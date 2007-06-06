@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3099 2007-06-03 19:31:42Z kennyluck $
+// SVN ID: $Id: tabulate.js 3115 2007-06-06 21:08:27Z presbrey $
 //
 // See Help.html, About.html, tb.html   
 

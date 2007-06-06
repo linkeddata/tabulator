@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3063 2007-05-25 15:18:09Z timbl $
+ * SVN ID: $Id: sources.js 3115 2007-06-06 21:08:27Z presbrey $
  *
  ************************************************************/
 

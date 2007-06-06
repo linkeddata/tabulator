@@ -4,13 +4,13 @@
 
 
 //include('calView/timeline/api/timeline-api.js');
-include('calView/yahoo.js');
-include('calView/dom.js');
-include('calView/event.js');
-include('calView/calendar.js');
-include('calView/loadEvents.js');
-include('calView/bigCal.js');
-include('calView/timeline/api/loadQueryEvents.js');
+include('js/calView/yahoo.js');
+include('js/calView/dom.js');
+include('js/calView/event.js');
+include('js/calView/calendar.js');
+include('js/calView/loadEvents.js');
+include('js/calView/bigCal.js');
+include('js/calView/timeline/api/loadQueryEvents.js');
 
 
 function include(linkstr){

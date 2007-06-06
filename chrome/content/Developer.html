@@ -30,8 +30,8 @@
 <p>You can browse the files of this version in the web.
 <dl>
 <dt><a href="tab.html">tab.html</a></dt><dd>The tabulator file itself - view source on it.</dd>
-<dt><a href="tabulate.js">tabulate.js</a></dt><dd>Top level script.</dd>
-<dt><a href="rdf/">rdf/</a></dt><dd>The AJAR library of RDF files.</dd>
+<dt><a href="js/tabulate.js">tabulate.js</a></dt><dd>Top level script.</dd>
+<dt><a href="js/rdf/">rdf/</a></dt><dd>The AJAR library of RDF files.</dd>
 <dt><a href="test/">test/</a></dt><dd>The tests</dd>
 <dt><a href="doc/api/">doc/api/</a></dt><dd>The docs (incomplete).</dd>
 </dl>
@@ -47,14 +47,14 @@ including web access, store, and query.
 The modules are
 as follows, in increasing order of functionality.
 Each dpends on the ones before it.</p>
-<h3><a href="uri.js">uri.js</a></h3>
+<h3><a href="js/uri.js">uri.js</a></h3>
 <p>This provides basic URI handling functions,
 such as calculation of absolute URIs from relative URIs.
 A <a href="test/uri-test-doc.html">URI test page</a>
 has red blocks if the tests fail.
 </p>
 <h3></h3>
-<h3><a href="rdf/term.js">rdf/term.js</a></h3>
+<h3><a href="js/rdf/term.js">rdf/term.js</a></h3>
 <p>Objects for representing the basic RDF terms.
 Symbols (nodes in the graph names by URIs),
 blank nodes and literal values are defined,
@@ -74,7 +74,7 @@ for testing and learning.
 (The Variable class of term is not introduced here,
 but is added by query.js.)</p>
 
-<h3><a href="rdf/match.js">rdf/match.js</a></h3>
+<h3><a href="js/rdf/match.js">rdf/match.js</a></h3>
 
 <p>This module adds comparison between terms
 (there is a consistent ordering across all terms)
@@ -82,18 +82,18 @@ an the simple searching for a statemnt pattern
 in a formula.
 </p>
 
-<h3><a href="rdf/rdfparser.js">rdf/rdfparser.js</a></h3>
+<h3><a href="js/rdf/rdfparser.js">rdf/rdfparser.js</a></h3>
 <p>This is used by sources.js to parse RDF/XML files
 from the DOM</p>
 <p>See also the <a href="test/rdf/">test/rdf/</a> parser test files.</p>
-<h3><a href="rdf/identity.js">rdf/identity.js</a></h3>
+<h3><a href="js/rdf/identity.js">rdf/identity.js</a></h3>
 <p>This is the main code for the store.
 This file introduces a more powerful formula class, RDFIndexedFormula.
 This is indexed, to provide faster searching. It also performs the
 <em>smushing</em> together of nodes which represent the same thing,
 using owl:sameAs, owl:InverseFunctionalProperty and owl:FunctionalProperty.
 </p>
-<h3><a href="rdf/query.js">rdf/query.js</a></h3>
+<h3><a href="js/rdf/query.js">rdf/query.js</a></h3>
 <p>A new type of term is introduced, Variable.
 (This is the thing which in SPARQ is written with a ?).
 Formulas which contain variables are used as pattern-matching
@@ -101,7 +101,7 @@ queries on the an RDFIndexedFormula.
 The query takes a callback, which is called when any matching set of
 bindings is called.
 The query looks up URIs on the web as it comes across them.
-<h3><a href="rdf/sources.js">rdf/sources.js</a></h3>
+<h3><a href="js/rdf/sources.js">rdf/sources.js</a></h3>
 <p>This manages all the sources (data-bearing infomation resources on the
 web) which the application has requested. It deals
 with
@@ -113,7 +113,7 @@ causes another to be fetched;</li>
 of representations of documents received from the web.</li>
 </ul>
 </p>
-<h3><a href="rdf/sparql.js">rdf/sparql.js</a></h3>
+<h3><a href="js/rdf/sparql.js">rdf/sparql.js</a></h3>
 <p>This module contains a SPARQL parser which generates
 a query object in the AJAR internal form,
 and a serilizer which performs the reverse process.

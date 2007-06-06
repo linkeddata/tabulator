@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 3052 2007-05-23 03:10:48Z timbl $
+// SVN ID: $Id: query.js 3115 2007-06-06 21:08:27Z presbrey $
 
 //  Variable
 //

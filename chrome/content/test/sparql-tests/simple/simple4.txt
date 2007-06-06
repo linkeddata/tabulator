@@ -1,0 +1,1 @@
+SELECT ?v0 ?v1 WHERE { ?v0 <is> <red> . ?v0 <isFriendOf> ?v1 . }

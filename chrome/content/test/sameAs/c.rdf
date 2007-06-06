@@ -1,0 +1,6 @@
+<rdf:RDF xmlns="http://dig.csail.mit.edu/2005/ajar/ajaw/test/sameAs/c.rdf#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+    <Cook rdf:about="#person3">
+    </Cook>
+</rdf:RDF>

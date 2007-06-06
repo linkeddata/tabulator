@@ -1,0 +1,8 @@
+PREFIX pre1: <http://example.com/ns#>
+PREFIX pre2: <http://anotherplace.org/rdfdocs#>
+
+SELECT ?a ?b WHERE { 
+ ?a pre1:numberOfWorkers ?b .
+ ?a a pre2:Company .
+ FILTER ( ?b > "500" ) }
+

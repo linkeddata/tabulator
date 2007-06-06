@@ -1,0 +1,71 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>Tabulator tutorial: calendar view</title>
+  <link rel="stylesheet" href="../general.css" type="text/css"></link>
+</head>
+<body>
+<div id="Nav"></div>
+<script src="../Nav.js" type="text/javascript"></script>
+<div style="float: left; max-width: 80%; margin-left: 10px;">
+<h1>Tabulator calendar view</h1>
+
+<p>The calendar view allows you to view <a href="http://www.w3.org/2002/12/cal/">RDF Calendar</a> data, and other time information (in the ISO 8601 format). See also: <a href="http://dig.csail.mit.edu/2005/ajar/ajaw/calView/calViewDocumentation.html">How to use Calendar View</a></p>
+
+<ol>
+<li>Start with <a
+href="http://dig.csail.mit.edu/2005/ajar/ajaw/tab.html">the
+development version of the tabulator</a>.
+<ul>
+<li><em>If you haven't been following tabulator development
+from the <a href="http://dig.csail.mit.edu/breadcrumbs/node/62">Dec
+2005 debut</a>, you'll probably need to tweak your
+<tt>about:config</tt> as detailed in the <a
+href="http://dig.csail.mit.edu/2005/ajar/ajaw/Help.html#Security">security
+section of the tabulator help file</a>.</em></li>
+</ul>
+</li>
+<li>
+Select a source of calendar info. Morten's <a href="http://www.wasab.dk/morten/2006/07/sparql-timeline/">SPARQL Timeline</a> uses RSS. The tabulator calendar groks <tt>dc:date</tt>, so something like <a href="http://www.w3.org/2000/08/w3c-synd/home.rss">W3C's main RSS feed</a> will work fine. Put its URI in the tabulator's URI text field and hit "Add to outliner".
+<div class="screenshot"><img src="tabulator_screenshots/01add-to-outliner.png" alt="add to outliner screenshot, before"/></div>
+<p>When it's done it should look something like this:</p>
+<div class="screenshot"><img src="tabulator_screenshots/01add-done.png" alt="add to outliner screenshot, after"/></div>
+
+<ul>
+<li><em>For fun, open the Sources tab near the bottom. Note that the tabulator loads the RSS and DC schemas, plus all the schemas they reference, and so on; i.e. the <a href="http://esw.w3.org/topic/OntologicalClosure">ontological closure</a>. Hmm... the RSS terms seem to be 404.</em>
+<div class="screenshot"><img src="tabulator_screenshots/01-sources.png" alt="sources screenshot"/></div>
+</li>
+</ul>
+</li>
+<li>Now navigate the outline down to one of the items.
+<div class="screenshot"><img src="tabulator_screenshots/02-item.png" alt="item screenshot"/></div>
+and then <a href="http://dig.csail.mit.edu/2005/ajar/ajaw/Help.html">re-focus</a> (shift click) on the rss item class itself, and then open an item and select the date property.
+<div class="screenshot"><img src="tabulator_screenshots/02-refocus.png" alt="refocus screenshot"/></div>
+</li>
+<li>Now hit "Tabulate selected properties". You'll get a table of items and their dates.
+<div class="screenshot"><img src="tabulator_screenshots/03-table.png" alt="table screenshot"/></div></li>
+
+<li>OK, so much for review of basic tabulator stuff. Now you're all
+set for the new stuff. Hit <b>Calendar</b> and scroll down a little:
+
+<div class="screenshot"><img src="tabulator_screenshots/04-calendar.png" alt="table screenshot"/></div>
+
+</li>
+</ol>
+
+<p>Note the <b>Export</b> button with the SPARQL option. That's a whole
+other item in itself, but for now, you can see the SPARQL query that
+corresponds to what you've selected to put on the the calendar:</p>
+<pre>
+SELECT ?v0 ?v1 
+WHERE 
+{ 
+    ?v0 &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type> &lt;http://purl.org/rss/1.0/item> .
+    ?v0 &lt;http://purl.org/dc/elements/1.1/date> ?v1 .
+</pre>
+
+<p>Fun, huh?</p>
+
+<div>tags: <a rel="tag" href="http://del.icio.us/connolly/calendar">calendar</a>,
+<a rel="tag" href="http://esw.w3.org/topic/SeedApplications">SeedApplications</a></div>
+</div>
+</body>
+</html>

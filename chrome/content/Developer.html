@@ -1,0 +1,247 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta http-equiv="content-type" content="">
+  <title>Developer notes for the Tabulator</title>
+  <link rel="stylesheet" href="general.css">
+</head>
+
+
+<body>
+<div id="Nav">
+</div>
+  <script src="Nav.js" type="text/javascript">
+  </script>
+<div style="float: left; max-width: 80%; margin-left: 10px;">
+<h1>Tabulator: Developer notes</h1>
+
+
+<p>These notes are for people developing websites using the tabulator library.</p>
+
+
+<h2>Getting the AJAR library archived</h2>
+<p>The 0.8 release of tabulator as a whole is available as an
+<a href="http://dig.csail.mit.edu/2005/ajar/release/tabulator-0.8-2007-02-01T16-43Z.tgz">archive file</a> 
+</p>
+
+
+<p>You can browse the files of this version in the web.
+<dl>
+<dt><a href="tab.html">tab.html</a></dt><dd>The tabulator file itself - view source on it.</dd>
+<dt><a href="tabulate.js">tabulate.js</a></dt><dd>Top level script.</dd>
+<dt><a href="rdf/">rdf/</a></dt><dd>The AJAR library of RDF files.</dd>
+<dt><a href="test/">test/</a></dt><dd>The tests</dd>
+<dt><a href="doc/api/">doc/api/</a></dt><dd>The docs (incomplete).</dd>
+</dl>
+</p>
+
+<h2>The 'AJAR' RDF library for Javascript</h2>
+<img src="doc/images/modules.png" alt="dependency map of modules" style="width: 80%"/>
+<p>The diagram is a simplified dependency graph of the major modules
+in the tabulator and the AJAR library.
+</p>
+<p>This library provides data handling for AJAX applications,
+including web access, store, and query.
+The modules are
+as follows, in increasing order of functionality.
+Each dpends on the ones before it.</p>
+<h3><a href="uri.js">uri.js</a></h3>
+<p>This provides basic URI handling functions,
+such as calculation of absolute URIs from relative URIs.
+A <a href="test/uri-test-doc.html">URI test page</a>
+has red blocks if the tests fail.
+</p>
+<h3></h3>
+<h3><a href="rdf/term.js">rdf/term.js</a></h3>
+<p>Objects for representing the basic RDF terms.
+Symbols (nodes in the graph names by URIs),
+blank nodes and literal values are defined,
+as are collections.
+</p>
+Statements are defined to havea subject, predicate
+and object, all terms.
+They also keep a "why" slot which is used to'track the provenance of the statement.
+
+<p>
+
+So are formulas, sets of triples.
+This is a simplistic implementation of formula,
+RDFFormula,
+for testing and learning.
+</p><p>
+(The Variable class of term is not introduced here,
+but is added by query.js.)</p>
+
+<h3><a href="rdf/match.js">rdf/match.js</a></h3>
+
+<p>This module adds comparison between terms
+(there is a consistent ordering across all terms)
+an the simple searching for a statemnt pattern
+in a formula.
+</p>
+
+<h3><a href="rdf/rdfparser.js">rdf/rdfparser.js</a></h3>
+<p>This is used by sources.js to parse RDF/XML files
+from the DOM</p>
+<p>See also the <a href="test/rdf/">test/rdf/</a> parser test files.</p>
+<h3><a href="rdf/identity.js">rdf/identity.js</a></h3>
+<p>This is the main code for the store.
+This file introduces a more powerful formula class, RDFIndexedFormula.
+This is indexed, to provide faster searching. It also performs the
+<em>smushing</em> together of nodes which represent the same thing,
+using owl:sameAs, owl:InverseFunctionalProperty and owl:FunctionalProperty.
+</p>
+<h3><a href="rdf/query.js">rdf/query.js</a></h3>
+<p>A new type of term is introduced, Variable.
+(This is the thing which in SPARQ is written with a ?).
+Formulas which contain variables are used as pattern-matching
+queries on the an RDFIndexedFormula.
+The query takes a callback, which is called when any matching set of
+bindings is called.
+The query looks up URIs on the web as it comes across them.
+<h3><a href="rdf/sources.js">rdf/sources.js</a></h3>
+<p>This manages all the sources (data-bearing infomation resources on the
+web) which the application has requested. It deals
+with
+<ul>
+<li>The managing of the status of sources to be fetched, fetched and failed.</li>
+<li>Tracking dependencies between sources, when the parsing of one
+causes another to be fetched;</li>
+<li>The interpretation, by MIME type, XML namespace, etc,
+of representations of documents received from the web.</li>
+</ul>
+</p>
+<h3><a href="rdf/sparql.js">rdf/sparql.js</a></h3>
+<p>This module contains a SPARQL parser which generates
+a query object in the AJAR internal form,
+and a serilizer which performs the reverse process.
+This module is used in the sparqlView module which provides user
+read and editing of queries in the sparql language.
+<h3><a href=""></a></h3>
+<h3><a href=""></a></h3>
+<h2>Programming with RDF on the Web: APIs</h2>
+
+<p>One way to start using the AJAR library
+is to look at a simple demo application. (Run it with Firefox set up as per tabulator)
+</p>
+<ul>
+ <li><a href="../adr/index.html">A trivial FOAF address book using AJAR</a></li>
+ <li><a href="../adr/book.js">The javascript book.js</a></li>
+ <li><a href="../adr/card.css">The stylesheet card.css</a></li>
+</ul>
+<p>This just loads a FOAF file into the store, finds the friends, and loads theirs,
+displaying business cards for each.</p>
+<p>It may also be useful to look at the interactive test pages
+which are quite simple in some cases.
+The notes which follow introduce the key features of the API.
+David Brondsema has also made some <a
+ href="http://brondsema.net/blog/index.php/2006/11/25/javascript_rdfparser_from_tabulator">
+notes</a> on how to use the RDF parser</p>
+
+
+<h3>Namespace shortcuts</h3>
+<p>The systm uses Javascript objects for RDF symbols. Generating them for predicates is 
+simplified by using a namespace function:
+</p>
+<pre>
+FOAF = Namespace("http://xmlns.com/foaf/0.1/")
+RDF = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+OWL = Namespace("http://www.w3.org/2002/07/owl#")
+DC = Namespace("http://purl.org/dc/elements/1.1/")
+RSS = Namespace("http://purl.org/rss/1.0/")
+XSD = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
+CONTACT = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
+
+var foafKnows = FOAF('knows');
+</pre>
+<h3>The RDFIndexedFormula class</h3>
+<p>This is the key class in the API. A formula is a set of 
+statements, as you get from parsing and RDF resource.
+</p>
+<h4>To make a new one</h4>
+<pre>
+    var kb = new RDFIndexedFormula()
+</pre>
+<h4>To add data to it from a reseource</h4>
+<pre>
+    kb.load('http://www.w3.org/People/Berners-Lee/card')
+</pre>
+<p>It will automatically add any ontologies used.</p>
+<h4>To use data in the store</h4>
+<p>
+There are two ways to look at RDF data in a formula.
+You can synchronously use the the(), each() and any() 
+methods and statementsMatching(),
+or you can do a query which returns results asynchronously.
+</p><p>
+The <em>the(), each(), any()</em> 
+and <em>statementsMatching()</em> take a pattern of subject, predate, object and source ('why'),
+where for the() each() and any() one of s p and o are undefined
+and source may be undefined or not.
+For example, using kb.sym() to make an object for an RDF node (symbol),
+<pre>
+    me = kb.sym('http://www.w3.org/People/Berners-Lee/card#i');
+    friend = kb.any(me, friend, undefined)
+</pre>
+<p>or for that matter</p>
+<pre>
+    me = kb.sym('http://www.w3.org/People/Berners-Lee/card#i');
+    friend = kb.any(me, FOAF('friend'))
+</pre>
+</p>One of the partrs of the triple is set undefined and that serves as a wildcard.
+In this case, the forumula returns the object of a matching triple.<p>
+</p><p>
+<pre>
+    m = kb.the(me, mother)
+</pre>
+<p>Here the assumption (unchecked in the application) is that there is only one match.
+<p>
+<pre>
+    friends = kb.each(me, FOAF('knows'))
+</pre>
+<p>This returns a javascript array of objects.<p>
+</p>
+<h4>Adding data</h4>
+<p>The <em>add(s, p, o, why)</em> method allows a statement to be added to a formula.
+The optional <em>why</em> argument iss used by tabulator to keep track of which resource was
+the source for each triple.
+</p>
+<pre>
+    kb.add(me, FOAF('knows'), fred)
+</pre>
+<p>The <em>the(), each(), any()</em> 
+and <em>statementsMatching()</em> in fact can take a fouth
+argumemnt to select data from a particular source.
+</p>
+<pre>
+    myFoafFile = kb.sym(uri)
+    friendsInMyFOAF = kb.each(me, FOAF('knows'), undefined, myFoafFile)
+</pre>
+
+<h4>Asynchronous query</h4>
+
+<p>To make a query, in brief, 
+the query is made as a separate formula, introducing variable objects
+in appropriate places. The query formula is then used a an argument to the
+query() method of the knowledge base formula being searched. 
+A callback routine also passed to kb.query(). The callback routine
+is called back when each 
+matching set of bindings is found with bindings as argument.
+</p>
+<p>This is not described in detail here.</p>
+<h2>Adding views</h2>
+<p>The view system is quote modular.  A form allows you to experiment
+adding new views to a running tabulator. Click on "New view..."
+</p>
+
+@@@@ To be continued...<br>
+
+
+
+
+</div>
+</body>
+</html>

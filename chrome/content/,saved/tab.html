@@ -1,0 +1,97 @@
+<html>
+<head>
+    <title>Tabulator: Playing with Asynch Javascript And Web</title>
+<!--    <script type="text/ecmascript" xlink:href="rdf/parser.js" /> -->
+
+<link rel="stylesheet" href="dynamic.css">
+<script src="rdf/term.js" />
+<script src="rdf/match.js" />
+<script src="rdf/parser.js" />
+
+<script src="tabulate.js" />
+<!--
+-->
+
+</head>
+<body>
+This is one possible form of a semantic web browser.
+Works on Firefox, may be bugs on other platforms.
+<hr>
+<form name="AddressBar">
+URI: <input type="text" name="UserURI" width="80%" />
+<input type="button" onclick="GotoFormURI()" value="Tabulate" ><br />
+</form>
+
+<h3>Browser</h3>
+Key:  <img src="icons/16dot-green.gif"> expand, <img src="icons/16dot-red.gif">
+ collapse, <img src="icons/16dot-blue.gif"> fetch data.
+<img src="icons/16dot-yellow.gif"> loading.
+<hr>
+<div onmousedown="TabulatorMousedown(event)" >
+
+<table id="browser">
+  <tr>
+    <td id="root" about="<http://www.w3.org/People/Berners-Lee/card.rdf#i>">
+<img border="0" src="icons/16dot-blue.gif" alt="fetch" />
+Tim Berners-Lee
+</td></tr></table>
+
+</div>
+<hr>
+<p>
+Firefox security prevents this from working on any data outside http://www.w3.org/.<br/>
+Example starting places: The first one is me in my FOAF file. Click the button bellow to put a starting
+cell in the browse space above.
+</p>
+<p>
+<img src="icons/16dot-blue.gif" onmousedown="GotoURI('http://www.w3.org/People/Berners-Lee/card.rdf#i')">
+Start at: http://www.w3.org/People/Berners-Lee/card.rdf#i
+</p>
+<p>
+<img src="icons/16dot-blue.gif" onmousedown="GotoURI('../../../People/Berners-Lee/card.rdf#i')">
+Start at: ../../../People/Berners-Lee/card.rdf#i
+</p>
+<p>
+<img src="icons/16dot-blue.gif" onmousedown="GotoURI('http://www.w3.org/People/Connolly/home-smart')">
+Test rdf loading kB with callback: http://www.w3.org/People/Connolly/home-smart
+</p>
+<p>
+<img src="icons/16dot-blue.gif" onmousedown="GotoURI('http://www.w3.org/2002/01/tr-automation/tr.rdf')">
+Test Tech Reports database: http://www.w3.org/2002/01/tr-automation/tr.rdf
+</p>
+<p>
+<img src="icons/16dot-blue.gif"  onmousedown="GotoURI('http://www.w3.org/2005/10/ajaw/examples/foaf2.rdf')">
+Test rdf loading kB with callback: http://www.w3.org/2005/10/ajaw/examples/foaf2.rdf
+</p>
+<p>
+<img src="icons/16dot-blue.gif" onmousedown="GotoURI('http://www.w3.org/2000/10/swap/test/test.xml')">
+Test rdf loading kB with callback: http://www.w3.org/2000/10/swap/test/test.xml
+</p>
+<p onmousedown="clearStatus()">
+[<img src="icons/16dot-red.gif"> Clear status]
+</p>
+
+<h3>Sources</h3>
+<table id=sources>
+</table>
+<div id="log">
+<hr>
+<h3>Log</h3>
+<span onmousedown="setLogging(true)">[turn logging on]</span> 
+<span onmousedown="setLogging(false)">[turn logging off]</span> 
+<span onmousedown="clearStatus()">[clear log]</span> 
+<span onmousedown="dumpStore()">[dump store to log]</span>
+<br/>
+
+<hr>
+<pre id=status>
+Initial status. Version $Id: tab.html,v 1.29 2005/11/23 19:14:33 timbl Exp $<br/>
+</pre>
+<span onmousedown="setLogging(true)">[turn logging on]</span> 
+<span onmousedown="setLogging(false)">[turn logging off]</span> 
+<span onmousedown="clearStatus()">[clear log]</span> 
+<span onmousedown="dumpStore()">[dump store to log]</span>
+<br/>
+</div>
+</body>
+</html>

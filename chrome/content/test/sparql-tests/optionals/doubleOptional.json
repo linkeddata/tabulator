@@ -1,0 +1,8 @@
+json.vars.push(kb.variable('a'))
+json.vars.push(kb.variable('b'))
+json.pat.add(kb.sym('tab'),kb.sym('dev'),kb.variable('a'))
+json.pat.optional.push(kb.formula())
+json.pat.optional[0].add(kb.variable('a'),kb.sym('http://anotherplace.org/rdfdocs#chatId'),kb.variable('b'))
+json.pat.optional.push(kb.formula())
+json.pat.optional[1].add(kb.variable('a'),kb.sym('http://anotherplace.org/rdfdocs#friend'),kb.variable('c'))
+json.pat.optional[1].add(kb.variable('c'),kb.sym('name'),kb.literal('Andy',''))

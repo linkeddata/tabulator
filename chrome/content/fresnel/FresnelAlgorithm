@@ -1,0 +1,111 @@
+25 July 2006
+
+// Looking at my foaf and the example lenses
+// Algorithm for fresnel interpretation
+input: a single resource ($resource), e.g., a foaf: foaf.rdf#me
+
+I. Select Lens
+
+1. Find type and instance of the RDF data to be displayed.
+	$type = type of $resource
+	$instance = instance of $resource //specific URI
+	
+	+fresnel:classLensDomain
+2. Find Fresnel lens with domain of that type or instance. 
+
+	$lenses[] = all lenses with domains matching type or instance //no reasoner here
+
+	+fresnel:defaultLens, fresnel:purpose
+
+3.  Determining lens to use
+[If the set of applicable lenses contains both lenses whose domain is a classLensDomain 
+and lenses whose domain is an instanceLensDomain, remove lenses whose domain is a 
+classLensDomain.]
+[If domains are classLensDomains and there exists subclass relationships between
+classes pointed at by selectors, select the lens that defines the most specific
+subclass. If there is no subclass relationship between classes pointed at by 
+selector, select the lens whose purpose if fresnel:defaultLens. If there is no
+such lens, the conflict cannot be resolved. Browsers should select one of the
+lenses and issue a warning.]
+(Needs to be default lens?)
+(How to know which lens to use? Prioritizing...) 
+Answer: Only prioritization is default lenses.  Rest must be done by application, 
+possibly by UI.
+		
+	$lens = the chosen lens //based on fresnel:purpose
+	
+	+fresnel:purpose, fresnel:defaultLens, fresnel:labelLens
+4. Find all the properties in the showProperties list from the RDF data in order.
+(Might have multiple levels...)
+(Might inherit lens properties...)
+
+	for each fresnel:property in fresnel:showProperties
+		if the property is just the name of a property 
+			then store it
+			else if it is a fresnel:propertyDescription  //checking with ryanlee
+			if it specifies a lens to use with fresnel:sublens
+					then go to step 4 with it 
+					else go to step 2 with it //not sure if sublens is required
+			else error
+
+	+fresnel:subLens, fresnel:showProperties, fresnel:propertyDescription,
+	fresnel:property
+	+sublens, knowsHierarchyLens, use, //hideProperties, allProperties are possibly also here.
+5. Returns the properties and associated lenses to display with.
+Can return it as RDF or as object.  
+	Object spec: 
+		Lens class has fields/predicate hasProperty 
+		Property class has fields/predicate hasSublens
+		
+
+
+II. Select Formats
+1. For each property, find the format with the domain that fits.  
+E.g. if format domain is "depict"... find a display for pictures.
+
+input: $property
+	
+	$formats[]=all formats (fresnel:format) with fresnel:property/instanceFormatDomain
+matching $property
+
++fresnel:format, fresnel:propertyFormatDomain, fresnel:instanceFormatDomain
+
+2. Determining which format to use.
+
+if $formats[] has formats with both classFormatsDomain and instanceFormatDomains
+then remove those with classFormatDomain
+
+if domains are all classFormatDomains 
+	if there exists subclass relationships  
+		then select the format that defines the most specific subclass. 
+		else if there is no subclass relationship 
+		then the conflict cannot be resolved. 
+else conflict not resolved 
+
+//if conflict cannot be resolved, browsers should select one of the formates and issue a warning.
+
+	
+3. Returns {label, value, value style, label style} 
+Can return it as RDF or as object.  
+	Object spec: 
+		Lens class has fields/predicate hasProperty 
+		Property class has fields/predicate hasSublens and hasFormats
+
+
+III.  Do Stuff
+	if the value is a literal, 
+		then display it as text.
+	if the current lens specifies a sublens for this property
+		display the value using the sublens.
+	if the value is a resource or bNode,
+		if there is an associated format 
+	   	then use it
+	   	check if the default procedure is overridden by a format for this instance and apply it. 
+   If several formats apply, 
+   resolve conflicts between formats as described section Conflicts Between Formats.
+   4. If the value is a resource or bNode, 
+   check if there is a label instance lens for this resource or bNode and display it.
+   5. Else display the browser's default label lens. Browsers might want to provide a default label lens which could for instance specify that rdfs:label or dc:title values should be used by default.
+   6. If there is no such lens, display the URI of the resource or the ID of the bNode.
+
+1.  Use javascript DOM to display the quadruplet returned by Style processing in the correct place.

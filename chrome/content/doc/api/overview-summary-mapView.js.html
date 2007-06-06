@@ -1,0 +1,636 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Frameset//EN""http://www.w3.org/TR/REC-html40/frameset.dtd">
+<html>
+<head>
+<title>
+ Overview
+</title>
+<link rel ="stylesheet" type="text/css" href="stylesheet.css" title="Style">
+<script>
+function asd() {
+	
+		parent.document.title="mapView.js Overview";
+	
+}
+</script>
+</head>
+<body bgcolor="white" onload="asd();">
+
+<!-- ========== START OF NAVBAR ========== -->
+<a name="navbar_top"><!-- --></a>
+<table border="0" width="100%" cellpadding="1" cellspacing="0">
+<tr>
+<td colspan=2 bgcolor="#EEEEFF" class="NavBarCell1">
+<a name="navbar_top_firstrow"><!-- --></a>
+<table border="0" cellpadding="0" cellspacing="3">
+  <tr align="center" valign="top">
+  
+  
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-summary.html"><font class="NavBarFont1"><b>Overview</b></font></a>&nbsp;</td>
+  <td bgcolor="#FFFFFF" class="NavBarCell1Rev">	&nbsp;<font class="NavBarFont1Rev"><b>File</b></font>&nbsp;</td>
+  
+
+  <td bgcolor="#FFFFFF" class="NavBarCell1"> 	<font class="NavBarFont1">Class</font>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-tree.html"><font class="NavBarFont1"><b>Tree</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="index-all.html"--><font class="NavBarFont1"><b>Index</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="help-doc.html"><font class="NavBarFont1"><b>Help</b></font></a>&nbsp;</td>
+  </tr>
+</table>
+</td>
+<td bgcolor="#EEEEFF" align="right" valign="top">
+<em>
+<b></b></em>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+&nbsp;PREV&nbsp;
+&nbsp;NEXT</font></td>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+  <a href="index.html" target="_top"><b>FRAMES</b></a>  &nbsp;
+&nbsp;<a href="overview-summary.html" target="_top"><b>NO FRAMES</b></a>
+&nbsp;&nbsp;
+<script>
+  <!--
+  if(window==top) {
+    document.writeln('<A HREF="allclasses-noframe.html" TARGET=""><B>All Classes</B></A>');
+  }
+  //-->
+</script>
+<noscript>
+<a href="allclasses-noframe.html" target=""><b>All Classes</b></a>
+</noscript>
+</font></td>
+</tr>
+</table>
+<!-- =========== END OF NAVBAR =========== -->
+
+<hr>
+<center>
+	
+	   <h2>mapView.js</h2>
+	
+</center>
+
+	
+
+
+<h4>Summary</h4>
+<p>
+	
+		No overview generated for 'mapView.js'<BR/><BR/>
+	
+</p>
+
+<hr>
+
+
+
+<!-- ========== METHOD SUMMARY =========== -->
+
+	<a name="method_summary"><!-- --></a>
+	<table border="1" cellpadding="3" cellspacing="0" width="100%">
+		<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+			<td colspan=2>
+				<font size="+2">
+					<b>Method Summary</b>
+				</font>
+			</td>
+		</tr>
+	
+		
+		   <tr bgcolor="white" class="TableRowColor">
+		      <td align="right" valign="top" width="1%">
+			 <font size="-1">
+			    <code>static&nbsp;Object</code>
+			 </font>
+		      </td>
+		      <td>
+			 <code>
+			    <b>
+			       <a href="GLOBALS.html#!s!makeInfoWindowObjectNode">makeInfoWindowObjectNode</a></b>(obj,asImage)
+			 </code>
+			 <br>
+			 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			 
+		      </td>
+		   </tr>
+		
+		   <tr bgcolor="white" class="TableRowColor">
+		      <td align="right" valign="top" width="1%">
+			 <font size="-1">
+			    <code>static&nbsp;void</code>
+			 </font>
+		      </td>
+		      <td>
+			 <code>
+			    <b>
+			       <a href="GLOBALS.html#!s!mapView">mapView</a></b>(container)
+			 </code>
+			 <br>
+			 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			 The mapView class is a view that implements the Google Maps API to display
+ tabulator queries and their associated information on a map window.
+		      </td>
+		   </tr>
+		
+		   <tr bgcolor="white" class="TableRowColor">
+		      <td align="right" valign="top" width="1%">
+			 <font size="-1">
+			    <code>static&nbsp;void</code>
+			 </font>
+		      </td>
+		      <td>
+			 <code>
+			    <b>
+			       <a href="GLOBALS.html#!s!mapViewDoubleClick">mapViewDoubleClick</a></b>(event)
+			 </code>
+			 <br>
+			 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			 
+		      </td>
+		   </tr>
+		
+	
+	</table>
+    <p>
+
+<!-- ========== END METHOD SUMMARY =========== -->
+
+
+        <pre class="sourceview"><span class="comment">/**
+ * The mapView class is a view that implements the Google Maps API to display
+ * tabulator queries and their associated information on a map window.
+ * MapView currently supports both latitude and longitude points, and also
+ * has minimal geocoding support. ~jambo
+ */</span>
+<span class="reserved">function</span> mapView(container) {
+
+    <span class="comment">//The necessary vars for a View...</span>
+    <span class="comment">/**The name field - a string.*/</span>
+    <span class="reserved">this</span>.name=<span class="literal">"Map"</span>;
+    <span class="comment">/**States of all queries that the view currently know about.
+     * 0=undrawn, 1=drawn, 2=can't draw. queryStates[q.id]=int*/</span>
+    <span class="reserved">this</span>.queryStates=[];
+    <span class="comment">/**the HTML DOM node provided for this view.*/</span>
+    <span class="reserved">this</span>.container=container;
+
+    <span class="comment">//The vars specific to a mapView...</span>
+    var map, geocoder;
+    <span class="comment">//the key displays what color matches what query.</span>
+    var key;
+    var thisMapView=<span class="reserved">this</span>; <span class="comment">//for weird closure things.</span>
+    <span class="comment">/**allMarkers stores the arrays of each marker set for each drawn query.
+     * allMakers[q.id] yields the markers array associated with a query.*/</span>
+    var allMarkers=[];
+    <span class="comment">/**Obviously, centers and zooms a map on an array of markers, based on
+     * the average coordinates of all of the markers.*/</span>
+
+    <span class="reserved">function</span> centerAndZoomOnMarkers(map, markers) {
+        var bounds = new GLatLngBounds(markers[0].getPoint(), markers[0].getPoint());
+        var i;
+        <span class="reserved">for</span> (i=1; i&lt;markers.length; i++) {
+            bounds.extend(markers[i].getPoint());
+        }
+        var lat = (bounds.getNorthEast().lat() + bounds.getSouthWest().lat()) / 2.0;
+        var lng = (bounds.getNorthEast().lng() + bounds.getSouthWest().lng()) / 2.0;
+        <span class="reserved">if</span>(bounds.getNorthEast().lng() &lt; bounds.getSouthWest().lng()){
+            lng += 180;
+        }
+        var center = new GLatLng(lat,lng)
+        map.setCenter(center, map.getBoundsZoomLevel(bounds)-1);
+    }
+
+    <span class="reserved">this</span>.onActive = <span class="reserved">function</span> () {
+        <span class="reserved">if</span>(map!=null)
+        {
+            map.checkResize();
+        }
+        <span class="reserved">else</span> <span class="reserved">if</span>(GBrowserIsCompatible()){
+            map = new GMap2(<span class="reserved">this</span>.container);
+            map.setCenter(new GLatLng(35,-90),4);
+            map.addControl(new GSmallMapControl);
+            <span class="reserved">if</span>(geocoder==null) {
+                geocoder = new GClientGeocoder();
+            }
+            map.checkResize();
+            <span class="reserved">this</span>.initializeKey();
+        }
+    }
+
+    <span class="comment">/**drawQuery draws a given query to the map and sets its state
+     * to be 1 (drawn).  Does not draw if queryStates[q.id]==2.*/</span>
+    <span class="reserved">this</span>.drawQuery = <span class="reserved">function</span> (q) {
+        <span class="reserved">if</span>(<span class="reserved">this</span>.queryStates[q.id]!=null &amp;&amp; <span class="reserved">this</span>.queryStates[q.id]==2)
+            <span class="reserved">return</span>;
+        var markers=[];        <span class="comment">//Will be used to temp store markers.</span>
+        var makeDark=false; <span class="comment">//so we can alternate infoWindow item colors.</span>
+        var markerIcon = new GIcon(G_DEFAULT_ICON,<span class="literal">'icons/markers/'</span>+q.id%10+<span class="literal">'.png'</span>);
+        <span class="reserved">this</span>.onBinding = <span class="reserved">function</span> (bindings) {
+            <span class="comment">//Handles bindings returned with a callback for the query.</span>
+            tinfo(<span class="literal">"making a marker w/ bindings "</span> + bindings);
+            var nv = q.vars.length;
+            var info, t, marker, point, lat, lng, i; <span class="comment">//info holds the info bubble's DOM node</span>
+            var tabs = [], useImage=false; <span class="comment">//These vars control tabbing info windows.</span>
+            info = document.createElement(<span class="literal">'div'</span>);
+            t=document.createElement(<span class="literal">'table'</span>);
+            t.setAttribute(<span class="literal">'class'</span>,<span class="literal">'infoBubbleTable'</span>);
+            info.setAttribute(<span class="literal">'class'</span>,<span class="literal">'infoBubbleDiv'</span>);
+            info.appendChild(t);
+            tabs[0]=new GInfoWindowTab(<span class="literal">"General"</span>, info);
+            info.setAttribute(<span class="literal">'ondblclick'</span>,<span class="literal">'mapViewDoubleClick(event)'</span>);
+            <span class="reserved">for</span> (i=0; i&lt;nv; i++) {
+                var obj = bindings[q.vars[i]];
+                var geoType = q.vars[i].mapUsed;
+                <span class="reserved">if</span>(geoType!=null) {    <span class="comment">//Found some data to use for mapping.</span>
+                    switch (geoType) {
+                        case <span class="literal">'lat'</span>:
+                            lat=obj.value; break;
+                        case <span class="literal">'long'</span>:
+                           lng=obj.value; break;
+                        case <span class="literal">'based_near'</span>:
+                            lat = kb.the(obj, kb.sym(<span class="literal">'http://www.w3.org/2003/01/geo/wgs84_pos#lat'</span>), undefined).value;
+                            lng = kb.the(obj, kb.sym(<span class="literal">'http://www.w3.org/2003/01/geo/wgs84_pos#long'</span>), undefined).value;
+                            break;
+                        case <span class="literal">'address'</span>:
+                            var street, city, country, post;
+                            street=kb.the(obj, kb.sym(<span class="literal">'http://www.w3.org/2000/10/swap/pim/contact#street'</span>), undefined).value;
+                            city=kb.the(obj, kb.sym(<span class="literal">'http://www.w3.org/2000/10/swap/pim/contact#city'</span>), undefined).value;
+                            country=kb.the(obj, kb.sym(<span class="literal">'http://www.w3.org/2000/10/swap/pim/contact#country'</span>), undefined).value;
+                            post=kb.the(obj, kb.sym(<span class="literal">'http://www.w3.org/2000/10/swap/pim/contact#postalCode'</span>), undefined).value;
+                            geocoder.getLatLng(street+<span class="literal">" "</span>+city+<span class="literal">" "</span>+country+<span class="literal">" "</span>+post, <span class="reserved">function</span>(newPoint) {
+                                <span class="reserved">if</span>(point==null &amp;&amp; newPoint!=null) {  <span class="comment">//if query didn't find another coord, and geocoding worked</span>
+                                    marker = new GMarker(newPoint, {icon:markerIcon});
+                                    map.addOverlay(marker);
+                                    markers[markers.length]=marker;  <span class="comment">//place our marker in the next index.</span>
+                                    centerAndZoomOnMarkers(map, markers);
+                                    var tr=document.createElement(<span class="literal">'tr'</span>),td=document.createElement(<span class="literal">'td'</span>);
+                                    td.colSpan=2;
+                                    td.appendChild(document.createTextNode(<span class="literal">"("</span>+newPoint.lat() +<span class="literal">", "</span>+newPoint.lng()+<span class="literal">")"</span>));
+                                    tr.appendChild(td);t.appendChild(tr);
+                                    GEvent.addListener(marker, <span class="literal">"click"</span>, <span class="reserved">function</span>() {
+                                        marker.openInfoWindowTabs(tabs);
+                                        
+                                    });
+                                }
+                            }); break;
+                        default:
+                            terror(<span class="literal">"Error in onBinding for MapView: findGeoType returned unknown type: "</span>+geoType);
+                            break;
+                    }
+                }
+                <span class="reserved">else</span> {    <span class="comment">//Data that isn't meant to be mapped.</span>
+                    var tr = document.createElement(<span class="literal">'tr'</span>);
+                    var tt = document.createElement(<span class="literal">'td'</span>);
+                    tt.appendChild(document.createTextNode(q.vars[i].label));
+                    tr.appendChild(tt);
+                    var objNode;
+                    <span class="reserved">if</span>(obj.termType==<span class="literal">'symbol'</span> &amp;&amp; isImage(obj.uri.substring(obj.uri.length-4))) {
+                        var img = document.createElement(<span class="literal">'img'</span>);
+                        var resizeRatio;
+                        img.src=obj.uri;
+                        var mapSize=map.getSize();
+                        <span class="reserved">if</span>(img.width&gt;mapSize.width/2) {
+                            resizeRatio=(mapSize.width/2)/img.width;
+                            img.width=mapSize.width/2;
+                            img.height*=resizeRatio;
+                        }
+                        <span class="reserved">if</span>(img.height&gt;mapSize.height/2) {
+                            resizeRatio=(mapSize.height/2)/img.height;
+                            img.height=mapSize.height/2;
+                            img.width*=resizeRatio;
+                        }
+
+                        tabs[tabs.length]=new GInfoWindowTab(<span class="literal">"Image "</span>+tabs.length, img);
+                    }
+                    <span class="reserved">else</span> {
+                        objNode=makeInfoWindowObjectNode(obj,false);
+                        <span class="reserved">if</span>(makeDark) {
+                            tt.setAttribute(<span class="literal">'class'</span>,<span class="literal">'dark'</span>);
+                            objNode.setAttribute(<span class="literal">'class'</span>,<span class="literal">'dark'</span>);
+                            makeDark=false;
+                        }
+                        <span class="reserved">else</span> makeDark=true;
+                        tr.appendChild(objNode);
+                        t.appendChild(tr);
+                    }
+                }
+            }
+
+            <span class="comment">//Add the completed point to the map -- but only if we actually got a point.</span>
+            <span class="reserved">if</span>((lat!=undefined &amp;&amp; lng!=undefined) || point!=undefined)
+            {
+                <span class="reserved">if</span>(lat!=undefined &amp;&amp; lng!=undefined) {
+                    point = new GLatLng(lat, lng);
+                }
+                var tr=document.createElement(<span class="literal">'tr'</span>),td=document.createElement(<span class="literal">'td'</span>);
+                td.colSpan=2;
+                td.appendChild(document.createTextNode(<span class="literal">"Location: ("</span>+point.lat() +<span class="literal">", "</span>+point.lng()+<span class="literal">")"</span>));
+                tr.appendChild(td);t.appendChild(tr);
+                marker = new GMarker(point, {icon:markerIcon});
+                map.addOverlay(marker);
+                markers[markers.length]=marker;  <span class="comment">//place our marker in the next index.</span>
+                centerAndZoomOnMarkers(map, markers);
+                GEvent.addListener(marker, <span class="literal">"click"</span>, <span class="reserved">function</span>() {
+                    marker.openInfoWindowTabs(tabs,{maxWidth:map.getSize().width/2});
+                });
+            }
+        }
+        <span class="reserved">if</span>(<span class="reserved">this</span>.queryStates[q.id]!=2) {
+            kb.query(q, <span class="reserved">this</span>.onBinding, myFetcher);
+            <span class="reserved">this</span>.queryStates[q.id]=1;
+            <span class="reserved">this</span>.addKeyEntry(q);
+            allMarkers[q.id]=markers;
+        }
+        map.checkResize();
+    } <span class="comment">//this.drawQuery</span>
+
+    <span class="reserved">function</span> isImage(extension) {
+        switch(extension) {
+            case <span class="literal">'.jpg'</span>:
+            case <span class="literal">'.JPG'</span>:
+            case <span class="literal">'.gif'</span>:
+            case <span class="literal">'.GIF'</span>:
+            case <span class="literal">'.png'</span>:
+            case <span class="literal">'.PNG'</span>:
+                <span class="reserved">return</span> true; break;
+            default:
+                <span class="reserved">return</span> false; break;
+    }
+}
+    <span class="comment">/**Removes query q from the map area.  Also sets queryStates[q.id]=0.
+     * Does nothing if q is not actually drawn. Deletes markers array
+       from allMarkers.*/</span>
+    <span class="reserved">this</span>.undrawQuery = <span class="reserved">function</span> (q) {
+        var i;
+        <span class="reserved">if</span>(<span class="reserved">this</span>.queryStates[q.id]==1) {
+            var markers=allMarkers[q.id];
+            <span class="reserved">for</span>(i=0; i&lt;markers.length; i++) {
+                map.removeOverlay(markers[i]);
+            }
+            delete allMarkers[q.id];
+            <span class="reserved">this</span>.removeKeyEntry(q);
+            <span class="reserved">this</span>.queryStates[q.id]=0;
+        }
+    }
+
+    <span class="comment">/**Adds a query --effectively makes the view aware that the query exists.
+     * Also does some preprocessing-checks to see if the map can actually
+     * handle this query.*/</span>
+    <span class="reserved">this</span>.addQuery = <span class="reserved">function</span> (q) {
+        var canBeMapped = <span class="reserved">this</span>.findMapVars(q);
+        <span class="reserved">if</span>(canBeMapped)
+            <span class="reserved">this</span>.queryStates[q.id]=0;
+        <span class="reserved">else</span>
+            <span class="reserved">this</span>.queryStates[q.id]=2;
+    }
+
+    <span class="comment">/**Removes a query--undraws the query and then deletes the queryStates
+     * entry for that query.*/</span>
+    <span class="reserved">this</span>.removeQuery = <span class="reserved">function</span> (q) {
+        <span class="reserved">this</span>.undrawQuery(q);
+        delete <span class="reserved">this</span>.queryStates[q.id];
+    }
+
+    <span class="comment">/**As of yet unused.  Will, however, undraw all active queries.*/</span>
+    <span class="reserved">this</span>.clearView = <span class="reserved">function</span> () {
+        var i;
+        <span class="reserved">for</span>(i=0; i&lt;<span class="reserved">this</span>.queryStates.length; i++){
+            <span class="reserved">if</span>(<span class="reserved">this</span>.queryStates[i]!=null &amp;&amp; <span class="reserved">this</span>.queryStates[i]==1) {
+                <span class="reserved">this</span>.undrawQuery(q);
+            }
+        }
+    }
+
+    <span class="comment">//mapView-specific functions..</span>
+
+
+    <span class="comment">/**Used to preprocess queries.  Looks for lats and longs, addresses.
+     * <span class="attrib">@returns</span> true if q can be mapped, false otherwise.*/</span>
+    <span class="reserved">this</span>.findMapVars = <span class="reserved">function</span> (q) {
+        var ns = q.pat.statements.length, i, pred, canBeMapped=false;
+        var gotLat=false, gotLong=false;
+        <span class="reserved">for</span>(i=0; i&lt;ns; i++) {
+            pred=q.pat.statements[i].predicate.uri;
+            switch(pred) {
+                case <span class="literal">'http://xmlns.com/foaf/0.1/based_near'</span>:
+                    q.pat.statements[i].object.mapUsed=<span class="literal">'based_near'</span>;canBeMapped=true; break;
+                case <span class="literal">'http://www.w3.org/2000/10/swap/pim/contact#address'</span>:
+                    q.pat.statements[i].object.mapUsed=<span class="literal">'address'</span>;canBeMapped=true; break;
+                case <span class="literal">'http://www.w3.org/2003/01/geo/wgs84_pos#lat'</span>:
+                    q.pat.statements[i].object.mapUsed=<span class="literal">'lat'</span>;
+                    gotLat=true;
+                    <span class="reserved">if</span>(gotLong)
+                        canBeMapped=true;
+                    break;
+                case <span class="literal">'http://www.w3.org/2003/01/geo/wgs84_pos#long'</span>:
+                    q.pat.statements[i].object.mapUsed=<span class="literal">'long'</span>;
+                    gotLong=true;
+                    <span class="reserved">if</span>(gotLat)
+                        canBeMapped=true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        <span class="comment">//Check the optionals, too!</span>
+        ns=q.pat.optional.length;
+        <span class="reserved">for</span>(i=0; i&lt;ns; i++) {
+            <span class="reserved">if</span>(checkOptionals(q.pat.optional[i]))
+                canBeMapped=true;
+        }
+        <span class="reserved">return</span> canBeMapped;
+    } 
+
+    <span class="reserved">function</span> checkOptionals(optional) {
+        var i, canBeMapped=false, pred, gotLat=false, gotLong=false, ns = optional.statements.length;
+        <span class="reserved">for</span>(i=0; i&lt;ns; i++) {
+            pred=optional.statements[i].predicate.uri;
+            switch(pred) {
+                case <span class="literal">'http://xmlns.com/foaf/0.1/based_near'</span>:
+                    optional.statements[i].object.mapUsed=<span class="literal">'based_near'</span>;canBeMapped=true; break;
+                case <span class="literal">'http://www.w3.org/2000/10/swap/pim/contact#address'</span>:
+                    optional.statements[i].object.mapUsed=<span class="literal">'address'</span>;canBeMapped=true; break;
+                case <span class="literal">'http://www.w3.org/2003/01/geo/wgs84_pos#lat'</span>:
+                    optional.statements[i].object.mapUsed=<span class="literal">'lat'</span>;
+                    gotLat=true;
+                    <span class="reserved">if</span>(gotLong)
+                        canBeMapped=true;
+                    break;
+                case <span class="literal">'http://www.w3.org/2003/01/geo/wgs84_pos#long'</span>:
+                    optional.statements[i].object.mapUsed=<span class="literal">'long'</span>;
+                    gotLong=true;
+                    <span class="reserved">if</span>(gotLat)
+                        canBeMapped=true;
+                    break;
+                default:
+                    break;
+            }
+        }
+        <span class="reserved">for</span>(i=0;i&lt;optional.optional.length; i++) {
+            <span class="reserved">if</span>(checkOptionals(optional.optional[i]))
+                canBeMapped=true;
+        }
+        <span class="reserved">return</span> canBeMapped;
+    }
+
+    <span class="reserved">this</span>.initializeKey = <span class="reserved">function</span>() {
+        var keyArea,keyButton, keyClose, keyCloseButton, keyCloseImg;
+        key=document.createElement(<span class="literal">'div'</span>);
+        keyButton=document.createElement(<span class="literal">'div'</span>);
+        keyArea=document.createElement(<span class="literal">'div'</span>);
+        keyClose=document.createElement(<span class="literal">'div'</span>);
+        keyCloseButton=document.createElement(<span class="literal">'span'</span>);
+        keyCloseImg=document.createElement(<span class="literal">'img'</span>);
+
+
+        keyCloseImg.src=<span class="literal">'icons/tbl-x-small.png'</span>;
+        keyCloseImg.title=<span class="literal">'Close Key'</span>;
+        keyClose.style.textAlign=<span class="literal">'right'</span>;
+        keyClose.style.color=<span class="literal">'#777'</span>;
+        keyCloseImg.onclick = <span class="reserved">function</span> () { <span class="reserved">return</span> thisMapView.hideKey(); }
+        keyCloseImg.style.border=<span class="literal">'solid #777 1px'</span>;
+        keyClose.appendChild(keyCloseImg);
+        keyClose.style.padding=<span class="literal">'2px'</span>;
+        keyArea.setAttribute(<span class="literal">'class'</span>,<span class="literal">'mapKeyDiv'</span>);
+        keyButton.appendChild(document.createTextNode(<span class="literal">'Show Key'</span>));
+        keyButton.onclick= <span class="reserved">function</span> () { <span class="reserved">return</span> thisMapView.showKey(); }
+        keyArea.appendChild(keyButton);
+        key.appendChild(keyClose);
+        <span class="reserved">this</span>.container.appendChild(keyArea);
+        <span class="reserved">this</span>.showKey = <span class="reserved">function</span> () {
+            keyArea.removeChild(keyButton);
+            keyArea.appendChild(key);
+        }
+        <span class="reserved">this</span>.hideKey = <span class="reserved">function</span> () {
+            keyArea.removeChild(key);
+            keyArea.appendChild(keyButton);
+        }
+    }
+
+    <span class="reserved">this</span>.addKeyEntry = <span class="reserved">function</span> (q) {
+        var newEntry = document.createElement(<span class="literal">'div'</span>);
+        var iconImg = document.createElement(<span class="literal">'img'</span>);
+        iconImg.src=<span class="literal">'icons/markers/'</span>+q.id%10+<span class="literal">'.png'</span>
+        iconImg.width=12;
+        iconImg.height=21;
+ 
+        newEntry.setAttribute(<span class="literal">'class'</span>,<span class="literal">'keyEntry'</span>);
+        newEntry.setAttribute(<span class="literal">'id'</span>,q.id);
+        newEntry.appendChild(iconImg);
+        newEntry.appendChild(document.createTextNode(q.name));
+        key.appendChild(newEntry);
+    }<span class="comment">//this.addKeyEntry</span>
+
+    <span class="reserved">this</span>.removeKeyEntry = <span class="reserved">function</span>(q) {
+        <span class="comment">//Do what it takes to remove a key item.</span>
+        <span class="comment">//somehow either traverse a DOM element, or maybe an array.</span>
+        <span class="comment">//personally i would prefer if key were a DOM element, and</span>
+        <span class="comment">//i just checked its children for things of class keyEntry.</span>
+        var children = key.childNodes;
+        <span class="reserved">for</span>(i=0;i&lt;children.length;i++) {
+            <span class="reserved">if</span>(children[i].getAttribute(<span class="literal">'class'</span>)==<span class="literal">'keyEntry'</span> &amp;&amp; children[i].getAttribute(<span class="literal">'id'</span>)==q.id) {
+                key.removeChild(children[i]);
+                break; <span class="comment">//The query should really only exist as one instance.</span>
+            }
+        }
+    }<span class="comment">//this.removeKeyEntry</span>
+
+
+} <span class="comment">// mapView</span>
+
+<span class="reserved">function</span> mapViewDoubleClick(event) {
+    var target = getTarget(event);
+    var aa = getAbout(kb, target);
+    <span class="reserved">if</span> (!aa) <span class="reserved">return</span>;
+    GotoURI(aa.uri);
+}
+
+<span class="reserved">function</span> makeInfoWindowObjectNode(obj,asImage) {
+    var newNode = document.createElement(<span class="literal">'td'</span>);
+    <span class="reserved">if</span> (!obj) var obj = new RDFLiteral(<span class="literal">"."</span>);
+    <span class="comment">/*if  ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
+        td.setAttribute('style', 'color:#4444ff');
+    }*/</span>
+    var image
+    <span class="reserved">if</span> (obj.termType == <span class="literal">'literal'</span>) {
+        var text=document.createTextNode(obj.value)
+        newNode.textAlign=<span class="literal">'right'</span>;
+        newNode.appendChild(text);
+    } <span class="reserved">else</span> <span class="reserved">if</span> ((obj.termType == <span class="literal">'symbol'</span>) || (obj.termType == <span class="literal">'bnode'</span>)){
+        <span class="reserved">if</span> (asImage) {
+            var img = AJARImage(obj.uri, label(obj));
+            img.setAttribute(<span class="literal">'class'</span>, <span class="literal">'pic'</span>);
+            newNode.appendChild(img);
+        } <span class="reserved">else</span> {
+            var text=document.createTextNode(label(obj));
+            newNode.textAlign=<span class="literal">'right'</span>;
+            newNode.setAttribute(<span class="literal">'about'</span>, obj.toNT());
+            newNode.setAttribute(<span class="literal">'style'</span>, <span class="literal">'color:#4444ff'</span>);
+            newNode.appendChild(text);
+        }
+    }
+    <span class="reserved">return</span> newNode;
+}
+</pre>
+	<hr>
+
+
+
+<!-- ========== START OF NAVBAR ========== -->
+<a name="navbar_top"><!-- --></a>
+<table border="0" width="100%" cellpadding="1" cellspacing="0">
+<tr>
+<td colspan=2 bgcolor="#EEEEFF" class="NavBarCell1">
+<a name="navbar_top_firstrow"><!-- --></a>
+<table border="0" cellpadding="0" cellspacing="3">
+  <tr align="center" valign="top">
+  
+  
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-summary.html"><font class="NavBarFont1"><b>Overview</b></font></a>&nbsp;</td>
+  <td bgcolor="#FFFFFF" class="NavBarCell1Rev">	&nbsp;<font class="NavBarFont1Rev"><b>File</b></font>&nbsp;</td>
+  
+
+  <td bgcolor="#FFFFFF" class="NavBarCell1"> <font class="NavBarFont1">Class</font>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-tree.html"><font class="NavBarFont1"><b>Tree</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="index-all.html"--><font class="NavBarFont1"><b>Index</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="help-doc.html"><font class="NavBarFont1"><b>Help</b></font></a>&nbsp;</td>
+  </tr>
+</table>
+</td>
+<td bgcolor="#EEEEFF" align="right" valign="top"><em>
+<b></b></em>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+&nbsp;PREV&nbsp;
+&nbsp;NEXT</font></td>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+  <a href="index.html" target="_top"><b>FRAMES</b></a>  &nbsp;
+&nbsp;<a href="overview-summary.html" target="_top"><b>NO FRAMES</b></a>
+&nbsp;&nbsp;
+<script>
+  <!--
+  if(window==top) {
+    document.writeln('<A HREF="allclasses-noframe.html" TARGET=""><B>All Classes</B></A>');
+  }
+  //-->
+</script>
+<noscript>
+<a href="allclasses-noframe.html" target=""><b>All Classes</b></a>
+</noscript>
+</font></td>
+</tr>
+</table>
+<!-- =========== END OF NAVBAR =========== -->
+
+<hr>
+<font size="-1">
+
+</font>
+<div class="jsdoc_ctime">Documentation generated by <a href="http://jsdoc.sourceforge.net/" target="_parent">JSDoc</a> on Wed Jan 31 15:48:38 2007</div>
+</body>
+</html>

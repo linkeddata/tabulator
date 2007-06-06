@@ -1,0 +1,25 @@
+
+<!-- HAND EDITED for real namespaces  -->
+
+
+<rdf:RDF xmlns="#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+
+    <rdf:Description rdf:about="#Joe">
+        <kids xmlns="http://dig.csail.mit.edu/2005/ajar/ajaw/test/test-labels#"
+            rdf:parseType="Resource">
+            <name>Alice</name>
+        </kids>
+        <kids xmlns="http://dig.csail.mit.edu/2005/ajar/ajaw/test/test-labels#"
+            rdf:parseType="Resource">
+            <name>Bob</name>
+        </kids>
+        <name xmlns="http://dig.csail.mit.edu/2005/ajar/ajaw/test/test-labels#">Joseph Smith</name>
+        <rdfs:label>Joseph</rdfs:label>
+    </rdf:Description>
+
+    <rdf:Description rdf:about="#name">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#label"/>
+    </rdf:Description>
+</rdf:RDF>

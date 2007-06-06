@@ -1,0 +1,3 @@
+json.vars.push(kb.variable('v0'))
+json.pat.add(kb.sym('http://example.com/ns#foo'),kb.sym('http://example.com/ns#bar'),kb.variable('v0'))
+json.pat.add(kb.variable('v0'),kb.sym('isVery'),kb.sym('http://anotherplace.org/rdfdocs#big'))

@@ -1,0 +1,2 @@
+json.pat.add(kb.sym('a'),kb.sym('b'),kb.variable('foo'));
+json.vars.push(kb.variable('foo'))

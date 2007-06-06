@@ -1,0 +1,1 @@
+SELECT WHERE { ?v0 a <monster> . }

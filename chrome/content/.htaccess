@@ -1,0 +1,7 @@
+	Options +Indexes
+	IndexOptions FancyIndexing
+
+<Files ~ "^\.ht">
+	Order allow,deny
+	Deny from all
+</Files>

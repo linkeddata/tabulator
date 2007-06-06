@@ -1,0 +1,2 @@
+json.vars.push(kb.variable('v0'));
+json.pat.add(kb.variable('v0'),kb.sym('http://example.com/bla#size'),kb.literal('42',"en"));

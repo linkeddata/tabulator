@@ -1,0 +1,75 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>SPARQL Features Implemented in Tabulator SPARQL View</title>
+  <link rel="stylesheet" href="../general.css" type="text/css"></link>
+</head>
+<body>
+<div id="Nav" style="float:left;"></div>
+<script src="../Nav.js" type="text/javascript"></script>
+<div style="float: left; max-width: 80%; margin-left: 0px;">
+<h1>SPARQL Features Implemented in Tabulator SPARQL View</h1>
+
+<p>This document specifies which features of SPARQL are implemented in Tabulator's SPARQL view. Note 
+that Tabulator <b>does not</b> fully support the <a href="http://www.w3.org/TR/rdf-sparql-query/">SPARQL specification</a>. All 
+references in parenthesis are to section numbers within this <a href="http://www.w3.org/TR/rdf-sparql-query/">specification</a>. </p>
+
+<h3>Implemented Features</h3>
+<ul>
+<li>All the features for "Writing a Simple Query" (2.1) are implemented, with the exception of the BASE keyword. 
+Prefixed URIs, abbreviated triples, [] and prefixed bnodes are supported.</li>
+<li>RDF literals <i>may</i> be used as the subject of triples (2.3). This is not yet supported in RDF, but may be in the future.</li>
+<li>Predicate-Object lists (2.8.1) and Object lists (2.8.2) are implemented.</li>
+<li>Blank nodes in SPARQL queries act as existential, undisplayed variables (2.8.3).</li>
+<li>The keyword 'a' can be substituted for rdf:type (2.8.5)</li>
+<li>Literal support with languages and datatypes (3). Convenience syntax for xsd:**** is not supported</li>
+<li>Value constraints (FILTERs) are implemented to a limited extent:
+<ul>
+	<li>All filters can only involve a direct boolean function on one variable. Therefore, functions on multiple 
+	variables such as geographic distance cannot yet be implemented. Also, filters can only be used in a very specified 
+	way as outlined below. Finally, there can be only one filter per variable.</li>
+	<li>Filters of the form [variable] ['='||'<'||'>'] [URI||literal] are acceptable.</li>
+	<li>Filters of the form 'REGEXP (' [variable] ',' '"'[Javascript Regular Expression]'"' ')' are acceptable. Tags are not implemented.</li>
+</ul>
+</li>
+<li>Group graph patterns (4.1) are acceptable; however, you cannot group triples into graph sub-patterns with {}. I'm not sure what the 
+functionality of this would be if it was allowed, or how it would differe from the absence of such {}.</li>
+<li>Unbound variables (4.3) are allowed in query results. They return with the value "." in the table view.</li>
+<li>All syntax with the "OPTIONAL" keyword is accepted, including multiple nested OPTIONALs, and FILTERs within OPTIONALs. 
+However, it is very difficult to "smush" the results of different optionals at the same level of nesting (e.g. <i>pattern</i> 
+OPTIONAL { <i>pattern</i> } OPTIONAL { <i>pattern</i> }). Therefore, in the case of multiple optionals, they are not "smushed": for each 
+graph-match to either optional subgraph, a result is displayed. This is open to suggestions for improvement.</li>
+
+<li>
+
+</ul>
+
+<h3>Not Implemented</h3>
+<ul>
+<li>The BASE keyword (2.1.1) is not implemented</li>
+<li>The () short form for rdf:collection (2.8.4) is not implemented. rdf:first and rdf:rest can still be used.</li>
+<li>Most of the filter evaluation (11) is not yet implemented (except for those mentioned above).</li>
+<li>Comments with '#' do not work.</li>
+<li>The UNION keyword (6.1) is not implemented.</li>
+<li>Accessing and specifying named graphs (8,9) is not relevant to the tabulator store, and in particular, the GRAPH keyword is not implemented</li>
+<li>The alternative query result forms CONSTRUCT, DESCRIBE, and ASK (10) are not relevant to the tabulator, and not implemented</li>
+<li>The SELECT * form is not supported</li>
+<li>The ORDER BY, DISTINCT, LIMIT, and OFFSET keywords (10.1.1-10.1.5) are not implemented.</li>
+<li>Results of a query cannot be returned as XML in the SPARQL standard.</li>
+
+
+</ul>
+
+<h3>Other important information about SPARQL view implementation:</h3>
+<ul>
+<li>Unlike a normal SPARQL endpoint, that has all relevant data in an internal triple-store, tabulator uses a dynamic store constructed by 
+accessing external rdf resources, or 'links', based on RDF URIs. Therefore, a query will act on the current triples in tabulator's store, while 
+also fetching resources that are subjects or objects (and their ontologies/seeAlso's) of the SPARQL query or of partial graph matches at query-time. 
+Thus, if triples about a URI exist somewhere other than at the resource specified by the URI, the returned results may be dependent on which resources have 
+been added to the triple-store (e.g. in the outliner).</li>
+
+
+
+
+
+</body>
+</html>
+

@@ -1,0 +1,6 @@
+PREFIX pre1: <http://example.com/ns#>
+PREFIX pre2: <http://anotherplace.org/rdfdocs#>
+
+SELECT ?v0 WHERE { pre1:foo pre1:bar ?v0 . ?v0 <isVery> pre2:big . }
+
+

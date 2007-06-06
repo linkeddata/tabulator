@@ -1,0 +1,15 @@
+# Test for IFP processsing
+
+@prefix ex: <http://www.w3.org/2005/10/ajaw/test/ifp#>.
+@prefix : <http://www.w3.org/2005/10/ajaw/test/ifp-meta#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@keywords a.
+
+ssn a owl:InverseFunctionalProperty.
+mother a owl:FunctionalProperty.
+
+
+
+
+
+

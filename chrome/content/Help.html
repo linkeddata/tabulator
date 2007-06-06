@@ -1,0 +1,241 @@
+<?xml encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org" />
+<title>How to use the Tabulator</title>
+<link rel="stylesheet" href="general.css" type="text/css" />
+</head>
+<body>
+<div id="Nav"></div>
+<script src="Nav.js" type="text/javascript">
+</script>
+<div style="float: left; max-width: 80%; margin-left: 10px;">
+<h1>How to use the Tabulator</h1>
+<p align="center"><a href="#Compatibility">Compatibility</a> |
+<a href="#Security">Security</a> | <a href="#Usage">Usage</a> |
+<a href="#Tutorials">Tutorials</a> | <a href=
+"#Limitations">Limitations</a></p>
+<p><em>The tabulator is one possible form of a data browser. It is only one
+way of looking at the Semantic Web, just as a refrigerator is just
+one way of using electricity.</em></p>
+<h2 id="Compatibility">Compatibility</h2>
+<p>We make some effort to stick to the ECMAScript and Dom specs
+where they apply, but we develop and test on <b>Firefox</b>,
+and some Firefox-specific dependencies may have crept in.</p>
+
+<p>To view sites
+outside of the local domain in Firefox, you must <a href=
+"#Security">change your FireFox settings</a>.</p>
+
+<p>Compatibility with other browsers is something we'd like help
+with. For example, David Håsäther contributed a <a
+href="http://widgets.opera.com/widget/5053">opera widget</a>.  (See
+also <a
+href="http://dig.csail.mit.edu/issues/tabulator/issue119">issue 199,
+Opera compatibility</a>).</p>
+
+<p><b>Safari:</b> Weird bugs occur all over the place. "Undefined"
+is littered all over the screen.</p>
+<p><b>Internet Explorer:</b> Not functional in Internet Explorer.
+We are interested in help on this.</p>
+<h2><a name="Security" id="Security">Security and browsing
+different sites</a></h2>
+<h3>The Cross-Domain Browsing Problem</h3>
+<p>Firefox security won't in general let a script from a given DNS
+domain (like www.w3.org) read web data from a different domain.
+Therefore, if you try to browse an rdf file from a different
+domain, the tabulator will fail. There are two ways to allow
+cross-domain requests.</p>
+<h3>The Simple Solution</h3>
+<ol>
+<li>Type into the main browser URI bar "about:config" and hit
+return to get to the config page.</li>
+<li>Type <em>codebase</em> into the filter window</li>
+<li style="list-style: none">Double-click the line<br />
+<tt>signed.applets.codebase_principal_support ... user set ...
+boolean .. false</tt><br />
+<br />
+to change it to 'true'.</li>
+<li>Go back to the tabulator, and try again. When the browser asks
+you whether to allow the script to access arbitrary web pages,
+agree. You probably want to check the "remember the answer this
+question" box.</li>
+</ol>
+<p>Note that this is reducing the security of your browser. You end
+up allowing any web page on the site to read data from the web,
+which could include data from inside your firewall.</p>
+<p>Meanwhile, you might also want to filter for <em>script</em> and
+set the value of <em>dom.max_script_run_time</em> to more than te
+default, say 30. This is the time in second it will wait before
+asking you wheter you want to abort a long-running script.</p>
+<h3>An Alternative Solution</h3>
+<p><strong>Quit Firefox</strong> and then find your prefs.js file
+and add to the bottom of it the line</p>
+<pre>
+user_pref("signed.applets.codebase_principal_support", true);
+</pre>
+<p>On Mac OS-X the file will be in somewhere like
+/Users/timbl/Library/Application
+Support/Firefox/Profiles/mxotp788.default, and in Windows in an
+equivalent place. Then, run Firefox and the tabulator again, and
+answer the dialog box as above.)</p>
+<h3>Why this problem?</h3>
+<p>The tabulator program is acting as your agent as you browse
+data, but the Firefox program doesn't know that you can trust it.
+It could be just a script on some webpage you are browsing, and it
+could be trying to get information which only you have access to
+and send it to a third party. It turns out that it is really
+difficult to stop such a script sending messages out in some form,
+so Firefox security prevents it from accessing anything on the web
+to which you have access to, unless it on the same DNS domain as
+the script itself. This is not a very good system, as many web
+sites which do not trust each other share a domain name. But that
+is how it is. A better way is for the scripts to be signed, but I
+haven't got the script signing system working yet.</p>
+<p>See also Mozilla/Firefox documentation on See also <a href=
+"http://www.mozilla.org/unix/customizing.html#prefs">Customizing</a>
+and <a href=
+"http://www.mozilla.org/projects/security/components/signed-scripts.html">
+Signed scripts</a>.</p>
+<h3>"Script is taking a long time" alerts</h3>
+<p>While you are adjusting the <a href="about:config">Firefox
+parameters</a>, you may wish to increase the
+<strong>dom.max_script_run_time value</strong> in about:config. The
+default seems to be 5 (whcih seems to give in practice around 10
+secs) of time in between Firefox asking whether it is Ok whether
+the script is still running. This happens when loading large RDF
+files. Try 30 or adjust to taste.</p>
+<h2><a name="usage" id="usage">Usage</a></h2>
+<div id="key">Key: <img src="icons/clean/icon_expand.png" alt=
+"expand" /> expand, <img src="icons/clean/icon_collapse.png" alt=
+"collapse" /> collapse, <img src="icons/16dot-blue.gif" alt=
+"fetch" /> Click the dot to fetch data. <img src=
+"icons/16dot-yellow.gif" alt="requested" />loading.... <img src=
+"icons/16dot-red.gif" alt="failed" />Failed to fetch data.
+<img src="icons/16dot-green.gif" alt="loaded" /> Data loaded
+OK.</div>
+<p>The outliner window allows you to explore the semantic web in a
+tree structure. The outliner begins with several initial rdf nodes
+(the objects with clickable <img src="icons/clean/icon_expand.png"
+alt="expand" /> symbols), and you can add more by around between
+different objects by adding their URI at the top of the window and
+clicking "Add to outliner". To explore an rdf node, simply expand
+it by clicking the <img src="icons/clean/icon_expand.png" alt=
+"expand" /> icon for that node. You can click it again to collapse
+it.</p>
+<p>The colored dot next to a given node indicates the status of
+retrieval for that URI. See the key above. Once a data source is
+retrieved, it will not need to be retrieved again, and the colored
+dot will not appear in future copies of that node. A list of data
+sources, accessible and not, is kept at the bottom of the
+browser.</p>
+<h4>Tip: Seeing web access details</h4>
+<p>If you hold the Alt key down when opening up
+an outline, you will also get some behind-the-scenes 
+info  ('Request') about what happened when Tabulator tried to access the thing,
+and also ('RequestedBy') where it found the URI for that thing in the first place.
+</p>
+<h3>Re-focusing</h3>
+<p>Once you begin browsing, the nested tables quickly get quite
+deep. You can clean it all up, refocussing on one item by
+<strong>shift-clicking</strong> on its <img src=
+"icons/clean/icon_expand.png" alt="expand" /> expand or <img src=
+"icons/clean/icon_collapse.png" alt="collapse" /> collapse icon.
+This removes the nested tables, and places your selected node into
+the tabulator as a starting node.</p>
+<p>Alternatively, if you would like to refocus on a node
+<i>without</i> removing the original tree you were browsing in, you
+can double-click on a node field (the text next to a <img src=
+"icons/clean/icon_expand.png" alt="expand" />/ <img src=
+"icons/clean/icon_collapse.png" alt="collapse" /> icon).</p>
+<h3>Seeing the URI</h3>
+<p>The point a browser is to give you the data without the URIs
+used as identifiers. They are hidden whenever there is a label,
+title, or name of some sort which can be used for something on the
+screen.</p>
+<p>To see something's URI, click once on a table cell and (if
+appropriate) the URI of the thing described in the cell will be put
+in the URI bar at the top.</p>
+<h3>Performing Queries on Data</h3>
+<p>As you explore the outliner, you may want to create a table,
+map, calendar, or other view containing certain pieces of
+information about each of several equivalently-related objects.
+This is how to do it:</p>
+<ol>
+<li>First find one instance of the property you are looking for and
+select it by clicking on the field name (not the field value). To
+select or deselect multiple field names, hold down the
+<strong>Alt</strong> key.</li>
+<li>The little checkboxes that appear in the selected fields and
+their descendants can be checked to make a section of the query
+<strong>optional</strong>. If part of a query is optional, then any
+results that have no value for that field will still be shown as a
+result, but with a "." in place of its value</li>
+<li>Click on the button "View and Save Query"</li>
+<li>You should see a table with your data appear. Be patient, this
+may take up to several minutes. Once the table appears, you can
+re-focus on any of the blue (non-literal) results in the table by
+double-clicking on them. You can also save the table as an HTML
+document with the button "Export as HTML"</li>
+<li>If your query can be mapped or calendarized, click on the map
+or calendar tabs to see the data in that format.</li>
+<li>If you want to manually edit your query in the SPARQL query
+language, click on the SPARQL tab. This tab will also allow you to
+create a URL that will open the tabulator with this query already
+saved in it.</li>
+</ol>
+<p>For example, to make a table of the names of all the W3C working
+group chairs and team contacts, expand World Wide Web Consortium
+-&gt; W3C Groups and Organizational Structure -&gt; working group.
+Now, you may want to shift-click the "working group" icon to
+refocus it. We refocus on "working group" so that only matches
+within "working group" will be tabulated. Open up one of the
+working groups and click on the "chair" name field. Now alt click
+on the "team contact" field. Both these fields should now be
+highlighted in green. Now you can go down to the bottom of the
+outline and click "Find All" to create the
+table.</p>
+<p>What you will notice in this example is that every combination
+of working group/chair/team contact has its own entry in the table.
+You can sort the table by clicking on the column heading of the
+column to sort by. Then you can export this data as an HTML table
+by clicking the "Export as HTML" button and saving the page that
+appears.</p>
+<a name="Tutorials" id="Tutorials"></a>
+<h3><a name="Tutorials" id="Tutorials">Linking to a tabulator
+view</a></h3>
+<p>If you take the URI of the tabulator page, and then append
+<tt>uri=</tt> and the <em>uri-encoded</em> URI of the thing you are
+viewing, then this is a URI of a tabulator view for that thing. You
+can get the URI for anything in the tabulator outline view by
+clicking on it, and then looking in the tabulator's URI form field
+(not the browser's address bar). Remmeber to encode # as %23.</p>
+<h2>Tutorials</h2>
+<ul>
+<li><a href="tut/querytut.html">Query Tutorial</a></li>
+<li><a href="tut/tabmap.html">Map Tutorial</a></li>
+<li><a href="tut/tabcal.html">Calendar Tutorial</a></li>
+</ul>
+<h2><a name="Limitations" id="Limitations">Bug reports</a></h2>
+<ul>
+<li><a href="http://dig.csail.mit.edu/issues/tabulator/">Tabulator
+Issue Tracker</a></li>
+</ul>
+Please make sure your bug is not already there before you enter it,
+and make up a title which will identify it well.
+<h2>Limitations</h2>
+<p>This is a very simple unoptimized javascript implementation, so
+it will tend to be slow with large files. If you get a message that
+a script is taking a long time, you have a choice of letting it run
+or aborting it. This is a firefox feature, you can control it using
+the about:config page. (Type about:config into the firefox URL bar,
+presss return, type "script" into the filter and then change the
+value for dom_max_script_run_time to say 30)</p>
+<p>This is a proof of concept program, many user interface things
+are missing, for example from the table view.</p>
+</div>
+</body>
+</html>

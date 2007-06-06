@@ -1,0 +1,9 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@keywords a.
+
+name rdfs:subPropertyOf rdfs:label.
+
+Joe rdfs:label "Joseph"; name "Joseph Smith"; kids [ name "Alice"], [name "Bob"].
+
+
+# ends

@@ -1,0 +1,37 @@
+/*  Some style for the tabulator
+*/
+
+body {background-color: #fffff0 }
+
+
+table table {background-color: white}
+
+table table table { background-color: #fffff0 }
+table table table table { background-color: #fff3f3 }
+table table table table table
+	 { background-color: #f3fff3 }
+table table table table table table
+	 { background-color: white}
+
+iframe { background: white }
+
+img.pic { max-height: 20em }
+
+.fetched { background-color: #eeffee }
+.requested { background-color: yellow }
+.failed { color: red; background-color: white }
+
+pre#status { font-size: 10pt }
+
+table#sources { background-color: #222 }
+
+
+table { border-spacing: 0}
+
+table { margin: 1em }
+
+td { 	border-left: none;
+	border-top: none;
+	border-right: solid #333 1px ;
+	border-bottom: solid #333 1px;
+	vertical-align: top }

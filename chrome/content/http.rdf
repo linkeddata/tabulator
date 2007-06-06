@@ -1,0 +1,77 @@
+<rdf:RDF
+  xmlns="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:owl="http://www.w3.org/2002/07/owl#"
+  xmlns:foaf="http://xmlns.com/foaf/0.1/"
+  xmlns:httph="httph#">
+
+  <owl:Ontology
+    rdf:about="#"
+    dc:title="HTTP Message Vocabulary"
+    dc:description="This is a vocabulary for describing HTTP messages."
+    rdfs:comment="Currently this vocabulary is a work-in-progress and functions
+    mainly as a placeholder."
+    dc:date="2006-07-26">
+    <dc:creator>
+      <foaf:Person
+        rdf:about="http://web.mit.edu/dsheets/www/foaf.rdf#dsheets"
+	foaf:name="David Sheets">
+	<foaf:mbox rdf:resource="mailto:dsheets@mit.edu"/>
+      </foaf:Person>
+    </dc:creator>
+  </owl:Ontology>
+
+  <Class
+    rdf:about="#Message"
+    rdfs:label="HTTP Message"
+    rdfs:comment="The class of all HTTP messages: 4.1">
+    <subClassOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
+    <isDefinedBy rdf:resource="#"/>
+  </Class>
+
+  <Class
+    rdf:about="#RequestMessage"
+    rdfs:label="HTTP Request Message"
+    rdfs:comment="This class of HTTP requests: 4.1">
+    <subClassOf rdf:resource="#Message"/>
+    <isDefinedBy rdf:resource="#"/>
+  </Class>
+
+  <Class
+    rdf:about="#ResponseMessage"
+    rdfs:label="HTTP Response Message"
+    rdfs:comment="This class of HTTP responses: 4.1">
+    <subClassOf rdf:resource="#Message"/>
+    <isDefinedBy rdf:resource="#"/>
+  </Class>
+
+  <rdf:Property
+    rdf:about="#method"
+    rdfs:label="method"
+    rdfs:comment="The method used in the request: 5.1.1">
+    <domain rdf:resource="#RequestMessage"/>
+    <range rdf:resource="http://www.w3.org/2000/01/rdf-schema#Literal"/>
+    <isDefinedBy rdf:resource="#"/>
+  </rdf:Property>
+
+  <rdf:Property
+    rdf:about="#requestURI"
+    rdfs:label="request URI"
+    rdfs:comment="The URI being requested: 5.1.2">
+    <domain rdf:resource="#RequestMessage"/>
+    <range rdf:resource="http://www.w3.org/2000/01/rdf-schema#Literal"/>
+    <isDefinedBy rdf:resource="#"/>
+  </rdf:Property>
+
+  <rdf:Property
+    rdf:about="#version"
+    rdfs:label="version"
+    rdfs:comment="The HTTP version of the request: 3.1,5.1,6.1">
+    <domain rdf:resource="#Message"/>
+    <range rdf:resource="http://www.w3.org/2000/01/rdf-schema#Literal"/>
+    <isDefinedBy rdf:resource="#"/>
+  </rdf:Property>
+
+</rdf:RDF>

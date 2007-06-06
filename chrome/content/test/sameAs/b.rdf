@@ -1,0 +1,12 @@
+<rdf:RDF xmlns="http://dig.csail.mit.edu/2005/ajar/ajaw/test/sameAs/b.rdf#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+    <BeerDrinker rdf:about="#person2">
+       <owl:sameAs rdf:resource="a.rdf#person1" />
+       <owl:sameAs rdf:resource="c.rdf#person3" />
+    </BeerDrinker>
+</rdf:RDF>
+
+<!-- Test that the IDs with samller and larger string compare value 
+wil both be smused.  -->

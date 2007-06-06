@@ -1,0 +1,21 @@
+# Test for IFP processsing
+
+@prefix ex: <http://www.w3.org/2005/10/ajaw/test/ifp#>.
+@prefix : <http://www.w3.org/2005/10/ajaw/test/ifp-meta#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@keywords a.
+
+ex:John a Person; ssn "1234"; eyeColor "green".
+ex:Jack a Person;  ssn "1234"; haircolor "straw".
+
+ex:Joe  a Person; mother ex:Beth.
+ex:Joe mother [ a Person;  hairColor "Grey" ].
+ex:Beth name "Elizabeth".
+
+ex:Test1 result ex:Pi.
+ex:Pi a  Number; = "3.1415926".
+
+
+
+
+

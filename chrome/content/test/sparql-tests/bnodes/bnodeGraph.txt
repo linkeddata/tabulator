@@ -1,0 +1,11 @@
+PREFIX pre1: <http://example.com/ns#>
+PREFIX pre2: <http://anotherplace.org/rdfdocs#>
+
+SELECT WHERE { 
+ _:a <name> "John" .
+ _:a <father> _:b .
+ _:b <wife> _:c .
+ _:b <name> <michael> .
+ _:a <mother> _:c .
+ _:a <dog>  [] }
+

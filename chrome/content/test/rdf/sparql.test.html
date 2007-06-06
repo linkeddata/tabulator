@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?><!--*- nxml -*-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>SPARQL W3C Tests</title>
+    <link rel="stylesheet" type="text/css"
+    href="ajaw/test/jsunit/css/jsUnitStyle.css" />
+<script src="../../rdf/sparql.js" type="text/javascript">
+</script>
+<script src="../../util.js" type="text/javascript">
+</script>
+<script src="../../uri.js" type="text/javascript">
+</script>
+<script src="../../rdf/term.js" type="text/javascript">
+</script>
+<script src="../../rdf/match.js" type="text/javascript">
+</script>
+<script src="../../rdf/rdfparser.js" type="text/javascript">
+</script>
+<script src="../../rdf/identity.js" type="text/javascript">
+</script>
+<script src="../../rdf/query.js" type="text/javascript">
+</script>
+<script src="../../rdf/sources.js" type="text/javascript">
+</script>
+<script src="../../rdf/remote.js" type="text/javascript">
+</script>
+<script src="../../tabulate.js" type="text/javascript">
+</script>
+<script src="../../sorttable.js" type="text/javascript">
+</script>
+
+<script language="JavaScript" type="text/javascript" src="../jsunit/app/jsUnitCore.js"></script>
+<script language="JavaScript" type="text/javascript">
+//<![CDATA[
+function setUpPage() {
+    xhr = XMLHTTPFactory()
+    setUpPageStatus = "complete"
+}
+
+function runW3CTest(dir, tests, desc) {
+
+    for (var y = 0; y < tests.length; y++) {
+
+    	      var desc2 = desc+"."+tests[y]
+	      getW3CData(dir + "/" + tests[y]+".txt")
+		var q = SPARQLToQuery(xhr.responseText,true)
+		//var txt2 = queryToSPARQL(q)
+		//alert(xhr.responseText+"||||||"+txt2)
+		getW3CData(dir + "/" + tests[y]+".json")
+		json = new Query()
+		eval(xhr.responseText);
+		assert("Vars.length: "+q.vars.length+" | "+json.vars.length+" in "+desc, q.vars.length==json.vars.length)
+		for (x in q.vars)
+			assert("Var1: "+q.vars[x]+", Var2: "+json.vars[x]+" in "+desc,q.vars[x].toNT()==json.vars[x].toNT())
+		testEquality(q.pat,json.pat,desc2)
+	}
+   	function testEquality (q1,q2,desc)
+   	{
+		assert("Statements.length: "+q1.statements.length+" | "+q2.statements.length+" in "+desc, q1.statements.length==q2.statements.length)
+		for (x in q1.statements)
+		{
+			var success = (RDFTermMatch(q1.statements[x].subject,q2.statements[x].subject) && 
+               			   RDFTermMatch(q1.statements[x].predicate,q2.statements[x].predicate) && 
+		   			   RDFTermMatch(q1.statements[x].object,q2.statements[x].object))?true:false		
+			assert("Stat1: "+q1.statements[x]+", Stat2: "+q2.statements[x]+" in "+desc,success)
+		}
+		for (x in q1.constraints)
+			assert("Con1: "+q1.constraints[x]+", Con2: "+q2.constraints[x]+" in "+desc,typeof q2.constraints[x]!='undefined' && q1.constraints[x].describe()==q2.constraints[x].describe())
+		for (x in q2.constraints)
+			assert("Con1: "+q1.constraints[x]+", Con2: "+q2.constraints[x]+" in "+desc,typeof q1.constraints[x]!='undefined' && q1.constraints[x].describe()==q2.constraints[x].describe())
+		assert("Equal # of optionals in "+desc, q1.optional.length==q2.optional.length)
+		for (x in q1.optional)
+			testEquality(q1.optional[x],q2.optional[x],"optional "+x+" in "+desc)
+   }
+}
+
+
+function getW3CData(relURI) {
+    xhr.open("GET", "../sparql-tests/" + relURI, false)
+    xhr.send("")
+}
+
+//FOR SOME REASON, IT RUNS THE TESTS BOTTOM TO TOP
+
+//This won't work, particularly because SPARQL can't do graph-matching with bnodes.
+/*function testBnodes() {
+ var dir = "bnodes"
+   var tests = ["simpleBnode","bnodeGraph"]
+   runW3CTest(dir, tests, dir)
+}*/
+
+function testOptionals() {
+  var dir = "optionals"
+   var tests = ["simpleOptional","optional_filter","doubleOptional","nestedOptional"]
+   runW3CTest(dir, tests, dir)
+}
+
+function testFilters() {
+  var dir = "filters"
+   var tests = ["equalTo","equalTo_uri","greaterThan","RegExp","twoConstraints"]
+   runW3CTest(dir, tests, dir)
+}
+
+function testShortcuts() {
+     var dir = "shortcuts"
+    var tests = ["keyword_a","keyword_isof","prefixed_uri","statement_short"]
+    runW3CTest(dir, tests, dir)
+}
+
+function testLiterals() {
+    var dir = "literals"
+    var tests = ["literals_datatype","literals_lang"]
+    runW3CTest(dir, tests, dir)
+}
+
+function testSimple() {
+    var dir = "simple"
+    var tests = ["simple1","simple2","simple3","simple4"]
+    runW3CTest(dir, tests, dir)
+}
+
+
+
+
+//]]>
+</script>
+  </head>
+
+  <body>
+    <h1>Tabulator SPARQL tests</h1>
+
+    <p>This is a collection of test for <a href="../../">tabulator</a>
+    SPARQL functionality. It's intended for use
+    with <a href="../jsunit/testRunner.html">JSUnit's testRunner</a>.</p>
+
+  </body>
+</html>

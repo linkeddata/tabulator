@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html id='docHTML'>
+<head>
+    <meta name="generator" content=
+    "HTML Tidy for Mac OS X (vers 1st December 2004), see www.w3.org">
+
+    <title>Tabulator: DBView W3C Team database demo</title>
+    <!--    <script type="text/ecmascript" xlink:href="rdf/parser.js" /> -->
+    <link rel="stylesheet" href="dynamic.css" type="text/css" />
+    <!-- These are from http://www.w3.org/2005/ajar/rdf/ -->
+
+<script src="util.js" type="text/javascript">
+</script>
+<script src="uri.js" type="text/javascript">
+</script>
+<script src="rdf/term.js" type="text/javascript">
+</script>
+<script src="rdf/match.js" type="text/javascript">
+</script>
+<script src="rdf/rdfparser.js" type="text/javascript">
+</script>
+<script src="rdf/identity.js" type="text/javascript">
+</script>
+<script src="rdf/query.js" type="text/javascript">
+</script>
+<script src="rdf/sources.js" type="text/javascript">
+</script>
+<script src="rdf/remote.js" type="text/javascript">
+</script>
+<script src="log.js" type="text/javascript">
+</script>
+<script src="tabulate.js" type="text/javascript">
+</script>
+<script src="sorttable.js" type="text/javascript">
+</script>
+<script src="mapper.js" type="text/javascript">
+</script>
+<script src="mapView.js" type="text/javascript">
+</script>
+<!--<script src="http://simile.mit.edu/timeline/api/timeline-api.js" type="text/javascript"></script>-->
+<script src="calView.js" type="text/javascript">
+</script>
+
+<script src="calView/timeline/api/timeline-api.js" type="text/javascript"></script>
+<script src="calView/timeline/api/timelineView.js" type="text/javascript"></script>
+
+<script src="tabviews.js" type="text/javascript">
+</script>
+<script src="rdf/sparql.js" type="text/javascript">
+</script>
+<script src="sparqlView.js" type="text/javascript">
+</script>
+<script type="text/javascript" src="calView/calView.js"></script>
+<script src="tableView.js" type="text/javascript">
+</script>
+
+
+
+<!-- Script for Google Maps API - WARNING: Only works for dig.csail.mit.edu-originating requests -->
+    <script src="http://maps.google.com/maps?file=api&amp;v=2.55&amp;key=ABQIAAAAc5soiwASdnA8N5abQqG3pBTJK_aDg4EoIC66fat1oOogJpoOYxRCy9Ektk6AIGW_c_nGt8wZICp5zA"
+      type="text/javascript"></script>
+
+<!--<script type="text/javascript" src="http://api.maps.yahoo.com/ajaxymap?v=3.0&appid=tabulator"> </script>-->
+</head>
+
+<body>
+     <div id="MenuBarShadow" style="display: hidden;">
+        URI: <input type="text" size="80"/>
+	     <input type="button" value="Add to Outliner"/>
+        <a class="menu" href="Help.html">Help</a> <a class="menu" href=
+        "About.html">About</a><div class="warning">This is the live
+        <a href="http://dig.csail.mit.edu/issues/tabulator/">development</a> version of the Tabulator. The <a
+        href="http://dig.csail.mit.edu/2005/ajar/release/tabulator/0.7/tab.html">latest
+        release</a> is also available.</div>
+    <div id="MenuBar">
+        URI: <input type="text" id="UserURI" size="80"
+	            onkeypress="GotoFormURI_enterKey(event)"/>
+	     <input type="button" onclick="GotoFormURI()"
+	            value="Add to Outliner"/>
+        <a class="menu" href="Help.html">Help</a> <a class="menu" href=
+        "About.html">About</a><div class="warning">This is the live
+        <a href="http://dig.csail.mit.edu/issues/tabulator/">development</a> version of the Tabulator. The <a
+        href="http://dig.csail.mit.edu/2005/ajar/release/tabulator/0.7/tab.html">latest
+        release</a> is also available.</div>
+    <div id="TabulatorStatusWidget"></div>
+    </div>
+    <!--
+    <p>Firefox security prevents this from working on any data
+    outside the DNS domain of the script.<br>
+    Example starting places are below. You can add new ones by
+    putting the URI in the address bar above and clicking "Add to
+    outliner".</p>
+    -->
+
+    <div onmousedown="TabulatorMousedown(event)" ondblclick=
+    "TabulatorDoubleClick(event)">
+        <table id="browser">
+ 
+            <tr>
+                <td about=
+                "&lt;http://cgi.w3.org/dbview/w3c#.database&gt;">
+                <img border="0" src="icons/tbl-expand-trans.png" alt=
+                "expand"> <img border="0" src="icons/16dot-blue.gif" alt=
+                "fetch"> The database</td>
+            </tr>
+
+            <tr>
+                <td about=
+                "&lt;http://www.w3.org/2000/10/swap/db#Table&gt;">
+                <img border="0" src="icons/tbl-expand-trans.png" alt=
+                "expand"> <img border="0" src="icons/16dot-blue.gif" alt=
+                "fetch"> Tables in the database</td>
+            </tr>
+
+            <tr>
+                <td about=
+                "&lt;http://www.w3.org/2006/05/dbview/keys.rdf&gt;">
+                <img border="0" src="icons/tbl-expand-trans.png" alt=
+                "expand"> <img border="0" src="icons/16dot-blue.gif" alt=
+                "fetch"> keys - the metadata for testing </td>
+            </tr>
+
+            <tr>
+                <td about=
+                "&lt;http://cgi.w3.org/dbview/w3c/wgDetails#.table&gt;">
+                <img border="0" src="icons/tbl-expand-trans.png" alt=
+                "expand"> <img border="0" src="icons/16dot-blue.gif" alt=
+                "fetch"> Groups </td>
+            </tr>
+
+            <tr>
+                <td about=
+                "&lt;http://cgi.w3.org/dbview/w3c/userDetails/item/id/3869#item&gt;">
+                <img border="0" src="icons/tbl-expand-trans.png" alt=
+                "expand"> <img border="0" src="icons/16dot-blue.gif" alt=
+                "fetch"> Danny as a user</td>
+            </tr>
+
+<!--
+            <tr>
+                <td about=
+                "&lt;http://www.w3.org/People/Berners-Lee/card#i&gt;">
+                <img border="0" src="icons/tbl-expand-trans.png" alt=
+                "expand"> Tim Berners-Lee</td>
+            </tr>
+-->
+        </table>
+    </div>
+
+
+    <form name="TabulateForm" onsubmit="void 0" action="" id=
+    "TabulateForm">
+        <input type="button" onclick="void AJAR_Tabulate()" value=
+        "Tabulate selected properties">
+        <input type="button" onclick="void AJAR_ClearTable()" value=
+        "Clear">
+        <a class="menu" href=
+        "Help.html">Help</a> <a class="menu" href=
+        "About.html">About</a>
+    </form>
+
+    <div id="results"></div>
+    <hr>
+
+    <h3><img src='icons/tbl-collapse.png' alt='collapse'
+    onmousedown='AJAR_hideNext(event)' />
+        Key</h3><div id="key">
+        &nbsp;Key: Data: <img src="icons/16dot-blue.gif" alt="fetch">
+        fetch data. <img src="icons/16dot-yellow.gif" alt="requested">
+        loading. <img src="icons/16dot-red.gif" alt="failed"> failed.
+        <img src="icons/16dot-green.gif" alt="loaded"> loaded.
+        &nbsp;&nbsp;&nbsp; Display: <img src=
+        "icons/tbl-expand-trans.png" alt="expand"> expand, <img src=
+        "icons/tbl-collapse.png" alt="collapse"> collapse,
+    </div>
+
+    <h3><img src='icons/tbl-expand-trans.png' alt='expand'
+    onmousedown='AJAR_hideNext(event)' />
+        Sources</h3><div class="collapse">
+    <table id="sources"></table>
+    <hr>
+        </div><h3><img src='icons/tbl-expand-trans.png' alt='expand'
+    onmousedown='AJAR_hideNext(event)' />Log</h3><div class="collapse">
+    <span onmousedown="setLogging(TALL)">[turn logging
+    on]</span> <span onmousedown="setLogging(TNONE)">[turn logging
+    off]</span> <span onmousedown="clearStatus()">[clear
+    log]</span> <span onmousedown="test()">[test
+    ]</span>
+    <span onmousedown="dumpStore()">[dump store to log]</span><br>
+    <span onmousedown="fyi(document.getElementById('docHTML').innerHTML)">[dump HTML to log]</span><br>
+    <hr>
+    <pre id="status">
+        Initial status. $Id: dbdemo.html 2333 2006-11-05 16:38:26Z timbl $<br>
+    </pre><span onmousedown="setLogging(TALL)">[turn logging on]</span>
+    <span onmousedown="setLogging(TNONE)">[turn logging off]</span>
+    <span onmousedown="clearStatus()">[clear log]</span>
+    <span onmousedown="dumpStore()">[dump store to log]</span><br>
+    <hr>
+        </div>
+</body>
+</html>

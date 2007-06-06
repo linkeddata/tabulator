@@ -1,0 +1,233 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Frameset//EN""http://www.w3.org/TR/REC-html40/frameset.dtd">
+<html>
+<head>
+<title>
+ Overview
+</title>
+<link rel ="stylesheet" type="text/css" href="stylesheet.css" title="Style">
+<script>
+function asd() {
+	
+		parent.document.title="SampleView.js Overview";
+	
+}
+</script>
+</head>
+<body bgcolor="white" onload="asd();">
+
+<!-- ========== START OF NAVBAR ========== -->
+<a name="navbar_top"><!-- --></a>
+<table border="0" width="100%" cellpadding="1" cellspacing="0">
+<tr>
+<td colspan=2 bgcolor="#EEEEFF" class="NavBarCell1">
+<a name="navbar_top_firstrow"><!-- --></a>
+<table border="0" cellpadding="0" cellspacing="3">
+  <tr align="center" valign="top">
+  
+  
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-summary.html"><font class="NavBarFont1"><b>Overview</b></font></a>&nbsp;</td>
+  <td bgcolor="#FFFFFF" class="NavBarCell1Rev">	&nbsp;<font class="NavBarFont1Rev"><b>File</b></font>&nbsp;</td>
+  
+
+  <td bgcolor="#FFFFFF" class="NavBarCell1"> 	<font class="NavBarFont1">Class</font>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-tree.html"><font class="NavBarFont1"><b>Tree</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="index-all.html"--><font class="NavBarFont1"><b>Index</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="help-doc.html"><font class="NavBarFont1"><b>Help</b></font></a>&nbsp;</td>
+  </tr>
+</table>
+</td>
+<td bgcolor="#EEEEFF" align="right" valign="top">
+<em>
+<b></b></em>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+&nbsp;PREV&nbsp;
+&nbsp;NEXT</font></td>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+  <a href="index.html" target="_top"><b>FRAMES</b></a>  &nbsp;
+&nbsp;<a href="overview-summary.html" target="_top"><b>NO FRAMES</b></a>
+&nbsp;&nbsp;
+<script>
+  <!--
+  if(window==top) {
+    document.writeln('<A HREF="allclasses-noframe.html" TARGET=""><B>All Classes</B></A>');
+  }
+  //-->
+</script>
+<noscript>
+<a href="allclasses-noframe.html" target=""><b>All Classes</b></a>
+</noscript>
+</font></td>
+</tr>
+</table>
+<!-- =========== END OF NAVBAR =========== -->
+
+<hr>
+<center>
+	
+	   <h2>SampleView.js</h2>
+	
+</center>
+
+	
+
+
+<h4>Summary</h4>
+<p>
+	
+		No overview generated for 'SampleView.js'<BR/><BR/>
+	
+</p>
+
+<hr>
+
+
+    <table border="1" cellpadding="3" cellspacing="0" width="100%">
+    <tr bgcolor="#CCCCFF" class="TableHeadingColor">
+    <td colspan=2><font size="+2">
+    
+        <b>Class Summary</b>
+    
+    </font></td>
+    </tr>
+    
+    <tr bgcolor="white" class="TableRowColor">
+    <td width="15%"><b><a href="SampleView.html">SampleView</a></b></td>
+    <td>The SampleView class highlights all functions and fields that
+ are required for a valid tabbed view in the tabulator.</td>
+    </tr>
+    
+    </table>
+    <hr/> 
+
+
+<!-- ========== METHOD SUMMARY =========== -->
+
+<!-- ========== END METHOD SUMMARY =========== -->
+
+
+        <pre class="sourceview"><span class="comment">/**<span class="attrib">@class</span> The SampleView class highlights all functions and fields that
+ * are required for a valid tabbed view in the tabulator.
+ * <span class="attrib">@constructor</span>
+ */</span>
+<span class="reserved">function</span> SampleView(container) {
+
+    <span class="comment">/**queryStates holds the individual state of each query that the view can
+     * currently display.  Values in queryStates should be indexed by query
+     * id number.  The possible values for a query are 0=inactive, 1=active,
+     * and 2=greyed out.*/</span>
+    <span class="reserved">this</span>.queryStates=[];
+    
+    <span class="comment">/**container holds the div element that this view is meant to be displayed
+     * in.  It is worth noting, for clarity's sake, that this should be used as
+     * this.container, not just container, since it is a field in the view 
+     * class.*/</span>
+    <span class="reserved">this</span>.container=container;
+    
+    <span class="comment">/**name holds the name of this view.  Just give it a relevant name.*/</span>
+    <span class="reserved">this</span>.name=<span class="literal">"Sample"</span>;
+
+    <span class="comment">/**this.drawQuery takes in a query and then draws that query into the
+     * container in the proper way for this view.  It should also set
+     * the query's value in queryStates[q.id] to reflect that it is now
+     * displayed.*/</span>
+    <span class="reserved">this</span>.drawQuery = <span class="reserved">function</span>(q) {
+        <span class="reserved">this</span>.container.appendChild(document.createTextNode(<span class="literal">'Drawing query with id '</span>+q.id+<span class="literal">' and name '</span>+q.name));
+        <span class="reserved">this</span>.queryStates[q.id]=1;
+    }
+
+    <span class="comment">/**this.undrawQuery removes a query from the display.  It is up to the
+     * view's author whether or not the data for the data should be discarded,
+     * but I suggest that it be discarded, since this gives checking and
+     * unchecking the effect of "refreshing" the query.*/</span>
+    <span class="reserved">this</span>.undrawQuery = <span class="reserved">function</span>(q) {
+        <span class="reserved">if</span>(<span class="reserved">this</span>.queryStates[q.id]==1) {
+            <span class="reserved">this</span>.container.appendChild(document.createTextNode(<span class="literal">'Undrawing query with id '</span>+q.id));
+            <span class="reserved">this</span>.queryStates[q.id]=0;
+        }
+    }
+
+    <span class="comment">/**this.addQuery adds a query to the view's queryStates.  There may also
+     * be some kind of preprocessing involved with this, but I would not
+     * recommend it since too much preprocessing without the user requesting
+     * a view to be displayed will cause unnecessary lag.*/</span>
+    <span class="reserved">this</span>.addQuery = <span class="reserved">function</span>(q) {
+        <span class="reserved">this</span>.container.appendChild(document.createTextNode(<span class="literal">'Adding query with id '</span>+q.id));
+        <span class="reserved">this</span>.queryStates[q.id]=0;
+    }
+
+    <span class="comment">/**this.removeQuery should undraw the query (Or at least, I can't think of
+     * a valid scenario where that wouldn't be the case), and then delete the
+     * query's value from the queryStates array.*/</span>
+    <span class="reserved">this</span>.removeQuery = <span class="reserved">function</span>(q) {
+        <span class="reserved">this</span>.container.appendChild(document.createTextNode(<span class="literal">'Removing query with id '</span>+q.id));
+        <span class="reserved">if</span>(<span class="reserved">this</span>.queryStates[q.id]!=null) {
+            <span class="reserved">this</span>.undrawQuery(q);
+            delete <span class="reserved">this</span>.queryStates[q.id];
+        }
+    }
+}
+</pre>
+	<hr>
+
+
+
+<!-- ========== START OF NAVBAR ========== -->
+<a name="navbar_top"><!-- --></a>
+<table border="0" width="100%" cellpadding="1" cellspacing="0">
+<tr>
+<td colspan=2 bgcolor="#EEEEFF" class="NavBarCell1">
+<a name="navbar_top_firstrow"><!-- --></a>
+<table border="0" cellpadding="0" cellspacing="3">
+  <tr align="center" valign="top">
+  
+  
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-summary.html"><font class="NavBarFont1"><b>Overview</b></font></a>&nbsp;</td>
+  <td bgcolor="#FFFFFF" class="NavBarCell1Rev">	&nbsp;<font class="NavBarFont1Rev"><b>File</b></font>&nbsp;</td>
+  
+
+  <td bgcolor="#FFFFFF" class="NavBarCell1"> <font class="NavBarFont1">Class</font>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-tree.html"><font class="NavBarFont1"><b>Tree</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="index-all.html"--><font class="NavBarFont1"><b>Index</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="help-doc.html"><font class="NavBarFont1"><b>Help</b></font></a>&nbsp;</td>
+  </tr>
+</table>
+</td>
+<td bgcolor="#EEEEFF" align="right" valign="top"><em>
+<b></b></em>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+&nbsp;PREV&nbsp;
+&nbsp;NEXT</font></td>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+  <a href="index.html" target="_top"><b>FRAMES</b></a>  &nbsp;
+&nbsp;<a href="overview-summary.html" target="_top"><b>NO FRAMES</b></a>
+&nbsp;&nbsp;
+<script>
+  <!--
+  if(window==top) {
+    document.writeln('<A HREF="allclasses-noframe.html" TARGET=""><B>All Classes</B></A>');
+  }
+  //-->
+</script>
+<noscript>
+<a href="allclasses-noframe.html" target=""><b>All Classes</b></a>
+</noscript>
+</font></td>
+</tr>
+</table>
+<!-- =========== END OF NAVBAR =========== -->
+
+<hr>
+<font size="-1">
+
+</font>
+<div class="jsdoc_ctime">Documentation generated by <a href="http://jsdoc.sourceforge.net/" target="_parent">JSDoc</a> on Wed Jan 31 15:48:38 2007</div>
+</body>
+</html>

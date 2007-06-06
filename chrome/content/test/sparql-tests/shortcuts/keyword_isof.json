@@ -1,0 +1,1 @@
+json.pat.add(kb.sym('beachball1'),kb.sym('color'),kb.literal('blue',''))

@@ -1,0 +1,766 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Frameset//EN""http://www.w3.org/TR/REC-html40/frameset.dtd">
+<html>
+<head>
+<title>
+ Overview
+</title>
+<link rel ="stylesheet" type="text/css" href="stylesheet.css" title="Style">
+<script>
+function asd() {
+	
+		parent.document.title="rdfparser.js Overview";
+	
+}
+</script>
+</head>
+<body bgcolor="white" onload="asd();">
+
+<!-- ========== START OF NAVBAR ========== -->
+<a name="navbar_top"><!-- --></a>
+<table border="0" width="100%" cellpadding="1" cellspacing="0">
+<tr>
+<td colspan=2 bgcolor="#EEEEFF" class="NavBarCell1">
+<a name="navbar_top_firstrow"><!-- --></a>
+<table border="0" cellpadding="0" cellspacing="3">
+  <tr align="center" valign="top">
+  
+  
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-summary.html"><font class="NavBarFont1"><b>Overview</b></font></a>&nbsp;</td>
+  <td bgcolor="#FFFFFF" class="NavBarCell1Rev">	&nbsp;<font class="NavBarFont1Rev"><b>File</b></font>&nbsp;</td>
+  
+
+  <td bgcolor="#FFFFFF" class="NavBarCell1"> 	<font class="NavBarFont1">Class</font>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-tree.html"><font class="NavBarFont1"><b>Tree</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="index-all.html"--><font class="NavBarFont1"><b>Index</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="help-doc.html"><font class="NavBarFont1"><b>Help</b></font></a>&nbsp;</td>
+  </tr>
+</table>
+</td>
+<td bgcolor="#EEEEFF" align="right" valign="top">
+<em>
+<b></b></em>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+&nbsp;PREV&nbsp;
+&nbsp;NEXT</font></td>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+  <a href="index.html" target="_top"><b>FRAMES</b></a>  &nbsp;
+&nbsp;<a href="overview-summary.html" target="_top"><b>NO FRAMES</b></a>
+&nbsp;&nbsp;
+<script>
+  <!--
+  if(window==top) {
+    document.writeln('<A HREF="allclasses-noframe.html" TARGET=""><B>All Classes</B></A>');
+  }
+  //-->
+</script>
+<noscript>
+<a href="allclasses-noframe.html" target=""><b>All Classes</b></a>
+</noscript>
+</font></td>
+</tr>
+</table>
+<!-- =========== END OF NAVBAR =========== -->
+
+<hr>
+<center>
+	
+	   <h2>rdfparser.js</h2>
+	
+</center>
+
+	
+
+
+<h4>Summary</h4>
+<p>
+	
+		TABULATOR RDF PARSER
+
+ Version 0.1
+  Parser believed to be in full positive RDF/XML parsing compliance
+  with the possible exception of handling deprecated RDF attributes
+  appropriately. Parser is believed to comply fully with other W3C
+  and industry standards where appropriate (DOM, ECMAScript, &c.)
+
+  Author: David Sheets <dsheets@mit.edu>
+  SVN ID: $Id$
+
+ W3C® SOFTWARE NOTICE AND LICENSE
+ http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
+ This work (and included software, documentation such as READMEs, or
+ other related items) is being provided by the copyright holders under
+ the following license. By obtaining, using and/or copying this work,
+ you (the licensee) agree that you have read, understood, and will
+ comply with the following terms and conditions.
+ 
+ Permission to copy, modify, and distribute this software and its
+ documentation, with or without modification, for any purpose and
+ without fee or royalty is hereby granted, provided that you include
+ the following on ALL copies of the software and documentation or
+ portions thereof, including modifications:
+ 
+ 1. The full text of this NOTICE in a location viewable to users of
+ the redistributed or derivative work.
+ 2. Any pre-existing intellectual property disclaimers, notices, or terms and
+ conditions. If none exist, the W3C Software Short Notice should be
+ included (hypertext is preferred, text is permitted) within the body
+ of any redistributed or derivative code.
+ 3. Notice of any changes or modifications to the files, including the
+ date changes were made. (We recommend you provide URIs to the location
+ from which the code is derived.)
+ 
+ THIS SOFTWARE AND DOCUMENTATION IS PROVIDED "AS IS," AND COPYRIGHT
+ HOLDERS MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED,
+ INCLUDING BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS
+ FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE OR
+ DOCUMENTATION WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS,
+ TRADEMARKS OR OTHER RIGHTS.
+ 
+ COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL
+ OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR
+ DOCUMENTATION.
+ 
+ The name and trademarks of copyright holders may NOT be used in
+ advertising or publicity pertaining to the software without specific,
+ written prior permission. Title to copyright in this software and any
+ associated documentation will at all times remain with copyright
+ holders.<BR/><BR/>
+	
+</p>
+
+<hr>
+
+
+    <table border="1" cellpadding="3" cellspacing="0" width="100%">
+    <tr bgcolor="#CCCCFF" class="TableHeadingColor">
+    <td colspan=2><font size="+2">
+    
+        <b>Class Summary</b>
+    
+    </font></td>
+    </tr>
+    
+    <tr bgcolor="white" class="TableRowColor">
+    <td width="15%"><b><a href="RDFParser.html">RDFParser</a></b></td>
+    <td>Class defining an RDFParser resource object tied to an RDFStore
+  
+ </td>
+    </tr>
+    
+    </table>
+    <hr/> 
+
+
+<!-- ========== METHOD SUMMARY =========== -->
+
+<!-- ========== END METHOD SUMMARY =========== -->
+
+
+        <pre class="sourceview"><span class="comment">/**
+ * <span class="attrib">@fileoverview</span>
+ * TABULATOR RDF PARSER
+ *
+ * Version 0.1
+ *  Parser believed to be in full positive RDF/XML parsing compliance
+ *  with the possible exception of handling deprecated RDF attributes
+ *  appropriately. Parser is believed to comply fully with other W3C
+ *  and industry standards where appropriate (DOM, ECMAScript, &amp;c.)
+ *
+ *  Author: David Sheets &lt;dsheets<span class="attrib">@mit</span>.edu&gt;
+ *  SVN ID: $Id$
+ *
+ * W3C® SOFTWARE NOTICE AND LICENSE
+ * http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
+ * This work (and included software, documentation such as READMEs, or
+ * other related items) is being provided by the copyright holders under
+ * the following license. By obtaining, using and/or copying this work,
+ * you (the licensee) agree that you have read, understood, and will
+ * comply with the following terms and conditions.
+ * 
+ * Permission to copy, modify, and distribute this software and its
+ * documentation, with or without modification, for any purpose and
+ * without fee or royalty is hereby granted, provided that you include
+ * the following on ALL copies of the software and documentation or
+ * portions thereof, including modifications:
+ * 
+ * 1. The full text of this NOTICE in a location viewable to users of
+ * the redistributed or derivative work.
+ * 2. Any pre-existing intellectual property disclaimers, notices, or terms and
+ * conditions. If none exist, the W3C Software Short Notice should be
+ * included (hypertext is preferred, text is permitted) within the body
+ * of any redistributed or derivative code.
+ * 3. Notice of any changes or modifications to the files, including the
+ * date changes were made. (We recommend you provide URIs to the location
+ * from which the code is derived.)
+ * 
+ * THIS SOFTWARE AND DOCUMENTATION IS PROVIDED "AS IS," AND COPYRIGHT
+ * HOLDERS MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS
+ * FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE OR
+ * DOCUMENTATION WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS,
+ * TRADEMARKS OR OTHER RIGHTS.
+ * 
+ * COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL
+ * OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR
+ * DOCUMENTATION.
+ * 
+ * The name and trademarks of copyright holders may NOT be used in
+ * advertising or publicity pertaining to the software without specific,
+ * written prior permission. Title to copyright in this software and any
+ * associated documentation will at all times remain with copyright
+ * holders.
+ */</span>
+<span class="comment">/**
+ * <span class="attrib">@class</span> Class defining an RDFParser resource object tied to an RDFStore
+ *  
+ * <span class="attrib">@author</span> David Sheets &lt;dsheets<span class="attrib">@mit</span>.edu&gt;
+ * <span class="attrib">@version</span> 0.1
+ * 
+ * <span class="attrib">@constructor</span>
+ * <span class="attrib">@param</span> {RDFStore} store An RDFStore object
+ */</span>
+<span class="reserved">function</span> RDFParser(store) {
+    <span class="comment">/** Standard namespaces that we know how to handle <span class="attrib">@final</span>
+     *  <span class="attrib">@member</span> RDFParser
+     */</span>
+    RDFParser[<span class="literal">'ns'</span>] = {<span class="literal">'RDF'</span>:
+		       <span class="literal">"http://www.w3.org/1999/02/22-rdf-syntax-ns#"</span>,
+		       <span class="literal">'RDFS'</span>:
+		       <span class="literal">"http://www.w3.org/2000/01/rdf-schema#"</span>}
+    <span class="comment">/** DOM Level 2 node type magic numbers <span class="attrib">@final</span>
+     *  <span class="attrib">@member</span> RDFParser
+     */</span>
+    RDFParser[<span class="literal">'nodeType'</span>] = {<span class="literal">'ELEMENT'</span>: 1, <span class="literal">'ATTRIBUTE'</span>: 2, <span class="literal">'TEXT'</span>: 3,
+			     <span class="literal">'CDATA_SECTION'</span>: 4, <span class="literal">'ENTITY_REFERENCE'</span>: 5,
+			     <span class="literal">'ENTITY'</span>: 6, <span class="literal">'PROCESSING_INSTRUCTION'</span>: 7,
+			     <span class="literal">'COMMENT'</span>: 8, <span class="literal">'DOCUMENT'</span>: 9, <span class="literal">'DOCUMENT_TYPE'</span>: 10,
+			     <span class="literal">'DOCUMENT_FRAGMENT'</span>: 11, <span class="literal">'NOTATION'</span>: 12}
+
+    <span class="comment">/**
+     * Frame class for namespace and base URI lookups
+     * Base lookups will always resolve because the parser knows
+     * the default base.
+     *
+     * <span class="attrib">@private</span>
+     */</span>
+    <span class="reserved">this</span>[<span class="literal">'frameFactory'</span>] = <span class="reserved">function</span> (parser, parent, element) {
+	<span class="reserved">return</span> {<span class="literal">'NODE'</span>: 1,
+		<span class="literal">'ARC'</span>: 2,
+		<span class="literal">'parent'</span>: parent,
+		<span class="literal">'parser'</span>: parser,
+		<span class="literal">'store'</span>: parser[<span class="literal">'store'</span>],
+		<span class="literal">'element'</span>: element,
+		<span class="literal">'lastChild'</span>: 0,
+		<span class="literal">'base'</span>: null,
+		<span class="literal">'lang'</span>: null,
+		<span class="literal">'node'</span>: null,
+		<span class="literal">'nodeType'</span>: null,
+		<span class="literal">'listIndex'</span>: 1,
+		<span class="literal">'rdfid'</span>: null,
+		<span class="literal">'datatype'</span>: null,
+		<span class="literal">'collection'</span>: false,
+
+	<span class="comment">/** Terminate the frame and notify the store that we're done */</span>
+		<span class="literal">'terminateFrame'</span>: <span class="reserved">function</span> () {
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'collection'</span>]) {
+			<span class="reserved">this</span>[<span class="literal">'node'</span>][<span class="literal">'close'</span>]()
+		    }
+		},
+	
+	<span class="comment">/** Add a symbol of a certain type to the this frame */</span>
+		<span class="literal">'addSymbol'</span>: <span class="reserved">function</span> (type, uri) {
+		    uri = Util.uri.join(uri, <span class="reserved">this</span>[<span class="literal">'base'</span>])
+		    <span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](uri)
+		    <span class="reserved">this</span>[<span class="literal">'nodeType'</span>] = type
+		},
+	
+	<span class="comment">/** Load any constructed triples into the store */</span>
+		<span class="literal">'loadTriple'</span>: <span class="reserved">function</span> () {
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'parent'</span>][<span class="literal">'collection'</span>]) {
+			<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'parent'</span>][<span class="literal">'node'</span>][<span class="literal">'append'</span>](<span class="reserved">this</span>[<span class="literal">'node'</span>])
+		    }
+		    <span class="reserved">else</span> {
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'parent'</span>][<span class="literal">'node'</span>],
+				       <span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'node'</span>],
+				       <span class="reserved">this</span>[<span class="literal">'node'</span>],
+				       <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'why'</span>])
+		    }
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'rdfid'</span>] != null) { <span class="comment">// reify</span>
+			var triple = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+			    Util.uri.join(<span class="literal">"#"</span>+<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'rdfid'</span>],
+					  <span class="reserved">this</span>[<span class="literal">'base'</span>]))
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](triple,
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]
+						     +<span class="literal">"type"</span>),
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]
+						     +<span class="literal">"Statement"</span>),
+					     <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'why'</span>])
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](triple,
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]
+						     +<span class="literal">"subject"</span>),
+					     <span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'parent'</span>][<span class="literal">'node'</span>],
+					     <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'why'</span>])
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](triple,
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]
+						     +<span class="literal">"predicate"</span>),
+					     <span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'node'</span>],
+					     <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'why'</span>])
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](triple,
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]
+						     +<span class="literal">"object"</span>),
+					     <span class="reserved">this</span>[<span class="literal">'node'</span>],
+					     <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'why'</span>])
+		    }
+		},
+
+	<span class="comment">/** Check if it's OK to load a triple */</span>
+		<span class="literal">'isTripleToLoad'</span>: <span class="reserved">function</span> () {
+		    <span class="reserved">return</span> (<span class="reserved">this</span>[<span class="literal">'parent'</span>] != null
+			    &amp;&amp; <span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'parent'</span>] != null
+			    &amp;&amp; <span class="reserved">this</span>[<span class="literal">'nodeType'</span>] == <span class="reserved">this</span>[<span class="literal">'NODE'</span>]
+			    &amp;&amp; <span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'nodeType'</span>] == <span class="reserved">this</span>[<span class="literal">'ARC'</span>]
+			    &amp;&amp; <span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'parent'</span>][<span class="literal">'nodeType'</span>]
+			    == <span class="reserved">this</span>[<span class="literal">'NODE'</span>])
+		},
+
+	<span class="comment">/** Add a symbolic node to this frame */</span>
+		<span class="literal">'addNode'</span>: <span class="reserved">function</span> (uri) {
+		    <span class="reserved">this</span>[<span class="literal">'addSymbol'</span>](<span class="reserved">this</span>[<span class="literal">'NODE'</span>],uri)
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'isTripleToLoad'</span>]()) {
+			<span class="reserved">this</span>[<span class="literal">'loadTriple'</span>]()
+		    }
+		},
+
+	<span class="comment">/** Add a collection node to this frame */</span>
+		<span class="literal">'addCollection'</span>: <span class="reserved">function</span> () {
+		    <span class="reserved">this</span>[<span class="literal">'nodeType'</span>] = <span class="reserved">this</span>[<span class="literal">'NODE'</span>]
+		    <span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'collection'</span>]()
+		    <span class="reserved">this</span>[<span class="literal">'collection'</span>] = true
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'isTripleToLoad'</span>]()) {
+			<span class="reserved">this</span>[<span class="literal">'loadTriple'</span>]()
+		    }
+		},
+
+	<span class="comment">/** Add a collection arc to this frame */</span>
+		<span class="literal">'addCollectionArc'</span>: <span class="reserved">function</span> () {
+		    <span class="reserved">this</span>[<span class="literal">'nodeType'</span>] = <span class="reserved">this</span>[<span class="literal">'ARC'</span>]
+		},
+
+	<span class="comment">/** Add a bnode to this frame */</span>
+		<span class="literal">'addBNode'</span>: <span class="reserved">function</span> (id) {
+		    <span class="reserved">if</span> (id != null) {
+			<span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'bnodes'</span>][id] != null) {
+			    <span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'bnodes'</span>][id]
+			} <span class="reserved">else</span> {
+			    <span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'parser'</span>][<span class="literal">'bnodes'</span>][id] = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'bnode'</span>]()
+			}
+		    } <span class="reserved">else</span> { <span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'bnode'</span>]() }
+		    
+		    <span class="reserved">this</span>[<span class="literal">'nodeType'</span>] = <span class="reserved">this</span>[<span class="literal">'NODE'</span>]
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'isTripleToLoad'</span>]()) {
+			<span class="reserved">this</span>[<span class="literal">'loadTriple'</span>]()
+		    }
+		},
+
+	<span class="comment">/** Add an arc or property to this frame */</span>
+		<span class="literal">'addArc'</span>: <span class="reserved">function</span> (uri) {
+		    <span class="reserved">if</span> (uri == RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"li"</span>) {
+			uri = RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"_"</span>+<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'listIndex'</span>]++
+		    }
+		    <span class="reserved">this</span>[<span class="literal">'addSymbol'</span>](<span class="reserved">this</span>[<span class="literal">'ARC'</span>], uri)
+		},
+
+	<span class="comment">/** Add a literal to this frame */</span>
+		<span class="literal">'addLiteral'</span>: <span class="reserved">function</span> (value) {
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'datatype'</span>]) {
+			<span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'literal'</span>](
+			    value, <span class="literal">""</span>, <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+				<span class="reserved">this</span>[<span class="literal">'parent'</span>][<span class="literal">'datatype'</span>]))
+		    }
+		    <span class="reserved">else</span> {
+			<span class="reserved">this</span>[<span class="literal">'node'</span>] = <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'literal'</span>](
+			    value, <span class="reserved">this</span>[<span class="literal">'lang'</span>])
+		    }
+		    <span class="reserved">this</span>[<span class="literal">'nodeType'</span>] = <span class="reserved">this</span>[<span class="literal">'NODE'</span>]
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'isTripleToLoad'</span>]()) {
+			<span class="reserved">this</span>[<span class="literal">'loadTriple'</span>]()
+		    }
+		}
+	       }
+    }
+
+    <span class="comment">/** Our triple store reference <span class="attrib">@private</span> */</span>
+    <span class="reserved">this</span>[<span class="literal">'store'</span>] = store
+    <span class="comment">/** Our identified blank nodes <span class="attrib">@private</span> */</span>
+    <span class="reserved">this</span>[<span class="literal">'bnodes'</span>] = {}
+    <span class="comment">/** A context for context-aware stores <span class="attrib">@private</span> */</span>
+    <span class="reserved">this</span>[<span class="literal">'why'</span>] = null
+    <span class="comment">/** Reification flag */</span>
+    <span class="reserved">this</span>[<span class="literal">'reify'</span>] = false
+
+    <span class="comment">/**
+     * Build our initial scope frame and parse the DOM into triples
+     * <span class="attrib">@param</span> {DOMTree} document The DOM to parse
+     * <span class="attrib">@param</span> {String} base The base URL to use 
+     * <span class="attrib">@param</span> {Object} why The context to which this resource belongs
+     */</span>
+    <span class="reserved">this</span>[<span class="literal">'parse'</span>] = <span class="reserved">function</span> (document, base, why) {
+	var children = document[<span class="literal">'childNodes'</span>]
+
+	<span class="comment">// clean up for the next run</span>
+	<span class="reserved">this</span>[<span class="literal">'cleanParser'</span>]()
+
+	<span class="comment">// figure out the root element</span>
+	<span class="reserved">if</span> (document[<span class="literal">'nodeType'</span>] == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'DOCUMENT'</span>]) {
+	    <span class="reserved">for</span> (var c=0; c&lt;children[<span class="literal">'length'</span>]; c++) {
+		<span class="reserved">if</span> (children[c][<span class="literal">'nodeType'</span>]
+		    == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'ELEMENT'</span>]) {
+		    var root = children[c]
+		    break
+		}
+	    }	    
+	}
+	<span class="reserved">else</span> <span class="reserved">if</span> (document[<span class="literal">'nodeType'</span>] == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'ELEMENT'</span>]) {
+	    var root = document
+	}
+	<span class="reserved">else</span> {
+	    throw new Error(<span class="literal">"RDFParser: can't find root in "</span> + base
+			    + <span class="literal">". Halting. "</span>)
+	    <span class="reserved">return</span> false
+	}
+	
+	<span class="reserved">this</span>[<span class="literal">'why'</span>] = why
+
+	<span class="comment">// our topmost frame</span>
+
+	var f = <span class="reserved">this</span>[<span class="literal">'frameFactory'</span>](<span class="reserved">this</span>)
+	f[<span class="literal">'base'</span>] = base
+	f[<span class="literal">'lang'</span>] = <span class="literal">''</span>
+	
+	<span class="reserved">this</span>[<span class="literal">'parseDOM'</span>](<span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](f,root))
+	<span class="reserved">return</span> true
+    }
+    <span class="reserved">this</span>[<span class="literal">'parseDOM'</span>] = <span class="reserved">function</span> (frame) {
+	<span class="comment">// a DOM utility function used in parsing</span>
+	var elementURI = <span class="reserved">function</span> (el) {
+	    <span class="reserved">return</span> el[<span class="literal">'namespaceURI'</span>] + el[<span class="literal">'localName'</span>]
+	}
+	var dig = true <span class="comment">// if we'll dig down in the tree on the next iter</span>
+
+	<span class="reserved">while</span> (frame[<span class="literal">'parent'</span>]) {
+	    var dom = frame[<span class="literal">'element'</span>]
+	    var attrs = dom[<span class="literal">'attributes'</span>]
+
+	    <span class="reserved">if</span> (dom[<span class="literal">'nodeType'</span>]
+		== RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'TEXT'</span>]
+		|| dom[<span class="literal">'nodeType'</span>]
+		== RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'CDATA_SECTION'</span>]) {<span class="comment">//we have a literal</span>
+		frame[<span class="literal">'addLiteral'</span>](dom[<span class="literal">'nodeValue'</span>])
+	    }
+	    <span class="reserved">else</span> <span class="reserved">if</span> (elementURI(dom)
+		     != RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"RDF"</span>) { <span class="comment">// not root</span>
+		<span class="reserved">if</span> (frame[<span class="literal">'parent'</span>] &amp;&amp; frame[<span class="literal">'parent'</span>][<span class="literal">'collection'</span>]) {
+		    <span class="comment">// we're a collection element</span>
+		    frame[<span class="literal">'addCollectionArc'</span>]()
+		    frame = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame,frame[<span class="literal">'element'</span>])
+		    frame[<span class="literal">'parent'</span>][<span class="literal">'element'</span>] = null
+		}
+                <span class="reserved">if</span> (!frame[<span class="literal">'parent'</span>] || !frame[<span class="literal">'parent'</span>][<span class="literal">'nodeType'</span>]
+		    || frame[<span class="literal">'parent'</span>][<span class="literal">'nodeType'</span>] == frame[<span class="literal">'ARC'</span>]) {
+		    <span class="comment">// we need a node</span>
+		    var about =dom[<span class="literal">'getAttributeNodeNS'</span>](
+			RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"about"</span>)
+		    var rdfid =dom[<span class="literal">'getAttributeNodeNS'</span>](
+			RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"ID"</span>)
+		    <span class="reserved">if</span> (about &amp;&amp; rdfid) {
+			throw new Error(<span class="literal">"RDFParser: "</span> + dom[<span class="literal">'nodeName'</span>]
+					+ <span class="literal">" has both rdf:id and rdf:about."</span>
+					+ <span class="literal">" Halting. Only one of these"</span>
+					+ <span class="literal">" properties may be specified on a"</span>
+					+ <span class="literal">" node."</span>);
+		    }
+		    <span class="reserved">if</span> (about == null &amp;&amp; rdfid) {
+			frame[<span class="literal">'addNode'</span>](<span class="literal">"#"</span>+rdfid[<span class="literal">'nodeValue'</span>])
+			dom[<span class="literal">'removeAttributeNode'</span>](rdfid)
+		    }
+		    <span class="reserved">else</span> <span class="reserved">if</span> (about == null &amp;&amp; rdfid == null) {
+			var bnid = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			    RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"nodeID"</span>)
+			<span class="reserved">if</span> (bnid) {
+			    frame[<span class="literal">'addBNode'</span>](bnid[<span class="literal">'nodeValue'</span>])
+			    dom[<span class="literal">'removeAttributeNode'</span>](bnid)
+			} <span class="reserved">else</span> { frame[<span class="literal">'addBNode'</span>]() }
+		    }
+		    <span class="reserved">else</span> {
+			frame[<span class="literal">'addNode'</span>](about[<span class="literal">'nodeValue'</span>])
+			dom[<span class="literal">'removeAttributeNode'</span>](about)
+		    }
+		
+		    <span class="comment">// Typed nodes</span>
+		    var rdftype = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"type"</span>)
+		    <span class="reserved">if</span> (RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"Description"</span>
+			!= elementURI(dom)) {
+			rdftype = {<span class="literal">'nodeValue'</span>: elementURI(dom)}
+		    }
+		    <span class="reserved">if</span> (rdftype != null) {
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](frame[<span class="literal">'node'</span>],
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"type"</span>),
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 Util.uri.join(
+						     rdftype[<span class="literal">'nodeValue'</span>],
+						     frame[<span class="literal">'base'</span>])),
+					     <span class="reserved">this</span>[<span class="literal">'why'</span>])
+			<span class="reserved">if</span> (rdftype[<span class="literal">'nodeName'</span>]){
+			    dom[<span class="literal">'removeAttributeNode'</span>](rdftype)
+			}
+		    }
+		    
+		    <span class="comment">// Property Attributes</span>
+		    <span class="reserved">for</span> (var x = attrs[<span class="literal">'length'</span>]-1; x &gt;= 0; x--) {
+			<span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'add'</span>](frame[<span class="literal">'node'</span>],
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'sym'</span>](
+						 elementURI(attrs[x])),
+					     <span class="reserved">this</span>[<span class="literal">'store'</span>][<span class="literal">'literal'</span>](
+						 attrs[x][<span class="literal">'nodeValue'</span>],
+						 frame[<span class="literal">'lang'</span>]),
+					     <span class="reserved">this</span>[<span class="literal">'why'</span>])
+		    }
+		}
+		<span class="reserved">else</span> { <span class="comment">// we should add an arc (or implicit bnode+arc)</span>
+		    frame[<span class="literal">'addArc'</span>](elementURI(dom))
+
+		    <span class="comment">// save the arc's rdf:ID if it has one</span>
+		    <span class="reserved">if</span> (<span class="reserved">this</span>[<span class="literal">'reify'</span>]) {
+			var rdfid = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			    RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"ID"</span>)
+			<span class="reserved">if</span> (rdfid) {
+			    frame[<span class="literal">'rdfid'</span>] = rdfid[<span class="literal">'nodeValue'</span>]
+			    dom[<span class="literal">'removeAttributeNode'</span>](rdfid)
+			}
+		    }
+
+		    var parsetype = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"parseType"</span>)
+		    var datatype = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"datatype"</span>)
+		    <span class="reserved">if</span> (datatype) {
+			frame[<span class="literal">'datatype'</span>] = datatype[<span class="literal">'nodeValue'</span>]
+			dom[<span class="literal">'removeAttributeNode'</span>](datatype)
+		    }
+
+		    <span class="reserved">if</span> (parsetype) {
+			var nv = parsetype[<span class="literal">'nodeValue'</span>]
+			<span class="reserved">if</span> (nv == <span class="literal">"Literal"</span>) {
+			    frame[<span class="literal">'datatype'</span>]
+				= RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"XMLLiteral"</span>
+			    <span class="comment">// (this.buildFrame(frame)).addLiteral(dom)</span>
+			    <span class="comment">// should work but doesn't</span>
+			    frame = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame)
+			    frame[<span class="literal">'addLiteral'</span>](dom)
+			    dig = false
+			}
+			<span class="reserved">else</span> <span class="reserved">if</span> (nv == <span class="literal">"Resource"</span>) {
+			    frame = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame,frame[<span class="literal">'element'</span>])
+			    frame[<span class="literal">'parent'</span>][<span class="literal">'element'</span>] = null
+			    frame[<span class="literal">'addBNode'</span>]()
+			}
+			<span class="reserved">else</span> <span class="reserved">if</span> (nv == <span class="literal">"Collection"</span>) {
+			    frame = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame,frame[<span class="literal">'element'</span>])
+			    frame[<span class="literal">'parent'</span>][<span class="literal">'element'</span>] = null
+			    frame[<span class="literal">'addCollection'</span>]()
+			}
+			dom[<span class="literal">'removeAttributeNode'</span>](parsetype)
+		    }
+
+		    <span class="reserved">if</span> (attrs[<span class="literal">'length'</span>] != 0) {
+			var resource = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			    RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"resource"</span>)
+			var bnid = dom[<span class="literal">'getAttributeNodeNS'</span>](
+			    RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>],<span class="literal">"nodeID"</span>)
+
+			frame = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame)
+			<span class="reserved">if</span> (resource) {
+			    frame[<span class="literal">'addNode'</span>](resource[<span class="literal">'nodeValue'</span>])
+			    dom[<span class="literal">'removeAttributeNode'</span>](resource)
+			} <span class="reserved">else</span> {
+			    <span class="reserved">if</span> (bnid) {
+				frame[<span class="literal">'addBNode'</span>](bnid[<span class="literal">'nodeValue'</span>])
+				dom[<span class="literal">'removeAttributeNode'</span>](bnid)
+			    } <span class="reserved">else</span> { frame[<span class="literal">'addBNode'</span>]() }
+			}
+
+			<span class="reserved">for</span> (var x = attrs[<span class="literal">'length'</span>]-1; x &gt;= 0; x--) {
+			    var f = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame)
+			    f[<span class="literal">'addArc'</span>](elementURI(attrs[x]))
+			    <span class="reserved">if</span> (elementURI(attrs[x])
+				==RDFParser[<span class="literal">'ns'</span>][<span class="literal">'RDF'</span>]+<span class="literal">"type"</span>){
+				(<span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](f))[<span class="literal">'addNode'</span>](
+				    attrs[x][<span class="literal">'nodeValue'</span>])
+			    } <span class="reserved">else</span> {
+				(<span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](f))[<span class="literal">'addLiteral'</span>](
+				    attrs[x][<span class="literal">'nodeValue'</span>])
+			    }
+			}
+		    }
+		    <span class="reserved">else</span> <span class="reserved">if</span> (dom[<span class="literal">'childNodes'</span>][<span class="literal">'length'</span>] == 0) {
+			(<span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](frame))[<span class="literal">'addLiteral'</span>](<span class="literal">""</span>)
+		    }
+		}
+	    } <span class="comment">// rdf:RDF</span>
+
+	    <span class="comment">// dig dug</span>
+	    dom = frame[<span class="literal">'element'</span>]
+	    <span class="reserved">while</span> (frame[<span class="literal">'parent'</span>]) {
+		var pframe = frame
+		<span class="reserved">while</span> (dom == null) {
+		    frame = frame[<span class="literal">'parent'</span>]
+		    dom = frame[<span class="literal">'element'</span>]
+		}
+		var candidate = dom[<span class="literal">'childNodes'</span>][frame[<span class="literal">'lastChild'</span>]]
+		<span class="reserved">if</span> (candidate == null || !dig) {
+		    frame[<span class="literal">'terminateFrame'</span>]()
+		    <span class="reserved">if</span> (!(frame = frame[<span class="literal">'parent'</span>])) { break } <span class="comment">// done</span>
+		    dom = frame[<span class="literal">'element'</span>]
+		    dig = true
+		}
+		<span class="reserved">else</span> <span class="reserved">if</span> ((candidate[<span class="literal">'nodeType'</span>]
+			  != RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'ELEMENT'</span>]
+			  &amp;&amp; candidate[<span class="literal">'nodeType'</span>]
+			  != RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'TEXT'</span>]
+			  &amp;&amp; candidate[<span class="literal">'nodeType'</span>]
+			  != RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'CDATA_SECTION'</span>])
+			 || ((candidate[<span class="literal">'nodeType'</span>]
+			      == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'TEXT'</span>]
+			      || candidate[<span class="literal">'nodeType'</span>]
+			      == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'CDATA_SECTION'</span>])
+			     &amp;&amp; dom[<span class="literal">'childNodes'</span>][<span class="literal">'length'</span>] != 1)) {
+		    frame[<span class="literal">'lastChild'</span>]++
+		}
+		<span class="reserved">else</span> { <span class="comment">// not a leaf</span>
+		    frame[<span class="literal">'lastChild'</span>]++
+		    frame = <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>](pframe,
+					       dom[<span class="literal">'childNodes'</span>][frame[<span class="literal">'lastChild'</span>]-1])
+		    break
+		}
+	    }
+	} <span class="comment">// while</span>
+    }
+
+    <span class="comment">/**
+     * Cleans out state from a previous parse run
+     * <span class="attrib">@private</span>
+     */</span>
+    <span class="reserved">this</span>[<span class="literal">'cleanParser'</span>] = <span class="reserved">function</span> () {
+	<span class="reserved">this</span>[<span class="literal">'bnodes'</span>] = {}
+	<span class="reserved">this</span>[<span class="literal">'why'</span>] = null
+    }
+
+    <span class="comment">/**
+     * Builds scope frame 
+     * <span class="attrib">@private</span>
+     */</span>
+    <span class="reserved">this</span>[<span class="literal">'buildFrame'</span>] = <span class="reserved">function</span> (parent, element) {
+	var frame = <span class="reserved">this</span>[<span class="literal">'frameFactory'</span>](<span class="reserved">this</span>,parent,element)
+	<span class="reserved">if</span> (parent) {
+	    frame[<span class="literal">'base'</span>] = parent[<span class="literal">'base'</span>]
+	    frame[<span class="literal">'lang'</span>] = parent[<span class="literal">'lang'</span>]
+	}
+	<span class="reserved">if</span> (element == null
+	    || element[<span class="literal">'nodeType'</span>] == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'TEXT'</span>]
+	    || element[<span class="literal">'nodeType'</span>] == RDFParser[<span class="literal">'nodeType'</span>][<span class="literal">'CDATA_SECTION'</span>]) {
+	    <span class="reserved">return</span> frame
+	}
+
+	var attrs = element[<span class="literal">'attributes'</span>]
+
+	var base = element[<span class="literal">'getAttributeNode'</span>](<span class="literal">"xml:base"</span>)
+	<span class="reserved">if</span> (base != null) {
+	    frame[<span class="literal">'base'</span>] = base[<span class="literal">'nodeValue'</span>]
+	    element[<span class="literal">'removeAttribute'</span>](<span class="literal">"xml:base"</span>)
+	}
+	var lang = element[<span class="literal">'getAttributeNode'</span>](<span class="literal">"xml:lang"</span>)
+	<span class="reserved">if</span> (lang != null) {
+	    frame[<span class="literal">'lang'</span>] = lang[<span class="literal">'nodeValue'</span>]
+	    element[<span class="literal">'removeAttribute'</span>](<span class="literal">"xml:lang"</span>)
+	}
+
+	<span class="comment">// remove all extraneous xml and xmlns attributes</span>
+	<span class="reserved">for</span> (var x = attrs[<span class="literal">'length'</span>]-1; x &gt;= 0; x--) {
+	    <span class="reserved">if</span> (attrs[x][<span class="literal">'nodeName'</span>][<span class="literal">'substr'</span>](0,3) == <span class="literal">"xml"</span>) {
+		element[<span class="literal">'removeAttributeNode'</span>](attrs[x])
+	    }
+	}
+	<span class="reserved">return</span> frame
+    }
+}</pre>
+	<hr>
+
+
+
+<!-- ========== START OF NAVBAR ========== -->
+<a name="navbar_top"><!-- --></a>
+<table border="0" width="100%" cellpadding="1" cellspacing="0">
+<tr>
+<td colspan=2 bgcolor="#EEEEFF" class="NavBarCell1">
+<a name="navbar_top_firstrow"><!-- --></a>
+<table border="0" cellpadding="0" cellspacing="3">
+  <tr align="center" valign="top">
+  
+  
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-summary.html"><font class="NavBarFont1"><b>Overview</b></font></a>&nbsp;</td>
+  <td bgcolor="#FFFFFF" class="NavBarCell1Rev">	&nbsp;<font class="NavBarFont1Rev"><b>File</b></font>&nbsp;</td>
+  
+
+  <td bgcolor="#FFFFFF" class="NavBarCell1"> <font class="NavBarFont1">Class</font>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="overview-tree.html"><font class="NavBarFont1"><b>Tree</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="index-all.html"--><font class="NavBarFont1"><b>Index</b></font></a>&nbsp;</td>
+  <td bgcolor="#EEEEFF" class="NavBarCell1">    <a href="help-doc.html"><font class="NavBarFont1"><b>Help</b></font></a>&nbsp;</td>
+  </tr>
+</table>
+</td>
+<td bgcolor="#EEEEFF" align="right" valign="top"><em>
+<b></b></em>
+</td>
+</tr>
+
+<tr>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+&nbsp;PREV&nbsp;
+&nbsp;NEXT</font></td>
+<td bgcolor="white" class="NavBarCell2"><font size="-2">
+  <a href="index.html" target="_top"><b>FRAMES</b></a>  &nbsp;
+&nbsp;<a href="overview-summary.html" target="_top"><b>NO FRAMES</b></a>
+&nbsp;&nbsp;
+<script>
+  <!--
+  if(window==top) {
+    document.writeln('<A HREF="allclasses-noframe.html" TARGET=""><B>All Classes</B></A>');
+  }
+  //-->
+</script>
+<noscript>
+<a href="allclasses-noframe.html" target=""><b>All Classes</b></a>
+</noscript>
+</font></td>
+</tr>
+</table>
+<!-- =========== END OF NAVBAR =========== -->
+
+<hr>
+<font size="-1">
+
+</font>
+<div class="jsdoc_ctime">Documentation generated by <a href="http://jsdoc.sourceforge.net/" target="_parent">JSDoc</a> on Wed Jan 31 15:48:38 2007</div>
+</body>
+</html>

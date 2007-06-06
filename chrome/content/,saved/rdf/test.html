@@ -1,0 +1,53 @@
+<html>
+<head>
+    <title>Test RDF basic classes</title>
+    <script src="term.js" />
+    <script src="match.js" />
+    <script src="term-test.js" />
+</head>
+
+<body>
+<h1 id="header">RDF term tests</h1>
+<p>Click the beanie any time to dump the store into the log.</p>
+</p>
+<h2>Status log:</h2>
+<hr>
+<pre id=status>
+Initial status. Version $Id: test.html,v 1.5 2005/11/21 17:37:14 timbl Exp $<br/>
+</pre>
+
+<img src="../icons/beanie-a.gif" onmousedown="dumpStore()" alt="dump" align="right">
+<span onmousedown="setLogging(true)">[loggingOn]</span> 
+<span onmousedown="setLogging(false)">[loggingOff]</span> 
+<span onmousedown="clearStatus()">[clear log]</span> 
+</br>
+
+<hr>
+<h2>Test controls</h2>
+
+<p>
+<img border="0" src="../icons/16dot-green.gif" alt="Ball"  onmousedown="test1()"/>
+Test adding statment
+</p>
+
+<p>
+<img border="0" src="../icons/16dot-green.gif" alt="Ball"  onmousedown="test2()"/>
+Test adding statment with bnode
+</p>
+
+<p>
+<img border="0" src="../icons/16dot-green.gif" alt="Ball"  onmousedown="dumpStore()"/>
+Dump store
+</p>
+
+<p>
+<img border="0" src="../icons/16dot-green.gif" alt="Ball"  onmousedown="test()"/>
+Combination test
+</p>
+<p>
+<img border="0" src="../icons/16dot-green.gif" alt="Ball" onmousedown="test3()"/>
+Add one and search with wildcard
+</p>
+
+</body>
+</html>

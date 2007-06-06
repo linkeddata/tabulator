@@ -1,0 +1,56 @@
+<rdf:RDF
+  xmlns="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:owl="http://www.w3.org/2002/07/owl#"
+  xmlns:foaf="http://xmlns.com/foaf/0.1/"
+  xml:base="http://www.w3.org/2006/07/query">
+
+  <owl:Ontology
+    rdf:about="#"
+    dc:title="RDF Query Vocabulary"
+    dc:description="This is a vocabulary for describing query endpoints."
+    dc:date="2006-07-26">
+    <dc:creator>
+      <foaf:Person
+        rdf:about="http://www.subluminal.org/data/people#dsheets"
+	foaf:name="David Sheets">
+	<foaf:mbox rdf:resource="mailto:dsheets@mit.edu"/>
+      </foaf:Person>
+    </dc:creator>
+  </owl:Ontology>
+
+  <Class
+    rdf:about="#Endpoint"
+    rdfs:label="Query Endpoint"
+    rdfs:comment="This is the class of any RDF query endpoint.">
+    <subClassOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
+    <isDefinedBy rdf:resource="#"/>
+  </Class>
+
+  <Class
+    rdf:about="#SPARQLEndpoint"
+    rdfs:label="SPARQL Endpoint"
+    rdfs:comment="This class represents a SPARQL endpoint.">
+    <subClassOf rdf:resource="#Endpoint"/>
+    <isDefinedBy rdf:resource="#"/>
+  </Class>
+
+  <rdf:Property
+    rdf:about="#services"
+    rdfs:label="services">
+    <comment>
+      Queries on URIs beginning with this prefix can be sent to the subject
+      resource. If no datatype is provided, the string is assumed to be a
+      URI prefix. Other datatypes might include string for prefix or different
+      reguler expression formats. Due to the usage of endpoints, it is
+      advisable to use prefixes if at all possible as regexen quickly become
+      very expensive.
+    </comment>
+    <domain rdf:resource="#Endpoint"/>
+    <range rdf:resource="http://www.w3.org/2000/01/rdf-schema#Literal"/>
+    <isDefinedBy rdf:resource="#"/>
+  </rdf:Property>
+
+</rdf:RDF>

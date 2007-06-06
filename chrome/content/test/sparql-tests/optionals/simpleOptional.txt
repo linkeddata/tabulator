@@ -1,7 +1,0 @@
-PREFIX pre1: <http://example.com/ns#>
-PREFIX pre2: <http://anotherplace.org/rdfdocs#>
-
-SELECT ?a ?b WHERE { 
- <tab> <dev> ?a .
- OPTIONAL { ?a pre2:chatId ?b . }
-}

@@ -1,5 +1,0 @@
-json.vars.push(kb.variable('a'))
-json.vars.push(kb.variable('b'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#numberOfWorkers'),kb.variable('b'))
-json.pat.add(kb.variable('a'),rdf('type'),kb.sym('http://anotherplace.org/rdfdocs#Company'))
-json.pat.constraints[kb.variable('b')]=new constraintGreaterThan(kb.literal('500',''))

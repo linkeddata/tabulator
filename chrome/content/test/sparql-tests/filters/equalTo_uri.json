@@ -1,6 +1,0 @@
-//This is not typical SPARQL behaviour, but I consider it at least somewhat useful for tabulator, so I'd like to keep it.
-json.vars.push(kb.variable('a'))
-json.vars.push(kb.variable('b'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#chairman'),kb.variable('b'))
-json.pat.add(kb.variable('a'),rdf('type'),kb.sym('http://anotherplace.org/rdfdocs#Company'))
-json.pat.constraints[kb.variable('b')]=new constraintEqualTo(kb.sym('http://apple.com/exec/foaf#steveJobs'))

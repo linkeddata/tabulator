@@ -1,7 +1,0 @@
-json.vars.push(kb.variable('a'))
-json.vars.push(kb.variable('b'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#son'),kb.sym('jacob'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#son'),kb.sym('michael'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#daughter'),kb.sym('sarah'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#daughter'),kb.sym('michelle'))
-json.pat.add(kb.variable('b'),kb.sym('hasCousin'),kb.variable('a'))

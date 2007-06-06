@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rdf:RDF xmlns:dataview="http://www.w3.org/2003/g/data-view#"
-         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-         xml:base="http://www.w3.org/Talks/WWW94Tim/"><!--XHTML Transformation produced by $Id: rdf-in-xhtml-processor.xsl,v 1.43 2005/10/24 07:44:27 dom Exp $-->
-   <Work xmlns="http://web.resource.org/cc/" xmlns:dc="http://purl.org/dc/elements/1.1/"
-         rdf:about="">
-	         <license rdf:resource="http://creativecommons.org/licenses/by/2.5/"/>
-       </Work>
-</rdf:RDF>

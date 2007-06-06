@@ -1,1 +1,0 @@
-SELECT WHERE { "blue" is <color> of <beachball1> . }

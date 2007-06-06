@@ -1,1 +1,0 @@
-json.pat.add(kb.sym('http://example.com/foo#bar'),kb.sym('http://example.com/foo#gra'),kb.sym('http://example.com/foo#sup'));

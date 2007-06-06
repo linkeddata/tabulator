@@ -1,1 +1,0 @@
-json.pat.add(kb.variable('v0'),rdf('type'),kb.sym('monster'))

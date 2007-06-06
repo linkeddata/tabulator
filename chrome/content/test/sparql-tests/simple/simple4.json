@@ -1,4 +1,0 @@
-json.pat.add(kb.variable('v0'),kb.sym('is'),kb.sym('red'));
-json.pat.add(kb.variable('v0'),kb.sym('isFriendOf'),kb.variable('v1'));
-json.vars.push(kb.variable('v0'))
-json.vars.push(kb.variable('v1'))

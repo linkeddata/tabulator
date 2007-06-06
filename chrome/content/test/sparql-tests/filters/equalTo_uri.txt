@@ -1,8 +1,0 @@
-PREFIX pre1: <http://example.com/ns#>
-PREFIX pre2: <http://anotherplace.org/rdfdocs#>
-
-SELECT ?a ?b WHERE { 
- ?a pre1:chairman ?b .
- ?a a pre2:Company .
- FILTER ( ?b = <http://apple.com/exec/foaf#steveJobs> ) }
-

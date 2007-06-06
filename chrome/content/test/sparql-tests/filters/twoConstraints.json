@@ -1,8 +1,0 @@
-json.vars.push(kb.variable('a'))
-json.vars.push(kb.variable('b'))
-json.vars.push(kb.variable('c'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#pictureType'),kb.literal('Photograph',''))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#pictureOf'),kb.variable('b'))
-json.pat.add(kb.variable('a'),kb.sym('http://example.com/ns#pictureWidth'),kb.variable('c'))
-json.pat.constraints[kb.variable('b')]=new constraintRegexp(kb.literal('horses?'))
-json.pat.constraints[kb.variable('c')]=new constraintGreaterThan(kb.literal('500',''))

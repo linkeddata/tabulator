@@ -1,4 +1,0 @@
-json.vars.push(kb.variable('b'))
-json.vars.push(kb.variable('c'))
-json.pat.add(kb.bnode(),kb.sym('http://example.com/ns#numberOfWorkers'),kb.variable('b'))
-json.pat.add(kb.bnode(),kb.sym('http://example.com/ns#squareFeet'),kb.variable('c'))

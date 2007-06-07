@@ -1,9 +1,5 @@
 function Outline(doc) {
-	var myDocument;
-	if(!doc)
-	  myDocument=document;
-	else
-      myDocument = doc;
+  var myDocument=doc;
 	
 	
 	/** benchmark a function **/

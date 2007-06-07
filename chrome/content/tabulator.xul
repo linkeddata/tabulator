@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<overlay id="tabulator" 
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <script type="application/x-javascript" src="js/tableView.js"/>
+  <script type="application/x-javascript" src="js/log.js"/>
+  <script type="application/x-javascript" src="js/util.js"/>
+  <script type="application/x-javascript" src="js/uri.js"/>
+  <script type="application/x-javascript" src="js/rdf/term.js"/>
+  <script type="application/x-javascript" src="js/rdf/match.js"/>
+  <script type="application/x-javascript" src="js/rdf/rdfparser.js"/>
+  <script type="application/x-javascript" src="js/rdf/identity.js"/>
+  <script type="application/x-javascript" src="js/rdf/query.js"/>
+  <script type="application/x-javascript" src="js/rdf/sources.js"/>
+  <script type="application/x-javascript" src="js/outline.js"/>
+  <script type="application/x-javascript" src="test.js"/>
+</overlay>

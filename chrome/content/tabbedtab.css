@@ -1,0 +1,262 @@
+/*  Some style for the tabulator
+**
+**  Do NOT use physical measures, but font-relative measures.
+**  2006-10-21  timbl  cconverted px to em at approx 1em = 12px
+** 
+*/
+
+body {background-color: white ; font-size: 80%; font-family: sans-serif}
+
+.warning { color: red; }
+.selected {background-color: #8F3}
+strong { font-size: 120%; color: #333 }
+div.Outliner { padding: 0.8em; }
+form#TabulateForm { padding: 0.8em }
+div#addViewForm { padding: 0.8em }
+iframe { background: white }
+
+img.pic { max-height: 20em }
+
+.fetched { background-color: #eeffee }
+.requested { background-color: yellow }
+.failed { color: red; background-color: white }
+.unparseable { background-color: #ffcc00; }
+
+pre#status { font-size: 100% }
+
+td.internal  { color: #080 }
+
+table#sources { width: 100% }
+
+table { border-spacing: 0}
+
+table { margin: 0em }
+
+td {    font-size: 100%;
+    border-left: none;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    margin: 0.1em;
+/*  border-right: solid purple 0.1em ;
+    border-bottom: solid purple 0.1em
+*/
+    vertical-align: top;
+/*    display: compact;    Causes console errors in ffox */
+     }
+
+/*td.optButton { display: none }
+tr[parentOfSelected] > td.pred td.optButton { display: block }
+*/
+
+table.results { width: 100% }
+
+table.results td {  font-size: 100%;
+    background-color:#fff;
+    border-left: none;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    margin: 0.1em;
+    border-right: solid #777 0.1em ;
+    border-bottom: solid #777 0.1em;
+
+    vertical-align: top }
+
+
+table.results th {  font-size: 100%;
+    background-color: #ddf; 
+    border-left: none;
+    border-top: none;
+    border-right: solid #777 0.1em;
+    border-bottom: solid #777 0.1em;
+    margin: 0.3em;
+    padding-top: 0.5em; padding-right: 0.5em;
+    border-right: solid #777 0.1em ;
+    border-bottom: solid #777 0.1em;
+
+    vertical-align: top }
+
+/* Hide sections of the display.
+Collpase not actually in CSS1 except for table row and col.
+Supposed to leave layoutunchanged. So we float it too. */
+.collapse { display: none }
+.expand { display: block }
+
+/* log classes */
+.nrml { color: black; }
+.info { color: black; }
+.warn { color: black; background-color: yellow; }
+.eror { color: white; background-color: red; }
+.mesg { color: green; }
+.dbug { color: black; }  /* timbl can't read grey easily */
+
+/* Try to get the icons to flush right in the cell */
+
+.sortheader {color: black; text-decoration: none }
+.colclose { float: right; color: #aaa } /* Should be 67% transp black */
+.sortarrow {float: right; color: #aaa }
+
+
+/* CSS Stuff for tabbed Views.. */
+table.viewTable {
+    padding: 0;
+    margin: 0;
+    border-style: none;
+    border-width: 0;
+    height: 40em;
+    width: 100%;
+    border-spacing: 0;
+}
+
+div.viewTabs {
+    background-color: #fff;
+    padding:0;
+}
+
+div.viewWindows {
+    width: 100%;
+    height:100%;
+    overflow: auto;
+    margin: 0em;
+    padding:0em;
+    border-right: solid #aaa 0.1em;  /* was 2px */
+    border-left: solid #aaa 0.1em;
+    border-bottom: solid #aaa 0.1em;
+    background-color: #ccc;
+}
+
+div.querySelect {
+    background-color: #ccc;
+    width:100%;
+    height:100%;
+    border-left: solid #aaa 0.1em;
+    border-bottom: solid #aaa 0.1em;
+    overflow:auto;
+    margin: 0em;
+    padding:0em;
+}
+
+td.viewTableData {
+    padding: 0em;
+    margin: 0em;
+    height:100%;
+    width:80%;
+}
+
+td.queryTableData {
+    padding: 0em;
+    margin: 0em;
+    border-width: 0em;
+    height:100%;
+    width:20%;
+    border-style:none;
+}
+
+table.viewTable tr {
+    height: 100%;
+    margin: 0em;
+    padding: 0em;
+    border-style:none;
+}
+
+
+a {
+    color:blue;
+    cursor:pointer;
+}
+a.inactive{
+    background-color: #eee;
+    border-right:solid #ddd 0.1em;
+    border-top:solid #aaa 0.1em;
+    border-left:solid #aaa 0.1em;
+    padding-top: 0.3em;
+    padding-left: 0.8em;
+    padding-right: 0.8em;
+    padding-bottom: 0em;
+    margin-right: 0.1em;
+    color: #99f;
+    text-decoration:none;
+}
+
+a.active{
+    background-color: #ccc;
+    border-right:solid #ddd 0.1em;
+    border-top:solid #aaa 0.1em;
+    border-left:solid #aaa 0.1em;
+    padding-top: 0.3em;
+    padding-left: 0.8em;
+    padding-right: 0.8em;
+    padding-bottom:0em;
+    margin-right:0.1em;
+    color: #22f;
+    text-decoration:none;
+}
+
+input.tabQueryName {
+    border: solid #aaa 0.1em;
+    width:100%;
+    padding:0em;
+}
+
+input.delQueryButton {
+    border:none;
+    color:#c00;
+    background-color:#ccc;
+    cursor:pointer;
+    padding:0em;
+}
+
+td.checkboxTD {
+    padding-right:0.5em;
+}
+
+.sourceHighlight {
+	background-color:yellow;
+}
+
+#MenuBar {
+    padding: 0.5em;
+    position: fixed;
+    top: 0;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    background-color: #ccc;
+    border: 0.1em solid #aaa;
+}
+
+#TabulatorStatusWidget {
+    position: fixed;
+    top: 0;
+    bottom: auto;
+    left: auto;
+    right: 0;
+}
+
+div.mapKeyDiv {
+    position:relative;
+    float:right;
+    margin: 0.3em;
+    color: #777;
+    background:#fff;
+    border:solid #777 0.1em;
+    padding:0.1em;
+}
+
+span.closeQuerySpan {
+    float:right;
+    text-align:right;
+    height: 0.1em;
+    overflow:visible;
+}
+
+span.openQuerySpan {
+    float:left;
+    overflow:visible;
+    height:0em;
+    text-align:left;
+    position:relative;
+    top:0em;
+    z-index:1;
+}

@@ -156,4 +156,146 @@ Util = {
 
         'disablePrivilege': netscape.security.PrivilegeManager.disablePrivilege
 }
+//================================================
+function findLabelSubProperties() {
+    var i,n
+    tdebug("rdfs:label subproperties:");
+    var labelPredicates = kb.each(undefined, RDFS('subPropertyOf'), RDFS('label'));
+    for (i=0, n=labelPredicates.length; i<n; i++) {
+	if (labelPriority[labelPredicates[i].uri] == null) {
+	    labelPriority[labelPredicates[i].uri] = 1
+	}
+	tdebug("rdfs:label subproperty "+ labelPredicates[i]);
+	
+    }
+}
 
+function label(x, trimSlash) {
+    var i,n
+    var plist = kb.statementsMatching(x);
+    var y, best = 0, lab = ""
+    findLabelSubProperties();	// Too slow? Could cache somewhere
+    for (i=0, n=plist.length; i<n; i++) {
+	var st = plist[i]
+	y = labelPriority[st.predicate.uri]
+	if (st.object.value && st.object.lang) {
+	    if (st.object.lang.indexOf(LanguagePreference) >= 0) { y += 1 } // Best
+	    else { y -= 1}  // Prefer no lang to wrong lang (?)
+	}
+	if (y && (y > best) && (st.object.termType=='literal')) {
+	    lab = st.object.value
+	    best = y
+	}
+    }
+    if (lab) {return lab};
+
+    if (x.termType == 'bnode') {
+	return "...";
+    }
+    if (x.termType=='collection'){
+	return '(' + x.elements.length + ')';
+    }
+    var hash = x.uri.indexOf("#")
+    if (hash >=0) { return x.uri.slice(hash+1) }
+
+    if (trimSlash) { // only trim URIs, not rdfs:labels
+	var slash = x.uri.lastIndexOf("/");
+	if ((slash >=0) && (slash < x.uri.length)) return x.uri.slice(slash+1);
+    }
+    return decodeURIComponent(x.uri)
+}
+
+//  As above but escaped for XML and chopped of contains a slash
+function labelForXML(x) {
+    return escapeForXML(label(x, true));
+}
+
+// As above but for predicate, possibly inverse
+function predicateLabelForXML(p, inverse) {
+    var lab;
+    if (inverse) { // If we know an inverse predicate, use its label
+	var ip = kb.any(p, OWL('inverseOf'));
+	if (!ip) ip = kb.any(undefined, OWL('inverseOf'), p);
+	if (ip) return labelForXML(ip)
+    }
+    
+    lab = labelForXML(p)
+    if (inverse) {
+	if (lab =='type') return 'e.g.'; // Not "is type of"
+	return "is "+lab+" of";
+    }
+    return lab
+} 
+//=====================================
+	///////////////// Utility
+	
+function emptyNode(node) {
+    var nodes = node.childNodes, len = nodes.length, i
+    for (i=len-1; i>=0; i--) node.removeChild(nodes[i])
+    return node
+}
+
+function ArrayContains(a, x) {
+    var i, n = a.length
+    for (i=0; i<n; i++)
+    if (a[i] == x) return true;
+    return false
+}
+
+/** returns true if argument is an array **/
+function isArray(arr) {
+    if (typeof arr == 'object') {  
+        var criterion = arr.constructor.toString().match(/array/i); 
+        return (criterion != null); 
+    }
+    return false;
+} //isArray
+
+/** turns an HTMLCollection into an Array. Why? um, mostly so map & filter will work, though
+  * i suspect they work on collections too **/
+function HTMLCollection_to_Array(coll) {
+    var arr = new Array();
+    var len = coll.length;
+    for (var e = 0; e < len; e++) arr[e] = coll[e];
+    return arr;
+} //HTMLCollection_to_Array
+
+/** evaluate expression asynchronously. scoping? **/
+function acall(expr) {
+    setTimeout(expr, 0); //start off expr
+} //acall
+
+
+function myFetcher(x, requestedBy) {
+    if (x == null) {
+        fyi("@@ SHOULD SYNC NOW") // what does this mean?
+    } else {
+        fyi("Fetcher: "+x)
+        AJAR_handleNewTerm(kb, x, requestedBy)
+    }
+}
+
+function matrixTD(obj, asImage, doc) {
+	if(!doc)
+	  doc=document;
+    var td = doc.createElement('TD');
+    if (!obj) var obj = new RDFLiteral(".");
+    if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+	td.setAttribute('about', obj.toNT());
+	td.setAttribute('style', 'color:#4444ff');
+    }
+    
+    var image;
+    if (obj.termType == 'literal') {
+	td.appendChild(doc.createTextNode(obj.value));
+    } else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')){
+	if (asImage) {
+	    image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
+	    image.setAttribute('class', 'pic');
+	    td.appendChild(image);
+	} else {
+	    td.appendChild(doc.createTextNode(label(obj)));
+	}
+    }
+    return td;
+}

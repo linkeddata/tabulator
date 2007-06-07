@@ -91,3 +91,57 @@ function tableDoubleClick(event) {
     if (!aa) return;
     GotoSubject(aa);
 }
+
+function exportTable()
+{
+    /*sel=document.getElementById('exportType')
+	var type = sel.options[sel.selectedIndex].value
+	
+	switch (type)
+	{
+		case 'cv':
+
+			break;
+		case 'html':
+*/
+	var win=window.open('table.html','Save table as HTML');
+    var tbl=document.getElementById('tabulated_data');
+    win.document.write('<TABLE>');
+    for(j=0;j<tbl.childNodes[0].childNodes.length;j++)
+    {
+	win.document.write('<TH>'+ts_getInnerText(tbl.childNodes[0].cells[j])
+			   +'</TH>')
+    }
+    for(i=1;i<tbl.childNodes.length;i++)
+    {
+	var r=tbl.childNodes[i]
+	win.document.write('<TR>')
+	var j
+	for(j=0;j<r.childNodes.length;j++) {
+	    var about = ""
+	    if (r.childNodes[j].attributes['about'])
+		about=r.childNodes[j].attributes['about'].value;
+	    win.document.write('<TD about="'+about+'">');
+	    win.document.write(ts_getInnerText(r.childNodes[j]));
+	    win.document.write('</TD>');
+	}
+	win.document.write('</TR>');
+    }
+    win.document.write('</TABLE>');
+    win.document.uri='table.html'
+    win.document.close();
+    /*			break;
+	   	case 'sparql':
+			//makeQueryLines();
+			var spr = document.getElementById('SPARQLText')
+			spr.setAttribute('class','expand')
+            document.getElementById('SPARQLTextArea').value=queryToSPARQL(myQuery);
+			//SPARQLToQuery("PREFIX ajar: <http://dig.csail.mit.edu/2005/ajar/ajaw/data#> SELECT ?v0 ?v1 WHERE { ajar:Tabulator <http://usefulinc.com/ns/doap#developer> ?v0 . ?v0 <http://xmlns.com/foaf/0.1/birthday> ?v1 . }")
+			//matrixTable(myQuery, sortables_init)
+    		      //sortables_init();
+			break;
+		case '': 
+			alert('Please select a file type');
+			break;
+	}*/
+}

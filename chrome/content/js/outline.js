@@ -1416,7 +1416,7 @@ function createTabURI() {
 }
 
 
-doc.getElementById('outline').addEventListener('click',thisOutline.TabulatorMousedown,true);
+doc.getElementById('outline').addEventListener('click',thisOutline.TabulatorMousedown,false);
 
 }//END OF OUTLINE
 

@@ -1,5 +1,6 @@
 selection = []  // Array of statements which have been selected
-//WE MUST KILL THIS GLOBAL.
+var sourceWidget;
+//WE MUST KILL THESE GLOBALS.
 
 function Outline(doc) {
   var myDocument=doc;
@@ -782,7 +783,7 @@ function Outline(doc) {
 		    if (node.AJAR_statement) source = node.AJAR_statement.why
 		    else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
 		    tinfo('Source to highlight: '+source);
-		    if (source && source.uri) sourceWidget.highlight(source, true);
+		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
 	       } else {
 		    fyi("cla=$"+cla+"$")
 		    cla = cla.replace(' selected','')

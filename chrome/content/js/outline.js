@@ -1,9 +1,9 @@
 function Outline(doc) {
-    this.document=null;
-    if(!doc)
-        this.document=document
-    else
-        this.document=doc;
+	var myDocument;
+	if(!doc)
+	  myDocument=document;
+	else
+      myDocument = doc;
 	
 	
 	/** benchmark a function **/
@@ -86,7 +86,7 @@ function Outline(doc) {
 	 **/
 	function outline_objectTD(obj, view, deleteNode) {
 	    //set about
-	    var td = document.createElement('td');
+	    var td = myDocument.createElement('td');
 	    
 	    if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
 		td.setAttribute('about', obj.toNT());
@@ -106,17 +106,17 @@ function Outline(doc) {
 	
 	///////////////// Represent an arbirary subject by its properties
 	//These are public variables
-	expandedHeaderTR.tr = document.createElement('tr');
-	expandedHeaderTR.td = document.createElement('td');
+	expandedHeaderTR.tr = myDocument.createElement('tr');
+	expandedHeaderTR.td = myDocument.createElement('td');
 	expandedHeaderTR.td.setAttribute('colspan', '2');
 	expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_collapse, 'collapse'));
-	expandedHeaderTR.td.appendChild(document.createElement('strong'));
+	expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
 	expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
 	
 	function expandedHeaderTR(subject) {
 	    var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
 	    tr.firstChild.setAttribute('about', subject.toNT());
-	    tr.firstChild.childNodes[1].appendChild(document.createTextNode(label(subject)));
+	    tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
 	    return tr;
 	} //expandedHeaderTR
 	
@@ -125,7 +125,7 @@ function Outline(doc) {
 	    subject = kb.canon(subject)
 	    
 	    if (!table) { // Create a new property table
-		var table = document.createElement('table')
+		var table = myDocument.createElement('table')
 		var tr1 = expandedHeaderTR(subject)
 		table.appendChild(tr1)
 		
@@ -136,7 +136,7 @@ function Outline(doc) {
 		var i=0, n=classes.length;
 		for (i=0; i<n; i++) {
 		    if (classes[i].uri == 'http://inferenceweb.stanford.edu/2004/07/iw.owl#NodeSet') {
-			var anchor = document.createElement('a');
+			var anchor = myDocument.createElement('a');
 			anchor.setAttribute('href', "http://silo.stanford.edu/iwbrowser/NodeSetBrowser?url=" + encodeURIComponent(subject.uri)); // @@ encode
 			anchor.setAttribute('title', "Browse in Infereence Web");
 			anchor.appendChild(AJARImage(
@@ -228,19 +228,19 @@ function Outline(doc) {
 		var lab = predicateLabelForXML(s.predicate, inverse);
 		lab = lab.slice(0,1).toUpperCase() + lab.slice(1) // init capital
 		
-		var tr = document.createElement("TR")
+		var tr = myDocument.createElement("TR")
 		parent.appendChild(tr)
 		tr.AJAR_statement = s
 		tr.AJAR_inverse = inverse
 		tr.AJAR_variable
 		tr.setAttribute('predTR','true')
-		var td_p = document.createElement("TD")
+		var td_p = myDocument.createElement("TD")
 		td_p.setAttribute('about', s.predicate.toNT())
 		td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
 		tr.appendChild(td_p)
-		var labelTD = document.createElement('TD')
+		var labelTD = myDocument.createElement('TD')
 		labelTD.setAttribute('notSelectable','true')
-		labelTD.appendChild(document.createTextNode(lab))
+		labelTD.appendChild(myDocument.createTextNode(lab))
 		td_p.appendChild(labelTD);
 		labelTD.style.width='100%'
 		td_p.appendChild(termWidget.construct());
@@ -287,7 +287,7 @@ function Outline(doc) {
 			for(l=1; l<k; l++) {
 			    if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))) {
 				s = plist[j+l];
-				var trobj = document.createElement("TR");
+				var trobj = myDocument.createElement("TR");
 				trobj.style.colspan='1';
 				trobj.appendChild(outline_objectTD(sel(plist[j+l]), defaultpropview)); //property view
 				trobj.AJAR_statement = s;
@@ -307,11 +307,11 @@ function Outline(doc) {
 			// special case if show == 1 (case that wasn't covered above)
 			// since adding moreTD html cell, still need to expand td_p to accommodate
 			// add the '... more' cell here for now
-			var moreTR = document.createElement('TR');
-			var moreTD = moreTR.appendChild(document.createElement('TD'));
+			var moreTR = myDocument.createElement('TR');
+			var moreTD = moreTR.appendChild(myDocument.createElement('TD'));
 	
 			if (k-dups > n){
-			    var small = document.createElement('a');		    
+			    var small = myDocument.createElement('a');		    
 			    moreTD.appendChild(small);
 	
 	
@@ -321,10 +321,10 @@ function Outline(doc) {
 				    small.innerHTML = '';
 				    if (display == 'none') {
 					small.appendChild(AJARImage(Icon.src.icon_more, 'more', 'See all'))
-					small.appendChild( document.createTextNode((k-dups-n) + ' more...'));
+					small.appendChild( myDocument.createTextNode((k-dups-n) + ' more...'));
 				    } else {
 					small.appendChild(AJARImage(Icon.src.icon_shrink, '(less)'))
-	//				small.appendChild(document.createTextNode(' shrink'));
+	//				small.appendChild(myDocument.createTextNode(' shrink'));
 				    }
 				    for (var i=0; i<showLaterArray.length; i++){
 					var trobj = showLaterArray[i];
@@ -363,7 +363,7 @@ function Outline(doc) {
 	
 	termWidget.construct = function ()
 	{
-		td = document.createElement('TD')
+		td = myDocument.createElement('TD')
 		td.setAttribute('class','iconTD')
 		td.setAttribute('notSelectable','true')
 		td.style.width = '0px';
@@ -388,7 +388,7 @@ function Outline(doc) {
 	    for (var x = 0; x<iconTD.childNodes.length; x++){
 		var elt = iconTD.childNodes[x];
 		var eltSrc = elt.src;
-		var baseURI = document.location.href.split('?')[0]; // ignore first '?' and everything after it
+		var baseURI = myDocument.location.href.split('?')[0]; // ignore first '?' and everything after it
 		var relativeIconSrc = Util.uri.join(icon.src,baseURI);
 		if (eltSrc == relativeIconSrc) {
 		    iconTD.removeChild(elt);
@@ -424,10 +424,10 @@ function Outline(doc) {
 	    }
 	
 	    var c; for (c in classes) {
-	        var tr = document.createElement('TR')
-	        var td1 = document.createElement('TD')
+	        var tr = myDocument.createElement('TR')
+	        var td1 = myDocument.createElement('TD')
 	        tr.appendChild(td1)
-	        td1.appendChild(document.createTextNode('mentions'))   // was: 'mentions class'
+	        td1.appendChild(myDocument.createTextNode('mentions'))   // was: 'mentions class'
 	        tr.appendChild(outline_objectTD(kb.fromNT(c)))
 	        parent.appendChild(tr)
 	    }*/
@@ -436,17 +436,17 @@ function Outline(doc) {
 	//////// Human-readable content of a document
 	
 	function documentContentTABLE(subject) {
-	    var table = document.createElement("TABLE")
+	    var table = myDocument.createElement("TABLE")
 	
 	    table.setAttribute('class', 'docView')
 	    table.appendChild(expandedHeaderTR(subject))
 	
-	    var iframe = document.createElement("IFRAME")
+	    var iframe = myDocument.createElement("IFRAME")
 	    iframe.setAttribute('src', subject.uri)
 	    iframe.setAttribute('class', 'doc')
 	    iframe.setAttribute('height', '480')
 	    iframe.setAttribute('width', '640')
-	    var tr = document.createElement('TR')
+	    var tr = myDocument.createElement('TR')
 	    tr.appendChild(iframe)
 	    table.appendChild(tr)
 	    return table
@@ -487,18 +487,18 @@ function Outline(doc) {
 	
 	function query_save() {
 	    queries.push(queries[0]);
-	    var choices = document.getElementById('queryChoices');
-	    var next = document.createElement('option');
-	    var box = document.createElement('input');
+	    var choices = myDocument.getElementById('queryChoices');
+	    var next = myDocument.createElement('option');
+	    var box = myDocument.createElement('input');
 	    var index = queries.length-1;
 	    box.setAttribute('type','checkBox');
 	    box.setAttribute('value',index);
 	    choices.appendChild(box);
-	    choices.appendChild(document.createTextNode("Saved query #"+index));
-	    choices.appendChild(document.createElement('br'));
+	    choices.appendChild(myDocument.createTextNode("Saved query #"+index));
+	    choices.appendChild(myDocument.createElement('br'));
 		next.setAttribute("value",index);
-		next.appendChild(document.createTextNode("Saved query #"+index));
-		document.getElementById("queryJump").appendChild(next);
+		next.appendChild(myDocument.createTextNode("Saved query #"+index));
+		myDocument.getElementById("queryJump").appendChild(next);
 	  }
 	
 	/** tabulate this! **/
@@ -613,7 +613,7 @@ function Outline(doc) {
 	
 	function AJAR_ClearTable() {
 	    resetQuery();
-	    var div = document.getElementById('results');
+	    var div = myDocument.getElementById('results');
 	    emptyNode(div);
 	    return false;
 	} //AJAR_ClearTable
@@ -626,7 +626,7 @@ function Outline(doc) {
 	    function onBinding(bindings) { //Creates a row of the table and sticks all the columns in it
 	        tinfo("making a row w/ bindings " + bindings);
 	        var i, tr, td
-	        tr = document.createElement('tr')
+	        tr = myDocument.createElement('tr')
 	        t.appendChild(tr)
 	        for (i=0; i<nv; i++) {
 	            v = q.vars[i]
@@ -634,20 +634,20 @@ function Outline(doc) {
 	        } //for each query var, make a row
 	    }
 	    var i, nv=q.vars.length, td, th, j, v
-	    var t = document.createElement('table')
+	    var t = myDocument.createElement('table')
 	
-	    tr = document.createElement('tr')
+	    tr = myDocument.createElement('tr')
 	    t.appendChild(tr)
 	    t.setAttribute('class', 'results sortable')
 	    t.setAttribute('id', 'tabulated_data'); //needed to make sortable
-	    var div = document.getElementById('results')
+	    var div = myDocument.getElementById('results')
 	    emptyNode(div).appendChild(t) // See results as we go
 	    for (i=0; i<nv; i++) {
 	    	v = q.vars[i]
 	  	fyi("table header cell for " + v + ': '+v.label)
-	    	th = document.createElement('th')
+	    	th = myDocument.createElement('th')
 	    	
-	    	th.appendChild(document.createTextNode(v.label))
+	    	th.appendChild(myDocument.createTextNode(v.label))
 	    	tr.appendChild(th)
 	    }
 	    use_callback = 1
@@ -662,12 +662,12 @@ function Outline(doc) {
 	        var nbs = kb.query(myQuery.pat)
 	        var j, tr, nb, bindings, what
 	        for (j=0; j<nbs.length; j++) {
-	            tr = document.createElement('tr')
+	            tr = myDocument.createElement('tr')
 	            t.appendChild(tr)
 	            bindings = nbs[j][0]  // [bindings, reason]
 	            for (i=0; i<nv; i++) {
 	            v = q.vars[i]
-	            td = document.createElement('td')
+	            td = myDocument.createElement('td')
 	            what = bindings[v]
 	        //      fyi("    table cell "+v+": "+what + " type="+what.termType)
 	            tr.appendChild(matrixTD(what))
@@ -855,7 +855,7 @@ function Outline(doc) {
 		((path) ? "; path=" + path : "") +
 		((domain) ? "; domain=" + domain : "") +
 		((secure) ? "; secure" : "");
-	    document.cookie = curCookie;
+	    myDocument.cookie = curCookie;
 	}
 	
 	
@@ -866,7 +866,7 @@ function Outline(doc) {
 	*/
 	
 	function getCookie(name) {
-	    var dc = document.cookie;
+	    var dc = myDocument.cookie;
 	    var prefix = name + "=";
 	    var begin = dc.indexOf("; " + prefix);
 	    if (begin == -1) {
@@ -874,7 +874,7 @@ function Outline(doc) {
 		if (begin != 0) return null;
 	    } else
 		begin += 2;
-	    var end = document.cookie.indexOf(";", begin);
+	    var end = myDocument.cookie.indexOf(";", begin);
 	    if (end == -1)
 		end = dc.length;
 	    return decodeURIComponent(dc.substring(begin + prefix.length, end));
@@ -882,7 +882,7 @@ function Outline(doc) {
 	
 	function deleteCookie(name, path, domain) {
 	    if (getCookie(name)) {
-		document.cookie = name + "=" +
+		myDocument.cookie = name + "=" +
 		    ((path) ? "; path=" + path : "") +
 		    ((domain) ? "; domain=" + domain : "") +
 		    "; expires=Thu, 01-Jan-70 00:00:01 GMT";
@@ -891,7 +891,7 @@ function Outline(doc) {
 	
 	function QuerySPARQLText ()
 	{
-	    var txt=document.getElementById('SPARQLTextArea').value;
+	    var txt=myDocument.getElementById('SPARQLTextArea').value;
 	    myQuery =  SPARQLToQuery(txt);
 	    matrixTable(myQuery, sortables_init)
 	    sortables_init(); //make table headers sortable
@@ -935,7 +935,7 @@ function Outline(doc) {
 	    }
 	    if (tname != "IMG") {
 	        if(about) { 
-	            document.getElementById('UserURI').value = 
+	            myDocument.getElementById('UserURI').value = 
 			 (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
 	        }
 	        var node;
@@ -1091,7 +1091,7 @@ function Outline(doc) {
 	    }
 	
 	    log.debug("outline_expand: dereferencing "+subject)
-	    var status = document.createElement("span")
+	    var status = myDocument.createElement("span")
 	    p.appendChild(status)
 	    sf.addCallback('done', expand)
 	    sf.addCallback('fail', expand)
@@ -1155,7 +1155,7 @@ function Outline(doc) {
 	        if (level.tagName == "TD") outer = level
 	    } //find outermost td
 	    emptyNode(outer).appendChild(propertyTable(subject));
-	    document.title = label("Tabulator: "+subject);
+	    myDocument.title = label("Tabulator: "+subject);
 	    outer.setAttribute('about', subject.toNT());
 	} //outline_refocus
 	
@@ -1170,7 +1170,7 @@ function Outline(doc) {
 	}
 	
 	function GotoFormURI_enterKey(e) { if (e.keyCode==13) GotoFormURI(e)  }
-	function GotoFormURI(e) { GotoURI(document.getElementById('UserURI').value); }
+	function GotoFormURI(e) { GotoURI(myDocument.getElementById('UserURI').value); }
 	
 	function GotoURI(uri){
 		var subject = kb.sym(uri)
@@ -1183,8 +1183,8 @@ function Outline(doc) {
 	}
 	
 	function GotoSubject(subject, expand) {
-	    var table = document.getElementById('browser');
-	    var tr = document.createElement("TR");
+	    var table = myDocument.getElementById('browser');
+	    var tr = myDocument.createElement("TR");
 	    tr.style.verticalAlign="top";
 	    table.appendChild(tr);
 	    var td = outline_objectTD(subject, undefined, tr)
@@ -1192,7 +1192,7 @@ function Outline(doc) {
 	    tr.appendChild(td)
 	    if (expand) {
 	    	outline_expand(td, subject)
-	    	document.title = "Tabulator: "+label(subject)
+	    	myDocument.title = "Tabulator: "+label(subject)
 	    }
 	
 	    return subject;
@@ -1202,6 +1202,220 @@ function Outline(doc) {
 	   var sbj = GotoURI(uri);
 	//   outline_expand(document.getElementById('browser'), sbj);  Wrong element
 	}
+
+////////////////////////////////////////////////////////
+//
+//
+//                    VIEWS
+//
+//
+////////////////////////////////////////////////////////
+
+var views = {
+    properties                          : [],
+    defaults                                : [],
+    classes                                 : []
+}; //views
+
+/** add a property view function **/
+function views_addPropertyView(property, pviewfunc, isDefault) {
+    if (!views.properties[property]) 
+        views.properties[property] = [];
+    views.properties[property].push(pviewfunc);
+    if(isDefault) //will override an existing default!
+        views.defaults[property] = pviewfunc;
+} //addPropertyView
+
+//view that applies to items that are objects of certain properties.
+//views_addPropertyView(property, viewjsfile, default?)
+views_addPropertyView(foaf('depiction').uri, VIEWAS_image, true);
+views_addPropertyView(foaf('img').uri, VIEWAS_image, true);
+views_addPropertyView(foaf('thumbnail').uri, VIEWAS_image, true);
+views_addPropertyView(foaf('logo').uri, VIEWAS_image, true);
+//views_addPropertyView(mo('image').uri, VIEWAS_image, true);
+//views_addPropertyView(foaf('aimChatID').uri, VIEWAS_aim_IMme, true);
+views_addPropertyView(foaf('mbox').uri, VIEWAS_mbox, true);
+//views_addPropertyView(foaf('based_near').uri, VIEWAS_map, true);
+views_addPropertyView(foaf('birthday').uri, VIEWAS_cal, true);
+
+var thisOutline=this;
+/** some builtin simple views **/
+function VIEWAS_boring_default(obj) {
+    //log.debug("entered VIEWAS_boring_default...");
+    var rep; //representation in html
+
+    if (obj.termType == 'literal')
+    {
+        rep = myDocument.createTextNode(obj.value);
+    } else if (obj.termType == 'symbol' || obj.termType == 'bnode') {
+        rep = myDocument.createElement('span');
+        rep.setAttribute('about', obj.toNT());
+        thisOutline.appendAccessIcon(rep, obj);
+        rep.appendChild(myDocument.createTextNode(label(obj)));
+        if ((obj.termType == 'symbol') &&
+            (obj.uri.indexOf("#") < 0) &&
+            (Util.uri.protocol(obj.uri)=='http'
+	     || Util.uri.protocol(obj.uri)=='https')) {
+	    // a web page @@ file, ftp;
+                var linkButton = myDocument.createElement('input');
+                linkButton.type='image';
+                linkButton.src='icons/document.png';
+                linkButton.alt='Open in new window';
+                linkButton.onclick= function () {
+                    return window.open(''+obj.uri,
+				       ''+obj.uri,
+				       'width=500,height=500,resizable=1,scrollbars=1')
+                }
+                linkButton.title='View in a new window';
+                rep.appendChild(linkButton);
+        }
+    } else if (obj.termType=='collection'){
+	// obj.elements is an array of the elements in the collection
+	rep = myDocument.createElement('table');
+	rep.setAttribute('about', obj.toNT());
+/* Not sure which looks best -- with or without. I think without
+
+	var tr = rep.appendChild(document.createElement('tr'));
+	tr.appendChild(document.createTextNode(
+		obj.elements.length ? '(' + obj.elements.length+')' : '(none)'));
+*/
+	for (var i=0; i<obj.elements.length; i++){
+	    var elt = obj.elements[i];
+	    var row = rep.appendChild(myDocument.createElement('tr'));
+	    var numcell = row.appendChild(myDocument.createElement('td'));
+	    numcell.setAttribute('about', obj.toNT());
+	    numcell.innerHTML = (i+1) + ')';
+	    row.appendChild(outline_objectTD(elt));
+	}
+    } else {
+        log.error("unknown term type: " + obj.termType);
+        rep = myDocument.createTextNode("[unknownTermType:" + obj.termType +"]");
+    } //boring defaults.
+    log.debug("contents: "+rep.innerHTML);
+    return rep;
+}  //boring_default!
+function VIEWAS_image(obj) {
+    return AJARImage(obj.uri, label(obj), label(obj));
+}
+
+function VIEWAS_mbox(obj) {
+    var anchor = myDocument.createElement('a');
+    // previous implementation assumed email address was Literal. fixed.
+    
+    // FOAF mboxs must NOT be literals -- must be mailto: URIs.
+    
+    var address = (obj.termType=='symbol') ? obj.uri : obj.value; // this way for now
+    if (!address) return VIEWAS_boring_default(obj)
+    var index = address.indexOf('mailto:');
+    address = (index >= 0) ? address.slice(index + 7) : address;
+    anchor.setAttribute('href', 'mailto:'+address);
+    anchor.appendChild(myDocument.createTextNode(address));
+    return anchor;
+}
+
+/* need to make unique calendar containers and names
+ * YAHOO.namespace(namespace) returns the namespace specified 
+ * and creates it if it doesn't exist
+ * function 'uni' creates a unique namespace for a calendar and 
+ * returns number ending
+ * ex: uni('cal') may create namespace YAHOO.cal1 and return 1
+ *
+ * YAHOO.namespace('foo.bar') makes YAHOO.foo.bar defined as an object,
+ * which can then have properties
+ */
+
+function uni(prefix){
+    var n = counter();
+    var name = prefix + n;
+    YAHOO.namespace(name);
+    return n;
+}
+
+// counter for calendar ids, 
+counter = function(){
+	var n = 0;
+	return function(){
+		n+=1;
+		return n;
+	}
+}() // *note* those ending parens! I'm using function scope
+
+var renderHoliday = function(workingDate, cell) { 
+	YAHOO.util.Dom.addClass(cell, "holiday");
+} 
+
+
+/* toggles whether element is displayed
+ * if elt.getAttribute('display') returns null, 
+ * it will be assigned 'block'
+ */
+function toggle(eltname){
+	var elt = myDocument.getElementById(eltname);
+	elt.style.display = (elt.style.display=='none')?'block':'none'
+}
+
+/* Example of calendar Id: cal1
+ * 42 cells in one calendar. from top left counting, each table cell has
+ * ID: YAHOO.cal1_cell0 ... YAHOO.cal.1_cell41
+ * name: YAHOO.cal1__2006_3_2 for anchor inside calendar cell 
+ * of date 3/02/2006
+ * 
+ */	
+function VIEWAS_cal(obj) {
+	prefix = 'cal';
+	var cal = prefix + uni(prefix);
+
+	var containerId = cal + 'Container';
+	var table = myDocument.createElement('table');
+	
+	
+	// create link to hide/show calendar
+	var a = myDocument.createElement('a');
+	// a.appendChild(document.createTextNode('[toggle]'))
+	a.innerHTML="<small>mm-dd: " + obj.value + "[toggle]</small>";
+	//a.setAttribute('href',":toggle('"+containerId+"')");
+	a.onclick = function(){toggle(containerId)};
+	table.appendChild(a);
+
+	var dateArray = obj.value.split("-");
+	var m = dateArray[0];
+	var d = dateArray[1];
+	var yr = (dateArray.length>2)?dateArray[2]:(new Date()).getFullYear();
+
+	// hack: calendar will be appended to divCal at first, but will
+	// be moved to new location
+	myDocument.getElementById('divCal').appendChild(table);
+	var div = table.appendChild(myDocument.createElement('DIV'));
+	div.setAttribute('id', containerId);
+	// default hide calendar
+	div.style.display = 'none';
+	div.setAttribute('tag','calendar');
+	YAHOO[cal] = new YAHOO.widget.Calendar("YAHOO." + cal, containerId, m+"/"+yr);
+
+	YAHOO[cal].addRenderer(m+"/"+d, renderHoliday); 
+
+	YAHOO[cal].render();
+	// document.childNodes.removeChild(table);
+	return table;
+}
+
+
+// test writing something to calendar cell
+
+
+function VIEWAS_aim_IMme(obj) {
+    var anchor = myDocument.createElement('a');
+    anchor.setAttribute('href', "aim:goim?screenname=" + obj.value + "&message=hello");
+    anchor.setAttribute('title', "IM me!");
+    anchor.appendChild(myDocument.createTextNode(obj.value));
+    return anchor;
+} //aim_IMme
+
+function createTabURI() {
+    myDocument.getElementById('UserURI').value=
+      myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
+}
+
 }
 
 var NextVariable = 0;

@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3123 2007-06-07 05:33:20Z jambo $
+// SVN ID: $Id: tabulate.js 3124 2007-06-07 05:39:20Z jambo $
 //
 // See Help.html, About.html, tb.html
 
@@ -12,6 +12,7 @@ LanguagePreference = "en"    // @@ How to set this from the browser? From cookie
 
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing
 var sf = new SourceFetcher(kb) // This handles resource retrieval
+var outline;
 
 kb.sf = sf // Make knowledge base aware of source fetcher to allow sameAs to propagate a fetch
 
@@ -180,8 +181,6 @@ internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 1;
 internals['http://www.w3.org/2006/link#uri'] = 1;
 internals['http://www.w3.org/2006/link#Document'] = 1;
 internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
-
-var outline=new Outline(document);
 
 /** returns true if str starts with pref, case sensitive, space sensitive **/
 function string_startswith(str, pref) { // missing library routines
@@ -592,6 +591,7 @@ starting points and start with the specified query; otherwise, display the sugge
  * starting points **/
 function AJAR_initialisePage()
 {
+    outline = new Outline(document);
     statusWidget = new StatusWidget()
     sourceWidget = new SourceWidget()
     initialiseGetData();

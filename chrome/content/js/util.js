@@ -299,3 +299,48 @@ function matrixTD(obj, asImage, doc) {
     }
     return td;
 }
+
+	function getTarget(e) {
+	    var target
+	    if (!e) var e = window.event
+	    if (e.target) target = e.target
+	    else if (e.srcElement) target = e.srcElement
+	    if (target.nodeType == 3) // defeat Safari bug [sic]
+	       target = target.parentNode
+	    fyi("Click on: " + target.tagName)
+	    return target
+	}
+	
+	//////////////////////////////////// User Interface Events
+	
+	function getAboutLevel(target) {
+	    var level
+	    for (level = target; level; level = level.parentNode) {
+	    fyi("Level "+level)
+	    var aa = level.getAttribute('about')
+	    if (aa) return level
+	    }
+	    return undefined
+	}
+	
+	function ancestor(target, tagName) {
+	    var level
+	    for (level = target; level; level = level.parentNode) {
+		fyi("looking for "+tagName+" Level: "+level+" "+level.tagName)
+		if (level.tagName == tagName) return level;
+	    }
+	    return undefined
+	}
+	
+	function getAbout(kb, target) {
+	    var level, aa
+	    for (level=target; level && (level.nodeType==1); level=level.parentNode) {
+	        fyi("Level "+level + ' '+level.nodeType)
+	        aa = level.getAttribute('about')
+	        if (aa) {
+		    return kb.fromNT(aa)
+		}
+	    }
+	    return undefined
+	}
+	

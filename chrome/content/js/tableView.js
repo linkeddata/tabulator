@@ -1,5 +1,9 @@
-function tableView(container) {
-
+function tableView(container,doc) {
+    this.document=null;
+    if(doc)
+      this.document=doc;
+    else
+      this.document=document;
     //The necessary vars for a View...
     this.name="Table";        //Display name of this view.
     this.queryStates=[];          //All Queries currently in this view.
@@ -13,7 +17,7 @@ function tableView(container) {
         this.onBinding = function (bindings) {
             tinfo("making a row w/ bindings " + bindings);
             var i, tr, td
-            tr = document.createElement('tr')
+            tr = this.document.createElement('tr')
             t.appendChild(tr)
             for (i=0; i<nv; i++) {
                 v = q.vars[i]
@@ -22,9 +26,9 @@ function tableView(container) {
         }
 
         var i, nv=q.vars.length, td, th, j, v
-        var t = document.createElement('table')
+        var t = this.document.createElement('table')
 
-        tr = document.createElement('tr')
+        tr = this.document.createElement('tr')
         t.appendChild(tr)
         t.setAttribute('class', 'results sortable')
         t.setAttribute('id', 'tabulated_data'); //needed to make sortable
@@ -32,9 +36,9 @@ function tableView(container) {
         for (i=0; i<nv; i++) {
             v = q.vars[i]
             //fyi("table header cell for " + v + ': '+v.label)
-            th = document.createElement('th')
+            th = this.document.createElement('th')
 
-            th.appendChild(document.createTextNode(v.label))
+            th.appendChild(this.document.createTextNode(v.label))
             tr.appendChild(th)
         }
         drawExport();
@@ -46,9 +50,9 @@ function tableView(container) {
 	
 	function drawExport ()
 	{
-		var form=document.createElement('form')
+		var form=this.document.createElement('form')
 		form.setAttribute('textAlign','right');
-	    var but = document.createElement('input')
+	    var but = this.document.createElement('input')
 	    but.setAttribute('type','button')
 	    but.setAttribute('id','exportButton')
 	    but.onclick=exportTable // they should all be like this?
@@ -105,7 +109,7 @@ function exportTable()
 		case 'html':
 */
 	var win=window.open('table.html','Save table as HTML');
-    var tbl=document.getElementById('tabulated_data');
+    var tbl=this.document.getElementById('tabulated_data');
     win.document.write('<TABLE>');
     for(j=0;j<tbl.childNodes[0].childNodes.length;j++)
     {

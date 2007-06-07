@@ -5,6 +5,64 @@ var sourceWidget;
 function Outline(doc) {
   var myDocument=doc;
 
+this.viewAndSaveQuery = function()
+{
+
+    onLoad = function(e) {
+        var doc = e.originalTarget;
+        var container = doc.getElementById('viewArea');
+        var view = new tableView(container,myDocument);
+        qs.addListener(view);
+        var q = saveQuery();
+        view.drawQuery(q);
+        gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
+    }
+    gBrowser.selectedTab = gBrowser.addTab("chrome://tabulator/content/view.html");
+    gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
+}
+
+
+function saveQuery()
+{
+    var q= new Query()
+    var i, n=selection.length, j, m, tr, sel, st;
+    for (i=0; i<n; i++) {
+        sel = selection[i]
+       	tr = sel.parentNode
+       	st = tr.AJAR_statement
+       	tdebug("Statement "+st)
+       	if (sel.getAttribute('class').indexOf('pred') >= 0) {
+           	tinfo("   We have a predicate")
+           	makeQueryRow(q,tr)
+       	}
+       	if (sel.getAttribute('class').indexOf('obj') >=0) {
+       		tinfo("   We have an object")
+       		makeQueryRow(q,tr,true)
+       	}
+    }   
+    qs.addQuery(q);
+	function resetOutliner(pat)
+	{
+		optionalSubqueriesIndex=[]
+		var i, n = pat.statements.length, pattern, tr;
+		for (i=0; i<n; i++) {
+	    	pattern = pat.statements[i];
+	    	tr = pattern.tr;
+	   	 	//tdebug("tr: " + tr.AJAR_statement);
+	    	if (typeof tr!='undefined')
+	    	{
+	    		tr.AJAR_pattern = null; //TODO: is this == to whats in current version?
+	    		tr.AJAR_variable = null;
+	    	}
+		}
+		for (x in pat.optional)
+			resetOutliner(pat.optional[x])
+    }
+    resetOutliner(q.pat);
+    //NextVariable=0;
+    return q;
+}
+
 	
 	/** benchmark a function **/
 	benchmark.lastkbsize = 0;
@@ -677,39 +735,6 @@ function Outline(doc) {
 	    return t
 	}
 	
-	//////////////////////////////////// User Interface Events
-	
-	function getAboutLevel(target) {
-	    var level
-	    for (level = target; level; level = level.parentNode) {
-	    fyi("Level "+level)
-	    var aa = level.getAttribute('about')
-	    if (aa) return level
-	    }
-	    return undefined
-	}
-	
-	function ancestor(target, tagName) {
-	    var level
-	    for (level = target; level; level = level.parentNode) {
-		fyi("looking for "+tagName+" Level: "+level+" "+level.tagName)
-		if (level.tagName == tagName) return level;
-	    }
-	    return undefined
-	}
-	
-	function getAbout(kb, target) {
-	    var level, aa
-	    for (level=target; level && (level.nodeType==1); level=level.parentNode) {
-	        fyi("Level "+level + ' '+level.nodeType)
-	        aa = level.getAttribute('about')
-	        if (aa) {
-		    return kb.fromNT(aa)
-		}
-	    }
-	    return undefined
-	}
-	
 	function addButtonCallbacks(target, term) {
 	    var fireOn = Util.uri.docpart(term.uri)
 	    log.debug("Button callbacks for " + fireOn + " added")
@@ -793,7 +818,7 @@ function Outline(doc) {
 		    fyi("cla=$"+cla+"$")
 		    if (node.AJAR_statement) source=node.AJAR_statement.why
 		    else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why
-		    if (source && source.uri) sourceWidget.highlight(source, false)
+		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false)
 	  }
 	    node.setAttribute('class', cla)
 	}
@@ -802,18 +827,6 @@ function Outline(doc) {
 	    var i, n=selection.length
 	    for (i=n-1; i>=0; i--) setSelected(selection[i], false);
 	}
-	
-	function getTarget(e) {
-	    var target
-	    if (!e) var e = window.event
-	    if (e.target) target = e.target
-	    else if (e.srcElement) target = e.srcElement
-	    if (target.nodeType == 3) // defeat Safari bug [sic]
-	       target = target.parentNode
-	    fyi("Click on: " + target.tagName)
-	    return target
-	}
-	
 	/////////  Hiding
 	
 	function AJAR_hideNext(event) {
@@ -837,7 +850,7 @@ function Outline(doc) {
 	    fyi("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
 	    var aa = getAbout(kb, target);
 	    if (!aa) return;
-		GotoSubject(aa,true);
+		this.GotoSubject(aa,true);
 	}
 	
 	function ResultsDoubleClick(event)
@@ -845,7 +858,7 @@ function Outline(doc) {
 	    var target = getTarget(event);
 	    var aa = getAbout(kb, target)
 	    if (!aa) return;
-	    GotoSubject(aa,true);
+	    this.GotoSubject(aa,true);
 	}
 	
 	
@@ -1174,15 +1187,15 @@ function Outline(doc) {
 	
 	function GotoURI(uri){
 		var subject = kb.sym(uri)
-		GotoSubject(subject, true);
+		this.GotoSubject(subject, true);
 	}
 	
 	this.GotoURIinit = function(uri){
 		var subject = kb.sym(uri)
-		GotoSubject(subject)
+		this.GotoSubject(subject)
 	}
 	
-	function GotoSubject(subject, expand) {
+	this.GotoSubject = function(subject, expand) {
 	    var table = myDocument.getElementById('outline');
 	    var tr = myDocument.createElement("TR");
 	    tr.style.verticalAlign="top";
@@ -1419,6 +1432,7 @@ function createTabURI() {
 
 doc.getElementById('outline').addEventListener('click',thisOutline.TabulatorMousedown,false);
 
+return this;
 }//END OF OUTLINE
 
 

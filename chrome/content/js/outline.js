@@ -1,6 +1,9 @@
+selection = []  // Array of statements which have been selected
+//WE MUST KILL THIS GLOBAL.
+
 function Outline(doc) {
   var myDocument=doc;
-	
+
 	
 	/** benchmark a function **/
 	benchmark.lastkbsize = 0;
@@ -1257,11 +1260,11 @@ function VIEWAS_boring_default(obj) {
                 linkButton.type='image';
                 linkButton.src='icons/document.png';
                 linkButton.alt='Open in new window';
-                linkButton.onclick= function () {
+                /*linkButton.onclick= function () {
                     return window.open(''+obj.uri,
 				       ''+obj.uri,
 				       'width=500,height=500,resizable=1,scrollbars=1')
-                }
+                }*///TODO: Reimplement this.
                 linkButton.title='View in a new window';
                 rep.appendChild(linkButton);
         }
@@ -1412,7 +1415,11 @@ function createTabURI() {
       myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
 }
 
-}
+
+doc.getElementById('outline').addEventListener('click',thisOutline.TabulatorMousedown,true);
+
+}//END OF OUTLINE
+
 
 var NextVariable = 0;
 function newVariableName() {

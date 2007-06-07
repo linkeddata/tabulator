@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3121 2007-06-07 04:42:26Z jambo $
+// SVN ID: $Id: tabulate.js 3123 2007-06-07 05:33:20Z jambo $
 //
 // See Help.html, About.html, tb.html
 
@@ -56,8 +56,6 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
 
 kb.predicateCallback = AJAR_handleNewTerm
 kb.typeCallback = AJAR_handleNewTerm
-
-selection = []  // Array of statements which have been selected
 
 // For offline working, you might want to map URIs to local copies.
 var SiteMap = []

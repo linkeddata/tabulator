@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3119 2007-06-07 03:46:41Z jambo $
+// SVN ID: $Id: tabulate.js 3121 2007-06-07 04:42:26Z jambo $
 //
 // See Help.html, About.html, tb.html
 
@@ -597,7 +597,7 @@ function AJAR_initialisePage()
     statusWidget = new StatusWidget()
     sourceWidget = new SourceWidget()
     initialiseGetData();
-    var browser = document.getElementById('browser');
+    var browser = document.getElementById('outline');
     var q
     if (GET_DATA['query']) {
         emptyNode(browser);

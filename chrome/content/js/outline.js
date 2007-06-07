@@ -1141,7 +1141,7 @@ function Outline(doc) {
 	        myview = views.defaults[statement.predicate.uri];
 	    }
 	    log.debug("view= " + myview);
-	    if (level.parentNode.parentNode.id == 'browser') {
+	    if (level.parentNode.parentNode.id == 'outline') {
 		var deleteNode = level.parentNode
 	    }
 	    level.parentNode.replaceChild(outline_objectTD(subject,
@@ -1183,7 +1183,7 @@ function Outline(doc) {
 	}
 	
 	function GotoSubject(subject, expand) {
-	    var table = myDocument.getElementById('browser');
+	    var table = myDocument.getElementById('outline');
 	    var tr = myDocument.createElement("TR");
 	    tr.style.verticalAlign="top";
 	    table.appendChild(tr);

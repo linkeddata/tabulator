@@ -2,6 +2,7 @@
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
+  <script type="application/x-javascript" src="js/sorttable.js"/>
   <script type="application/x-javascript" src="js/tableView.js"/>
   <script type="application/x-javascript" src="js/log.js"/>
   <script type="application/x-javascript" src="js/util.js"/>

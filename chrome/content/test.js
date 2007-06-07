@@ -196,9 +196,15 @@ Extension.prototype = {
 
 function OutlineLoader(target,uri) {
   onLoadEvent = function(e) {
+    var doc = e.originalTarget;
     //The following might be shaky: if there are loading bugs, check this first    
     var outline = new Outline(e.originalTarget);
-    outline.GotoURIinit(uri);
+    outline.GotoSubject(kb.sym(uri),true);
+    var queryButton = doc.createElement('input');
+    queryButton.setAttribute('type','button');
+    queryButton.setAttribute('value','Find All');
+    doc.body.appendChild(queryButton);
+    queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
     //TODO: Figure out the BROWSER from the event.
     target.removeEventListener("load",onLoadEvent , true);
   }

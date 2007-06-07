@@ -933,7 +933,7 @@ function Outline(doc) {
 	        return
 	    }
 	    if (tname != "IMG") {
-	        if(about) { 
+	        if(about && myDocument.getElementById('UserURI')) { 
 	            myDocument.getElementById('UserURI').value = 
 			 (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
 	        }

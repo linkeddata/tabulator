@@ -1,6 +1,12 @@
 selection = []  // Array of statements which have been selected
 var sourceWidget;
 //WE MUST KILL THESE GLOBALS.
+var _tabulatorMode=0; //Sorry one more
+//Default mode: Discovery 
+
+//Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
+//              targetOf -> this.targetOf
+//              outline_objectTD -> this.outline_objectTD
 
 function Outline(doc) {
   var myDocument=doc;
@@ -142,7 +148,7 @@ function saveQuery()
 	 *  @param obj - an RDF term
 	 *  @param view - a VIEW function (rather than a bool asImage)
 	 **/
-	function outline_objectTD(obj, view, deleteNode) {
+	this.outline_objectTD=function(obj, view, deleteNode) {
 	    //set about
 	    var td = myDocument.createElement('td');
 	    
@@ -318,7 +324,7 @@ function saveQuery()
 		if (myLang > 0 && langTagged == dups+1) {
 		    for (k=j; k <= j+dups; k++) {
 			if (sel(plist[k]).lang.indexOf(LanguagePreference) >=0) {
-			    tr.appendChild(outline_objectTD(sel(plist[k]), defaultpropview))
+			    tr.appendChild(outline.outline_objectTD(sel(plist[k]), defaultpropview))
 			    break;
 			}
 		    }
@@ -326,7 +332,7 @@ function saveQuery()
 		    continue;
 		}
 	
-		tr.appendChild(outline_objectTD(sel(s), defaultpropview));
+		tr.appendChild(outline.outline_objectTD(sel(s), defaultpropview));
 	
 		/* Note: showNobj shows between n to 2n objects.
 		 * This is to prevent the case where you have a long list of objects
@@ -347,7 +353,7 @@ function saveQuery()
 				s = plist[j+l];
 				var trobj = myDocument.createElement("TR");
 				trobj.style.colspan='1';
-				trobj.appendChild(outline_objectTD(sel(plist[j+l]), defaultpropview)); //property view
+				trobj.appendChild(outline.outline_objectTD(sel(plist[j+l]), defaultpropview)); //property view
 				trobj.AJAR_statement = s;
 				trobj.AJAR_inverse = inverse;
 				parent.appendChild(trobj);
@@ -912,7 +918,7 @@ function saveQuery()
 	
 	/** get the target of an event **/
 	
-	function targetOf(e) {
+	this.targetOf=function(e) {
 	    var target;
 	    if (!e) var e = window.event
 	    if (e.target) 
@@ -928,6 +934,22 @@ function saveQuery()
 	    return target;
 	} //targetOf
 	
+	this.OutlinerKeypressPanel=function(e){
+	    if (_tabulatorMode==1) UserInput.Keypress(e);
+	}
+	    
+	this.OutlinerMouseclickPanel=function(e){
+	    switch(_tabulatorMode){
+	        case 0:
+	            TabulatorMousedown(e);
+	            break;
+	        case 1:
+	            UserInput.Click(e);
+	            break;
+	        default:
+	    }
+	}
+	
 	/** things to do onmousedown in outline view **/
 	// expand
 	// collapse
@@ -935,8 +957,8 @@ function saveQuery()
 	// select
 	// visit/open a page
 	
-	this.TabulatorMousedown = function(e) {
-	    var target = targetOf(e);
+	function TabulatorMousedown(e) {
+	    var target = outline.targetOf(e);
 	    if (!target) return;
 	    var tname = target.tagName;
 	    //fyi("TabulatorMousedown: " + tname + " shift="+e.shiftKey+" alt="+e.altKey+" ctrl="+e.ctrlKey);
@@ -1157,7 +1179,7 @@ function saveQuery()
 	    if (level.parentNode.parentNode.id == 'outline') {
 		var deleteNode = level.parentNode
 	    }
-	    level.parentNode.replaceChild(outline_objectTD(subject,
+	    level.parentNode.replaceChild(outline.outline_objectTD(subject,
 							   myview, deleteNode), level);
 	} //outline_collapse
 	
@@ -1200,7 +1222,7 @@ function saveQuery()
 	    var tr = myDocument.createElement("TR");
 	    tr.style.verticalAlign="top";
 	    table.appendChild(tr);
-	    var td = outline_objectTD(subject, undefined, tr)
+	    var td = outline.outline_objectTD(subject, undefined, tr)
 	
 	    tr.appendChild(td)
 	    if (expand) {
@@ -1298,7 +1320,7 @@ function VIEWAS_boring_default(obj) {
 	    var numcell = row.appendChild(myDocument.createElement('td'));
 	    numcell.setAttribute('about', obj.toNT());
 	    numcell.innerHTML = (i+1) + ')';
-	    row.appendChild(outline_objectTD(elt));
+	    row.appendChild(outline.outline_objectTD(elt));
 	}
     } else {
         log.error("unknown term type: " + obj.termType);
@@ -1430,7 +1452,10 @@ function createTabURI() {
 }
 
 
-doc.getElementById('outline').addEventListener('click',thisOutline.TabulatorMousedown,false);
+doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
+doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
+window.addEventListener('keypress',function(e){	if (e.ctrlKey && e.charCode==115) UserInput.switchMode();},false) 
+//temporary key ctrl+s for swiching mode (work only for Mac?)
 
 return this;
 }//END OF OUTLINE

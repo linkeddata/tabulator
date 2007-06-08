@@ -1454,8 +1454,8 @@ function createTabURI() {
 
 doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
 doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
-window.addEventListener('keypress',function(e){	if (e.ctrlKey && e.charCode==115) UserInput.switchMode();},false) 
-//temporary key ctrl+s for swiching mode (work only for Mac?)
+window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false) 
+//temporary key ctrl+s or q for swiching mode
 
 return this;
 }//END OF OUTLINE

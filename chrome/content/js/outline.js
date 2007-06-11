@@ -10,7 +10,7 @@ var _tabulatorMode=0; //Sorry one more
 
 function Outline(doc) {
   var myDocument=doc;
-
+  var outline=this;
 this.viewAndSaveQuery = function()
 {
 

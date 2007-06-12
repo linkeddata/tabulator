@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3129 2007-06-07 19:05:59Z jambo $
+// SVN ID: $Id: tabulate.js 3147 2007-06-12 19:55:20Z presbrey $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -592,14 +592,13 @@ function initialiseGetData(){
 /** if the get ?uri= is set, begin with that; if ?sparql is set, empty the 
 starting points and start with the specified query; otherwise, display the suggested
  * starting points **/
-function AJAR_initialisePage()
-{
+function AJAR_initialisePage() {
     outline = new Outline(document);
     statusWidget = new StatusWidget()
     sourceWidget = new SourceWidget()
     initialiseGetData();
     var browser = document.getElementById('outline');
-    var q
+    var q;
     if (GET_DATA['query']) {
         emptyNode(browser);
     	var txt = GET_DATA['query'];
@@ -607,7 +606,7 @@ function AJAR_initialisePage()
     	txt = window.decodeURIComponent(txt)
     	q = SPARQLToQuery(txt)
     	if (GET_DATA['sname']) q.name=GET_DATA['sname']
-	qs.addQuery(q);
+        qs.addQuery(q);
     }
     if (GET_DATA['uri']) {
         //clear browser
@@ -621,19 +620,12 @@ function AJAR_initialisePage()
     			  'http://dig.csail.mit.edu/data#DIG':'Decentralised Information Group' };
     	for (q in links)
     	{
-    		/*var tr = document.createElement('tr')
-    		var td = document.createElement('td')
-    		td.setAttribute('about',q)
-    		browser.appendChild(tr)
-    		tr.appendChild(td)
-    		td.appendChild(AJARImage(icon_expand,'expand'))
-    		td.appendChild(document.createTextNode(links[q]))*/
     		kb.add(kb.sym(q),kb.sym('dc',"title"),kb.literal(links[q]));
     		outline.GotoURIinit(q)
     	}
     } //go to an initial uri
+    return outline;
 } //initialize page
-
 
 ///and at the end
 //addLoadEvent(function() { sources_request_new(tabulator_ns('')) });

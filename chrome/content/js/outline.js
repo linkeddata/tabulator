@@ -2,95 +2,83 @@ selection = []  // Array of statements which have been selected
 var sourceWidget;
 //WE MUST KILL THESE GLOBALS.
 var _tabulatorMode=0; //Sorry one more
-//Default mode: Discovery 
+//Default mode: Discovery
 
 //Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
 //              targetOf -> this.targetOf
 //              outline_objectTD -> this.outline_objectTD
 
 function Outline(doc) {
-  var myDocument=doc;
-  var outline=this;
-this.viewAndSaveQuery = function()
-{
-
-    onLoad = function(e) {
-        var doc = e.originalTarget;
-        var container = doc.getElementById('viewArea');
-        var view = new tableView(container,myDocument);
-        qs.addListener(view);
-        var q = saveQuery();
-        view.drawQuery(q);
-        gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
+    var myDocument=doc;
+    var outline=this;
+    this.viewAndSaveQuery = function() {
+        onLoad = function(e) {
+            var doc = e.originalTarget;
+            var container = doc.getElementById('viewArea');
+            var view = new tableView(container,myDocument);
+            qs.addListener(view);
+            var q = saveQuery();
+            view.drawQuery(q);
+            gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
+        }
+        gBrowser.selectedTab = gBrowser.addTab("chrome://tabulator/content/view.html");
+        gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
     }
-    gBrowser.selectedTab = gBrowser.addTab("chrome://tabulator/content/view.html");
-    gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
-}
-
-
-function saveQuery()
-{
-    var q= new Query()
-    var i, n=selection.length, j, m, tr, sel, st;
-    for (i=0; i<n; i++) {
-        sel = selection[i]
-       	tr = sel.parentNode
-       	st = tr.AJAR_statement
-       	tdebug("Statement "+st)
-       	if (sel.getAttribute('class').indexOf('pred') >= 0) {
-           	tinfo("   We have a predicate")
-           	makeQueryRow(q,tr)
-       	}
-       	if (sel.getAttribute('class').indexOf('obj') >=0) {
-       		tinfo("   We have an object")
-       		makeQueryRow(q,tr,true)
-       	}
-    }   
-    qs.addQuery(q);
-	function resetOutliner(pat)
-	{
-		optionalSubqueriesIndex=[]
-		var i, n = pat.statements.length, pattern, tr;
-		for (i=0; i<n; i++) {
-	    	pattern = pat.statements[i];
-	    	tr = pattern.tr;
-	   	 	//tdebug("tr: " + tr.AJAR_statement);
-	    	if (typeof tr!='undefined')
-	    	{
-	    		tr.AJAR_pattern = null; //TODO: is this == to whats in current version?
-	    		tr.AJAR_variable = null;
-	    	}
-		}
-		for (x in pat.optional)
-			resetOutliner(pat.optional[x])
+    function saveQuery() {
+        var q= new Query()
+        var i, n=selection.length, j, m, tr, sel, st;
+        for (i=0; i<n; i++) {
+            sel = selection[i]
+           	tr = sel.parentNode
+           	st = tr.AJAR_statement
+           	tdebug("Statement "+st)
+           	if (sel.getAttribute('class').indexOf('pred') >= 0) {
+               	tinfo("   We have a predicate")
+               	makeQueryRow(q,tr)
+           	}
+           	if (sel.getAttribute('class').indexOf('obj') >=0) {
+           		tinfo("   We have an object")
+           		makeQueryRow(q,tr,true)
+           	}
+        }   
+        qs.addQuery(q);
+    	function resetOutliner(pat) {
+    		optionalSubqueriesIndex=[]
+    		var i, n = pat.statements.length, pattern, tr;
+    		for (i=0; i<n; i++) {
+    	    	pattern = pat.statements[i];
+    	    	tr = pattern.tr;
+    	   	 	//tdebug("tr: " + tr.AJAR_statement);
+    	    	if (typeof tr!='undefined')
+    	    	{
+    	    		tr.AJAR_pattern = null; //TODO: is this == to whats in current version?
+    	    		tr.AJAR_variable = null;
+    	    	}
+    		}
+    		for (x in pat.optional)
+    			resetOutliner(pat.optional[x])
+        }
+        resetOutliner(q.pat);
+        //NextVariable=0;
+        return q;
     }
-    resetOutliner(q.pat);
-    //NextVariable=0;
-    return q;
-}
-
-	
-	/** benchmark a function **/
-	benchmark.lastkbsize = 0;
-	function benchmark(f) {
-	    var args = [];
-	    for (var i = arguments.length-1; i > 0; i--) args[i-1] = arguments[i];
-	    //tdebug("BENCHMARK: args=" + args.join());
-	    var begin = new Date().getTime();
-	    var return_value = f.apply(f, args);
-	    var end = new Date().getTime();
-	    tinfo("BENCHMARK: kb delta: " + (kb.statements.length - benchmark.lastkbsize) 
-	            + ", time elapsed for " + f + " was " + (end-begin) + "ms");
-	    benchmark.lastkbsize = kb.statements.length;
-	    return return_value;
-	} //benchmark
+    /** benchmark a function **/
+    benchmark.lastkbsize = 0;
+    function benchmark(f) {
+        var args = [];
+        for (var i = arguments.length-1; i > 0; i--) args[i-1] = arguments[i];
+        //tdebug("BENCHMARK: args=" + args.join());
+        var begin = new Date().getTime();
+        var return_value = f.apply(f, args);
+        var end = new Date().getTime();
+        tinfo("BENCHMARK: kb delta: " + (kb.statements.length - benchmark.lastkbsize) 
+                + ", time elapsed for " + f + " was " + (end-begin) + "ms");
+        benchmark.lastkbsize = kb.statements.length;
+        return return_value;
+    } //benchmark
 	
 	///////////////////////// Representing data
-
-		
-	
 	//  Represent an object in summary form as a table cell
-	
 	function appendRemoveIcon(node, subject, removeNode) {
 	    var image = AJARImage(Icon.src.icon_remove_node, 'remove')
 	    image.node = removeNode
@@ -100,7 +88,6 @@ function saveQuery()
 	    node.appendChild(image)
 	    return image
 	}
-	
 	this.appendAccessIcon = function(node, term) {
 	    if (typeof term.termType == 'undefined') log.error("??"+ term);
 	    if (term.termType != 'symbol') return '';
@@ -143,7 +130,6 @@ function saveQuery()
 	    node.appendChild(img)
 	    return img
 	} //appendAccessIcon
-	
 	/** make the td for an object (grammatical object) 
 	 *  @param obj - an RDF term
 	 *  @param view - a VIEW function (rather than a bool asImage)
@@ -167,7 +153,7 @@ function saveQuery()
 	    //td.appendChild( iconBox.construct(document.createTextNode('bla')) );
 	    return td;
 	} //outline_objectTD
-	
+
 	///////////////// Represent an arbirary subject by its properties
 	//These are public variables
 	expandedHeaderTR.tr = myDocument.createElement('tr');
@@ -176,15 +162,13 @@ function saveQuery()
 	expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_collapse, 'collapse'));
 	expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
 	expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
-	
 	function expandedHeaderTR(subject) {
 	    var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
 	    tr.firstChild.setAttribute('about', subject.toNT());
 	    tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
 	    return tr;
 	} //expandedHeaderTR
-	
-	function propertyTable(subject, table, details) {
+    function propertyTable(subject, table, details) {
 	    fyi("Property table for: "+ subject)
 	    subject = kb.canon(subject)
 	    
@@ -254,9 +238,7 @@ function saveQuery()
 	    }
 	} /* propertyTable */
 	
-	
-	///////////// Property list
-	
+	///////////// Property list	
 	function appendPropertyTRs(parent, plist, inverse, details) {
 	    fyi("Property list length = " + plist.length)
 	    if (plist.length == 0) return "";
@@ -422,19 +404,15 @@ function saveQuery()
 	    }
 	}
 	
-	
-	termWidget={}
-	
-	termWidget.construct = function ()
-	{
+    termWidget={}
+	termWidget.construct = function () {
 		td = myDocument.createElement('TD')
 		td.setAttribute('class','iconTD')
 		td.setAttribute('notSelectable','true')
 		td.style.width = '0px';
 		return td
 	}
-	termWidget.addIcon = function (td, icon)
-	{
+	termWidget.addIcon = function (td, icon) {
 		var img = AJARImage(icon.src,icon.alt,icon.tooltip)
 		var iconTD = td.childNodes[1];
 		var width = iconTD.style.width;
@@ -443,7 +421,7 @@ function saveQuery()
 		iconTD.style.width = width+'px';
 		iconTD.appendChild(img);
 	}
-	termWidget.removeIcon = function (td, icon){
+	termWidget.removeIcon = function (td, icon) {
 	    var iconTD = td.childNodes[1];
 	    var width = iconTD.style.width;
 	    width = parseInt(width);
@@ -459,17 +437,13 @@ function saveQuery()
 		}
 	    }
 	}
-	termWidget.replaceIcon = function (td, oldIcon, newIcon)
-	{
+	termWidget.replaceIcon = function (td, oldIcon, newIcon) {
 		termWidget.removeIcon (td, oldIcon)
 		termWidget.addIcon (td, newIcon)
-	}
-		
+	}	
 	
 	////////// Views of classes mentioned in a document
-	
 	function appendClassViewTRs(parent, subject) {
-		
 	 /*   var statements = kb.statementsMatching(
 	            undefined, rdf('type'), undefined, subject)
 	    n = statements.length
@@ -498,7 +472,6 @@ function saveQuery()
 	}
 	
 	//////// Human-readable content of a document
-	
 	function documentContentTABLE(subject) {
 	    var table = myDocument.createElement("TABLE")
 	
@@ -517,29 +490,24 @@ function saveQuery()
 	}
 	
 	////////////////////////////////////////////////////// VALUE BROWSER VIEW
-	
-	
+
 	////////////////////////////////////////////////////////// TABLE VIEW
-	
+
 	//  Summarize a thing as a table cell
-	
-	
+
 	/**********************
 	
 	  query global vars 
 	
 	***********************/
 	
-	
 	// const doesn't work in Opera
 	// const BLANK_QUERY = { pat: kb.formula(), vars: [], orderBy: [] };
 	// @ pat: the query pattern in an RDFIndexedFormula. Statements are in pat.statements
 	// @ vars: the free variables in the query
 	// @ orderBy: the variables to order the table
-	
-	
-	function queryObj()
-	{ 
+
+	function queryObj() { 
 		this.pat = kb.formula(), 
 		this.vars = []
 		this.orderBy = [] 
@@ -547,8 +515,7 @@ function saveQuery()
 	
 	var queries = [];
 	myQuery=queries[0]=new queryObj();
-	
-	
+
 	function query_save() {
 	    queries.push(queries[0]);
 	    var choices = myDocument.getElementById('queryChoices');
@@ -564,14 +531,14 @@ function saveQuery()
 		next.appendChild(myDocument.createTextNode("Saved query #"+index));
 		myDocument.getElementById("queryJump").appendChild(next);
 	  }
-	
+
 	/** tabulate this! **/
 	function AJAR_Tabulate(event) {
 	    makeQueryLines();
 	    matrixTable(myQuery, sortables_init)
 	    sortables_init(); //make table headers sortable
 	} //AJAR_Tabulate
-	
+
 	function makeQueryLines() {
 	    var i, n=selection.length, j, m, tr, sel, st;
 	    for (i=0; i<n; i++) {
@@ -591,8 +558,7 @@ function saveQuery()
 	    fyi("Vars now: "+myQuery.vars)
 	    tinfo("Query pattern now:\n"+myQuery.pat+"\n")
 	}
-	
-	
+
 	/** add a row to global myQuery using tr **/
 	function patternFromTR(tr, constraint) {
 	    var nodes = tr.childNodes, n = tr.childNodes.length, inverse=tr.AJAR_inverse,
@@ -651,9 +617,8 @@ function saveQuery()
 	    myQuery.pat.statements.push(pattern)
 	    return v
 	} //patternFromTR
-	
-	
-	function resetQuery(){
+
+	function resetQuery() {
 		function resetOutliner(pat)
 		{
 	    	var i, n = pat.statements.length, pattern, tr;
@@ -674,15 +639,14 @@ function saveQuery()
 	    clearVariableNames();
 	    queries[0]=myQuery=new queryObj();
 	}
-	
+
 	function AJAR_ClearTable() {
 	    resetQuery();
 	    var div = myDocument.getElementById('results');
 	    emptyNode(div);
 	    return false;
 	} //AJAR_ClearTable
-	
-	
+
 	/** build the tabulator table 
 	  * @param q - a query pattern (RDFFormula) 
 	  * @param matrixTableCB - function pointer **/
@@ -770,9 +734,8 @@ function saveQuery()
 	    if (a && (a.indexOf('selected') >= 0)) return true
 	    return false
 	}
-	
-	
-	function setSelectedParent(node, inc){
+
+	function setSelectedParent(node, inc) {
 	    var onIcon = Icon.termWidgets.optOn;
 		var offIcon = Icon.termWidgets.optOff;
 		for (var n = node; n.parentNode; n=n.parentNode)
@@ -800,7 +763,7 @@ function saveQuery()
 	    	}
 	    }
 	}
-	
+
 	function setSelected(node, newValue) {
 	    if (newValue == selected(node)) return;
 	    var cla = node.getAttribute('class')
@@ -828,13 +791,13 @@ function saveQuery()
 	  }
 	    node.setAttribute('class', cla)
 	}
-	
+
 	function deselectAll() {
 	    var i, n=selection.length
 	    for (i=n-1; i>=0; i--) setSelected(selection[i], false);
 	}
 	/////////  Hiding
-	
+
 	function AJAR_hideNext(event) {
 	    var target = getTarget(event)
 	    var div = target.parentNode.nextSibling
@@ -848,9 +811,8 @@ function saveQuery()
 		target.src = Icon.src.icon_collapse
 	    }
 	}
-	
-	this.TabulatorDoubleClick =function(event)
-	{
+
+	this.TabulatorDoubleClick =function(event) {
 	    var target = getTarget(event);
 	    var tname = target.tagName;
 	    fyi("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
@@ -858,16 +820,14 @@ function saveQuery()
 	    if (!aa) return;
 		this.GotoSubject(aa,true);
 	}
-	
-	function ResultsDoubleClick(event)
-	{	
+
+	function ResultsDoubleClick(event) {	
 	    var target = getTarget(event);
 	    var aa = getAbout(kb, target)
 	    if (!aa) return;
 	    this.GotoSubject(aa,true);
 	}
-	
-	
+
 	function setCookie(name, value, expires, path, domain, secure) {
 	    var curCookie = name + "=" + escape(value) +
 		((expires) ? "; expires=" + expires.toGMTString() : "") +
@@ -876,14 +836,11 @@ function saveQuery()
 		((secure) ? "; secure" : "");
 	    myDocument.cookie = curCookie;
 	}
-	
-	
 	/*
 	  name - name of the desired cookie
 	  return string containing value of specified cookie or null
 	  if cookie does not exist
 	*/
-	
 	function getCookie(name) {
 	    var dc = myDocument.cookie;
 	    var prefix = name + "=";
@@ -898,7 +855,6 @@ function saveQuery()
 		end = dc.length;
 	    return decodeURIComponent(dc.substring(begin + prefix.length, end));
 	}
-	
 	function deleteCookie(name, path, domain) {
 	    if (getCookie(name)) {
 		myDocument.cookie = name + "=" +
@@ -907,17 +863,15 @@ function saveQuery()
 		    "; expires=Thu, 01-Jan-70 00:00:01 GMT";
 	    }
 	}
-	
-	function QuerySPARQLText ()
-	{
+
+	function QuerySPARQLText() {
 	    var txt=myDocument.getElementById('SPARQLTextArea').value;
 	    myQuery =  SPARQLToQuery(txt);
 	    matrixTable(myQuery, sortables_init)
 	    sortables_init(); //make table headers sortable
 	}
-	
-	/** get the target of an event **/
-	
+
+	/** get the target of an event **/	
 	this.targetOf=function(e) {
 	    var target;
 	    if (!e) var e = window.event
@@ -933,11 +887,10 @@ function saveQuery()
 	        target = target.parentNode;
 	    return target;
 	} //targetOf
-	
+
 	this.OutlinerKeypressPanel=function(e){
 	    if (_tabulatorMode==1) UserInput.Keypress(e);
 	}
-	    
 	this.OutlinerMouseclickPanel=function(e){
 	    switch(_tabulatorMode){
 	        case 0:
@@ -949,14 +902,13 @@ function saveQuery()
 	        default:
 	    }
 	}
-	
+
 	/** things to do onmousedown in outline view **/
 	// expand
 	// collapse
 	// refocus
 	// select
-	// visit/open a page
-	
+	// visit/open a page	
 	function TabulatorMousedown(e) {
 	    var target = outline.targetOf(e);
 	    if (!target) return;
@@ -1056,7 +1008,6 @@ function saveQuery()
 	    }  // IMG
 	    if (e) e.stopPropagation();
 	} //function
-	
 	// added source-getting to outline expand 4/27/06
 	function outline_expand(p, subject1, details) {
 	    var subject = kb.canon(subject1)
@@ -1149,7 +1100,6 @@ function saveQuery()
 	    render()  // inital open, or else full if re-open
 	
 	} //outline_expand
-	
 	function outline_collapse(p, subject) {
 	    var row = ancestor(p, 'TR');
 	    row = ancestor(row.parentNode, 'TR'); //two levels up
@@ -1182,7 +1132,6 @@ function saveQuery()
 	    level.parentNode.replaceChild(outline.outline_objectTD(subject,
 							   myview, deleteNode), level);
 	} //outline_collapse
-	
 	function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
 	    var outer = null
 	    for (var level=p.parentNode; level; level=level.parentNode) {
@@ -1193,9 +1142,7 @@ function saveQuery()
 	    myDocument.title = label("Tabulator: "+subject);
 	    outer.setAttribute('about', subject.toNT());
 	} //outline_refocus
-	
 	// Inversion is turning the outline view inside-out
-	 
 	function outline_inversion(p, subject) { // re-root at subject
 	
 	    function move_root(rootTR, childTR) { // swap root with child
@@ -1203,20 +1150,21 @@ function saveQuery()
 	    }
 	
 	}
-	
-	function GotoFormURI_enterKey(e) { if (e.keyCode==13) GotoFormURI(e)  }
-	function GotoFormURI(e) { GotoURI(myDocument.getElementById('UserURI').value); }
-	
-	function GotoURI(uri){
+
+	function GotoFormURI_enterKey(e) {
+        if (e.keyCode==13) GotoFormURI(e);
+    }
+	function GotoFormURI(e) {
+        GotoURI(myDocument.getElementById('UserURI').value);
+    }
+	function GotoURI(uri) {
 		var subject = kb.sym(uri)
 		this.GotoSubject(subject, true);
 	}
-	
 	this.GotoURIinit = function(uri){
 		var subject = kb.sym(uri)
 		this.GotoSubject(subject)
 	}
-	
 	this.GotoSubject = function(subject, expand) {
 	    var table = myDocument.getElementById('outline');
 	    var tr = myDocument.createElement("TR");
@@ -1229,10 +1177,8 @@ function saveQuery()
 	    	outline_expand(td, subject)
 	    	myDocument.title = "Tabulator: "+label(subject)
 	    }
-	
 	    return subject;
 	}
-	
 	function GotoURIAndOpen(uri) {
 	   var sbj = GotoURI(uri);
 	//   outline_expand(document.getElementById('browser'), sbj);  Wrong element
@@ -1332,7 +1278,6 @@ function VIEWAS_boring_default(obj) {
 function VIEWAS_image(obj) {
     return AJARImage(obj.uri, label(obj), label(obj));
 }
-
 function VIEWAS_mbox(obj) {
     var anchor = myDocument.createElement('a');
     // previous implementation assumed email address was Literal. fixed.
@@ -1347,7 +1292,6 @@ function VIEWAS_mbox(obj) {
     anchor.appendChild(myDocument.createTextNode(address));
     return anchor;
 }
-
 /* need to make unique calendar containers and names
  * YAHOO.namespace(namespace) returns the namespace specified 
  * and creates it if it doesn't exist
@@ -1358,14 +1302,12 @@ function VIEWAS_mbox(obj) {
  * YAHOO.namespace('foo.bar') makes YAHOO.foo.bar defined as an object,
  * which can then have properties
  */
-
 function uni(prefix){
     var n = counter();
     var name = prefix + n;
     YAHOO.namespace(name);
     return n;
 }
-
 // counter for calendar ids, 
 counter = function(){
 	var n = 0;
@@ -1374,12 +1316,9 @@ counter = function(){
 		return n;
 	}
 }() // *note* those ending parens! I'm using function scope
-
 var renderHoliday = function(workingDate, cell) { 
 	YAHOO.util.Dom.addClass(cell, "holiday");
 } 
-
-
 /* toggles whether element is displayed
  * if elt.getAttribute('display') returns null, 
  * it will be assigned 'block'
@@ -1388,7 +1327,6 @@ function toggle(eltname){
 	var elt = myDocument.getElementById(eltname);
 	elt.style.display = (elt.style.display=='none')?'block':'none'
 }
-
 /* Example of calendar Id: cal1
  * 42 cells in one calendar. from top left counting, each table cell has
  * ID: YAHOO.cal1_cell0 ... YAHOO.cal.1_cell41
@@ -1433,11 +1371,7 @@ function VIEWAS_cal(obj) {
 	// document.childNodes.removeChild(table);
 	return table;
 }
-
-
 // test writing something to calendar cell
-
-
 function VIEWAS_aim_IMme(obj) {
     var anchor = myDocument.createElement('a');
     anchor.setAttribute('href', "aim:goim?screenname=" + obj.value + "&message=hello");
@@ -1445,12 +1379,10 @@ function VIEWAS_aim_IMme(obj) {
     anchor.appendChild(myDocument.createTextNode(obj.value));
     return anchor;
 } //aim_IMme
-
 function createTabURI() {
     myDocument.getElementById('UserURI').value=
       myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
 }
-
 
 doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
 doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
@@ -1459,7 +1391,6 @@ window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==11
 
 return this;
 }//END OF OUTLINE
-
 
 var NextVariable = 0;
 function newVariableName() {
@@ -1472,11 +1403,13 @@ function clearVariableNames() {
 function AJARImage(src, alt, tt, doc) {
 	if(!doc)
 	    doc=document;
-    if (!tt && Icon.tooltips[src]) tt = Icon.tooltips[src]
-//    var sp = document.createElement('span')
-    var image = document.createElement('img')
-    image.setAttribute('src', src)
-    if (typeof alt != 'undefined') image.setAttribute('alt', alt)
-    if (typeof tt != 'undefined') image.setAttribute('title',tt)
-    return image
+    if (!tt && Icon.tooltips[src])
+        tt = Icon.tooltips[src];
+    var image = document.createElement('img');
+    image.setAttribute('src', src);
+    if (typeof alt != 'undefined')
+        image.setAttribute('alt', alt);
+    if (typeof tt != 'undefined')
+        image.setAttribute('title',tt);
+    return image;
 }

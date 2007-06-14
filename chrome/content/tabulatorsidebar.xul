@@ -5,18 +5,16 @@
 
 <page id="sbTabulatorSidebar"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" >
-  <vbox flex="1">
-    <label id="atest" value=""/>
     <button id="querySubmitButton"
       class="dialog"
-      label="Submit Query"
+      label="Save Query"
       disabled="true"
       accesskey="s"/>
-  </vbox>
+
+  <listbox id="queryList" />
   <script type="application/x-javascript" src="querySidebar.js"/>
   <script type="application/x-javascript">
   var qsb = new querySidebar(document);
   var button = document.getElementById("querySubmitButton");
-  
   </script>
 </page>

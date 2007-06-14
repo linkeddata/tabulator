@@ -106,93 +106,13 @@ var tabExtension = {
       var catman = Components.classes["@mozilla.org/categorymanager;1"]
                            .getService(Components.interfaces.nsICategoryManager);
       catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
+      var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+      tabulator.kb=kb;
+      tabulator.qs=qs;
+      tabulator.sf=sf;
     }
   }
 }
-
-
-
-//======================================================================
-//=======================BEGIN TABULATOR XPCOM DEFN=====================
-//======================================================================
-var extensionInstance = null;
-
-var ExtensionModule = {
-    myCID : Components.ID("{576e3347-4a93-47ae-85c2-e33e758a8868}"),
-    myProgID : "@dig.csail.mit.edu/tabext;1",
-
-    registerSelf : function(compMgr, fileSpec, location, type) {
-        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
-        compMgr.registerFactoryLocation(
-            this.myCID,
-            "Tabulator Extension",
-            this.myProgID,
-            fileSpec,
-            location,
-            type
-        );
-    },
-
-    unregisterSelf : function(compMgr, fileSpec, location) {
-        compMgr = compMgr.QueryInterface(nsIComponentRegistrar);
-        compMgr.unregisterFactoryLocation(this.myCID, fileSpec);
-    },
-
-    getClassObject : function(compMgr, cid, iid) {
-        if (!cid.equals(this.myCID)) {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-        if (!iid.equals(Components.interfaces.nsIFactory)) {
-            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-        }
-        return this.myFactory;
-    },
-
-    canUnload : function(compMgr) {
-        extensionInstance = null;        
-        return true;
-    },
-
-    myFactory : {
-        createInstance : function(outer, aIID) {
-            if (outer != null) {
-                throw Components.results.NS_ERROR_NO_AGGREGATION;
-            }
-
-            if (!extensionInstance) {
-                extensionInstance = new Extension();
-            }
-
-            return extensionInstance.QueryInterface(aIID);
-        }
-    }
-}
-
-function NSGetModule(compMgr, fileSpec) {
-    return ExtensionModule;
-}
-
-function Extension() {};
-
-
-//Extension interface !
-Extension.prototype = {
-
-    QueryInterface : function(aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports)) {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-        return this;
-    },
-
-};
-
-
-
-//======================================================================
-//=======================END TABULATOR XPCOM DEFN=======================
-//======================================================================
-
 
 function OutlineLoader(target,uri) {
   onLoadEvent = function(e) {
@@ -345,21 +265,21 @@ var uriContentListener = {
     }
     if(targetBrowser==-1)
       targetBrowser=gBrowser;
-    
     targetBrowser.loadURI("chrome://tabulator/content/test.html");
-    
     targetBrowser.addEventListener("load",OutlineLoader(targetBrowser,uri), true);
-    return true;
+    return 1;
   },
 
   isPreferred: function ( /*char* */ contentType , /*out char* */ desiredContentType ) {
     if (contentType == 'application/rdf+xml') {
       return true;
     }
-    else return false;
+    else {
+      return false;
+    }
   },
 
   onStartURIOpen: function ( /*nsIURI*/ URI ) {
-    return false;
+    return true;
   }
-}; 
+};

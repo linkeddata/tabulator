@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
+<!DOCTYPE overlay SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-
   <script type="application/x-javascript" src="js/sorttable.js"/>
   <script type="application/x-javascript" src="js/tableView.js"/>
   <script type="application/x-javascript" src="js/log.js"/>
@@ -15,4 +15,26 @@
   <script type="application/x-javascript" src="js/rdf/sources.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
   <script type="application/x-javascript" src="test.js"/>
+  
+  <menupopup id="viewSidebarMenu">
+  <menuitem key="key_openTabulatorSidebar" observes="viewTabulatorSidebar"  />
+  </menupopup>
+  
+  <keyset id="mainKeyset">
+    <key id="key_openTabulatorSidebar" command="viewTabulatorSidebar"
+         key="&openTabulatorSidebar.commandkey;" 
+         modifiers="&openTabulatorSidebar.modifierskey;" />
+  </keyset>
+  
+  <broadcasterset id="mainBroadcasterSet"> 
+    <broadcaster id="viewTabulatorSidebar" 
+                 label="&tabulatorsidebar.title;"
+                 autoCheck="false"
+                 type="checkbox"
+                 group="sidebar"
+                 sidebarurl="chrome://tabulator/content/tabulatorsidebar.xul"
+                 sidebartitle="&tabulatorsidebar.title;"
+                 oncommand="toggleSidebar('viewTabulatorSidebar');" />
+  </broadcasterset>
+
 </overlay>

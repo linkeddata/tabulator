@@ -140,7 +140,7 @@ RDFFormula.prototype.each = function(s,p,o,w) {
 
 RDFFormula.prototype.any = function(s,p,o,w) {
     var st = this.anyStatementMatching(s,p,o,w)
-    if (typeof st == 'undefined') return undefined
+    if (typeof st == 'undefined') return undefined;
     
     if (typeof s == 'undefined') return st.subject;
     if (typeof p == 'undefined') return st.predicate;

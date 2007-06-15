@@ -94,15 +94,17 @@ clearInputAndSave: function(){
     var s=this.lastModifiedStat;
     if(this.lastModified.value != this.lastModified.defaultValue){
 
+        new sparql(kb).updateStatement(s).setObject(this.lastModified.value);
+
         if (obj.termType=='literal') obj.value=this.lastModified.value;
         //fire text modified??
         if (obj.termType=='symbol'){
-            kb.remove(s);        //fire SPARQL update here
+            kb.remove(s);
             if(!this.statIsInverse)
                 s=kb.add(s.subject,s.predicate,kb.sym(this.lastModified.value),s.why); //fire!
                                                                            //'why' to be changed
             else
-                s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!                       
+                s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!
         }
 
     };

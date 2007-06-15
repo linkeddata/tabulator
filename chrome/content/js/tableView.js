@@ -49,38 +49,30 @@ function tableView(container,doc) {
 		// This is the eventListener for Table Editing
 		document.getElementById('tabulated_data').addEventListener('click', onClickCell, false)
 		
-		function getEventRow(e) { 
-			var srcElem = outline.targetOf(e);
-			var trNode = ancestor(srcElem, "TR");
-			return trNode; 
-		}
-		
 		function onClickCell(e) {
-			var srcElem = getEventRow(e);
-			if (srcElem.tagName != "TR") return;
-			// This isn't working for some reason
-			if (srcElem.rowIndex == 0) {alert("Header");}
+			srcElem = outline.targetOf(e);
+			if (srcElem.tagName == "TH") return;
 			else onEdit(e);
 		}
 		
-		function getEventCell(e) {
+		// Use getTdNode to avoid div and span elements
+		function gettdNode(e) {
 			var srcElem = outline.targetOf(e);
 			var tdNode = ancestor(srcElem, "TD");
-			return tdNode
+			return tdNode;
 		}
 		
 		function onEdit(e) {
-			var srcElem = getEventCell(e);
-			var oldTxt = srcElem.innerHTML;
+			var tdNode = gettdNode(e);
+			var oldTxt = tdNode.innerHTML;
 			var inputObj = document.createElement('INPUT');
-			if (srcElem.tagName != "TD") return;
-			if (srcElem.firstChild && srcElem.firstChild.tagName == "INPUT") return;
-			inputObj.style.width = "100%"
+			if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
+			inputObj.style.width = "99%"
 			inputObj.value = oldTxt;
 			inputObj.type = "TEXT"
 			inputObj.addEventListener ("blur", focusLost, false);
 			inputObj.addEventListener ("keypress", checkForEnter, false);
-			srcElem.replaceChild(inputObj, srcElem.firstChild);
+			tdNode.replaceChild(inputObj, tdNode.firstChild);
 			inputObj.select();
 		}
 		

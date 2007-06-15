@@ -50,6 +50,7 @@ Click: function(e){
              this.lastModified=textBox;
         }else{
             var inputBox=document.createElement('input');
+            
             inputBox.setAttribute('value',obj.value);
             inputBox.setAttribute('class','textinput');
             inputBox.setAttribute('size','100'); //should be the size of <TD>
@@ -131,7 +132,63 @@ Keypress: function(e){
     //                 Direct him/her to a new blank (how?)
 },
 
-//Utilities
+Mousedown: function(e){
+    HCIoptions["right click to switch mode"][1].setupHere([e],"UserInput.Mousedown");
+    /*
+    if (e.button==2){ //right click
+        UserInput.switchMode();
+        if(e){
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }
+    */
+},
+
+Mouseover: function(e){
+if (_tabulatorMode==1){
+    /**ABANDONED
+    switch (getTarget(e).tagName){
+        case 'TD':
+            var Td=ancestor(getTarget(e),'TD');
+            if(Td.className!="obj" || ancestor(Td,'TABLE').id=="outline") return;
+            //I'll think about the latter case
+            if(UserInput.aroundBorderBottom(e,Td))  //"this" not working, why? 
+                Td.style.borderBottom='.1em solid rgb(100%,65%,0%)';
+            break;
+        default:
+    }**/
+    switch (getTarget(e).tagName){
+        case 'TD':
+            var preTd=getTarget(e);
+            if(preTd.className=="pred") preTd.style.cursor='copy';
+            break;
+        //Uh...I think I might have to give up this
+        case 'DIV':
+            var border=getTarget(e);
+            if (getTarget(e).className=="bottom-border"){
+                border.style.borderColor='rgb(100%,65%,0%)';
+                border.style.cursor='copy';
+            }
+            break;
+       default:
+   }
+}
+},
+
+Mouseout: function(e){
+if (_tabulatorMode==1){
+    var border=getTarget(e);
+    if (getTarget(e).className=="bottom-border"){ 
+        border.style.borderColor='transparent';
+        border.style.cursor='auto';
+    }
+}
+},
+
+/**
+ * Utilities
+ */
 getStatementAbout: function(something){
     var trNode=ancestor(something,'TR');
     try{
@@ -146,7 +203,36 @@ getStatementAbout: function(something){
         
     return statement;
 },
-//emptyNode(Node) from tabulate.js
+
+/** ABANDONED APPROACH
+//determine whether the event happens at around the bottom border of the element
+aroundBorderBottom: function(event,element){
+    //alert(event.pageY);
+    //alert(findPos(element)[1]);
+    var elementPageY=findPos(element)[1]+38; //I'll figure out what this 38 is...
+    
+    function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
+	var curleft = curtop = 0;
+	if (obj.offsetParent) {
+		curleft = obj.offsetLeft
+		curtop = obj.offsetTop
+		while (obj = obj.offsetParent) {
+			curleft += obj.offsetLeft
+			curtop += obj.offsetTop
+		}
+	}
+	return [curleft,curtop];
+    }
+    
+    //alert(elementPageY+element.offsetHeight-event.pageY);
+    //I'm totally confused by these numbers...
+    if(event.pageY-4==elementPageY+element.offsetHeight||event.pageY-5==elementPageY+element.offsetHeight) 
+        return true;
+    else
+        return false;
+},
+**/
+//#include emptyNode(Node) from tabulate.js
 
 //Not so important (will become obsolete?)
 switchModeByRadio: function(){

@@ -5,7 +5,7 @@ var _tabulatorMode=0; //Sorry one more
 //Default mode: Discovery
 
 //Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
-//              targetOf -> this.targetOf
+//              targetOf -> this.targetOf // this can be changed back 
 //              outline_objectTD -> this.outline_objectTD
 
 function Outline(doc) {
@@ -138,6 +138,11 @@ function Outline(doc) {
 	    //set about
 	    var td = myDocument.createElement('td');
 	    
+	    //---------------------------------------------------------------------------
+	    //var divInTd=myDocument.createElement('div'); //for identifying border of <td>
+	    //td.appendChild( divInTd );
+	    //---------------------------------------------------------------abandoned approach
+	    
 	    if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
 		td.setAttribute('about', obj.toNT());
 	    td.setAttribute('class', 'obj');      //this is how you find an object
@@ -146,10 +151,19 @@ function Outline(doc) {
 	    } //expandable
 	    if (!view) // view should be a function pointer
 	        view = VIEWAS_boring_default;
-	    td.appendChild( view(obj) );
+	    td.appendChild( view(obj) );    
 	    if (deleteNode) {
 		appendRemoveIcon(td, obj, deleteNode)
 	    }
+	    
+	    var bottomDiv=document.createElement('div');
+	    bottomDiv.className="bottom-border";
+	    td.appendChild(bottomDiv);
+	    //set event handlers
+	    //addEvent(td,'mouseover',UserInput.tdMouseover,false);
+	    //addEvent(divInTd,'mouseover',UserInput.Mouseover,false);
+	    //divInTd.onmouseover=UserInput.Mouseover;
+	    
 	    //td.appendChild( iconBox.construct(document.createTextNode('bla')) );
 	    return td;
 	} //outline_objectTD
@@ -944,11 +958,11 @@ function Outline(doc) {
 	        }
 	        fyi("Was node selected after: "+selected(node)
 	            +", count="+selection.length)
-		var tr = node.parentNode;
-		if (tr.AJAR_statement) {
-		    var why = tr.AJAR_statement.why
-		    tinfo("Information from "+why);
-		}
+		    var tr = node.parentNode;
+		    if (tr.AJAR_statement) {
+		        var why = tr.AJAR_statement.why
+		        tinfo("Information from "+why);
+		    }
 		
 	    } else { // IMG
 	        var tsrc = target.src
@@ -1386,8 +1400,13 @@ function createTabURI() {
 
 doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
 doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
-window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false) 
 //temporary key ctrl+s or q for swiching mode
+window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false); 
+doc.getElementById('outline').addEventListener('mouseover',UserInput.Mouseover,false);
+doc.getElementById('outline').addEventListener('mouseout',UserInput.Mouseout,false);
+//window.addEventListener('mousedown',UserInput.Mousedown,false);
+//doc.getElementById('outline').oncontextmenu=function(){return false;};
+HCIoptions["right click to switch mode"][0].setupHere([],"end of class Outline")
 
 return this;
 }//END OF OUTLINE

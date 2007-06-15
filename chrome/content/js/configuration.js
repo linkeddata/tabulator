@@ -96,8 +96,8 @@ delete temp_RCTSM1;
   * Preferences
   **/
 //ToDo: Option.enable();
-HCIoptions["right click to switch mode"][0].enabled=true;
-HCIoptions["right click to switch mode"][1].enabled=true;
+//HCIoptions["right click to switch mode"][0].enabled=true;
+//HCIoptions["right click to switch mode"][1].enabled=true;
 
 
 //ToDo:

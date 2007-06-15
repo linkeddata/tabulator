@@ -313,8 +313,6 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     if (typeof this.objectIndex[hashO] == 'undefined') this.objectIndex[hashO] = [];
     this.objectIndex[hashO].push(st); // Set of things with this as object
     fyi("ADDING    {"+subj+" "+pred+" "+obj+"} "+why);
-    this.statements.push(st);
-    
     var newIndex=this.statements.push(st);
     return this.statements[newIndex-1];
 }; //add

@@ -93,8 +93,8 @@ clearInputAndSave: function(){
     
     var s=this.lastModifiedStat;
     if(this.lastModified.value != this.lastModified.defaultValue){
-
-        new sparql(kb).updateStatement(s).setObject(this.lastModified.value);
+        // generate path and nailing from current values
+        sparqlUpdate = new sparql(kb).prepareUpdate(s);
 
         if (obj.termType=='literal') obj.value=this.lastModified.value;
         //fire text modified??
@@ -107,6 +107,8 @@ clearInputAndSave: function(){
                 s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!
         }
 
+        // send sparql update with new values
+        sparqlUpdate.setObject();
     };
     var trNode=ancestor(this.lastModified,'TR');
     trNode.removeChild(trNode.lastChild);

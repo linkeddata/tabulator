@@ -9,14 +9,15 @@ function tableView(container,doc) {
     this.queryStates=[];          //All Queries currently in this view.
     this.container=container; //HTML DOM parent node for this view.
     this.container.setAttribute('ondblclick','tableDoubleClick(event)')
-
+	
+	//alert (document.getElementsByName("Table"))
     //The vars specific to a tableView..
     var activeSingleQuery = null;
 
     this.drawQuery = function (q) {
         this.onBinding = function (bindings) {
-            tinfo("making a row w/ bindings " + bindings);
-            var i, tr, td
+			var i, tr, td
+			tinfo("making a row w/ bindings " + bindings);
             tr = this.document.createElement('tr')
             t.appendChild(tr)
             for (i=0; i<nv; i++) {
@@ -24,20 +25,18 @@ function tableView(container,doc) {
                 tr.appendChild(matrixTD(bindings[v]))
             } //for each query var, make a row
         }
-
         var i, nv=q.vars.length, td, th, j, v
         var t = this.document.createElement('table')
-
-        tr = this.document.createElement('tr')
+        var tr = this.document.createElement('tr')
+		
         t.appendChild(tr)
-        t.setAttribute('class', 'results sortable')
+        t.setAttribute('class', 'results') //changed from 'results sortable'
         t.setAttribute('id', 'tabulated_data'); //needed to make sortable
         emptyNode(this.container).appendChild(t) // See results as we go
         for (i=0; i<nv; i++) {
             v = q.vars[i]
             //fyi("table header cell for " + v + ': '+v.label)
             th = this.document.createElement('th')
-
             th.appendChild(this.document.createTextNode(v.label))
             tr.appendChild(th)
         }
@@ -46,10 +45,57 @@ function tableView(container,doc) {
         activeSingleQuery = q;
         this.queryStates[q.id]=1;
         sortables_init();
-    } //this.drawQuery
+
+		// This is the eventListener for Table Editing
+		document.getElementById('tabulated_data').addEventListener('click', onClickCell, false)
+		
+		function getEventRow(e) { 
+			var srcElem = outline.targetOf(e);
+			var trNode = ancestor(srcElem, "TR");
+			return trNode; 
+		}
+		
+		function onClickCell(e) {
+			var srcElem = getEventRow(e);
+			if (srcElem.tagName != "TR") return;
+			// This isn't working for some reason
+			if (srcElem.rowIndex == 0) {alert("Header");}
+			else onEdit(e);
+		}
+		
+		function getEventCell(e) {
+			var srcElem = outline.targetOf(e);
+			var tdNode = ancestor(srcElem, "TD");
+			return tdNode
+		}
+		
+		function onEdit(e) {
+			var srcElem = getEventCell(e);
+			var oldTxt = srcElem.innerHTML;
+			var inputObj = document.createElement('INPUT');
+			if (srcElem.tagName != "TD") return;
+			if (srcElem.firstChild && srcElem.firstChild.tagName == "INPUT") return;
+			inputObj.style.width = "100%"
+			inputObj.value = oldTxt;
+			inputObj.type = "TEXT"
+			inputObj.addEventListener ("blur", focusLost, false);
+			inputObj.addEventListener ("keypress", checkForEnter, false);
+			srcElem.replaceChild(inputObj, srcElem.firstChild);
+			inputObj.select();
+		}
+		
+		function focusLost(e) {
+			var objSrcElm = outline.targetOf(e);
+			objSrcElm.parentNode.innerHTML = objSrcElm.value;
+			// Add code here to handle SPARQL query.  Make a call to clearInputAndSave.  
+		}
+		
+		function checkForEnter(e) {
+			if (e.keyCode == 13) focusLost (e);
+		}
+	} //this.drawQuery
 	
-	function drawExport ()
-	{
+	function drawExport () {
 		var form=this.document.createElement('form')
 		form.setAttribute('textAlign','right');
 	    var but = this.document.createElement('input')
@@ -84,7 +130,6 @@ function tableView(container,doc) {
         activeSingleQuery=null;
         emptyNode(this.container);
     }
-
 } // tableView
 
 function tableDoubleClick(event) {
@@ -95,7 +140,7 @@ function tableDoubleClick(event) {
     if (!aa) return;
     GotoSubject(aa);
 }
-
+	
 function exportTable()
 {
     /*sel=document.getElementById('exportType')

@@ -7,6 +7,11 @@ var _tabulatorMode=0; //Sorry one more
 //Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
 //              targetOf -> this.targetOf // this can be changed back 
 //              outline_objectTD -> this.outline_objectTD
+//              AJAR_hideNext -> this.hideNext
+//              GotoFormURI_enterKey -> this.GotoFormURI_enterKey
+//              GotoFormURI -> this.GotoFormURI
+//              createTabURI -> this.createTabURI
+//              GotoURIAndOpen -> this.GotoURIAndOpen
 
 function Outline(doc) {
     var myDocument=doc;
@@ -812,7 +817,7 @@ function Outline(doc) {
 	}
 	/////////  Hiding
 
-	function AJAR_hideNext(event) {
+	this.AJAR_hideNext = function(event) {
 	    var target = getTarget(event)
 	    var div = target.parentNode.nextSibling
 	    for (; div.nodeType != 1; div = div.nextSibling) {}
@@ -1165,10 +1170,10 @@ function Outline(doc) {
 	
 	}
 
-	function GotoFormURI_enterKey(e) {
-        if (e.keyCode==13) GotoFormURI(e);
+	this.GotoFormURI_enterKey = function(e) {
+        if (e.keyCode==13) outline.GotoFormURI(e);
     }
-	function GotoFormURI(e) {
+    this.GotoFormURI = function(e) {
         GotoURI(myDocument.getElementById('UserURI').value);
     }
 	function GotoURI(uri) {
@@ -1193,7 +1198,7 @@ function Outline(doc) {
 	    }
 	    return subject;
 	}
-	function GotoURIAndOpen(uri) {
+	this.GotoURIAndOpen = function(uri) {
 	   var sbj = GotoURI(uri);
 	//   outline_expand(document.getElementById('browser'), sbj);  Wrong element
 	}
@@ -1393,7 +1398,7 @@ function VIEWAS_aim_IMme(obj) {
     anchor.appendChild(myDocument.createTextNode(obj.value));
     return anchor;
 } //aim_IMme
-function createTabURI() {
+this.createTabURI = function() {
     myDocument.getElementById('UserURI').value=
       myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
 }

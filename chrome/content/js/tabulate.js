@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3147 2007-06-12 19:55:20Z presbrey $
+// SVN ID: $Id: tabulate.js 3156 2007-06-15 19:09:49Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -612,7 +612,7 @@ function AJAR_initialisePage() {
         //clear browser
         emptyNode(browser);
 		document.getElementById('UserURI').value = GET_DATA['uri'];
-        GotoURIAndOpen(GET_DATA['uri']);
+        outline.GotoURIAndOpen(GET_DATA['uri']);
     }
     else
     {

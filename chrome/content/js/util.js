@@ -65,6 +65,17 @@ Util = {
 		obj.callbacks[hook].push(func)
 	    }
 
+        obj.removeCallback = function (hook, funcName) {
+            for (var i=0;i<obj.callbacks[hook].length;i++){
+                //alert(obj.callbacks[hook][i].name);
+                if (obj.callbacks[hook][i].name==funcName){
+
+                    obj.callbacks[hook].splice(i,1);
+                    return true;
+                }
+            }
+            return false; 
+        }
 	    obj.fireCallbacks = function (hook, args) {
 		var newCallbacks = []
 		var replaceCallbacks = []
@@ -337,9 +348,10 @@ function matrixTD(obj, asImage, doc) {
 	    for (level=target; level && (level.nodeType==1); level=level.parentNode) {
 	        fyi("Level "+level + ' '+level.nodeType)
 	        aa = level.getAttribute('about')
-	        if (aa) {
-		    return kb.fromNT(aa)
-		}
+	        if (aa) 
+		        return kb.fromNT(aa)
+		    else if (level.tagName=='TD')
+		        return undefined
 	    }
 	    return undefined
 	}

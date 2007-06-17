@@ -90,7 +90,11 @@ HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM1);
 delete temp_RCTSM1;
 
 //able to edit in Discovery Mode by mouse
-
+function temp_ATEIDMBM(sel,e){
+    if (sel) UserInput.Click(e);
+}
+HCIoptions.addOption("able to edit in Discovery Mode by mouse",temp_ATEIDMBM);
+delete temp_ATEIDMBM;
 
 /**
   * Preferences
@@ -98,6 +102,7 @@ delete temp_RCTSM1;
 //ToDo: Option.enable();
 //HCIoptions["right click to switch mode"][0].enabled=true;
 //HCIoptions["right click to switch mode"][1].enabled=true;
+HCIoptions["able to edit in Discovery Mode by mouse"].enabled=true;
 
 
 //ToDo:

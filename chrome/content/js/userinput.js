@@ -24,7 +24,10 @@ switchMode: function(){ //should be part of global UI
 },
     
 Click: function(e){
-    var target=outline.targetOf(e);
+    if (!e) //e==undefined : Keyboard Input
+        var target=selection[0];
+    else
+        var target=outline.targetOf(e);
     if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
     try{
         var obj=this.getStatementAbout(target).object;
@@ -119,7 +122,9 @@ clearInputAndSave: function(){
 	else
 	    trNode.appendChild(outline.outline_objectTD(s.subject, defaultpropview));
 	trNode.AJAR_statement=s;
-	//This is going to be painful when predicate-edit allowed  
+	//This is going to be painful when predicate-edit allowed
+	
+	this.lastModified = null;  
 },
 
 //ToDo: shrink rows when \n+backspace

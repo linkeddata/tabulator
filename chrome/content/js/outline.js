@@ -16,6 +16,7 @@ var _tabulatorMode=0; //Sorry one more
 function Outline(doc) {
     var myDocument=doc;
     var outline=this;
+    this.focusTd; //the <td> that is being observed
     this.viewAndSaveQuery = function() {
         onLoad = function(e) {
             var doc = e.originalTarget;
@@ -906,10 +907,84 @@ function Outline(doc) {
 	        target = target.parentNode;
 	    return target;
 	} //targetOf
-
+    
+    //Keyboard Input: we can consider this as...
+    //1. a fast way to modify data - enter will go to next predicate
+    //2. an alternative way to input - enter at the end of a predicate will create a new statement
 	this.OutlinerKeypressPanel=function(e){
-	    if (_tabulatorMode==1) UserInput.Keypress(e);
-	}
+	    if (getTarget(e).id=="UserURI") return;
+	    if (selection.length>1) return;
+	    if (selection.length==0){
+	        if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39)
+	            setSelected(this.focusTd.firstChild.childNodes[1].lastChild,true);
+	        return;    
+        }
+	    var selectedTd=selection[0];
+	    switch (e.keyCode){
+	        case 13://enter
+	            if (getTarget(e).tagName=='HTML') //I don't know why 'HTML'
+	                UserInput.Click(undefined);
+	            else{
+                    var newSelTd=UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
+	                deselectAll();
+	                UserInput.Keypress(e);
+                    setSelected(newSelTd,true);
+                    document.getElementById('docHTML').focus(); //have to set this or focus blurs
+                    e.stopPropagation();
+	            }
+	            break;
+	        case 38://up
+	            deselectAll();
+	            var newSelTd=selectedTd.parentNode.previousSibling.lastChild;
+	            setSelected(newSelTd,true);
+	            e.stopPropagation();
+	            e.preventDefault();
+                break;
+	        case 40://down
+	            deselectAll();
+	            var newSelTd=selectedTd.parentNode.nextSibling.lastChild;
+	            setSelected(newSelTd,true);
+	            e.stopPropagation();
+	            e.preventDefault();
+	            break;
+            case 37://left
+                var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
+                var titleTd=parentTr.lastChild.firstChild.firstChild;
+                outline_collapse(titleTd,getAbout(kb,titleTd));
+                setSelected(parentTr.lastChild,true);
+                break;
+            case 39://right
+                var obj=getAbout(kb,selectedTd);
+                if (obj){
+                    function setSelectedAfterward(uri){
+                        //if (uri==undefined || Util.uri.docpart(obj.uri)==uri){
+                            deselectAll();
+                            setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
+                        //}
+                        return true;
+                    }
+                    //if not done, Have to deal with redraw...
+                    sf.removeCallback('done',"setSelectedAfterward");
+                    sf.removeCallback('fail',"setSelectedAfterward");
+                    if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
+                        sf.addCallback('done',setSelectedAfterward);
+                        sf.addCallback('fail',setSelectedAfterward);
+                        outline_expand(selectedTd,obj,false);
+                    }
+                    setSelectedAfterward();                   
+                }
+                break;    
+	        default:
+                if (getTarget(e).tagName=='HTML'){
+                    UserInput.Click(undefined);
+                    UserInput.lastModified.value=String.fromCharCode(e.charCode);
+                    //Events are not reliable...
+                    //var e2=document.createEvent("KeyboardEvent");
+                    //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);
+                    //UserInput.lastModified.dispatchEvent(e2);
+                }
+	    }
+    };
 	this.OutlinerMouseclickPanel=function(e){
 	    switch(_tabulatorMode){
 	        case 0:
@@ -936,9 +1011,11 @@ function Outline(doc) {
 	    var p = target.parentNode;
 	    var about = getAbout(kb, target)
 	    var source = null;
-	    if (tname == "INPUT") {
+	    if (tname == "INPUT" || tname == "TEXTAREA") {
 	        return
 	    }
+	    //not input then clear
+	    UserInput.clearInputAndSave();
 	    if (tname != "IMG") {
 	        if(about && myDocument.getElementById('UserURI')) { 
 	            myDocument.getElementById('UserURI').value = 
@@ -960,6 +1037,10 @@ function Outline(doc) {
 	            //setSelected(node, !selected(node))
 	            deselectAll()
 	            setSelected(node, true)
+	            //if (sel) UserInput.Click(e); = the following
+	            var text="TabulatorMouseDown@Outline()";
+	            HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e],text); 
+	            
 	        }
 	        fyi("Was node selected after: "+selected(node)
 	            +", count="+selection.length)
@@ -1056,6 +1137,7 @@ function Outline(doc) {
 		    newTable.style.backgroundColor='white'
 		}
 		emptyNode(p).appendChild(newTable)
+		this.focusTd=p;
 		log.debug("expand: Node for " + subject + " expanded")	    
 	    } 
 	
@@ -1404,9 +1486,10 @@ this.createTabURI = function() {
 }
 
 doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
-doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
+//doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
 //temporary key ctrl+s or q for swiching mode
-window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false); 
+window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false);
+window.addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);//why 1422 not working? 
 doc.getElementById('outline').addEventListener('mouseover',UserInput.Mouseover,false);
 doc.getElementById('outline').addEventListener('mouseout',UserInput.Mouseout,false);
 //window.addEventListener('mousedown',UserInput.Mousedown,false);

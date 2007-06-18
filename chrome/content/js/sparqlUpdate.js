@@ -9,7 +9,9 @@ sparql.prototype.prepareUpdate = function(statement) {
     if (statement == undefined || statement.why == undefined) return;
 
     function contextToWhere(context) {
-        return "WHERE { " + map(function(x){return x.toNT()},context).join("\n") + " }";
+        return (context == undefined || context.length == 0)
+            ? ""
+            : "WHERE { " + map(function(x){return x.toNT()},context).join("\n") + " }";
     }
 
     context = [];
@@ -28,14 +30,14 @@ sparql.prototype.prepareUpdate = function(statement) {
     }
 
     return {
-        statement: statement,
+        statement: [statement.subject, statement.predicate, statement.object, statement.why],
         statementNT: statement.toNT(),
         where: contextToWhere(context),
 
-        setObject: function() {
-            query = "MODIFY GRAPH " + this.statement.why.toNT() + "\n";
+        setObject: function(obj) {
+            query = "MODIFY GRAPH " + this.statement[3].toNT() + "\n";
             query += "DELETE { " + this.statementNT + " }\n";
-            query += "INSERT { " + this.statement.toNT() + " }\n"
+            query += "INSERT { " + this.statement[0].toNT() + " " + this.statement[1].toNT() + " " + obj.toNT() + " " + " . }\n";
             query += this.where;
             alert(query);
         }

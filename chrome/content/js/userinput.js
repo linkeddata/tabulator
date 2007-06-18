@@ -99,7 +99,11 @@ clearInputAndSave: function(){
         // generate path and nailing from current values
         sparqlUpdate = new sparql(kb).prepareUpdate(s);
 
-        if (obj.termType=='literal') obj.value=this.lastModified.value;
+        if (obj.termType=='literal') {
+            obj.value=this.lastModified.value;
+            // send sparql update with new values
+            sparqlUpdate.setObject(makeTerm(this.lastModified.value));
+        }
         //fire text modified??
         if (obj.termType=='symbol'){
             kb.remove(s);
@@ -108,10 +112,10 @@ clearInputAndSave: function(){
                                                                            //'why' to be changed
             else
                 s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!
+            // send sparql update with new values
+            sparqlUpdate.setObject(kb.sym(this.lastModified.value));
         }
 
-        // send sparql update with new values
-        sparqlUpdate.setObject();
     };
     var trNode=ancestor(this.lastModified,'TR');
     trNode.removeChild(trNode.lastChild);

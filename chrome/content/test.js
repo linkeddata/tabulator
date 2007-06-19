@@ -39,16 +39,17 @@ Icon = {}
 Icon.src= []
 Icon.tooltips= []
 
-Icon.src.icon_unrequested = 'icons/16dot-blue.gif';
-Icon.src.icon_fetched = 'icons/16dot-green.gif';
-Icon.src.icon_failed = 'icons/16dot-red.gif';
-Icon.src.icon_requested = 'icons/16dot-yellow.gif'
-Icon.src.icon_expand = 'icons/tbl-expand-trans.png';
-Icon.src.icon_collapse = 'icons/tbl-collapse.png';
-Icon.src.icon_remove_node = 'icons/tbl-x-small.png'
-Icon.src.icon_shrink = 'icons/tbl-shrink.png';
-Icon.src.icon_optoff = 'icons/optional_off.PNG';
-Icon.src.icon_opton = 'icons/optional_on.PNG';
+var iconPrefix = 'chrome://tabulator/content/';
+Icon.src.icon_unrequested = iconPrefix+'icons/16dot-blue.gif';
+Icon.src.icon_fetched = iconPrefix+'icons/16dot-green.gif';
+Icon.src.icon_failed = iconPrefix+'icons/16dot-red.gif';
+Icon.src.icon_requested = iconPrefix+'icons/16dot-yellow.gif'
+Icon.src.icon_expand = iconPrefix+'icons/tbl-expand-trans.png';
+Icon.src.icon_collapse = iconPrefix+'icons/tbl-collapse.png';
+Icon.src.icon_remove_node = iconPrefix+'icons/tbl-x-small.png'
+Icon.src.icon_shrink = iconPrefix+'icons/tbl-shrink.png';
+Icon.src.icon_optoff = iconPrefix+'icons/optional_off.PNG';
+Icon.src.icon_opton = iconPrefix+'icons/optional_on.PNG';
 
 Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
 Icon.tooltips[Icon.src.icon_expand]='View details.'
@@ -100,16 +101,32 @@ var tabExtension = {
   init: function() {
     var appcontent = document.getElementById("appcontent");   // browser
     if(appcontent) {
-      Components.classes["@mozilla.org/uriloader;1"]
-        .getService(Components.interfaces.nsIURILoader)
-           .registerContentListener(uriContentListener);
       var catman = Components.classes["@mozilla.org/categorymanager;1"]
                            .getService(Components.interfaces.nsICategoryManager);
       catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
       var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-      tabulator.kb=kb;
-      tabulator.qs=qs;
-      tabulator.sf=sf;
+      if(!tabulator.kb) {
+        tabulator.kb=kb;
+        tabulator.qs=qs;
+        tabulator.sf=sf;
+        tabulator.registerView(tableView);
+        tabulator.registerView(tableView);
+      }
+      gBrowser.addEventListener('load',function(e) {
+        var doc = e.originalTarget;
+        var divs = doc.getElementsByTagName('div');
+        for(var i=0;i<divs.length;i++) {
+          if(divs[i].className.search("TabulatorOutline")!=-1) {
+            //Inject an outline here!!
+            var uri = divs[i].getAttribute('id');
+            var table = doc.createElement('table');
+            table.setAttribute('id','outline');
+            divs[i].appendChild(table);
+            var outline = new Outline(doc);
+            outline.GotoSubject(kb.sym(uri),true);
+          }
+        }
+      },true);
     }
   }
 }
@@ -236,50 +253,3 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
 function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);
 }
-
-var uriContentListener = {
-  QueryInterface: function(aIID) {
-    if
-      (aIID.equals(Components.interfaces.nsISupports)
-      || aIID.equals(Components.interfaces.nsIURIContentListener)
-      || aIID.equals(Components.interfaces.nsISupportsWeakReference)
-      ) return uriContentListener;
-    throw Components.results.NS_NOINTERFACE;
-  },
-
-  canHandleContent: function ( /*char* */ contentType , /*function*/ isContentPreferred , /*out char* */ desiredContentType ) {
-    if (contentType == 'application/rdf+xml') {
-      return true;
-    }
-    else return false;
-  },
-
-  doContent: function ( /*char* */ contentType , /*function*/ isContentPreferred , /*nsIRequest*/ request , /*out nsIStreamListener*/ contentHandler ) {
-    var uri = request.name;
-    var bs = gBrowser.browsers;
-    var targetBrowser = -1;
-    var i;
-    for(i=0;i<bs.length;i++) {
-      if(bs.item(i).currentURI.spec.toString()=="about:blank" && bs.item(i).webProgress.isLoadingDocument)
-        targetBrowser = bs.item(i); //TODO: Fix this shameless hack.
-    }
-    if(targetBrowser==-1)
-      targetBrowser=gBrowser;
-    targetBrowser.loadURI("chrome://tabulator/content/test.html");
-    targetBrowser.addEventListener("load",OutlineLoader(targetBrowser,uri), true);
-    return 1;
-  },
-
-  isPreferred: function ( /*char* */ contentType , /*out char* */ desiredContentType ) {
-    if (contentType == 'application/rdf+xml') {
-      return true;
-    }
-    else {
-      return false;
-    }
-  },
-
-  onStartURIOpen: function ( /*nsIURI*/ URI ) {
-    return true;
-  }
-};

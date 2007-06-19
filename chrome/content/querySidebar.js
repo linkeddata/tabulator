@@ -5,9 +5,10 @@ function querySidebar(doc) {
   var tabulator =
       Components.classes["@dig.csail.mit.edu/tabulator;1"]
         .getService(Components.interfaces.nsISupports).wrappedJSObject;
+  var toolbar = doc.getElementById("queryToolbar");
+  var button = doc.getElementById("querySubmitButton");
 
   var myQueries = [];
-  var button = doc.getElementById("querySubmitButton");
 
   function listSelectionListener(e){
     return;
@@ -59,30 +60,55 @@ function querySidebar(doc) {
     return;
   }
   this.addQuery = function(q) {
-    var ql = document.getElementById("queryList");
+    var ql = doc.getElementById("queryList");
     var li = doc.createElement('listitem');
     var label = doc.createElement('label');
     label.setAttribute('value',q.name);
     li.appendChild(label);
     label.value=q.id;
     ql.appendChild(li);
+    myQueries[q.id]=q;
+    //TODO:Finish... updating mechanism!! (see tabviews.js)
   }
 
   this.removeQuery = function(q) {
     //TODO:Write all of this!
   }
 
+  function createToolbarClickListener(view) {
+    return function(e) {
+      //TODO: Write code that will send off for new query draw.
+      var ql = doc.getElementById("queryList");
+      if(ql.selectedItem==null)
+        alert("You must select a query to display before opening a view.");
+      else {
+        var q = myQueries[ql.selectedItem.firstChild.value]; //Find by ID.
+        tabulator.drawInView(q,view,alert);
+      }
+    }
+  }
+
+  function createToolbar() {
+    for(var i=0;i<tabulator.views.length;i++) {
+      var newButton = doc.createElement('toolbarbutton');
+      newButton.setAttribute('image','icons/document.png');
+      newButton.label=tabulator.views[i].name;
+      newButton.addEventListener('click',createToolbarClickListener(tabulator.views[i]),true);
+      toolbar.appendChild(newButton);
+    }
+  }
+
+
   //and when it's all over
   function closeListener(e) {
     //cleanup
     tabulator.qs.removeListener(mySidebar);
   }
-
-  var ql = document.getElementById("queryList");
+  createToolbar();
+  var ql = doc.getElementById("queryList");
   ql.addEventListener('select',listSelectionListener,true);
   ql.addEventListener('click',listClickListener,true);
   ql.addEventListener('keypress',listKeyListener,true);
-
   window.addEventListener('unload',closeListener,true);
   tabulator.qs.addListener(this);
 }

@@ -1063,7 +1063,8 @@ function Outline(doc) {
 	        var tsrc = target.src
 	        var outer
 	        var i = tsrc.indexOf('/icons/')
-	        if (i >=0 ) tsrc=tsrc.slice(i+1) // get just relative bit we use
+          //TODO: This check could definitely be made cleaner.
+	        if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
 	        fyi("\nEvent: You clicked on an image, src=" + tsrc)
 	        if (!about) {
 	            alert("No about attribute");

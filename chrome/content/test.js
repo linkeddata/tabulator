@@ -110,7 +110,6 @@ var tabExtension = {
         tabulator.qs=qs;
         tabulator.sf=sf;
         tabulator.registerView(tableView);
-        tabulator.registerView(tableView);
       }
       gBrowser.addEventListener('load',function(e) {
         var doc = e.originalTarget;

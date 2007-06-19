@@ -1,4 +1,5 @@
-addLoadEvent(function(){ document.getElementsByName("mode")[0].checked=true;})
+//addLoadEvent(function(){ document.getElementsByName("mode")[0].checked=true;});
+//TODO: The mode-switch buttons need to be removed.
 
 var UserInput={
 lastModified: null, //the last <input> being modified

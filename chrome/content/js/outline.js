@@ -792,7 +792,7 @@ function Outline(doc) {
 		    cla += ' selected'
 		    if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
 		    if (cla.indexOf('pred') >= 0)
-		        HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
+		        //HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
 		    selection.push(node)
 		    fyi("Selecting "+node)
 		    var source
@@ -805,7 +805,7 @@ function Outline(doc) {
 		    cla = cla.replace(' selected','')
 		    if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
 		    if (cla.indexOf('pred') >=0)
-		        HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
+		        //HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
 		    RDFArrayRemove(selection, node)
 		    fyi("Deselecting "+node)
 		    fyi("cla=$"+cla+"$")

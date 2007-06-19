@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3156 2007-06-15 19:09:49Z kennyluck $
+// SVN ID: $Id: tabulate.js 3188 2007-06-19 20:56:17Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -29,7 +29,11 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
     if (p.uri.indexOf('#') < 0) { // No hash
 
 	// @@ major hack for dbpedia Categories, which spred indefinitely
-	if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
+	if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;
+    var URITitlesToStop=[]; //uri strarts with any element in URIsTitleToStop is not dereferenced
+    SourceOptions["javascript2rdf"][2].setupHere([URITitlesToStop],"AJAR_handleNewTerm()@tabulate.js");
+    for (var i=0;i<URITitlesToStop.length;i++)
+        if (string_startswith(p.uri,URITitlesToStop[i])) return;  
 	if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
 		   || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
             fixuri = "http://dublincore.org/2005/06/13/dcq";
@@ -93,6 +97,7 @@ Icon.src.icon_retracted = Icon.src.icon_unrequested
 Icon.src.icon_retracted = Icon.src.icon_unrequested;
 Icon.src.icon_time = 'icons/Wclocksmall.png';
 Icon.src.icon_remove_node = 'icons/tbl-x-small.png'
+Icon.src.icon_add_triple = 'icons/userinput_add_triple.png';
 Icon.tooltips = [];
 Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
 {
@@ -135,6 +140,7 @@ function calendarable(st, type, inverse){
 Icon.termWidgets.time = new Icon.OutlinerIcon(Icon.src.icon_time,20,'time',
 'You can view this field in the calendar or timeline view',
 					      calendarable);
+Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
 
 Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
 Icon.tooltips[Icon.src.icon_expand]='View details.'

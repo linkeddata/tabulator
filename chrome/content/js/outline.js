@@ -1210,7 +1210,10 @@ function Outline(doc) {
 			       status.textContent=" parsing..."
 			       return false
 			   })
-	    sf.lookUpThing(subject)
+	    function expand_default(){
+	        sf.lookUpThing(subject); //This will be executed by default (see configuration.js)
+	    }
+	    SourceOptions["javascript2rdf"][1].setupHere([subject],"outline_expand()",expand_default);
 	    render()  // inital open, or else full if re-open
 	
 	} //outline_expand

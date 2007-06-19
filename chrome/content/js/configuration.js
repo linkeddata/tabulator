@@ -28,10 +28,11 @@ function Option(code){ //{class Option}
     this.length=1;
     this.enabled=false;
     this.setupHere=
-    function (arg,message){
+    function (arg,message,defaultCode){
         //which is faster? eval or Function?
 
-        this.message=message;//you should input message        
+        this.message=message;//you should input message
+        this.defaultCode=defaultCode;        
         //eval:
         //for (var i=0;i<arguments.length;i+=2) eval("var "+arguments[i]+"="+arguments[i+1].toString());
         //if (this.enabled) eval(this.code);
@@ -40,13 +41,21 @@ function Option(code){ //{class Option}
         //if (this.enabled) Function("e",this.code).apply(this,arguments); 
         
         //Neither: (why didn't I find this solution in the past few hours...)
-        if (this.enabled) this.code.apply(this,arg);
-
+        if (this.enabled) 
+            this.code.apply(this,arg);
+        else if (defaultCode)
+            this.defaultCode.apply(this,arg);
     };
     this.addMoreCode=function (func){
         if (this.length==1) this[0]=new Option(this.code);
         this[this.length]=new Option(func);
         this.length++;
+    }
+    this.enable=function(){
+        this.enabled=true;
+        if (this.length>1)
+            for(var i=0;i<this.length;i++)
+                this[i].enabled=true;
     }
 }
 
@@ -90,11 +99,63 @@ HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM1);
 delete temp_RCTSM1;
 
 //able to edit in Discovery Mode by mouse
-function temp_ATEIDMBM(sel,e){
+function temp_ATEIDMBM0(sel,e,node){
     if (sel) UserInput.Click(e);
 }
-HCIoptions.addOption("able to edit in Discovery Mode by mouse",temp_ATEIDMBM);
-delete temp_ATEIDMBM;
+HCIoptions.addOption("able to edit in Discovery Mode by mouse",temp_ATEIDMBM0);
+delete temp_ATEIDMBM0;
+
+function temp_ATEIDMBM1(node,termWidget){
+    termWidget.addIcon(node,Icon.termWidgets.addTri);
+}
+HCIoptions["able to edit in Discovery Mode by mouse"].addMoreCode(temp_ATEIDMBM1);
+delete temp_ATEIDMBM1;
+
+function temp_ATEIDMBM2(node){
+    termWidget.removeIcon(node,Icon.termWidgets.addTri);
+}
+HCIoptions["able to edit in Discovery Mode by mouse"].addMoreCode(temp_ATEIDMBM2);
+delete temp_ATEIDMBM2;
+
+//favorite dock
+function temp_FD0(){
+    include("js/calView/yahoo-dom-event.js");
+    include("js/calView/dragdrop.js");
+}
+
+HCIoptions.addOption("favorite dock",temp_FD0);
+delete temp_FD0;
+
+
+/** 
+  * Source Options
+  **/
+var SourceOptions=new OptionCollection();
+
+//javascript2rdf
+function javascript2rdf0()
+{
+    include("js/misc/javascript2rdf.js");
+}
+SourceOptions.addOption("javascript2rdf",javascript2rdf0);
+delete javascript2rdf0;
+
+function javascript2rdf1(subject)
+{
+    if (string_startswith(subject.uri,"javascript:")) 
+        RDFizers["javascript2rdf"].load(subject.uri);
+    else
+	    sf.lookUpThing(subject)
+}
+SourceOptions["javascript2rdf"].addMoreCode(javascript2rdf1);
+delete javascript2rdf1;
+
+function javascript2rdf2(URITitlesToStop)
+{
+    if(URITitlesToStop.length==0) URITitlesToStop.push("javascript:");
+}
+SourceOptions["javascript2rdf"].addMoreCode(javascript2rdf2);
+delete javascript2rdf2;
 
 /**
   * Preferences
@@ -102,7 +163,12 @@ delete temp_ATEIDMBM;
 //ToDo: Option.enable();
 //HCIoptions["right click to switch mode"][0].enabled=true;
 //HCIoptions["right click to switch mode"][1].enabled=true;
-HCIoptions["able to edit in Discovery Mode by mouse"].enabled=true;
+HCIoptions["able to edit in Discovery Mode by mouse"].enable();
+//HCIoptions["favorite dock"].enabled=true;
+
+//##Enable this to play with javascript:variableName
+//'javascript:document' is not working fine but 'javascript:document.firstChild' is OK
+//SourceOptions["javascript2rdf"].enable();
 
 
 //ToDo:
@@ -119,6 +185,11 @@ function HCIoption(){ //{class HCIoption} HCI:Human Computer Interaction
 HCIoption.instances=[];
 */
 
+
+
+
+SourceOptions["javascript2rdf"][0].setupHere([],"end of configuration.js");
+///////////////////////////////////end of configurauration.js
 
 
 

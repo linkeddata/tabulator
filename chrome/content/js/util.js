@@ -350,9 +350,19 @@ function matrixTD(obj, asImage, doc) {
 	        aa = level.getAttribute('about')
 	        if (aa) 
 		        return kb.fromNT(aa)
-		    else if (level.tagName=='TD')
+		    else if (level.tagName=='TR') //this is to prevent literals passing through
 		        return undefined
 	    }
 	    return undefined
 	}
 	
+//////////////////////////////////////Source Utility
+
+/**This is for .js that is not so important**/
+function include(linkstr){
+    var lnk = document.createElement('script');
+    lnk.setAttribute('type', 'text/javascript');
+    lnk.setAttribute('src', linkstr);
+    document.getElementsByTagName('head')[0].appendChild(lnk);
+    return lnk;
+}

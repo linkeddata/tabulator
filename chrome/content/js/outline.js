@@ -953,7 +953,7 @@ function Outline(doc) {
 	            break;
             case 37://left
                 var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
-                var titleTd=parentTr.lastChild.firstChild.firstChild;
+                var titleTd=parentTr.lastChild.firstChild.firstChild.firstChild;
                 outline_collapse(titleTd,getAbout(kb,titleTd));
                 setSelected(parentTr.lastChild,true);
                 break;

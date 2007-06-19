@@ -791,6 +791,8 @@ function Outline(doc) {
 	    if (newValue) {
 		    cla += ' selected'
 		    if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
+		    if (cla.indexOf('pred') >= 0)
+		        HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
 		    selection.push(node)
 		    fyi("Selecting "+node)
 		    var source
@@ -798,17 +800,19 @@ function Outline(doc) {
 		    else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
 		    tinfo('Source to highlight: '+source);
 		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
-	       } else {
+	    } else {
 		    fyi("cla=$"+cla+"$")
 		    cla = cla.replace(' selected','')
 		    if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
+		    if (cla.indexOf('pred') >=0)
+		        HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
 		    RDFArrayRemove(selection, node)
 		    fyi("Deselecting "+node)
 		    fyi("cla=$"+cla+"$")
 		    if (node.AJAR_statement) source=node.AJAR_statement.why
 		    else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why
 		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false)
-	  }
+	    }
 	    node.setAttribute('class', cla)
 	}
 
@@ -1037,9 +1041,14 @@ function Outline(doc) {
 	            //setSelected(node, !selected(node))
 	            deselectAll()
 	            setSelected(node, true)
+	            
+	            if (e.detail==2){//dobule click -> quit TabulatorMousedown()
+	                e.stopPropagation();
+	                return;
+	            }
 	            //if (sel) UserInput.Click(e); = the following
 	            var text="TabulatorMouseDown@Outline()";
-	            HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e],text); 
+	            HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,node],text); 
 	            
 	        }
 	        fyi("Was node selected after: "+selected(node)
@@ -1102,6 +1111,9 @@ function Outline(doc) {
 		    var node = target.node;
 			setSelected(node, true);
 			viewAndSaveQuery();
+		    break;
+		case Icon.src.icon_add_triple:
+		    UserInput.addTriple(e);
 		    break;
 		default: //nothing
 	        }

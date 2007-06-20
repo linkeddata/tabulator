@@ -3,14 +3,17 @@
 var SORT_COLUMN_INDEX;
 
 function sortables_init() {
-    // Find all tables with class sortable and make them sortable
+  //alert("Entered sortables_init");
+  // Find all tables with class sortable and make them sortable
   if (!document.getElementsByTagName) return;
   tbls = document.getElementsByTagName("table");
+  //alert(tbls);
+  //alert(tbls.length);
   for (ti=0;ti<tbls.length;ti++) {
     thisTbl = tbls[ti];
-
+    //alert((' '+thisTbl.className+' ').indexOf("sortable"))
     if (((' '+thisTbl.className+' ').indexOf("sortable") != -1) && (thisTbl.id)) {
-            //initTable(thisTbl.id);
+      //initTable(thisTbl.id);
       //alert ("yes! " + thisTbl.id);
       ts_makeSortable(thisTbl);
     }
@@ -18,6 +21,7 @@ function sortables_init() {
 }
 
 function ts_makeSortable(table) {
+  //alert("Entered ts_makeSortable");
   var firstRow; //first childNode of the table. for some reason rows doesn't work?!
   fyi("making sortable: " + table.id + table.rows + table.rows.length + table.childNodes.length);
   // fyi("table contents: " + table.innerHTML); Long!
@@ -37,9 +41,10 @@ function ts_makeSortable(table) {
 //NOTE THAT I HAVE REMOVED SPACING AND FUNCTIONS ASSOCIATED WITH REMOVECOLUMN BECAUSE
 //THE FUNCTION DOESN"T EXIST --ALERER
     fyi("making header clickable: " + txt); // See style sheet: float right changes order!
-    cell.innerHTML = /*'<a class="colclose" onclick="removeColumn(event)">&otimes;</a> ' + */
+    cell.innerHTML = 
     '<a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">' +
         '<span class="sortarrow"></span>' + txt+'</a>';
+        //alert(cell.innerHTML);
   }
 }
 

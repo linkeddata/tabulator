@@ -287,26 +287,29 @@ function myFetcher(x, requestedBy) {
 }
 
 function matrixTD(obj, asImage, doc) {
+    //alert (obj.termType);
 	if(!doc)
-	  doc=document;
+        doc=document;
     var td = doc.createElement('TD');
     if (!obj) var obj = new RDFLiteral(".");
     if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
-	td.setAttribute('about', obj.toNT());
-	td.setAttribute('style', 'color:#4444ff');
+        td.setAttribute('class', 'notEditable');
+		td.setAttribute('about', obj.toNT());
+		td.setAttribute('style', 'color:#4444ff');
     }
     
     var image;
     if (obj.termType == 'literal') {
-	td.appendChild(doc.createTextNode(obj.value));
-    } else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')){
-	if (asImage) {
-	    image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
-	    image.setAttribute('class', 'pic');
-	    td.appendChild(image);
-	} else {
-	    td.appendChild(doc.createTextNode(label(obj)));
-	}
+        td.setAttribute('class', 'editable'); //you're only allowed to edit a literal field
+        td.appendChild(doc.createTextNode(obj.value));
+    } else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+        if (asImage) {
+            image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
+            image.setAttribute('class', 'pic');
+            td.appendChild(image);
+        } else {
+            td.appendChild(doc.createTextNode(label(obj)));
+        }
     }
     return td;
 }
@@ -317,7 +320,7 @@ function matrixTD(obj, asImage, doc) {
 	    if (e.target) target = e.target
 	    else if (e.srcElement) target = e.srcElement
 	    if (target.nodeType == 3) // defeat Safari bug [sic]
-	       target = target.parentNode
+            target = target.parentNode
 	    fyi("Click on: " + target.tagName)
 	    return target
 	}

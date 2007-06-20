@@ -6,6 +6,7 @@
   <script type="application/x-javascript" src="js/sorttable.js"/>
   <script type="application/x-javascript" src="js/tableView.js"/>
   <script type="application/x-javascript" src="js/log.js"/>
+  <script type="application/x-javascript" src="js/rdf/sparql.js"/>
   <script type="application/x-javascript" src="js/util.js"/>
   <script type="application/x-javascript" src="js/uri.js"/>
   <script type="application/x-javascript" src="js/rdf/term.js"/>

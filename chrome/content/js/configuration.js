@@ -98,6 +98,22 @@ function temp_RCTSM1(e){
 HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM1);
 delete temp_RCTSM1;
 
+function temp_RCTSM2(){
+    function thoseRadios(){
+        var menuDiv=document.getElementById('MenuBar');
+        var labelWrite=document.createElement('label');
+        labelWrite.innerHTML='<input type="radio" onclick="UserInput.switchModeByRadio()" name="mode" value="1"><img src="icons/pencil_small.png" title="Edit Mode" /></input>'
+        var labelBrowse=document.createElement('label');
+        labelBrowse.innerHTML='<input type="radio" onclick="UserInput.switchModeByRadio()" name="mode" value="0" checked><img src="icons/discovery_small.png" title="Discovery Mode" /></input>'
+        menuDiv.insertBefore(labelWrite,menuDiv.childNodes[6]); //6!! text nodes suck!
+        menuDiv.insertBefore(labelBrowse,menuDiv.childNodes[6]);
+    }
+    addLoadEvent(thoseRadios);
+    addLoadEvent(function(){ document.getElementsByName("mode")[0].checked=true;});
+}
+HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM2);
+delete temp_RCTSM2;
+
 //able to edit in Discovery Mode by mouse
 function temp_ATEIDMBM0(sel,e,node){
     if (sel) UserInput.Click(e);
@@ -160,9 +176,7 @@ delete javascript2rdf2;
 /**
   * Preferences
   **/
-//ToDo: Option.enable();
-//HCIoptions["right click to switch mode"][0].enabled=true;
-//HCIoptions["right click to switch mode"][1].enabled=true;
+//HCIoptions["right click to switch mode"].enable();
 HCIoptions["able to edit in Discovery Mode by mouse"].enable();
 //HCIoptions["favorite dock"].enabled=true;
 
@@ -187,7 +201,7 @@ HCIoption.instances=[];
 
 
 
-
+HCIoptions["right click to switch mode"][2].setupHere([],"end of configuration.js");
 SourceOptions["javascript2rdf"][0].setupHere([],"end of configuration.js");
 ///////////////////////////////////end of configurauration.js
 

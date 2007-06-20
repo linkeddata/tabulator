@@ -366,3 +366,16 @@ function include(linkstr){
     document.getElementsByTagName('head')[0].appendChild(lnk);
     return lnk;
 }
+
+function addLoadEvent(func) {
+    var oldonload = window.onload;
+    if (typeof window.onload != 'function') {
+        window.onload = func;
+    }
+    else {
+        window.onload = function() {
+            oldonload();
+            func();
+        }
+    }
+} //addLoadEvent

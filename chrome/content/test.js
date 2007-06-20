@@ -123,6 +123,11 @@ var tabExtension = {
             divs[i].appendChild(table);
             var outline = new Outline(doc);
             outline.GotoSubject(kb.sym(uri),true);
+            var queryButton = doc.createElement('input');
+            queryButton.setAttribute('type','button');
+            queryButton.setAttribute('value','Find All');
+            divs[i].appendChild(queryButton);
+            queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
           }
         }
       },true);

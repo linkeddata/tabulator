@@ -32,7 +32,7 @@ RDFConverter.prototype = {
     var parser = Components.classes['@mozilla.org/xmlextras/domparser;1']
                    .getService(Components.interfaces.nsIDOMParser);
     //TODO:Parse this before pageload, or let Tabulator kb do it on its own?
-    var nodeTree = parser.parseFromString(this.data, "text/xml");
+    //var nodeTree = parser.parseFromString(this.data, "text/xml");
 
     var outlineHTML = 
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+

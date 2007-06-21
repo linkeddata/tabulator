@@ -5,6 +5,7 @@
   <script type="application/x-javascript" src="js/configuration.js"/>  
   <script type="application/x-javascript" src="js/sorttable.js"/>
   <script type="application/x-javascript" src="js/tableView.js"/>
+  <script type="application/x-javascript" src="js/mapView.js"/>
   <script type="application/x-javascript" src="js/log.js"/>
   <script type="application/x-javascript" src="js/rdf/sparql.js"/>
   <script type="application/x-javascript" src="js/util.js"/>
@@ -18,7 +19,6 @@
   <script type="application/x-javascript" src="js/userinput.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
   <script type="application/x-javascript" src="test.js"/>
-  
   <menupopup id="viewSidebarMenu">
   <menuitem key="key_openTabulatorSidebar" observes="viewTabulatorSidebar"  />
   </menupopup>
@@ -39,5 +39,16 @@
                  sidebartitle="&tabulatorsidebar.title;"
                  oncommand="toggleSidebar('viewTabulatorSidebar');" />
   </broadcasterset>
+
+  <menupopup id="menu_ToolsPopup">
+    <menu id="menu_ToolsTabulatorMenu" label="&toolsTabulatorMenu.label;" accesskey="&toolsTabulatorMenu.accesskey;" insertafter="javascriptConsole">
+      <menupopup id="menu_ToolsTabulatorPopup">
+        <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" checked="false"/>
+        <menuseparator/>  
+        <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" oncommand="openTool('chrome://tabulator/content/sources.xul')"/>
+        <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" oncommand="openTool('chrome://tabulator/content/log.xul')"/>
+      </menupopup>
+    </menu>
+  </menupopup>
 
 </overlay>

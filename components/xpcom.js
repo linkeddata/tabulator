@@ -1,4 +1,3 @@
-dump("ffff");
 const nsISupports = Components.interfaces.nsISupports;
 
 const CLASS_ID = Components.ID("968a15aa-83d2-4577-88dd-b493dab4deb7");

@@ -7,7 +7,6 @@ function RDFConverter() {
   this.wrappedJSObject = this;
 }
 
-//Most code for the converter is derived from the WMLBrowser, by Matthew Wilson.
 RDFConverter.prototype = {
   listener: null,
 
@@ -22,50 +21,20 @@ RDFConverter.prototype = {
   },
 
   onStartRequest: function(request,context) {
-
-    this.data = '';
-    this.unencodeddata = '';
-    this.uri = request.QueryInterface (Components.interfaces.nsIChannel).URI.spec;
-
-    // Sets the charset if it is available. (For documents loaded from the
-    // filesystem, this is not set.)
-    this.charset =
-       request.QueryInterface (Components.interfaces.nsIChannel)
-           .contentCharset;
-
-    this.channel = request;
+    this.data="";
+    this.channel=request.QueryInterface(Components.interfaces.nsIChannel);
     this.channel.contentType = "text/html";
-    // All our data will be coerced to UTF-8
-    this.channel.contentCharset = "UTF-8";
-
     this.listener.onStartRequest (this.channel, context);
-
     return;
   },
 
   onStopRequest: function(request,context,statusCode) {
-    
-    var converter = Components
-        .classes["@mozilla.org/intl/scriptableunicodeconverter"]
-        .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-    converter.charset = this.charset;
+    var parser = Components.classes['@mozilla.org/xmlextras/domparser;1']
+                   .getService(Components.interfaces.nsIDOMParser);
+    //TODO:Parse this before pageload, or let Tabulator kb do it on its own?
+    var nodeTree = parser.parseFromString(this.data, "text/xml");
 
-    try {
-        this.data = converter.ConvertToUnicode (this.unencodeddata);
-    } catch (failure) {
-        this.data += this.unencodeddata;
-    }
-
-    // Strip leading whitespace
-    this.data = this.data.replace (/^\s+/,'');
-
-    // Parse the content into an XMLDocument
-    var parser =
-        Components.classes['@mozilla.org/xmlextras/domparser;1']
-             .getService(Components.interfaces.nsIDOMParser);
-    var originalDoc = parser.parseFromString(this.data, "text/xml");
-
-    var targetDocument = 
+    var outlineHTML = 
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
         "<html id='docHTML'>"+
         "    <head>"+
@@ -73,7 +42,7 @@ RDFConverter.prototype = {
         "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
         "    </head>"+
         "    <body>"+
-        "        <div class=\"TabulatorOutline\" id=\""+this.uri+"\">"+
+        "        <div class=\"TabulatorOutline\" id=\""+request.QueryInterface(Components.interfaces.nsIChannel).URI.spec+"\">"+
         "            <table id=\"outline\"></table>"+
         "        </div>"+
         "    </body>"+
@@ -82,30 +51,30 @@ RDFConverter.prototype = {
     var sis =
         Components.classes["@mozilla.org/io/string-input-stream;1"]
         .createInstance(Components.interfaces.nsIStringInputStream);
-    sis.setData (targetDocument, targetDocument.length);
-    this.listener.onDataAvailable (this.channel, context, sis, 0, targetDocument.length);
-
+    sis.setData (outlineHTML, outlineHTML.length);
+    this.listener.onDataAvailable (this.channel, context, sis, 0, outlineHTML.length);
     this.listener.onStopRequest (this.channel, context, statusCode);
+    return;
   },
 
   onDataAvailable: function(request,context,inputStream,offset,count) {
-    // TODO For more recent Mozilla versions, we can use the
-    // 'convertFromByteArray' methods.  Creating a string first leaves us with
-    // the risk of problems, eg a 0 byte indicating the end of a string
-    var si = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance();
-    si = si.QueryInterface(Components.interfaces.nsIScriptableInputStream);
-    si.init(inputStream);
+    var characterSet = this.channel.QueryInterface(Components.interfaces.nsIChannel).contentCharset;
+    // First, get and initialize the converter
+    var converter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
+                          .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
+    if(!characterSet || characterSet=="")
+      converter.charset = /* The character encoding you want, using UTF-8 here */ "UTF-8";
+    else
+      converter.charset=characterSet;
 
-    // This is basically a string containing a UTF-16 character for each
-    // byte of the original data
-    var unencoded = si.read (count);
+    // Now, read from the stream
+    var scriptableStream = Components.classes["@mozilla.org/scriptableinputstream;1"]
+                                 .createInstance(Components.interfaces.nsIScriptableInputStream);
+    scriptableStream.init(inputStream);
+    var chunk = scriptableStream.read(count);
+    var text = converter.ConvertToUnicode(chunk);
 
-    // Default charset
-    if (this.charset == undefined || this.charset == '') {
-       this.charset = 'UTF-8';
-    }
-
-    this.unencodeddata += unencoded;
+    this.data += text;
     return;
   },
 
@@ -114,7 +83,8 @@ RDFConverter.prototype = {
     return;
   },
   convert: function(fromStream,fromType,toType,context) {
-    return fromStream;
+    //I don't know what I should really do here !
+    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
   }
 }
 

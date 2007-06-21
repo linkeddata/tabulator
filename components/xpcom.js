@@ -28,7 +28,7 @@ function Tabulator() {
         return true;
       }
     }
-    alert("ERROR: That query can't be drawn! Do you have a table view?");
+    alert("ERROR: That query can't be drawn! Do you not have a table view?");
     return false;
   }
 

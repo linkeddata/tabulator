@@ -7,6 +7,9 @@ function RDFConverter() {
   this.wrappedJSObject = this;
 }
 
+
+//Most code for the converter is derived from the WMLBrowser, by Matthew Wilson et al.
+//See http://wmlbrowser.mozdev.org/ for more on the WML Browser.
 RDFConverter.prototype = {
   listener: null,
 

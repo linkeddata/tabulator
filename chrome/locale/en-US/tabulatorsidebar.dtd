@@ -1,3 +1,19 @@
 <!ENTITY tabulatorsidebar.title "TabulatorSidebar">
 <!ENTITY openTabulatorSidebar.commandkey "E">
 <!ENTITY openTabulatorSidebar.modifierskey "shift accel">
+
+<!ENTITY tabsources.title "Tabulator Sources">
+<!ENTITY tabsources.label "View Data Sources">
+<!ENTITY tabsources.accesskey "s">
+
+<!ENTITY tablog.title "Tabulator Log">
+<!ENTITY tablog.label "View Tabulator Log">
+<!ENTITY tablog.accesskey "l">
+
+<!ENTITY toolsTabulatorMenu.label "Tabulator">
+<!ENTITY toolsTabulatorMenu.accesskey "t">
+
+
+<!ENTITY tabulatorToggleHeader.label "Make Firefox request RDF">
+<!ENTITY tabulatorToggleHeader.accesskey "m">
+

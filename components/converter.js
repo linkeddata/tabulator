@@ -29,8 +29,8 @@ RDFConverter.prototype = {
   },
 
   onStopRequest: function(request,context,statusCode) {
-    var parser = Components.classes['@mozilla.org/xmlextras/domparser;1']
-                   .getService(Components.interfaces.nsIDOMParser);
+    //var parser = Components.classes['@mozilla.org/xmlextras/domparser;1']
+    //               .getService(Components.interfaces.nsIDOMParser);
     //TODO:Parse this before pageload, or let Tabulator kb do it on its own?
     //var nodeTree = parser.parseFromString(this.data, "text/xml");
 

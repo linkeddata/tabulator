@@ -2,7 +2,7 @@
 //TODO: The mode-switch buttons need to be removed.
 
 var UserInput={
-lastModified: null, //the last <input> being modified
+lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
 lastModifiedStat: null, //the last statement being modified
 statIsInverse: false, //whether the statement is an inverse
 
@@ -53,15 +53,9 @@ Click: function(e){
              tdNode.appendChild(textBox);
              this.lastModified=textBox;
         }else{
-            var inputBox=document.createElement('input');
-            
-            inputBox.setAttribute('value',obj.value);
-            inputBox.setAttribute('class','textinput');
-            inputBox.setAttribute('size','100'); //should be the size of <TD>
-            tdNode.appendChild(inputBox);
-            this.lastModified = inputBox;
+             this.lastModified = this.createInputBoxIn(tdNode,obj.value);
         }
-        
+        this.lastModified.isNew=false;
         //Kenny: What should be expected after you click a editable text element?
         //Choice 1
         this.lastModified.select();
@@ -91,22 +85,25 @@ Click: function(e){
 
 clearInputAndSave: function(){
     if(!this.lastModified) return;
-    try{
-         var obj=this.getStatementAbout(this.lastModified).object;
-    }catch(e){return;}
-    
+    if(!this.lastModified.isNew){
+        try{
+             var obj=this.getStatementAbout(this.lastModified).object;
+        }catch(e){return;}
+    }
     var s=this.lastModifiedStat;
     if(this.lastModified.value != this.lastModified.defaultValue){
         // generate path and nailing from current values
         sparqlUpdate = new sparql(kb).prepareUpdate(s);
-
-        if (obj.termType=='literal') {
+        if (this.lastModified.isNew){
+            s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
+        }
+        else if (obj.termType=='literal') {
             obj.value=this.lastModified.value;
             // send sparql update with new values
-            sparqlUpdate.setObject(makeTerm(this.lastModified.value));
+            //sparqlUpdate.setObject(makeTerm(this.lastModified.value));
         }
         //fire text modified??
-        if (obj.termType=='symbol'){
+        else if (obj.termType=='symbol'){
             kb.remove(s);
             if(!this.statIsInverse)
                 s=kb.add(s.subject,s.predicate,kb.sym(this.lastModified.value),s.why); //fire!
@@ -116,30 +113,71 @@ clearInputAndSave: function(){
             // send sparql update with new values
             sparqlUpdate.setObject(kb.sym(this.lastModified.value));
         }
-
-    };
+    }else if(this.lastModified.isNew){//generate 'Request', there is no way you can input ' (Please Input) '
+        this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
+        return;        
+    }
+    //case modified:
     var trNode=ancestor(this.lastModified,'TR');
     trNode.removeChild(trNode.lastChild);
     
-	var defaultpropview = views.defaults[s.predicate.uri];
-	if (!this.statIsInverse)
-	    trNode.appendChild(outline.outline_objectTD(s.object, defaultpropview));
-	else
-	    trNode.appendChild(outline.outline_objectTD(s.subject, defaultpropview));
-	trNode.AJAR_statement=s;
-	//This is going to be painful when predicate-edit allowed
-	
-	this.lastModified = null;  
+    var defaultpropview = views.defaults[s.predicate.uri];
+    if (!this.statIsInverse)
+        trNode.appendChild(outline.outline_objectTD(s.object, defaultpropview));
+    else
+        trNode.appendChild(outline.outline_objectTD(s.subject, defaultpropview));
+    trNode.AJAR_statement=s;//you don't have to set AJAR_inverse because it's not changed
+    //This is going to be painful when predicate-edit allowed
+
+    this.lastModified = null;  
 },
 
+addTriple: function(e){
+    var predicateTd=getTarget(e).parentNode.parentNode;
+    var predicateTerm=getAbout(kb,predicateTd);
+    //set pseudo lastModifiedStat here
+    this.lastModifiedStat=predicateTd.parentNode.AJAR_statement;
+
+   
+    var isEnd=false;
+    var trIterator;
+    try{
+        for(trIterator=predicateTd.parentNode.nextSibling;
+        trIterator.childNodes.length==1; //number of nodes as condition
+        trIterator=trIterator.nextSibling){}
+    }catch(e){isEnd=true;}
+    var insertTr=document.createElement('tr');
+    //AJAR_statement not set yet
+    
+    //style stuff, I'll have to investigate appendPropertyTRs() somehow
+    insertTr.style.colspan='1';
+    insertTr.style.display='block';
+    if (!predicateTd.hasAttribute('rowspan')) predicateTd.setAttribute('rowspan','2');
+    
+    var td=insertTr.appendChild(document.createElement('td'));
+    this.lastModified = this.createInputBoxIn(td," (Please Input) ");
+    this.lastModified.isNew=true;
+    if (!isEnd)
+        trIterator.parentNode.insertBefore(insertTr,trIterator);
+    else
+        predicateTd.parentNode.parentNode.appendChild(insertTr);
+    this.lastModified.select();
+
+    if(predicateTd.parentNode.AJAR_inverse) {//generate 'Request';
+        this.generateRequest("(This is an inverse statement. Drag a subject onto this field)");
+        //I guess it's not making sense...createInputBox and then remove it..
+    }
+    this.statIsInverse=false;
+},
 //ToDo: shrink rows when \n+backspace
 Keypress: function(e){
     if(e.keyCode==13){
         if(outline.targetOf(e).tagName!='TEXTAREA') 
             this.clearInputAndSave();
         else {//<TEXTAREA>
-            var preRows=eval(this.lastModified.getAttribute('rows').valueOf()) //...
+            var preRows=parseInt(this.lastModified.getAttribute('rows'))
             this.lastModified.setAttribute('rows',(preRows+1).toString());
+            e.stopPropagation();
         }
     }
     //Remark by Kenny: If the user wants to input more lines into an one-line-only blank.
@@ -160,6 +198,17 @@ Mousedown: function(e){
 },
 
 Mouseover: function(e){
+/*
+if (getTarget(e).tagName=='SPAN'){
+    var proxyDiv = document.createElement('DIV');
+    proxyDiv.id="proxyDiv";
+    proxyDiv.setAttribute('style',"position:absolute; visibility:hidden; top:630px; left:525px;height:50px;width:50px;background-color:#7E5B60;");
+    getTarget(e).appendChild(proxyDiv);
+    dragdropSpan=new YAHOO.util.DragDrop(getTarget(e),"outliner",{dragElId: "proxyDiv", centerFrame: true, resizeFrame: false});
+    //dragdropSpan.setXConstraint(0,0);
+    //dragdropSpan.setYConstraint(0,0);
+}
+*/
 if (_tabulatorMode==1){
     /**ABANDONED
     switch (getTarget(e).tagName){
@@ -218,6 +267,24 @@ getStatementAbout: function(something){
     return statement;
 },
 
+createInputBoxIn: function(tdNode,defaultText){
+    var inputBox=document.createElement('input');
+    inputBox.setAttribute('value',defaultText);
+    inputBox.setAttribute('class','textinput');
+    inputBox.setAttribute('size','100'); //should be the size of <TD>
+    tdNode.appendChild(inputBox);
+    return inputBox;
+},
+
+generateRequest: function(tipText){
+    var trNode=ancestor(this.lastModified,'TR');
+    trNode.removeChild(trNode.lastChild);
+    textTd=document.createElement('td');
+    textTd.className='undetermined';
+    textTd.appendChild(document.createTextNode(tipText));
+    trNode.appendChild(textTd);
+    this.lastModified=null;
+},
 /** ABANDONED APPROACH
 //determine whether the event happens at around the bottom border of the element
 aroundBorderBottom: function(event,element){

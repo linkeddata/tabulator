@@ -1,3 +1,4 @@
+var selection=[]
 var sourceWidget;
 //WE MUST KILL THESE GLOBALS.
 
@@ -14,7 +15,7 @@ function Outline(doc) {
     var myDocument=doc;
     var outline=this; //Kenny: do we need this?
     var thisOutline=this;
-    var selection = []  // Array of statements which have been selected
+    //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
     this.UserInput=new UserInput();
     this.viewAndSaveQuery = function() {

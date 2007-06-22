@@ -916,18 +916,43 @@ function Outline(doc) {
     //1. a fast way to modify data - enter will go to next predicate
     //2. an alternative way to input - enter at the end of a predicate will create a new statement
 	this.OutlinerKeypressPanel=function(e){
+        function showURI(about){
+            if(about && myDocument.getElementById('UserURI')) { 
+	            myDocument.getElementById('UserURI').value = 
+			 (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+            }
+        }
 	    if (getTarget(e).id=="UserURI") return;
 	    if (selection.length>1) return;
 	    if (selection.length==0){
-	        if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39)
+	        if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39){
 	            setSelected(this.focusTd.firstChild.childNodes[1].lastChild,true);
+                showURI(getAbout(kb,selection[0]));            
+	        }    
 	        return;    
         }
 	    var selectedTd=selection[0];
+        //if not done, Have to deal with redraw...
+        sf.removeCallback('done',"setSelectedAfterward");
+        sf.removeCallback('fail',"setSelectedAfterward");
 	    switch (e.keyCode){
 	        case 13://enter
 	            if (getTarget(e).tagName=='HTML') //I don't know why 'HTML'
-	                UserInput.Click(undefined);
+	                if (!UserInput.Click(undefined)){//meaning this is an expandable node
+	                    deselectAll();
+	                    var newTr=document.getElementById('outline').lastChild;                
+                        setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
+                        function setSelectedAfterward(uri){
+                            deselectAll();
+                            setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
+                            showURI(getAbout(kb,selection[0]));
+                            return true;                        
+                        }
+                        sf.insertCallback('done',setSelectedAfterward);
+                        sf.insertCallback('fail',setSelectedAfterward);                        
+                        //alert(newTr.firstChild.firstChild.childNodes[1].lastChild);
+                        return;
+	                }
 	            else{
                     var newSelTd=UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
 	                deselectAll();
@@ -964,12 +989,10 @@ function Outline(doc) {
                         //if (uri==undefined || Util.uri.docpart(obj.uri)==uri){
                             deselectAll();
                             setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
+                            showURI(getAbout(kb,selection[0]));
                         //}
                         return true;
                     }
-                    //if not done, Have to deal with redraw...
-                    sf.removeCallback('done',"setSelectedAfterward");
-                    sf.removeCallback('fail',"setSelectedAfterward");
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
                         sf.addCallback('done',setSelectedAfterward);
                         sf.addCallback('fail',setSelectedAfterward);
@@ -987,7 +1010,11 @@ function Outline(doc) {
                     //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);
                     //UserInput.lastModified.dispatchEvent(e2);
                 }
-	    }
+	    }//end of switch
+        showURI(getAbout(kb,selection[0]));   
+	    var PosY=findPos(selection[0])[1];
+	    if (PosY+selection[0].clientHeight > window.scrollY+window.innerHeight) getEyeFocus(selection[0],true,true);
+	    if (PosY<window.scrollY+54) getEyeFocus(selection[0],true);
     };
 	this.OutlinerMouseclickPanel=function(e){
 	    switch(_tabulatorMode){
@@ -1294,6 +1321,7 @@ function Outline(doc) {
 	    if (expand) {
 	    	outline_expand(td, subject)
 	    	myDocument.title = "Tabulator: "+label(subject)
+	    	getEyeFocus(tr,false);//instantly: false
 	    }
 	    return subject;
 	}

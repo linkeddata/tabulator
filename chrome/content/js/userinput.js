@@ -27,6 +27,11 @@ switchMode: function(){ //should be part of global UI
 Click: function(e){
     if (!e) //e==undefined : Keyboard Input
         var target=selection[0];
+        var object=getAbout(kb,target);
+        if (object.termType=='symbol' || object.termType=='bnode'){
+            outline.GotoSubject(object,true);
+            return false;
+        }            
     else
         var target=outline.targetOf(e);
     if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked

@@ -1,8 +1,5 @@
-selection = []  // Array of statements which have been selected
 var sourceWidget;
 //WE MUST KILL THESE GLOBALS.
-var _tabulatorMode=0; //Sorry one more
-//Default mode: Discovery
 
 //Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
 //              targetOf -> this.targetOf // this can be changed back 
@@ -15,8 +12,11 @@ var _tabulatorMode=0; //Sorry one more
 
 function Outline(doc) {
     var myDocument=doc;
-    var outline=this;
+    var outline=this; //Kenny: do we need this?
+    var thisOutline=this;
+    var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
+    this.UserInput=new UserInput();
     this.viewAndSaveQuery = function() {
         onLoad = function(e) {
             var doc = e.originalTarget;
@@ -326,7 +326,7 @@ function Outline(doc) {
 		if (myLang > 0 && langTagged == dups+1) {
 		    for (k=j; k <= j+dups; k++) {
 			if (sel(plist[k]).lang.indexOf(LanguagePreference) >=0) {
-			    tr.appendChild(outline.outline_objectTD(sel(plist[k]), defaultpropview))
+			    tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview))
 			    break;
 			}
 		    }
@@ -334,7 +334,7 @@ function Outline(doc) {
 		    continue;
 		}
 	
-		tr.appendChild(outline.outline_objectTD(sel(s), defaultpropview));
+		tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview));
 	
 		/* Note: showNobj shows between n to 2n objects.
 		 * This is to prevent the case where you have a long list of objects
@@ -355,7 +355,7 @@ function Outline(doc) {
 				s = plist[j+l];
 				var trobj = myDocument.createElement("TR");
 				trobj.style.colspan='1';
-				trobj.appendChild(outline.outline_objectTD(sel(plist[j+l]), defaultpropview)); //property view
+				trobj.appendChild(thisOutline.outline_objectTD(sel(plist[j+l]), defaultpropview)); //property view
 				trobj.AJAR_statement = s;
 				trobj.AJAR_inverse = inverse;
 				parent.appendChild(trobj);
@@ -926,7 +926,7 @@ function Outline(doc) {
 	    if (selection.length>1) return;
 	    if (selection.length==0){
 	        if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39){
-	            setSelected(this.focusTd.firstChild.childNodes[1].lastChild,true);
+	            setSelected(thisOutline.focusTd.firstChild.childNodes[1].lastChild,true);
                 showURI(getAbout(kb,selection[0]));            
 	        }    
 	        return;    
@@ -937,8 +937,9 @@ function Outline(doc) {
         sf.removeCallback('fail',"setSelectedAfterward");
 	    switch (e.keyCode){
 	        case 13://enter
-	            if (getTarget(e).tagName=='HTML') //I don't know why 'HTML'
-	                if (!UserInput.Click(undefined)){//meaning this is an expandable node
+
+	            if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
+	                if (!thisOutline.UserInput.Click(undefined,selectedTd)){//meaning this is an expandable node
 	                    deselectAll();
 	                    var newTr=document.getElementById('outline').lastChild;                
                         setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
@@ -953,10 +954,10 @@ function Outline(doc) {
                         //alert(newTr.firstChild.firstChild.childNodes[1].lastChild);
                         return;
 	                }
-	            else{
-                    var newSelTd=UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
+	            }else{
+                    var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
 	                deselectAll();
-	                UserInput.Keypress(e);
+	                thisOutline.UserInput.Keypress(e);
                     setSelected(newSelTd,true);
                     document.getElementById('docHTML').focus(); //have to set this or focus blurs
                     e.stopPropagation();
@@ -1003,8 +1004,8 @@ function Outline(doc) {
                 break;    
 	        default:
                 if (getTarget(e).tagName=='HTML'){
-                    UserInput.Click(undefined);
-                    UserInput.lastModified.value=String.fromCharCode(e.charCode);
+                    thisOutline.UserInput.Click(undefined,selectedTd);
+                    thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
                     //Events are not reliable...
                     //var e2=document.createEvent("KeyboardEvent");
                     //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);
@@ -1017,12 +1018,12 @@ function Outline(doc) {
 	    if (PosY<window.scrollY+54) getEyeFocus(selection[0],true);
     };
 	this.OutlinerMouseclickPanel=function(e){
-	    switch(_tabulatorMode){
+	    switch(thisOutline.UserInput._tabulatorMode){
 	        case 0:
 	            TabulatorMousedown(e);
 	            break;
 	        case 1:
-	            UserInput.Click(e);
+	            thisOutline.UserInput.Click(e);
 	            break;
 	        default:
 	    }
@@ -1035,7 +1036,7 @@ function Outline(doc) {
 	// select
 	// visit/open a page	
 	function TabulatorMousedown(e) {
-	    var target = outline.targetOf(e);
+	    var target = thisOutline.targetOf(e);
 	    if (!target) return;
 	    var tname = target.tagName;
 	    //fyi("TabulatorMousedown: " + tname + " shift="+e.shiftKey+" alt="+e.altKey+" ctrl="+e.ctrlKey);
@@ -1046,7 +1047,7 @@ function Outline(doc) {
 	        return
 	    }
 	    //not input then clear
-	    UserInput.clearInputAndSave();
+	    thisOutline.UserInput.clearInputAndSave();
 	    if (tname != "IMG") {
 	        if(about && myDocument.getElementById('UserURI')) { 
 	            myDocument.getElementById('UserURI').value = 
@@ -1075,7 +1076,7 @@ function Outline(doc) {
 	            }
 	            //if (sel) UserInput.Click(e); = the following
 	            var text="TabulatorMouseDown@Outline()";
-	            HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,node],text); 
+	            HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline],text); 
 	            
 	        }
 	        fyi("Was node selected after: "+selected(node)
@@ -1141,7 +1142,7 @@ function Outline(doc) {
 			viewAndSaveQuery();
 		    break;
 		case Icon.src.icon_add_triple:
-		    UserInput.addTriple(e);
+		    thisOutline.UserInput.addTriple(e);
 		    break;
 		default: //nothing
 	        }
@@ -1178,7 +1179,7 @@ function Outline(doc) {
 		    newTable.style.backgroundColor='white'
 		}
 		emptyNode(p).appendChild(newTable)
-		this.focusTd=p;
+		thisOutline.focusTd=p; //I don't know why I couldn't use this...
 		log.debug("expand: Node for " + subject + " expanded")	    
 	    } 
 	
@@ -1315,7 +1316,7 @@ function Outline(doc) {
 	    var tr = myDocument.createElement("TR");
 	    tr.style.verticalAlign="top";
 	    table.appendChild(tr);
-	    var td = outline.outline_objectTD(subject, undefined, tr)
+	    var td = thisOutline.outline_objectTD(subject, undefined, tr)
 	
 	    tr.appendChild(td)
 	    if (expand) {
@@ -1412,7 +1413,7 @@ function VIEWAS_boring_default(obj) {
 	    var numcell = row.appendChild(myDocument.createElement('td'));
 	    numcell.setAttribute('about', obj.toNT());
 	    numcell.innerHTML = (i+1) + ')';
-	    row.appendChild(outline.outline_objectTD(elt));
+	    row.appendChild(thisOutline.outline_objectTD(elt));
 	}
     } else {
         log.error("unknown term type: " + obj.termType);
@@ -1530,15 +1531,14 @@ this.createTabURI = function() {
       myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
 }
 
+doc.getElementById('docHTML').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
 doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
 //doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
-//temporary key ctrl+s or q for swiching mode
-window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false);
-window.addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);//why 1422 not working? 
-doc.getElementById('outline').addEventListener('mouseover',UserInput.Mouseover,false);
-doc.getElementById('outline').addEventListener('mouseout',UserInput.Mouseout,false);
-//window.addEventListener('mousedown',UserInput.Mousedown,false);
-//doc.getElementById('outline').oncontextmenu=function(){return false;};
+//Kenny: I cannot make this work. The target of keypress is always <html>.
+//       I tried doc.getElementById('outline').focus();
+
+doc.getElementById('outline').addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
+doc.getElementById('outline').addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
 HCIoptions["right click to switch mode"][0].setupHere([],"end of class Outline")
 
 return this;

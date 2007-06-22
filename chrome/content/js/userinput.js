@@ -1,21 +1,20 @@
-//addLoadEvent(function(){ document.getElementsByName("mode")[0].checked=true;});
-//TODO: The mode-switch buttons need to be removed.
+function UserInput(){
 
-var UserInput={
+return {
 lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
 lastModifiedStat: null, //the last statement being modified
 statIsInverse: false, //whether the statement is an inverse
 
 switchMode: function(){ //should be part of global UI
-    switch (_tabulatorMode){
+    switch (this._tabulatorMode){
         case 0://discovery -> edit
-            _tabulatorMode=1;
+            this._tabulatorMode=1;
 	        var outliner=document.getElementById('browser');
 	        //outliner.style.cursor="url('icons/pencil_small.png')"; //not working as of now
 	        document.getElementsByName('mode')[1].checked=true;
 	        break;
 	    case 1://edit -> discovery
-	        _tabulatorMode=0;
+	        this._tabulatorMode=0;
 	        this.clearInputAndSave();	        
             document.getElementsByName('mode')[0].checked=true;
             break;
@@ -24,14 +23,15 @@ switchMode: function(){ //should be part of global UI
     }
 },
     
-Click: function(e){
-    if (!e) //e==undefined : Keyboard Input
-        var target=selection[0];
+Click: function(e,selectedTd){
+    if (!e){ //e==undefined : Keyboard Input
+        var target=selectedTd;
         var object=getAbout(kb,target);
-        if (object.termType=='symbol' || object.termType=='bnode'){
+        if (object && (object.termType=='symbol' || object.termType=='bnode')){
             outline.GotoSubject(object,true);
             return false;
-        }            
+        }
+    }            
     else
         var target=outline.targetOf(e);
     if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
@@ -86,6 +86,7 @@ Click: function(e){
         //Kenny: What if the user just want to edit the title?
     }
     if(e) e.stopPropagation();
+    return true; //this is not a valid modification
 },
 
 clearInputAndSave: function(){
@@ -214,7 +215,7 @@ if (getTarget(e).tagName=='SPAN'){
     //dragdropSpan.setYConstraint(0,0);
 }
 */
-if (_tabulatorMode==1){
+if (this._tabulatorMode==1){
     /**ABANDONED
     switch (getTarget(e).tagName){
         case 'TD':
@@ -245,7 +246,7 @@ if (_tabulatorMode==1){
 },
 
 Mouseout: function(e){
-if (_tabulatorMode==1){
+if (this._tabulatorMode==1){
     var border=getTarget(e);
     if (getTarget(e).className=="bottom-border"){ 
         border.style.borderColor='transparent';
@@ -323,8 +324,11 @@ aroundBorderBottom: function(event,element){
 //Not so important (will become obsolete?)
 switchModeByRadio: function(){
     var radio=document.getElementsByName('mode');
-    if (_tabulatorMode==0 && radio[1].checked==true) this.switchMode();
-    if (_tabulatorMode==1 && radio[0].checked==true) this.switchMode();
-}
-
+    if (this._tabulatorMode==0 && radio[1].checked==true) this.switchMode();
+    if (this._tabulatorMode==1 && radio[0].checked==true) this.switchMode();
+},
+_tabulatorMode: 0
+//Default mode: Discovery
 };
+
+}

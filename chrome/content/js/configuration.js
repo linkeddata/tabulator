@@ -80,6 +80,8 @@ var HCIoptions=new OptionCollection();
 
 //right click to switch mode
 function temp_RCTSM0(){
+    //temporary key ctrl+s or q for swiching mode
+    window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false);
     window.addEventListener('mousedown',UserInput.Mousedown,false);
     document.getElementById('outline').oncontextmenu=function(){return false;};
 }
@@ -115,8 +117,8 @@ HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM2);
 delete temp_RCTSM2;
 
 //able to edit in Discovery Mode by mouse
-function temp_ATEIDMBM0(sel,e,node){
-    if (sel) UserInput.Click(e);
+function temp_ATEIDMBM0(sel,e,outline){
+    if (sel) outline.UserInput.Click(e);
 }
 HCIoptions.addOption("able to edit in Discovery Mode by mouse",temp_ATEIDMBM0);
 delete temp_ATEIDMBM0;

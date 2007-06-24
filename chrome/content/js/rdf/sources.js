@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3115 2007-06-06 21:08:27Z presbrey $
+ * SVN ID: $Id: sources.js 3239 2007-06-24 15:41:37Z timbl $
  *
  ************************************************************/
 
@@ -237,6 +237,8 @@ function SourceFetcher(store, timeout, async) {
     }
     SourceFetcher.HTMLHandler.pattern = new RegExp("text/html")
     
+    /***********************************************/
+
     SourceFetcher.TextHandler = function () {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
@@ -274,6 +276,42 @@ function SourceFetcher(store, timeout, async) {
 	sf.mediatypes['text/plain'] = {'q': 0.1}
     }
     SourceFetcher.TextHandler.pattern = new RegExp("text/plain")
+
+    /***********************************************/
+
+    SourceFetcher.N3Handler = function () {
+	this.recv = function (xhr) {
+	    xhr.handle = function (cb) {
+		// Parse the text of this non-XML file
+		var rt = xhr.responseText
+	        var p = SinkParser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
+//@@		try {
+		    p.loadBuf(xhr.responseText)
+/*
+		} catch(e) {
+		    var msg = ("Error trying to parse " + xhr.uri
+			+ 'as Notation3:\n' + e)
+		    log.warn(msg)
+		    sf.failFetch(xhr, msg)
+		}
+Put this catch in after debugging parser! @@*/
+	    }
+	}
+    }
+    SourceFetcher.N3Handler.term = this.store.sym(this.thisURI
+						    +".N3Handler")
+    SourceFetcher.N3Handler.toString = function () { return "N3Handler" }
+    SourceFetcher.N3Handler.register = function (sf) {
+	sf.mediatypes['text/rdf+n3'] = {'q': 0.2} // low whiile parser untested
+    }
+    SourceFetcher.N3Handler.pattern = new RegExp("text/rdf\\+n3")
+
+
+    /***********************************************/
+
+
+
+
 
     Util.callbackify(this,['request', 'recv', 'load', 'fail', 'refresh',
 			   'retract', 'done'])
@@ -342,7 +380,9 @@ function SourceFetcher(store, timeout, async) {
      SourceFetcher.XHTMLHandler,
      SourceFetcher.XMLHandler,
      SourceFetcher.HTMLHandler,
-     SourceFetcher.TextHandler].map(this.addHandler)
+     SourceFetcher.TextHandler,
+     SourceFetcher.N3Handler,
+     ].map(this.addHandler)
 
     this.addCallback('done',function (uri, r) {
 	     if (uri.indexOf('#') >=0) alert('addcallBack '+uri)
@@ -693,7 +733,7 @@ function SourceFetcher(store, timeout, async) {
 		    }
 		}
 		xhr.setRequestHeader('Accept',acceptstring)
-//		twarn('Accept: '+ acceptstring)
+		tinfo('Accept: '+ acceptstring)
 		
 		// See http://dig.csail.mit.edu/issues/tabulator/issue65
 		//if (requester) { xhr.setRequestHeader('Referer',requester) }

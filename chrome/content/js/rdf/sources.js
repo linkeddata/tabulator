@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3239 2007-06-24 15:41:37Z timbl $
+ * SVN ID: $Id: sources.js 3240 2007-06-25 11:49:07Z timbl $
  *
  ************************************************************/
 
@@ -285,16 +285,19 @@ function SourceFetcher(store, timeout, async) {
 		// Parse the text of this non-XML file
 		var rt = xhr.responseText
 	        var p = SinkParser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
-//@@		try {
+		try {
 		    p.loadBuf(xhr.responseText)
-/*
+
 		} catch(e) {
 		    var msg = ("Error trying to parse " + xhr.uri
 			+ 'as Notation3:\n' + e)
 		    log.warn(msg)
 		    sf.failFetch(xhr, msg)
 		}
-Put this catch in after debugging parser! @@*/
+
+		sf.addStatus(xhr,'N3 parsed: '+p.statementCount 
+					    + ' in '+p.lines+' lines.')
+		sf.doneFetch(xhr, args)
 	    }
 	}
     }

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3240 2007-06-25 11:49:07Z timbl $
+ * SVN ID: $Id: sources.js 3241 2007-06-25 21:46:12Z timbl $
  *
  ************************************************************/
 
@@ -297,6 +297,7 @@ function SourceFetcher(store, timeout, async) {
 
 		sf.addStatus(xhr,'N3 parsed: '+p.statementCount 
 					    + ' in '+p.lines+' lines.')
+		args = [ xhr.uri.uri ]; // Other args needed ever?
 		sf.doneFetch(xhr, args)
 	    }
 	}

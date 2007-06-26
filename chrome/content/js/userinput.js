@@ -203,6 +203,7 @@ clipboardInit: function clipboardInit(address){
     kb.add(kb.sym(address),tabont('objects'),kb.collection())
     kb.add(kb.sym(address),tabont('predicates'),kb.collection())
     kb.add(kb.sym(address),tabont('all'),kb.collection())
+    internals[tabont('all').uri]=1;
 },
 
 copyToClipboard: function copyToClipboard(address,selectedTd){
@@ -219,7 +220,7 @@ copyToClipboard: function copyToClipboard(address,selectedTd){
             if (!predicates) predicates=kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection()).object;
             predicates.unshift(term);
     }
-    internals[address+"#all"]=1;
+
     var all=kb.the(kb.sym(address),tabont('all'));
     if (!all) all=kb.add(kb.sym(address),tabont('all'),kb.collection()).object
     all.unshift(term);
@@ -227,7 +228,7 @@ copyToClipboard: function copyToClipboard(address,selectedTd){
 
 pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
     function termFrom(fromCode){
-        function theCollection(from){return kb.the(kb.sym(address),tabont('all'));}
+        function theCollection(from){return kb.the(kb.sym(address),tabont(from));}
         var term=theCollection(fromCode).shift();
         if (term==null){
              alert("no more element in clipboard!");
@@ -246,7 +247,7 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
                 break;
             case 'all':
                 var isObject=term.sameTerm(theCollection('objects').elements[0]);
-                isObject ? theCollection('objects').shift():theCollection('predicates').shift();
+                isObject ? theCollection('objects').shift():theCollection('predicates').shift(); //drop the corresponding term
                 return [term,isObject];
                 break;
         }

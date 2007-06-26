@@ -42,9 +42,9 @@ function Option(code){ //{class Option}
         
         //Neither: (why didn't I find this solution in the past few hours...)
         if (this.enabled) 
-            this.code.apply(this,arg);
+            return this.code.apply(this,arg);
         else if (defaultCode)
-            this.defaultCode.apply(this,arg);
+            return this.defaultCode.apply(this,arg);
     };
     this.addMoreCode=function (func){
         if (this.length==1) this[0]=new Option(this.code);
@@ -158,12 +158,17 @@ function javascript2rdf0()
 SourceOptions.addOption("javascript2rdf",javascript2rdf0);
 delete javascript2rdf0;
 
-function javascript2rdf1(subject)
+function javascript2rdf1(returnConditions)
 {
-    if (string_startswith(subject.uri,"javascript:")) 
-        RDFizers["javascript2rdf"].load(subject.uri);
-    else
-	    sf.lookUpThing(subject)
+    function javascript2rdfLoad(subject){
+        if (subject.termType!='symbol') return false;
+        if (string_startswith(subject.uri,"javascript:")){ 
+            if(RDFizers["javascript2rdf"].load(subject.uri)) return [true,true];
+            return [true,false];
+        }
+        return false;
+    }
+    returnConditions.push(javascript2rdfLoad);
 }
 SourceOptions["javascript2rdf"].addMoreCode(javascript2rdf1);
 delete javascript2rdf1;
@@ -175,6 +180,105 @@ function javascript2rdf2(URITitlesToStop)
 SourceOptions["javascript2rdf"].addMoreCode(javascript2rdf2);
 delete javascript2rdf2;
 
+//tabulator internal terms
+function temp_TIT(returnConditions)
+{
+    function tabulatorTermPanel(subject){
+        if (subject.termType!='symbol') return false;
+        if (string_startswith(subject.uri,"tabulator:")) return true;
+        return false;
+    }
+}
+SourceOptions.addOption("tabulator internal terms",temp_TIT);
+delete temp_TIT;
+/**
+  * Display Options
+  **/
+var DisplayOptions=new OptionCollection();
+
+//outliner rotate left
+function temp_ORL(table,subject){
+    var lastTr=table.lastChild;
+    if (lastTr)
+        return lastTr.appendChild(outline.outline_objectTD(subject,undefined,true));
+}
+DisplayOptions.addOption("outliner rotate left",temp_ORL);
+delete temp_ORL;
+
+//No display:block
+function temp_NDP(tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline){
+var s;
+var defaultpropview;
+tr.showNobj = function(n){
+    var predDups=k-dups;
+    var show = ((2*n)<predDups) ? n: predDups;
+    var showLaterArray=[];
+    if (predDups!=1){
+        td_p.setAttribute('rowspan',(show==predDups)?predDups:n+1);
+        var l;
+        if ((show<predDups)&&(show==1)){ //what case is this...
+	    td_p.setAttribute('rowspan',2)  
+        }
+        for(l=1;l<k;l++){
+	if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
+	    s=plist[j+l];
+	    defaultpropview = views.defaults[s.predicate.uri];
+            var trObj=myDocument.createElement('tr');
+            trObj.style.colspan='1';
+            trObj.appendChild(thisOutline.outline_objectTD(sel(plist[j+l]),defaultpropview));
+            trObj.AJAR_statement=s;
+            trObj.AJAR_inverse=inverse;
+            parent.appendChild(trObj);
+            if (l>=show){
+	        trObj.style.display='none';
+                showLaterArray.push(trObj);
+	    }
+	}
+	}
+    }
+
+    if (show<predDups){ //Add the x more <TR> here
+        var moreTR=myDocument.createElement('tr');
+        var moreTD=moreTR.appendChild(myDocument.createElement('td'));
+        if (predDups>n){ //what is this for??
+            var small=myDocument.createElement('a');
+            moreTD.appendChild(small);
+
+            var predToggle= (function(f){return f(td_p,k,dups,n);})(function(td_p,k,dups,n){
+            return function(display){
+      	        small.innerHTML="";
+                if (display=='none'){
+                    small.appendChild(AJARImage(Icon.src.icon_more, 'more', 'See all'));
+	            small.appendChild( myDocument.createTextNode((predDups-n) + ' more...'));
+                    td_p.setAttribute('rowspan',n+1);
+                } else{
+	            small.appendChild(AJARImage(Icon.src.icon_shrink, '(less)'));
+	            td_p.setAttribute('rowspan',predDups+1);
+                }
+	        for (var i=0; i<showLaterArray.length; i++){
+	            var trObj = showLaterArray[i];
+	            trObj.style.display = display;
+                }
+    	    }
+	        }); //???
+	        var current='none';
+            var toggleObj=function(event){
+    	        predToggle(current);
+                current=(current=='none')?'':'none';
+                if (event) event.stopPropagation();
+                return false; //what is this for?
+            }
+            toggleObj();
+            small.addEventListener('click', toggleObj, false); 
+	    } //if(predDups>n)
+	    parent.appendChild(moreTR);
+    }
+}//tr.showNobj
+
+}
+DisplayOptions.addOption("No display:block",temp_NDP);
+delete temp_NDP;
+
 /**
   * Preferences
   **/
@@ -184,8 +288,11 @@ HCIoptions["able to edit in Discovery Mode by mouse"].enable();
 
 //##Enable this to play with javascript:variableName
 //'javascript:document' is not working fine but 'javascript:document.firstChild' is OK
-//SourceOptions["javascript2rdf"].enable();
+SourceOptions["javascript2rdf"].enable();
+SourceOptions["tabulator internal terms"].enable();
 
+//DisplayOptions["outliner rotate left"].enable();
+//DisplayOptions["No display:block"].enable();
 
 //ToDo:
 //0.Able to query OptionCollections
@@ -200,7 +307,6 @@ function HCIoption(){ //{class HCIoption} HCI:Human Computer Interaction
 }
 HCIoption.instances=[];
 */
-
 
 
 HCIoptions["right click to switch mode"][2].setupHere([],"end of configuration.js");

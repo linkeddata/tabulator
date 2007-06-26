@@ -17,7 +17,13 @@ function Outline(doc) {
     var thisOutline=this;
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
-    this.UserInput=new UserInput();
+    this.UserInput=new UserInput(this);
+    this.clipboardAddress="tabulator:clipboard";
+    this.UserInput.clipboardInit(this.clipboardAddress);
+    this.outlineElement=myDocument.getElementById('outline');
+    var outlineElement=this.outlineElement;
+    this.document=doc;
+    
     this.viewAndSaveQuery = function() {
         onLoad = function(e) {
             var doc = e.originalTarget;
@@ -141,7 +147,7 @@ function Outline(doc) {
 	 *  @param obj - an RDF term
 	 *  @param view - a VIEW function (rather than a bool asImage)
 	 **/
-	this.outline_objectTD=function(obj, view, deleteNode) {
+	this.outline_objectTD=function outline_objectTD(obj, view, deleteNode) {
 	    //set about
 	    var td = myDocument.createElement('td');
 	    
@@ -153,6 +159,7 @@ function Outline(doc) {
 	    if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
 		td.setAttribute('about', obj.toNT());
 	    td.setAttribute('class', 'obj');      //this is how you find an object
+	    if (kb.statementsMatching(obj,rdf('type'),tabont('Request')).length) td.className='undetermined';
 	    if ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
 		td.appendChild(AJARImage(Icon.src.icon_expand, 'expand'));
 	    } //expandable
@@ -174,6 +181,32 @@ function Outline(doc) {
 	    //td.appendChild( iconBox.construct(document.createTextNode('bla')) );
 	    return td;
 	} //outline_objectTD
+	
+	this.outline_predicateTD=function outline_predicateTD(predicate,newTr,inverse,internal){
+	    var lab = predicateLabelForXML(predicate, inverse);
+		lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
+		        
+        var td_p = myDocument.createElement("TD")
+		td_p.setAttribute('about', predicate.toNT())
+        td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
+        if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
+
+		var labelTD = document.createElement('TD')
+		labelTD.setAttribute('notSelectable','true')
+		labelTD.appendChild(document.createTextNode(lab))
+		td_p.appendChild(labelTD);
+		labelTD.style.width='100%'
+		td_p.appendChild(termWidget.construct()); //termWidget is global???
+		for (var w in Icon.termWidgets)	{
+		    if(!newTr.AJAR_statement) break; //case for TBD as predicate
+		            //alert(Icon.termWidgets[w]+"   "+Icon.termWidgets[w].filter)
+		    if (Icon.termWidgets[w].filter
+			&& Icon.termWidgets[w].filter(newTr.AJAR_statement,'pred',
+					inverse))
+			termWidget.addIcon(td_p,Icon.termWidgets[w])
+		}
+		return td_p;              
+	} //outline_predicateTD
 
 	///////////////// Represent an arbirary subject by its properties
 	//These are public variables
@@ -292,8 +325,6 @@ function Outline(doc) {
 		    }
 		}
 	
-		var lab = predicateLabelForXML(s.predicate, inverse);
-		lab = lab.slice(0,1).toUpperCase() + lab.slice(1) // init capital
 		
 		var tr = myDocument.createElement("TR")
 		parent.appendChild(tr)
@@ -301,23 +332,9 @@ function Outline(doc) {
 		tr.AJAR_inverse = inverse
 		tr.AJAR_variable
 		tr.setAttribute('predTR','true')
-		var td_p = myDocument.createElement("TD")
-		td_p.setAttribute('about', s.predicate.toNT())
-		td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
+		var td_p = thisOutline.outline_predicateTD(s.predicate,tr,inverse,internal);
 		tr.appendChild(td_p)
-		var labelTD = myDocument.createElement('TD')
-		labelTD.setAttribute('notSelectable','true')
-		labelTD.appendChild(myDocument.createTextNode(lab))
-		td_p.appendChild(labelTD);
-		labelTD.style.width='100%'
-		td_p.appendChild(termWidget.construct());
-		for (var w in Icon.termWidgets)	{
-		    //alert(Icon.termWidgets[w]+"   "+Icon.termWidgets[w].filter)
-		    if (Icon.termWidgets[w].filter
-			&& Icon.termWidgets[w].filter(tr.AJAR_statement,'pred',
-						      inverse))
-			termWidget.addIcon(td_p,Icon.termWidgets[w])
-		}
+
 		var defaultpropview = views.defaults[s.predicate.uri];
 		
 		/* Display only the one in the preferred language 
@@ -342,6 +359,13 @@ function Outline(doc) {
 	         * shown, and dangling at the end is '1 more' (which is easily ignored)
 		 * Therefore more objects are shown than hidden.
 		 */
+		/* Kenny's Annotation:
+		   var k  //how many rows have the same predicate?
+		   var dups //It's supposed to mean the number of triple duplicates
+		            // but with "if (dups!=0) alert(dups);"
+		            // it never shows anything even when opening Tim's profile
+		            // (testing required)
+		*/ 
 		tr.showNobj = function(n){
 		    var show = ((2*n) < (k-dups)) ? n : (k-dups);
 		    var showLaterArray = [];
@@ -418,7 +442,7 @@ function Outline(doc) {
 	
 		tr.showAllobj = function(){tr.showNobj(k-dups);};
 		//tr.showAllobj();
-	
+        DisplayOptions["No display:block"].setupHere([tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],"appendPropertyTRs()");	
 		tr.showNobj(10);
 	
 		j += k-1  // extra push
@@ -803,6 +827,7 @@ function Outline(doc) {
 		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
 	    } else {
 		    fyi("cla=$"+cla+"$")
+		    if (cla=='selected') cla=''; // for header <TD>
 		    cla = cla.replace(' selected','')
 		    if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
 		    if (cla.indexOf('pred') >=0)
@@ -916,7 +941,7 @@ function Outline(doc) {
     //Keyboard Input: we can consider this as...
     //1. a fast way to modify data - enter will go to next predicate
     //2. an alternative way to input - enter at the end of a predicate will create a new statement
-	this.OutlinerKeypressPanel=function(e){
+	this.OutlinerKeypressPanel=function OutlinerKeypressPanel(e){
         function showURI(about){
             if(about && myDocument.getElementById('UserURI')) { 
 	            myDocument.getElementById('UserURI').value = 
@@ -1004,13 +1029,27 @@ function Outline(doc) {
                 }
                 break;    
 	        default:
-                if (getTarget(e).tagName=='HTML'){
+	            switch(e.charCode){
+	            case 99: //c for Copy
+	                if (e.ctrlKey){
+	                    thisOutline.UserInput.copyToClipboard(thisOutline.clipboardAddress,selectedTd);
+                        break;
+	                }
+	            case 118: //v
+	            case 112: //p for Paste
+	                if (e.ctrlKey){
+	                    thisOutline.UserInput.pasteFromClipboard(thisOutline.clipboardAddress,selectedTd);
+	                    break;
+	                }
+	            default:
+                    if (getTarget(e).tagName=='HTML'){
                     thisOutline.UserInput.Click(undefined,selectedTd);
                     thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
                     //Events are not reliable...
                     //var e2=document.createEvent("KeyboardEvent");
                     //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);
                     //UserInput.lastModified.dispatchEvent(e2);
+                    }
                 }
 	    }//end of switch
         showURI(getAbout(kb,selection[0]));   
@@ -1134,6 +1173,7 @@ function Outline(doc) {
 		    break;
 		case Icon.src.icon_remove_node:
 		    var node = target.node;
+		    if (node.childNodes.length>1) node=target.parentNode; //parallel outline view
 		    node.parentNode.removeChild(node);
 		    
 		    break;
@@ -1180,7 +1220,7 @@ function Outline(doc) {
 		    newTable.style.backgroundColor='white'
 		}
 		emptyNode(p).appendChild(newTable)
-		thisOutline.focusTd=p; //I don't know why I couldn't use this...
+		thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
 		log.debug("expand: Node for " + subject + " expanded")	    
 	    } 
 	
@@ -1240,10 +1280,21 @@ function Outline(doc) {
 			       status.textContent=" parsing..."
 			       return false
 			   })
-	    function expand_default(){
-	        sf.lookUpThing(subject); //This will be executed by default (see configuration.js)
-	    }
-	    SourceOptions["javascript2rdf"][1].setupHere([subject],"outline_expand()",expand_default);
+			   
+	    var returnConditions=[]; //this is quite a general way to do cut and paste programming
+	                             //I might make a class for this
+ 	    SourceOptions["javascript2rdf"][1].setupHere([returnConditions],"outline_expand()");
+	    SourceOptions["tabulator internal terms"].setupHere([returnConditions],"outline_expand()");
+	    for (var i=0;i<returnConditions.length;i++){
+	        var returnCode;
+	        if (returnCode=returnConditions[i](subject)){
+	            render();
+	            if (returnCode[1]) outlineElement.removeChild(outlineElement.lastChild);
+	            return;
+	        }
+        }
+        
+	    sf.lookUpThing(subject);
 	    render()  // inital open, or else full if re-open
 	
 	} //outline_expand
@@ -1314,15 +1365,23 @@ function Outline(doc) {
 	}
 	this.GotoSubject = function(subject, expand) {
 	    var table = myDocument.getElementById('outline');
-	    var tr = myDocument.createElement("TR");
-	    tr.style.verticalAlign="top";
-	    table.appendChild(tr);
-	    var td = thisOutline.outline_objectTD(subject, undefined, tr)
+
+	    function GotoSubject_default(){
+	        var tr = myDocument.createElement("TR");
+	        tr.style.verticalAlign="top";
+	        table.appendChild(tr);
+	        var td = thisOutline.outline_objectTD(subject, undefined, tr)
 	
-	    tr.appendChild(td)
+	        tr.appendChild(td)
+	        return td
+	    }
+	    var text="GotoSubject()@outline.js";
+	    var td=DisplayOptions["outliner rotate left"].setupHere([table,subject],text,GotoSubject_default);
+	    if (!td) td=GotoSubject_default(); //the first tr is required	    
 	    if (expand) {
 	    	outline_expand(td, subject)
 	    	myDocument.title = "Tabulator: "+label(subject)
+	    	tr=td.parentNode;
 	    	getEyeFocus(tr,false);//instantly: false
 	    }
 	    return subject;

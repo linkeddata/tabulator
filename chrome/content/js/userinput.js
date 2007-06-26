@@ -1,4 +1,9 @@
-function UserInput(){
+//places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()
+//                                  undetermined statement generated formUndetStat()
+
+function UserInput(outline){
+
+//var document=outline.document; //is this ok?
 
 return {
 lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
@@ -89,7 +94,7 @@ Click: function(e,selectedTd){
     return true; //this is not a valid modification
 },
 
-clearInputAndSave: function(){
+clearInputAndSave: function clearInputAndSave(){
     if(!this.lastModified) return;
     if(!this.lastModified.isNew){
         try{
@@ -120,7 +125,12 @@ clearInputAndSave: function(){
             sparqlUpdate.setObject(kb.sym(this.lastModified.value));
         }
     }else if(this.lastModified.isNew){//generate 'Request', there is no way you can input ' (Please Input) '
-        this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
+        var trNode=ancestor(this.lastModified,'TR');
+        var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
+        var preStat=trNode.previousSibling.AJAR_statement; //the statement of the same predicate
+        this.formUndetStat(trNode,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
+        //this why being the same as the previous statement
+        this.lastModified=null;
         return;        
     }
     //case modified:
@@ -138,13 +148,14 @@ clearInputAndSave: function(){
     this.lastModified = null;  
 },
 
-addTriple: function(e){
+addTriple: function addTriple(e){
     var predicateTd=getTarget(e).parentNode.parentNode;
     var predicateTerm=getAbout(kb,predicateTd);
+    //var titleTerm=getAbout(kb,ancestor(predicateTd.parentNode,'TD'));
     //set pseudo lastModifiedStat here
     this.lastModifiedStat=predicateTd.parentNode.AJAR_statement;
 
-   
+/*   
     var isEnd=false;
     var trIterator;
     try{
@@ -152,29 +163,143 @@ addTriple: function(e){
         trIterator.childNodes.length==1; //number of nodes as condition
         trIterator=trIterator.nextSibling){}
     }catch(e){isEnd=true;}
-    var insertTr=document.createElement('tr');
-    //AJAR_statement not set yet
     
+    var insertTr=document.createElement('tr');
     //style stuff, I'll have to investigate appendPropertyTRs() somehow
     insertTr.style.colspan='1';
     insertTr.style.display='block';
     if (!predicateTd.hasAttribute('rowspan')) predicateTd.setAttribute('rowspan','2');
-    
+*/
+    var insertTr=this.appendToPredicate(predicateTd);    
     var td=insertTr.appendChild(document.createElement('td'));
     this.lastModified = this.createInputBoxIn(td," (Please Input) ");
     this.lastModified.isNew=true;
-    if (!isEnd)
+/*   if (!isEnd)
         trIterator.parentNode.insertBefore(insertTr,trIterator);
     else
-        predicateTd.parentNode.parentNode.appendChild(insertTr);
+        predicateTd.parentNode.parentNode.appendChild(insertTr); */ 
     this.lastModified.select();
 
     if(predicateTd.parentNode.AJAR_inverse) {//generate 'Request';
-        this.generateRequest("(This is an inverse statement. Drag a subject onto this field)");
+        var preStat=insertTr.previousSibling.AJAR_statement;
+        var reqTerm=this.generateRequest("(This is an inverse statement. Drag a subject onto this field)");
         //I guess it's not making sense...createInputBox and then remove it..
+        this.formUndetStat(insertTr,reqTerm,predicateTerm,preStat.subject,preStat.why,true);
+        this.lastModified = null;
     }
     this.statIsInverse=false;
 },
+
+/*clipboard principle: copy wildly, paste carefully
+  ToDoS:
+  1. register Subcollection?
+  2. copy from more than one selectedTd: 1.sequece 2.collection
+  3. make a clipboard class?
+*/
+clipboardInit: function clipboardInit(address){
+    RDFCollection.prototype.unshift=function(el){
+        this.elements.unshift(el);
+    }
+
+    RDFCollection.prototype.shift=function(){
+        return this.elements.shift();
+    }
+
+    kb.add(kb.sym(address),kb.sym(address+"#objects"),kb.collection())
+    kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection())
+    kb.add(kb.sym(address),kb.sym(address+"#all"),kb.collection())
+},
+
+copyToClipboard: function copyToClipboard(address,selectedTd){
+    var term=getTerm(selectedTd);
+    switch (selectedTd.className){
+        case 'selected': //table header
+        case 'obj selected':
+            var objects=kb.the(kb.sym(address),kb.sym(address+"#objects"));
+            if (!objects) objects=kb.add(kb.sym(address),kb.sym(address+"#objects"),kb.collection()).object
+            objects.unshift(term);
+            break;
+        case 'pred selected':
+            var predicates=kb.the(kb.sym(address),kb.sym(address+"#predicates"));
+            if (!predicates) predicates=kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection()).object;
+            predicates.unshift(term);
+    }
+    internals[address+"#all"]=1;
+    var all=kb.the(kb.sym(address),kb.sym(address+"#all"));
+    if (!all) all=kb.add(kb.sym(address),kb.sym(address+"#all"),kb.collection()).object
+    all.unshift(term);
+},
+
+pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
+    function termFrom(fromCode){
+        function theCollection(from){return kb.the(kb.sym(address),kb.sym(address+"#"+from));}
+        var term=theCollection(fromCode).shift();
+        if (term==null){
+             alert("no more element in clipboard!");
+             return;
+        }
+        switch (fromCode){
+            case 'predicates':
+            case 'objects':
+                var allArray=theCollection('all').elements;
+                for(var i=0;true;i++){
+                    if (term.sameTerm(allArray[i])){
+                        allArray.splice(i,1);
+                        break;
+                    }
+                }
+                break;
+            case 'all':
+                var isObject=term.sameTerm(kb.the(kb.sym(address),kb.sym(address+"#objects")).elements[0]);
+                isObject ? theCollection('objects').shift():theCollection('predicates').shift();
+                return [term,isObject];
+                break;
+        }
+        return term;
+    }
+    switch (selectedTd.className){
+        case 'undetermined selected':
+            var term=selectedTd.nextSibling?termFrom('predicates'):termFrom('objects');
+            if (!term) return;
+            //alert(selectedTd.parentNode.AJAR_statement);
+            var defaultpropview = views.defaults[selectedTd.parentNode.AJAR_statement.predicate.uri];
+            var theTr=selectedTd.parentNode;
+            if (selectedTd.nextSibling) //predicate Td
+                theTr.replaceChild(outline.outline_predicateTD(term,theTr,false,false),selectedTd);
+            else
+                theTr.replaceChild(outline.outline_objectTD(term, defaultpropview),selectedTd);
+            break;
+        case 'pred selected': //paste objects into this predicate
+            var term=termFrom('objects');
+            if (!term) return;            
+            var insertTr=this.appendToPredicate(selectedTd);
+            var defaultpropview = views.defaults[selectedTd.parentNode.AJAR_statement.predicate.uri];
+            insertTr.appendChild(outline.outline_objectTD(term, defaultpropview));
+            break;            
+        case 'selected': //header <TD>, undetermined generated
+            var returnArray=termFrom('all');
+            if (!returnArray) return;
+            var term=returnArray[0];
+            var newTr=ancestor(selectedTd,'TABLE').appendChild(document.createElement('tr'));
+            //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
+            var preStat=newTr.previousSibling.AJAR_statement;
+            
+            if (returnArray[1]){//object inserted
+                this.formUndetStat(newTr,preStat.subject,this.generateRequest('(TBD)',newTr,true),term,preStat.why,false);
+                //defaultpropview temporaily not dealt with
+                newTr.appendChild(outline.outline_objectTD(term));
+            
+            }else{//predicate inserted
+                //existing predicate not expected
+                var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)",newTr);
+                this.formUndetStat(newTr,preStat.subject,term,reqTerm,preStat.why,false);
+
+                newTr.insertBefore(outline.outline_predicateTD(term,newTr,false,false),newTr.firstChild);
+            }
+            break;
+    }                        
+},
+
 //ToDo: shrink rows when \n+backspace
 Keypress: function(e){
     if(e.keyCode==13){
@@ -282,14 +407,86 @@ createInputBoxIn: function(tdNode,defaultText){
     return inputBox;
 },
 
-generateRequest: function(tipText){
-    var trNode=ancestor(this.lastModified,'TR');
-    trNode.removeChild(trNode.lastChild);
+appendToPredicate: function appendToPredicate(predicateTd){   
+    var isEnd=false;
+    var trIterator;
+    try{
+        for(trIterator=predicateTd.parentNode.nextSibling;
+        trIterator.childNodes.length==1; //number of nodes as condition
+        trIterator=trIterator.nextSibling){}
+    }catch(e){isEnd=true;}
+   
+    var insertTr=document.createElement('tr');
+    //style stuff, I'll have to investigate appendPropertyTRs() somehow
+    insertTr.style.colspan='1';
+    insertTr.style.display='block';
+    if (!predicateTd.hasAttribute('rowspan')) predicateTd.setAttribute('rowspan','2');
+    
+    if (!isEnd)
+        trIterator.parentNode.insertBefore(insertTr,trIterator);
+    else
+        predicateTd.parentNode.parentNode.appendChild(insertTr);
+
+    return insertTr;
+},
+
+generateRequest: function generateRequest(tipText,trNew,isPredicate){
+    var trNode;
+    if (trNew)
+        trNode=trNew;
+    else
+        trNode=ancestor(this.lastModified,'TR');
+    emptyNode(trNode);
+    
+    //create the undetermined term
+    //Choice 1:
+    //return kb.literal("TBD");  
+    //this is troblesome since RDFIndexedFormula does not allow me to add <x> <y> "TBD". twice
+    //Choice 2:
+    labelPriority[tabont('message').uri] = 20;
+    
+    var reqTerm=kb.bnode();
+    kb.add(reqTerm,rdf('type'),tabont("Request"));
+    if (tipText.length<10)
+        kb.add(reqTerm,tabont('message'),kb.literal(tipText));
+    else
+        kb.add(reqTerm,tabont('message'),kb.literal(tipText));
+    kb.add(reqTerm,tabont('to'),kb.literal("The User"));
+    kb.add(reqTerm,tabont('from'),kb.literal("The User"));
+    
+    //append the undetermined td
+    /*
     textTd=document.createElement('td');
     textTd.className='undetermined';
     textTd.appendChild(document.createTextNode(tipText));
-    trNode.appendChild(textTd);
+    trNode.appendChild(textTd);*/
+    if(isPredicate)
+        trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
+    else
+        trNode.appendChild(outline.outline_objectTD(reqTerm));
+    
+    return reqTerm;
+    
+    
+    //set AJAR_statement
+    /*
+    var preStat=trNode.previousSibling.AJAR_statement;
+    var preInv=trNode.previousSibling.AJAR_inverse;
+    if(!preInv){
+        trNode.AJAR_statement=kb.add(preStat.subject,preStat.predicate,kb.literal("TBD"));
+        trNode.AJAR_inverse=false;
+    }else{
+        trNode.AJAR_statement=kb.add(kb.literal("TBD"),preStat.predicate,preStat.object);//...is this Valid?
+        trNode.AJAR_inverse=true;
+    }
+    
     this.lastModified=null;
+    */
+},
+
+formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){
+    trNode.AJAR_statement=kb.add(subject,predicate,object,why);
+    trNode.AJAR_inverse=inverse;
 },
 /** ABANDONED APPROACH
 //determine whether the event happens at around the bottom border of the element
@@ -319,7 +516,8 @@ aroundBorderBottom: function(event,element){
         return false;
 },
 **/
-//#include emptyNode(Node) from tabulate.js
+//#include emptyNode(Node) from util.js
+//#include getTerm(node) from util.js
 
 //Not so important (will become obsolete?)
 switchModeByRadio: function(){

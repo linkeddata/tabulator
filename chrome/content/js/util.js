@@ -362,6 +362,22 @@ function matrixTD(obj, asImage, doc) {
 	    return undefined
 	}
 	
+	function getTerm(target){ //works only for <TD>
+	    var statementTr=ancestor(target,'TR');
+	    switch (target.className){
+	        case 'pred selected':
+	            return statementTr.AJAR_statement.predicate;
+	            break;
+	        case 'obj selected':
+	            if (!statementTr.AJAR_inverse)
+	                return statementTr.AJAR_statement.object;
+	            else
+	                return statementTr.AJAR_statement.subject;
+	            break;
+	        case 'selected': //header TD
+	            return getAbout(kb,target); //kb to be changed
+	    }
+	}
 //////////////////////////////////////Source Utility
 
 /**This is for .js that is not so important**/

@@ -1,6 +1,5 @@
 var selection=[]
-var sourceWidget;
-//WE MUST KILL THESE GLOBALS.
+//WE MUST KILL THIS GLOBAL.
 
 //Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
 //              targetOf -> this.targetOf // this can be changed back 
@@ -959,7 +958,7 @@ function Outline(doc) {
 	            if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
 	                if (!thisOutline.UserInput.Click(undefined,selectedTd)){//meaning this is an expandable node
 	                    deselectAll();
-	                    var newTr=document.getElementById('outline').lastChild;                
+	                    var newTr=myDocument.getElementById('outline').lastChild;                
                         setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
                         function setSelectedAfterward(uri){
                             deselectAll();
@@ -977,7 +976,7 @@ function Outline(doc) {
 	                deselectAll();
 	                thisOutline.UserInput.Keypress(e);
                     setSelected(newSelTd,true);
-                    document.getElementById('docHTML').focus(); //have to set this or focus blurs
+                    myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
                     e.stopPropagation();
 	            }
 	            break;

@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://tabulator/skin/tabulator.css" type="text/css"?>
 <!DOCTYPE window SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
-<window id="tabsources"
+<window id="tabsources"  flex="1"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         contenttitlesetting="true"
-	  title="&tabsources.title;">
+	  title="&tabsources.title;"
+        windowtype="tabulatorsources">
+        <iframe flex="1" id="sourceshtml" src="chrome://tabulator/content/sources.html"/>
 </window>

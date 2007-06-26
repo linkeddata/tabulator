@@ -1,0 +1,15 @@
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+
+/* ::::: toolbar button ::::: */
+
+/* ---- big (32px) buttons ---- */
+
+#tabsources {
+  width:100%;
+  height:100%;
+}
+
+#sourceshtml {
+  width:100%;
+  height:100%;
+}

@@ -2,13 +2,13 @@
 <!DOCTYPE overlay SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  <script type="application/x-javascript" src="js/util.js"/>
   <script type="application/x-javascript" src="js/configuration.js"/>  
   <script type="application/x-javascript" src="js/sorttable.js"/>
   <script type="application/x-javascript" src="js/tableView.js"/>
   <script type="application/x-javascript" src="js/mapView.js"/>
   <script type="application/x-javascript" src="js/log.js"/>
   <script type="application/x-javascript" src="js/rdf/sparql.js"/>
-  <script type="application/x-javascript" src="js/util.js"/>
   <script type="application/x-javascript" src="js/uri.js"/>
   <script type="application/x-javascript" src="js/rdf/term.js"/>
   <script type="application/x-javascript" src="js/rdf/match.js"/>
@@ -16,8 +16,10 @@
   <script type="application/x-javascript" src="js/rdf/identity.js"/>
   <script type="application/x-javascript" src="js/rdf/query.js"/>
   <script type="application/x-javascript" src="js/rdf/sources.js"/>
+  <script type="application/x-javascript" src="js/sparqlUpdate.js"/>
   <script type="application/x-javascript" src="js/userinput.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
+  <script type="application/x-javascript" src="sourcewidget.js"/>
   <script type="application/x-javascript" src="test.js"/>
   <menupopup id="viewSidebarMenu">
   <menuitem key="key_openTabulatorSidebar" observes="viewTabulatorSidebar"  />
@@ -45,8 +47,8 @@
       <menupopup id="menu_ToolsTabulatorPopup">
         <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" checked="false"/>
         <menuseparator/>  
-        <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" oncommand="openTool('chrome://tabulator/content/sources.xul')"/>
-        <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" oncommand="openTool('chrome://tabulator/content/log.xul')"/>
+        <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
+        <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
       </menupopup>
     </menu>
   </menupopup>

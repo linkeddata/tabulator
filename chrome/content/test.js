@@ -1,5 +1,18 @@
+function openTool(url, type, width, height)
+{
+  width = width || 500;
+  height = height || 400;
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Components.interfaces.nsIWindowMediator);
+  var toolWindow = wm.getMostRecentWindow(type);
+  if(!toolWindow)
+    var w = window.openDialog(url, "_blank", "all=no,width="+width+",height="+height+",scrollbars=yes,resizable=yes,dialog=no");
+  else
+     toolWindow.focus();
+}
+
 window.addEventListener("load", function() { tabExtension.init(); }, false);
-var kb,sf,qs;
+var kb,sf,qs,sourceWidget; //TODO:  In future, ditch these for tabulator.kb, etc
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
 if(!tabulator.kb) {
   kb = new RDFIndexedFormula()  // This uses indexing and smushing
@@ -12,11 +25,18 @@ if(!tabulator.kb) {
   tabulator.kb=kb;
   tabulator.qs=qs;
   tabulator.sf=sf;
+
+  sourceWidget = new SourceWidget();
+  tabulator.sourceWidget = sourceWidget;
+
   tabulator.registerView(tableView);
+  tabulator.registerView(mapView);
 } else {
+  //Horrible global vars :(
   kb = tabulator.kb;
   sf = tabulator.sf;
   qs = tabulator.qs;
+  sourceWidget=tabulator.sourceWidget;
 }
   
 
@@ -61,6 +81,7 @@ Icon.src.icon_remove_node = iconPrefix+'icons/tbl-x-small.png'
 Icon.src.icon_shrink = iconPrefix+'icons/tbl-shrink.png';
 Icon.src.icon_optoff = iconPrefix+'icons/optional_off.PNG';
 Icon.src.icon_opton = iconPrefix+'icons/optional_on.PNG';
+Icon.src.icon_add_triple = iconPrefix+'icons/userinput_add_triple.png';
 
 Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
 Icon.tooltips[Icon.src.icon_expand]='View details.'
@@ -92,6 +113,8 @@ Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
 Icon.termWidgets = {}
 Icon.termWidgets.optOn = new Icon.OutlinerIcon(Icon.src.icon_opton,20,'opt on','Make this branch of your query mandatory.');
 Icon.termWidgets.optOff = new Icon.OutlinerIcon(Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
+Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
+
 
 LanguagePreference = "en"
 labelPriority = []
@@ -136,6 +159,18 @@ var tabExtension = {
           }
         }
       },true);
+
+      var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
+        .getService(Components.interfaces.nsIPrefBranch);
+      var acceptheader = prefManager.getCharPref('network.http.accept.default');
+      if(acceptheader.search("application/rdf+xml")==-1) { //Let's prefer some application/rdf+xml!
+        var index = acceptheader.search(";q=0.9");
+        if(index==-1)
+          acceptheader="application/rdf+xml;q=0.9,"+acceptheader;
+        else
+          acceptheader=acceptheader.slice(0,index)+"application/rdf+xml"+acceptheader.slice(index);
+      }
+      dump(acceptheader);
     }
   }
 }

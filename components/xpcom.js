@@ -11,6 +11,7 @@ function Tabulator() {
   this.kb;
   this.qs;
   this.sf;
+  this.Util;
   this.views=[];
 
   this.registerView = function(view) {

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3241 2007-06-25 21:46:12Z timbl $
+ * SVN ID: $Id: sources.js 3250 2007-06-26 20:29:08Z kennyluck $
  *
  ************************************************************/
 
@@ -769,6 +769,16 @@ function SourceFetcher(store, timeout, async) {
 	return xhr
     }
 
+    this.objectRefresh = function(term) {
+	    var uris = kb.uris(term) // Get all URIs
+	    if (typeof uris != 'undefined') {
+	        for (var i=0; i< uris.length; i++) {
+	            this.refresh(this.store.sym(Util.uri.docpart(uris[i])));
+                //what about rterm?
+	        }
+	    }        
+    }
+    
     this.refresh = function (term) { // sources_refresh
 	this.store.removeMany(undefined,undefined,undefined,term)
 	this.fireCallbacks('refresh',arguments)

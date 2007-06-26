@@ -1149,7 +1149,7 @@ function Outline(doc) {
 		    //break;
 		case Icon.src.icon_failed:
 		case Icon.src.icon_fetched:
-		    sf.refresh(subject);
+		    sf.objectRefresh(subject);
 		    break;
 		case Icon.src.icon_unrequested:
 		    if (subject.uri) sf.lookUpThing(subject);

@@ -481,11 +481,13 @@ function SPARQLToQuery (SPARQL, testMode)
 	var st = q.pat.statements[x]
 	if (st.subject.termType == 'symbol'
 	    /*&& sf.isPending(st.subject.uri)*/) { //This doesn't work.
-	    sf.requestURI(st.subject.uri,"sparql:"+st.subject)
+	    //sf.requestURI(st.subject.uri,"sparql:"+st.subject) Kenny: I remove these two
+	    sf.lookUpThing(st.subject,"sparql:"+st.subject);
 	}
 	if (st.object.termType == 'symbol'
 	    /*&& sf.isPending(st.object.uri)*/) {
-	    sf.requestURI(st.object.uri,"sparql:"+st.object)
+	    //sf.requestURI(st.object.uri,"sparql:"+st.object)
+	    sf.lookUpThing(st.object,"sparql:"+st.object);
 	}
     }
     //alert(q.pat);

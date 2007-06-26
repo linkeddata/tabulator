@@ -1,9 +1,15 @@
 //places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()
 //                                  undetermined statement generated formUndetStat()
 
+/*ontological issues
+    temporarily using the tabont namespace
+    clipboard: 'predicates' 'objects' 'all'(internal)
+    request: 'from' 'to' 'message' 'Request'
+*/
 function UserInput(outline){
 
 //var document=outline.document; //is this ok?
+this.menuId='predicateMenu1';
 
 return {
 lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
@@ -47,6 +53,7 @@ Click: function(e,selectedTd){
     this.clearInputAndSave();
     
     var tdNode=trNode.lastChild;
+    if (selectedTd.className=='undetermined selected') this.Refill(e,selectedTd);
     //ignore clicking trNode.firstChild (be careful for <div> or <span>)    
     if (target!=tdNode && ancestor(target,'TD')!=tdNode) return;     
     
@@ -92,6 +99,11 @@ Click: function(e,selectedTd){
     }
     if(e) e.stopPropagation();
     return true; //this is not a valid modification
+},
+
+clearMenu: function clearMenu(){
+    var menu=document.getElementById(this.menuID);
+    if (menu) menu.parentNode.removeChild(menu);
 },
 
 clearInputAndSave: function clearInputAndSave(){
@@ -155,29 +167,12 @@ addTriple: function addTriple(e){
     //set pseudo lastModifiedStat here
     this.lastModifiedStat=predicateTd.parentNode.AJAR_statement;
 
-/*   
-    var isEnd=false;
-    var trIterator;
-    try{
-        for(trIterator=predicateTd.parentNode.nextSibling;
-        trIterator.childNodes.length==1; //number of nodes as condition
-        trIterator=trIterator.nextSibling){}
-    }catch(e){isEnd=true;}
-    
-    var insertTr=document.createElement('tr');
-    //style stuff, I'll have to investigate appendPropertyTRs() somehow
-    insertTr.style.colspan='1';
-    insertTr.style.display='block';
-    if (!predicateTd.hasAttribute('rowspan')) predicateTd.setAttribute('rowspan','2');
-*/
-    var insertTr=this.appendToPredicate(predicateTd);    
+    var insertTr=this.appendToPredicate(predicateTd);
+        
     var td=insertTr.appendChild(document.createElement('td'));
     this.lastModified = this.createInputBoxIn(td," (Please Input) ");
     this.lastModified.isNew=true;
-/*   if (!isEnd)
-        trIterator.parentNode.insertBefore(insertTr,trIterator);
-    else
-        predicateTd.parentNode.parentNode.appendChild(insertTr); */ 
+
     this.lastModified.select();
 
     if(predicateTd.parentNode.AJAR_inverse) {//generate 'Request';
@@ -205,9 +200,9 @@ clipboardInit: function clipboardInit(address){
         return this.elements.shift();
     }
 
-    kb.add(kb.sym(address),kb.sym(address+"#objects"),kb.collection())
-    kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection())
-    kb.add(kb.sym(address),kb.sym(address+"#all"),kb.collection())
+    kb.add(kb.sym(address),tabont('objects'),kb.collection())
+    kb.add(kb.sym(address),tabont('predicates'),kb.collection())
+    kb.add(kb.sym(address),tabont('all'),kb.collection())
 },
 
 copyToClipboard: function copyToClipboard(address,selectedTd){
@@ -215,24 +210,24 @@ copyToClipboard: function copyToClipboard(address,selectedTd){
     switch (selectedTd.className){
         case 'selected': //table header
         case 'obj selected':
-            var objects=kb.the(kb.sym(address),kb.sym(address+"#objects"));
+            var objects=kb.the(kb.sym(address),tabont('objects'));
             if (!objects) objects=kb.add(kb.sym(address),kb.sym(address+"#objects"),kb.collection()).object
             objects.unshift(term);
             break;
         case 'pred selected':
-            var predicates=kb.the(kb.sym(address),kb.sym(address+"#predicates"));
+            var predicates=kb.the(kb.sym(address),tabont('predicates'));
             if (!predicates) predicates=kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection()).object;
             predicates.unshift(term);
     }
     internals[address+"#all"]=1;
-    var all=kb.the(kb.sym(address),kb.sym(address+"#all"));
-    if (!all) all=kb.add(kb.sym(address),kb.sym(address+"#all"),kb.collection()).object
+    var all=kb.the(kb.sym(address),tabont('all'));
+    if (!all) all=kb.add(kb.sym(address),tabont('all'),kb.collection()).object
     all.unshift(term);
 },
 
 pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
     function termFrom(fromCode){
-        function theCollection(from){return kb.the(kb.sym(address),kb.sym(address+"#"+from));}
+        function theCollection(from){return kb.the(kb.sym(address),tabont('all'));}
         var term=theCollection(fromCode).shift();
         if (term==null){
              alert("no more element in clipboard!");
@@ -250,7 +245,7 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
                 }
                 break;
             case 'all':
-                var isObject=term.sameTerm(kb.the(kb.sym(address),kb.sym(address+"#objects")).elements[0]);
+                var isObject=term.sameTerm(theCollection('objects').elements[0]);
                 isObject ? theCollection('objects').shift():theCollection('predicates').shift();
                 return [term,isObject];
                 break;
@@ -300,6 +295,50 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
     }                        
 },
 
+Refill: function Refill(e,selectedTd){
+    if (selectedTd.nextSibling){ //predicateTd
+        //------selector
+        /* SELECT ?pred
+           WHERE{
+               ?pred a rdf:Property.
+               ?pred rdfs:domain subjectClass.
+               ?pred rdfs:range objectClass.
+           }
+        */
+        function test(bindings){alert(bindings[predicateQuery.vars[0]]);}               
+        var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
+        var subjectClass=kb.any(subject,rdf('type'));
+        var object=selectedTd.parentNode.AJAR_statement.object;
+        var objectClass=(object.termType=='literal')?RDFS('Literal'):kb.any(object,rdf('type'));
+        sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+                       "?pred "+RDFS('domain')+subjectClass+".\n"+
+                       "?pred "+RDFS('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
+        var predicateQuery=SPARQLToQuery(sparqlText);
+
+        
+    
+        //-------presenter
+        //ToDo: how to sort selected predicates?
+	    var menu=document.createElement('div');
+	    menu.id=this.menuID;
+	    menu.className='predicateMenu';
+	    //menu.addEventListener('click',false);
+	    menu.style.top=e.pageY+"px";
+	    menu.style.left=e.pageX+"px";
+	    document.body.appendChild(menu);
+	    var table=menu.appendChild(document.createElement('table'));
+	    function addPredicateChoice(bindings){
+	        namespace='Kenny';
+	        var predicate=bindings[predicateQuery.vars[0]]
+	        var tr=table.appendChild(document.createElement('tr'));
+	        tr.appendChild(document.createElement('th')).appendChild(document.createTextNode(label(predicate)));
+	        tr.appendChild(document.createElement('td')).appendChild(document.createTextNode(namespace));
+	    }
+	    //addPredicateChoice('Name','FOAF');
+	    //addPredicateChoice('Predicate','RDF');
+        kb.query(predicateQuery,addPredicateChoice,myFetcher);
+	}
+},
 //ToDo: shrink rows when \n+backspace
 Keypress: function(e){
     if(e.keyCode==13){
@@ -420,6 +459,12 @@ appendToPredicate: function appendToPredicate(predicateTd){
     //style stuff, I'll have to investigate appendPropertyTRs() somehow
     insertTr.style.colspan='1';
     insertTr.style.display='block';
+    
+    if (!DisplayOptions["display:block on"].enabled){
+        insertTr.style.display='';
+        if (predicateTd.hasAttribute('rowspan'))
+            predicateTd.setAttribute('rowspan',parseInt(predicateTd.getAttribute('rowspan'))+1);
+    }
     if (!predicateTd.hasAttribute('rowspan')) predicateTd.setAttribute('rowspan','2');
     
     if (!isEnd)
@@ -440,7 +485,7 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate){
     
     //create the undetermined term
     //Choice 1:
-    //return kb.literal("TBD");  
+    //var reqTerm=kb.literal("TBD");  
     //this is troblesome since RDFIndexedFormula does not allow me to add <x> <y> "TBD". twice
     //Choice 2:
     labelPriority[tabont('message').uri] = 20;
@@ -455,33 +500,12 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate){
     kb.add(reqTerm,tabont('from'),kb.literal("The User"));
     
     //append the undetermined td
-    /*
-    textTd=document.createElement('td');
-    textTd.className='undetermined';
-    textTd.appendChild(document.createTextNode(tipText));
-    trNode.appendChild(textTd);*/
     if(isPredicate)
         trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
     else
         trNode.appendChild(outline.outline_objectTD(reqTerm));
     
     return reqTerm;
-    
-    
-    //set AJAR_statement
-    /*
-    var preStat=trNode.previousSibling.AJAR_statement;
-    var preInv=trNode.previousSibling.AJAR_inverse;
-    if(!preInv){
-        trNode.AJAR_statement=kb.add(preStat.subject,preStat.predicate,kb.literal("TBD"));
-        trNode.AJAR_inverse=false;
-    }else{
-        trNode.AJAR_statement=kb.add(kb.literal("TBD"),preStat.predicate,preStat.object);//...is this Valid?
-        trNode.AJAR_inverse=true;
-    }
-    
-    this.lastModified=null;
-    */
 },
 
 formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){

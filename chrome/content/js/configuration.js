@@ -117,8 +117,8 @@ HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM2);
 delete temp_RCTSM2;
 
 //able to edit in Discovery Mode by mouse
-function temp_ATEIDMBM0(sel,e,outline){
-    if (sel) outline.UserInput.Click(e);
+function temp_ATEIDMBM0(sel,e,outline,selectedTd){
+    if (sel) outline.UserInput.Click(e,selectedTd);
 }
 HCIoptions.addOption("able to edit in Discovery Mode by mouse",temp_ATEIDMBM0);
 delete temp_ATEIDMBM0;
@@ -205,79 +205,89 @@ function temp_ORL(table,subject){
 DisplayOptions.addOption("outliner rotate left",temp_ORL);
 delete temp_ORL;
 
-//No display:block
-function temp_NDP(tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline){
+//display:block on
+function temp_DO(tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline){
 var s;
 var defaultpropview;
-tr.showNobj = function(n){
-    var predDups=k-dups;
-    var show = ((2*n)<predDups) ? n: predDups;
-    var showLaterArray=[];
-    if (predDups!=1){
-        td_p.setAttribute('rowspan',(show==predDups)?predDups:n+1);
-        var l;
-        if ((show<predDups)&&(show==1)){ //what case is this...
-	    td_p.setAttribute('rowspan',2)  
-        }
-        for(l=1;l<k;l++){
-	if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
-	    s=plist[j+l];
-	    defaultpropview = views.defaults[s.predicate.uri];
-            var trObj=myDocument.createElement('tr');
-            trObj.style.colspan='1';
-            trObj.appendChild(thisOutline.outline_objectTD(sel(plist[j+l]),defaultpropview));
-            trObj.AJAR_statement=s;
-            trObj.AJAR_inverse=inverse;
-            parent.appendChild(trObj);
-            if (l>=show){
-	        trObj.style.display='none';
-                showLaterArray.push(trObj);
-	    }
-	}
-	}
-    }
 
-    if (show<predDups){ //Add the x more <TR> here
-        var moreTR=myDocument.createElement('tr');
-        var moreTD=moreTR.appendChild(myDocument.createElement('td'));
-        if (predDups>n){ //what is this for??
-            var small=myDocument.createElement('a');
-            moreTD.appendChild(small);
 
-            var predToggle= (function(f){return f(td_p,k,dups,n);})(function(td_p,k,dups,n){
-            return function(display){
-      	        small.innerHTML="";
-                if (display=='none'){
-                    small.appendChild(AJARImage(Icon.src.icon_more, 'more', 'See all'));
-	            small.appendChild( myDocument.createTextNode((predDups-n) + ' more...'));
-                    td_p.setAttribute('rowspan',n+1);
-                } else{
-	            small.appendChild(AJARImage(Icon.src.icon_shrink, '(less)'));
-	            td_p.setAttribute('rowspan',predDups+1);
-                }
-	        for (var i=0; i<showLaterArray.length; i++){
-	            var trObj = showLaterArray[i];
-	            trObj.style.display = display;
-                }
-    	    }
-	        }); //???
-	        var current='none';
-            var toggleObj=function(event){
-    	        predToggle(current);
-                current=(current=='none')?'':'none';
-                if (event) event.stopPropagation();
-                return false; //what is this for?
-            }
-            toggleObj();
-            small.addEventListener('click', toggleObj, false); 
-	    } //if(predDups>n)
-	    parent.appendChild(moreTR);
-    }
-}//tr.showNobj
+		tr.showNobj = function(n){
+		    var show = ((2*n) < (k-dups)) ? n : (k-dups);
+		    var showLaterArray = [];
+		    if ((k-dups) != 1) {
+			td_p.setAttribute('rowspan', (show == (k-dups)) ? 2 : 3);
+			var l;
+			if ((show < k-dups) && (show == 1)){
+			    td_p.setAttribute('rowspan', 2);
+			}
+			for(l=1; l<k; l++) {
+			    if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))) {
+				s = plist[j+l];
+				var trobj = myDocument.createElement("TR");
+				trobj.style.colspan='1';
+				trobj.appendChild(thisOutline.outline_objectTD(sel(plist[j+l]), defaultpropview)); //property view
+				trobj.AJAR_statement = s;
+				trobj.AJAR_inverse = inverse;
+				parent.appendChild(trobj);
+				trobj.style.display = 'none';
+				if (l<show){
+				    trobj.style.display='block';
+				} else {
+				    showLaterArray.push(trobj);
+				}
+			    }
+			}
+		    }
+	
+		    if (show < (k-dups)){ //didn't show every obj
+			// special case if show == 1 (case that wasn't covered above)
+			// since adding moreTD html cell, still need to expand td_p to accommodate
+			// add the '... more' cell here for now
+			var moreTR = myDocument.createElement('TR');
+			var moreTD = moreTR.appendChild(myDocument.createElement('TD'));
+	
+			if (k-dups > n){
+			    var small = myDocument.createElement('a');		    
+			    moreTD.appendChild(small);
+	
+	
+			    var predtoggle = (function(f){return f(td_p, k, dups, n);})(function(td_p, k, dups, n){
+				return function(display){
+				    // empty small
+				    small.innerHTML = '';
+				    if (display == 'none') {
+					small.appendChild(AJARImage(Icon.src.icon_more, 'more', 'See all'))
+					small.appendChild( myDocument.createTextNode((k-dups-n) + ' more...'));
+				    } else {
+					small.appendChild(AJARImage(Icon.src.icon_shrink, '(less)'))
+	//				small.appendChild(myDocument.createTextNode(' shrink'));
+				    }
+				    for (var i=0; i<showLaterArray.length; i++){
+					var trobj = showLaterArray[i];
+					trobj.style.display = display;
+				    //td_p.setAttribute('rowspan', parseInt(td_p.getAttribute('rowspan')) + 1);
+				    // for some reason, setting the display attribute to 'block'
+				    // somehow stretches td_p to the right dimensions?! without changing the rowspan.
+				    }
+				}
+			    }); // For Great Scoping.
+			    var current = 'none';
+			    var toggleObj = function(event){
+				predtoggle(current);
+				current = (current == 'none')? 'block':'none';
+				if (event) event.stopPropagation();
+				return false;
+			    }
+			    toggleObj();		    
+			    small.addEventListener('click', toggleObj, false); 
+			}
+			parent.appendChild(moreTR);
+		    }
+		} //tr.showNobj
 
 }
-DisplayOptions.addOption("No display:block",temp_NDP);
-delete temp_NDP;
+DisplayOptions.addOption("display:block on",temp_DO);
+delete temp_DO;
 
 /**
   * Preferences
@@ -292,7 +302,7 @@ SourceOptions["javascript2rdf"].enable();
 SourceOptions["tabulator internal terms"].enable();
 
 //DisplayOptions["outliner rotate left"].enable();
-//DisplayOptions["No display:block"].enable();
+//DisplayOptions["display:block on"].enable();
 
 //ToDo:
 //0.Able to query OptionCollections

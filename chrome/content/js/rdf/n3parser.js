@@ -73,7 +73,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3252 2007-06-27 16:44:48Z jambo $
+$Id: n3parser.js 3254 2007-06-27 18:02:03Z timbl $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -1017,7 +1017,7 @@ Skip white space, newlines and comments.
     i += eol.lastIndex;
     this.previousLine = this.startOfLine;
     this.startOfLine = i;
-    tabulator.log.debug( (  (  ( "line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
+    tabulator.log.debug( (  (  ( "N3 line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
     }
     ws.lastIndex = 0;
     var m = ws.exec(str.slice(i));

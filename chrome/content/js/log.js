@@ -1,4 +1,8 @@
+//TODO: tabulator = {} should be moved to some file that is loaded before
+//      all of the other ones are, so that its declaration isn't in a
+//      really strange place.
 var tabulator = {};
+tabulator.log = {};
 
 /////////////////////////  Logging
 //
@@ -11,20 +15,17 @@ TSUCCESS = 8;
 TINFO = 16;
 TDEBUG = 32;
 TALL = 63;
-logging = {
-    ascending : false, 
-    level: 7
-//    level : TERROR | TWARN //default
-};
+
+tabulator.log.level=TERROR+TWARN+TMESG;
+tabulator.log.ascending=false;
 
 function escapeForXML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 }
 
-tabulator.log = {}
 tabulator.log.msg =function (str, type, typestr) {
     if (!type) { type = TMESG; typestr = 'mesg'};
-    if (!(logging.level & type)) return; //bitmask
+    if (!(tabulator.log.level & type)) return; //bitmask
     var log_area = document.getElementById('status');
     if (!log_area) return;
     
@@ -33,7 +34,7 @@ tabulator.log.msg =function (str, type, typestr) {
     var now = new Date();
     addendum.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds()
             + " [" + typestr + "] "+ escapeForXML(str) + "<br/>";
-    if (logging.ascending)
+    if (tabulator.log.ascending)
         log_area.appendChild(addendum);
     else
         log_area.insertBefore(addendum, log_area.firstChild);
@@ -46,7 +47,7 @@ tabulator.log.error = function(msg)   { tabulator.log.msg(msg, TERROR, 'eror') }
 tabulator.log.success = function(msg) { tabulator.log.msg(msg, TSUCCESS, 'good') };
 
 /** clear the log window **/
-function clearStatus(str) {
+tabulator.log.clear = function(){
     var x = document.getElementById('status');
     if (!x) return;
     //x.innerHTML = "";
@@ -54,24 +55,24 @@ function clearStatus(str) {
 } //clearStatus
 
 /** set the logging level **/
-function setLogging(x) {
-    logging.level = TALL;
-    fyi("Logging "+x);
-    logging.level = x;
+tabulator.log.setLevel = function(x) {
+    tabulator.log.level = TALL;
+    tabulator.log.debug("Log level is now "+x);
+    tabulator.log.level = x;
 }
 
-function dumpStore() {
-    var l = logging.level;
-    logging.level = TALL;
-    fyi("\nStore:\n" + kb + "__________________\n");
-    tdebug("subject index: " + kb.subjectIndex[0] + kb.subjectIndex[1]);
-    tdebug("object index: " + kb.objectIndex[0] + kb.objectIndex[1]);
-    logging.level = l;
+tabulator.log.dumpStore = function(){
+    var l = tabulator.log.level
+    tabulator.log.level = TALL;
+    tabulator.log.debug("\nStore:\n" + kb + "__________________\n");
+    tabulator.log.debug("subject index: " + kb.subjectIndex[0] + kb.subjectIndex[1]);
+    tabulator.log.debug("object index: " + kb.objectIndex[0] + kb.objectIndex[1]);
+    tabulator.log.level = l;
 }
 
-function dumpHTML() {
-    var l = logging.level;
-    logging.level = TALL;
-    fyi(document.innerHTML);
-    logging.level = l
+tabulator.log.dumpHTML = function(){
+    var l = tabulator.log.level;
+    tabulator.log.level = TALL;
+    tabulator.log.debug(document.innerHTML);
+    tabulator.log.level = l
 }

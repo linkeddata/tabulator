@@ -1,5 +1,6 @@
 //places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()
 //                                  undetermined statement generated formUndetStat()
+//                                                                 ->fillInRequest()
 
 /*ontological issues
     temporarily using the tabont namespace
@@ -10,6 +11,20 @@ function UserInput(outline){
 
 //var document=outline.document; //is this ok?
 this.menuId='predicateMenu1';
+this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
+this.namespaces["tabont"] = "http://dig.csail.mit.edu/2005/ajar/ajaw#"
+this.namespaces["foaf"] = "http://xmlns.com/foaf/0.1/";
+this.namespaces["rdf"] = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+this.namespaces["RDFS"] = "http://www.w3.org/2000/01/rdf-schema#";
+this.namespaces["OWL"] = "http://www.w3.org/2002/07/owl#";
+this.namespaces["dc"] = "http://purl.org/dc/elements/1.1/";
+this.namespaces["rss"] = "http://purl.org/rss/1.0/";
+this.namespaces["xsd"] = "http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-";
+this.namespaces["contact"] = "http://www.w3.org/2000/10/swap/pim/contact#";
+this.namespaces["mo"] = "http://purl.org/ontology/mo/";
+this.namespaces["doap"] = "http://usefulinc.com/ns/doap#"
+var NameSpaces=this.namespaces;
+//var thisInput=this;
 
 return {
 lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
@@ -257,20 +272,23 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
         case 'undetermined selected':
             var term=selectedTd.nextSibling?termFrom('predicates'):termFrom('objects');
             if (!term) return;
-            //alert(selectedTd.parentNode.AJAR_statement);
             var defaultpropview = views.defaults[selectedTd.parentNode.AJAR_statement.predicate.uri];
-            var theTr=selectedTd.parentNode;
-            if (selectedTd.nextSibling) //predicate Td
-                theTr.replaceChild(outline.outline_predicateTD(term,theTr,false,false),selectedTd);
-            else
-                theTr.replaceChild(outline.outline_objectTD(term, defaultpropview),selectedTd);
+            this.fillInRequest(selectedTd.nextSibling ? 'predicate':'object',selectedTd,term);
             break;
         case 'pred selected': //paste objects into this predicate
             var term=termFrom('objects');
             if (!term) return;            
             var insertTr=this.appendToPredicate(selectedTd);
-            var defaultpropview = views.defaults[selectedTd.parentNode.AJAR_statement.predicate.uri];
+            var preStat=selectedTd.parentNode.AJAR_statement;
+            var defaultpropview = views.defaults[preStat.predicate.uri];
             insertTr.appendChild(outline.outline_objectTD(term, defaultpropview));
+            //modify store and update here
+            var isInverse=selectedTd.parentNode.AJAR_inverse;
+            if (!isInverse)
+                insertTr.AJAR_statement=kb.add(preStat.subject,preStat.predicate,term,preStat.why);
+            else
+                insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
+            insertTr.AJAR_inverse=isInverse;
             break;            
         case 'selected': //header <TD>, undetermined generated
             var returnArray=termFrom('all');
@@ -278,8 +296,10 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
             var term=returnArray[0];
             var newTr=ancestor(selectedTd,'TABLE').appendChild(document.createElement('tr'));
             //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
-            var preStat=newTr.previousSibling.AJAR_statement;
-            
+            if (HCIoptions["bottom insert highlights"].enabled) 
+                var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
+            else
+                var preStat=newTr.previousSibling.AJAR_statement;
             if (returnArray[1]){//object inserted
                 this.formUndetStat(newTr,preStat.subject,this.generateRequest('(TBD)',newTr,true),term,preStat.why,false);
                 //defaultpropview temporaily not dealt with
@@ -297,7 +317,77 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
 },
 
 Refill: function Refill(e,selectedTd){
-    if (selectedTd.nextSibling){ //predicateTd
+    var isPredicate=selectedTd.nextSibling;
+    function showMenu(inputQuery,order){
+	    var menu=document.createElement('div');
+	    menu.id=this.menuID;
+	    menu.className='outlineMenu';
+	    //menu.addEventListener('click',false);
+	    menu.style.top=e.pageY+"px";
+	    menu.style.left=e.pageX+"px";
+	    document.body.appendChild(menu);
+	    var table=menu.appendChild(document.createElement('table'));
+        
+        var lastHighlight;
+        function highlightTr(e){
+            if (lastHighlight) lastHighlight.className='';
+            lastHighlight=ancestor(getTarget(e),'TR');
+            if (!lastHighlight) return; //mouseover <TABLE>
+            lastHighlight.className='activeItem';
+        }
+        function selectItem(e){
+            var inputTerm=getAbout(kb,getTarget(e))
+            if (isPredicate){
+                outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm);
+            }else{
+                //thisInput.fillInRequest('object',selectedTd,inputTerm); //why is this not working?
+                outline.UserInput.fillInRequest('object',selectedTd,inputTerm);
+            }
+            outline.UserInput.clearMenu();
+        }
+        table.addEventListener('mouseover',highlightTr,false);
+        table.addEventListener('click',selectItem,false);
+	    
+	    var bindingsCount=0;
+	    function addPredicateChoice(bindings){
+	        bindingsCount++;    
+	        if(bindingsCount==10) menu.style.width='11em';
+            var predicate=bindings[inputQuery.vars[0]]
+	        var Label = predicateLabelForXML(predicate, false);
+		    Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
+
+            var theNamespace;	    
+		    for (var name in NameSpaces){
+		        if (string_startswith(predicate.uri,NameSpaces[name])){
+		            theNamespace=name;
+		            break;
+		        }
+		    }
+
+	        var tr=table.appendChild(document.createElement('tr'));
+	        tr.setAttribute('about',predicate);
+	        var th=tr.appendChild(document.createElement('th'))
+	        th.appendChild(document.createElement('div')).appendChild(document.createTextNode(Label));
+	        if (theNamespace)
+	            tr.appendChild(document.createElement('td')).appendChild(document.createTextNode(theNamespace.toUpperCase()));
+	    }
+	    kb.query(inputQuery,addPredicateChoice,myFetcher);
+    }//funciton showMenu
+    
+    if (isPredicate){ //predicateTd
+        if (selectedTd.nextSibling.className=='undetermined') {
+         /* SELECT ?pred
+           WHERE{
+               ?pred a rdf:Property.
+               ?pred rdfs:domain subjectClass.
+           }
+        */  
+        var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
+        var subjectClass=kb.any(subject,rdf('type'));
+        var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+                       "?pred "+RDFS('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
+        var predicateQuery=SPARQLToQuery(sparqlText);                          
+        }else{
         //------selector
         /* SELECT ?pred
            WHERE{
@@ -305,39 +395,32 @@ Refill: function Refill(e,selectedTd){
                ?pred rdfs:domain subjectClass.
                ?pred rdfs:range objectClass.
            }
-        */
-        function test(bindings){alert(bindings[predicateQuery.vars[0]]);}               
+        */           
         var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
         var subjectClass=kb.any(subject,rdf('type'));
         var object=selectedTd.parentNode.AJAR_statement.object;
         var objectClass=(object.termType=='literal')?RDFS('Literal'):kb.any(object,rdf('type'));
-        sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+        var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
                        "?pred "+RDFS('domain')+subjectClass+".\n"+
                        "?pred "+RDFS('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
         var predicateQuery=SPARQLToQuery(sparqlText);
-
+        }
         
     
         //-------presenter
         //ToDo: how to sort selected predicates?
-	    var menu=document.createElement('div');
-	    menu.id=this.menuID;
-	    menu.className='predicateMenu';
-	    //menu.addEventListener('click',false);
-	    menu.style.top=e.pageY+"px";
-	    menu.style.left=e.pageX+"px";
-	    document.body.appendChild(menu);
-	    var table=menu.appendChild(document.createElement('table'));
-	    function addPredicateChoice(bindings){
-	        namespace='Kenny';
-	        var predicate=bindings[predicateQuery.vars[0]]
-	        var tr=table.appendChild(document.createElement('tr'));
-	        tr.appendChild(document.createElement('th')).appendChild(document.createTextNode(label(predicate)));
-	        tr.appendChild(document.createElement('td')).appendChild(document.createTextNode(namespace));
+        showMenu(predicateQuery);
+        
+	}else{ //objectTd
+	    //show menu for rdf:type
+	    if (selectedTd.parentNode.AJAR_statement.predicate.sameTerm(rdf('type'))){
+	       var sparqlText="SELECT ?class WHERE{?class "+rdf('type')+RDFS('Class')+".}"; 
+	       //I should just use kb.each
+	       var classQuery=SPARQLToQuery(sparqlText);
+	       showMenu(classQuery);
 	    }
-	    //addPredicateChoice('Name','FOAF');
-	    //addPredicateChoice('Predicate','RDF');
-        kb.query(predicateQuery,addPredicateChoice,myFetcher);
+	    
+	
 	}
 },
 //ToDo: shrink rows when \n+backspace
@@ -349,6 +432,7 @@ Keypress: function(e){
             var preRows=parseInt(this.lastModified.getAttribute('rows'))
             this.lastModified.setAttribute('rows',(preRows+1).toString());
             e.stopPropagation();
+            return false;
         }
     }
     //Remark by Kenny: If the user wants to input more lines into an one-line-only blank.
@@ -367,8 +451,36 @@ Mousedown: function(e){
     }
     */
 },
+borderClick: function borderClick(){
+    var This=outline.UserInput;
 
-Mouseover: function(e){
+    var insertTr=document.createElement('tr');
+    ancestor(this,'TABLE').insertBefore(insertTr,ancestor(this,'TR').nextSibling);
+    var tempTr=document.createElement('tr');
+    var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
+    insertTr.appendChild(tempTr.firstChild);
+    var reqTerm2=This.generateRequest("(To be determined. Re-type of drag an object onto this field)",tempTr,false);
+    insertTr.appendChild(tempTr.firstChild);
+    //there should be an elegant way of doing this
+    
+    var preStat=ancestor(this,'TR').previousSibling.AJAR_statement;
+    This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
+    
+    var myDocument=document;
+		var holdingTr=myDocument.createElement('tr');
+		var holdingTd=myDocument.createElement('td');
+		holdingTd.setAttribute('colspan','2');
+	    var bottomDiv=myDocument.createElement('div');
+	    bottomDiv.className='bottom-border';
+	    holdingTd.setAttribute('notSelectable','true');
+	    bottomDiv.addEventListener('mouseover',This.Mouseover,false);
+	    bottomDiv.addEventListener('mouseout',This.Mouseout,false);
+	    bottomDiv.addEventListener('click',This.borderClick,false);
+	    insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
+},
+
+Mouseover: function Mouseover(e){
+    this.className='bottom-border-active';
 /*
 if (getTarget(e).tagName=='SPAN'){
     var proxyDiv = document.createElement('DIV');
@@ -411,6 +523,7 @@ if (this._tabulatorMode==1){
 },
 
 Mouseout: function(e){
+    this.className='bottom-border';
 if (this._tabulatorMode==1){
     var border=getTarget(e);
     if (getTarget(e).className=="bottom-border"){ 
@@ -455,6 +568,7 @@ appendToPredicate: function appendToPredicate(predicateTd){
         trIterator.childNodes.length==1; //number of nodes as condition
         trIterator=trIterator.nextSibling){}
     }catch(e){isEnd=true;}
+    if(!isEnd && HCIoptions["bottom insert highlights"].enabled) trIterator=trIterator.previousSibling;
    
     var insertTr=document.createElement('tr');
     //style stuff, I'll have to investigate appendPropertyTRs() somehow
@@ -470,13 +584,15 @@ appendToPredicate: function appendToPredicate(predicateTd){
     
     if (!isEnd)
         trIterator.parentNode.insertBefore(insertTr,trIterator);
-    else
+    else if (!HCIpptions["bottom insert highlights"].enabled)
         predicateTd.parentNode.parentNode.appendChild(insertTr);
-
+    else; //anyway, this is buggy
+        //predicateTd.parentNode.parentNode.insertBefore(
+        
     return insertTr;
 },
 
-generateRequest: function generateRequest(tipText,trNew,isPredicate){
+generateRequest: function generateRequest(tipText,trNew,isPredicate,allNew){
     var trNode;
     if (trNew)
         trNode=trNew;
@@ -507,6 +623,22 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate){
         trNode.appendChild(outline.outline_objectTD(reqTerm));
     
     return reqTerm;
+},
+
+fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
+    this.deselectAll()
+    var tr=selectedTd.parentNode
+    if (type=='predicate'){
+        tr.replaceChild(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
+        //modify store and update here
+    }else if (type=='object'){
+        var newTd=outline.outline_objectTD(inputTerm);
+        tr.replaceChild(newTd,selectedTd);
+        
+        //modify store and update here
+        this.setSelected(newTd,true);        
+    }
+
 },
 
 formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){

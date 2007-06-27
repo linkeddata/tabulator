@@ -168,10 +168,11 @@ function Outline(doc) {
 	    if (deleteNode) {
 		appendRemoveIcon(td, obj, deleteNode)
 	    }
-	    
+	    /*
 	    var bottomDiv=document.createElement('div');
 	    bottomDiv.className="bottom-border";
 	    td.appendChild(bottomDiv);
+	    */
 	    //set event handlers
 	    //addEvent(td,'mouseover',UserInput.tdMouseover,false);
 	    //addEvent(divInTd,'mouseover',UserInput.Mouseover,false);
@@ -435,7 +436,20 @@ function Outline(doc) {
 		//tr.showAllobj();
         DisplayOptions["display:block on"].setupHere([tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],"appendPropertyTRs()");	
 		tr.showNobj(10);
-	
+		
+		if (HCIoptions["bottom insert highlights"].enabled){
+		var holdingTr=myDocument.createElement('tr');
+		var holdingTd=myDocument.createElement('td');
+		holdingTd.setAttribute('colspan','2');
+	    var bottomDiv=myDocument.createElement('div');
+	    bottomDiv.className='bottom-border';
+	    holdingTd.setAttribute('notSelectable','true');
+	    bottomDiv.addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
+	    bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
+	    bottomDiv.addEventListener('click',thisOutline.UserInput.borderClick,false);
+	    parent.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
+	    }
+	    
 		j += k-1  // extra push
 	    }
 	}
@@ -812,6 +826,7 @@ function Outline(doc) {
 		    selection.push(node)
 		    fyi("Selecting "+node)
 		    var source
+		    try{node.parentNode.AJAR_statement}catch(e){alert(node.textContent)}
 		    if (node.AJAR_statement) source = node.AJAR_statement.why
 		    else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
 		    tinfo('Source to highlight: '+source);
@@ -952,6 +967,26 @@ function Outline(doc) {
         //if not done, Have to deal with redraw...
         sf.removeCallback('done',"setSelectedAfterward");
         sf.removeCallback('fail',"setSelectedAfterward");
+	    function goNext(directionCode){
+	            var newSelTd;
+	            switch (directionCode){
+	                case 'down':
+	                    try{newSelTd=selectedTd.parentNode.nextSibling.lastChild;}catch(e){
+	                        goNext('up');
+	                        return;
+	                    }//end
+	                    deselectAll();
+	                    setSelected(newSelTd,true);
+	                    break;
+	                case 'up':
+	                    try{newSelTd=selectedTd.parentNode.previousSibling.lastChild;}catch(e){return;}//top
+	                    deselectAll();
+	                    setSelected(newSelTd,true);            
+	            }
+	            selectedTd=selection[0];
+	            if (newSelTd.hasAttribute('notSelectable')) goNext(directionCode);
+	            return newSelTd;
+	    }
 	    switch (e.keyCode){
 	        case 13://enter
 
@@ -972,25 +1007,28 @@ function Outline(doc) {
                         return;
 	                }
 	            }else{
-                    var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
-	                deselectAll();
-	                thisOutline.UserInput.Keypress(e);
-                    setSelected(newSelTd,true);
+                    //var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
+                    var notEnd=goNext('down')//bug with input at the end
+	                //deselectAll();
+	                if(!thisOutline.UserInput.Keypress(e)&&notEnd) goNext('up');
+                    //setSelected(newSelTd,true);
                     myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
                     e.stopPropagation();
 	            }
 	            break;
 	        case 38://up
+	            goNext('up');/*
 	            deselectAll();
 	            var newSelTd=selectedTd.parentNode.previousSibling.lastChild;
-	            setSelected(newSelTd,true);
+	            setSelected(newSelTd,true);*/
 	            e.stopPropagation();
 	            e.preventDefault();
                 break;
 	        case 40://down
+	            goNext('down');/*
 	            deselectAll();
 	            var newSelTd=selectedTd.parentNode.nextSibling.lastChild;
-	            setSelected(newSelTd,true);
+	            setSelected(newSelTd,true);*/
 	            e.stopPropagation();
 	            e.preventDefault();
 	            break;
@@ -1043,10 +1081,12 @@ function Outline(doc) {
                     }
                 }
 	    }//end of switch
-        showURI(getAbout(kb,selection[0]));   
-	    var PosY=findPos(selection[0])[1];
-	    if (PosY+selection[0].clientHeight > window.scrollY+window.innerHeight) getEyeFocus(selection[0],true,true);
-	    if (PosY<window.scrollY+54) getEyeFocus(selection[0],true);
+        showURI(getAbout(kb,selection[0]));
+        if (selection[0]){   
+	        var PosY=findPos(selection[0])[1];
+	        if (PosY+selection[0].clientHeight > window.scrollY+window.innerHeight) getEyeFocus(selection[0],true,true);
+	        if (PosY<window.scrollY+54) getEyeFocus(selection[0],true);
+	    }
     };
 	this.OutlinerMouseclickPanel=function(e){
 	    switch(thisOutline.UserInput._tabulatorMode){
@@ -1589,9 +1629,12 @@ doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouse
 //Kenny: I cannot make this work. The target of keypress is always <html>.
 //       I tried doc.getElementById('outline').focus();
 
-doc.getElementById('outline').addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
-doc.getElementById('outline').addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
+//doc.getElementById('outline').addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
+//doc.getElementById('outline').addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
 HCIoptions["right click to switch mode"][0].setupHere([],"end of class Outline")
+
+this.UserInput.setSelected=setSelected;
+this.UserInput.deselectAll=deselectAll;
 
 return this;
 }//END OF OUTLINE

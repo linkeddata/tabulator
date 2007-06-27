@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3188 2007-06-19 20:56:17Z kennyluck $
+// SVN ID: $Id: tabulate.js 3251 2007-06-27 09:07:39Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -185,6 +185,7 @@ internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#source'] = 1;
 internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 1;
 internals['http://www.w3.org/2006/link#uri'] = 1;
 internals['http://www.w3.org/2006/link#Document'] = 1;
+if (!SourceOptions["seeAlso not internal"].enabled)
 internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
 
 /** returns true if str starts with pref, case sensitive, space sensitive **/

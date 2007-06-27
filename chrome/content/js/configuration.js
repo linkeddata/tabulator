@@ -144,6 +144,9 @@ function temp_FD0(){
 HCIoptions.addOption("favorite dock",temp_FD0);
 delete temp_FD0;
 
+//insert bottom highlights
+HCIoptions.addOption("bottom insert highlights");
+
 
 /** 
   * Source Options
@@ -191,6 +194,10 @@ function temp_TIT(returnConditions)
 }
 SourceOptions.addOption("tabulator internal terms",temp_TIT);
 delete temp_TIT;
+
+//seeAlso not internal
+SourceOptions.addOption("seeAlso not internal");
+
 /**
   * Display Options
   **/
@@ -295,11 +302,13 @@ delete temp_DO;
 //HCIoptions["right click to switch mode"].enable();
 HCIoptions["able to edit in Discovery Mode by mouse"].enable();
 //HCIoptions["favorite dock"].enabled=true;
+HCIoptions["bottom insert highlights"].enable();
 
 //##Enable this to play with javascript:variableName
 //'javascript:document' is not working fine but 'javascript:document.firstChild' is OK
 SourceOptions["javascript2rdf"].enable();
 SourceOptions["tabulator internal terms"].enable();
+//SourceOptions["seeAlso not internal"].enable();
 
 //DisplayOptions["outliner rotate left"].enable();
 //DisplayOptions["display:block on"].enable();

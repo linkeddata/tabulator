@@ -7,7 +7,7 @@ function onPageLoad(aEvent) {
   var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
                     .getService(Components.interfaces.nsISupports)
                     .wrappedJSObject;
-  tabulator.sourceWidget.setContainer(div,doc);
+  tabulator.sourceWidget.setContainer(div);
   document.addEventListener("unload",tabulator.sourceWidget.clearContainer,true);
 }
 

@@ -256,7 +256,6 @@ function emptyNode(node) {
 }
 
 function AJAR_handleNewTerm(kb, p, requestedBy) {
-    //tdebug("entering AJAR_handleNewTerm w/ kb, p=" + p + ", requestedBy=" + requestedBy);
     if (p.termType != 'symbol') return;
     var docuri = Util.uri.docpart(p.uri);
     var fixuri;
@@ -278,7 +277,7 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
         } else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
             fixuri = "http://xmlns.com/wot/0.1/index.rdf";
         } else if (string_startswith(p.uri, 'http://web.resource.org/cc/')) {
-//            twarn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
+//            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
             fixuri = "http://web.resource.org/cc/schema.rdf";
         }
     }
@@ -288,7 +287,7 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
     if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
     
     if (fixuri) {   // only give warning once: else happens too often
-        twarn("Assuming server still broken, faking redirect of <" + p.uri +
+        tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
 	    "> to <" + docuri + ">")	
     }
     sf.requestURI(docuri, requestedBy);

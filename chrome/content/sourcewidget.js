@@ -6,7 +6,7 @@ function SourceWidget(container) {
     this.sources = {}
     var sw = this
 
-    this.setContainer = function(newContainer,newDoc) {
+    this.setContainer = function(newContainer) {
         this.ele = newContainer;
         this.ele.appendChild(this.container);
     }

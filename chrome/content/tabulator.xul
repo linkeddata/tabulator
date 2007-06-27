@@ -2,12 +2,12 @@
 <!DOCTYPE overlay SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  <script type="application/x-javascript" src="log-ext.js"/>
   <script type="application/x-javascript" src="js/util.js"/>
   <script type="application/x-javascript" src="js/configuration.js"/>  
   <script type="application/x-javascript" src="js/sorttable.js"/>
   <script type="application/x-javascript" src="js/tableView.js"/>
   <script type="application/x-javascript" src="js/mapView.js"/>
-  <script type="application/x-javascript" src="js/log.js"/>
   <script type="application/x-javascript" src="js/rdf/sparql.js"/>
   <script type="application/x-javascript" src="js/uri.js"/>
   <script type="application/x-javascript" src="js/rdf/term.js"/>

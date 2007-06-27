@@ -219,6 +219,10 @@ function label(x, trimSlash) {
     return decodeURIComponent(x.uri)
 }
 
+function escapeForXML(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+}
+
 //  As above but escaped for XML and chopped of contains a slash
 function labelForXML(x) {
     return escapeForXML(label(x, true));

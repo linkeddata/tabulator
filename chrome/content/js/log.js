@@ -1,3 +1,5 @@
+var tabulator = {};
+
 /////////////////////////  Logging
 //
 //bitmask levels
@@ -19,16 +21,8 @@ function escapeForXML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 }
 
-// t is for tabulator
-//log a message where type is mesg|warning|error|debug|info|good
-function tmsg(msg)  { tlog(msg, TMESG, 'mesg') };
-function tinfo(msg)  { tlog(msg, TINFO, 'info') };
-function twarn(msg) { tlog(msg, TWARN, 'warn') };
-function terror(msg) { tlog(msg, TERROR, 'eror') };
-function tdebug(msg) { tlog(msg, TDEBUG, 'dbug') };
-function tsuccess(msg) { tlog(msg, TSUCCESS, 'good') };
-function tlog(str, type, typestr)
-{
+tabulator.log = {}
+tabulator.log.msg =function (str, type, typestr) {
     if (!type) { type = TMESG; typestr = 'mesg'};
     if (!(logging.level & type)) return; //bitmask
     var log_area = document.getElementById('status');
@@ -43,15 +37,13 @@ function tlog(str, type, typestr)
         log_area.appendChild(addendum);
     else
         log_area.insertBefore(addendum, log_area.firstChild);
-} //tlog
-fyi = tdebug;
-log = {}
-log.msg = tmsg
-log.warn = twarn
-log.debug = tdebug
-log.info = tinfo
-log.error = terror
-log.success = tsuccess
+} //tabulator.log.msg
+
+tabulator.log.warn = function(msg) { tabulator.log.msg(msg, TWARN, 'warn') };
+tabulator.log.debug = function(msg)   { tabulator.log.msg(msg, TDEBUG, 'dbug') };
+tabulator.log.info = function(msg)    { tabulator.log.msg(msg, TINFO, 'info') };
+tabulator.log.error = function(msg)   { tabulator.log.msg(msg, TERROR, 'eror') };
+tabulator.log.success = function(msg) { tabulator.log.msg(msg, TSUCCESS, 'good') };
 
 /** clear the log window **/
 function clearStatus(str) {

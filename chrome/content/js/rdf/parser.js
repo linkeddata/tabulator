@@ -111,7 +111,7 @@ function RDFParser() {
     }
     
     function ReturnRDF(obj) {
-	fyi("RDF get return status: " + obj.status +
+	tabulator.log.debug("RDF get return status: " + obj.status +
 		    "\n\tURI: " + obj.url +
 		    "\n\tcontent-type: " + obj.contentType +
 		    "\n\tcontent length " + obj.content.length +
@@ -128,7 +128,7 @@ function RDFParser() {
 
 /*	if (obj.domcontent) {
 	    xml = obj.domcontent;
-	    fyi("Parsing DOM we seem to have "+obj.domcontent)
+	    tabulator.log.debug("Parsing DOM we seem to have "+obj.domcontent)
 	    return GetTriples();
 	}
 */
@@ -170,7 +170,7 @@ function RDFParser() {
 			xml=document.implementation.createDocument('', '', null);
 			xml.loadXML(obj.content);
 		    } catch (e) {
-			fyi("Exception near (new DOMParser())parseFromString: "+e)
+			tabulator.log.debug("Exception near (new DOMParser())parseFromString: "+e)
 			if (typeof alert!=null) alert("OK, I give up, you're not ASV, Batik, IE or\n a Mozilla build or anything else a bit like them.");
 		    }
 		}
@@ -190,15 +190,15 @@ function RDFParser() {
 	    var a=xml.documentElement.childNodes;
 	    gettriples=true;
 	} catch (E) {
-	    fyi("Exception near xml.documentElement.childNodes: "+E)
+	    tabulator.log.debug("Exception near xml.documentElement.childNodes: "+E)
 	    try {
 		xmld=xml.childNodes.item(0);
 		gettriples=true;
 	    } catch (E) {
-		fyi("Exception near xmld=xml.childNodes.item(0): "+E)
+		tabulator.log.debug("Exception near xmld=xml.childNodes.item(0): "+E)
 		// if (typeof alert != null) alert("No XML Document Found, or not valid XML, or something\n Basically an error so I'm giving up.");
 		gettriples=false;
-		fyi("Document content:_______\n"+obj.content+"\n____________\n")
+		tabulator.log.debug("Document content:_______\n"+obj.content+"\n____________\n")
 		return callbackfn("Can't parse XML: "+E)
 	    }
 
@@ -221,16 +221,16 @@ function RDFParser() {
  function _loadRDFXML(xmltxt) {
 	 if (typeof parseXML=='undefined') {
 		 try {
-		         fyi("Trying ActiveXObject")
+		         tabulator.log.debug("Trying ActiveXObject")
 			 xml=new ActiveXObject ("Microsoft.XMLDOM");
 			 xml.async=false;
 			 xml.validateOnParse=false;
 			 xml.resolveExternals=false;
 			 xml.loadXML(xmltxt);
 		 } catch (e) {
-		    fyi('Exception near new ActiveXObject ("Microsoft.XMLDOM"): '+e)
+		    tabulator.log.debug('Exception near new ActiveXObject ("Microsoft.XMLDOM"): '+e)
 			 try {
-				 fyi("Trying DOMParser")
+				 tabulator.log.debug("Trying DOMParser")
 				 Document.prototype.loadXML = function (s) {
 					 var doc2 = (new DOMParser()).parseFromString(s, "text/xml");
 					 while (this.hasChildNodes()) {
@@ -243,7 +243,7 @@ function RDFParser() {
 				 xml=document.implementation.createDocument('', '', null);
 				 xml.loadXML(xmltxt);
 			 } catch (e) {
-				fyi('Exception using DOMParser: '+e);
+				tabulator.log.debug('Exception using DOMParser: '+e);
 				 if (typeof alert!=null) alert(
 				 "Error: No XML parser found. You're not ASV, Batik, IE or\n a Mozilla build or anything else a bit like them.");
 			 }
@@ -268,7 +268,7 @@ function RDFParser() {
 
  
     function GetTriples(offset) {
-	fyi("Parsing XML to RDF triples: " + xmld)
+	tabulator.log.debug("Parsing XML to RDF triples: " + xmld)
 	getNamespaces(xmld);
 	var xmlbase = xmld.getAttribute('xml:base');
 	if (xmlbase && xmlbase!='') {
@@ -281,19 +281,19 @@ function RDFParser() {
 	    node = docNodes.item(i)
 	    if (node.nodeType == 1) {
 		top = qnameURI(node.nodeName)
-		fyi("Document top element: "+top)
+		tabulator.log.debug("Document top element: "+top)
 		if (top != (RDF_NS+'RDF')) {
-		    fyi ("Not rdf:RDF:  No code to parse this")
+		    tabulator.log.debug ("Not rdf:RDF:  No code to parse this")
 		    return undefined
 		}
 	    }
 	    break;
 	}
 	createPredicates(xmld.childNodes);
-	fyi("Parsing phase 1, triples: " + inTriples.length)
+	tabulator.log.debug("Parsing phase 1, triples: " + inTriples.length)
 	for (var j=offset;j<inTriples.length;j++) {
 	    var it=inTriples[j];
-    //	fyi("Considering s="+it.subject+" p="+it.predicate+" ty="+it.type
+    //	tabulator.log.debug("Considering s="+it.subject+" p="+it.predicate+" ty="+it.type
     //		+ " ob="+it.object)
 	    if (!it.object) { it.object=""; it.type="literal" }
 	    it.subject = URIjoin(it.subject, baseURL)
@@ -307,11 +307,11 @@ function RDFParser() {
 	    if (s2) it.subject = s2
 	    s2 = realSubject[it.object]
 	    if (s2) it.object = s2
-    //	fyi("    becomes s="+it.subject+" p="+it.predicate+" ty="+it.type
+    //	tabulator.log.debug("    becomes s="+it.subject+" p="+it.predicate+" ty="+it.type
     //		+ " ob="+it.object)
 	}
 
-	fyi("Parsing done, triples: " + inTriples.length)
+	tabulator.log.debug("Parsing done, triples: " + inTriples.length)
 	return inTriples;
     }
  
@@ -322,7 +322,7 @@ function RDFParser() {
 	} else {
 	    var ns = Namespaces['_'+qn.slice(0,colon)]
 	    if (typeof ns == 'undefined') {
-		fyi("XML parse error: Unbound namespace prefix: "+qn);
+		tabulator.log.debug("XML parse error: Unbound namespace prefix: "+qn);
 		return undefined
 	    }
 	    return ns + qn.slice(colon+1)
@@ -648,10 +648,10 @@ function RDFParser() {
 		for (var i=0;i<atl;i++) {
 			 nn=':'+attr.item(i).nodeName+"::";
 			 nn=nn.split(':')[2];
-//			 fyi("Namspace looking at attr "+nn)
+//			 tabulator.log.debug("Namspace looking at attr "+nn)
 			 ns=attr.item(i).nodeValue;
 			 ns = URIjoin(ns, baseURL)
-			 tdebug("   parser: Namespace "+ns)
+			 tabulator.log.debug("   parser: Namespace "+ns)
 			 // @@ join base URL here
 //			 Namespaces[Namespaces.length]=ns;
 			 Namespaces['_'+nn] = ns;
@@ -669,7 +669,7 @@ function RDFParser() {
  
  function Triple(subject,predicate,object, type, datatype, lang) {
 	 if (typeof object == 'undefined') {
-	    twarn("parser: No object specified in triple:"+subject+" "+predicate)
+	    tabulator.log.warn("parser: No object specified in triple:"+subject+" "+predicate)
 	 }
 	 this.subject=subject;
 	 this.predicate=predicate;
@@ -833,7 +833,7 @@ function HTTP() {
 		} catch (e) {
 			xmlhttp=false;
 		}
-		fyi("xmlhtp = "+xmlhttp)
+		tabulator.log.debug("xmlhtp = "+xmlhttp)
 	}
 	return xmlhttp;
  }
@@ -851,7 +851,7 @@ function HTTP() {
 			 try {
 				xmlhttp.open("GET",url,true,'test','test');
 			 } catch (exception) {
-			    fyi("Exception: " + exception)
+			    tabulator.log.debug("Exception: " + exception)
 			    fn({status: 999, content: ("Exception: " + exception),
 						domcontent: undefined,
 						contentType: undefined})
@@ -912,21 +912,21 @@ function HTTP() {
 function RDFLoad(url, base, sink, callback, why) {
 
     function callback1(status, myRDF, sink, callback) {
-	fyi("Callback1 status " + status)
+	tabulator.log.debug("Callback1 status " + status)
 	if (status != 200) return callback(status)
 	
-	fyi("   callback, triples: " + myRDF.getTriples().length)
+	tabulator.log.debug("   callback, triples: " + myRDF.getTriples().length)
 	triplesToFormula(myRDF.getTriples(), sink, why)
 	myRDF.reset()  // Clear RDF triple accumulator
 	callback(status)
-	fyi("Callback done, KB size now " + sink.statements.length)
+	tabulator.log.debug("Callback done, KB size now " + sink.statements.length)
 	return
 
      }
     var myRDF = new RDFParser()  //  parser resource
-    fyi("myRDF: "+myRDF+", why="+why)
+    tabulator.log.debug("myRDF: "+myRDF+", why="+why)
 
-    fyi("Loading: "+url)
+    tabulator.log.debug("Loading: "+url)
     if (url.slice(7, 7+document.domain.length) != document.domain) {
 	try {
 	    netscape.security.PrivilegeManager.enablePrivilege(
@@ -943,7 +943,7 @@ function RDFLoad(url, base, sink, callback, why) {
   
 function RDFParseDOM(dom, base, sink, why) {
     var myRDF = new RDFParser()  //  parser resource
-    fyi("Parsing DOM: "+dom)
+    tabulator.log.debug("Parsing DOM: "+dom)
     myRDF.parseDOM(dom, base, sink, why)
     return true;
 }
@@ -952,7 +952,7 @@ function triplesToFormula(triples, F, why) {
     var i, tr
     var genidMap = []
     var lt = triples.length
-    fyi("Converting triples why="+why)
+    tabulator.log.debug("Converting triples why="+why)
     function map(uri) {
 	var term
 	if (uri.slice(0,6) =='genid:') {

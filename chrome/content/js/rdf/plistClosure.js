@@ -43,7 +43,7 @@ function about(kb, subject) {
 			agenda[other] = true;
 	    }
 	    if (ifps[(st.predicate.hashString()]) {
-		fyi("IFP " + st.predicate )
+		tabulator.log.debug("IFP " + st.predicate )
 	    }
 	}
     }

@@ -55,7 +55,7 @@ uripath_join = function(base, given) {
 
 var diag_tracking = 0;
 var diag_chatty_flag = 0;
-diag_progress = function(str) { log.debug(str); }
+diag_progress = function(str) { tabulator.log.debug(str); }
 
 // why_BecauseOfData = function(doc, reason) { return doc };
 
@@ -73,7 +73,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3245 2007-06-26 14:49:13Z timbl $
+$Id: n3parser.js 3252 2007-06-27 16:44:48Z jambo $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -1017,7 +1017,7 @@ Skip white space, newlines and comments.
     i += eol.lastIndex;
     this.previousLine = this.startOfLine;
     this.startOfLine = i;
-    log.debug( (  (  ( "line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
+    tabulator.log.debug( (  (  ( "line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
     }
     ws.lastIndex = 0;
     var m = ws.exec(str.slice(i));

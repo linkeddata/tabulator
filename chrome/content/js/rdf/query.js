@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 3115 2007-06-06 21:08:27Z presbrey $
+// SVN ID: $Id: query.js 3252 2007-06-27 16:44:48Z jambo $
 
 //  Variable
 //
@@ -122,13 +122,13 @@ function saveQuery()
         sel = selection[i]
        	tr = sel.parentNode
        	st = tr.AJAR_statement
-       	tdebug("Statement "+st)
+       	tabulator.log.debug("Statement "+st)
        	if (sel.getAttribute('class').indexOf('pred') >= 0) {
-           	tinfo("   We have a predicate")
+           	tabulator.log.info("   We have a predicate")
            	makeQueryRow(q,tr)
        	}
        	if (sel.getAttribute('class').indexOf('obj') >=0) {
-       		tinfo("   We have an object")
+       		tabulator.log.info("   We have an object")
        		makeQueryRow(q,tr,true)
        	}
     }    
@@ -140,7 +140,7 @@ function saveQuery()
 		for (i=0; i<n; i++) {
 	    	pattern = pat.statements[i];
 	    	tr = pattern.tr;
-	   	 	//tdebug("tr: " + tr.AJAR_statement);
+	   	 	//tabulator.log.debug("tr: " + tr.AJAR_statement);
 	    	if (typeof tr!='undefined')
 	    	{
 	    		delete tr.AJAR_pattern;
@@ -164,7 +164,7 @@ function predParentOf(node)
 			return n;
 		else if (n.previousSibling && n.previousSibling.nodeName == 'TR')
 			n=n.previousSibling;
-		else { terror("Could not find predParent"); return node }
+		else { tabulator.log.error("Could not find predParent"); return node }
 	}
 }
 
@@ -187,7 +187,7 @@ function makeQueryRow(q, tr, constraint) {
     for (level=tr.parentNode; level; level=level.parentNode) {
         if (typeof level.AJAR_statement != 'undefined') {   // level.AJAR_statement
         	level.setAttribute('bla',level.AJAR_statement)
-            fyi("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
+            tabulator.log.debug("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
             /*for(c=0;c<level.parentNode.childNodes.length;c++) //This makes sure the same variable is used for a subject
             	if(level.parentNode.childNodes[c].AJAR_variable)
             		level.AJAR_variable = level.parentNode.childNodes[c].AJAR_variable;*/
@@ -237,7 +237,7 @@ function makeQueryRow(q, tr, constraint) {
     	hasParent=false;
     	parentVar = inverse? st.object : st.subject; //if there is no parents, uses the sub/obj
 	}
-	tdebug('Initial variable: '+tr.AJAR_variable)
+	tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
 	v = tr.AJAR_variable? tr.AJAR_variable : kb.variable(newVariableName());
     q.vars.push(v)
     v.label = hasParent? parentVar.label : label(parentVar);
@@ -249,12 +249,12 @@ function makeQueryRow(q, tr, constraint) {
     if (constraint)   //binds the constrained variable to its selected value
     	pat.constraints[v]=new constraintEqualTo(constraintVar);
     	
-    tinfo('Pattern: '+pattern);
+    tabulator.log.info('Pattern: '+pattern);
     pattern.tr = tr
     tr.AJAR_pattern = pattern    // Cross-link UI and query line
     tr.AJAR_variable = v;
-    tdebug('Final variable: '+tr.AJAR_variable)
-    fyi("Query pattern: "+pattern)
+    tabulator.log.debug('Final variable: '+tr.AJAR_variable)
+    tabulator.log.debug("Query pattern: "+pattern)
     pat.statements.push(pattern)
     return v
 } //makeQueryRow
@@ -355,9 +355,9 @@ RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) {
     //prepare, oncallback: match1
     //match1: fetcher, oncallback: match2
     //match2, oncallback: populatetable
-    //    fyi("Query F length"+this.statements.length+" G="+foodog)
+    //    tabulator.log.debug("Query F length"+this.statements.length+" G="+foodog)
     var f = this;
-    fyi("Query on "+this.statements.length)
+    tabulator.log.debug("Query on "+this.statements.length)
 //    if (kb != this) alert("@@@@??? this="+ this)
 	
 	//kb.remoteQuery(foodog,'http://jena.hpl.hp.com:3040/backstage',callback);
@@ -391,7 +391,7 @@ RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) {
 	//alert("INIT OPT: "+foodog.pat.optional);
     setTimeout(function() { match(f, foodog.pat, foodog.pat.initBindings, '', fetcher, optionalCallback, new branchCount()); }, 0);
     //match(this, foodog, [], '', fetcher, callback);
-    //    fyi("Returning from query length="+res.length+" bindings: "+bindingsDebug(res))
+    //    tabulator.log.debug("Returning from query length="+res.length+" bindings: "+bindingsDebug(res))
     /*var r, nr=res.length, b, v;
     for (r=0; r<nr; r++) {
         b = res[r][0];
@@ -401,7 +401,7 @@ RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) {
             }
         }
     }
-    fyi("Returning from query length="+res.length+" bindings: "+bindingsDebug(res));
+    tabulator.log.debug("Returning from query length="+res.length+" bindings: "+bindingsDebug(res));
         
     return res;
     */
@@ -416,9 +416,9 @@ RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) {
 function prepare(f, item, bindings) {
     item.nvars = 0;
     item.index = null;
-    if (!f.statements) twarn("@@@ prepare: f is "+f);
-//    tdebug("Prepare: f has "+ f.statements.length);
-    tdebug("Prepare: Kb size "+f.statements.length+" Preparing "+item);
+    if (!f.statements) tabulator.log.warn("@@@ prepare: f is "+f);
+//    tabulator.log.debug("Prepare: f has "+ f.statements.length);
+    tabulator.log.debug("Prepare: Kb size "+f.statements.length+" Preparing "+item);
     
     var t,c,terms = [item.subject,item.predicate,item.object],ind = [f.subjectIndex,f.predicateIndex,f.objectIndex];
     for (i=0;i<3;i++)
@@ -433,15 +433,15 @@ function prepare(f, item, bindings) {
         	termIndex=ind[i]
         	item.index = termIndex[t.hashString()];
         	if (typeof item.index == 'undefined') {
-            	tdebug("prepare: no occurrence [yet?] of term: "+ t);
+            	tabulator.log.debug("prepare: no occurrence [yet?] of term: "+ t);
             	item.index = [];
         	}
     	}
     }
     	
     if (item.index == null) item.index = f.statements;
-    // fyi("Prep: index length="+item.index.length+" for "+item)
-    tdebug("prepare: index length "+item.index.length +" for "+ item);
+    // tabulator.log.debug("Prep: index length="+item.index.length+" for "+item)
+    tabulator.log.debug("prepare: index length "+item.index.length +" for "+ item);
     return false;
 } //prepare
     
@@ -462,21 +462,21 @@ var match_index = 0; //index
 * @param fetcher - function (term, requestedBy) - myFetcher / AJAR_handleNewTerm / the sort
 * @returns nothing **/
 function match(f, g, bindingsSoFar, level, fetcher, callback, branchCount) {
-    log.debug("match: f has "+f.statements.length+", g has "+g.statements.length)
+    tabulator.log.debug("match: f has "+f.statements.length+", g has "+g.statements.length)
     var pattern = g.statements;
     if (pattern.length == 0) { //when it's satisfied all the pattern triples
-        log.msg("REACHED CALLBACK WITH BINDINGS:")
+        tabulator.log.msg("REACHED CALLBACK WITH BINDINGS:")
         for (var b in bindingsSoFar) {
-	    log.msg("b=" + b + ", bindingsSoFar[b]=" + bindingsSoFar[b])
+	    tabulator.log.msg("b=" + b + ", bindingsSoFar[b]=" + bindingsSoFar[b])
 	}
         if (callback) callback(bindingsSoFar,g)
         branchCount.count--
         branchCount.success=true
-        tdebug("Branch Count at end: "+branchCount.count)
+        tabulator.log.debug("Branch Count at end: "+branchCount.count)
         return [[ [], null ]]; // Success
     }
     var item, i, n=pattern.length;
-    //fyi(level + "Match "+n+" left, bs so far:"+bindingDebug(bindingsSoFar))
+    //tabulator.log.debug(level + "Match "+n+" left, bs so far:"+bindingDebug(bindingsSoFar))
 
     // Follow links from variables in query
     if (fetcher) {   //Fetcher is used to fetch URIs, function first term is a URI term, second is the requester
@@ -522,17 +522,17 @@ function match2(f, g, bindingsSoFar, level, fetcher, callback, branchCount) //po
     var pattern = g.statements, n = pattern.length, i;
     for (i=0; i<n; i++) {  //For each statement left in the query, run prepare
         item = pattern[i];
-        tinfo("match2: item=" + item + ", bindingsSoFar=" + bindingDebug(bindingsSoFar));
+        tabulator.log.info("match2: item=" + item + ", bindingsSoFar=" + bindingDebug(bindingsSoFar));
         prepare(f, item, bindingsSoFar);
     }
     pattern.sort(easiestQuery);
-    // fyi("Sorted pattern:\n"+pattern)
+    // tabulator.log.debug("Sorted pattern:\n"+pattern)
     var item = pattern[0];
     var rest = f.formula();
     rest.optional = g.optional;
     rest.constraints = g.constraints;
     rest.statements = pattern.slice(1); // No indexes: we will not query g. 
-    fyi(level + "Match2 searching "+item.index.length+ " for "+item+
+    tabulator.log.debug(level + "Match2 searching "+item.index.length+ " for "+item+
             "; bindings so far="+bindingDebug(bindingsSoFar));
     //var results = [];
     var c, nc=item.index.length, nbs1, x;
@@ -541,7 +541,7 @@ function match2(f, g, bindingsSoFar, level, fetcher, callback, branchCount) //po
         nbs1 = RDFArrayUnifyContents(
                 [item.subject, item.predicate, item.object],
         [st.subject, st.predicate, st.object], bindingsSoFar, f);
-        tinfo(level+" From first: "+nbs1.length+": "+bindingsDebug(nbs1))
+        tabulator.log.info(level+" From first: "+nbs1.length+": "+bindingsDebug(nbs1))
         var k, nk=nbs1.length, nb1, v;
         branchCount.count+=nk;
         for (k=0; k<nk; k++) {  // For each way that statement binds
@@ -554,12 +554,12 @@ function match2(f, g, bindingsSoFar, level, fetcher, callback, branchCount) //po
         }
     }
     branchCount.count--;
-    tdebug("BranchCount: "+branchCount.count);
+    tabulator.log.debug("BranchCount: "+branchCount.count);
     if (branchCount.count == 0 && !branchCount.success)
     {
     	branchCount.numTasks.val--;
     	//alert(branchCount.numTasks.val)
-    	tdebug("Branch finished. Tasks remaining: "+branchCount.numTasks.val+" Optional array length: "+g.optional.length);
+    	tabulator.log.debug("Branch finished. Tasks remaining: "+branchCount.numTasks.val+" Optional array length: "+g.optional.length);
     	if (branchCount.numTasks.val==0) branchCount.onFail();
     	//if (g.optional.length == 0 && branchCount.numTasks.val < 1) { branchCount.onComplete();}
     	//if (!branchCount.optional && branchCount.numTasks.val == -1) branchCount.onComplete();

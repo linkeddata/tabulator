@@ -23,15 +23,15 @@ function sortables_init() {
 function ts_makeSortable(table) {
   //alert("Entered ts_makeSortable");
   var firstRow; //first childNode of the table. for some reason rows doesn't work?!
-  fyi("making sortable: " + table.id + table.rows + table.rows.length + table.childNodes.length);
-  // fyi("table contents: " + table.innerHTML); Long!
+  tabulator.log.debug("making sortable: " + table.id + table.rows + table.rows.length + table.childNodes.length);
+  // tabulator.log.debug("table contents: " + table.innerHTML); Long!
   //if (table.rows && table.rows.length > 0) {
   if (table.childNodes && table.childNodes.length > 0) {
-    //fyi("found first row");
+    //tabulator.log.debug("found first row");
     firstRow = table.firstChild;
   }
   if (!firstRow) {
-    twarn("no first row found"); return;
+    tabulator.log.warn("no first row found"); return;
   } //stop
   
   // We have a first row: assume it's the header, and make its contents clickable links
@@ -40,7 +40,7 @@ function ts_makeSortable(table) {
     var txt = ts_getInnerText(cell);
 //NOTE THAT I HAVE REMOVED SPACING AND FUNCTIONS ASSOCIATED WITH REMOVECOLUMN BECAUSE
 //THE FUNCTION DOESN"T EXIST --ALERER
-    fyi("making header clickable: " + txt); // See style sheet: float right changes order!
+    tabulator.log.debug("making header clickable: " + txt); // See style sheet: float right changes order!
     cell.innerHTML = 
     '<a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">' +
         '<span class="sortarrow"></span>' + txt+'</a>';
@@ -66,13 +66,13 @@ function ts_getInnerText(el) {
       break;
     }
   }
-  //fyi("got inner text: " + str);
+  //tabulator.log.debug("got inner text: " + str);
   return str;
 }
 
 function ts_resortTable(lnk) {
   // get the span
-  //fyi ("entering ts_resortTable");
+  //tabulator.log.debug ("entering ts_resortTable");
   var span;
   for (var ci=0;ci<lnk.childNodes.length;ci++) {
     if (lnk.childNodes[ci].tagName && lnk.childNodes[ci].tagName.toLowerCase() == 'span') span = lnk.childNodes[ci];
@@ -81,12 +81,12 @@ function ts_resortTable(lnk) {
   var td = lnk.parentNode;
   var column = td.cellIndex;
   var table = getParent(td,'TABLE');
-  //fyi("got spantext,td,column,table: " + spantext + td + column + table);
+  //tabulator.log.debug("got spantext,td,column,table: " + spantext + td + column + table);
   
   // Work out a type for the column
   //if (table.rows.length <= 1) return;
   if (table.childNodes.length <= 1) return;
-  //fyi("getting sort type...");
+  //tabulator.log.debug("getting sort type...");
   var itm = ts_getInnerText(table.lastChild.cells[column]); //test data, so to speak
   sortfn = ts_sort_caseinsensitive;
   if (itm.match(/^\d\d[\/-]\d\d[\/-]\d\d\d\d$/)) sortfn = ts_sort_date;
@@ -94,7 +94,7 @@ function ts_resortTable(lnk) {
   if (itm.match(/^[£$]/)) sortfn = ts_sort_currency;
   if (itm.match(/^[\d\.]+$/)) sortfn = ts_sort_numeric;
   SORT_COLUMN_INDEX = column;
-  //fyi("sort type selected: " + sortfn);
+  //tabulator.log.debug("sort type selected: " + sortfn);
   var firstRow = new Array();
   var newRows = new Array();
   //for (i=0;i<table.rows[0].length;i++) { firstRow[i] = table.rows[0][i]; }
@@ -102,7 +102,7 @@ function ts_resortTable(lnk) {
   for (i=0;i<table.firstChild.length;i++) { firstRow[i] = table.firstChild[i]; }
   for (j=1;j<table.childNodes.length;j++) { newRows[j-1] = table.childNodes[j]; }
   
-  //fyi ("calling array sort fn");
+  //tabulator.log.debug ("calling array sort fn");
   newRows.sort(sortfn);
   
   if (span.getAttribute("sortdir") == 'down') {
@@ -114,7 +114,7 @@ function ts_resortTable(lnk) {
     span.setAttribute('sortdir','down');
   }
   
-  //fyi ("moving rows around");
+  //tabulator.log.debug ("moving rows around");
     // We appendChild rows that already exist to the tbody, so it moves them rather than creating new ones
     // don't do sortbottom rows
   for (i=0;i<newRows.length;i++) {

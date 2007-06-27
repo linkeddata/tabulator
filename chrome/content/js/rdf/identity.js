@@ -85,13 +85,13 @@ function RDFIndexedFormula() {
 	}; //sameAs -> equate & don't add to index
     
     function newPropertyAction(formula, pred, action) {
-	fyi("newPropertyAction:  "+pred);
+	tabulator.log.debug("newPropertyAction:  "+pred);
         formula.propertyAction[pred] = action;
 	var fixEndA = formula.statementsMatching(undefined, pred, undefined);
 	var i;
 	for (i=0; i<fixEndA.length; i++) { // NOT optimized - sort fixEndA etc
 	    if (action(formula, fixEndA[i].subject, pred, fixEndA[i].object)) {
-		fyi("newPropertyAction: NOT removing "+fixEndA[i]);
+		tabulator.log.debug("newPropertyAction: NOT removing "+fixEndA[i]);
 	    }
 	}
 	return false;
@@ -135,7 +135,7 @@ We replace the bigger with the smaller.
 
 */
 RDFIndexedFormula.prototype.equate = function(u1, u2) {
-    fyi("Equating "+u1+" and "+u2)
+    tabulator.log.debug("Equating "+u1+" and "+u2)
     var d = u1.compareTerm(u2);
     if (!d) return true; // No information in {a = a}
     var big, small;
@@ -153,7 +153,7 @@ RDFIndexedFormula.prototype.replaceWith = function(big, small) {
     var i, matches, fixEndA, hash;
     fixEndA = this.statementsMatching(big, undefined, undefined);
     matches = fixEndA.length;
-    fyi("Replacing "+big+" with "+small) // @@
+    tabulator.log.debug("Replacing "+big+" with "+small) // @@
 
     for (i=0; i<matches; i++) {
         fixEndA[i].subject = small;
@@ -219,7 +219,7 @@ RDFIndexedFormula.prototype.replaceWith = function(big, small) {
 	    this.propertyAction[small.hashString()] = action;
 	    alert("copying action on "+big+" to "+small)
     }
-    fyi("Equate done. "+big+" to be known as "+small)    
+    tabulator.log.debug("Equate done. "+big+" to be known as "+small)    
     return true;  // true means the statement does not need to be put in
 };
 
@@ -260,7 +260,7 @@ function RDFMakeTerm(formula,val) {
 	alert('formula: '+ formula+', term: '+val);
     var y = formula.redirection[val.hashString()];
     if (typeof y == 'undefined') return val;
-//    fyi(" redirecting "+val+" to "+y)
+//    tabulator.log.debug(" redirecting "+val+" to "+y)
     return y;
 }
 
@@ -295,7 +295,7 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     // Check we don't already know it -- esp when working with dbview
     st = this.anyStatementMatching(subj,pred,obj) // @@@@@@@ temp fix <====WATCH OUT!
     if (typeof st != 'undefined') return; // already in store
-    //    fyi("\nActions for "+s+" "+p+" "+o+". size="+this.statements.length)
+    //    tabulator.log.debug("\nActions for "+s+" "+p+" "+o+". size="+this.statements.length)
     if (typeof this.predicateCallback != 'undefined')
 	this.predicateCallback(this, pred, why);
 	
@@ -312,7 +312,7 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     
     if (typeof this.objectIndex[hashO] == 'undefined') this.objectIndex[hashO] = [];
     this.objectIndex[hashO].push(st); // Set of things with this as object
-    fyi("ADDING    {"+subj+" "+pred+" "+obj+"} "+why);
+    tabulator.log.debug("ADDING    {"+subj+" "+pred+" "+obj+"} "+why);
     var newIndex=this.statements.push(st);
     return this.statements[newIndex-1];
 }; //add
@@ -329,7 +329,7 @@ RDFIndexedFormula.prototype.anyStatementMatching = function(subj,pred,obj,why) {
 RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,justOne) {
     var results = [];
     var candidates;
-    fyi("Matching {"+subj+" "+pred+" "+obj+"}");
+    tabulator.log.debug("Matching {"+subj+" "+pred+" "+obj+"}");
     subj = RDFMakeTerm(this, subj);
     pred = RDFMakeTerm(this, pred);
     obj = RDFMakeTerm(this, obj);
@@ -348,22 +348,22 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
 		candidates = this.statements; //all wildcards
 	    } else {
 		candidates = this.predicateIndex[pred.hashString()];
-//		fyi("@@Trying predciate "+p+" length "+candidates.length)
+//		tabulator.log.debug("@@Trying predciate "+p+" length "+candidates.length)
 
 		if (typeof candidates == 'undefined') return [];
-		fyi("Trying predicate "+pred+" index of: "+candidates.length +
+		tabulator.log.debug("Trying predicate "+pred+" index of: "+candidates.length +
 			    " for {"+subj+" "+pred+" "+obj+" @ "+why+"}");
 	    }
-    //      fyi("Trying all "+candidates.length+" statements")
+    //      tabulator.log.debug("Trying all "+candidates.length+" statements")
         } else { // subj undefined, obj defined
             candidates = this.objectIndex[obj.hashString()];
             if (typeof candidates == 'undefined') return [];
             if ((typeof pred == 'undefined') &&
 		(typeof why == 'undefined')) {
-                // fyi("Returning all statements for object")
+                // tabulator.log.debug("Returning all statements for object")
                 return candidates ;
             }
-            // fyi("Trying only "+candidates.length+" object statements")
+            // tabulator.log.debug("Trying only "+candidates.length+" object statements")
         }
     } else {  // s defined
         if (this.redirection[subj.hashString()])
@@ -372,7 +372,7 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
         if (typeof candidates == 'undefined') return [];
         if (typeof(obj) =='undefined') {
 	    if ((typeof pred == 'undefined') && (typeof why == 'undefined')) {
-		// fyi("Trying all "+candidates.length+" subject statements")
+		// tabulator.log.debug("Trying all "+candidates.length+" subject statements")
 		return candidates;
 	    }
 	} else { // s and o defined ... unusual in practice?
@@ -380,25 +380,25 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
             if (typeof oix == 'undefined') return [];
 	    if (oix.length < candidates.length) {
 		candidates = oix;
-//		fyi("Wow!  actually used object index instead of subj");
+//		tabulator.log.debug("Wow!  actually used object index instead of subj");
 	    }
 	
         }
-        // fyi("Trying only "+candidates.length+" subject statements")
+        // tabulator.log.debug("Trying only "+candidates.length+" subject statements")
     }
     
     if (typeof candidates == 'undefined') return [];
-//    fyi("Matching {"+s+" "+p+" "+o+"} against "+n+" stmts")
+//    tabulator.log.debug("Matching {"+s+" "+p+" "+o+"} against "+n+" stmts")
     var i;
     var st;
     for(i=0; i<candidates.length; i++) {
         st = candidates[i]; //for each candidate, match terms of candidate with input, then return all
-        // fyi("  Matching against st=" + st +" why="+st.why);
+        // tabulator.log.debug("  Matching against st=" + st +" why="+st.why);
         if (RDFTermMatch(pred, st.predicate) &&  // first as simplest
             RDFTermMatch(subj, st.subject) &&
             RDFTermMatch(obj, st.object) &&
             RDFTermMatch(why, st.why)) {
-            // fyi("   Found: "+st)
+            // tabulator.log.debug("   Found: "+st)
             if (justOne) return [st];
             results.push(st);
         }
@@ -409,11 +409,11 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
 
 /** remove a particular statement from the bank **/
 RDFIndexedFormula.prototype.remove = function (st) {
-  fyi("entering remove w/ st=" + st);
+  tabulator.log.debug("entering remove w/ st=" + st);
   var subj = st.subject, pred = st.predicate, obj = st.object;
-  if (typeof this.subjectIndex[subj.hashString()] == 'undefined') twarn ("statement not in sbj index: "+st);
-  if (typeof this.predicateIndex[pred.hashString()] == 'undefined') twarn ("statement not in pred index: "+st);
-  if (typeof this.objectIndex[obj.hashString()] == 'undefined') twarn ("statement not in obj index: " +st);
+  if (typeof this.subjectIndex[subj.hashString()] == 'undefined') tabulator.log.warn ("statement not in sbj index: "+st);
+  if (typeof this.predicateIndex[pred.hashString()] == 'undefined') tabulator.log.warn ("statement not in pred index: "+st);
+  if (typeof this.objectIndex[obj.hashString()] == 'undefined') tabulator.log.warn ("statement not in obj index: " +st);
 
   RDFArrayRemove(this.subjectIndex[subj.hashString()], st);
   RDFArrayRemove(this.predicateIndex[pred.hashString()], st);
@@ -423,7 +423,7 @@ RDFIndexedFormula.prototype.remove = function (st) {
 
 /** remove all statements matching args (within limit) **/
 RDFIndexedFormula.prototype.removeMany = function (subj, pred, obj, why, limit) {
-  fyi("entering removeMany w/ subj,pred,obj,why,limit = " + subj +", "+ pred+", " + obj+", " + why+", " + limit);
+  tabulator.log.debug("entering removeMany w/ subj,pred,obj,why,limit = " + subj +", "+ pred+", " + obj+", " + why+", " + limit);
   var statements = this.statementsMatching (subj, pred, obj, why, false);
   if (limit) statements = statements.slice(0, limit);
   for (var st in statements) this.remove(statements[st]);

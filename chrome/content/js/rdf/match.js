@@ -153,7 +153,7 @@ RDFFormula.prototype.the = function(s,p,o,w) {
     // the() should contain a check there is only one
     var x = this.any(s,p,o,w)
     if (typeof x == 'undefined')
-	terror("No value found for the(){" + s + " " + p + " " + o + "}.")
+	tabulator.log.error("No value found for the(){" + s + " " + p + " " + o + "}.")
     return x
 }
  

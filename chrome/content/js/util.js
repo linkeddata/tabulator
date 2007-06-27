@@ -7,15 +7,15 @@
  * it is global.
  */
 function filter(func, list) {
-    //tdebug("entered filter with list length=" + list.length);
+    //tabulator.log.debug("entered filter with list length=" + list.length);
     var output = [];
     for (var elt in list) {
-	//tdebug("elt=" + list[elt] + ", true? " + func(list[elt]));
+	//tabulator.log.debug("elt=" + list[elt] + ", true? " + func(list[elt]));
 	if (func(list[elt])) {
 	    output.push(list[elt]);
 	}
     } //construct output
-    //tdebug("exiting filter with list length=" + output.length);
+    //tabulator.log.debug("exiting filter with list length=" + output.length);
     return output;
 }
 
@@ -24,7 +24,7 @@ function filter(func, list) {
  * is global.
  */
 function map(func, list) {
-    //tdebug("entered map with list=" + list.join(", "));
+    //tabulator.log.debug("entered map with list=" + list.join(", "));
     var output = [];
     for (var i in list)  //works on assoc? i hope so
 	output[i] = func(list[i]);
@@ -84,7 +84,7 @@ Util = {
 		var replaceCallbacks = []
 		var len = obj.callbacks[hook].length
 		for (var x=len-1; x>=0; x--) {
-//		    tinfo('@@ Firing '+hook+' callback '+ obj.callbacks[hook][x])
+//		    tabulator.log.info('@@ Firing '+hook+' callback '+ obj.callbacks[hook][x])
 		    if (obj.callbacks[hook][x].apply(obj,args)) {
 			newCallbacks.push(obj.callbacks[hook][x])
 		    }
@@ -173,13 +173,13 @@ Util = {
 //================================================
 function findLabelSubProperties() {
     var i,n
-    tdebug("rdfs:label subproperties:");
+    tabulator.log.debug("rdfs:label subproperties:");
     var labelPredicates = kb.each(undefined, RDFS('subPropertyOf'), RDFS('label'));
     for (i=0, n=labelPredicates.length; i<n; i++) {
 	if (labelPriority[labelPredicates[i].uri] == null) {
 	    labelPriority[labelPredicates[i].uri] = 1
 	}
-	tdebug("rdfs:label subproperty "+ labelPredicates[i]);
+	tabulator.log.debug("rdfs:label subproperty "+ labelPredicates[i]);
 	
     }
 }
@@ -282,9 +282,9 @@ function acall(expr) {
 
 function myFetcher(x, requestedBy) {
     if (x == null) {
-        fyi("@@ SHOULD SYNC NOW") // what does this mean?
+        tabulator.log.debug("@@ SHOULD SYNC NOW") // what does this mean?
     } else {
-        fyi("Fetcher: "+x)
+        tabulator.log.debug("Fetcher: "+x)
         AJAR_handleNewTerm(kb, x, requestedBy)
     }
 }
@@ -324,7 +324,7 @@ function matrixTD(obj, asImage, doc) {
 	    else if (e.srcElement) target = e.srcElement
 	    if (target.nodeType == 3) // defeat Safari bug [sic]
             target = target.parentNode
-	    fyi("Click on: " + target.tagName)
+	    tabulator.log.debug("Click on: " + target.tagName)
 	    return target
 	}
 	
@@ -333,7 +333,7 @@ function matrixTD(obj, asImage, doc) {
 	function getAboutLevel(target) {
 	    var level
 	    for (level = target; level; level = level.parentNode) {
-	    fyi("Level "+level)
+	    tabulator.log.debug("Level "+level)
 	    var aa = level.getAttribute('about')
 	    if (aa) return level
 	    }
@@ -343,7 +343,7 @@ function matrixTD(obj, asImage, doc) {
 	function ancestor(target, tagName) {
 	    var level
 	    for (level = target; level; level = level.parentNode) {
-		fyi("looking for "+tagName+" Level: "+level+" "+level.tagName)
+		tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
 		if (level.tagName == tagName) return level;
 	    }
 	    return undefined
@@ -352,7 +352,7 @@ function matrixTD(obj, asImage, doc) {
 	function getAbout(kb, target) {
 	    var level, aa
 	    for (level=target; level && (level.nodeType==1); level=level.parentNode) {
-	        fyi("Level "+level + ' '+level.nodeType)
+	        tabulator.log.debug("Level "+level + ' '+level.nodeType)
 	        aa = level.getAttribute('about')
 	        if (aa) 
 		        return kb.fromNT(aa)

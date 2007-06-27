@@ -34,22 +34,22 @@ function onreadystateloaded (subject,callback) {
 		return function () {
 			//alert(xhr.readyState);
 			if (xhr.readyState != 4) {
-				tdebug("entering remoteQuery, readyState=" + xhr.readyState + ", uri=" + uri);
+				tabulator.log.debug("entering remoteQuery, readyState=" + xhr.readyState + ", uri=" + uri);
 				return false; //state 4 = complete
     		}
-    		tdebug( "remoteQuery, request=" + xhr + ", uri=" + uri);
+    		tabulator.log.debug( "remoteQuery, request=" + xhr + ", uri=" + uri);
     		var statuscode;
     		try  { 
       			statuscode = xhr.status;
     		} catch (e) {
-        		terror ("couldn't get request.status: e=" + e);
+        		tabulator.log.error ("couldn't get request.status: e=" + e);
         		statuscode = -1; //failure
     		} //try-catch
     		//alert("Status: "+statuscode)
     		//alert(uri_docpart(subject.uri)+"@"+uri.slice(0,uri.indexOf('?')))
     		//sources_update_html(uri_docpart(subject.uri)+"@"+uri.slice(0,uri.indexOf('?')), statuscode);
     		if (statuscode != 200){
-    			twarn ("Status code from "+uri+" was "+statuscode+".");
+    			tabulator.log.warn ("Status code from "+uri+" was "+statuscode+".");
     			sources.status[externalSource(subject,uri)].state = 'failed';
     			refreshButtons(uri_docpart(subject.uri), icon_failed);
     			sources_update_html(subject.uri,statuscode,uri)
@@ -110,10 +110,10 @@ RDFIndexedFormula.prototype.accessRemoteStore = function(SPARQL, externalURI, on
 	s=s.replace(/\+\++/g,"+"); //okay??? Not necessary really
 	var uri = base+"?query="+s
 	//alert(uri)
-	tdebug("SPARQL external database uri: "+uri)
+	tabulator.log.debug("SPARQL external database uri: "+uri)
 	netscape.security.PrivilegeManager.enablePrivilege("UniversalBrowserRead");  
 	netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");           
-	tinfo("Got UniversalBrowserRead");
+	tabulator.log.info("Got UniversalBrowserRead");
 	var xhr = XMLHTTPFactory();
 	xhr.onreadystatechange = onreadystatechange(xhr,uri);
 	xhr.open('GET', uri, true);

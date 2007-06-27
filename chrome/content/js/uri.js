@@ -16,7 +16,7 @@ if (typeof Util == "undefined") { Util = {}}
 if (typeof Util.uri == "undefined") { Util.uri = {}}
 
 Util.uri.join = function (given, base) {
-    // if (typeof fyi != 'undefined') fyi("   URI given="+given+" base="+base)
+    // if (typeof tabulator.log.debug != 'undefined') tabulator.log.debug("   URI given="+given+" base="+base)
     var baseHash = base.indexOf('#')
     if (baseHash > 0) base = base.slice(0, baseHash)
     if (given.length==0) return base // before chopping its filename off

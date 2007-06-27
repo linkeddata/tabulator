@@ -43,13 +43,13 @@ function Outline(doc) {
             sel = selection[i]
            	tr = sel.parentNode
            	st = tr.AJAR_statement
-           	tdebug("Statement "+st)
+           	tabulator.log.debug("Statement "+st)
            	if (sel.getAttribute('class').indexOf('pred') >= 0) {
-               	tinfo("   We have a predicate")
+               	tabulator.log.info("   We have a predicate")
                	makeQueryRow(q,tr)
            	}
            	if (sel.getAttribute('class').indexOf('obj') >=0) {
-           		tinfo("   We have an object")
+           		tabulator.log.info("   We have an object")
            		makeQueryRow(q,tr,true)
            	}
         }   
@@ -60,7 +60,7 @@ function Outline(doc) {
     		for (i=0; i<n; i++) {
     	    	pattern = pat.statements[i];
     	    	tr = pattern.tr;
-    	   	 	//tdebug("tr: " + tr.AJAR_statement);
+    	   	 	//tabulator.log.debug("tr: " + tr.AJAR_statement);
     	    	if (typeof tr!='undefined')
     	    	{
     	    		tr.AJAR_pattern = null; //TODO: is this == to whats in current version?
@@ -79,11 +79,11 @@ function Outline(doc) {
     function benchmark(f) {
         var args = [];
         for (var i = arguments.length-1; i > 0; i--) args[i-1] = arguments[i];
-        //tdebug("BENCHMARK: args=" + args.join());
+        //tabulator.log.debug("BENCHMARK: args=" + args.join());
         var begin = new Date().getTime();
         var return_value = f.apply(f, args);
         var end = new Date().getTime();
-        tinfo("BENCHMARK: kb delta: " + (kb.statements.length - benchmark.lastkbsize) 
+        tabulator.log.info("BENCHMARK: kb delta: " + (kb.statements.length - benchmark.lastkbsize) 
                 + ", time elapsed for " + f + " was " + (end-begin) + "ms");
         benchmark.lastkbsize = kb.statements.length;
         return return_value;
@@ -101,11 +101,11 @@ function Outline(doc) {
 	    return image
 	}
 	this.appendAccessIcon = function(node, term) {
-	    if (typeof term.termType == 'undefined') log.error("??"+ term);
+	    if (typeof term.termType == 'undefined') tabulator.log.error("??"+ term);
 	    if (term.termType != 'symbol') return '';
 	    var state = sf.getState(term);
 	    var icon, alt, info;
-	//    fyi("State of " + doc + ": " + state)
+	//    tabulator.log.debug("State of " + doc + ": " + state)
 	    switch (state) {
 	        case 'unrequested': 
 	            icon = Icon.src.icon_unrequested;
@@ -132,7 +132,7 @@ function Outline(doc) {
 	            alt = 'cannot fetch';
 	        break;
 	        default:
-	            log.error("?? state = " + state);
+	            tabulator.log.error("?? state = " + state);
 	        break;
 	    } //switch
 	    var img = AJARImage(icon, alt, 
@@ -223,7 +223,7 @@ function Outline(doc) {
 	    return tr;
 	} //expandedHeaderTR
     function propertyTable(subject, table, details) {
-	    fyi("Property table for: "+ subject)
+	    tabulator.log.debug("Property table for: "+ subject)
 	    subject = kb.canon(subject)
 	    
 	    if (!table) { // Create a new property table
@@ -294,7 +294,7 @@ function Outline(doc) {
 	
 	///////////// Property list	
 	function appendPropertyTRs(parent, plist, inverse, details) {
-	    fyi("Property list length = " + plist.length)
+	    tabulator.log.debug("Property list length = " + plist.length)
 	    if (plist.length == 0) return "";
 	    var sel
 	    if (inverse) {
@@ -595,18 +595,18 @@ function Outline(doc) {
 	        sel = selection[i]
 	       	tr = sel.parentNode
 	       	st = tr.AJAR_statement
-	       	tdebug("Statement "+st)
+	       	tabulator.log.debug("Statement "+st)
 	       	if (sel.getAttribute('class').indexOf('pred') >= 0) {
-	           	tinfo("   We have a predicate")
+	           	tabulator.log.info("   We have a predicate")
 	           	patternFromTR(tr) //defined in tabulate.js, currently..
 	       	}
 	       	if (sel.getAttribute('class').indexOf('obj') >=0) {
-	       		tinfo("   We have an object")
+	       		tabulator.log.info("   We have an object")
 	       		patternFromTR(tr,true)
 	       	}
 	    }
-	    fyi("Vars now: "+myQuery.vars)
-	    tinfo("Query pattern now:\n"+myQuery.pat+"\n")
+	    tabulator.log.debug("Vars now: "+myQuery.vars)
+	    tabulator.log.info("Query pattern now:\n"+myQuery.pat+"\n")
 	}
 
 	/** add a row to global myQuery using tr **/
@@ -625,7 +625,7 @@ function Outline(doc) {
 	    var st = tr.AJAR_statement; 
 	    for (level=tr.parentNode; level; level=level.parentNode) {
 	        if (typeof level.AJAR_statement != 'undefined') {
-	            fyi("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
+	            tabulator.log.debug("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
 	            /*for(c=0;c<level.parentNode.childNodes.length;c++) //This makes sure the same variable is used for a subject
 	            	if(level.parentNode.childNodes[c].AJAR_variable)
 	            		level.AJAR_variable = level.parentNode.childNodes[c].AJAR_variable;*/
@@ -644,13 +644,13 @@ function Outline(doc) {
 	    	hasParent=false;
 	    	parentVar = inverse? st.object : st.subject; //if there is no parents, uses the sub/obj
 		}
-		tdebug('Initial variable: '+tr.AJAR_variable)
+		tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
 		v = tr.AJAR_variable? tr.AJAR_variable : kb.variable(newVariableName());
 	    myQuery.vars.push(v)
 	    v.label = hasParent? parentVar.label : label(parentVar);
 	    alert('Susepct this code is  not used')
 	    v.label += " "+ predicateLabelForXML(st.predicate, inverse);
-	    twarn('@@ temp2: v.label='+v.label)
+	    tabulator.log.warn('@@ temp2: v.label='+v.label)
 	    pattern = makeRDFStatement(v,parentVar);
 	    //alert(pattern);
 	    v.label = v.label.slice(0,1).toUpperCase() + v.label.slice(1)// init cap
@@ -658,12 +658,12 @@ function Outline(doc) {
 	    if (constraint)   //binds the constrained variable to its selected value
 	    	myQuery.pat.initBindings[v]=constraintVar;
 	    	
-	    tinfo('Pattern: '+pattern);
+	    tabulator.log.info('Pattern: '+pattern);
 	    pattern.tr = tr
 	    tr.AJAR_pattern = pattern    // Cross-link UI and query line
 	    tr.AJAR_variable = v;
-	    tdebug('Final variable: '+tr.AJAR_variable)
-	    fyi("Query pattern: "+pattern)
+	    tabulator.log.debug('Final variable: '+tr.AJAR_variable)
+	    tabulator.log.debug("Query pattern: "+pattern)
 	    myQuery.pat.statements.push(pattern)
 	    return v
 	} //patternFromTR
@@ -675,7 +675,7 @@ function Outline(doc) {
 	    	for (i=0; i<n; i++) {
 	        	pattern = pat.statements[i];
 	        	tr = pattern.tr;
-	       	 	//tdebug("tr: " + tr.AJAR_statement);
+	       	 	//tabulator.log.debug("tr: " + tr.AJAR_statement);
 	        	if (typeof tr!='undefined')
 	        	{
 	        		delete tr.AJAR_pattern;
@@ -702,7 +702,7 @@ function Outline(doc) {
 	  * @param matrixTableCB - function pointer **/
 	function matrixTable(q, matrixTableCB) {
 	    function onBinding(bindings) { //Creates a row of the table and sticks all the columns in it
-	        tinfo("making a row w/ bindings " + bindings);
+	        tabulator.log.info("making a row w/ bindings " + bindings);
 	        var i, tr, td
 	        tr = myDocument.createElement('tr')
 	        t.appendChild(tr)
@@ -722,7 +722,7 @@ function Outline(doc) {
 	    emptyNode(div).appendChild(t) // See results as we go
 	    for (i=0; i<nv; i++) {
 	    	v = q.vars[i]
-	  	fyi("table header cell for " + v + ': '+v.label)
+	  	tabulator.log.debug("table header cell for " + v + ': '+v.label)
 	    	th = myDocument.createElement('th')
 	    	
 	    	th.appendChild(myDocument.createTextNode(v.label))
@@ -747,7 +747,7 @@ function Outline(doc) {
 	            v = q.vars[i]
 	            td = myDocument.createElement('td')
 	            what = bindings[v]
-	        //      fyi("    table cell "+v+": "+what + " type="+what.termType)
+	        //      tabulator.log.debug("    table cell "+v+": "+what + " type="+what.termType)
 	            tr.appendChild(matrixTD(what))
 	            }
 	        }
@@ -757,7 +757,7 @@ function Outline(doc) {
 	
 	function addButtonCallbacks(target, term) {
 	    var fireOn = Util.uri.docpart(term.uri)
-	    log.debug("Button callbacks for " + fireOn + " added")
+	    tabulator.log.debug("Button callbacks for " + fireOn + " added")
 	    var makeIconCallback = function (icon) {
 		return function (req) {
 		    if (req.indexOf('#') >= 0) alert('Should have no hash in '+req)
@@ -824,23 +824,23 @@ function Outline(doc) {
 		    if (cla.indexOf('pred') >= 0)
 		        HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
 		    selection.push(node)
-		    fyi("Selecting "+node)
+		    tabulator.log.debug("Selecting "+node)
 		    var source
 		    try{node.parentNode.AJAR_statement}catch(e){alert(node.textContent)}
 		    if (node.AJAR_statement) source = node.AJAR_statement.why
 		    else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
-		    tinfo('Source to highlight: '+source);
+		    tabulator.log.info('Source to highlight: '+source);
 		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
 	    } else {
-		    fyi("cla=$"+cla+"$")
+		    tabulator.log.debug("cla=$"+cla+"$")
 		    if (cla=='selected') cla=''; // for header <TD>
 		    cla = cla.replace(' selected','')
 		    if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
 		    if (cla.indexOf('pred') >=0)
 		        HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
 		    RDFArrayRemove(selection, node)
-		    fyi("Deselecting "+node)
-		    fyi("cla=$"+cla+"$")
+		    tabulator.log.debug("Deselecting "+node)
+		    tabulator.log.debug("cla=$"+cla+"$")
 		    if (node.AJAR_statement) source=node.AJAR_statement.why
 		    else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why
 		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false)
@@ -871,7 +871,7 @@ function Outline(doc) {
 	this.TabulatorDoubleClick =function(event) {
 	    var target = getTarget(event);
 	    var tname = target.tagName;
-	    fyi("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
+	    tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
 	    var aa = getAbout(kb, target);
 	    if (!aa) return;
 		this.GotoSubject(aa,true);
@@ -936,7 +936,7 @@ function Outline(doc) {
 	    else if (e.srcElement) 
 	    target = e.srcElement
 	    else {
-	        terror("can't get target for event " + e);
+	        tabulator.log.error("can't get target for event " + e);
 	        return false;
 	    } //fail
 	    if (target.nodeType == 3) // defeat Safari bug [sic]
@@ -1110,7 +1110,7 @@ function Outline(doc) {
 	    var target = thisOutline.targetOf(e);
 	    if (!target) return;
 	    var tname = target.tagName;
-	    //fyi("TabulatorMousedown: " + tname + " shift="+e.shiftKey+" alt="+e.altKey+" ctrl="+e.ctrlKey);
+	    //tabulator.log.debug("TabulatorMousedown: " + tname + " shift="+e.shiftKey+" alt="+e.altKey+" ctrl="+e.ctrlKey);
 	    var p = target.parentNode;
 	    var about = getAbout(kb, target)
 	    var source = null;
@@ -1132,7 +1132,7 @@ function Outline(doc) {
 	        if (!node) return;
 	        var sel = selected(node);
 	        var cla = node.getAttribute('class')
-	        fyi("Was node selected before: "+sel)
+	        tabulator.log.debug("Was node selected before: "+sel)
 	        if (e.altKey) {
 	            setSelected(node, !selected(node))
 	        } else if  (e.shiftKey) {
@@ -1151,12 +1151,12 @@ function Outline(doc) {
 	            HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
 	            
 	        }
-	        fyi("Was node selected after: "+selected(node)
+	        tabulator.log.debug("Was node selected after: "+selected(node)
 	            +", count="+selection.length)
 		    var tr = node.parentNode;
 		    if (tr.AJAR_statement) {
 		        var why = tr.AJAR_statement.why
-		        tinfo("Information from "+why);
+		        tabulator.log.info("Information from "+why);
 		    }
 		
 	    } else { // IMG
@@ -1165,13 +1165,13 @@ function Outline(doc) {
 	        var i = tsrc.indexOf('/icons/')
           //TODO: This check could definitely be made cleaner.
 	        if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
-	        fyi("\nEvent: You clicked on an image, src=" + tsrc)
+	        tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
 	        if (!about) {
 	            alert("No about attribute");
 	            return;
 	        }
 	        var subject = about;
-	        fyi("TabulatorMousedown: subject=" + subject);
+	        tabulator.log.debug("TabulatorMousedown: subject=" + subject);
 	        
 	        switch (tsrc) {
 		case Icon.src.icon_expand:
@@ -1235,7 +1235,7 @@ function Outline(doc) {
 		if (!p || !p.parentNode || !p.parentNode.parentNode) return false
 	
 		var newTable
-		log.info('@@ REPAINTING ')
+		tabulator.log.info('@@ REPAINTING ')
 		if (!already) { // first expand
 		    newTable = propertyTable(subject, undefined, details)
 		} else {
@@ -1253,13 +1253,13 @@ function Outline(doc) {
 		}
 		emptyNode(p).appendChild(newTable)
 		thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
-		log.debug("expand: Node for " + subject + " expanded")	    
+		tabulator.log.debug("expand: Node for " + subject + " expanded")	    
 	    } 
 	
 	
 	    function expand(uri)  {
 		var cursubj = kb.canon(subject)  // canonical identifier may have changed
-		    log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
+		    tabulator.log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
 	        var term = kb.sym(uri)
 		var docTerm = kb.sym(Util.uri.docpart(uri))
 		if (uri.indexOf('#') >= 0) 
@@ -1272,7 +1272,7 @@ function Outline(doc) {
 		    if (!as) return false;
 		    for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
 			for (var rd = Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
-	//		    log.info('@@@@@ cursubj='+cursubj+', rd='+rd)
+	//		    tabulator.log.info('@@@@@ cursubj='+cursubj+', rd='+rd)
 			    if (uri == rd) return true;
 			}
 		    }
@@ -1284,7 +1284,7 @@ function Outline(doc) {
 		    return false;
 		}
 		if (relevant()) {
-		    log.success('@@ expand OK: relevant subject='+cursubj+', uri='+uri+', source='+
+		    tabulator.log.success('@@ expand OK: relevant subject='+cursubj+', uri='+uri+', source='+
 			already)
 			
 		    render()
@@ -1292,7 +1292,7 @@ function Outline(doc) {
 		return true
 	    }
 	
-	    log.debug("outline_expand: dereferencing "+subject)
+	    tabulator.log.debug("outline_expand: dereferencing "+subject)
 	    var status = myDocument.createElement("span")
 	    p.appendChild(status)
 	    sf.addCallback('done', expand)
@@ -1349,13 +1349,13 @@ function Outline(doc) {
 	    	    if (elt===row)
 			setSelected(selection[x],false)
 	    			
-	    fyi("Collapsing subject "+subject);
+	    tabulator.log.debug("Collapsing subject "+subject);
 	    var myview;
 	    if (statement) {
-	        log.debug("looking up pred " + statement.predicate.uri + "in defaults");
+	        tabulator.log.debug("looking up pred " + statement.predicate.uri + "in defaults");
 	        myview = views.defaults[statement.predicate.uri];
 	    }
-	    log.debug("view= " + myview);
+	    tabulator.log.debug("view= " + myview);
 	    if (level.parentNode.parentNode.id == 'outline') {
 		var deleteNode = level.parentNode
 	    }
@@ -1365,7 +1365,7 @@ function Outline(doc) {
 	function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
 	    var outer = null
 	    for (var level=p.parentNode; level; level=level.parentNode) {
-	        fyi("level "+ level.tagName)
+	        tabulator.log.debug("level "+ level.tagName)
 	        if (level.tagName == "TD") outer = level
 	    } //find outermost td
 	    emptyNode(outer).appendChild(propertyTable(subject));
@@ -1461,7 +1461,7 @@ views_addPropertyView(foaf('birthday').uri, VIEWAS_cal, true);
 var thisOutline=this;
 /** some builtin simple views **/
 function VIEWAS_boring_default(obj) {
-    //log.debug("entered VIEWAS_boring_default...");
+    //tabulator.log.debug("entered VIEWAS_boring_default...");
     var rep; //representation in html
 
     if (obj.termType == 'literal')
@@ -1508,10 +1508,10 @@ function VIEWAS_boring_default(obj) {
 	    row.appendChild(thisOutline.outline_objectTD(elt));
 	}
     } else {
-        log.error("unknown term type: " + obj.termType);
+        tabulator.log.error("unknown term type: " + obj.termType);
         rep = myDocument.createTextNode("[unknownTermType:" + obj.termType +"]");
     } //boring defaults.
-    log.debug("contents: "+rep.innerHTML);
+    tabulator.log.debug("contents: "+rep.innerHTML);
     return rep;
 }  //boring_default!
 function VIEWAS_image(obj) {

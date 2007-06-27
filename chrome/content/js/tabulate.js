@@ -2,13 +2,14 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3251 2007-06-27 09:07:39Z kennyluck $
+// SVN ID: $Id: tabulate.js 3252 2007-06-27 16:44:48Z jambo $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
 
 LanguagePreference = "en"    // @@ How to set this from the browser? From cookie?
 
+//var tabulator = {}; //This should eventually wrap all global vars.
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing
 var sf = new SourceFetcher(kb) // This handles resource retrieval
 var outline;
@@ -22,7 +23,7 @@ kb.register('owl', "http://www.w3.org/2002/07/owl#")
 
 
 function AJAR_handleNewTerm(kb, p, requestedBy) {
-    //tdebug("entering AJAR_handleNewTerm w/ kb, p=" + p + ", requestedBy=" + requestedBy);
+    //tabulator.log.debug("entering AJAR_handleNewTerm w/ kb, p=" + p + ", requestedBy=" + requestedBy);
     if (p.termType != 'symbol') return;
     var docuri = Util.uri.docpart(p.uri);
     var fixuri;
@@ -41,7 +42,7 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
         } else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
             fixuri = "http://xmlns.com/wot/0.1/index.rdf";
         } else if (string_startswith(p.uri, 'http://web.resource.org/cc/')) {
-//            twarn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
+//            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
             fixuri = "http://web.resource.org/cc/schema.rdf";
         }
     }
@@ -51,7 +52,7 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
     if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
     
     if (fixuri) {   // only give warning once: else happens too often
-        twarn("Assuming server still broken, faking redirect of <" + p.uri +
+        tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
 	    "> to <" + docuri + ">")	
     }
     sf.requestURI(docuri, requestedBy);
@@ -358,7 +359,7 @@ views_addPropertyView(foaf('birthday').uri, VIEWAS_cal, true);
 
 /** some builtin simple views **/
 function VIEWAS_boring_default(obj) {
-    //log.debug("entered VIEWAS_boring_default...");
+    //tabulator.log.debug("entered VIEWAS_boring_default...");
     var rep; //representation in html
 
     if (obj.termType == 'literal')
@@ -405,10 +406,10 @@ function VIEWAS_boring_default(obj) {
 	    row.appendChild(outline_objectTD(elt));
 	}
     } else {
-        log.error("unknown term type: " + obj.termType);
+        tabulator.log.error("unknown term type: " + obj.termType);
         rep = document.createTextNode("[unknownTermType:" + obj.termType +"]");
     } //boring defaults.
-    log.debug("contents: "+rep.innerHTML);
+    tabulator.log.debug("contents: "+rep.innerHTML);
     return rep;
 }  //boring_default!
 function VIEWAS_image(obj) {
@@ -572,10 +573,10 @@ function addLoadEvent(func) {
 } //addLoadEvent
 
 function test() {
-    tmsg("DEPENDENCIES: ");
-    for (var d in sources.depends) tmsg("d=" + d + ", sources.depends[d]=" + sources.depends[d]);
-    tmsg("CALLBACKS: ");
-    for (var c in sources.callbacks) tmsg("c=" + c + ", sources.callbacks[c]=" + sources.callbacks[c]);
+    tabulator.log.msg("DEPENDENCIES: ");
+    for (var d in sources.depends) tabulator.log.msg("d=" + d + ", sources.depends[d]=" + sources.depends[d]);
+    tabulator.log.msg("CALLBACKS: ");
+    for (var c in sources.callbacks) tabulator.log.msg("c=" + c + ", sources.callbacks[c]=" + sources.callbacks[c]);
 } //test
 //end;
 

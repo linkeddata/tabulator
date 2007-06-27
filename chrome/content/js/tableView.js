@@ -22,7 +22,7 @@ function tableView(container,doc) {
     this.drawQuery = function (q) {
         this.onBinding = function (bindings) {
             var i, tr, td;
-            tinfo("making a row w/ bindings " + bindings);
+            tabulator.log.info("making a row w/ bindings " + bindings);
             tr = this.document.createElement('tr');
             t.appendChild(tr);
             for (i=0; i<nv; i++) {
@@ -47,7 +47,7 @@ function tableView(container,doc) {
             //alert(q);
             //alert(v);
             //alert(v.label);
-            //fyi("table header cell for " + v + ': '+v.label)
+            //tabulator.log.debug("table header cell for " + v + ': '+v.label)
             th = this.document.createElement('th');
             th.appendChild(this.document.createTextNode(v.label));
             tr.appendChild(th);
@@ -143,7 +143,7 @@ function tableView(container,doc) {
 function tableDoubleClick(event) {
     var target = getTarget(event)
     var tname = target.tagName
-    fyi("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName)
+    tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName)
     var aa = getAbout(kb, target)
     if (!aa) return;
     GotoSubject(aa);

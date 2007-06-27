@@ -68,7 +68,7 @@ function mapView(container) {
         var markerIcon = new GIcon(G_DEFAULT_ICON,'icons/markers/'+q.id%10+'.png');
         this.onBinding = function (bindings) {
             //Handles bindings returned with a callback for the query.
-            tinfo("making a marker w/ bindings " + bindings);
+            tabulator.log.info("making a marker w/ bindings " + bindings);
             var nv = q.vars.length;
             var info, t, marker, point, lat, lng, i; //info holds the info bubble's DOM node
             //var tabs = [], useImage=false; //These vars control tabbing info windows.
@@ -115,7 +115,7 @@ function mapView(container) {
                                 }
                             }); break;
                         default:
-                            terror("Error in onBinding for MapView: findGeoType returned unknown type: "+geoType);
+                            tabulator.log.error("Error in onBinding for MapView: findGeoType returned unknown type: "+geoType);
                             break;
                     }
                 }

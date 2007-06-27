@@ -232,7 +232,7 @@ function queryHasTimeData(q){
 function CalendarDoubleClick(event){
     var target = getTarget(event);
     var tname = target.tagName;
-    fyi("CalendarDoubleClick: " + tname + " in "+target.parentNode.tagName);
+    tabulator.log.debug("CalendarDoubleClick: " + tname + " in "+target.parentNode.tagName);
     var aa = getAbout(kb, target);
     if (!aa) return;
     GotoSubject(aa);
@@ -441,7 +441,7 @@ makeTimeViewOnBindingFn = function(q, eventFunction, colorCellCss){
 
 	function readSt(){
 	    // helper function            
-	    tinfo("making a calendar w/ bindings " + bindings);
+	    tabulator.log.info("making a calendar w/ bindings " + bindings);
         
 	    function contains(str, array){
 		for (i = 0; i<array.length; i++){

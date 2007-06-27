@@ -12,7 +12,7 @@ RDFTracking = 0  // Are we requiring reasons for statements?
 
 //takes in an object and makes it an object if it's a literal
 function makeTerm(val) {
-    //  fyi("Making term from " + val)
+    //  tabulator.log.debug("Making term from " + val)
     if (typeof val == 'object') return val;
     if (typeof val == 'string') return new RDFLiteral(val);
     if (typeof val == 'undefined') return undefined;
@@ -152,7 +152,7 @@ function RDFStatement(subject, predicate, object, why) {
     if (typeof why !='undefined') {
 	this.why = why
     } else if (RDFTracking) {
-	fyi("WARNING: No reason on "+subject+" "+predicate+" "+object)
+	tabulator.log.debug("WARNING: No reason on "+subject+" "+predicate+" "+object)
     }
     return this
 }

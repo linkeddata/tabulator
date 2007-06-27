@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3250 2007-06-26 20:29:08Z kennyluck $
+ * SVN ID: $Id: sources.js 3252 2007-06-27 16:44:48Z jambo $
  *
  ************************************************************/
 
@@ -74,7 +74,7 @@ function SourceFetcher(store, timeout, async) {
 		if (title.length > 0) {
 		    kb.add(xhr.uri,kb.sym('dc','title'),
 			   kb.literal(title[0].textContent),xhr.uri)
-		    log.info("Inferring title of "+xhr.uri)
+		    tabulator.log.info("Inferring title of "+xhr.uri)
 		}
 
 		// link rel
@@ -89,7 +89,7 @@ function SourceFetcher(store, timeout, async) {
 					      xhr.uri.uri))
 			kb.add(xhr.uri,kb.sym('rdfs','seeAlso'),uri,
 			       xhr.uri)
-			log.info("Loading "+uri+" from link rel in "+xhr.uri)
+			tabulator.log.info("Loading "+uri+" from link rel in "+xhr.uri)
 		    }
 		}
 
@@ -98,7 +98,7 @@ function SourceFetcher(store, timeout, async) {
 		if (head) {
 		    var profile = head.getAttribute('profile');
 		    if (profile && Util.uri.protocol(profile)=='http') {
-			log.info("GRDDL: Using generic "
+			tabulator.log.info("GRDDL: Using generic "
 				 + "2003/11/rdf-in-xhtml-processor.");
 			sf.requestURI('http://www.w3.org/2005/08/'
 					  + 'online_xslt/xslt?'
@@ -109,7 +109,7 @@ function SourceFetcher(store, timeout, async) {
 					  + escape(xhr.uri.uri),
 				   xhr.uri)
 		    } else {
-			log.info("GRDDL: No GRDDL profile in "+xhr.uri)
+			tabulator.log.info("GRDDL: No GRDDL profile in "+xhr.uri)
 		    }
 		}
 
@@ -140,7 +140,7 @@ function SourceFetcher(store, timeout, async) {
 			// We've found the first element, it's the root
 			if (dom.childNodes[c].namespaceURI
 			    == kb.namespaces['rdf']) {
-			    log.info(xhr.uri + " seems to have a root element"
+			    tabulator.log.info(xhr.uri + " seems to have a root element"
 				     + " in the RDF namespace. We'll assume "
 				     + "it's RDF/XML.")
 			    sf.switchHandler(SourceFetcher.RDFXMLHandler,
@@ -156,11 +156,11 @@ function SourceFetcher(store, timeout, async) {
 		
 		// Maybe it has an XHTML DOCTYPE?
                 if (dom.doctype) {
-		    log.info("We found a DOCTYPE in "+xhr.uri)
+		    tabulator.log.info("We found a DOCTYPE in "+xhr.uri)
 		    if (dom.doctype.name == 'html'
 			&& dom.doctype.publicId.match(/^-\/\/W3C\/\/DTD XHTML/)
 			&& dom.doctype.systemId.match(/http:\/\/www.w3.org\/TR\/xhtml/)) {
-			log.info(xhr.uri + " has XHTML DOCTYPE. Switching to "
+			tabulator.log.info(xhr.uri + " has XHTML DOCTYPE. Switching to "
 				 + "XHTML Handler.")
 			sf.switchHandler(SourceFetcher.XHTMLHandler, xhr, cb)
 			return
@@ -173,7 +173,7 @@ function SourceFetcher(store, timeout, async) {
 		    var xmlns = html.getAttribute('xmlns')
 		    if (xmlns
 			&& xmlns.match(/^http:\/\/www.w3.org\/1999\/xhtml/)) {
-			log.info(xhr.uri + " has a default namespace for "
+			tabulator.log.info(xhr.uri + " has a default namespace for "
 				 + "XHTML. Switching to XHTMLHandler.")
 			sf.switchHandler(SourceFetcher.XHTMLHandler, xhr, cb)
 			return
@@ -199,10 +199,10 @@ function SourceFetcher(store, timeout, async) {
 	    xhr.handle = function (cb) {
 		var rt = xhr.responseText
 		// We only handle XHTML so we have to figure out if this is XML
-		log.info("Sniffing HTML "+xhr.uri+" for XHTML.");
+		tabulator.log.info("Sniffing HTML "+xhr.uri+" for XHTML.");
 
 		if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-		    log.info(xhr.uri + " has an XML declaration. We'll assume "
+		    tabulator.log.info(xhr.uri + " has an XML declaration. We'll assume "
 			     + "it's XHTML as the content-type was text/html.")
 		    sf.switchHandler(SourceFetcher.XHTMLHandler, xhr, cb)
 		    return
@@ -211,7 +211,7 @@ function SourceFetcher(store, timeout, async) {
 		// DOCTYPE
 		// There is probably a smarter way to do this
 		if (rt.match(/.*<!DOCTYPE\s+html[^<]+-\/\/W3C\/\/DTD XHTML[^<]+http:\/\/www.w3.org\/TR\/xhtml[^<]+>/)) {
-		    log.info(xhr.uri + " has XHTML DOCTYPE. Switching to XHTML"
+		    tabulator.log.info(xhr.uri + " has XHTML DOCTYPE. Switching to XHTML"
 			     + "Handler.")
 		    sf.switchHandler(SourceFetcher.XHTMLHandler, xhr, cb)
 		    return
@@ -219,7 +219,7 @@ function SourceFetcher(store, timeout, async) {
 
 		// xmlns
 		if (rt.match(/[^(<html)]*<html\s+[^<]*xmlns=['"]http:\/\/www.w3.org\/1999\/xhtml["'][^<]*>/)) {
-		    log.info(xhr.uri + " has a default namespace for XHTML."
+		    tabulator.log.info(xhr.uri + " has a default namespace for XHTML."
 			     + " Switching to XHTMLHandler.")
 		    sf.switchHandler(SourceFetcher.XHTMLHandler, xhr, cb)
 		    return
@@ -247,7 +247,7 @@ function SourceFetcher(store, timeout, async) {
 
 		// Look for an XML declaration
 		if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-		    log.warn(xhr.uri + " has an XML declaration. We'll assume "
+		    tabulator.log.warn(xhr.uri + " has an XML declaration. We'll assume "
 			     + "it's XML but its content-type wasn't XML.")
 		    sf.switchHandler(SourceFetcher.XMLHandler, xhr, cb)
 		    return
@@ -255,7 +255,7 @@ function SourceFetcher(store, timeout, async) {
 		
 		// Look for an XML declaration
 		if (rt.slice(0,500).match(/xmlns:/)) {
-		    log.warn(xhr.uri + " may have an XML namespace. We'll assume "
+		    tabulator.log.warn(xhr.uri + " may have an XML namespace. We'll assume "
 			     + "it's XML but its content-type wasn't XML.")
 		    sf.switchHandler(SourceFetcher.XMLHandler, xhr, cb)
 		    return
@@ -263,7 +263,7 @@ function SourceFetcher(store, timeout, async) {
 		
 		// We give up
 		sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
-		log.warn(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n"
+		tabulator.log.warn(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n"
 			+ rt.slice(0,500))
 
 	    }
@@ -291,7 +291,7 @@ function SourceFetcher(store, timeout, async) {
 		} catch(e) {
 		    var msg = ("Error trying to parse " + xhr.uri
 			+ 'as Notation3:\n' + e)
-		    log.warn(msg)
+		    tabulator.log.warn(msg)
 		    sf.failFetch(xhr, msg)
 		}
 
@@ -361,7 +361,7 @@ function SourceFetcher(store, timeout, async) {
 
     this.doneFetch = function (xhr, args) {
 	this.addStatus(xhr,'done')
-	log.info("Done with parse, firing 'done' callbacks for "+xhr.uri)
+	tabulator.log.info("Done with parse, firing 'done' callbacks for "+xhr.uri)
 	this.fireCallbacks('done',args)
     }
 
@@ -468,7 +468,7 @@ function SourceFetcher(store, timeout, async) {
     **      rterm:  the resource which refered to this (for tracking bad links)
     */
     this.lookUpThing = function (term, rterm, force) {
-	log.debug("lookUpThing: looking up "+ term);
+	tabulator.log.debug("lookUpThing: looking up "+ term);
 	var uris = kb.uris(term) // Get all URIs
 	if (typeof uris != 'undefined') {
 	    for (var i=0; i< uris.length; i++) {
@@ -478,7 +478,7 @@ function SourceFetcher(store, timeout, async) {
 	}
 /*	var args = []
 	args.push(term.uri)
-	log.debug('Lookup: firing callbacks: '+args)
+	tabulator.log.debug('Lookup: firing callbacks: '+args)
 	this.fireCallbacks('done', args) ; /// @@@@@ only if count==0
 */
 	return uris.length
@@ -502,7 +502,7 @@ function SourceFetcher(store, timeout, async) {
 	var docuri = Util.uri.docpart(uri)
 	var docterm = kb.sym(docuri)
 
-	log.debug("requestURI: dereferencing "+ uri)
+	tabulator.log.debug("requestURI: dereferencing "+ uri)
 	this.fireCallbacks('request',args)
 	
 
@@ -510,13 +510,13 @@ function SourceFetcher(store, timeout, async) {
 	if (term.uri) { // we have a URI instead of a blank node
 	    var uri = kb.sym(Util.uri.docpart(term.uri))
 	} else {
-	    log.info(uri + " isn't a resource to fetch. Skipping.")
+	    tabulator.log.info(uri + " isn't a resource to fetch. Skipping.")
 	    this.fireCallbacks('done',args)
 	    return
 	}
 */
 	if (!force && typeof this.requested[docuri]!="undefined") {
-	    log.debug("We already have "+docuri+". Skipping.")
+	    tabulator.log.debug("We already have "+docuri+". Skipping.")
 	    this.fireCallbacks('done',args)
 	    return null
 	}
@@ -534,8 +534,8 @@ function SourceFetcher(store, timeout, async) {
 	    }
 	}
 
-	if (rterm) { tinfo('SF.request: ' + docuri +' refd by '+rterm.uri) }
-	else { tinfo('SF.request: '+ docuri+' no referring doc') };
+	if (rterm) { tabulator.log.info('SF.request: ' + docuri +' refd by '+rterm.uri) }
+	else { tabulator.log.info('SF.request: '+ docuri+' no referring doc') };
 
 	var status = kb.collection()
 	var xhr = Util.XMLHTTPFactory()
@@ -596,7 +596,7 @@ function SourceFetcher(store, timeout, async) {
 		    }
 
 		    if (Util.uri.protocol(xhr.uri.uri) == 'file') {
-			log.info("Assuming local file is some flavor of XML.")
+			tabulator.log.info("Assuming local file is some flavor of XML.")
 			xhr.headers['content-type'] = 'text/xml'
 		    }
 		    
@@ -607,7 +607,7 @@ function SourceFetcher(store, timeout, async) {
 			if (!force && udoc != xhr.uri.uri 
 			    && sf.requested[udoc]) {
 			    // should we smush too?
-			    log.info("HTTP headers indicate we have already"
+			    tabulator.log.info("HTTP headers indicate we have already"
 				     + " retrieved " + xhr.uri + " as "
 				     + udoc + ". Aborting.")
 			    sf.doneFetch(xhr,args)
@@ -661,7 +661,7 @@ function SourceFetcher(store, timeout, async) {
 	var here = '' + document.location
 	if (here.slice(0,17) == 'http://localhost/') {
 	    uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
-	    fyi("URI mapped to "+ uri2)
+	    tabulator.log.debug("URI mapped to "+ uri2)
 	}
 	
 
@@ -701,7 +701,7 @@ function SourceFetcher(store, timeout, async) {
 					var msg ='Warning: '+xhr.uri +
 					    ' has moved to <'+newC.URI.spec + '>. Link in '+
 					    rterm + 'should be changed';
-					log.warn(msg);
+					tabulator.log.warn(msg);
 					kb.add(xhr.req,
 					    kb.sym('http://www.w3.org/2006/link#warning'),
 					     msg, sf.appNode);	
@@ -737,7 +737,7 @@ function SourceFetcher(store, timeout, async) {
 		    }
 		}
 		xhr.setRequestHeader('Accept',acceptstring)
-		tinfo('Accept: '+ acceptstring)
+		tabulator.log.info('Accept: '+ acceptstring)
 		
 		// See http://dig.csail.mit.edu/issues/tabulator/issue65
 		//if (requester) { xhr.setRequestHeader('Referer',requester) }
@@ -838,7 +838,7 @@ remote.js: refreshButtons, sources_check_callbacks, sources_xml
 	{
 	    ep = sparqlEndpoints[x];
 	    if (ep.subject.uri && ep.object.uri) {
-		tdebug("Retrieving data for "+subject+" from SPARQL endpoint at "+ep.uri);
+		tabulator.log.debug("Retrieving data for "+subject+" from SPARQL endpoint at "+ep.uri);
 		kb.spEndpointIndex[ep.subject.uri]=ep.object.uri;
 	    }
 	}	
@@ -854,15 +854,15 @@ function isExternal (uri)
 function sources_check_callbacks()
 {
     for (var t in sources.callbacks) { //for each trigger
-        tdebug("trigger=" + t + ", depends on=" + sources.depends[t]);
+        tabulator.log.debug("trigger=" + t + ", depends on=" + sources.depends[t]);
         if (sources.depends[t] && filter(sources_pending, sources.depends[t]).length != 0)
             continue; //still dependencies
-        tsuccess("all dependencies loaded for " + t + ", completed files=" + sources.depends[t]);
+        tabulator.log.success("all dependencies loaded for " + t + ", completed files=" + sources.depends[t]);
         if (!sources.callbacks[t])
-            tinfo("no callback for trigger " + t);
+            tabulator.log.info("no callback for trigger " + t);
         else {
             for (var c in sources.callbacks[t]) {
-                tdebug("executing callback #" + c + " for: " + t); // + ", " + sources.callbacks[t][c]);
+                tabulator.log.debug("executing callback #" + c + " for: " + t); // + ", " + sources.callbacks[t][c]);
                 sources.callbacks[t][c](); //call back
             } //for
             delete sources.callbacks[t]; //unset this trigger
@@ -894,7 +894,7 @@ function requestFetch(subject) {
 function sources_add_html(uri) {
     var i = sources.status[uri].number; //index
     var x = document.getElementById('sources');
-    if (!x) terror("no sources table!");
+    if (!x) tabulator.log.error("no sources table!");
     if (x) {
         var addendum = document.createElement("tr");
         addendum.setAttribute('class', 'requested');
@@ -930,7 +930,7 @@ function sources_remove_html(index)
 {
     var row = document.getElementById('source'+index);
     if (!row) {
-        twarn("no such source: " + index);
+        tabulator.log.warn("no such source: " + index);
         return;
     }
     row.parentNode.removeChild(row);
@@ -950,7 +950,7 @@ function sources_update_html(uri, status, external) {
         x.setAttribute('class', mystate);
     var td = x.childNodes[1];
     var tn = td.childNodes[0];
-    tinfo("td="+td+" tn="+tn+" response="+status);
+    tabulator.log.info("td="+td+" tn="+tn+" response="+status);
     td.replaceChild(document.createTextNode(status), tn);
 } //sources_update_html
 

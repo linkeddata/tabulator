@@ -8,21 +8,22 @@
         contenttitlesetting="true"
 	  title="&tabsources.title;"
         windowtype="tabulatorsources">
+        <checkbox id="tabsourcesontop" checked="false" oncommand="toggleOnTop()" label="Always on Top" /> 
         <iframe flex="1" id="sourceshtml" src="chrome://tabulator/content/sources.html"/>
         <script type="application/x-javascript">
-        //  To go in above:?<checkbox id="tabsourcesontop" checked="false" oncommand="toggleOnTop()" label="Always on Top" /> 
+        //  To go in above:?
             function toggleOnTop() {
-               window.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
-               var xulwin = window.getInterface(Components.interfaces.nsIWebNavigation)
-                               .QueryInterface(Components.interfaces.nsIDocShellTreeItem)
-                               .treeOwner
-                               .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
-                               .getInterface(Components.interfaces.nsIXULWindow);
-               if(xulwin.zLevel=xulwin.raisedZ) {
-                 xulwin.zLevel=xulwin.normalZ;
-               } else {
-                 xulwin.zLevel=xulwin.raisedZ;
-               }
+              window.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+              var webnav = window.getInterface(Components.interfaces.nsIWebNavigation);
+              var dsti = webnav.QueryInterface(Components.interfaces.nsIDocShellTreeItem);
+              var treeowner = dsti.treeOwner;
+              var ifreq = treeowner.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+              var xulwin = ifreq.getInterface(Components.interfaces.nsIXULWindow);
+              if (xulwin.zLevel > xulwin.normalZ) {
+                xulwin.zLevel = xulwin.normalZ;
+              } else {
+                xulwin.zLevel = xulwin.raisedZ;
+              }
             }
         </script>
 </window>

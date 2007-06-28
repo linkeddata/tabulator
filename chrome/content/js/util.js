@@ -76,9 +76,6 @@ Util = {
             }
             return false; 
         }
-        obj.insertCallback=function (hook,func){
-        obj.callbacks[hook].unshift(func);
-        }
 	    obj.fireCallbacks = function (hook, args) {
 		var newCallbacks = []
 		var replaceCallbacks = []
@@ -294,95 +291,95 @@ function myFetcher(x, requestedBy) {
     }
 }
 
+// 
 function matrixTD(obj, asImage, doc) {
     //alert (obj.termType);
-	if(!doc)
-        doc=document;
+	if (!doc) doc=document;
     var td = doc.createElement('TD');
     if (!obj) var obj = new RDFLiteral(".");
     if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
-        td.setAttribute('class', 'notEditable');
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
     
     var image;
     if (obj.termType == 'literal') {
-        td.setAttribute('class', 'editable'); //you're only allowed to edit a literal field
         td.appendChild(doc.createTextNode(obj.value));
-    } else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+    } 
+    else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
         if (asImage) {
             image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
             image.setAttribute('class', 'pic');
             td.appendChild(image);
-        } else {
+        } 
+        else {
             td.appendChild(doc.createTextNode(label(obj)));
         }
     }
     return td;
 }
 
-	function getTarget(e) {
-	    var target
-	    if (!e) var e = window.event
-	    if (e.target) target = e.target
-	    else if (e.srcElement) target = e.srcElement
-	    if (target.nodeType == 3) // defeat Safari bug [sic]
-            target = target.parentNode
-	    tabulator.log.debug("Click on: " + target.tagName)
-	    return target
-	}
+function getTarget(e) {
+    var target
+    if (!e) var e = window.event
+    if (e.target) target = e.target
+    else if (e.srcElement) target = e.srcElement
+    if (target.nodeType == 3) // defeat Safari bug [sic]
+        target = target.parentNode
+	tabulator.log.debug("Click on: " + target.tagName)
+	return target
+}
 	
 	//////////////////////////////////// User Interface Events
 	
-	function getAboutLevel(target) {
-	    var level
-	    for (level = target; level; level = level.parentNode) {
-	    tabulator.log.debug("Level "+level)
-	    var aa = level.getAttribute('about')
-	    if (aa) return level
-	    }
-	    return undefined
-	}
-	
-	function ancestor(target, tagName) {
-	    var level
-	    for (level = target; level; level = level.parentNode) {
-		tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
-		if (level.tagName == tagName) return level;
-	    }
-	    return undefined
-	}
-	
-	function getAbout(kb, target) {
-	    var level, aa
-	    for (level=target; level && (level.nodeType==1); level=level.parentNode) {
-	        tabulator.log.debug("Level "+level + ' '+level.nodeType)
-	        aa = level.getAttribute('about')
-	        if (aa) 
-		        return kb.fromNT(aa)
-		    else if (level.tagName=='TR') //this is to prevent literals passing through
-		        return undefined
-	    }
-	    return undefined
-	}
-	
-	function getTerm(target){ //works only for <TD>
-	    var statementTr=ancestor(target,'TR');
-	    switch (target.className){
-	        case 'pred selected':
-	            return statementTr.AJAR_statement.predicate;
-	            break;
-	        case 'obj selected':
-	            if (!statementTr.AJAR_inverse)
-	                return statementTr.AJAR_statement.object;
-	            else
-	                return statementTr.AJAR_statement.subject;
-	            break;
-	        case 'selected': //header TD
-	            return getAbout(kb,target); //kb to be changed
-	    }
-	}
+function getAboutLevel(target) {
+    var level
+    for (level = target; level; level = level.parentNode) {
+    tabulator.log.debug("Level "+level)
+    var aa = level.getAttribute('about')
+    if (aa) return level
+    }
+    return undefined
+}
+
+function ancestor(target, tagName) {
+    var level
+    for (level = target; level; level = level.parentNode) {
+    tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
+    if (level.tagName == tagName) return level;
+    }
+    return undefined
+}
+
+function getAbout(kb, target) {
+    var level, aa
+    for (level=target; level && (level.nodeType==1); level=level.parentNode) {
+        tabulator.log.debug("Level "+level + ' '+level.nodeType)
+        aa = level.getAttribute('about')
+        if (aa) 
+            return kb.fromNT(aa)
+        else if (level.tagName=='TR') //this is to prevent literals passing through
+            return undefined
+    }
+    return undefined
+}
+
+function getTerm(target){ //works only for <TD>
+    var statementTr=ancestor(target,'TR');
+    switch (target.className){
+        case 'pred selected':
+            return statementTr.AJAR_statement.predicate;
+            break;
+        case 'obj selected':
+            if (!statementTr.AJAR_inverse)
+                return statementTr.AJAR_statement.object;
+            else
+                return statementTr.AJAR_statement.subject;
+            break;
+        case 'selected': //header TD
+            return getAbout(kb,target); //kb to be changed
+    }
+}
 //////////////////////////////////////Source Utility
 
 /**This is for .js that is not so important**/
@@ -406,38 +403,3 @@ function addLoadEvent(func) {
         }
     }
 } //addLoadEvent
-
-//////////////////////////////////View Utility
-function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
-	var curleft = curtop = 0;
-	if (obj.offsetParent) {
-		curleft = obj.offsetLeft
-		curtop = obj.offsetTop
-		while (obj = obj.offsetParent) {
-			curleft += obj.offsetLeft
-			curtop += obj.offsetTop
-		}
-	}
-	return [curleft,curtop];
-}
-
-function getEyeFocus(element,instantly,isBottom) {
-    var elementPosY=findPos(element)[1];
-    var totalScroll=elementPosY-52-window.scrollY; //magic number 52 for web-based version
-    if (instantly){
-        if (isBottom){
-            window.scrollBy(0,elementPosY+element.clientHeight-(window.scrollY+window.innerHeight));
-            return;
-        }            
-        window.scrollBy(0,totalScroll);
-        return;
-    }
-    var id=window.setInterval(scrollAmount,50);
-    var times=0
-    function scrollAmount(){
-        window.scrollBy(0,totalScroll/10);
-        times++;
-        if (times==10)
-            window.clearInterval(id);
-    }
-}

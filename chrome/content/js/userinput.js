@@ -231,6 +231,7 @@ copyToClipboard: function copyToClipboard(address,selectedTd){
             objects.unshift(term);
             break;
         case 'pred selected':
+        case 'pred internal selected':
             var predicates=kb.the(kb.sym(address),tabont('predicates'));
             if (!predicates) predicates=kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection()).object;
             predicates.unshift(term);

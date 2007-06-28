@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3252 2007-06-27 16:44:48Z jambo $
+ * SVN ID: $Id: sources.js 3262 2007-06-28 04:40:57Z kennyluck $
  *
  ************************************************************/
 
@@ -395,7 +395,7 @@ function SourceFetcher(store, timeout, async) {
 	     var udoc=term.uri?kb.sym(Util.uri.docpart(uri)):uri
 
 	     var seeAlso = sf.store.sym('rdfs','seeAlso')
-	     var refs = sf.store.statementsMatching(uri,seeAlso)
+	     var refs = sf.store.statementsMatching(term,seeAlso) //this fetches seeAlso of docs indefinitely
 	     refs.map(function (x) {
 			  if (!sf.requested[Util.uri.docpart(x.object.uri)]) {
 			      sf.requestURI(x.object.uri, term)
@@ -495,15 +495,15 @@ function SourceFetcher(store, timeout, async) {
         if (uri.indexOf('#') >= 0) { // hash
 	    return alert("requestURI should notbe called with fragid: "+uri)
 	}
+
 	var force = !!force
 	var kb = this.store
 	var args = arguments
 //	var term = kb.sym(uri)
 	var docuri = Util.uri.docpart(uri)
 	var docterm = kb.sym(docuri)
-
 	tabulator.log.debug("requestURI: dereferencing "+ uri)
-	this.fireCallbacks('request',args)
+	//this.fireCallbacks('request',args)
 	
 
 /*
@@ -517,9 +517,13 @@ function SourceFetcher(store, timeout, async) {
 */
 	if (!force && typeof this.requested[docuri]!="undefined") {
 	    tabulator.log.debug("We already have "+docuri+". Skipping.")
-	    this.fireCallbacks('done',args)
+	    var newArgs=[];
+	    for (var i=0;i<args.length;i++) newArgs.push(args[i]);
+	    newArgs.push(true); //extra information indicates this is a skipping done!
+	    //this.fireCallbacks('done',newArgs) //comment out here
 	    return null
 	}
+    this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
 
 	this.requested[docuri] = true
 

@@ -83,6 +83,7 @@ Util = {
 		var newCallbacks = []
 		var replaceCallbacks = []
 		var len = obj.callbacks[hook].length
+//	    tabulator.log.info('!@$ Firing '+hook+' call back with length'+len);
 		for (var x=len-1; x>=0; x--) {
 //		    tabulator.log.info('@@ Firing '+hook+' callback '+ obj.callbacks[hook][x])
 		    if (obj.callbacks[hook][x].apply(obj,args)) {

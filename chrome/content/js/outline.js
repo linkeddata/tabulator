@@ -759,11 +759,12 @@ function Outline(doc) {
 	    var fireOn = Util.uri.docpart(term.uri)
 	    tabulator.log.debug("Button callbacks for " + fireOn + " added")
 	    var makeIconCallback = function (icon) {
-		return function (req) {
+		return function IconCallback(req) {
 		    if (req.indexOf('#') >= 0) alert('Should have no hash in '+req)
 		    if (!target) {
 			return false
-		    }
+		    }		   
+		    if (!ancestor(target,'DIV')) return false;
 		    if (term.termType != "symbol") { return true }
 		    if (req == fireOn) {
 			target.src = icon
@@ -1042,11 +1043,10 @@ function Outline(doc) {
                 var obj=getAbout(kb,selectedTd);
                 if (obj){
                     function setSelectedAfterward(uri){
-                        //if (uri==undefined || Util.uri.docpart(obj.uri)==uri){
-                            deselectAll();
-                            setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
-                            showURI(getAbout(kb,selection[0]));
-                        //}
+                        if (arguments[3]) return true;
+                        deselectAll();
+                        setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
+                        showURI(getAbout(kb,selection[0]));
                         return true;
                     }
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
@@ -1225,6 +1225,10 @@ function Outline(doc) {
 	} //function
 	// added source-getting to outline expand 4/27/06
 	function outline_expand(p, subject1, details) {
+	    //remove callback to prevent unexpected repaint
+        sf.removeCallback('done','expand');
+        sf.removeCallback('fail','expand');
+	    
 	    var subject = kb.canon(subject1)
 	    var requTerm = subject.uri?kb.sym(Util.uri.docpart(subject.uri)):subject
 	    var subj_uri = subject.uri
@@ -1253,11 +1257,16 @@ function Outline(doc) {
 		}
 		emptyNode(p).appendChild(newTable)
 		thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
-		tabulator.log.debug("expand: Node for " + subject + " expanded")	    
+		tabulator.log.debug("expand: Node for " + subject + " expanded")
+		//fetch seeAlso when render()
+	     var seeAlsoStats = sf.store.statementsMatching(subject,RDFS('seeAlso'))
+	     seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
 	    } 
 	
-	
+	    var expandCount;
 	    function expand(uri)  {
+	    if (arguments[3]) return true;//already fetched indicator
+	    if (uri=="https://svn.csail.mit.edu/kennyluck/data") var debug=true;
 		var cursubj = kb.canon(subject)  // canonical identifier may have changed
 		    tabulator.log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
 	        var term = kb.sym(uri)
@@ -1276,6 +1285,7 @@ function Outline(doc) {
 			    if (uri == rd) return true;
 			}
 		    }
+		    if (kb.anyStatementMatching(cursubj,undefined,undefined,docTerm)) return true; //Kenny: inverse?
 		    /* This didn't work because of smushing
 		    if (kb.anyStatementMatching(docTerm, // or stg. requestedBY the same thing?
 			kb.sym('tab',"requestedBy"),  // @@ works? -tim
@@ -1291,12 +1301,12 @@ function Outline(doc) {
 		}
 		return true
 	    }
-	
 	    tabulator.log.debug("outline_expand: dereferencing "+subject)
 	    var status = myDocument.createElement("span")
 	    p.appendChild(status)
 	    sf.addCallback('done', expand)
 	    sf.addCallback('fail', expand)
+	    /*
 	    sf.addCallback('request', function (u) {
 			       if (u != subj_uri) { return true }
 			       status.textContent=" requested..."
@@ -1312,6 +1322,7 @@ function Outline(doc) {
 			       status.textContent=" parsing..."
 			       return false
 			   })
+	    */ //these are not working as we have a pre-render();
 			   
 	    var returnConditions=[]; //this is quite a general way to do cut and paste programming
 	                             //I might make a class for this
@@ -1325,7 +1336,6 @@ function Outline(doc) {
 	            return;
 	        }
         }
-        
 	    sf.lookUpThing(subject);
 	    render()  // inital open, or else full if re-open
 	

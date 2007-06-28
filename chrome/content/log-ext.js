@@ -38,11 +38,9 @@ function TabulatorLogger () {
     this.success = function(msg) { this.msg(msg, this.TSUCCESS, 'good') };
 
     this.clear = function(){
-        var x = document.getElementById('status');
-        if (!x) return;
         //x.innerHTML = "";
         //TODO: Is emptyNode out of scope? I dunno.
-        emptyNode(x);
+        emptyNode(this.container);
     } //clearStatus
 
     this.setLevel = function(x) {
@@ -54,9 +52,9 @@ function TabulatorLogger () {
     this.dumpStore = function(){
         var l = tabulator.log.level
         tabulator.log.level = this.TALL;
-        tabulator.log.debug("\nStore:\n" + kb + "__________________\n");
-        tabulator.log.debug("subject index: " + kb.subjectIndex[0] + kb.subjectIndex[1]);
-        tabulator.log.debug("object index: " + kb.objectIndex[0] + kb.objectIndex[1]);
+        tabulator.log.debug("Store:");
+        tabulator.log.debug(tabulator.kb.toString());
+        tabulator.log.debug("__________________");
         tabulator.log.level = l;
     }
 

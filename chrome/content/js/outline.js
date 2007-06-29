@@ -12,8 +12,10 @@ var selection=[]
 
 function Outline(doc) {
     var myDocument=doc;
+    this.document=doc;
     var outline=this; //Kenny: do we need this?
     var thisOutline=this;
+    
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
     this.UserInput=new UserInput(this);
@@ -21,7 +23,7 @@ function Outline(doc) {
     this.UserInput.clipboardInit(this.clipboardAddress);
     this.outlineElement=myDocument.getElementById('outline');
     var outlineElement=this.outlineElement;
-    this.document=doc;
+
     
     this.viewAndSaveQuery = function() {
         onLoad = function(e) {
@@ -842,9 +844,10 @@ function Outline(doc) {
 		    RDFArrayRemove(selection, node)
 		    tabulator.log.debug("Deselecting "+node)
 		    tabulator.log.debug("cla=$"+cla+"$")
-		    if (node.AJAR_statement) source=node.AJAR_statement.why
-		    else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why
-		    if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false)
+		    //if (node.AJAR_statement) source=node.AJAR_statement.why
+		    //else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why
+		    //if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false)
+		    //Kenny: why display source when deselct? I don't understand
 	    }
 	    node.setAttribute('class', cla)
 	}
@@ -1013,7 +1016,7 @@ function Outline(doc) {
 	                //deselectAll();
 	                if(!thisOutline.UserInput.Keypress(e)&&notEnd) goNext('up');
                     //setSelected(newSelTd,true);
-                    myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
+                    //myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
                     e.stopPropagation();
 	            }
 	            break;
@@ -1068,6 +1071,9 @@ function Outline(doc) {
 	            case 112: //p for Paste
 	                if (e.ctrlKey){
 	                    thisOutline.UserInput.pasteFromClipboard(thisOutline.clipboardAddress,selectedTd);
+	                    //myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
+	                    //window.focus();
+	                    //e.stopPropagation();                   
 	                    break;
 	                }
 	            default:
@@ -1082,6 +1088,16 @@ function Outline(doc) {
                 }
 	    }//end of switch
         showURI(getAbout(kb,selection[0]));
+        //alert(window);alert(doc);
+        /*
+        var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Components.interfaces.nsIWindowMediator);
+        var gBrowser = wm.getMostRecentWindow("navigator:browser")*/
+        //gBrowser.addTab("http://www.w3.org/");
+        //alert(gBrowser.addTab);alert(gBrowser.scroll);alert(gBrowser.scrollBy)
+        //gBrowser.scrollBy(0,100);
+        
+        //var thisHtml=selection[0].owner
         if (selection[0]){   
 	        var PosY=findPos(selection[0])[1];
 	        if (PosY+selection[0].clientHeight > window.scrollY+window.innerHeight) getEyeFocus(selection[0],true,true);

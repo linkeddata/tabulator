@@ -9,7 +9,7 @@
 */
 function UserInput(outline){
 
-//var document=outline.document; //is this ok?
+var myDocument=outline.document; //is this ok?
 this.menuId='predicateMenu1';
 this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
 this.namespaces["tabont"] = "http://dig.csail.mit.edu/2005/ajar/ajaw#"
@@ -24,7 +24,6 @@ this.namespaces["contact"] = "http://www.w3.org/2000/10/swap/pim/contact#";
 this.namespaces["mo"] = "http://purl.org/ontology/mo/";
 this.namespaces["doap"] = "http://usefulinc.com/ns/doap#"
 var NameSpaces=this.namespaces;
-//var thisInput=this;
 
 return {
 lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
@@ -49,7 +48,8 @@ switchMode: function(){ //should be part of global UI
     }
 },
     
-Click: function(e,selectedTd){
+Click: function Click(e,selectedTd){
+    //var This=outline.UserInput;
     if (!e){ //e==undefined : Keyboard Input
         var target=selectedTd;
         var object=getAbout(kb,target);
@@ -64,7 +64,7 @@ Click: function(e,selectedTd){
     try{
         var obj=this.getStatementAbout(target).object;
         var trNode=ancestor(target,'TR');
-    }catch(e){return;}
+    }catch(e){alert(target+'getStatement');}
     this.clearInputAndSave();
     
     var tdNode=trNode.lastChild;
@@ -76,8 +76,8 @@ Click: function(e,selectedTd){
         tdNode.removeChild(tdNode.firstChild); //remove the text
         
         if (obj.value.match('\n')){//match a line feed and require <TEXTAREA>
-             var textBox=document.createElement('textarea');
-             textBox.appendChild(document.createTextNode(obj.value));
+             var textBox=myDocument.createElement('textarea');
+             textBox.appendChild(myDocument.createTextNode(obj.value));
              textBox.setAttribute('rows',(obj.value.match(/\n/g).length+1).toString());
                                                             //g is for global(??)
              textBox.setAttribute('cols','100'); //should be the size of <TD>
@@ -94,19 +94,19 @@ Click: function(e,selectedTd){
         //Choice 2 - direct the key cursor to where you click (failed attempt) 
         //--------------------------------------------------------------------------     
             //duplicate the event so user can edit without clicking twice
-            //var e2=document.createEvent("MouseEvents");
+            //var e2=myDocument.createEvent("MouseEvents");
             //e2.initMouseEvent("click",true,true,window,0,0,0,0,0,false,false,false,false,0,null);
             //inputBox.dispatchEvent(e2);
         //---------------------------------------------------------------------------
     }else if (obj.termType== 'symbol'){
         emptyNode(tdNode);
-        tdNode.appendChild(document.createTextNode("<"));
-        var inputBox=document.createElement('input');
+        tdNode.appendChild(myDocument.createTextNode("<"));
+        var inputBox=myDocument.createElement('input');
         inputBox.setAttribute('value',obj.uri);
         inputBox.setAttribute('class','textinput');
         inputBox.setAttribute('size',obj.uri.length.toString());
         tdNode.appendChild(inputBox);
-        tdNode.appendChild(document.createTextNode(">"));
+        tdNode.appendChild(myDocument.createTextNode(">"));
         
         inputBox.select();
         this.lastModified = inputBox;
@@ -117,7 +117,7 @@ Click: function(e,selectedTd){
 },
 
 clearMenu: function clearMenu(){
-    var menu=document.getElementById(this.menuID);
+    var menu=myDocument.getElementById(this.menuID);
     if (menu) menu.parentNode.removeChild(menu);
 },
 
@@ -162,6 +162,7 @@ clearInputAndSave: function clearInputAndSave(){
     }
     //case modified:
     var trNode=ancestor(this.lastModified,'TR');
+    
     trNode.removeChild(trNode.lastChild);
     
     var defaultpropview = views.defaults[s.predicate.uri];
@@ -184,7 +185,7 @@ addTriple: function addTriple(e){
 
     var insertTr=this.appendToPredicate(predicateTd);
         
-    var td=insertTr.appendChild(document.createElement('td'));
+    var td=insertTr.appendChild(myDocument.createElement('td'));
     this.lastModified = this.createInputBoxIn(td," (Please Input) ");
     this.lastModified.isNew=true;
 
@@ -295,7 +296,7 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
             var returnArray=termFrom('all');
             if (!returnArray) return;
             var term=returnArray[0];
-            var newTr=ancestor(selectedTd,'TABLE').appendChild(document.createElement('tr'));
+            var newTr=ancestor(selectedTd,'TABLE').appendChild(myDocument.createElement('tr'));
             //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
             if (HCIoptions["bottom insert highlights"].enabled) 
                 var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
@@ -320,14 +321,14 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
 Refill: function Refill(e,selectedTd){
     var isPredicate=selectedTd.nextSibling;
     function showMenu(inputQuery,order){
-	    var menu=document.createElement('div');
+	    var menu=myDocument.createElement('div');
 	    menu.id=this.menuID;
 	    menu.className='outlineMenu';
 	    //menu.addEventListener('click',false);
 	    menu.style.top=e.pageY+"px";
 	    menu.style.left=e.pageX+"px";
-	    document.body.appendChild(menu);
-	    var table=menu.appendChild(document.createElement('table'));
+	    myDocument.body.appendChild(menu);
+	    var table=menu.appendChild(myDocument.createElement('table'));
         
         var lastHighlight;
         function highlightTr(e){
@@ -365,12 +366,12 @@ Refill: function Refill(e,selectedTd){
 		        }
 		    }
 
-	        var tr=table.appendChild(document.createElement('tr'));
+	        var tr=table.appendChild(myDocument.createElement('tr'));
 	        tr.setAttribute('about',predicate);
-	        var th=tr.appendChild(document.createElement('th'))
-	        th.appendChild(document.createElement('div')).appendChild(document.createTextNode(Label));
+	        var th=tr.appendChild(myDocument.createElement('th'))
+	        th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
 	        if (theNamespace)
-	            tr.appendChild(document.createElement('td')).appendChild(document.createTextNode(theNamespace.toUpperCase()));
+	            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
 	    }
 	    kb.query(inputQuery,addPredicateChoice,myFetcher);
     }//funciton showMenu
@@ -452,22 +453,21 @@ Mousedown: function(e){
     }
     */
 },
-borderClick: function borderClick(){
+borderClick: function borderClick(e){
     var This=outline.UserInput;
-
-    var insertTr=document.createElement('tr');
-    ancestor(this,'TABLE').insertBefore(insertTr,ancestor(this,'TR').nextSibling);
-    var tempTr=document.createElement('tr');
+    var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
+    var insertTr=myDocument.createElement('tr');
+    ancestor(target,'TABLE').insertBefore(insertTr,ancestor(target,'TR').nextSibling);
+    var tempTr=myDocument.createElement('tr');
     var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
     insertTr.appendChild(tempTr.firstChild);
     var reqTerm2=This.generateRequest("(To be determined. Re-type of drag an object onto this field)",tempTr,false);
     insertTr.appendChild(tempTr.firstChild);
     //there should be an elegant way of doing this
     
-    var preStat=ancestor(this,'TR').previousSibling.AJAR_statement;
+    var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
     This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
     
-    var myDocument=document;
 		var holdingTr=myDocument.createElement('tr');
 		var holdingTd=myDocument.createElement('td');
 		holdingTd.setAttribute('colspan','2');
@@ -537,7 +537,7 @@ if (this._tabulatorMode==1){
 /**
  * Utilities
  */
-getStatementAbout: function(something){
+getStatementAbout: function getStatementAbout(something){
     var trNode=ancestor(something,'TR');
     try{
         var statement=trNode.AJAR_statement;
@@ -552,8 +552,8 @@ getStatementAbout: function(something){
     return statement;
 },
 
-createInputBoxIn: function(tdNode,defaultText){
-    var inputBox=document.createElement('input');
+createInputBoxIn: function createInputBoxIn(tdNode,defaultText){
+    var inputBox=myDocument.createElement('input');
     inputBox.setAttribute('value',defaultText);
     inputBox.setAttribute('class','textinput');
     inputBox.setAttribute('size','100'); //should be the size of <TD>
@@ -571,7 +571,7 @@ appendToPredicate: function appendToPredicate(predicateTd){
     }catch(e){isEnd=true;}
     if(!isEnd && HCIoptions["bottom insert highlights"].enabled) trIterator=trIterator.previousSibling;
    
-    var insertTr=document.createElement('tr');
+    var insertTr=myDocument.createElement('tr');
     //style stuff, I'll have to investigate appendPropertyTRs() somehow
     insertTr.style.colspan='1';
     insertTr.style.display='block';
@@ -627,7 +627,6 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,allNew){
 },
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
-    this.deselectAll()
     var tr=selectedTd.parentNode
     if (type=='predicate'){
         tr.replaceChild(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
@@ -679,7 +678,7 @@ aroundBorderBottom: function(event,element){
 
 //Not so important (will become obsolete?)
 switchModeByRadio: function(){
-    var radio=document.getElementsByName('mode');
+    var radio=myDocument.getElementsByName('mode');
     if (this._tabulatorMode==0 && radio[1].checked==true) this.switchMode();
     if (this._tabulatorMode==1 && radio[0].checked==true) this.switchMode();
 },

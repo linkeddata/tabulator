@@ -289,7 +289,7 @@ function tableResize_OnMouseUp(event) {
         var td;
         var tr = document.createElement('tr');
         var t = document.getElementById('tabulated_data');
-        var lastRowNum = t.rows.length - 1;
+        var lastRowNum = t.childNodes.length - 1; // not a very reliable way of getting rownumber
         for (i=0; i<nv; i++) {
             if (hasAboutRC(lastRowNum, i)) td = createNonLiteralNode();
             else td = createLiteralNode();
@@ -306,30 +306,21 @@ function tableResize_OnMouseUp(event) {
     
     function createNonLiteralNode() {
         var td = document.createElement("TD");
+        td.setAttribute('about', '');
+        td.setAttribute('style', 'color:#4444ff');
+        td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
         // set attributes;
         return td;
     }
     
-    /*
-    function getUpperTDNode (TDNode) {
-        // assume for now that there aren't any div or span elements, use ancestors to get the right values
-        var currTRNode = TDNode.parentNode;
-        var table = currTRNode.parentNode;
-        var currTDIndex = TDNode.cellIndex;
-        var currTRIndex = currTRNode.rowIndex;
-        var upperTDIndex = currTDIndex;
-        var upperTRIndex = currTRIndex-1;
-        var upperTDNode = table.rows[upperTRIndex].cells[upperTDIndex];
-        return upperTDNode;
-    }*/
-    
+    // checks to see if a TD element has the about attribute
     function hasAboutTD (tdNode) {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
     function hasAboutRC (row, col) {
-        var t = document.getElementById('tabulated_data');
-        var TDNode = t.rows[row].cells[col];
+        var t = document.getElementById('tabulated_data'); 
+        var TDNode = t.childNodes[row].childNodes[col];
         if (hasAboutTD (TDNode)) return true;
     }
     

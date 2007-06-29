@@ -76,6 +76,9 @@ Util = {
             }
             return false; 
         }
+        obj.insertCallback=function (hook,func){
+        obj.callbacks[hook].unshift(func);
+        }
 	    obj.fireCallbacks = function (hook, args) {
 		var newCallbacks = []
 		var replaceCallbacks = []

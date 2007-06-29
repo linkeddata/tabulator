@@ -260,3 +260,59 @@ span.openQuerySpan {
     top:0em;
     z-index:1;
 }
+
+/*UserInput style since here*/
+input.textinput{
+    border: none;
+    font-size:95%;
+    padding: 0em;
+    margin: 0;
+}
+
+textarea.textinput{
+    border: none;
+}
+
+td.undetermined{
+   color: gray;
+   font-style: italic; 
+}
+
+/*revert back*/
+td.undetermined table{
+	color: black;
+	font-style: normal;
+}
+
+/*color style from http://developer.yahoo.com/yui/docs/module_menu.html*/
+.outlineMenu{
+	position:absolute;
+	width:10em;
+	height:10em;
+	background: #FFFFFF none repeat scroll 0%;
+	overflow-x: hidden;
+	overflow-y: auto;
+	border: 1px solid;
+	/*padding:.2em;*/
+}
+.outlineMenu table{cursor:default;width:100%;text-align:left;padding:5px 5px;}
+.outlineMenu div{width:6em; overflow:auto; white-space:nowrap;}
+.outlineMenu td{color:#654d6c;}
+tr.activeItem{background: #D1C6DA;}
+
+div.bottom-border{
+    border: .2em solid transparent;
+    width: 100%;
+}
+
+div.bottom-border-active{
+    cursor: copy;
+    border: .2em solid;
+    border-color: rgb(100%,65%,0%);
+}	
+
+td{
+    margin: 0;
+    padding: 0;
+}
+

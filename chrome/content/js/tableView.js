@@ -86,7 +86,7 @@ function tableView(container,doc) {
             //alert(tdNode.className);
             var oldTxt = tdNode.innerHTML;
             var inputObj = document.createElement('INPUT');
-            if (tdNode.getAttributeNode('about') != null) return; // changed from (tdNode.class != 'notEditable');
+            if (hasAboutTD(tdNode)) return;
             if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
             inputObj.style.width = "99%";
             inputObj.value = oldTxt;
@@ -263,7 +263,6 @@ function tableResize_OnMouseUp(event) {
         var form=this.document.createElement('form');
         var but = this.document.createElement('input');
         form.setAttribute('textAlign','right');
-        form.style.position = "inline";
         but.setAttribute('type','button');
         but.setAttribute('id','addRowButton');
         but.onclick=addRow;
@@ -271,6 +270,7 @@ function tableResize_OnMouseUp(event) {
         form.appendChild(but);
         container.appendChild(form);
     }
+    
     
     function addRow () {
         // find number of columns in current table
@@ -289,22 +289,48 @@ function tableResize_OnMouseUp(event) {
         var td;
         var tr = document.createElement('tr');
         var t = document.getElementById('tabulated_data');
+        var lastRowNum = t.rows.length - 1;
         for (i=0; i<nv; i++) {
-            td = document.createElement('td');
-            td.innerHTML = "Enter Text";
+            if (hasAboutRC(lastRowNum, i)) td = createNonLiteralNode();
+            else td = createLiteralNode();
             tr.appendChild(td);
         }
         t.appendChild(tr);
     }
     
-    function uppertdNode (tdNode) {
-        var currtrNode = tdNode.parentNode;
-        
-        var currtdIndex;
-        var currtrIndex;
-        var toptdIndex = currtdIndex;
-        var currtrIndex = currtrIndex-1;
-        
+    function createLiteralNode() {
+        var td = document.createElement("TD");
+        td.innerHTML = "Enter Text";
+        return td;
+    }
+    
+    function createNonLiteralNode() {
+        var td = document.createElement("TD");
+        // set attributes;
+        return td;
+    }
+    
+    /*
+    function getUpperTDNode (TDNode) {
+        // assume for now that there aren't any div or span elements, use ancestors to get the right values
+        var currTRNode = TDNode.parentNode;
+        var table = currTRNode.parentNode;
+        var currTDIndex = TDNode.cellIndex;
+        var currTRIndex = currTRNode.rowIndex;
+        var upperTDIndex = currTDIndex;
+        var upperTRIndex = currTRIndex-1;
+        var upperTDNode = table.rows[upperTRIndex].cells[upperTDIndex];
+        return upperTDNode;
+    }*/
+    
+    function hasAboutTD (tdNode) {
+        if (tdNode.getAttributeNode('about') != null) return true; 
+    }
+    
+    function hasAboutRC (row, col) {
+        var t = document.getElementById('tabulated_data');
+        var TDNode = t.rows[row].cells[col];
+        if (hasAboutTD (TDNode)) return true;
     }
     
     function drawExport () {

@@ -403,3 +403,39 @@ function addLoadEvent(func) {
         }
     }
 } //addLoadEvent
+
+//////////////////////////////////View Utility
+function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
+	var curleft = curtop = 0;
+	if (obj.offsetParent) {
+		curleft = obj.offsetLeft
+		curtop = obj.offsetTop
+		while (obj = obj.offsetParent) {
+			curleft += obj.offsetLeft
+			curtop += obj.offsetTop
+		}
+	}
+	return [curleft,curtop];
+}
+
+function getEyeFocus(element,instantly,isBottom) {
+    var elementPosY=findPos(element)[1];
+    var totalScroll=elementPosY-52-window.scrollY; //magic number 52 for web-based version
+    if (instantly){
+        if (isBottom){
+            window.scrollBy(0,elementPosY+element.clientHeight-(window.scrollY+window.innerHeight));
+            return;
+        }            
+        window.scrollBy(0,totalScroll);
+        return;
+    }
+    var id=window.setInterval(scrollAmount,50);
+    var times=0
+    function scrollAmount(){
+        window.scrollBy(0,totalScroll/10);
+        times++;
+        if (times==10)
+            window.clearInterval(id);
+    }
+}
+

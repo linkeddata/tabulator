@@ -1,5 +1,7 @@
 function tableView(container,doc) {
-    var nv; //The vars specific to a tableView..  // global to this function since I need it in addRow
+    var nv; 
+    //The vars specific to a tableView
+    // global to this function since I need it in addRow
     var activeSingleQuery = null;
     
     this.document=null;
@@ -75,14 +77,14 @@ function tableView(container,doc) {
         }
 
         //Use getTdNode to avoid div and span elements
-        function gettdNode(e) {
+        function getTDNode(e) {
             var srcElem = getTarget(e);
             var tdNode = ancestor(srcElem, "TD");
             return tdNode;
         }
 
         function onEdit(e) {
-            var tdNode = gettdNode(e);
+            var tdNode = getTDNode(e);
             //alert(tdNode.className);
             var oldTxt = tdNode.innerHTML;
             var inputObj = document.createElement('INPUT');
@@ -108,8 +110,8 @@ function tableView(container,doc) {
         }
         
 /*        
-        document.getElementById('tabulated_data').addEventListener('mousemove', tableResize_OnMouseMoveBefore, false);
-        document.getElementById('tabulated_data').addEventListener('mousedown', tableResize_OnMouseDown, false);
+        document.getElementById('tabulated_data').addEventListener('mousemove', tableResize_MouseMoveBefore, false);
+        document.getElementById('tabulated_data').addEventListener('mousedown', tableResize_MouseDown, false);
         
         
 var resizeElement = "TH"; //Elements to be resized
@@ -117,13 +119,13 @@ var edgeThreshold = 2;
 var rBarID = "rBar";
 
 var resizeTarget = null; //position and distance moved
-var iStartX = null;
-var iEndX = null;
-var iSizeX = null;
+var startX = null;
+var endX = null;
+var sizeX = null;
 var adjacentCell = null;
 
 //Creates rBar on load 
-function tableResize_CreaterBar() {
+function tableResize_CreateResizeBar() {
     var objItem = document.getElementById(rBarID);
     if(!objItem) {
         objItem = document.createElement("DIV");
@@ -137,7 +139,7 @@ function tableResize_CreaterBar() {
         document.body.appendChild(objItem);
     }
 }
-window.addEventListener("load", tableResize_CreaterBar,0);
+window.addEventListener("load", tableResize_CreateResizeBar,0);
 
 function tableResize_GetHeader(objReference) {
     var oElement = objReference;
@@ -153,16 +155,16 @@ function tableResize_CleanUp() {
     if(rBar) {
         rBar.style.display = "none";
     }
-    iEndX = null;
-    iSizeX = null;
-    iStartX = null;
+    endX = null;
+    sizeX = null;
+    startX = null;
     resizeTarget = null;
     adjacentCell = null;
     return true;
 }
 
-function tableResize_OnMouseMoveBefore (event) {
-    //document.getElementById('debug').value += 'Entered OnMouseMoveBefore\n';
+function tableResize_MouseMoveBefore (event) {
+    //document.getElementById('debug').value += 'Entered MouseMoveBefore\n';
     var objTH = tableResize_GetHeader(event.target); if (!objTH ) return;
 
     //document.getElementById('coords').value += "event.clientX " + event.clientX + "\n";
@@ -177,11 +179,11 @@ function tableResize_OnMouseMoveBefore (event) {
     return true;
 }
 
-///// HERE"S THE IMPORTANT CODE
-// In order to use layerX, each TH must have style="position: relative";
+////////////////////// HERE"S THE IMPORTANT CODE  /////////////////////////////
+//// In order to use layerX, each TH must have style="position: relative"; ////
 
-function tableResize_OnMouseDown(event) {
-    //document.getElementById('debug').value += 'Entered OnMouseDown\n';
+function tableResize_MouseDown(event) {
+    //document.getElementById('debug').value += 'Entered MouseDown\n';
     objTable = this;
     var objTH = tableResize_GetHeader(event.target); if (!objTH) return;
     var rBar = document.getElementById(rBarID); if(!rBar) return;
@@ -192,7 +194,7 @@ function tableResize_OnMouseDown(event) {
     //IT DOESN"T SEEM TO GET PAST THIS STEP!
 
     if ((objTH.tagName.toUpperCase() == resizeElement) && (objTH.style.cursor == "e-resize")) { 
-        iStartX = event.clientX;
+        startX = event.clientX;
         resizeTarget = objTH;
         
         rBar.style.left = event.clientX + window.pageXOffset;
@@ -200,28 +202,28 @@ function tableResize_OnMouseDown(event) {
         rBar.style.height = objTable.parentNode.clientHeight;
         rBar.style.display = "inline"; // THIS IS CRUCIAL
     }
-    document.getElementById("tabulated_data").addEventListener("mousemove", tableResize_OnMouseMoveAfter, true);  
-    document.getElementById("tabulated_data").addEventListener("mouseup", tableResize_HeaderProblem, true); //this handles a problem with clickling on the header and then not exiting OnMouseMoveAfter
-    document.getElementById(rBarID).addEventListener("mouseup", tableResize_OnMouseUp, true);
+    document.getElementById("tabulated_data").addEventListener("mousemove", tableResize_MouseMoveAfter, true);  
+    document.getElementById("tabulated_data").addEventListener("mouseup", tableResize_HeaderProblem, true); //this handles a problem with clickling on the header and then not exiting MouseMoveAfter
+    document.getElementById(rBarID).addEventListener("mouseup", tableResize_MouseUp, true);
     alert("EventListeners added");
 }
 
 function tableResize_HeaderProblem (event) {
     //document.getElementById('debug').value += 'Entered HeaderProblem\n';
-    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
+    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_MouseMoveAfter, true);
 }
 
 // doesn't seem like I ever enter OnMouseAfter
 
-function tableResize_OnMouseMoveAfter(event) {
-    //document.getElementById('debug').value += 'Entered OnMouseMoveAfter\n';
+function tableResize_MouseMoveAfter(event) {
+    //document.getElementById('debug').value += 'Entered MouseMoveAfter\n';
     rBar.style.left = event.clientX + window.pageXOffset;
     //document.getElementById("coords").value += rBar.style.left + "\n"; 
     event.stopPropagation();
 }
 
-function tableResize_OnMouseUp(event) {
-    //document.getElementById('debug').value += 'Entered OnMouseUp\n';
+function tableResize_MouseUp(event) {
+    //document.getElementById('debug').value += 'Entered MouseUp\n';
     var iAdjCellOldWidth = 0;
     var iResizeOldWidth = 0;
     var rBar = document.getElementById(rBarID); 
@@ -232,14 +234,14 @@ function tableResize_OnMouseUp(event) {
     
     //--------------------------------------
     // set the width on resizeTarget
-    // the distance that resizeTarget moves is iStartX+iEndX
-    var iEndX = event.clientX;
-    // iStartX is already defined
-    var distanceMoved = iEndX - iStartX;
-    var newPosition = iStartX + distanceMoved;
+    // the distance that resizeTarget moves is startX+endX
+    var endX = event.clientX;
+    // startX is already defined
+    var distanceMoved = endX - startX;
+    var newPosition = startX + distanceMoved;
     var oldCellWidth = resizeTarget.offsetWidth;
-    //document.getElementById("coords").value += "iStartX " + iStartX + "\n";
-    //document.getElementById("coords").value += "iEndX " + iEndX + "\n";
+    //document.getElementById("coords").value += "startX " + startX + "\n";
+    //document.getElementById("coords").value += "endX " + endX + "\n";
     //document.getElementById("coords").value += "oldCellWidth " + oldCellWidth + "\n"
     resizeTarget.style.width = oldCellWidth + distanceMoved;
     //document.getElementById("coords").value += "newCellWidth " + newCellWidth + "\n"; 
@@ -250,8 +252,8 @@ function tableResize_OnMouseUp(event) {
     var oldAdjacentWidth = adjacentCell.offsetWidth;
     adjacentCell.style.width = oldAdjacentWidth - distanceMoved;
     
-    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
-    document.getElementById(rBarID).removeEventListener("mouseup", tableResize_OnMouseUp, true);
+    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_MouseMoveAfter, true);
+    document.getElementById(rBarID).removeEventListener("mouseup", tableResize_MouseUp, true);
     event.stopPropagation();
     tableResize_CleanUp();
 }*/
@@ -260,7 +262,7 @@ function tableResize_OnMouseUp(event) {
     } //this.drawQuery
     //alert(this.document);
     function drawAddRow () {
-        var form=this.document.createElement('form');
+        var form = this.document.createElement('form');
         var but = this.document.createElement('input');
         form.setAttribute('textAlign','right');
         but.setAttribute('type','button');
@@ -323,16 +325,16 @@ function tableResize_OnMouseUp(event) {
         var TDNode = t.childNodes[row].childNodes[col];
         if (hasAboutTD (TDNode)) return true;
     }
-    
+
     function drawExport () {
         var form= this.document.createElement('form');
         var but = this.document.createElement('input');
         form.setAttribute('textAlign','right');
-        but.setAttribute('type','button')
-        but.setAttribute('id','exportButton')
+        but.setAttribute('type','button');
+        but.setAttribute('id','exportButton');
         but.onclick=exportTable // they should all be like this?
         but.setAttribute('value','Export to HTML');
-        form.appendChild(but)
+        form.appendChild(but);
         container.appendChild(form);
     }
 

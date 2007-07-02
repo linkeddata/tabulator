@@ -439,10 +439,12 @@ RDFIndexedFormula.prototype.load = function(url) {
     }
 
     // Get privileges for cross-domain web access
-    try {
-	Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
-    } catch(e) {
-	alert("Failed to get privileges: (see Tabulator help info!)" + e)
+    if(!isExtension) {
+        try {
+            Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
+        } catch(e) {
+            alert("Failed to get privileges: (see Tabulator help info!)" + e)
+        }
     }
 
     xhr.open("GET", url, false);  // Synchronous

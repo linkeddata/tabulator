@@ -2,10 +2,12 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3252 2007-06-27 16:44:48Z jambo $
+// SVN ID: $Id: tabulate.js 3280 2007-07-02 15:28:20Z jambo $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
+
+isExtension=false;
 
 LanguagePreference = "en"    // @@ How to set this from the browser? From cookie?
 

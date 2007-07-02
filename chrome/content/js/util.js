@@ -107,7 +107,11 @@ Util = {
      * A standard way to create XMLHttpRequest objects
      */
 	'XMLHTTPFactory': function () {
-	    if (window.XMLHttpRequest) {
+      if (isExtension) {
+          return Components.
+              classes["@mozilla.org/xmlextras/xmlhttprequest;1"].
+              createInstance().QueryInterface(Components.interfaces.nsIXMLHttpRequest);
+      } else if (window.XMLHttpRequest) {
 		try {
 		    return new XMLHttpRequest()
 		} catch (e) {
@@ -167,9 +171,9 @@ Util = {
 		+ hour + ":" + minute + ":" + second + "Z";
 	},
 
-        'enablePrivilege': netscape.security.PrivilegeManager.enablePrivilege,
+        'enablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.enablePrivilege) || function() { return; },
 
-        'disablePrivilege': netscape.security.PrivilegeManager.disablePrivilege
+        'disablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.disablePrivilege) || function() { return; }
 }
 //================================================
 function findLabelSubProperties() {
@@ -387,10 +391,12 @@ function getTerm(target){ //works only for <TD>
 
 /**This is for .js that is not so important**/
 function include(linkstr){
+
     var lnk = document.createElement('script');
     lnk.setAttribute('type', 'text/javascript');
     lnk.setAttribute('src', linkstr);
-    document.getElementsByTagName('head')[0].appendChild(lnk);
+    //TODO:This needs to be fixed or no longer used.
+    //document.getElementsByTagName('head')[0].appendChild(lnk);
     return lnk;
 }
 
@@ -442,3 +448,16 @@ function getEyeFocus(element,instantly,isBottom) {
     }
 }
 
+function AJARImage(src, alt, tt, doc) {
+	if(!doc)
+	    doc=document;
+    if (!tt && Icon.tooltips[src])
+        tt = Icon.tooltips[src];
+    var image = doc.createElement('img');
+    image.setAttribute('src', src);
+    if (typeof alt != 'undefined')
+        image.setAttribute('alt', alt);
+    if (typeof tt != 'undefined')
+        image.setAttribute('title',tt);
+    return image;
+}

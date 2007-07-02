@@ -137,7 +137,7 @@ function RDFParser() {
 	// of a loaded document for which we already have the contents.
 	// This is basically a Firefox bug.
 	
-	if (url.slice(7, 7+document.domain.length) != document.domain) {
+	if (!isExtension && (url.slice(7, 7+document.domain.length) != document.domain)) {
 	    try {
 		netscape.security.PrivilegeManager.enablePrivilege(
 			"UniversalBrowserRead")
@@ -927,7 +927,7 @@ function RDFLoad(url, base, sink, callback, why) {
     tabulator.log.debug("myRDF: "+myRDF+", why="+why)
 
     tabulator.log.debug("Loading: "+url)
-    if (url.slice(7, 7+document.domain.length) != document.domain) {
+    if (!isExtension && (url.slice(7, 7+document.domain.length) != document.domain)) {
 	try {
 	    netscape.security.PrivilegeManager.enablePrivilege(
 		    "UniversalBrowserRead")

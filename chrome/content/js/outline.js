@@ -1672,17 +1672,3 @@ function newVariableName() {
 function clearVariableNames() { 
     NextVariable = 0;
 } //clear
-
-function AJARImage(src, alt, tt, doc) {
-	if(!doc)
-	    doc=document;
-    if (!tt && Icon.tooltips[src])
-        tt = Icon.tooltips[src];
-    var image = document.createElement('img');
-    image.setAttribute('src', src);
-    if (typeof alt != 'undefined')
-        image.setAttribute('alt', alt);
-    if (typeof tt != 'undefined')
-        image.setAttribute('title',tt);
-    return image;
-}

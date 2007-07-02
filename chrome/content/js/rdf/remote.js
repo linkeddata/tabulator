@@ -111,9 +111,11 @@ RDFIndexedFormula.prototype.accessRemoteStore = function(SPARQL, externalURI, on
 	var uri = base+"?query="+s
 	//alert(uri)
 	tabulator.log.debug("SPARQL external database uri: "+uri)
-	netscape.security.PrivilegeManager.enablePrivilege("UniversalBrowserRead");  
-	netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");           
-	tabulator.log.info("Got UniversalBrowserRead");
+        if(!isExtension) {
+	    netscape.security.PrivilegeManager.enablePrivilege("UniversalBrowserRead");  
+	    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");           
+	    tabulator.log.info("Got UniversalBrowserRead");
+        }
 	var xhr = XMLHTTPFactory();
 	xhr.onreadystatechange = onreadystatechange(xhr,uri);
 	xhr.open('GET', uri, true);

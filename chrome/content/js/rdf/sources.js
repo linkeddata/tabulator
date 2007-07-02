@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3262 2007-06-28 04:40:57Z kennyluck $
+ * SVN ID: $Id: sources.js 3280 2007-07-02 15:28:20Z jambo $
  *
  ************************************************************/
 
@@ -37,7 +37,13 @@ function SourceFetcher(store, timeout, async) {
 	    xhr.handle = function (cb) {
 		var kb = sf.store
 		if (!this.dom) {
-		    var dparser = new DOMParser()
+        var dparser;
+        if(isExtension) {
+            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                        .getService(Components.interfaces.nsIDOMParser);
+        } else {
+		        dparser = new DOMParser()
+        }
 		    this.dom = dparser.parseFromString(xhr.responseText,
 						       'application/xml')
 		}
@@ -63,7 +69,13 @@ function SourceFetcher(store, timeout, async) {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
 		if (!this.dom) {
-		    var dparser = new DOMParser()
+        var dparser;
+        if(isExtension) {
+            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                        .getService(Components.interfaces.nsIDOMParser);
+        } else {
+		        dparser = new DOMParser()
+        }
 		    this.dom = dparser.parseFromString(xhr.responseText,
 						       'application/xml')
 		}
@@ -129,7 +141,14 @@ function SourceFetcher(store, timeout, async) {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
 		var kb = sf.store
-		var dom = (new DOMParser()).parseFromString(xhr.responseText,
+    var dparser;
+    if(isExtension) {
+        dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                    .getService(Components.interfaces.nsIDOMParser);
+    } else {
+		    dparser = new DOMParser()
+    }
+		var dom = dparser.parseFromString(xhr.responseText,
 							    'application/xml')
 
 		// It could be RDF/XML
@@ -651,23 +670,25 @@ function SourceFetcher(store, timeout, async) {
 	}
 
 	// Get privileges for cross-domain XHR
-	try {
-	    Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
-        } catch(e) {
-	    alert("Failed to get privileges: " + e)
-	}
+        if(!isExtension) {
+            try {
+                Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
+            } catch(e) {
+                alert("Failed to get privileges: " + e)
+            }
+        }
 	
 	// Map the URI to a localhot proxy if we are running on localhost
 	// This is used for working offline and on planes.
 	// Do not remove without checking with TimBL :)
-	
 	var uri2 = uri;
-	var here = '' + document.location
-	if (here.slice(0,17) == 'http://localhost/') {
-	    uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
-	    tabulator.log.debug("URI mapped to "+ uri2)
+	if(!isExtension) {
+	    var here = '' + document.location
+	    if (here.slice(0,17) == 'http://localhost/') {
+	        uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
+	        tabulator.log.debug("URI mapped to "+ uri2)
+	    }
 	}
-	
 
 	// Setup the request
 	xhr.open('GET', uri2, this.async)
@@ -679,11 +700,15 @@ function SourceFetcher(store, timeout, async) {
 		xhr.channel.notificationCallbacks = {
 		    getInterface: 
 		    function (iid) {
-			Util.enablePrivilege("UniversalXPConnect")
+            if(!isExtension){
+			    Util.enablePrivilege("UniversalXPConnect")
+            }
 			if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
 			    return {
 				onChannelRedirect: function (oldC,newC,flags) {
+            if(!isExtension) {
 				    Util.enablePrivilege("UniversalXPConnect")
+            }
 				    if (xhr.aborted) return
 				    var kb = sf.store
 				    sf.addStatus(xhr,"Redirected: "+ 
@@ -759,11 +784,13 @@ function SourceFetcher(store, timeout, async) {
 	}
 
 	// Drop privs
-	try {
-	    Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
-	} catch (e) {
-	    alert("Can't drop privilege: " + e)
-	}
+        if(!isExtension) {
+	    try {
+	        Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
+	    } catch (e) {
+	        alert("Can't drop privilege: " + e)
+	    }
+        }
 
 	setTimeout(function() { 
 		       if (xhr.readyState != 4 && sf.isPending(xhr.uri)) {
@@ -876,7 +903,14 @@ function sources_check_callbacks()
 
 /** hack around firefox permission shtuff **/   
 function sources_xml(request) {
-    return (new DOMParser()).parseFromString(request.responseText, 'text/xml');
+    var dparser;
+    if(isExtension) {
+        dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                    .getService(Components.interfaces.nsIDOMParser);
+    } else {
+        dparser = new DOMParser()
+    }
+    return dparser.parseFromString(request.responseText, 'text/xml');
 } //sources_xml
 
 /** completely(!) retrach a source from the kb **/

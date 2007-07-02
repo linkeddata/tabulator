@@ -1,4 +1,6 @@
+
 function TabulatorLogger () {
+    this.document = Components.classes["@mozilla.org/xul/xul-document;1"].createInstance()
 
     this.TNONE = 0; 
     this.TERROR = 1;
@@ -8,19 +10,17 @@ function TabulatorLogger () {
     this.TINFO = 16;
     this.TDEBUG = 32;
     this.TALL = 63;
-
     this.level = this.TERROR+this.TWARN+this.TMESG;
     this.ascending = false;
 
     this.ele=null;
-    this.container=document.createElementNS('http://www.w3.org/1999/xhtml','html:div');
-
+    this.container=this.document.createElementNS('http://www.w3.org/1999/xhtml','html:div');
 
     this.msg = function (str, type, typestr) {
         if (!type) { type = this.TMESG; typestr = 'mesg'};
         if (!(tabulator.log.level & type)) return; //bitmask
         
-        var addendum = document.createElementNS('http://www.w3.org/1999/xhtml','span');
+        var addendum = this.document.createElementNS('http://www.w3.org/1999/xhtml','span');
         addendum.setAttribute('class', typestr);
         var now = new Date();
         addendum.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds()
@@ -62,12 +62,4 @@ function TabulatorLogger () {
         this.ele = newContainer;
         this.ele.appendChild(this.container);
     }
-}
-
-var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
-                  .getService(Components.interfaces.nsISupports)
-                  .wrappedJSObject;
-
-if(!tabulator.log) {
-    tabulator.log = new TabulatorLogger();
 }

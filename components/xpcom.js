@@ -4,14 +4,189 @@ const CLASS_ID = Components.ID("968a15aa-83d2-4577-88dd-b493dab4deb7");
 const CLASS_NAME = "the rdf/xml handler";
 const CONTRACT_ID = "@dig.csail.mit.edu/tabulator;1";
 
+//TODO: Maybe replace with a real check.
+const isExtension = true;
+
+function setTimeout(cb, delay) {
+    var timer = Components.classes["@mozilla.org/timer;1"]
+                  .getService(Components.interfaces.nsITimer);
+    var timerCallback = {
+        QueryInterface: function(aIID) {
+            if (aIID.equals(Components.interfaces.nsISupports)
+              || aIID.equals(Components.interfaces.nsITimerCallback))
+                return this;
+            throw Components.results.NS_NOINTERFACE;
+        },
+        notify: function () {
+            cb();
+        }
+    }; 
+    timer.initWithCallback(timerCallback,delay,timer.TYPE_ONE_SHOT);
+}
+
 function Tabulator() {
-  var thisTabulator=this;
+  tabulator = this;
   this.wrappedJSObject = this;
-  //Define all tabulator fields and functions HERE:
-  this.kb;
-  this.qs;
-  this.sf;
-  this.Util;
+  //Include the javascript that makes up the backend:
+  var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
+                       .getService(Components.interfaces.mozIJSSubScriptLoader);
+  loader.loadSubScript("chrome://tabulator/content/log-ext.js");
+  this.log = new TabulatorLogger();
+  dump("yello");
+
+  loader.loadSubScript("chrome://tabulator/content/sources-ext.js");
+  loader.loadSubScript("chrome://tabulator/content/js/util.js");
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/term.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/match.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfparser.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/n3parser.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/identity.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/rdf/sources.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/uri.js"/*, rootObj*/);
+  this.kb = new RDFIndexedFormula();
+  this.sf = new SourceFetcher(this.kb);
+  this.qs = new QuerySource();
+  this.sourceWidget = new SourceWidget();
+
+  //GLOBALS
+  kb =this.kb;
+  sf =this.sf;
+  qs =this.qs;
+
+  kb.register('dc', "http://purl.org/dc/elements/1.1/")
+  kb.register('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+  kb.register('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
+  kb.register('owl', "http://www.w3.org/2002/07/owl#")
+
+internals = []
+internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#request'] = 1;
+internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#requestedBy'] = 1;
+internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#source'] = 1;
+internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 1;
+internals['http://www.w3.org/2006/link#uri'] = 1;
+internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
+
+// Special knowledge of properties
+tabont = Namespace("http://dig.csail.mit.edu/2005/ajar/ajaw#")
+foaf = Namespace("http://xmlns.com/foaf/0.1/")
+rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+OWL = Namespace("http://www.w3.org/2002/07/owl#")
+dc = Namespace("http://purl.org/dc/elements/1.1/")
+rss = Namespace("http://purl.org/rss/1.0/")
+xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
+contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
+mo = Namespace("http://purl.org/ontology/mo/")
+
+
+Icon = {}
+Icon.src= []
+Icon.tooltips= []
+
+var iconPrefix = 'chrome://tabulator/content/';
+Icon.src.icon_unrequested = iconPrefix+'icons/16dot-blue.gif';
+Icon.src.icon_fetched = iconPrefix+'icons/16dot-green.gif';
+Icon.src.icon_failed = iconPrefix+'icons/16dot-red.gif';
+Icon.src.icon_requested = iconPrefix+'icons/16dot-yellow.gif'
+Icon.src.icon_expand = iconPrefix+'icons/tbl-expand-trans.png';
+Icon.src.icon_collapse = iconPrefix+'icons/tbl-collapse.png';
+Icon.src.icon_remove_node = iconPrefix+'icons/tbl-x-small.png'
+Icon.src.icon_shrink = iconPrefix+'icons/tbl-shrink.png';
+Icon.src.icon_optoff = iconPrefix+'icons/optional_off.PNG';
+Icon.src.icon_opton = iconPrefix+'icons/optional_on.PNG';
+Icon.src.icon_add_triple = iconPrefix+'icons/userinput_add_triple.png';
+
+Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
+Icon.tooltips[Icon.src.icon_expand]='View details.'
+Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
+Icon.tooltips[Icon.src.icon_collapse] = 'Hide list.'
+Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
+Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
+Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'
+Icon.tooltips[Icon.src.icon_failed] = 'Failed to load. Click to retry.'
+Icon.tooltips[Icon.src.icon_requested] = 'Being fetched. Please wait...'
+Icon.tooltips[Icon.src.icon_visit] = 'View the HTML content of this page within tabulator.'
+Icon.tooltips[Icon.src.icon_retract] = 'Remove this source and all its data from tabulator.'
+Icon.tooltips[Icon.src.icon_refresh] = 'Refresh this source and reload its triples.'
+
+Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
+{
+	this.src=src;
+	this.alt=alt;
+	this.width=width;
+	this.tooltip=tooltip;
+	this.filter=filter;
+       //filter: RDFStatement,('subj'|'pred'|'obj')->boolean, inverse->boolean (whether the statement is an inverse).
+       //Filter on whether to show this icon for a term; optional property.
+       //If filter is not passed, this icon will never AUTOMATICALLY be shown.
+       //You can show it with termWidget.addIcon
+	return this;
+}
+
+Icon.termWidgets = {}
+Icon.termWidgets.optOn = new Icon.OutlinerIcon(Icon.src.icon_opton,20,'opt on','Make this branch of your query mandatory.');
+Icon.termWidgets.optOff = new Icon.OutlinerIcon(Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
+Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
+
+
+LanguagePreference = "en"
+labelPriority = []
+labelPriority[foaf('name').uri] = 10
+labelPriority[dc('title').uri] = 8
+labelPriority[rss('title').uri] = 6   // = dc:title?
+labelPriority[contact('fullName').uri] = 4
+labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
+labelPriority[foaf('nick').uri] = 3
+labelPriority[RDFS('label').uri] = 2
+
+
+kb.predicateCallback = AJAR_handleNewTerm;
+kb.typeCallback = AJAR_handleNewTerm;
+
+function AJAR_handleNewTerm(kb, p, requestedBy) {
+    if (p.termType != 'symbol') return;
+    var docuri = Util.uri.docpart(p.uri);
+    var fixuri;
+    if (p.uri.indexOf('#') < 0) { // No hash
+
+	// @@ major hack for dbpedia Categories, which spred indefinitely
+	if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
+
+/*
+        if (string_startswith(p.uri, 'http://xmlns.com/foaf/0.1/')) {
+            fixuri = "http://dig.csail.mit.edu/2005/ajar/ajaw/test/foaf"
+	    // should give HTTP 303 to ontology -- now is :-)
+        } else
+*/
+	if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
+		   || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
+            fixuri = "http://dublincore.org/2005/06/13/dcq";
+	    //dc fetched multiple times
+        } else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
+            fixuri = "http://xmlns.com/wot/0.1/index.rdf";
+        } else if (string_startswith(p.uri, 'http://web.resource.org/cc/')) {
+//            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
+            fixuri = "http://web.resource.org/cc/schema.rdf";
+        }
+    }
+    if (fixuri) {
+	docuri = fixuri
+    }
+    if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
+    
+    if (fixuri) {   // only give warning once: else happens too often
+        tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
+	    "> to <" + docuri + ">")	
+    }
+    sf.requestURI(docuri, requestedBy);
+} //AJAR_handleNewTerm
+
+function string_startswith(str, pref) { // missing library routines
+    return (str.slice(0, pref.length) == pref);
+}
+
   this.views=[];
 
   this.registerView = function(view) {
@@ -43,7 +218,7 @@ function Tabulator() {
         var doc = e.originalTarget;
         var container = doc.getElementById('viewArea');
         var newView = new view(container,doc);
-        thisTabulator.qs.addListener(newView);
+        tabulator.qs.addListener(newView);
         newView.drawQuery(query);
         gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
     }

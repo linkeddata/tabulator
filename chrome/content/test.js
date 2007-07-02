@@ -14,8 +14,7 @@ function openTool(url, type, width, height)
 window.addEventListener("load", function() { tabExtension.init(); }, false);
 var kb,sf,qs,sourceWidget; //TODO:  In future, ditch these for tabulator.kb, etc
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-if(!tabulator.kb) {
-  kb = new RDFIndexedFormula()  // This uses indexing and smushing
+  /*kb = new RDFIndexedFormula()  // This uses indexing and smushing
   sf = new SourceFetcher(kb)    // This handles resource retrieval
   qs = new QuerySource()        // This stores all user-generated queries
   kb.register('dc', "http://purl.org/dc/elements/1.1/")
@@ -30,14 +29,12 @@ if(!tabulator.kb) {
   tabulator.sourceWidget = sourceWidget;
 
   tabulator.registerView(tableView);
-  tabulator.registerView(mapView);
-} else {
+  tabulator.registerView(mapView);*/
   //Horrible global vars :(
   kb = tabulator.kb;
   sf = tabulator.sf;
   qs = tabulator.qs;
   sourceWidget=tabulator.sourceWidget;
-}
   
 
 internals = []

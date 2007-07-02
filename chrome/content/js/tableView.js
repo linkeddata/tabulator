@@ -208,12 +208,12 @@ function tableResize_OnMouseDown(event) {
     alert("EventListeners added");
 }
 
-/*
+
 function tableResize_HeaderProblem (event) {
     //document.getElementById('debug').value += 'Entered HeaderProblem\n';
     document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
 }
-*/
+
 
 // doesn't seem like I ever enter OnMouseAfter
 
@@ -295,7 +295,7 @@ function tableResize_OnMouseUp(event) {
         var t = document.getElementById('tabulated_data');
         var lastRowNum = t.childNodes.length - 1; // not a very reliable way of getting rownumber
         for (i=0; i<nv; i++) {
-            if (hasAboutRC(lastRowNum, i)) 
+            if (literalNodeRC(lastRowNum, i)) 
                 td = createNonLiteralNode();
             else 
                 td = createLiteralNode();
@@ -324,7 +324,7 @@ function tableResize_OnMouseUp(event) {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
-    function hasAboutRC (row, col) {
+    function literalNodeRC (row, col) {
         var t = document.getElementById('tabulated_data'); 
         var TDNode = t.childNodes[row].childNodes[col];
         if (literalNodeTD (TDNode)) return true;

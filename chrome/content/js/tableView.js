@@ -72,7 +72,7 @@ function tableView(container,doc) {
 
         function onClickCell(e) {
             var srcElem = getTarget(e);
-            if (srcElem.tagName != "td") return;
+            if (srcElem.tagName != "TD") return;
             else onEdit(e);
         }
 
@@ -209,10 +209,10 @@ function tableResize_OnMouseDown(event) {
 }
 
 
-function tableResize_HeaderProblem (event) {
+//function tableResize_HeaderProblem (event) {
     //document.getElementById('debug').value += 'Entered HeaderProblem\n';
-    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
-}
+   //document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
+//}
 
 
 // doesn't seem like I ever enter OnMouseAfter
@@ -270,7 +270,7 @@ function tableResize_OnMouseUp(event) {
         but.setAttribute('type','button');
         but.setAttribute('id','addRowButton');
         but.onclick=addRow;
-        but.setAttribute('value','      Add Row      ');
+        but.setAttribute('value','+');
         form.appendChild(but);
         container.appendChild(form);
     }
@@ -320,10 +320,12 @@ function tableResize_OnMouseUp(event) {
     }
     
     // checks to see if a TD element has the about attribute
+    // to determine if it is a literal node
     function literalNodeTD (tdNode) {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
+    // same as the above except it checks using row, col specs
     function literalNodeRC (row, col) {
         var t = document.getElementById('tabulated_data'); 
         var TDNode = t.childNodes[row].childNodes[col];

@@ -72,7 +72,7 @@ function tableView(container,doc) {
 
         function onClickCell(e) {
             var srcElem = getTarget(e);
-            if (srcElem.tagName != "th") return;
+            if (srcElem.tagName != "td") return;
             else onEdit(e);
         }
 
@@ -88,7 +88,7 @@ function tableView(container,doc) {
             //alert(tdNode.className);
             var oldTxt = tdNode.innerHTML;
             var inputObj = document.createElement('INPUT');
-            if (hasAboutTD(tdNode)) return;
+            if (literalNodeTD(tdNode)) return;
             if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
             inputObj.style.width = "99%";
             inputObj.value = oldTxt;
@@ -208,10 +208,12 @@ function tableResize_OnMouseDown(event) {
     alert("EventListeners added");
 }
 
+/*
 function tableResize_HeaderProblem (event) {
     //document.getElementById('debug').value += 'Entered HeaderProblem\n';
     document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
 }
+*/
 
 // doesn't seem like I ever enter OnMouseAfter
 
@@ -293,8 +295,10 @@ function tableResize_OnMouseUp(event) {
         var t = document.getElementById('tabulated_data');
         var lastRowNum = t.childNodes.length - 1; // not a very reliable way of getting rownumber
         for (i=0; i<nv; i++) {
-            if (hasAboutRC(lastRowNum, i)) td = createNonLiteralNode();
-            else td = createLiteralNode();
+            if (hasAboutRC(lastRowNum, i)) 
+                td = createNonLiteralNode();
+            else 
+                td = createLiteralNode();
             tr.appendChild(td);
         }
         t.appendChild(tr);
@@ -316,14 +320,14 @@ function tableResize_OnMouseUp(event) {
     }
     
     // checks to see if a TD element has the about attribute
-    function hasAboutTD (tdNode) {
+    function literalNodeTD (tdNode) {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
     function hasAboutRC (row, col) {
         var t = document.getElementById('tabulated_data'); 
         var TDNode = t.childNodes[row].childNodes[col];
-        if (hasAboutTD (TDNode)) return true;
+        if (literalNodeTD (TDNode)) return true;
     }
 
     function drawExport () {

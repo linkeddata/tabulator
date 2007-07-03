@@ -3,7 +3,7 @@
 
 var RDFSink_forSomeSym = "http://www.w3.org/2000/10/swap/log#forSome";
 var RDFSink_forAllSym = "http://www.w3.org/2000/10/swap/log#forAll";
-
+var Logic_NS = "http://www.w3.org/2000/10/swap/log#";
 
 //  pyjs seems to reference runtime library which I didn't find
 
@@ -53,6 +53,7 @@ uripath_join = function(base, given) {
     return Util.uri.join(given, base)  // sad but true
 }
 
+var becauseSubexpression = null; // No reason needed
 var diag_tracking = 0;
 var diag_chatty_flag = 0;
 diag_progress = function(str) { tabulator.log.debug(str); }
@@ -73,7 +74,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3254 2007-06-27 18:02:03Z timbl $
+$Id: n3parser.js 3293 2007-07-03 18:22:19Z timbl $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -135,7 +136,7 @@ function __SinkParser(store, openFormula, thisDoc, baseURI, genPrefix, metaURI, 
     if (typeof why == 'undefined') why=null;
 /*
  note: namespace names should *not* end in #;
-	the # will get added during qname processing */
+        the # will get added during qname processing */
 
     this._bindings = new pyjslib_Dict([]);
     this._flags = flags;
@@ -186,10 +187,10 @@ function __SinkParser(store, openFormula, thisDoc, baseURI, genPrefix, metaURI, 
     }
     if ((openFormula == null)) {
     if (this._thisDoc) {
-    this._formula = store.newFormula( ( thisDoc + "#_formula" ) );
+    this._formula = store.formula( ( thisDoc + "#_formula" ) );
     }
     else {
-    this._formula = store.newFormula();
+    this._formula = store.formula();
     }
     }
     else {
@@ -218,12 +219,12 @@ Parses a buffer and returns its top level formula*/
 __SinkParser.prototype.feed = function(octets) {
 /*
 Feed an octet stream tothe parser
-	
-	if BadSyntax is raised, the string
-	passed in the exception object is the
-	remainder after any statements have been parsed.
-	So if there is more data to feed to the
-	parser, it should be straightforward to recover.*/
+        
+        if BadSyntax is raised, the string
+        passed in the exception object is the
+        remainder after any statements have been parsed.
+        So if there is more data to feed to the
+        parser, it should be straightforward to recover.*/
 
     var str = octets;
     var i = 0;
@@ -256,14 +257,14 @@ __SinkParser.prototype.directiveOrStatement = function(str, h) {
 __SinkParser.prototype.tok = function(tok, str, i) {
 /*
 Check for keyword.  Space must have been stripped on entry and
-	we must not be at end of file.*/
+        we must not be at end of file.*/
 
     var whitespace = "\t\n\v\f\r ";
     if ((pyjslib_slice(str, i,  ( i + 1 ) ) == "@")) {
     var i =  ( i + 1 ) ;
     }
     else {
-    if (!(this.keywords.indexOf(tok) >= 0)) {
+    if ((this.keywords.indexOf(tok) < 0)) {
     return -1;
     }
     }
@@ -310,9 +311,33 @@ __SinkParser.prototype.directive = function(str, i) {
                 var x = __x.next();
                 
         
-    if (!(this._variables.indexOf(x) >= 0) || (this._parentVariables.indexOf(x) >= 0)) {
+    if ((this._variables.indexOf(x) < 0) || (this._parentVariables.indexOf(x) >= 0)) {
     this._variables[x] = ( this._context.newUniversal(x));
     }
+
+            }
+        } catch (e) {
+            if (e != StopIteration) {
+                throw e;
+            }
+        }
+        
+    return i;
+    }
+    var j = this.tok("forSome", str, i);
+    if ((j > 0)) {
+    var i = this.commaSeparatedList(str, j, res, this.uri_ref2);
+    if ((i < 0)) {
+    throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad variable list after @forSome");
+    }
+
+        var __x = new pyjslib_Iterator(res);
+        try {
+            while (true) {
+                var x = __x.next();
+                
+        
+    this._context.declareExistential(x);
 
             }
         } catch (e) {
@@ -423,13 +448,13 @@ __SinkParser.prototype.subject = function(str, i, res) {
 __SinkParser.prototype.verb = function(str, i, res) {
 /*
  has _prop_
-	is _prop_ of
-	a
-	=
-	_prop_
-	>- prop ->
-	<- prop -<
-	_operator_*/
+        is _prop_ of
+        a
+        =
+        _prop_
+        >- prop ->
+        <- prop -<
+        _operator_*/
 
     var j = this.skipSpace(str, i);
     if ((j < 0)) {
@@ -507,17 +532,17 @@ __SinkParser.prototype.blankNode = function(uri) {
 __SinkParser.prototype.path = function(str, i, res) {
 /*
 Parse the path production.
-	*/
+        */
 
     var j = this.nodeOrLiteral(str, i, res);
     if ((j < 0)) {
     return j;
     }
-    while (("!^.".indexOf(pyjslib_slice(str, j,  ( j + 1 ) >= 0) ))) {
+    while (("!^.".indexOf(pyjslib_slice(str, j,  ( j + 1 ) )) >= 0)) {
     var ch = pyjslib_slice(str, j,  ( j + 1 ) );
     if ((ch == ".")) {
     var ahead = pyjslib_slice(str,  ( j + 1 ) ,  ( j + 2 ) );
-    if (!(ahead) || (_notNameChars.indexOf(ahead) >= 0) && !(":?<[{(".indexOf(ahead) >= 0)) {
+    if (!(ahead) || (_notNameChars.indexOf(ahead) >= 0) && (":?<[{(".indexOf(ahead) < 0)) {
     break;
     }
     }
@@ -554,9 +579,9 @@ __SinkParser.prototype.node = function(str, i, res, subjectAlready) {
     if (typeof subjectAlready == 'undefined') subjectAlready=null;
 /*
 Parse the <node> production.
-	Space is now skipped once at the beginning
-	instead of in multipe calls to self.skipSpace().
-	*/
+        Space is now skipped once at the beginning
+        instead of in multipe calls to self.skipSpace().
+        */
 
     var subj = subjectAlready;
     var j = this.skipSpace(str, i);
@@ -575,7 +600,7 @@ Parse the <node> production.
     var i =  ( j + 1 ) ;
     var objs = new pyjslib_List([]);
     var j = this.objectList(str, i, objs);
-None
+
     if ((j >= 0)) {
     var subj = objs[0];
     if ((pyjslib_len(objs) > 1)) {
@@ -630,7 +655,7 @@ None
     if ((ch2 == "$")) {
     i += 1;
     var j =  ( i + 1 ) ;
-    var List = new pyjslib_List([]);
+    var mylist = new pyjslib_List([]);
     var first_run = true;
     while (1) {
     var i = this.skipSpace(str, j);
@@ -657,9 +682,9 @@ None
     if ((j < 0)) {
     throw BadSyntax(this._thisDoc, this.lines, str, i, "expected item in set or '$}'");
     }
-    __List.prototype.append.call(this._store.intern(item[0]));
+    mylist.push(item[0]);
     }
-    res.push(this._store.newSet(List, this._context));
+    res.push(this._store.newSet(mylist, this._context));
     return j;
     }
     else {
@@ -670,11 +695,11 @@ None
     var grandParentVariables = this._parentVariables;
     this._parentVariables = this._variables;
     this._anonymousNodes = new pyjslib_Dict([]);
-    this._variables = this._variables.copy();
+    this._variables = this._variables.slice();
     var reason2 = this._reason2;
     this._reason2 = becauseSubexpression;
     if ((subj == null)) {
-    var subj = this._store.newFormula();
+    var subj = this._store.formula();
     }
     this._context = subj;
     while (1) {
@@ -702,14 +727,14 @@ None
     }
     }
     if ((ch == "(")) {
-    var thing_type = this._store.newList;
+    var thing_type = this._store.list;
     var ch2 = pyjslib_slice(str,  ( i + 1 ) ,  ( i + 2 ) );
     if ((ch2 == "$")) {
     var thing_type = this._store.newSet;
     i += 1;
     }
     var j =  ( i + 1 ) ;
-    var List = new pyjslib_List([]);
+    var mylist = new pyjslib_List([]);
     while (1) {
     var i = this.skipSpace(str, j);
     if ((i < 0)) {
@@ -724,9 +749,9 @@ None
     if ((j < 0)) {
     throw BadSyntax(this._thisDoc, this.lines, str, i, "expected item in list or ')'");
     }
-    __List.prototype.append.call(this._store.intern(item[0]));
+    mylist.push(item[0]);
     }
-    res.push(thing_type(List, this._context));
+    res.push(thing_type(mylist, this._context));
     return j;
     }
     var j = this.tok("this", str, i);
@@ -755,8 +780,8 @@ None
 __SinkParser.prototype.property_list = function(str, i, subj) {
 /*
 Parse property list
-	Leaves the terminating punctuation in the buffer
-	*/
+        Leaves the terminating punctuation in the buffer
+        */
 
     while (1) {
     var j = this.skipSpace(str, i);
@@ -911,10 +936,10 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
 /*
 Generate uri from n3 representation.
 
-	Note that the RDF convention of directly concatenating
-	NS and local name is now used though I prefer inserting a '#'
-	to make the namesapces look more like what XML folks expect.
-	*/
+        Note that the RDF convention of directly concatenating
+        NS and local name is now used though I prefer inserting a '#'
+        to make the namesapces look more like what XML folks expect.
+        */
 
     var qn = new pyjslib_List([]);
     var j = this.qname(str, i, qn);
@@ -1005,7 +1030,7 @@ Generate uri from n3 representation.
 __SinkParser.prototype.skipSpace = function(str, i) {
 /*
 Skip white space, newlines and comments.
-	return -1 if EOF, else position of first non-ws character*/
+        return -1 if EOF, else position of first non-ws character*/
 
     while (1) {
     eol.lastIndex = 0;
@@ -1031,8 +1056,8 @@ Skip white space, newlines and comments.
 };
 __SinkParser.prototype.variable = function(str, i, res) {
 /*
-	?abc -> variable(:abc)
-  	*/
+     ?abc -> variable(:abc)
+        */
 
     var j = this.skipSpace(str, i);
     if ((j < 0)) {
@@ -1047,14 +1072,14 @@ __SinkParser.prototype.variable = function(str, i, res) {
     throw BadSyntax(this._thisDoc, this.lines, str, j, "Varible name can't start with '%s'" % str[j]);
     return -1;
     }
-    while ((i < pyjslib_len(str)) && !(_notNameChars.indexOf(str[i]) >= 0)) {
+    while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str[i]) < 0)) {
     var i =  ( i + 1 ) ;
     }
     if ((this._parentContext == null)) {
     throw BadSyntax(this._thisDoc, this.lines, str, j, "Can't use ?xxx syntax for variable in outermost level: %s" % pyjslib_slice(str,  ( j - 1 ) , i));
     }
     var varURI = this._store.sym( (  ( this._baseURI + "#" )  + pyjslib_slice(str, j, i) ) );
-    if (!(this._parentVariables.indexOf(varURI) >= 0)) {
+    if ((this._parentVariables.indexOf(varURI) < 0)) {
     this._parentVariables[varURI] = ( this._parentContext.newUniversal(varURI, this._reason2));
     }
     res.push(this._parentVariables[varURI]);
@@ -1077,7 +1102,7 @@ __SinkParser.prototype.bareWord = function(str, i, res) {
     return -1;
     }
     var i = j;
-    while ((i < pyjslib_len(str)) && !(_notNameChars.indexOf(str[i]) >= 0)) {
+    while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str[i]) < 0)) {
     var i =  ( i + 1 ) ;
     }
     res.push(pyjslib_slice(str, j, i));
@@ -1086,10 +1111,10 @@ __SinkParser.prototype.bareWord = function(str, i, res) {
 __SinkParser.prototype.qname = function(str, i, res) {
 /*
 
-	xyz:def -> ('xyz', 'def')
-	If not in keywords and keywordsSet: def -> ('', 'def')
-	:def -> ('', 'def')    
-	*/
+        xyz:def -> ('xyz', 'def')
+        If not in keywords and keywordsSet: def -> ('', 'def')
+        :def -> ('', 'def')    
+        */
 
     var i = this.skipSpace(str, i);
     if ((i < 0)) {
@@ -1099,12 +1124,12 @@ __SinkParser.prototype.qname = function(str, i, res) {
     if (("0123456789-+".indexOf(c) >= 0)) {
     return -1;
     }
-    if (!(_notNameChars.indexOf(c) >= 0)) {
+    if ((_notNameChars.indexOf(c) < 0)) {
     var ln = c;
     var i =  ( i + 1 ) ;
     while ((i < pyjslib_len(str))) {
     var c = str[i];
-    if (!(_notNameChars.indexOf(c) >= 0)) {
+    if ((_notNameChars.indexOf(c) < 0)) {
     var ln =  ( ln + c ) ;
     var i =  ( i + 1 ) ;
     }
@@ -1122,7 +1147,7 @@ __SinkParser.prototype.qname = function(str, i, res) {
     var ln = "";
     while ((i < pyjslib_len(str))) {
     var c = str[i];
-    if (!(_notNameChars.indexOf(c) >= 0)) {
+    if ((_notNameChars.indexOf(c) < 0)) {
     var ln =  ( ln + c ) ;
     var i =  ( i + 1 ) ;
     }
@@ -1134,7 +1159,7 @@ __SinkParser.prototype.qname = function(str, i, res) {
     return i;
     }
     else {
-    if (ln && this.keywordsSet && !(this.keywords.indexOf(ln) >= 0)) {
+    if (ln && this.keywordsSet && (this.keywords.indexOf(ln) < 0)) {
     res.push(new pyjslib_Tuple(["", ln]));
     return i;
     }
@@ -1189,20 +1214,17 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
     }
     var ch = str[i];
     if (("-+0987654321".indexOf(ch) >= 0)) {
-    number_syntax.lastIndex = i;
-    var m = number_syntax.match(str);
+    number_syntax.lastIndex = 0;
+    var m = number_syntax.exec(str.slice(i));
     if ((m == null)) {
     throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad number syntax");
     }
-    var j = number_syntax.lastIndex;
-    if ((m.group("exponent") != null)) {
-    res.push(float(pyjslib_slice(str, i, j)));
-    }
-    else if ((m.group("decimal") != null)) {
-    res.push(local_decimal_Decimal(pyjslib_slice(str, i, j)));
+    var j =  ( i + number_syntax.lastIndex ) ;
+    if ((pyjslib_slice(str, i, j).indexOf(".") >= 0)) {
+    res.push(parseFloat(pyjslib_slice(str, i, j)));
     }
     else {
-    res.push(long(pyjslib_slice(str, i, j)));
+    res.push(parseInt(pyjslib_slice(str, i, j)));
     }
     return j;
     }
@@ -1220,11 +1242,14 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
     var s = pairFudge[1];
     var lang = null;
     if ((pyjslib_slice(str, j,  ( j + 1 ) ) == "@")) {
-    var m = langcode.match(str,  ( j + 1 ) );
+    langcode.lastIndex = 0;
+
+    var m = langcode.exec(str.slice( ( j + 1 ) ));
     if ((m == null)) {
     throw BadSyntax(this._thisDoc, startline, str, i, "Bad language code syntax on string literal, after @");
     }
-    var i = m.end();
+    var i =  (  ( langcode.lastIndex + j )  + 1 ) ;
+
     var lang = pyjslib_slice(str,  ( j + 1 ) , i);
     var j = i;
     }
@@ -1323,7 +1348,7 @@ __SinkParser.prototype.uEscape = function(str, i, startline) {
     var value = 0;
     while ((count < 4)) {
     var chFudge = pyjslib_slice(str, j,  ( j + 1 ) );
-    var ch = chFudge.lower();
+    var ch = chFudge.toLowerCase();
     var j =  ( j + 1 ) ;
     if ((ch == "")) {
     throw BadSyntax(this._thisDoc, startline, str, i, "unterminated string literal(3)");
@@ -1335,7 +1360,7 @@ __SinkParser.prototype.uEscape = function(str, i, startline) {
     var value =  (  ( value * 16 )  + k ) ;
     var count =  ( count + 1 ) ;
     }
-    var uch = unichr(value);
+    var uch = String.fromCharCode(value);
     return new pyjslib_Tuple([j, uch]);
 };
 __SinkParser.prototype.UEscape = function(str, i, startline) {
@@ -1345,7 +1370,7 @@ __SinkParser.prototype.UEscape = function(str, i, startline) {
     var value = "\\U";
     while ((count < 8)) {
     var chFudge = pyjslib_slice(str, j,  ( j + 1 ) );
-    var ch = chFudge.lower();
+    var ch = chFudge.toLowerCase();
     var j =  ( j + 1 ) ;
     if ((ch == "")) {
     throw BadSyntax(this._thisDoc, startline, str, i, "unterminated string literal(3)");
@@ -1360,18 +1385,17 @@ __SinkParser.prototype.UEscape = function(str, i, startline) {
     var uch = stringType(value).decode("unicode-escape");
     return new pyjslib_Tuple([j, uch]);
 };
-__BadSyntax.prototype = new __SyntaxError;
-function BadSyntax(uri, lines, str, i, why) {
-    return new __BadSyntax(uri, lines, str, i, why);
+function OLD_BadSyntax(uri, lines, str, i, why) {
+    return new __OLD_BadSyntax(uri, lines, str, i, why);
 }
-function __BadSyntax(uri, lines, str, i, why) {
+function __OLD_BadSyntax(uri, lines, str, i, why) {
     this._str = str;
     this._i = i;
     this._why = why;
     this.lines = lines;
     this._uri = uri;
 }
-__BadSyntax.prototype.__str__ = function() {
+__OLD_BadSyntax.prototype.toString = function() {
     var str = this._str;
     var i = this._i;
     var st = 0;
@@ -1390,6 +1414,11 @@ __BadSyntax.prototype.__str__ = function() {
     }
     return "Line %i of <%s>: Bad syntax (%s) at ^ in:\n\"%s%s^%s%s\"" % new pyjslib_Tuple([ ( this.lines + 1 ) , this._uri, this._why, pre, pyjslib_slice(str, st, i), pyjslib_slice(str, i,  ( i + 60 ) ), post]);
 };
+function BadSyntax(self, uri, lines, str, i, why) {
+    return "Line %i of <%s>: Bad syntax: %s\nat: \"%s\"" % new pyjslib_Tuple([ ( lines + 1 ) , uri, why, pyjslib_slice(str, i,  ( i + 30 ) )]);
+}
+
+
 function stripCR(str) {
     var res = "";
 

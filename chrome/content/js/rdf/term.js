@@ -14,6 +14,7 @@ RDFTracking = 0  // Are we requiring reasons for statements?
 function makeTerm(val) {
     //  tabulator.log.debug("Making term from " + val)
     if (typeof val == 'object') return val;
+    if (typeof val == 'number') return new RDFLiteral(val); // @@ differet types
     if (typeof val == 'string') return new RDFLiteral(val);
     if (typeof val == 'undefined') return undefined;
     alert("Can't make term from " + val + " of type " + typeof val) // @@ add numbers
@@ -216,8 +217,18 @@ RDFFormula.prototype.formula = function() {
     return new RDFFormula()
 }
 
-RDFFormula.prototype.collection = function () {
+RDFFormula.prototype.collection = function () { // obsolete
     return new RDFCollection()
+}
+
+RDFFormula.prototype.list = function (values) {
+    li = new RDFCollection();
+    if (values) {
+        for(var i = 0; i<values.length; i++) {
+            li.append(values[i]);
+        }
+    }
+    return li;
 }
 
 

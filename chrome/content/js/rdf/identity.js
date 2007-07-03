@@ -39,7 +39,7 @@ RDFArrayRemove = function(a, x) {  //removes all elements equal to x from a
             return;
 	}
     }
-    alert("RDFArrayRemove: Array did not contain "+x);
+    throw "RDFArrayRemove: Array did not contain " + x;
 };
 
 //Stores an associative array that maps URIs to functions
@@ -217,7 +217,6 @@ RDFIndexedFormula.prototype.replaceWith = function(big, small) {
     if ((typeof action != 'undefined') &&
 	(typeof this.propertyAction[small.hashString()] == 'undefined')) {
 	    this.propertyAction[small.hashString()] = action;
-	    alert("copying action on "+big+" to "+small)
     }
     tabulator.log.debug("Equate done. "+big+" to be known as "+small)    
     return true;  // true means the statement does not need to be put in
@@ -250,14 +249,17 @@ function RDFMakeTerm(formula,val) {
     if (typeof val != 'object') {   
 	if (typeof val == 'string') {
 	    return new RDFLiteral(val);
+	} else if (typeof val == 'number') {
+	    return new RDFLiteral(''+val);   // @@ datatypes
 	} else if (typeof val == 'undefined') {
 	    return undefined;
 	} else {   // @@ add converting of dates and numbers
-	    alert("Can't make term from " + val + " of type " + typeof val); 
+	    throw "Can't make term from " + val + " of type " + typeof val; 
 	}
     }
-    if (typeof formula.redirection == 'undefined') 
-	alert('formula: '+ formula+', term: '+val);
+    if (typeof formula.redirection == 'undefined') {
+	throw 'Internal: No redirection index for formula: '+ formula+', term: '+val;
+    }
     var y = formula.redirection[val.hashString()];
     if (typeof y == 'undefined') return val;
 //    tabulator.log.debug(" redirecting "+val+" to "+y)
@@ -443,7 +445,7 @@ RDFIndexedFormula.prototype.load = function(url) {
         try {
             Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
         } catch(e) {
-            alert("Failed to get privileges: (see Tabulator help info!)" + e)
+            throw ("Failed to get privileges: (see http://dig.csail.mit.edu/2005/ajar/ajaw/Privileges.html)" + e)
         }
     }
 
@@ -464,5 +466,38 @@ RDFIndexedFormula.prototype.load = function(url) {
     var parser = new RDFParser(this);
     parser.parse(nodeTree,url);
 }
+
+
+/**  Full N3 bits  -- placeholders only to allow parsing, no functionality! **/
+
+RDFIndexedFormula.prototype.newUniversal = function(uri) {
+    var x = this.sym(uri);
+    if (!this._universalVariables) this._universalVariables = [];
+    this._universalVariables.push(x);
+    return x;
+}
+
+RDFIndexedFormula.prototype.newExistential = function(uri) {
+    if (!uri) return this.bnode();
+    var x = this.sym(uri);
+    return this.declareExistential(x);
+}
+
+RDFIndexedFormula.prototype.declareExistential = function(x) {
+    if (!this._existentialVariables) this._existentialVariables = [];
+    this._existentialVariables.push(x);
+    return x;
+}
+
+RDFIndexedFormula.prototype.formula = function() {
+    return new RDFIndexedFormula();
+}
+
+RDFIndexedFormula.prototype.close = function() {
+    return this;
+}
+
+RDFIndexedFormula.prototype.hashString = RDFIndexedFormula.prototype.toNT;
+
 // ends
 

@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3280 2007-07-02 15:28:20Z jambo $
+// SVN ID: $Id: tabulate.js 3290 2007-07-03 08:55:44Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -101,6 +101,7 @@ Icon.src.icon_retracted = Icon.src.icon_unrequested;
 Icon.src.icon_time = 'icons/Wclocksmall.png';
 Icon.src.icon_remove_node = 'icons/tbl-x-small.png'
 Icon.src.icon_add_triple = 'icons/userinput_add_triple.png';
+Icon.src.icon_show_choices = 'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
 Icon.tooltips = [];
 Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
 {
@@ -144,6 +145,8 @@ Icon.termWidgets.time = new Icon.OutlinerIcon(Icon.src.icon_time,20,'time',
 'You can view this field in the calendar or timeline view',
 					      calendarable);
 Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
+function menuable(statement,type,inverse){return (statement.predicate.termType=='collection');}
+Icon.termWidgets.showChoices=new Icon.OutlinerIcon(Icon.src.icon_show_choices,20,'show choices',"Choose another term",menuable);
 
 Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
 Icon.tooltips[Icon.src.icon_expand]='View details.'
@@ -316,7 +319,7 @@ function SourceWidget() {
 		   
     this.highlight = function(u, on) {
 	if (!u) return;
-	this.sources[u.uri].setAttribute('class', on ? 'sourceHighlight' : '')
+	try{this.sources[u.uri].setAttribute('class', on ? 'sourceHighlight' : '')}catch(e){alert(u.uri);}
     }
 }
 
@@ -606,6 +609,13 @@ function AJAR_initialisePage() {
     outline = new Outline(document);
     statusWidget = new StatusWidget()
     sourceWidget = new SourceWidget()
+
+    //Force tabulator to load these two again because these are used in "This Session"
+    //Make sw.sources and sf.requested syncronized to each other should be the better way - Kenny
+    var ThisSession=kb.the(undefined,RDFS('label'),kb.literal("This Session"));
+    sf.requestURI('http://www.w3.org/2000/01/rdf-schema',ThisSession,true);
+    sf.requestURI('http://dig.csail.mit.edu/2005/ajar/ajaw/ont',ThisSession,true);
+
     initialiseGetData();
     var browser = document.getElementById('outline');
     var q;

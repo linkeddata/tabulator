@@ -12,7 +12,7 @@ function UserInput(outline){
 var myDocument=outline.document; //is this ok?
 this.menuId='predicateMenu1';
 this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
-this.namespaces["tabont"] = "http://dig.csail.mit.edu/2005/ajar/ajaw#"
+this.namespaces["tabont"] = "http://dig.csail.mit.edu/2005/ajar/ajaw#";
 this.namespaces["foaf"] = "http://xmlns.com/foaf/0.1/";
 this.namespaces["rdf"] = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 this.namespaces["RDFS"] = "http://www.w3.org/2000/01/rdf-schema#";
@@ -22,7 +22,7 @@ this.namespaces["rss"] = "http://purl.org/rss/1.0/";
 this.namespaces["xsd"] = "http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-";
 this.namespaces["contact"] = "http://www.w3.org/2000/10/swap/pim/contact#";
 this.namespaces["mo"] = "http://purl.org/ontology/mo/";
-this.namespaces["doap"] = "http://usefulinc.com/ns/doap#"
+this.namespaces["doap"] = "http://usefulinc.com/ns/doap#";
 var NameSpaces=this.namespaces;
 
 return {
@@ -48,27 +48,29 @@ switchMode: function(){ //should be part of global UI
     }
 },
     
-Click: function Click(e,selectedTd){
+Click: function Click(e,selectedTd,keyCode){
     //var This=outline.UserInput;
     if (!e){ //e==undefined : Keyboard Input
         var target=selectedTd;
         var object=getAbout(kb,target);
-        if (object && (object.termType=='symbol' || object.termType=='bnode')){
+        if (object && (object.termType=='symbol' || object.termType=='bnode') && keyCode==13){
             outline.GotoSubject(object,true);
             return false;
         }
     }            
-    else
+    else if (selectedTd) //case: add triple 
+        var target=selectedTd;
+    else    
         var target=outline.targetOf(e);
     if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
     try{
         var obj=this.getStatementAbout(target).object;
         var trNode=ancestor(target,'TR');
-    }catch(e){alert(target+'getStatement');}
+    }catch(e){/*alert(target+'getStatement');*/}
     this.clearInputAndSave();
     
     var tdNode=trNode.lastChild;
-    if (selectedTd.className=='undetermined selected') this.Refill(e,selectedTd);
+    if (selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined') this.Refill(e,selectedTd);
     //ignore clicking trNode.firstChild (be careful for <div> or <span>)    
     if (target!=tdNode && ancestor(target,'TD')!=tdNode) return;     
     
@@ -118,10 +120,13 @@ Click: function Click(e,selectedTd){
 
 clearMenu: function clearMenu(){
     var menu=myDocument.getElementById(this.menuID);
-    if (menu) menu.parentNode.removeChild(menu);
+    if (menu) {
+        menu.parentNode.removeChild(menu);
+        emptyNode(menu);
+    }
 },
 
-clearInputAndSave: function clearInputAndSave(){
+clearInputAndSave: function clearInputAndSave(e){
     if(!this.lastModified) return;
     if(!this.lastModified.isNew){
         try{
@@ -135,21 +140,42 @@ clearInputAndSave: function clearInputAndSave(){
         if (this.lastModified.isNew){
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
         }
-        else if (obj.termType=='literal') {
-            obj.value=this.lastModified.value;
+        else{ 
+            switch (obj.termType){
+                case 'literal':
+                    obj.value=this.lastModified.value;
             // send sparql update with new values
             //sparqlUpdate.setObject(makeTerm(this.lastModified.value));
-        }
+               
         //fire text modified??
-        else if (obj.termType=='symbol'){
-            kb.remove(s);
-            if(!this.statIsInverse)
-                s=kb.add(s.subject,s.predicate,kb.sym(this.lastModified.value),s.why); //fire!
+                    break;
+                case 'bnode': //a request refill with text
+                    var textTerm=kb.literal(this.lastModified.value,"");
+                    if (s.predicate.termType=='collection'){ //case: add triple
+                        var selectedPredicate=s.predicate.elements[0];
+                        if (kb.any(undefined,selectedPredicate,textTerm))
+                            this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
+                        else{
+                            kb.remove(s);
+                            kb.add(s.subject,selectedPredicate,textTerm);
+                        }
+                        //table_refresh ??? auto?                           
+                    }else{
+                    kb.remove(s);
+                    s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
+                    }
+                    break;
+                case 'symbol'://no longer allow user to edit URI
+                    /* 
+                    kb.remove(s);
+                    if(!this.statIsInverse)
+                        s=kb.add(s.subject,s.predicate,kb.sym(this.lastModified.value),s.why); //fire!
                                                                            //'why' to be changed
-            else
-                s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!
-            // send sparql update with new values
-            sparqlUpdate.setObject(kb.sym(this.lastModified.value));
+                    else
+                        s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!
+                    // send sparql update with new values
+                    sparqlUpdate.setObject(kb.sym(this.lastModified.value));*/ //
+            }
         }
     }else if(this.lastModified.isNew){//generate 'Request', there is no way you can input ' (Please Input) '
         var trNode=ancestor(this.lastModified,'TR');
@@ -179,17 +205,60 @@ clearInputAndSave: function clearInputAndSave(){
 addTriple: function addTriple(e){
     var predicateTd=getTarget(e).parentNode.parentNode;
     var predicateTerm=getAbout(kb,predicateTd);
+    var isInverse=predicateTd.parentNode.AJAR_inverse;
     //var titleTerm=getAbout(kb,ancestor(predicateTd.parentNode,'TD'));
     //set pseudo lastModifiedStat here
     this.lastModifiedStat=predicateTd.parentNode.AJAR_statement;
 
     var insertTr=this.appendToPredicate(predicateTd);
-        
-    var td=insertTr.appendChild(myDocument.createElement('td'));
-    this.lastModified = this.createInputBoxIn(td," (Please Input) ");
-    this.lastModified.isNew=true;
 
-    this.lastModified.select();
+    /*
+        switch (kb.whether(term,rdf('type'),OWL(?x))){
+            when ?x='ObjectProperty:
+            ...
+        }
+    */
+    if (kb.whether(predicateTerm,rdf('type'),OWL('ObjectProperty'))){
+        var tempTerm=kb.bnode();
+        var tempType=(!isInverse)?kb.any(predicateTerm,RDFS('range')):kb.any(predicateTerm,RDFS('domain'));
+        if (tempType) kb.add(tempTerm,rdf('type'),tempType);
+        var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
+        kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest);
+        /* SELECT ?labelProperty
+           WHERE{
+               ?labelProperty rdfs:subPropertyOf rdfs:label.
+               ?labelProperty rdfs:domain tempType.
+           }
+        */ //this is ideal...but
+
+        var labelChoices=kb.collection();
+        var labelProperties = kb.each(undefined,RDFS('subPropertyOf'),RDFS('label'));
+        for (var i=0;i<labelProperties.length;i++) {
+            labelChoices.append(labelProperties[i]);
+            kb.add(labelChoices,tabont('element'),labelProperties[i]);
+        }
+        labelChoices.append(RDFS('label'));
+        kb.add(labelChoices,tabont('element'),RDFS('label'));
+        kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true));
+
+        insertTr.appendChild(outline.outline_objectTD(tempTerm));              
+        var preStat=insertTr.previousSibling.AJAR_statement;
+        if (!isInverse)
+            this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
+        else
+            this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
+        return [insertTr.lastChild,tempTerm]; //expand signal
+    } else if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))){
+        var td=insertTr.appendChild(myDocument.createElement('td'));
+        this.lastModified = this.createInputBoxIn(td," (Please Input) ");
+        this.lastModified.isNew=true;
+
+        this.lastModified.select();
+        this.statIsInverse=false;        
+    } else { //inference work...
+    }
+
+
 
     if(predicateTd.parentNode.AJAR_inverse) {//generate 'Request';
         var preStat=insertTr.previousSibling.AJAR_statement;
@@ -198,7 +267,7 @@ addTriple: function addTriple(e){
         this.formUndetStat(insertTr,reqTerm,predicateTerm,preStat.subject,preStat.why,true);
         this.lastModified = null;
     }
-    this.statIsInverse=false;
+    //this.statIsInverse=false;
 },
 
 /*clipboard principle: copy wildly, paste carefully
@@ -214,6 +283,10 @@ clipboardInit: function clipboardInit(address){
 
     RDFCollection.prototype.shift=function(){
         return this.elements.shift();
+    }
+        
+    RDFIndexedFormula.prototype.whether = function (subject,predicate,object,why){
+        return this.statementsMatching(subject,predicate,object,why).length;
     }
 
     kb.add(kb.sym(address),tabont('objects'),kb.collection())
@@ -319,76 +392,34 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
 },
 
 Refill: function Refill(e,selectedTd){
-    var isPredicate=selectedTd.nextSibling;
-    function showMenu(inputQuery,order){
-	    var menu=myDocument.createElement('div');
-	    menu.id=this.menuID;
-	    menu.className='outlineMenu';
-	    //menu.addEventListener('click',false);
-	    menu.style.top=e.pageY+"px";
-	    menu.style.left=e.pageX+"px";
-	    myDocument.body.appendChild(menu);
-	    var table=menu.appendChild(myDocument.createElement('table'));
-        
-        var lastHighlight;
-        function highlightTr(e){
-            if (lastHighlight) lastHighlight.className='';
-            lastHighlight=ancestor(getTarget(e),'TR');
-            if (!lastHighlight) return; //mouseover <TABLE>
-            lastHighlight.className='activeItem';
-        }
-        function selectItem(e){
-            var inputTerm=getAbout(kb,getTarget(e))
-            if (isPredicate){
-                outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm);
-            }else{
-                //thisInput.fillInRequest('object',selectedTd,inputTerm); //why is this not working?
-                outline.UserInput.fillInRequest('object',selectedTd,inputTerm);
-            }
-            outline.UserInput.clearMenu();
-        }
-        table.addEventListener('mouseover',highlightTr,false);
-        table.addEventListener('click',selectItem,false);
-	    
-	    var bindingsCount=0;
-	    function addPredicateChoice(bindings){
-	        bindingsCount++;    
-	        if(bindingsCount==10) menu.style.width='11em';
-            var predicate=bindings[inputQuery.vars[0]]
-	        var Label = predicateLabelForXML(predicate, false);
-		    Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
-
-            var theNamespace;	    
-		    for (var name in NameSpaces){
-		        if (string_startswith(predicate.uri,NameSpaces[name])){
-		            theNamespace=name;
-		            break;
-		        }
-		    }
-
-	        var tr=table.appendChild(myDocument.createElement('tr'));
-	        tr.setAttribute('about',predicate);
-	        var th=tr.appendChild(myDocument.createElement('th'))
-	        th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
-	        if (theNamespace)
-	            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
-	    }
-	    kb.query(inputQuery,addPredicateChoice,myFetcher);
-    }//funciton showMenu
-    
+    var isPredicate=selectedTd.nextSibling;    
     if (isPredicate){ //predicateTd
         if (selectedTd.nextSibling.className=='undetermined') {
-         /* SELECT ?pred
+        /* SELECT ?pred
            WHERE{
                ?pred a rdf:Property.
                ?pred rdfs:domain subjectClass.
            }
         */  
+        /** SELECT ?pred ?class
+            WHERE{
+               ?pred a rdf:Property.
+               subjectClass owl:subClassOf ?class.
+               ?pred rdfs:domain ?class.
+           }
+        */
         var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
         var subjectClass=kb.any(subject,rdf('type'));
-        var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
-                       "?pred "+RDFS('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
-        var predicateQuery=SPARQLToQuery(sparqlText);                          
+        var sparqlText=[];
+        sparqlText[0]="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+                      "?pred "+RDFS('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
+        sparqlText[1]="SELECT ?pred ?class\nWHERE{\n"+
+                      "?pred "+rdf('type')+rdf('Property')+".\n"+
+                      subjectClass+RDFS('subClassOf')+" ?class.\n"+
+                      "?pred "+RDFS('domain')+" ?class.\n}";              
+        var predicateQuery=sparqlText.map(SPARQLToQuery);
+        
+                                  
         }else{
         //------selector
         /* SELECT ?pred
@@ -408,18 +439,28 @@ Refill: function Refill(e,selectedTd){
         var predicateQuery=SPARQLToQuery(sparqlText);
         }
         
-    
+
         //-------presenter
         //ToDo: how to sort selected predicates?
-        showMenu(predicateQuery);
+        this.showMenu(e,'GeneralPredicateChoice',predicateQuery,{'isPredicate': isPredicate,'selectedTd': selectedTd});
         
 	}else{ //objectTd
+	    var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate;
+	    if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))||predicateTerm.termType=='collection'){
+	        selectedTd.className='';
+	        emptyNode(selectedTd);
+	        this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
+	        this.lastModified.isNew=false;
+	        
+	        this.lastModified.select();
+	    }
+	     
 	    //show menu for rdf:type
 	    if (selectedTd.parentNode.AJAR_statement.predicate.sameTerm(rdf('type'))){
 	       var sparqlText="SELECT ?class WHERE{?class "+rdf('type')+RDFS('Class')+".}"; 
 	       //I should just use kb.each
 	       var classQuery=SPARQLToQuery(sparqlText);
-	       showMenu(classQuery);
+	       this.showMenu(e,'TypeChoice',classQuery,{'isPredicate': isPredicate});
 	    }
 	    
 	
@@ -585,7 +626,7 @@ appendToPredicate: function appendToPredicate(predicateTd){
     
     if (!isEnd)
         trIterator.parentNode.insertBefore(insertTr,trIterator);
-    else if (!HCIpptions["bottom insert highlights"].enabled)
+    else if (!HCIoptions["bottom insert highlights"].enabled)
         predicateTd.parentNode.parentNode.appendChild(insertTr);
     else; //anyway, this is buggy
         //predicateTd.parentNode.parentNode.insertBefore(
@@ -593,13 +634,15 @@ appendToPredicate: function appendToPredicate(predicateTd){
     return insertTr;
 },
 
-generateRequest: function generateRequest(tipText,trNew,isPredicate,allNew){
+generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
     var trNode;
-    if (trNew)
-        trNode=trNew;
-    else
-        trNode=ancestor(this.lastModified,'TR');
-    emptyNode(trNode);
+    if(!notShow){
+        if (trNew)
+            trNode=trNew;
+        else
+            trNode=ancestor(this.lastModified,'TR');
+        emptyNode(trNode);
+    }
     
     //create the undetermined term
     //Choice 1:
@@ -618,13 +661,148 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,allNew){
     kb.add(reqTerm,tabont('from'),kb.literal("The User"));
     
     //append the undetermined td
-    if(isPredicate)
-        trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
-    else
-        trNode.appendChild(outline.outline_objectTD(reqTerm));
+    if (!notShow){
+        if(isPredicate)
+            trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
+        else
+            trNode.appendChild(outline.outline_objectTD(reqTerm));
+    }
     
     return reqTerm;
 },
+
+showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo:order
+    var menu=myDocument.createElement('div');
+    menu.id=this.menuID;
+    menu.className='outlineMenu';
+    //menu.addEventListener('click',false);
+    menu.style.top=e.pageY+"px";
+    menu.style.left=e.pageX+"px";
+    myDocument.body.appendChild(menu);
+    var table=menu.appendChild(myDocument.createElement('table'));
+       
+    var lastHighlight;
+    function highlightTr(e){
+        if (lastHighlight) lastHighlight.className='';
+        lastHighlight=ancestor(getTarget(e),'TR');
+        if (!lastHighlight) return; //mouseover <TABLE>
+        lastHighlight.className='activeItem';
+    }
+
+    table.addEventListener('mouseover',highlightTr,false);
+	    
+    switch (menuType){
+        case 'DidYouMeanDialog':
+            var dialogTerm=extraInformation.dialogTerm;
+            var bnodeTerm=extraInformation.bnodeTerm;
+            //have to do style instruction passing
+            menu.style.width='auto';
+            
+            var h1=table.appendChild(myDocument.createElement('tr'));
+            var h1th=h1.appendChild(myDocument.createElement('th'))
+            h1th.appendChild(myDocument.createTextNode("Did you mean..."));
+            var plist=kb.statementsMatching(dialogTerm);
+            var i;
+            for (i=0;i<plist.length;i++) if (kb.whether(plist[i].predicate,rdf('type'),OWL('InverseFunctionalProperty'))) break;
+            var IDpredicate=plist[i].predicate;
+            var IDterm=kb.any(dialogTerm,plist[i].predicate);
+            var text=label(dialogTerm)+" who has "+label(IDpredicate)+" "+IDterm+"?";
+            var h2=table.appendChild(myDocument.createElement('tr'));
+            var h2th=h2.appendChild(myDocument.createElement('th'))
+            h2th.appendChild(myDocument.createTextNode(text));
+            h1th.setAttribute('colspan','2');h2th.setAttribute('colspan','2');
+            var ans1=table.appendChild(myDocument.createElement('tr'));
+            ans1.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('Yes'));
+            ans1.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
+            var ans2=table.appendChild(myDocument.createElement('tr'));
+            ans2.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('No'));
+            ans2.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
+            
+            table.removeEventListener('click',selectItem,false);
+            var selectItem=function selectItem(e){
+                var target=ancestor(getTarget(e),'TR')
+                if (target.childNodes.length==2 && target.nextSibling){ //Yes
+                    kb.add(bnodeTerm,IDpredicate,IDterm); //used to connect the two
+                    outline.UserInput.clearMenu();
+                }
+                else if (target.childNodes.length==2) //No
+                    outline.UserInput.clearMenu();                
+            }   
+            break;
+        case 'LimitedPredicateChoice':
+            var clickedTd=extraInformation.clickedTd;         
+            var selectItem=function selectItem(e){
+                var selectedPredicate=getAbout(kb,getTarget(e));
+                var predicateChoices=clickedTd.parentNode.AJAR_statement.predicate.elements;
+                for (var i=0;i<predicateChoices.length;i++){
+                    if (predicateChoices[i].sameTerm(selectedPredicate)){
+                        predicateChoices.unshift(predicateChoices.splice(i,1)[0]);
+                    }
+                }
+                outline.UserInput.clearMenu();
+
+                //refresh the choice
+                var tr=clickedTd.parentNode;
+                var newTd=outline.outline_predicateTD(tr.AJAR_statement.predicate,tr);
+                tr.insertBefore(newTd,clickedTd);
+                tr.removeChild(clickedTd);
+            }
+            break;
+        case 'GeneralPredicateChoice':
+        case 'TypeChoice':
+            var isPredicate=extraInformation.isPredicate;
+            var selectedTd=extraInformation.selectedTd;
+            var selectItem=function selectItem(e){
+                var inputTerm=getAbout(kb,getTarget(e))
+                if (isPredicate){
+                    outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm);
+                }else{
+                    //thisInput.fillInRequest('object',selectedTd,inputTerm); //why is this not working?
+                    outline.UserInput.fillInRequest('object',selectedTd,inputTerm);
+                }
+                outline.UserInput.clearMenu();
+            }
+    }       
+    table.addEventListener('click',selectItem,false);
+    if (menuType=='DidYouMeanDialog') return;
+    
+    //Add Items to the list
+	var bindingsCount=0;
+	function addPredicateChoice(selectedQuery){
+	    return function (bindings){
+	    bindingsCount++; 
+	    if(bindingsCount==10) menu.style.width='11em';
+        var predicate=bindings[selectedQuery.vars[0]]
+	    var Label = predicateLabelForXML(predicate, false);
+		Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
+
+        var theNamespace;	    
+	    for (var name in NameSpaces){
+            if (string_startswith(predicate.uri,NameSpaces[name])){
+	            theNamespace=name;
+	            break;
+	        }
+	    }
+
+        var tr=table.appendChild(myDocument.createElement('tr'));
+        tr.setAttribute('about',predicate);
+        var th=tr.appendChild(myDocument.createElement('th'))
+        th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
+        if (theNamespace)
+            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
+        }
+    }
+    switch (inputQuery.constructor.name){
+        case 'Array':
+            for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),function(){});
+            break;
+        case 'undefined':
+            alert("query is not defined");
+            break;
+        default:
+            kb.query(inputQuery,addPredicateChoice(inputQuery),myFetcher);
+    }
+},//funciton showMenu
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     var tr=selectedTd.parentNode

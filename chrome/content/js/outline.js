@@ -185,13 +185,22 @@ function Outline(doc) {
 	} //outline_objectTD
 	
 	this.outline_predicateTD=function outline_predicateTD(predicate,newTr,inverse,internal){
-	    var lab = predicateLabelForXML(predicate, inverse);
-		lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
-		        
+	    
         var td_p = myDocument.createElement("TD")
 		td_p.setAttribute('about', predicate.toNT())
         td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
-        if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
+        
+        switch (predicate.termType){
+            case 'bnode': //TBD
+                td_p.className='undetermined';
+            case 'symbol': 
+	            var lab = predicateLabelForXML(predicate, inverse);
+	            break;
+		    case 'collection': // some choices of predicate
+		        lab = predicateLabelForXML(predicate.elements[0],inverse);
+        }
+        lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
+        //if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
 
 		var labelTD = document.createElement('TD')
 		labelTD.setAttribute('notSelectable','true')
@@ -200,7 +209,7 @@ function Outline(doc) {
 		labelTD.style.width='100%'
 		td_p.appendChild(termWidget.construct()); //termWidget is global???
 		for (var w in Icon.termWidgets)	{
-		    if(!newTr.AJAR_statement) break; //case for TBD as predicate
+		    if(!newTr||!newTr.AJAR_statement) break; //case for TBD as predicate
 		            //alert(Icon.termWidgets[w]+"   "+Icon.termWidgets[w].filter)
 		    if (Icon.termWidgets[w].filter
 			&& Icon.termWidgets[w].filter(newTr.AJAR_statement,'pred',
@@ -958,6 +967,7 @@ function Outline(doc) {
 			 (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
             }
         }
+        if (getTarget(e).tagName=='TEXTAREA') return;
 	    if (getTarget(e).id=="UserURI") return;
 	    if (selection.length>1) return;
 	    if (selection.length==0){
@@ -993,7 +1003,6 @@ function Outline(doc) {
 	    }
 	    switch (e.keyCode){
 	        case 13://enter
-
 	            if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
 	                if (!thisOutline.UserInput.Click(undefined,selectedTd)){//meaning this is an expandable node
 	                    deselectAll();
@@ -1019,23 +1028,28 @@ function Outline(doc) {
                     //myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
                     e.stopPropagation();
 	            }
-	            break;
+	            return;      
 	        case 38://up
+	            thisOutline.UserInput.clearInputAndSave();
 	            goNext('up');/*
 	            deselectAll();
 	            var newSelTd=selectedTd.parentNode.previousSibling.lastChild;
 	            setSelected(newSelTd,true);*/
 	            e.stopPropagation();
 	            e.preventDefault();
-                break;
+                return;
 	        case 40://down
+	            thisOutline.UserInput.clearInputAndSave();
 	            goNext('down');/*
 	            deselectAll();
 	            var newSelTd=selectedTd.parentNode.nextSibling.lastChild;
 	            setSelected(newSelTd,true);*/
 	            e.stopPropagation();
 	            e.preventDefault();
-	            break;
+	            return;
+	    }
+	    if (getTarget(e).tagName=='INPUT') return;
+	    switch (e.keyCode){
             case 37://left
                 var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
                 var titleTd=parentTr.lastChild.firstChild.firstChild.firstChild;
@@ -1078,7 +1092,7 @@ function Outline(doc) {
 	                }
 	            default:
                     if (getTarget(e).tagName=='HTML'){
-                    thisOutline.UserInput.Click(undefined,selectedTd);
+                    thisOutline.UserInput.Click(undefined,selectedTd,e.keyCode);
                     thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
                     //Events are not reliable...
                     //var e2=document.createEvent("KeyboardEvent");
@@ -1134,8 +1148,9 @@ function Outline(doc) {
 	        return
 	    }
 	    //not input then clear
-	    thisOutline.UserInput.clearInputAndSave();
-	    thisOutline.UserInput.clearMenu();
+        thisOutline.UserInput.clearMenu();
+        if(!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)
+            thisOutline.UserInput.clearInputAndSave(e);
 	    if (tname != "IMG") {
 	        if(about && myDocument.getElementById('UserURI')) { 
 	            myDocument.getElementById('UserURI').value = 
@@ -1231,7 +1246,26 @@ function Outline(doc) {
 			viewAndSaveQuery();
 		    break;
 		case Icon.src.icon_add_triple:
-		    thisOutline.UserInput.addTriple(e);
+		    var returnSignal=thisOutline.UserInput.addTriple(e);
+		    if (returnSignal){ //when expand signal returned
+		        outline_expand(returnSignal[0],returnSignal[1],false);
+                for (var trIterator=returnSignal[0].firstChild.firstChild;trIterator;trIterator=trIterator.nextSibling){
+                    var st=trIterator.AJAR_statement;
+                    if (!st) continue;
+                    if (st.predicate.termType=='collection') break;
+                }
+                thisOutline.UserInput.Click(e,trIterator.lastChild);
+		    }
+		    break;
+		case Icon.src.icon_show_choices:
+            /*  SELECT ?pred 
+                WHERE{
+                    about tabont:element ?pred.
+                }
+            */
+            //Query Error because of getAbout->kb.fromNT
+            var choiceQuery=SPARQLToQuery("SELECT ?pred\nWHERE{ "+about+tabont('element')+" ?pred.}");
+		    thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',choiceQuery,{'clickedTd':p.parentNode});
 		    break;
 		default: //nothing
 	        }
@@ -1279,7 +1313,6 @@ function Outline(doc) {
 	     seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
 	    } 
 	
-	    var expandCount;
 	    function expand(uri)  {
 	    if (arguments[3]) return true;//already fetched indicator
 	    if (uri=="https://svn.csail.mit.edu/kennyluck/data") var debug=true;

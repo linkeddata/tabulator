@@ -3,11 +3,12 @@ function tableView(container,doc)
     var nv; // made this global since I need it later
     var activeSingleQuery = null;
     
+    thisTable = this;  // fixes a with calling this.container
     this.document=null;
     if(doc)
-      this.document=doc;
+        this.document=doc;
     else
-      this.document=document;
+        this.document=document;
     
     //The necessary vars for a View...
     this.name="Table";               //Display name of this view.
@@ -16,18 +17,17 @@ function tableView(container,doc)
     this.container.setAttribute('ondblclick','tableDoubleClick(event)')
     // this.container.setAttribute('onclick', 'onClickCell');
     
-    //----------------- this.drawQuery ----------------//
+    //***************** this.drawQuery *****************//
     this.drawQuery = function (q) 
     {
-        // q is a query object
-        //------------------ this.onBinding ----------------//
+        //***************** this.onBinding *****************//
         this.onBinding = function (bindings) 
         {
             var i, tr, td;
             tabulator.log.info("making a row w/ bindings " + bindings);
             tr = this.document.createElement('tr');
             t.appendChild(tr);
-            for (i=0; i<nv; i++) 
+            for (i=0; i<nv; i++)
             {
                 v = q.vars[i];
                 //alert("calling matrixTD");
@@ -36,7 +36,7 @@ function tableView(container,doc)
                 tr.appendChild(matrixTD(bindings[v]));
             } //for each query var, make a row
         }
-        //------------------ End this.onBinding ----------------//
+        //***************** End this.onBinding *****************//
         
         var i, td, th, j, v;
         var t = this.document.createElement('table');
@@ -50,9 +50,9 @@ function tableView(container,doc)
         
         emptyNode(this.container).appendChild(t); // See results as we go
         
-        for (i=0; i<nv; i++) 
+        for (i=0; i<nv; i++)
         {
-            v = q.vars[i]; 
+            v = q.vars[i];
             //tabulator.log.debug("table header cell for " + v + ': '+v.label)
             th = this.document.createElement('th');
             th.appendChild(this.document.createTextNode(v.label));
@@ -67,28 +67,32 @@ function tableView(container,doc)
         activeSingleQuery = q;
         this.queryStates[q.id]=1;
        
-        //---------------- Table Editing-------------------//
+        
         this.document.getElementById('tabulated_data').addEventListener('click', onClickCell, false);
 
+        //***************** Table Editing *****************//
+        
         function onClickCell(e) 
         {
-            var srcElem = getTarget(e);
-            if (srcElem.tagName != "TD") return;
-            srcElem.style.color = "
-            else onEdit(e);
+            var tdNode = getTarget(e);
+            
+            //tdNode.style.border = "black";
+            if (tdNode.tagName != "TD") return;
+            if (literalNodeTD(tdNode)) return;
+            if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT")return;
+            if (checkForEnter(e))
+                onEdit(tdNode, e);
+        }
+        
+        function checkForEnter(e)
+        {
+            if (e.keyCode == 13) 
+                return true;
         }
 
-        //Use getTdNode to avoid div and span elements
-        function getTDNode(e) 
+        function onEdit(TD, e)
         {
-            var srcElem = getTarget(e);
-            var tdNode = ancestor(srcElem, "TD");
-            return tdNode;
-        }
-
-        function onEdit(e) 
-        {
-            var tdNode = getTDNode(e);
+            var tdNode = TD;
             //alert(tdNode.className);
             var oldTxt = tdNode.innerHTML;
             var input = createInputForm(oldTxt);
@@ -97,10 +101,7 @@ function tableView(container,doc)
             
             if (!oldTxt)
                 input = createInputForm(" ");
-            if (literalNodeTD(tdNode)) return;
-            if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT")
-                return;
-            alert(tdNode.firstChild);
+            
             if (tdNode.firstChild) // node of the form <td> text </td>
             {
                 tdNode.replaceChild(input, tdNode.firstChild);
@@ -109,7 +110,7 @@ function tableView(container,doc)
             else // we have a node of the form <td />
             {
                 parent = tdNode.parentNode;
-                newTD = document.createElement('TD');
+                newTD = this.document.createElement('TD');
                 parent.replaceChild(newTD, tdNode);
                 newTD.appendChild(input);
             }
@@ -117,190 +118,32 @@ function tableView(container,doc)
         
         function createInputForm(oldText) 
         {
-            var inputObj = document.createElement('INPUT');
+            var inputObj = this.document.createElement('INPUT');
             inputObj.style.width = "99%";
             inputObj.value = oldText;
             inputObj.type = "TEXT";
-            inputObj.addEventListener ("blur", focusLost, false);
-            inputObj.addEventListener ("keypress", checkForEnter, false);
+            inputObj.addEventListener ("blur", tableEdit_FocusLost, false);
+            inputObj.addEventListener ("keypress", tableEdit_CheckForEnter, false);
             return inputObj;
         }
 
-        function focusLost(e) 
+        function tableEdit_FocusLost(e) 
         {
             var srcElem = getTarget(e);
             srcElem.parentNode.innerHTML = srcElem.value;
-            // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.  
+            // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
         }
 
-        function checkForEnter(e) 
+        function tableEdit_CheckForEnter(e) 
         {
-            if (e.keyCode == 13) focusLost (e);
+            if (e.keyCode == 13) 
+                tableEdit_FocusLost(e);
         }
-        //---------------- End Table Editing-------------------//
-        
-/*        
-//---------------- Table Resize -------------------//       
-
-document.getElementById('tabulated_data').addEventListener('mousemove', tableResize_OnMouseMoveBefore, false);
-document.getElementById('tabulated_data').addEventListener('mousedown', tableResize_OnMouseDown, false);
-window.addEventListener("load", tableResize_CreateResizeBar,0);
-
-var resizeElement = "TH"; //Elements to be resized
-var edgeThreshold = 2;
-var rBarID = "rBar";
-
-var resizeTarget = null; //position and distance moved
-var startX = null;
-var endX = null;
-var sizeX = null;
-var adjacentCell = null;
-
-//Creates rBar on load 
-function tableResize_CreateResizeBar() 
-{
-    var objItem = document.getElementById(rBarID);
-    if(!objItem) 
-    {
-        objItem = document.createElement("DIV");
-        objItem.id = rBarID;
-        objItem.style.position = "absolute";
-        objItem.style.top = "0px";
-        objItem.style.left = "0px";
-        objItem.style.height = "100px";
-        objItem.style.border = "1px solid black";
-        objItem.style.display = "none";
-        document.body.appendChild(objItem);
+        //***************** End Table Editing *****************//
     }
-}
-
-function tableResize_GetHeader(objReference) 
-{
-    var oElement = objReference;
-    if(oElement.tagName.toUpperCase() == resizeElement)
-        return oElement; //print alert?
-    return null;
-}
-
-function tableResize_CleanUp() 
-{
-    //document.getElementById('debug').value += 'Entered CleanUp\n';
-    var rBar = document.getElementById(rBarID);
-    if(rBar) 
-        rBar.style.display = "none";
-    endX = null;
-    sizeX = null;
-    startX = null;
-    resizeTarget = null;
-    adjacentCell = null;
-    return true;
-}
-
-function tableResize_OnMouseMoveBefore (event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseMoveBefore\n';
-    var objTH = tableResize_GetHeader(event.target); if (!objTH ) return;
-
-    //document.getElementById('coords').value += "event.clientX " + event.clientX + "\n";
-    //document.getElementById('coords').value += "event.layerX " + event.layerX + "\n";
-    //document.getElementById('coords').value += "offsetWidth " + objTH.offsetWidth+ "\n";
-    if (event.layerX >= (objTH.offsetWidth - edgeThreshold)) 
-        objTH.style.cursor = "e-resize";
-    else 
-        objTH.style.cursor = "";
-    return true;
-}
-
-// In order to use layerX, each TH must have style="position: relative"; 
-
-function tableResize_OnMouseDown(event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseDown\n';
-    objTable = this;
-    var objTH = tableResize_GetHeader(event.target); if (!objTH) return;
-    var rBar = document.getElementById(rBarID); if(!rBar) return;
-    // adjacentCell = objTH.nextSibling.nextSibling;
-    // alert(objTH.innerHTML);
-    // alert(adjacentCell.innerHTML);
+    //***************** End drawQuery *****************//
     
-    //IT DOESN"T SEEM TO GET PAST THIS STEP!
-
-    if ((objTH.tagName.toUpperCase() == resizeElement) && (objTH.style.cursor == "e-resize")) 
-    { 
-        startX = event.clientX;
-        resizeTarget = objTH;
-        
-        rBar.style.left = event.clientX + window.pageXOffset;
-        rBar.style.top = objTable.parentNode.offsetTop + window.pageYOffset;
-        rBar.style.height = objTable.parentNode.clientHeight;
-        rBar.style.display = "inline"; // THIS IS CRUCIAL
-    }
-    document.getElementById("tabulated_data").addEventListener("mousemove", tableResize_OnMouseMoveAfter, true);  
-    document.getElementById("tabulated_data").addEventListener("mouseup", tableResize_HeaderProblem, true); //this handles a problem with clickling on the header and then not exiting OnMouseMoveAfter
-    document.getElementById(rBarID).addEventListener("mouseup", tableResize_OnMouseUp, true);
-    alert("EventListeners added");
-}
-
-
-//function tableResize_HeaderProblem (event) 
-{
-    //document.getElementById('debug').value += 'Entered HeaderProblem\n';
-   //document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
-//}
-
-
-// doesn't seem like I ever enter OnMouseAfter
-
-function tableResize_OnMouseMoveAfter(event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseMoveAfter\n';
-    rBar.style.left = event.clientX + window.pageXOffset;
-    //document.getElementById("coords").value += rBar.style.left + "\n"; 
-    event.stopPropagation();
-}
-
-function tableResize_OnMouseUp(event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseUp\n';
-    var iAdjCellOldWidth = 0;
-    var iResizeOldWidth = 0;
-    var rBar = document.getElementById(rBarID); 
-
-    //resize target is already defined in onmousedown
-    var adjacentCell = resizeTarget.nextSibling.nextSibling;
-    //alert(adjacentCell);
-    
-    //---------------------------------------------------------
-    // set the width on resizeTarget
-    // the distance that resizeTarget moves is startX+endX ----
-    var endX = event.clientX;
-    // startX is already defined
-    var distanceMoved = endX - startX;
-    var newPosition = startX + distanceMoved;
-    var oldCellWidth = resizeTarget.offsetWidth;
-    //document.getElementById("coords").value += "startX " + startX + "\n";
-    //document.getElementById("coords").value += "endX " + endX + "\n";
-    //document.getElementById("coords").value += "oldCellWidth " + oldCellWidth + "\n"
-    resizeTarget.style.width = oldCellWidth + distanceMoved;
-    //document.getElementById("coords").value += "newCellWidth " + newCellWidth + "\n"; 
-    
-    //-------------------------------------------------
-    // set the width on adjacent Cell
-    // the distance that the adjacentCell moves is ---- 
-    var oldAdjacentWidth = adjacentCell.offsetWidth;
-    adjacentCell.style.width = oldAdjacentWidth - distanceMoved;
-    
-    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResize_OnMouseMoveAfter, true);
-    document.getElementById(rBarID).removeEventListener("mouseup", tableResize_OnMouseUp, true);
-    event.stopPropagation();
-    tableResize_CleanUp();
-}*/
-// Write getAdjacentCell function
-//---------------- End Table Resize -------------------//
-    }
-//-------------- End drawQuery ------------------//
-    
-    //--------------- Add Row -----------------//
+    //***************** Add Row *****************//
     function drawAddRow () 
     {
         var form = this.document.createElement('form');
@@ -311,7 +154,7 @@ function tableResize_OnMouseUp(event)
         but.onclick=addRow;
         but.setAttribute('value','+');
         form.appendChild(but);
-        container.appendChild(form);
+        thisTable.container.appendChild(form);
     }
     
     
@@ -327,8 +170,8 @@ function tableResize_OnMouseUp(event)
         // replace that with a selection bar?
         var i;
         var td;
-        var tr = document.createElement('tr');
-        var t = document.getElementById('tabulated_data');
+        var tr = this.document.createElement('tr');
+        var t = this.document.getElementById('tabulated_data');
         var lastRowNum = t.childNodes.length - 1; // not a very reliable way of getting rownumber
         for (i=0; i<nv; i++) 
         {
@@ -343,14 +186,14 @@ function tableResize_OnMouseUp(event)
     
     function createLiteralNode() 
     {
-        var td = document.createElement("TD");
+        var td = this.document.createElement("TD");
         td.innerHTML = " ";
         return td;
     }
     
     function createNonLiteralNode() 
     {
-        var td = document.createElement("TD");
+        var td = this.document.createElement("TD");
         td.setAttribute('about', '');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
@@ -360,19 +203,22 @@ function tableResize_OnMouseUp(event)
     
     // checks to see if a TD element has the about attribute
     // to determine if it is a literal node
-    function literalNodeTD (tdNode) {
+    function literalNodeTD (tdNode) 
+    {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
     // same as the above except it checks using row, col specs
-    function literalNodeRC (row, col) {
-        var t = document.getElementById('tabulated_data'); 
+    function literalNodeRC (row, col) 
+    {
+        var t = this.document.getElementById('tabulated_data'); 
         var TDNode = t.childNodes[row].childNodes[col];
         if (literalNodeTD (TDNode)) return true;
     }
-    //--------------- End Add Row -----------------//
+    //***************** End Add Row *****************//
 
-    function drawExport () {
+    function drawExport () 
+    {
         var form= this.document.createElement('form');
         var but = this.document.createElement('input');
         form.setAttribute('textAlign','right');
@@ -381,35 +227,41 @@ function tableResize_OnMouseUp(event)
         but.onclick=exportTable // they should all be like this?
         but.setAttribute('value','Export to HTML');
         form.appendChild(but);
-        container.appendChild(form);
+        thisTable.container.appendChild(form);
     }
 
-    this.undrawQuery = function(q) {
-        if(q===activeSingleQuery) {
+    this.undrawQuery = function(q) 
+    {
+        if(q===activeSingleQuery) 
+        {
             this.queryStates[q.id]=0;
             activeSingleQuery=null;
             emptyNode(this.container);
         }
-    }   
+    }
 
-    this.addQuery = function(q) {
+    this.addQuery = function(q) 
+    {
         this.queryStates[q.id]=0;
     }
 
-    this.removeQuery = function (q) {
+    this.removeQuery = function (q) 
+    {
         this.undrawQuery(q);
         delete this.queryStates[q.id];
         return;
     }
 
-    this.clearView = function () {
+    this.clearView = function () 
+    {
         this.undrawQuery(activeSingleQuery);
         activeSingleQuery=null;
         emptyNode(this.container);
     }
 } // tableView
 
-function tableDoubleClick(event) {
+function tableDoubleClick(event) 
+{
     var target = getTarget(event);
     var tname = target.tagName;
     var aa = getAbout(kb, target);
@@ -471,3 +323,162 @@ function exportTable()
             break;
     }*/
 }
+
+       
+//***************** Table Resize *****************//       
+/* 
+document.getElementById('tabulated_data').addEventListener('mousemove', tableResizeOnMouseMoveBefore, false);
+document.getElementById('tabulated_data').addEventListener('mousedown', tableResizeOnMouseDown, false);
+window.addEventListener("load", tableResizeCreateResizeBar,0);
+
+var resizeElement = "TH"; //Elements to be resized
+var edgeThreshold = 2;
+var rBarID = "rBar";
+
+var resizeTarget = null; //position and distance moved
+var startX = null;
+var endX = null;
+var sizeX = null;
+var adjacentCell = null;
+
+//Creates rBar on load 
+function tableResizeCreateResizeBar() 
+{
+    var objItem = document.getElementById(rBarID);
+    if(!objItem) 
+    {
+        objItem = document.createElement("DIV");
+        objItem.id = rBarID;
+        objItem.style.position = "absolute";
+        objItem.style.top = "0px";
+        objItem.style.left = "0px";
+        objItem.style.height = "100px";
+        objItem.style.border = "1px solid black";
+        objItem.style.display = "none";
+        document.body.appendChild(objItem);
+    }
+}
+
+function tableResizeGetHeader(objReference) 
+{
+    var oElement = objReference;
+    if(oElement.tagName.toUpperCase() == resizeElement)
+        return oElement; //print alert?
+    return null;
+}
+
+function tableResizeCleanUp() 
+{
+    //document.getElementById('debug').value += 'Entered CleanUp\n';
+    var rBar = document.getElementById(rBarID);
+    if(rBar) 
+        rBar.style.display = "none";
+    endX = null;
+    sizeX = null;
+    startX = null;
+    resizeTarget = null;
+    adjacentCell = null;
+    return true;
+}
+
+function tableResizeOnMouseMoveBefore (event) 
+{
+    //document.getElementById('debug').value += 'Entered OnMouseMoveBefore\n';
+    var objTH = tableResizeGetHeader(event.target); if (!objTH ) return;
+
+    //document.getElementById('coords').value += "event.clientX " + event.clientX + "\n";
+    //document.getElementById('coords').value += "event.layerX " + event.layerX + "\n";
+    //document.getElementById('coords').value += "offsetWidth " + objTH.offsetWidth+ "\n";
+    if (event.layerX >= (objTH.offsetWidth - edgeThreshold)) 
+        objTH.style.cursor = "e-resize";
+    else 
+        objTH.style.cursor = "";
+    return true;
+}
+
+// In order to use layerX, each TH must have style="position: relative"; 
+
+function tableResizeOnMouseDown(event) 
+{
+    //document.getElementById('debug').value += 'Entered OnMouseDown\n';
+    objTable = this;
+    var objTH = tableResizeGetHeader(event.target); if (!objTH) return;
+    var rBar = document.getElementById(rBarID); if(!rBar) return;
+    // adjacentCell = objTH.nextSibling.nextSibling;
+    // alert(objTH.innerHTML);
+    // alert(adjacentCell.innerHTML);
+    
+    //IT DOESN"T SEEM TO GET PAST THIS STEP!
+
+    if ((objTH.tagName.toUpperCase() == resizeElement) && (objTH.style.cursor == "e-resize")) 
+    { 
+        startX = event.clientX;
+        resizeTarget = objTH;
+        
+        rBar.style.left = event.clientX + window.pageXOffset;
+        rBar.style.top = objTable.parentNode.offsetTop + window.pageYOffset;
+        rBar.style.height = objTable.parentNode.clientHeight;
+        rBar.style.display = "inline"; // THIS IS CRUCIAL
+    }
+    document.getElementById("tabulated_data").addEventListener("mousemove", tableResizeOnMouseMoveAfter, true);  
+    document.getElementById("tabulated_data").addEventListener("mouseup", tableResizeHeaderProblem, true); //this handles a problem with clickling on the header and then not exiting OnMouseMoveAfter
+    document.getElementById(rBarID).addEventListener("mouseup", tableResizeOnMouseUp, true);
+    alert("EventListeners added");
+}
+
+function tableResizeHeaderProblem (event) 
+{
+    document.getElementById('debug').value += 'Entered HeaderProblem\n';
+    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResizeOnMouseMoveAfter, true);
+}
+
+
+// doesn't seem like I ever enter OnMouseAfter
+
+function tableResizeOnMouseMoveAfter(event) 
+{
+    //document.getElementById('debug').value += 'Entered OnMouseMoveAfter\n';
+    rBar.style.left = event.clientX + window.pageXOffset;
+    //document.getElementById("coords").value += rBar.style.left + "\n"; 
+    event.stopPropagation();
+}
+
+function tableResizeOnMouseUp(event) 
+{
+    //document.getElementById('debug').value += 'Entered OnMouseUp\n';
+    var iAdjCellOldWidth = 0;
+    var iResizeOldWidth = 0;
+    var rBar = document.getElementById(rBarID); 
+
+    //resize target is already defined in onmousedown
+    var adjacentCell = resizeTarget.nextSibling.nextSibling;
+    //alert(adjacentCell);
+    
+    //---------------------------------------------------------
+    // set the width on resizeTarget
+    // the distance that resizeTarget moves is startX+endX ----
+    var endX = event.clientX;
+    // startX is already defined
+    var distanceMoved = endX - startX;
+    var newPosition = startX + distanceMoved;
+    var oldCellWidth = resizeTarget.offsetWidth;
+    //document.getElementById("coords").value += "startX " + startX + "\n";
+    //document.getElementById("coords").value += "endX " + endX + "\n";
+    //document.getElementById("coords").value += "oldCellWidth " + oldCellWidth + "\n"
+    resizeTarget.style.width = oldCellWidth + distanceMoved;
+    //document.getElementById("coords").value += "newCellWidth " + newCellWidth + "\n"; 
+    
+    //-------------------------------------------------
+    // set the width on adjacent Cell
+    // the distance that the adjacentCell moves is ---- 
+    var oldAdjacentWidth = adjacentCell.offsetWidth;
+    adjacentCell.style.width = oldAdjacentWidth - distanceMoved;
+    
+    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResizeOnMouseMoveAfter, true);
+    document.getElementById(rBarID).removeEventListener("mouseup", tableResizeOnMouseUp, true);
+    event.stopPropagation();
+    tableResizeCleanUp();
+}
+// Write getAdjacentCell function
+*/
+//***************** End Table Resize *****************//

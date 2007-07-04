@@ -1004,7 +1004,7 @@ function Outline(doc) {
 	    switch (e.keyCode){
 	        case 13://enter
 	            if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
-	                if (!thisOutline.UserInput.Click(undefined,selectedTd)){//meaning this is an expandable node
+	                if (!thisOutline.UserInput.Click(e,selectedTd,true)){//meaning this is an expandable node
 	                    deselectAll();
 	                    var newTr=myDocument.getElementById('outline').lastChild;                
                         setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
@@ -1030,26 +1030,29 @@ function Outline(doc) {
 	            }
 	            return;      
 	        case 38://up
-	            thisOutline.UserInput.clearInputAndSave();
+	            //thisOutline.UserInput.clearInputAndSave(); 
+	            //^^^ does not work because up and down not captured...
 	            goNext('up');/*
 	            deselectAll();
 	            var newSelTd=selectedTd.parentNode.previousSibling.lastChild;
 	            setSelected(newSelTd,true);*/
 	            e.stopPropagation();
 	            e.preventDefault();
-                return;
+	            break;
 	        case 40://down
-	            thisOutline.UserInput.clearInputAndSave();
+	            //thisOutline.UserInput.clearInputAndSave();
 	            goNext('down');/*
 	            deselectAll();
 	            var newSelTd=selectedTd.parentNode.nextSibling.lastChild;
 	            setSelected(newSelTd,true);*/
 	            e.stopPropagation();
 	            e.preventDefault();
-	            return;
 	    }
 	    if (getTarget(e).tagName=='INPUT') return;
 	    switch (e.keyCode){
+	        case 8://delete
+	            e.preventDefault();//prevent from going back
+	            break;
             case 37://left
                 var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
                 var titleTd=parentTr.lastChild.firstChild.firstChild.firstChild;
@@ -1073,6 +1076,9 @@ function Outline(doc) {
                     }
                     setSelectedAfterward();                   
                 }
+                break;
+            case 38://up
+            case 40://down
                 break;    
 	        default:
 	            switch(e.charCode){
@@ -1092,8 +1098,9 @@ function Outline(doc) {
 	                }
 	            default:
                     if (getTarget(e).tagName=='HTML'){
-                    thisOutline.UserInput.Click(undefined,selectedTd,e.keyCode);
+                    thisOutline.UserInput.Click(e,selectedTd);
                     thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
+                    if (selectedTd.className=='undetermined selected') thisOutline.UserInput.AutoComplete(e.charCode)
                     //Events are not reliable...
                     //var e2=document.createEvent("KeyboardEvent");
                     //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);

@@ -48,17 +48,17 @@ switchMode: function(){ //should be part of global UI
     }
 },
     
-Click: function Click(e,selectedTd,keyCode){
+Click: function Click(e,selectedTd,isEnter){
     //var This=outline.UserInput;
-    if (!e){ //e==undefined : Keyboard Input
+    if (e.type=='keypress'){ //e==undefined : Keyboard Input
         var target=selectedTd;
         var object=getAbout(kb,target);
-        if (object && (object.termType=='symbol' || object.termType=='bnode') && keyCode==13){
+        if (object && (object.termType=='symbol' || object.termType=='bnode') && isEnter){
             outline.GotoSubject(object,true);
             return false;
         }
     }            
-    else if (selectedTd) //case: add triple 
+    else if (selectedTd) //case: add triple, auto-complete
         var target=selectedTd;
     else    
         var target=outline.targetOf(e);
@@ -69,10 +69,14 @@ Click: function Click(e,selectedTd,keyCode){
     }catch(e){/*alert(target+'getStatement');*/}
     this.clearInputAndSave();
     
-    var tdNode=trNode.lastChild;
-    if (selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined') this.Refill(e,selectedTd);
+    try{var tdNode=trNode.lastChild;}catch(ec){alert(selectedTd.childNode);}
+    //seems to be a event handling problem of firefox3
+    if (e.type!='keypress'&&selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined'){ 
+        this.Refill(e,selectedTd);
+        return;
+    }
     //ignore clicking trNode.firstChild (be careful for <div> or <span>)    
-    if (target!=tdNode && ancestor(target,'TD')!=tdNode) return;     
+    if (e.type!='keypress'&&target!=tdNode && ancestor(target,'TD')!=tdNode) return;     
     
     if (obj.termType== 'literal'){
         tdNode.removeChild(tdNode.firstChild); //remove the text
@@ -100,7 +104,13 @@ Click: function Click(e,selectedTd,keyCode){
             //e2.initMouseEvent("click",true,true,window,0,0,0,0,0,false,false,false,false,0,null);
             //inputBox.dispatchEvent(e2);
         //---------------------------------------------------------------------------
+    }else if (selectedTd.className=='undetermined selected'){
+        emptyNode(selectedTd);
+        this.lastModified=this.createInputBoxIn(selectedTd,"");
+        this.lastModified.select();
+        this.lastModified.addEventListener('keypress',this.AutoComplete,false);
     }else if (obj.termType== 'symbol'){
+        /*
         emptyNode(tdNode);
         tdNode.appendChild(myDocument.createTextNode("<"));
         var inputBox=myDocument.createElement('input');
@@ -113,7 +123,9 @@ Click: function Click(e,selectedTd,keyCode){
         inputBox.select();
         this.lastModified = inputBox;
         //Kenny: What if the user just want to edit the title?
+        */
     }
+    if (e.type=='keypress'&&selectedTd.className=='undetermined selected') this.AutoComplete(undefined,selectedTd);
     if(e) e.stopPropagation();
     return true; //this is not a valid modification
 },
@@ -466,6 +478,64 @@ Refill: function Refill(e,selectedTd){
 	
 	}
 },
+
+AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
+    var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
+    if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
+        var newText=InputBox.value;
+        var menu=myDocument.getElementById(this.menuID);
+        if (typeof enterEvent=='object'){
+            enterEvent.stopPropagation();  
+            switch (enterEvent.keyCode){
+                case 13://enter
+                    var inputTerm=getAbout(kb,menu.lastHighlight)
+                    outline.UserInput.fillInRequest('predicate',InputBox.parentNode,inputTerm);
+                    outline.UserInput.clearMenu();
+                    return;
+                case 38://up
+                    menu.lastHighlight.className='';
+                    menu.lastHighlight=menu.lastHighlight.previousSibling;
+                    menu.lastHighlight.className='activeItem';
+                    return;
+                case 40://down
+                    menu.lastHighlight.className='';
+                    menu.lastHighlight=menu.lastHighlight.nextSibling;
+                    menu.lastHighlight.className='activeItem';
+                    return;
+                case 8://backspace
+                    newText=newText.slice(0,-1);
+                    break;
+                default:
+                    newText+=String.fromCharCode(enterEvent.charCode)
+            }
+        }
+        var i;
+        for(i=0;InputBox.predicates[i].label<newText;i++);
+        if (i==0) i=1;
+        menu.scrollTop=(i-1)*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
+        //adjustment for firefox3 required
+        if (menu.lastHighlight) menu.lastHighlight.className='';
+        menu.lastHighlight=menu.firstChild.childNodes[i-1];
+        menu.lastHighlight.className='activeItem';   
+        return;
+    }
+    InputBox.predicates=[] //{NT,label}
+    for (var predNT in kb.predicateIndex){ //there is supposed to be not smushing on predicates??
+        var pred=kb.fromNT(predNT);
+        if (pred.termType=='symbol') //temporarily deal with symbol only
+            InputBox.predicates.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})   
+    }
+    function sortPred(a,b){
+        if (a.label < b.label) return -1;
+        if (a.label == b.label) return 0;
+        if (a.label > b.label) return 1;
+    }
+    InputBox.predicates.sort(sortPred);
+    var e={};
+    e.pageX=findPos(tdNode)[0];
+    e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
+    this.showMenu(e,'PredicateAutoComplete',undefined,{'isPredicate':true,'selectedTd':tdNode,'predicates':InputBox.predicates});
+},
 //ToDo: shrink rows when \n+backspace
 Keypress: function(e){
     if(e.keyCode==13){
@@ -597,7 +667,16 @@ createInputBoxIn: function createInputBoxIn(tdNode,defaultText){
     var inputBox=myDocument.createElement('input');
     inputBox.setAttribute('value',defaultText);
     inputBox.setAttribute('class','textinput');
-    inputBox.setAttribute('size','100'); //should be the size of <TD>
+    if (tdNode.className!='undetermined selected') {
+        inputBox.setAttribute('size','100');//should be the size of <TD>
+        function UpAndDown(e){
+            if (e.keyCode==38||e.keyCode==40){
+                outline.OutlinerKeypressPanel(e);  
+                outline.UserInput.clearInputAndSave();              
+            }
+        }
+        inputBox.addEventListener('keypress',UpAndDown,false)
+    }
     tdNode.appendChild(inputBox);
     return inputBox;
 },
@@ -681,12 +760,12 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
     myDocument.body.appendChild(menu);
     var table=menu.appendChild(myDocument.createElement('table'));
        
-    var lastHighlight;
+    menu.lastHighlight=null;;
     function highlightTr(e){
-        if (lastHighlight) lastHighlight.className='';
-        lastHighlight=ancestor(getTarget(e),'TR');
-        if (!lastHighlight) return; //mouseover <TABLE>
-        lastHighlight.className='activeItem';
+        if (menu.lastHighlight) menu.lastHighlight.className='';
+        menu.lastHighlight=ancestor(getTarget(e),'TR');
+        if (!menu.lastHighlight) return; //mouseover <TABLE>
+        menu.lastHighlight.className='activeItem';
     }
 
     table.addEventListener('mouseover',highlightTr,false);
@@ -748,6 +827,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
                 tr.removeChild(clickedTd);
             }
             break;
+        case 'PredicateAutoComplete':
         case 'GeneralPredicateChoice':
         case 'TypeChoice':
             var isPredicate=extraInformation.isPredicate;
@@ -771,13 +851,14 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
 	function addPredicateChoice(selectedQuery){
 	    return function (bindings){
 	    bindingsCount++; 
-	    if(bindingsCount==10) menu.style.width='11em';
+	    //if(bindingsCount==10) menu.style.width='11em';
         var predicate=bindings[selectedQuery.vars[0]]
 	    var Label = predicateLabelForXML(predicate, false);
-		Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
+		//Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
 
-        var theNamespace;	    
+        var theNamespace="";	    
 	    for (var name in NameSpaces){
+	        if (!predicate.uri) break;//bnode
             if (string_startswith(predicate.uri,NameSpaces[name])){
 	            theNamespace=name;
 	            break;
@@ -788,9 +869,20 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
         tr.setAttribute('about',predicate);
         var th=tr.appendChild(myDocument.createElement('th'))
         th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
-        if (theNamespace)
-            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
+        tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
         }
+    }
+    if (menuType=='PredicateAutoComplete'){
+        var predicates=extraInformation.predicates;
+        for (var i=1;i<predicates.length;i++){
+            var tempQuery={};
+            tempQuery.vars=[];
+            tempQuery.vars.push('Kenny');
+            var tempBinding={};
+            tempBinding.Kenny=kb.fromNT(predicates[i].NT);
+            try{addPredicateChoice(tempQuery)(tempBinding);}catch(e){alert(e);}//I'll deal with bnodes later...
+        }
+        return;
     }
     switch (inputQuery.constructor.name){
         case 'Array':
@@ -806,14 +898,20 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     var tr=selectedTd.parentNode
+    var stat=tr.AJAR_statement;
     if (type=='predicate'){
         tr.replaceChild(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
+        kb.remove(stat);
+        kb.add(stat.subject,inputTerm,stat.object) //ToDo: why and inverse
     }else if (type=='object'){
         var newTd=outline.outline_objectTD(inputTerm);
         tr.replaceChild(newTd,selectedTd);
         
         //modify store and update here
+        kb.remove(stat);
+        kb.add(stat.subject,stat.predicate,inputTerm);
+        
         this.setSelected(newTd,true);        
     }
 

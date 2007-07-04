@@ -25,7 +25,7 @@ function tableView(container,doc)
         {
             var i, tr, td;
             tabulator.log.info("making a row w/ bindings " + bindings);
-            tr = this.document.createElement('tr');
+            tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
             for (i=0; i<nv; i++)
             {
@@ -39,8 +39,8 @@ function tableView(container,doc)
         //***************** End this.onBinding *****************//
         
         var i, td, th, j, v;
-        var t = this.document.createElement('table');
-        var tr = this.document.createElement('tr');
+        var t = thisTable.document.createElement('table');
+        var tr = thisTable.document.createElement('tr');
         
         nv = q.vars.length;
         
@@ -54,8 +54,8 @@ function tableView(container,doc)
         {
             v = q.vars[i];
             //tabulator.log.debug("table header cell for " + v + ': '+v.label)
-            th = this.document.createElement('th');
-            th.appendChild(this.document.createTextNode(v.label));
+            th = thisTable.document.createElement('th');
+            th.appendChild(thisTable.document.createTextNode(v.label));
             tr.appendChild(th);
         }
         
@@ -68,7 +68,7 @@ function tableView(container,doc)
         this.queryStates[q.id]=1;
        
         
-        this.document.getElementById('tabulated_data').addEventListener('click', onClickCell, false);
+        thisTable.document.getElementById('tabulated_data').addEventListener('click', onClickCell, false);
 
         //***************** Table Editing *****************//
         
@@ -79,16 +79,16 @@ function tableView(container,doc)
             //tdNode.style.border = "black";
             if (tdNode.tagName != "TD") return;
             if (literalNodeTD(tdNode)) return;
-            if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT")return;
-            if (checkForEnter(e))
-                onEdit(tdNode, e);
+            if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
+            onEdit(tdNode, e);
         }
         
+        /*
         function checkForEnter(e)
         {
             if (e.keyCode == 13) 
                 return true;
-        }
+        }*/
 
         function onEdit(TD, e)
         {
@@ -110,7 +110,7 @@ function tableView(container,doc)
             else // we have a node of the form <td />
             {
                 parent = tdNode.parentNode;
-                newTD = this.document.createElement('TD');
+                newTD = thisTable.document.createElement('TD');
                 parent.replaceChild(newTD, tdNode);
                 newTD.appendChild(input);
             }
@@ -118,7 +118,7 @@ function tableView(container,doc)
         
         function createInputForm(oldText) 
         {
-            var inputObj = this.document.createElement('INPUT');
+            var inputObj = thisTable.document.createElement('INPUT');
             inputObj.style.width = "99%";
             inputObj.value = oldText;
             inputObj.type = "TEXT";
@@ -146,8 +146,8 @@ function tableView(container,doc)
     //***************** Add Row *****************//
     function drawAddRow () 
     {
-        var form = this.document.createElement('form');
-        var but = this.document.createElement('input');
+        var form = thisTable.document.createElement('form');
+        var but = thisTable.document.createElement('input');
         form.setAttribute('textAlign','right');
         but.setAttribute('type','button');
         but.setAttribute('id','addRowButton');
@@ -170,8 +170,8 @@ function tableView(container,doc)
         // replace that with a selection bar?
         var i;
         var td;
-        var tr = this.document.createElement('tr');
-        var t = this.document.getElementById('tabulated_data');
+        var tr = thisTable.document.createElement('tr');
+        var t = thisTable.document.getElementById('tabulated_data');
         var lastRowNum = t.childNodes.length - 1; // not a very reliable way of getting rownumber
         for (i=0; i<nv; i++) 
         {
@@ -186,14 +186,14 @@ function tableView(container,doc)
     
     function createLiteralNode() 
     {
-        var td = this.document.createElement("TD");
+        var td = thisTable.document.createElement("TD");
         td.innerHTML = " ";
         return td;
     }
     
     function createNonLiteralNode() 
     {
-        var td = this.document.createElement("TD");
+        var td = thisTable.document.createElement("TD");
         td.setAttribute('about', '');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
@@ -211,7 +211,7 @@ function tableView(container,doc)
     // same as the above except it checks using row, col specs
     function literalNodeRC (row, col) 
     {
-        var t = this.document.getElementById('tabulated_data'); 
+        var t = thisTable.document.getElementById('tabulated_data'); 
         var TDNode = t.childNodes[row].childNodes[col];
         if (literalNodeTD (TDNode)) return true;
     }
@@ -219,8 +219,8 @@ function tableView(container,doc)
 
     function drawExport () 
     {
-        var form= this.document.createElement('form');
-        var but = this.document.createElement('input');
+        var form= thisTable.document.createElement('form');
+        var but = thisTable.document.createElement('input');
         form.setAttribute('textAlign','right');
         but.setAttribute('type','button');
         but.setAttribute('id','exportButton');
@@ -283,7 +283,7 @@ function exportTable()
         case 'html':
 */
     var win=window.open('table.html','Save table as HTML');
-    var tbl=this.document.getElementById('tabulated_data');
+    var tbl=thisTable.document.getElementById('tabulated_data');
     win.document.write('<TABLE>');
     for(j=0;j<tbl.childNodes[0].childNodes.length;j++)
     {

@@ -3,7 +3,7 @@ function tableView(container,doc)
     var nv; // made this global since I need it later
     var activeSingleQuery = null;
     
-    thisTable = this;  // fixes a with calling this.container
+    thisTable = this;  // fixes a problem with calling this.container
     this.document=null;
     if(doc)
         this.document=doc;
@@ -48,7 +48,7 @@ function tableView(container,doc)
         t.setAttribute('class', 'results sortable'); //needed to make sortable
         t.setAttribute('id', 'tabulated_data'); 
         
-        emptyNode(this.container).appendChild(t); // See results as we go
+        emptyNode(thisTable.container).appendChild(t); // See results as we go
         
         for (i=0; i<nv; i++)
         {
@@ -59,90 +59,88 @@ function tableView(container,doc)
             tr.appendChild(th);
         }
         
+        kb.query(q, this.onBinding, myFetcher);
+        activeSingleQuery = q;
+        this.queryStates[q.id]=1;
+        
         drawExport();
         drawAddRow();
         sortables_init();
 
-        kb.query(q, this.onBinding, myFetcher);
-        activeSingleQuery = q;
-        this.queryStates[q.id]=1;
-       
-        
-        thisTable.document.getElementById('tabulated_data').addEventListener('click', onClickCell, false);
-
-        //***************** Table Editing *****************//
-        
-        function onClickCell(e) 
-        {
-            var tdNode = getTarget(e);
-            
-            //tdNode.style.border = "black";
-            if (tdNode.tagName != "TD") return;
-            if (literalNodeTD(tdNode)) return;
-            if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
-            onEdit(tdNode, e);
-        }
-        
-        /*
-        function checkForEnter(e)
-        {
-            if (e.keyCode == 13) 
-                return true;
-        }*/
-
-        function onEdit(TD, e)
-        {
-            var tdNode = TD;
-            //alert(tdNode.className);
-            var oldTxt = tdNode.innerHTML;
-            var input = createInputForm(oldTxt);
-            var parent;
-            var newTD;
-            
-            if (!oldTxt)
-                input = createInputForm(" ");
-            
-            if (tdNode.firstChild) // node of the form <td> text </td>
-            {
-                tdNode.replaceChild(input, tdNode.firstChild);
-                input.select();
-            }
-            else // we have a node of the form <td />
-            {
-                parent = tdNode.parentNode;
-                newTD = thisTable.document.createElement('TD');
-                parent.replaceChild(newTD, tdNode);
-                newTD.appendChild(input);
-            }
-        }
-        
-        function createInputForm(oldText) 
-        {
-            var inputObj = thisTable.document.createElement('INPUT');
-            inputObj.style.width = "99%";
-            inputObj.value = oldText;
-            inputObj.type = "TEXT";
-            inputObj.addEventListener ("blur", tableEdit_FocusLost, false);
-            inputObj.addEventListener ("keypress", tableEdit_CheckForEnter, false);
-            return inputObj;
-        }
-
-        function tableEdit_FocusLost(e) 
-        {
-            var srcElem = getTarget(e);
-            srcElem.parentNode.innerHTML = srcElem.value;
-            // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
-        }
-
-        function tableEdit_CheckForEnter(e) 
-        {
-            if (e.keyCode == 13) 
-                tableEdit_FocusLost(e);
-        }
-        //***************** End Table Editing *****************//
+        t.addEventListener('click', onClickCell, false);
     }
     //***************** End drawQuery *****************//
     
+    //***************** Table Editing *****************//
+    function onClickCell(e) 
+    {
+        var tdNode = getTarget(e);
+        
+        //tdNode.style.border = "black";
+        if (tdNode.tagName != "TD") return;
+        if (literalNodeTD(tdNode)) return;
+        if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
+        onEdit(tdNode, e);
+    }
+    
+    /*
+    function checkForEnter(e)
+    {
+        if (e.keyCode == 13) 
+            return true;
+    }*/
+
+    function onEdit(TD, e)
+    {
+        var tdNode = TD;
+        //alert(tdNode.className);
+        var oldTxt = tdNode.innerHTML;
+        var input = createInputForm(oldTxt);
+        var parent;
+        var newTD;
+        
+        if (!oldTxt)
+            input = createInputForm(" ");
+        
+        if (tdNode.firstChild) // node of the form <td> text </td>
+        {
+            tdNode.replaceChild(input, tdNode.firstChild);
+            input.select();
+        }
+        else // we have a node of the form <td />
+        {
+            parent = tdNode.parentNode;
+            newTD = thisTable.document.createElement('TD');
+            parent.replaceChild(newTD, tdNode);
+            newTD.appendChild(input);
+        }
+    }
+    
+    function createInputForm(oldText) 
+    {
+        var inputObj = thisTable.document.createElement('INPUT');
+        inputObj.style.width = "99%";
+        inputObj.value = oldText;
+        inputObj.type = "TEXT";
+        inputObj.addEventListener ("blur", tableEdit_FocusLost, false);
+        inputObj.addEventListener ("keypress", tableEdit_CheckForEnter, false);
+        return inputObj;
+    }
+
+    function tableEdit_FocusLost(e) 
+    {
+        var srcElem = getTarget(e);
+        srcElem.parentNode.innerHTML = srcElem.value;
+        // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
+    }
+
+    function tableEdit_CheckForEnter(e) 
+    {
+        if (e.keyCode == 13) 
+            tableEdit_FocusLost(e);
+    }
+    //***************** End Table Editing *****************//
+        
     //***************** Add Row *****************//
     function drawAddRow () 
     {

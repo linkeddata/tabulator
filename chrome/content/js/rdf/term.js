@@ -284,7 +284,7 @@ RDFFormula.prototype.fromNT = function(str) {
 	RDFNextId--
 	return x
     }
-    alert("Can't yet convert from NT: '"+str+"', "+str[0])
+    //alert("Can't yet convert from NT: '"+str+"', "+str[0])
 }
 
 // ends

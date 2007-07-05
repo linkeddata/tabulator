@@ -125,7 +125,10 @@ Click: function Click(e,selectedTd,isEnter){
         //Kenny: What if the user just want to edit the title?
         */
     }
-    if (e.type=='keypress'&&selectedTd.className=='undetermined selected') this.AutoComplete(undefined,selectedTd);
+    if (e.type=='keypress'&&selectedTd.className=='undetermined selected') {
+        var completeType=(selectedTd.nextSibling)?'predicate':'all';
+        this.AutoComplete(undefined,selectedTd,completeType);
+    }
     if(e) e.stopPropagation();
     return true; //this is not a valid modification
 },
@@ -268,8 +271,14 @@ addTriple: function addTriple(e){
         this.lastModified.select();
         this.statIsInverse=false;        
     } else { //inference work...
+        var tiptext="(To be determined. Re-type of drag an object onto this field)";
+        var reqTerm=this.generateRequest(tiptext,insertTr,false);
+        var preStat=insertTr.previousSibling.AJAR_statement;
+        if (!isInverse)
+            this.formUndetStat(insertTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
+        else
+            this.formUndetStat(insertTr,reqTerm,preStat.predicate,preStat.object,preStat.why,true);
     }
-
 
 
     if(predicateTd.parentNode.AJAR_inverse) {//generate 'Request';
@@ -481,15 +490,22 @@ Refill: function Refill(e,selectedTd){
 
 AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
     var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
+    var e={};
+    if (!tdNode) tdNode=InputBox.parentNode //argument tdNode seems to be not neccessary
+    if (!mode) mode=tdNode.nextSibling?'predicate':'all';
+    e.pageX=findPos(tdNode)[0];
+    e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
+   
     if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
         var newText=InputBox.value;
-        var menu=myDocument.getElementById(this.menuID);
+        var menu=myDocument.getElementById(outline.UserInput.menuID);
         if (typeof enterEvent=='object'){
             enterEvent.stopPropagation();  
             switch (enterEvent.keyCode){
                 case 13://enter
                     var inputTerm=getAbout(kb,menu.lastHighlight)
-                    outline.UserInput.fillInRequest('predicate',InputBox.parentNode,inputTerm);
+                    var fillInType=(mode=='predicate')?'predicate':'object';
+                    outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
                     outline.UserInput.clearMenu();
                     return;
                 case 38://up
@@ -509,32 +525,67 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
                     newText+=String.fromCharCode(enterEvent.charCode)
             }
         }
+        //alert(InputBox.choices.length);
         var i;
-        for(i=0;InputBox.predicates[i].label<newText;i++);
-        if (i==0) i=1;
-        menu.scrollTop=(i-1)*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
+        for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
+        if (mode=='all') {
+            outline.UserInput.clearMenu();
+            outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
+            i=10;
+        }
+        var menu=myDocument.getElementById(outline.UserInput.menuID); 
+        menu.scrollTop=i*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
         //adjustment for firefox3 required
         if (menu.lastHighlight) menu.lastHighlight.className='';
-        menu.lastHighlight=menu.firstChild.childNodes[i-1];
+        menu.lastHighlight=menu.firstChild.childNodes[i];
         menu.lastHighlight.className='activeItem';   
         return;
+    }//end of autoScroll, start of menu generation
+    
+    InputBox.choices=[] //{NT,label}
+    switch(mode){
+        case 'predicate':
+            for (var predNT in kb.predicateIndex){ //there is supposed to be not smushing on predicates??
+                var pred=kb.fromNT(predNT);
+                if (pred.termType=='symbol') //temporarily deal with symbol only
+                    InputBox.choices.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})   
+            }
+            break;
+        case 'all':
+            for each (var indexedStore in [kb.subjectIndex,kb.predicateIndex,kb.objectIndex]){
+            for (var theNT in indexedStore){
+                var term=kb.fromNT(theNT);
+                if (term) InputBox.choices.push({'NT':theNT,'label':label(term)});
+            }            
+            }                        
     }
-    InputBox.predicates=[] //{NT,label}
-    for (var predNT in kb.predicateIndex){ //there is supposed to be not smushing on predicates??
-        var pred=kb.fromNT(predNT);
-        if (pred.termType=='symbol') //temporarily deal with symbol only
-            InputBox.predicates.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})   
-    }
-    function sortPred(a,b){
+
+    function sortLabel(a,b){
         if (a.label < b.label) return -1;
-        if (a.label == b.label) return 0;
         if (a.label > b.label) return 1;
+        if (a.label == b.label) {
+            if (a.NT < b.NT) return -1;
+            if (a.NT > b.NT) return 1;
+            if (a.NT == b.NT) return 0;
+        }
     }
-    InputBox.predicates.sort(sortPred);
-    var e={};
-    e.pageX=findPos(tdNode)[0];
-    e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
-    this.showMenu(e,'PredicateAutoComplete',undefined,{'isPredicate':true,'selectedTd':tdNode,'predicates':InputBox.predicates});
+    InputBox.choices.sort(sortLabel);
+
+    //alert(InputBox.choices.length); //about 1345 for all
+    if (mode=='predicate')
+        this.showMenu(e,'PredicateAutoComplete',undefined,{'isPredicate':true,'selectedTd':tdNode,'predicates':InputBox.choices});
+    else{
+        //this.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices});
+        var choices=InputBox.choices;
+        InputBox.choices=[];
+        var lastChoiceNT='';
+        for (var i=0;i<choices.length;i++){
+            var thisNT=choices[i].NT;
+            if (thisNT==lastChoiceNT) continue;
+            lastChoiceNT=thisNT;
+            InputBox.choices.push({'NT':choices[i].NT,'label':choices[i].label})
+        }
+    }
 },
 //ToDo: shrink rows when \n+backspace
 Keypress: function(e){
@@ -545,7 +596,6 @@ Keypress: function(e){
             var preRows=parseInt(this.lastModified.getAttribute('rows'))
             this.lastModified.setAttribute('rows',(preRows+1).toString());
             e.stopPropagation();
-            return false;
         }
     }
     //Remark by Kenny: If the user wants to input more lines into an one-line-only blank.
@@ -750,7 +800,8 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
     return reqTerm;
 },
 
-showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo:order
+showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
+   //ToDo:order, make a class?
     var menu=myDocument.createElement('div');
     menu.id=this.menuID;
     menu.className='outlineMenu';
@@ -770,34 +821,9 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
 
     table.addEventListener('mouseover',highlightTr,false);
 	    
+    //setting for action after selecting item
     switch (menuType){
-        case 'DidYouMeanDialog':
-            var dialogTerm=extraInformation.dialogTerm;
-            var bnodeTerm=extraInformation.bnodeTerm;
-            //have to do style instruction passing
-            menu.style.width='auto';
-            
-            var h1=table.appendChild(myDocument.createElement('tr'));
-            var h1th=h1.appendChild(myDocument.createElement('th'))
-            h1th.appendChild(myDocument.createTextNode("Did you mean..."));
-            var plist=kb.statementsMatching(dialogTerm);
-            var i;
-            for (i=0;i<plist.length;i++) if (kb.whether(plist[i].predicate,rdf('type'),OWL('InverseFunctionalProperty'))) break;
-            var IDpredicate=plist[i].predicate;
-            var IDterm=kb.any(dialogTerm,plist[i].predicate);
-            var text=label(dialogTerm)+" who has "+label(IDpredicate)+" "+IDterm+"?";
-            var h2=table.appendChild(myDocument.createElement('tr'));
-            var h2th=h2.appendChild(myDocument.createElement('th'))
-            h2th.appendChild(myDocument.createTextNode(text));
-            h1th.setAttribute('colspan','2');h2th.setAttribute('colspan','2');
-            var ans1=table.appendChild(myDocument.createElement('tr'));
-            ans1.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('Yes'));
-            ans1.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
-            var ans2=table.appendChild(myDocument.createElement('tr'));
-            ans2.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('No'));
-            ans2.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
-            
-            table.removeEventListener('click',selectItem,false);
+        case 'DidYouMeanDialog':            
             var selectItem=function selectItem(e){
                 var target=ancestor(getTarget(e),'TR')
                 if (target.childNodes.length==2 && target.nextSibling){ //Yes
@@ -828,6 +854,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
             }
             break;
         case 'PredicateAutoComplete':
+        case 'GeneralAutoComplete':
         case 'GeneralPredicateChoice':
         case 'TypeChoice':
             var isPredicate=extraInformation.isPredicate;
@@ -872,27 +899,73 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){//ToDo
         tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
         }
     }
-    if (menuType=='PredicateAutoComplete'){
-        var predicates=extraInformation.predicates;
-        for (var i=1;i<predicates.length;i++){
-            var tempQuery={};
-            tempQuery.vars=[];
-            tempQuery.vars.push('Kenny');
-            var tempBinding={};
-            tempBinding.Kenny=kb.fromNT(predicates[i].NT);
-            try{addPredicateChoice(tempQuery)(tempBinding);}catch(e){alert(e);}//I'll deal with bnodes later...
-        }
-        return;
-    }
-    switch (inputQuery.constructor.name){
-        case 'Array':
-            for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),function(){});
+    switch (menuType){
+        case 'DidYouMeanDialog':
+            var dialogTerm=extraInformation.dialogTerm;
+            var bnodeTerm=extraInformation.bnodeTerm;
+            //have to do style instruction passing
+            menu.style.width='auto';
+            
+            var h1=table.appendChild(myDocument.createElement('tr'));
+            var h1th=h1.appendChild(myDocument.createElement('th'))
+            h1th.appendChild(myDocument.createTextNode("Did you mean..."));
+            var plist=kb.statementsMatching(dialogTerm);
+            var i;
+            for (i=0;i<plist.length;i++) if (kb.whether(plist[i].predicate,rdf('type'),OWL('InverseFunctionalProperty'))) break;
+            var IDpredicate=plist[i].predicate;
+            var IDterm=kb.any(dialogTerm,plist[i].predicate);
+            var text=label(dialogTerm)+" who has "+label(IDpredicate)+" "+IDterm+"?";
+            var h2=table.appendChild(myDocument.createElement('tr'));
+            var h2th=h2.appendChild(myDocument.createElement('th'))
+            h2th.appendChild(myDocument.createTextNode(text));
+            h1th.setAttribute('colspan','2');h2th.setAttribute('colspan','2');
+            var ans1=table.appendChild(myDocument.createElement('tr'));
+            ans1.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('Yes'));
+            ans1.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
+            var ans2=table.appendChild(myDocument.createElement('tr'));
+            ans2.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('No'));
+            ans2.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
             break;
-        case 'undefined':
-            alert("query is not defined");
+        case 'PredicateAutoComplete':
+            var predicates=extraInformation.predicates;
+            for (var i=0;i<predicates.length;i++){
+                var tempQuery={};
+                tempQuery.vars=[];
+                tempQuery.vars.push('Kenny');
+                var tempBinding={};
+                tempBinding.Kenny=kb.fromNT(predicates[i].NT);
+                try{addPredicateChoice(tempQuery)(tempBinding);}catch(e){alert(e);}//I'll deal with bnodes later...
+            }
+            break;
+        case 'GeneralAutoComplete':
+            var choices=extraInformation.choices;
+            var index=extraInformation.index;
+            for (var i=index-10;i<index+20;i++){ //show 30 items
+                if (i<0) i=0;
+                if (i==choices.length) break;
+                var thisNT=choices[i].NT;
+                var tr=table.appendChild(myDocument.createElement('tr'));
+                tr.setAttribute('about',thisNT);
+                var th=tr.appendChild(myDocument.createElement('th'))
+                th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(choices[i].label));
+                var theTerm=kb.fromNT(thisNT);
+                var type=theTerm?kb.any(kb.fromNT(thisNT),rdf('type')):undefined;
+                var typeLabel=type?label(type):"";
+                tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
+            }
+            //alert(extraInformation.choices.length);
             break;
         default:
-            kb.query(inputQuery,addPredicateChoice(inputQuery),myFetcher);
+            switch (inputQuery.constructor.name){
+            case 'Array':
+                for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),function(){});
+                break;
+            case 'undefined':
+                alert("query is not defined");
+                break;
+            default:
+                kb.query(inputQuery,addPredicateChoice(inputQuery),myFetcher);
+            }                
     }
 },//funciton showMenu
 

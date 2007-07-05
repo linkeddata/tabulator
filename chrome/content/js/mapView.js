@@ -415,3 +415,86 @@ function makeInfoWindowObjectNode(obj,asImage) {
     }
     return newNode;
 }
+
+MapViewFactory = {
+    name: "Map View",
+
+    checkOptionals: function(optional) {
+        var i, canBeMapped=false, pred, gotLat=false, gotLong=false, ns = optional.statements.length;
+        for(i=0; i<ns; i++) {
+            pred=optional.statements[i].predicate.uri;
+            switch(pred) {
+                case 'http://xmlns.com/foaf/0.1/based_near':
+                    optional.statements[i].object.mapUsed='based_near';return true; break;
+                case 'http://www.w3.org/2000/10/swap/pim/contact#address':
+                    optional.statements[i].object.mapUsed='address';return true; break;
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#lat':
+                    optional.statements[i].object.mapUsed='lat';
+                    gotLat=true;
+                    if(gotLong)
+                        return true;
+                    break;
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#long':
+                    optional.statements[i].object.mapUsed='long';
+                    gotLong=true;
+                    if(gotLat)
+                        return true;
+                    break;
+                default:
+                    break;
+            }
+        }
+        for(i=0;i<optional.optional.length; i++) {
+            if(checkOptionals(optional.optional[i]))
+                return true;
+        }
+        return canBeMapped;
+    },
+
+    canDrawQuery:function(q) {
+        var ns = q.pat.statements.length, i, pred, canBeMapped=false;
+        var gotLat=false, gotLong=false;
+        for(i=0; i<ns; i++) {
+            pred=q.pat.statements[i].predicate.uri;
+            switch(pred) {
+                case 'http://xmlns.com/foaf/0.1/based_near':
+                    q.pat.statements[i].object.mapUsed='based_near';return true; break;
+                case 'http://www.w3.org/2000/10/swap/pim/contact#address':
+                    q.pat.statements[i].object.mapUsed='address';return true; break;
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#lat':
+                    q.pat.statements[i].object.mapUsed='lat';
+                    gotLat=true;
+                    if(gotLong)
+                        return true;
+                    break;
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#long':
+                    q.pat.statements[i].object.mapUsed='long';
+                    gotLong=true;
+                    if(gotLat)
+                        return true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        ns=q.pat.optional.length;
+        for(i=0; i<ns; i++) {
+            if(checkOptionals(q.pat.optional[i]))
+                return true;
+        }
+
+    },
+
+    makeView: function(container,doc) {
+        return new mapView(container,doc);
+    },
+
+    getIcon: function() {
+        return "chrome://tabulator/content/icons/map.png";
+    },
+
+    getValidDocument: function() {
+        return "http://dig.csail.mit.edu/2007/tab/map.html";
+    }
+}

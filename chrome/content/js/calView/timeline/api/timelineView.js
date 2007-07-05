@@ -148,3 +148,43 @@ function timelineView(timelineContainer) {
         }
     }
 } // timelineView
+
+
+TimelineViewFactory = {
+    name: "Timeline View",
+
+    findCalType: function(pred) {
+        var types = {'http://www.w3.org/2002/12/cal/icaltzd#dtend':'end', 'http://www.w3.org/2002/12/cal/icaltzd#dtstart':'start', 'http://www.w3.org/2002/12/cal/icaltzd#summary':'summary', 'http://www.w3.org/2002/12/cal/icaltzd#Vevent':'event', 'http://www.w3.org/2002/12/cal/icaltzd#component':'component', 'date':'dateThing'};
+        for (var key in types){
+            // match: finds substrings
+            if(pred.toLowerCase().match(key.toLowerCase())!=null){
+                return types[key];
+            }
+        }
+        return null;
+    },
+
+    canDrawQuery:function(q) {
+        var n = q.pat.statements.length;
+        for (var i = 0; i < n; i++){
+            var qst = q.pat.statements[i];
+            var calType = findCalType(qst.predicate.toString());
+            if (calType!=null && calType!='summary'){
+                return true;
+            }
+        }
+        return false;
+    },
+
+    makeView: function(container,doc) {
+        return new timelineView(container,doc);
+    },
+
+    getIcon: function() {
+        return "chrome://tabulator/content/icons/appointment-new.png";
+    },
+
+    getValidDocument: function() {
+        return "chrome://tabulator/content/view.html";
+    }
+}

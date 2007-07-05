@@ -480,3 +480,23 @@ function tableResizeOnMouseUp(event)
 // Write getAdjacentCell function
 */
 //***************** End Table Resize *****************//
+
+TableViewFactory = {
+    name: "Table View",
+
+    canDrawQuery: function(q) {
+        return true;
+    },
+
+    makeView: function(container,doc) {
+        return new tableView(container,doc);
+    },
+
+    getIcon: function() {
+        return "chrome://tabulator/content/icons/table.png";
+    },
+
+    getValidDocument: function() {
+        return "chrome://tabulator/content/view.html";
+    }
+}

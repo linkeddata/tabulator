@@ -37,3 +37,4 @@ RDFizers["javascript2rdf"].load=function(uri){
         }
     }
 }
+//commit test

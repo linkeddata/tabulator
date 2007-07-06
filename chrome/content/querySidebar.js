@@ -88,12 +88,25 @@ function querySidebar(doc) {
     }
   }
 
+  function createDisabledListener(view,button) {
+    return function () {
+      if(view.canDrawQuery(myQueries[ql.selectedItem.firstChild.value])) {
+        button.disabled=false;
+      }
+      else {
+        button.disabled=true;
+      }
+    }
+  }
   function createToolbar() {
-    for(var i=0;i<tabulator.views.length;i++) {
+    var ql = doc.getElementById("queryList");
+    var i;
+    for(i=0;i<tabulator.views.length;i++) {
       var newButton = doc.createElement('toolbarbutton');
-      newButton.setAttribute('image','icons/document.png');
+      newButton.setAttribute('image',tabulator.views[i].getIcon());
       newButton.label=tabulator.views[i].name;
-      newButton.addEventListener('click',createToolbarClickListener(tabulator.views[i]),true);
+      newButton.addEventListener('command',createToolbarClickListener(tabulator.views[i]),true);
+      ql.addEventListener('select',createDisabledListener(tabulator.views[i],newButton),true);
       toolbar.appendChild(newButton);
     }
   }

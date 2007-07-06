@@ -3,6 +3,7 @@
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <script type="application/x-javascript" src="log-ext.js"/>
+  <script type="application/x-javascript" src="prefs.js"/>
   <script type="application/x-javascript" src="js/util.js"/>
   <script type="application/x-javascript" src="js/configuration.js"/>  
   <script type="application/x-javascript" src="js/sorttable.js"/>
@@ -45,12 +46,48 @@
   <menupopup id="menu_ToolsPopup">
     <menu id="menu_ToolsTabulatorMenu" label="&toolsTabulatorMenu.label;" accesskey="&toolsTabulatorMenu.accesskey;" insertafter="javascriptConsole">
       <menupopup id="menu_ToolsTabulatorPopup">
-        <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" checked="false"/>
+        <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" oncommand="toggleSetHeader()"/>
         <menuseparator/>  
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
         <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
       </menupopup>
     </menu>
   </menupopup>
+  <script type="application/x-javascript">
+    var myCheckbox;
+    tabulatormenu_init = function() {
+      myCheckbox = document.getElementById("tabulator_setaccept");
+      var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch);
+      try {
+        var value = prefManager.getBoolPref("extensions.tabulator.setheader");
+        if(value) {
+          myCheckbox.setAttribute('checked','true');
+        } else {
+          myCheckbox.setAttribute('checked','false');
+        }
+      } catch(e) {
+        prefManager.setBoolPref("extensions.tabulator.setheader",true);
+        myCheckbox.setAttribute('checked',true);
+      }
+    }
 
+    function toggleSetHeader() {
+      var checked = myCheckbox.getAttribute('checked');
+      var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch);
+        var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch);
+        try {
+          if(checked)
+            prefManager.setBoolPref("extensions.tabulator.setheader",true);
+          else
+            prefManager.setBoolPref("extensions.tabulator.setheader",false);
+        } catch(e) {
+          alert("Error: Could not set the HTTP Accept header preference.\n       Please report error to http://dig.csail.mit.edu/issues/tabulator/");
+        }
+    }
+
+    window.addEventListener("load",tabulatormenu_init, false);
+  </script>
 </overlay>

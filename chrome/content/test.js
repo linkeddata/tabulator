@@ -14,22 +14,6 @@ function openTool(url, type, width, height)
 window.addEventListener("load", function() { tabExtension.init(); }, false);
 var kb,sf,qs,sourceWidget; //TODO:  In future, ditch these for tabulator.kb, etc
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-  /*kb = new RDFIndexedFormula()  // This uses indexing and smushing
-  sf = new SourceFetcher(kb)    // This handles resource retrieval
-  qs = new QuerySource()        // This stores all user-generated queries
-  kb.register('dc', "http://purl.org/dc/elements/1.1/")
-  kb.register('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-  kb.register('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
-  kb.register('owl', "http://www.w3.org/2002/07/owl#")
-  tabulator.kb=kb;
-  tabulator.qs=qs;
-  tabulator.sf=sf;
-
-  sourceWidget = new SourceWidget();
-  tabulator.sourceWidget = sourceWidget;
-
-  tabulator.registerView(tableView);
-  tabulator.registerView(mapView);*/
   //Horrible global vars :(
   kb = tabulator.kb;
   sf = tabulator.sf;
@@ -156,18 +140,6 @@ var tabExtension = {
           }
         }
       },true);
-
-      var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
-        .getService(Components.interfaces.nsIPrefBranch);
-      var acceptheader = prefManager.getCharPref('network.http.accept.default');
-      if(acceptheader.search("application/rdf+xml")==-1) { //Let's prefer some application/rdf+xml!
-        var index = acceptheader.search(";q=0.9");
-        if(index==-1)
-          acceptheader="application/rdf+xml;q=0.9,"+acceptheader;
-        else
-          acceptheader=acceptheader.slice(0,index)+"application/rdf+xml"+acceptheader.slice(index);
-      }
-      dump(acceptheader);
     }
   }
 }

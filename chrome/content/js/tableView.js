@@ -149,7 +149,7 @@ function tableView(container,doc)
         form.setAttribute('textAlign','right');
         but.setAttribute('type','button');
         but.setAttribute('id','addRowButton');
-        but.onclick=addRow;
+        but.addEVentListener('click',addRow,true);
         but.setAttribute('value','+');
         form.appendChild(but);
         thisTable.container.appendChild(form);

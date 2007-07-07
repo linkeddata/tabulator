@@ -1,4 +1,71 @@
-// Things we need to define to make converted pythn code work in js
+/**
+*
+*  UTF-8 data encode / decode
+*  http://www.webtoolkit.info/
+*
+**/
+
+var Utf8 = {
+
+	// public method for url encoding
+	encode : function (string) {
+		string = string.replace(/\r\n/g,"\n");
+		var utftext = "";
+
+		for (var n = 0; n < string.length; n++) {
+
+			var c = string.charCodeAt(n);
+
+			if (c < 128) {
+				utftext += String.fromCharCode(c);
+			}
+			else if((c > 127) && (c < 2048)) {
+				utftext += String.fromCharCode((c >> 6) | 192);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+			else {
+				utftext += String.fromCharCode((c >> 12) | 224);
+				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+
+		}
+
+		return utftext;
+	},
+
+	// public method for url decoding
+	decode : function (utftext) {
+		var string = "";
+		var i = 0;
+		var c = c1 = c2 = 0;
+
+		while ( i < utftext.length ) {
+
+			c = utftext.charCodeAt(i);
+
+			if (c < 128) {
+				string += String.fromCharCode(c);
+				i++;
+			}
+			else if((c > 191) && (c < 224)) {
+				c2 = utftext.charCodeAt(i+1);
+				string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+				i += 2;
+			}
+			else {
+				c2 = utftext.charCodeAt(i+1);
+				c3 = utftext.charCodeAt(i+2);
+				string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+				i += 3;
+			}
+
+		}
+
+		return string;
+	}
+
+}// Things we need to define to make converted pythn code work in js
 // environment of tabulator
 
 var RDFSink_forSomeSym = "http://www.w3.org/2000/10/swap/log#forSome";
@@ -20,6 +87,8 @@ pyjslib_Dict = function(listOfPairs) {
 pyjslib_len = function(s) { return s.length }
 
 pyjslib_slice = function(str, i, j) {
+    if (typeof str.slice == 'undefined')
+        throw '@@ mising.js: No .slice function for '+str+' of type '+(typeof str) 
     if ((typeof j == 'undefined') || (j ==null)) return str.slice(i);
     return str.slice(i, j) // @ exactly the same spec?
 }
@@ -49,6 +118,41 @@ assertFudge = function(condition, desc) {
     throw "(python) Assertion failed.";  
 }
 
+
+stringFromCharCode = function(uesc) {
+    return String.fromCharCode(uesc);
+}
+
+
+// http://developer.mozilla.org/en/docs/Reading_textual_data
+// First, get and initialize the converter
+if (typeof Components != 'undefined') { // Only in Mozillaland
+    var UTF8_converter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
+                              .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
+    UTF8_converter.charset = /* The character encoding you want, using UTF-8 here */ "UTF-8";
+
+    String.prototype.encode = function(encoding) {
+        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
+        return UTF8_converter.ConvertFromUnicode(this);
+    }
+    String.prototype.decode = function(encoding) {
+        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
+        return UTF8_converter.ConvertToUnicode(this);
+    }
+    // var text = converter.ConvertToUnicode(chunk);
+} else {
+    String.prototype.encode = function(encoding) {
+        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
+        return Utf8.encode(this);
+    }
+    String.prototype.decode = function(encoding) {
+        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
+        return Utf8.decode(this);
+    }
+}
+
+
+
 uripath_join = function(base, given) {
     return Util.uri.join(given, base)  // sad but true
 }
@@ -74,7 +178,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3293 2007-07-03 18:22:19Z timbl $
+$Id: n3parser.js 3326 2007-07-07 12:17:08Z timbl $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -102,8 +206,6 @@ the module, including tests and test harness.
 
 */
 
-var N3_forSome_URI = RDFSink_forSomeSym;
-var N3_forAll_URI = RDFSink_forAllSym;
 var ADDED_HASH = "#";
 var LOG_implies_URI = "http://www.w3.org/2000/10/swap/log#implies";
 var INTEGER_DATATYPE = "http://www.w3.org/2001/XMLSchema#integer";
@@ -141,7 +243,7 @@ function __SinkParser(store, openFormula, thisDoc, baseURI, genPrefix, metaURI, 
     this._bindings = new pyjslib_Dict([]);
     this._flags = flags;
     if ((thisDoc != "")) {
-    assertFudge((thisDoc.indexOf(":") >= 0), "Document URI not absolute: <%s>" % thisDoc);
+    assertFudge((thisDoc.indexOf(":") >= 0),  ( "Document URI not absolute: " + thisDoc ) );
     this._bindings[""] = (  ( thisDoc + "#" ) );
     }
     this._store = store;
@@ -200,7 +302,7 @@ function __SinkParser(store, openFormula, thisDoc, baseURI, genPrefix, metaURI, 
     this._parentContext = null;
 }
 __SinkParser.prototype.here = function(i) {
-    return "%s_L%iC%i" % new pyjslib_Tuple([this._genPrefix, this.lines,  (  ( i - this.startOfLine )  + 1 ) ]);
+    return  (  (  (  ( this._genPrefix + "_L" )  + this.lines )  + "C" )  +  (  ( i - this.startOfLine )  + 1 )  ) ;
 };
 __SinkParser.prototype.formula = function() {
     return this._formula;
@@ -226,7 +328,7 @@ Feed an octet stream tothe parser
         So if there is more data to feed to the
         parser, it should be straightforward to recover.*/
 
-    var str = octets;
+    var str = octets.decode("utf-8");
     var i = 0;
     while ((i >= 0)) {
     var j = this.skipSpace(str, i);
@@ -284,13 +386,13 @@ __SinkParser.prototype.directive = function(str, i) {
     var res = new pyjslib_List([]);
     var j = this.tok("bind", str, i);
     if ((j > 0)) {
-    raiseFudge(BadSyntax(this._thisDoc, this.lines, str, i, "keyword bind is obsolete: use @prefix"));
+    throw BadSyntax(this._thisDoc, this.lines, str, i, "keyword bind is obsolete: use @prefix");
     }
     var j = this.tok("keywords", str, i);
     if ((j > 0)) {
     var i = this.commaSeparatedList(str, j, res, false);
     if ((i < 0)) {
-    raiseFudge(BadSyntax(this._thisDoc, this.lines, str, i, "'@keywords' needs comma separated list of words"));
+    throw BadSyntax(this._thisDoc, this.lines, str, i, "'@keywords' needs comma separated list of words");
     }
     this.setKeywords(pyjslib_slice(res, null, null));
     if ((diag_chatty_flag > 80)) {
@@ -302,7 +404,7 @@ __SinkParser.prototype.directive = function(str, i) {
     if ((j > 0)) {
     var i = this.commaSeparatedList(str, j, res, true);
     if ((i < 0)) {
-    raiseFudge(BadSyntax(this._thisDoc, this.lines, str, i, "Bad variable list after @forAll"));
+    throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad variable list after @forAll");
     }
 
         var __x = new pyjslib_Iterator(res);
@@ -348,34 +450,8 @@ __SinkParser.prototype.directive = function(str, i) {
         
     return i;
     }
-    var j = this.tok("forSome", str, i);
-    if ((j > 0)) {
-    var i = this.commaSeparatedList(str, j, res, true);
-    if ((i < 0)) {
-    throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad variable list after @forSome");
-    }
-
-        var __x = new pyjslib_Iterator(res);
-        try {
-            while (true) {
-                var x = __x.next();
-                
-        
-    this._context.declareExistential(x);
-
-            }
-        } catch (e) {
-            if (e != StopIteration) {
-                throw e;
-            }
-        }
-        
-    return i;
-    }
     var j = this.tok("prefix", str, i);
-    if ((j < 0)) {
-    return -1;
-    }
+    if ((j >= 0)) {
     var t = new pyjslib_List([]);
     var i = this.qname(str, j, t);
     if ((i < 0)) {
@@ -390,12 +466,32 @@ __SinkParser.prototype.directive = function(str, i) {
     var ns = uripath_join(this._baseURI, ns);
     }
     else {
-    assertFudge((ns.indexOf(":") >= 0), "With no base URI, cannot handle relative URI");
+    assertFudge((ns.indexOf(":") >= 0), "With no base URI, cannot handle relative URI for NS");
     }
     assertFudge((ns.indexOf(":") >= 0));
     this._bindings[t[0][0]] = ( ns);
     this.bind(t[0][0], hexify(ns));
     return j;
+    }
+    var j = this.tok("base", str, i);
+    if ((j >= 0)) {
+    var t = new pyjslib_List([]);
+    var i = this.uri_ref2(str, j, t);
+    if ((i < 0)) {
+    throw BadSyntax(this._thisDoc, this.lines, str, j, "expected <uri> after @base ");
+    }
+    var ns = t[0].uri;
+    if (this._baseURI) {
+    var ns = uripath_join(this._baseURI, ns);
+    }
+    else {
+    throw BadSyntax(this._thisDoc, this.lines, str, j,  (  ( "With no previous base URI, cannot use relative URI in @base  <" + ns )  + ">" ) );
+    }
+    assertFudge((ns.indexOf(":") >= 0));
+    this._baseURI = ns;
+    return i;
+    }
+    return -1;
 };
 __SinkParser.prototype.bind = function(qn, uri) {
     return;
@@ -756,6 +852,7 @@ Parse the <node> production.
     }
     var j = this.tok("this", str, i);
     if ((j >= 0)) {
+    throw BadSyntax(this._thisDoc, this.lines, str, i, "Keyword 'this' was ancient N3. Now use @forSome and @forAll keywords.");
     res.push(this._context);
     return j;
     }
@@ -958,7 +1055,7 @@ Generate uri from n3 representation.
     res.push(this.anonymousNode(ln));
     return j;
     }
-    throw BadSyntax(this._thisDoc, this.lines, str, i, "Prefix %s not bound" % pfx);
+    throw BadSyntax(this._thisDoc, this.lines, str, i,  (  ( "Prefix " + pfx )  + " not bound." ) );
     }
     }
     var symb = this._store.sym( ( ns + ln ) );
@@ -1018,7 +1115,7 @@ Generate uri from n3 representation.
     return -1;
     }
     if ((this.keywords.indexOf(v[0]) >= 0)) {
-    throw BadSyntax(this._thisDoc, this.lines, str, i, "Keyword \"%s\" not allowed here." % v[0]);
+    throw BadSyntax(this._thisDoc, this.lines, str, i,  (  ( "Keyword \"" + v[0] )  + "\" not allowed here." ) );
     }
     res.push(this._store.sym( ( this._bindings[""] + v[0] ) ));
     return j;
@@ -1069,14 +1166,14 @@ __SinkParser.prototype.variable = function(str, i, res) {
     var j =  ( j + 1 ) ;
     var i = j;
     if (("0123456789-".indexOf(str[j]) >= 0)) {
-    throw BadSyntax(this._thisDoc, this.lines, str, j, "Varible name can't start with '%s'" % str[j]);
+    throw BadSyntax(this._thisDoc, this.lines, str, j,  (  ( "Varible name can't start with '" + str[j] )  + "s'" ) );
     return -1;
     }
     while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str[i]) < 0)) {
     var i =  ( i + 1 ) ;
     }
     if ((this._parentContext == null)) {
-    throw BadSyntax(this._thisDoc, this.lines, str, j, "Can't use ?xxx syntax for variable in outermost level: %s" % pyjslib_slice(str,  ( j - 1 ) , i));
+    throw BadSyntax(this._thisDoc, this.lines, str, j,  ( "Can't use ?xxx syntax for variable in outermost level: " + pyjslib_slice(str,  ( j - 1 ) , i) ) );
     }
     var varURI = this._store.sym( (  ( this._baseURI + "#" )  + pyjslib_slice(str, j, i) ) );
     if ((this._parentVariables.indexOf(varURI) < 0)) {
@@ -1288,7 +1385,7 @@ parse an N3 string constant delimited by delim.
     interesting.lastIndex = 0;
     var m = interesting.exec(str.slice(j));
     if (!(m)) {
-    throw BadSyntax(this._thisDoc, startline, str, j, "Closing quote missing in string at ^ in %s^%s" % new pyjslib_Tuple([pyjslib_slice(str,  ( j - 20 ) , j), pyjslib_slice(str, j,  ( j + 20 ) )]));
+    throw BadSyntax(this._thisDoc, startline, str, j,  (  (  ( "Closing quote missing in string at ^ in " + pyjslib_slice(str,  ( j - 20 ) , j) )  + "^" )  + pyjslib_slice(str, j,  ( j + 20 ) ) ) );
     }
     var i =  (  ( j + interesting.lastIndex )  - 1 ) ;
     var ustr =  ( ustr + pyjslib_slice(str, j, i) ) ;
@@ -1364,7 +1461,6 @@ __SinkParser.prototype.uEscape = function(str, i, startline) {
     return new pyjslib_Tuple([j, uch]);
 };
 __SinkParser.prototype.UEscape = function(str, i, startline) {
-    var stringType = type("");
     var j = i;
     var count = 0;
     var value = "\\U";
@@ -1382,13 +1478,14 @@ __SinkParser.prototype.UEscape = function(str, i, startline) {
     var value =  ( value + ch ) ;
     var count =  ( count + 1 ) ;
     }
-    var uch = stringType(value).decode("unicode-escape");
+    var uch = stringFromCharCode( (  ( "0x" + pyjslib_slice(value, 2, 10) )  - 0 ) );
     return new pyjslib_Tuple([j, uch]);
 };
 function OLD_BadSyntax(uri, lines, str, i, why) {
     return new __OLD_BadSyntax(uri, lines, str, i, why);
 }
 function __OLD_BadSyntax(uri, lines, str, i, why) {
+    this._str = str.encode("utf-8");
     this._str = str;
     this._i = i;
     this._why = why;
@@ -1414,8 +1511,8 @@ __OLD_BadSyntax.prototype.toString = function() {
     }
     return "Line %i of <%s>: Bad syntax (%s) at ^ in:\n\"%s%s^%s%s\"" % new pyjslib_Tuple([ ( this.lines + 1 ) , this._uri, this._why, pre, pyjslib_slice(str, st, i), pyjslib_slice(str, i,  ( i + 60 ) ), post]);
 };
-function BadSyntax(self, uri, lines, str, i, why) {
-    return "Line %i of <%s>: Bad syntax: %s\nat: \"%s\"" % new pyjslib_Tuple([ ( lines + 1 ) , uri, why, pyjslib_slice(str, i,  ( i + 30 ) )]);
+function BadSyntax(uri, lines, str, i, why) {
+    return  (  (  (  (  (  (  (  ( "Line " +  ( lines + 1 )  )  + " of <" )  + uri )  + ">: Bad syntax: " )  + why )  + "\nat: \"" )  + pyjslib_slice(str, i,  ( i + 30 ) ) )  + "\"" ) ;
 }
 
 

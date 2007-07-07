@@ -14,12 +14,13 @@ RDFTracking = 0  // Are we requiring reasons for statements?
 function makeTerm(val) {
     //  tabulator.log.debug("Making term from " + val)
     if (typeof val == 'object') return val;
-    if (typeof val == 'number') return new RDFLiteral(val); // @@ differet types
     if (typeof val == 'string') return new RDFLiteral(val);
+    if (typeof val == 'number') return new RDFLiteral(val); // @@ differet types
+    if (typeof val == 'boolean') return new RDFLiteral(val?"1":"0", undefined, 
+                                                RDFSymbol.prototype.XSDboolean);
     if (typeof val == 'undefined') return undefined;
-    alert("Can't make term from " + val + " of type " + typeof val) // @@ add numbers
+    alert("Can't make term from " + val + " of type " + typeof val);
 }
-
 
 
 //	Symbol
@@ -28,8 +29,8 @@ function RDFEmpty() {
 	return this;
 }
 RDFEmpty.prototype.termType = 'empty'
-RDFEmpty.prototype.toString = function () { return "" }
-RDFEmpty.prototype.toNT = function () { return "" }
+RDFEmpty.prototype.toString = function () { return "()" }
+RDFEmpty.prototype.toNT = function () { return "@@" }
 
 function RDFSymbol_toNT(x) {
     return ("<" + x.uri + ">")
@@ -47,6 +48,11 @@ function RDFSymbol(uri) {
 RDFSymbol.prototype.termType = 'symbol'
 RDFSymbol.prototype.toString = toNT
 RDFSymbol.prototype.toNT = toNT
+
+//  Some precalculaued symbols
+
+RDFSymbol.prototype.XSDboolean = new RDFSymbol('http://www.w3.org/2001/XMLSchema#boolean');
+RDFSymbol.prototype.integer = new RDFSymbol('http://www.w3.org/2001/XMLSchema#integer');
 
 
 //	Blank Node

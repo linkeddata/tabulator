@@ -49,6 +49,16 @@ function tableView(container,doc)
         t.setAttribute('class', 'results sortable'); //needed to make sortable
         t.setAttribute('id', 'tabulated_data'); 
         
+        //********** key mvmt activation code *********//
+        var a = document.createElement('a');
+        a.focus();
+        a.setAttribute('display', 'hidden');
+        t.appendChild(a);
+        a.setAttribute('id', 'anchor');
+        // For some reason this gets attached to the first tr
+        // which is not exactly what I want, but it works
+        //********** key mvmt activation code *****///
+        
         emptyNode(thisTable.container).appendChild(t); // See results as we go
         
         for (i=0; i<nv; i++)
@@ -71,13 +81,6 @@ function tableView(container,doc)
         t.addEventListener('click', onClickCell, false);
         numCols = nv;
         
-        //********** Resize activation code *********//
-        var a = document.createElement('a');
-        a.focus();
-        a.setAttribute('display', 'hidden');
-        t.appendChild(a);
-        a.setAttribute('id', 'anchor');
-        //********** End Resize activation code *****///
     }
     //***************** End drawQuery *****************//
 

@@ -10,7 +10,7 @@ function tableView(container,doc)
     else
         this.document=document;
     
-    //The necessary vars for a View...
+    // The necessary vars for a View
     this.name="Table";               //Display name of this view.
     this.queryStates=[];            //All Queries currently in this view.
     this.container=container;       //HTML DOM parent node for this view.
@@ -66,78 +66,173 @@ function tableView(container,doc)
         drawExport();
         drawAddRow();
         sortables_init();
-
+        //********** Resize activation code *********//
+        var t = document.getElementById('tabulated_data');
+        var a = document.createElement('a');
+        a.focus();
+        a.setAttribute('display', 'hidden');
+        t.appendChild(a);
+        a.setAttribute('id', 'anchor');
+        //********** End Resize activation code *****///
+    
         t.addEventListener('click', onClickCell, false);
     }
     //***************** End drawQuery *****************//
     
+    var selectedNode;
+    var listener;
     //***************** Table Editing *****************//
     function onClickCell(e) 
     {
-        var tdNode = getTarget(e);
-        
-        //tdNode.style.border = "black";
+        if (selectedNode != null) 
+        { // handle if some other node is already selected
+            clearSelected(selectedNode);
+        }
+        var tdNode = e.target;
+
         if (tdNode.tagName != "TD") return;
-        if (literalNodeTD(tdNode)) return;
         if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
-        onEdit(tdNode, e);
+        setSelected(tdNode);
     }
     
-    /*
-    function checkForEnter(e)
+    // use this wrapper so that the node can be passed to the event handler
+    function makeListener(node) {
+        debug = document.getElementById('debug');
+        debug.value += "makelistener"+'\n'
+        return function keydowntest(e) 
+        {
+            var iRow = node.parentNode.rowIndex;
+            var iCol = node.cellIndex;
+            var numRows = 5-1;
+            var numCols = 3;
+            var t = document.getElementById('tabulated_data');
+            var debug = document.getElementById('debug');
+            clearSelected(node);
+            if(e.keyCode==37) { //left
+                row = iRow;
+                col = (iCol>0)?(iCol-1):iCol;
+                var newNode = getTDNode(row, col);
+                setSelected(newNode);
+            }
+            if (e.keyCode==38) { //top
+                row = (iRow>1)?(iRow-1):iRow;
+                col = iCol;
+                var newNode = getTDNode(row, col)
+                setSelected(newNode);
+            }
+            if (e.keyCode==39) { //right
+                row = iRow;
+                col = (iCol<numCols-1)?(iCol+1):iCol;
+                var newNode = getTDNode(row, col);
+                setSelected(newNode);
+            }
+            if (e.keyCode==40) { //down
+                row = (iRow<numRows)?(iRow+1):iRow;
+                col = iCol;
+                var newNode = getTDNode(row, col);
+                setSelected(newNode);
+            }
+            if (e.keyCode==13) { //return
+                onEdit(node);
+            }
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }
+    
+    function getTDNode(iRow, iCol)
     {
-        if (e.keyCode == 13) 
-            return true;
-    }*/
+        var t = document.getElementById('tabulated_data');
+        //return t.rows[iRow].cells[iCol];  // be careful with this, relies on tbody
+        return t.childNodes[iRow].childNodes[iCol];
+    }
+    
+    function setSelected(node) 
+    {
+        var a = document.getElementById('anchor');
+        a.focus();
+        
+        var t = document.getElementById('tabulated_data');
+        listener = makeListener(node);
+        t.addEventListener('keypress', listener, false);
+        node.style.backgroundColor = "lightgray";
+        
+        selectedNode = node;
+        selectedNode.addEventListener('click', onCellClickSecond, false);
+    }
+    
+    function onCellClickSecond(e) 
+    {
+        selectedNode.removeEventListener('click', onCellClickSecond, false); // DOES THIS WORK?
+        if (e.target == selectedNode) {
+            clearSelected(selectedNode);
+            onEdit(selectedNode);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }
+    
+    function clearSelected(node) 
+    {
+        var t = document.getElementById('tabulated_data');
+        t.removeEventListener('keypress', listener, false);
+        node.style.backgroundColor = 'white';
+    }
 
-    function onEdit(TD, e)
-    {
-        var tdNode = TD;
-        //alert(tdNode.className);
-        var oldTxt = tdNode.innerHTML;
-        var input = createInputForm(oldTxt);
-        var parent;
-        var newTD;
+    function onEdit(node)
+    {   
+        if (literalNodeTD(node)) return; // move this inside of onEdit
+        var t = document.getElementById('tabulated_data');
+
+        var oldTxt = node.innerHTML;
+        var inputObj = document.createElement('INPUT');
+        inputObj.type = "TEXT";
+        inputObj.style.width = "99%";
+        inputObj.value = oldTxt;
         
         if (!oldTxt)
-            input = createInputForm(" ");
-        
-        if (tdNode.firstChild) // node of the form <td> text </td>
+            inputObj.value = ' ';
+        if (node.firstChild) // node of the form <td> text </td>
         {
-            tdNode.replaceChild(input, tdNode.firstChild);
-            input.select();
+            node.replaceChild(inputObj, node.firstChild);
+            inputObj.select();
         }
         else // we have a node of the form <td />
         {
-            parent = tdNode.parentNode;
-            newTD = thisTable.document.createElement('TD');
-            parent.replaceChild(newTD, tdNode);
-            newTD.appendChild(input);
+            var parent = node.parentNode;
+            var newTD = thisTable.document.createElement('TD');
+            parent.replaceChild(newTD, node);
+            newTD.appendChild(inputObj);
+        }
+        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
+        inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false); 
+    }
+    
+    function tableEditOnBlurWrap(node) 
+    {
+        return function tableEditOnBlur(e) 
+        {
+            var srcElem = e.target;  // getTarget(e)
+            node.innerHTML = srcElem.value
+
+            var col = node.cellIndex;
+            var row = node.parentNode.rowIndex;
+            setSelected(node);
+            // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
+            
+            e.stopPropagation();
+            e.preventDefault();
         }
     }
     
-    function createInputForm(oldText) 
+    function tableEditOnKeyPressWrap(node) 
     {
-        var inputObj = thisTable.document.createElement('INPUT');
-        inputObj.style.width = "99%";
-        inputObj.value = oldText;
-        inputObj.type = "TEXT";
-        inputObj.addEventListener ("blur", tableEdit_FocusLost, false);
-        inputObj.addEventListener ("keypress", tableEdit_CheckForEnter, false);
-        return inputObj;
-    }
-
-    function tableEdit_FocusLost(e) 
-    {
-        var srcElem = getTarget(e);
-        srcElem.parentNode.innerHTML = srcElem.value;
-        // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
-    }
-
-    function tableEdit_CheckForEnter(e) 
-    {
-        if (e.keyCode == 13) 
-            tableEdit_FocusLost(e);
+        return function tableEditOnKeyPress(e) 
+        {
+            if (e.keyCode == 13) {
+                tableEditOnBlurWrap(node)(e);
+            }
+        }
     }
     //***************** End Table Editing *****************//
         
@@ -170,10 +265,10 @@ function tableView(container,doc)
         var td;
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
-        var lastRowNum = t.childNodes.length - 1; // not a very reliable way of getting rownumber
+        var numRows = t.childNodes.length - 1; 
         for (i=0; i<nv; i++) 
         {
-            if (literalNodeRC(lastRowNum, i)) 
+            if (literalNodeRC(numRows, i)) 
                 td = createNonLiteralNode();
             else 
                 td = createLiteralNode();
@@ -210,8 +305,8 @@ function tableView(container,doc)
     function literalNodeRC (row, col) 
     {
         var t = thisTable.document.getElementById('tabulated_data'); 
-        var TDNode = t.childNodes[row].childNodes[col];
-        if (literalNodeTD (TDNode)) return true;
+        var tdNode = t.childNodes[row].childNodes[col];
+        if (literalNodeTD (tdNode)) return true;
     }
     //***************** End Add Row *****************//
 

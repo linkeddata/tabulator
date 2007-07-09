@@ -49,12 +49,17 @@ function Tabulator() {
   loader.loadSubScript("chrome://tabulator/content/js/mapView.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/calView.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timelineView.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/sparqlUpdate.js"/*, rootObj*/);
   //loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timeline-api.js"/*, rootObj*/);
   //loader.loadSubScript("chrome://tabulator/content/js/calView/calView.js"/*, rootObj*/);
   this.kb = new RDFIndexedFormula();
   this.sf = new SourceFetcher(this.kb);
   this.qs = new QuerySource();
   this.sourceWidget = new SourceWidget();
+  this.sparql = new sparql(this.kb);
+  //var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+  //var updater = tabulator.sparql.prepareUpdate(newStatement);
+  //updater.setObject(kb.sym('http://web.mit.edu/jambo/www/foaf.rdf#jambo'));
 
   //GLOBALS
   kb =this.kb;
@@ -204,7 +209,7 @@ function string_startswith(str, pref) { // missing library routines
   }
 
   this.drawInBestView = function(query) {
-    for(var i=0; i<this.views.length; i++) {
+    for(var i=this.views.length-1; i>=0; i--) {
       if(this.views[i].canDrawQuery(query)) { //TODO:Maybe an RDF-based mechanism for this?
         this.drawInView(query,this.views[i]);
         return true;

@@ -38,8 +38,8 @@
         var myTimelineView = new timelineView(document.getElementById('viewArea'));
         qs.addListener(myTimelineView);
         //extract the query ID Here!
-        //var q = qs.queries[?]
-        //myCalView.drawQuery(q);
+        var q = qs.queries[getURIQueryParameters(window.location)['query']];
+        myTimelineView.drawQuery(q);
       }
       document.onLoad=timelineLoader();
     </script>

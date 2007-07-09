@@ -33,8 +33,9 @@
         var myCalView = new calView(document.getElementById('viewArea'));
         qs.addListener(myCalView);
         //extract the query ID Here!
-        //var q = qs.queries[?]
-        //myCalView.drawQuery(q);
+        
+        var q = qs.queries[getURIQueryParameters(window.location)['query']];
+        myCalView.drawQuery(q);
       }
       document.onLoad=calLoader();
     </script>

@@ -1,6 +1,7 @@
 function tableView(container,doc) 
 {
-    var nv; // made this global since I need it later
+    var numRows; // assigned in makeListener
+    var numCols; // assigned at bottom of drawQuery
     var activeSingleQuery = null;
     
     thisTable = this;  // fixes a problem with calling this.container
@@ -66,19 +67,20 @@ function tableView(container,doc)
         drawExport();
         drawAddRow();
         sortables_init();
+    
+        t.addEventListener('click', onClickCell, false);
+        numCols = nv;
+        
         //********** Resize activation code *********//
-        var t = document.getElementById('tabulated_data');
         var a = document.createElement('a');
         a.focus();
         a.setAttribute('display', 'hidden');
         t.appendChild(a);
         a.setAttribute('id', 'anchor');
         //********** End Resize activation code *****///
-    
-        t.addEventListener('click', onClickCell, false);
     }
     //***************** End drawQuery *****************//
-    
+
     var selectedNode;
     var listener;
     //***************** Table Editing *****************//
@@ -88,25 +90,31 @@ function tableView(container,doc)
         { // handle if some other node is already selected
             clearSelected(selectedNode);
         }
-        var tdNode = e.target;
+        var node = e.target;
 
-        if (tdNode.tagName != "TD") return;
-        if (tdNode.firstChild && tdNode.firstChild.tagName == "INPUT") return;
-        setSelected(tdNode);
+        if (node.firstChild && node.firstChild.tagName == "INPUT") return;
+        setSelected(node);
+        var t = document.getElementById('tabulated_data');
+        numRows = t.childNodes.length - 1; // numRows - 1 is the number of rows minus the header
+    }
+    
+    function getRowIndex(node)
+    {
+        var trNode = node.parentNode
+        var rowArray = trNode.parentNode.childNodes;
+        var rowArrayLength = trNode.parentNode.childNodes.length;
+        for (i = 1; i<rowArrayLength; i++) {
+            if (rowArray[i].innerHTML == trNode.innerHTML) return i;
+        }
     }
     
     // use this wrapper so that the node can be passed to the event handler
     function makeListener(node) {
-        debug = document.getElementById('debug');
-        debug.value += "makelistener"+'\n'
         return function keydowntest(e) 
         {
-            var iRow = node.parentNode.rowIndex;
+            var iRow = getRowIndex(node);
             var iCol = node.cellIndex;
-            var numRows = 5-1;
-            var numCols = 3;
             var t = document.getElementById('tabulated_data');
-            var debug = document.getElementById('debug');
             clearSelected(node);
             if(e.keyCode==37) { //left
                 row = iRow;
@@ -114,7 +122,7 @@ function tableView(container,doc)
                 var newNode = getTDNode(row, col);
                 setSelected(newNode);
             }
-            if (e.keyCode==38) { //top
+            if (e.keyCode==38) { //up
                 row = (iRow>1)?(iRow-1):iRow;
                 col = iCol;
                 var newNode = getTDNode(row, col)
@@ -149,13 +157,14 @@ function tableView(container,doc)
     
     function setSelected(node) 
     {
+        if (node.tagName != "TD") return;
         var a = document.getElementById('anchor');
         a.focus();
         
         var t = document.getElementById('tabulated_data');
         listener = makeListener(node);
         t.addEventListener('keypress', listener, false);
-        node.style.backgroundColor = "lightgray";
+        node.style.backgroundColor = "#8F3";
         
         selectedNode = node;
         selectedNode.addEventListener('click', onCellClickSecond, false);
@@ -250,23 +259,13 @@ function tableView(container,doc)
         thisTable.container.appendChild(form);
     }
     
-    
     function addRow () 
     {
-        // find number of columns in current table
-        // create new tr and td elements, set class as editable
-        // append these to the table
-        // see if editing works
-        // other variables used: nv
-        // this should give you a list of all the tabulator project developers in the main tabulator file
-        // something matching the q bindings
-        // replace that with a selection bar?
         var i;
         var td;
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
-        var numRows = t.childNodes.length - 1; 
-        for (i=0; i<nv; i++) 
+        for (i=0; i<numCols; i++) 
         {
             if (literalNodeRC(numRows, i)) 
                 td = createNonLiteralNode();
@@ -290,18 +289,17 @@ function tableView(container,doc)
         td.setAttribute('about', '');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
-        // set attributes;
+        // SET ATTRIBUTES HERE;
         return td;
     }
     
-    // checks to see if a TD element has the about attribute
-    // to determine if it is a literal node
+    // checks to see if a TD element has the about attribute to determine if it is a literal node
     function literalNodeTD (tdNode) 
     {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
-    // same as the above except it checks using row, col specs
+    // same as the above except it checks using row, col specifications
     function literalNodeRC (row, col) 
     {
         var t = thisTable.document.getElementById('tabulated_data'); 

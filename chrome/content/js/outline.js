@@ -26,17 +26,10 @@ function Outline(doc) {
 
     
     this.viewAndSaveQuery = function() {
-        onLoad = function(e) {
-            var doc = e.originalTarget;
-            var container = doc.getElementById('viewArea');
-            var view = new tableView(container,myDocument);
-            qs.addListener(view);
+        if(isExtension) {
             var q = saveQuery();
-            view.drawQuery(q);
-            gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
+            tabulator.drawInBestView(q);
         }
-        gBrowser.selectedTab = gBrowser.addTab("chrome://tabulator/content/view.html");
-        gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
     }
     function saveQuery() {
         var q= new Query()

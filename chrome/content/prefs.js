@@ -29,14 +29,12 @@ var tabulatorPrefObserver =
     if(aTopic != "nsPref:changed") return;
     // aSubject is the nsIPrefBranch we're observing (after appropriate QI)
     // aData is the name of the pref that's been changed (relative to aSubject)
-    dump(aData);
     switch (aData) {
       case "setheader":
         var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                            .getService(Components.interfaces.nsIPrefBranch);
         var acceptheader = prefManager.getCharPref('network.http.accept.default');
         var value = prefManager.getBoolPref("extensions.tabulator.setheader");
-        dump(value);
         if(value) {
           if(acceptheader.indexOf("application/rdf+xml")==-1) { //Let's prefer some application/rdf+xml!
             acceptheader+=",application/rdf+xml;q=0.93";
@@ -45,11 +43,9 @@ var tabulatorPrefObserver =
             acceptheader+=",text/rdf+n3;q=0.5"; // low for now.
           }
         } else {
-          dump("trying to set");
           acceptheader = acceptheader.replace(/,application\/rdf\+xml;q=0\.93/,"");
           acceptheader = acceptheader.replace(/,text\/rdf\+n3;q=0\.5/,"");
         }
-        dump("\nNew Header: "+acceptheader);
         prefManager.setCharPref('network.http.accept.default',acceptheader);
         break;
     }

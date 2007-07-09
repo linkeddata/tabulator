@@ -32,7 +32,6 @@ function Tabulator() {
                        .getService(Components.interfaces.mozIJSSubScriptLoader);
   loader.loadSubScript("chrome://tabulator/content/log-ext.js");
   this.log = new TabulatorLogger();
-  dump("yello");
 
   loader.loadSubScript("chrome://tabulator/content/sources-ext.js");
   loader.loadSubScript("chrome://tabulator/content/js/util.js");

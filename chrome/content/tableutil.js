@@ -8,6 +8,8 @@ dc = Namespace("http://purl.org/dc/elements/1.1/")
 rss = Namespace("http://purl.org/rss/1.0/")
 contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
 
+LanguagePreference="en";
+
 labelPriority = []
 labelPriority[foaf('name').uri] = 10
 labelPriority[dc('title').uri] = 8

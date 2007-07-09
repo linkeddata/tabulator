@@ -1,17 +1,6 @@
 function tableView(container,doc) 
 {
-    // - TODO: TAB AND SHIFT TAB FUNCTIONALITY
-    // - Problem: the focus keeps shifting back to the header for long files
-    // - If I want to keep with the scrolling, then I'll have to add an 
-    // anchor to each element
-    // - add a delete column icon
-    // - distinguish between RDF Formula and the value
-    // - Joe said some more stuff about using his update code
-    
-    // - reinstall firefox to get rid of that problem
-    // - check out Alban's script editor
-
-    var numRows; // assigned in makeListener
+    var numRows; // assigned in makeKeyListener
     var numCols; // assigned at bottom of drawQuery
     var activeSingleQuery = null;
     
@@ -120,13 +109,10 @@ function tableView(container,doc)
         }
     }
     
-
-
-    
     // use this wrapper so that the node can be passed to the event handler
     
-    function makeListener(node) {
-        return function keydowntest(e) 
+    function makeKeyListener(node) {
+        return function keyListener(e) 
         {
             var iRow = getRowIndex(node);
             var iCol = node.cellIndex;
@@ -180,7 +166,7 @@ function tableView(container,doc)
         // add an anchor node, focus on it, then remove the node
         
         var t = document.getElementById('tabulated_data');
-        listener = makeListener(node);
+        listener = makeKeyListener(node);
         t.addEventListener('keypress', listener, false);
         node.style.backgroundColor = "#8F3";
         

@@ -1,3 +1,5 @@
+isExtension = true;
+
 function openTool(url, type, width, height)
 {
   width = width || 500;

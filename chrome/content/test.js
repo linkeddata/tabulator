@@ -107,10 +107,6 @@ labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
 labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
 
-
-kb.predicateCallback = AJAR_handleNewTerm;
-kb.typeCallback = AJAR_handleNewTerm;
-
 //Heavily modified from http://developer.mozilla.org/en/docs/Code_snippets:On_page_load
 var tabExtension = {
   init: function() {
@@ -223,44 +219,6 @@ function emptyNode(node) {
     node.removeChild(nodes[i])
   return node
 }
-
-function AJAR_handleNewTerm(kb, p, requestedBy) {
-    if (p.termType != 'symbol') return;
-    var docuri = Util.uri.docpart(p.uri);
-    var fixuri;
-    if (p.uri.indexOf('#') < 0) { // No hash
-
-	// @@ major hack for dbpedia Categories, which spred indefinitely
-	if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
-
-/*
-        if (string_startswith(p.uri, 'http://xmlns.com/foaf/0.1/')) {
-            fixuri = "http://dig.csail.mit.edu/2005/ajar/ajaw/test/foaf"
-	    // should give HTTP 303 to ontology -- now is :-)
-        } else
-*/
-	if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
-		   || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
-            fixuri = "http://dublincore.org/2005/06/13/dcq";
-	    //dc fetched multiple times
-        } else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
-            fixuri = "http://xmlns.com/wot/0.1/index.rdf";
-        } else if (string_startswith(p.uri, 'http://web.resource.org/cc/')) {
-//            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
-            fixuri = "http://web.resource.org/cc/schema.rdf";
-        }
-    }
-    if (fixuri) {
-	docuri = fixuri
-    }
-    if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
-    
-    if (fixuri) {   // only give warning once: else happens too often
-        tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
-	    "> to <" + docuri + ">")	
-    }
-    sf.requestURI(docuri, requestedBy);
-} //AJAR_handleNewTerm
 
 function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);

@@ -45,6 +45,13 @@ function Tabulator() {
   loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/rdf/sources.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/uri.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/sorttable.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/tableView.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/mapView.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/calView.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timelineView.js"/*, rootObj*/);
+  //loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timeline-api.js"/*, rootObj*/);
+  //loader.loadSubScript("chrome://tabulator/content/js/calView/calView.js"/*, rootObj*/);
   this.kb = new RDFIndexedFormula();
   this.sf = new SourceFetcher(this.kb);
   this.qs = new QuerySource();
@@ -189,9 +196,9 @@ function string_startswith(str, pref) { // missing library routines
 
   this.views=[];
 
-  this.registerView = function(view) {
-    if(view) {
-      this.views.push(view);
+  this.registerViewType = function(viewFactory) {
+    if(viewFactory) {
+      this.views.push(viewFactory);
     } else {
       alert("ERROR: View class not found.");
     }
@@ -208,7 +215,7 @@ function string_startswith(str, pref) { // missing library routines
     return false;
   }
 
-  this.drawInView = function(query,view,alert) {
+  this.drawInView = function(query,viewFactory,alert) {
     //get a new doc, generate a new view in doc, add and draw query.
     
     var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
@@ -217,14 +224,21 @@ function string_startswith(str, pref) { // missing library routines
     onLoad = function(e) {
         var doc = e.originalTarget;
         var container = doc.getElementById('viewArea');
-        var newView = new view(container,doc);
+        var newView = viewFactory.makeView(container,doc);
         tabulator.qs.addListener(newView);
         newView.drawQuery(query);
         gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
     }
-    gBrowser.selectedTab = gBrowser.addTab("chrome://tabulator/content/view.html");
-    gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
+    //viewFactory.getViewURI
+    gBrowser.selectedTab = gBrowser.addTab(viewFactory.getValidDocument(query));
+    //gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
   }
+
+  this.registerViewType(TableViewFactory);
+  this.registerViewType(MapViewFactory);
+  this.registerViewType(CalViewFactory);
+  this.registerViewType(TimelineViewFactory);
+
 }//Tabulator
 
 // This is the implementation of your component.

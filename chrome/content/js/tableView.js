@@ -15,7 +15,7 @@ function tableView(container,doc)
     this.name="Table";               //Display name of this view.
     this.queryStates=[];            //All Queries currently in this view.
     this.container=container;       //HTML DOM parent node for this view.
-    this.container.setAttribute('ondblclick','tableDoubleClick(event)')
+    this.container.setAttribute('ondblclick','tableDoubleClick(event)');
     // this.container.setAttribute('onclick', 'onClickCell');
     
     //***************** this.drawQuery *****************//
@@ -49,16 +49,6 @@ function tableView(container,doc)
         t.setAttribute('class', 'results sortable'); //needed to make sortable
         t.setAttribute('id', 'tabulated_data'); 
         
-        //********** key mvmt activation code *********//
-        var a = document.createElement('a');
-        a.focus();
-        a.setAttribute('display', 'hidden');
-        t.appendChild(a);
-        a.setAttribute('id', 'anchor');
-        // For some reason this gets attached to the first tr
-        // which is not exactly what I want, but it works
-        //********** key mvmt activation code *****///
-        
         emptyNode(thisTable.container).appendChild(t); // See results as we go
         
         for (i=0; i<nv; i++)
@@ -80,6 +70,14 @@ function tableView(container,doc)
     
         t.addEventListener('click', onClickCell, false);
         numCols = nv;
+        
+        //********** key mvmt activation code *********//
+        var a = document.createElement('a');
+        a.focus();
+        a.setAttribute('display', 'none');
+        thisTable.container.appendChild(a); // odd way of adding it
+        a.setAttribute('id', 'anchor');
+        //********** key mvmt activation code *****///
         
     }
     //***************** End drawQuery *****************//
@@ -160,6 +158,7 @@ function tableView(container,doc)
     
     function setSelected(node) 
     {
+        if (!node) return;
         if (node.tagName != "TD") return;
         var a = document.getElementById('anchor');
         a.focus();

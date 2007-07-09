@@ -75,7 +75,7 @@ function tableView(container,doc)
         var a = document.createElement('a');
         a.focus();
         a.setAttribute('display', 'none');
-        thisTable.container.appendChild(a); // odd way of adding it
+        th.appendChild(a); 
         a.setAttribute('id', 'anchor');
         //********** key mvmt activation code *****///
         
@@ -110,6 +110,8 @@ function tableView(container,doc)
     }
     
     // use this wrapper so that the node can be passed to the event handler
+    
+    // TODO: TAB AND SHIFT TAB FUNCTIONALITY
     function makeListener(node) {
         return function keydowntest(e) 
         {

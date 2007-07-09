@@ -1,5 +1,16 @@
 function tableView(container,doc) 
 {
+    // - TODO: TAB AND SHIFT TAB FUNCTIONALITY
+    // - Problem: the focus keeps shifting back to the header for long files
+    // - If I want to keep with the scrolling, then I'll have to add an 
+    // anchor to each element
+    // - add a delete column icon
+    // - distinguish between RDF Formula and the value
+    // - Joe said some more stuff about using his update code
+    
+    // - reinstall firefox to get rid of that problem
+    // - check out Alban's script editor
+
     var numRows; // assigned in makeListener
     var numCols; // assigned at bottom of drawQuery
     var activeSingleQuery = null;
@@ -100,7 +111,7 @@ function tableView(container,doc)
     }
     
     function getRowIndex(node)
-    {
+    { // given a node, returns the row that the node is
         var trNode = node.parentNode
         var rowArray = trNode.parentNode.childNodes;
         var rowArrayLength = trNode.parentNode.childNodes.length;
@@ -109,9 +120,11 @@ function tableView(container,doc)
         }
     }
     
+
+
+    
     // use this wrapper so that the node can be passed to the event handler
     
-    // TODO: TAB AND SHIFT TAB FUNCTIONALITY
     function makeListener(node) {
         return function keydowntest(e) 
         {
@@ -154,7 +167,7 @@ function tableView(container,doc)
     function getTDNode(iRow, iCol)
     {
         var t = document.getElementById('tabulated_data');
-        //return t.rows[iRow].cells[iCol];  // be careful with this, relies on tbody
+        //return t.rows[iRow].cells[iCol];  // relies on tbody
         return t.childNodes[iRow].childNodes[iCol];
     }
     
@@ -164,6 +177,7 @@ function tableView(container,doc)
         if (node.tagName != "TD") return;
         var a = document.getElementById('anchor');
         a.focus();
+        // add an anchor node, focus on it, then remove the node
         
         var t = document.getElementById('tabulated_data');
         listener = makeListener(node);
@@ -176,8 +190,10 @@ function tableView(container,doc)
     
     function onCellClickSecond(e) 
     {
-        selectedNode.removeEventListener('click', onCellClickSecond, false); // DOES THIS WORK?
-        if (e.target == selectedNode) {
+        selectedNode.removeEventListener('click', onCellClickSecond, false); 
+        // DOES THIS WORK?
+        if (e.target == selectedNode) 
+        {
             clearSelected(selectedNode);
             onEdit(selectedNode);
             e.stopPropagation();
@@ -193,8 +209,8 @@ function tableView(container,doc)
     }
 
     function onEdit(node)
-    {   
-        if (literalNodeTD(node)) return; // move this inside of onEdit
+    {
+        if (literalNodeTD(node)) {setSelected(node); return; }
         var t = document.getElementById('tabulated_data');
 
         var oldTxt = node.innerHTML;
@@ -221,7 +237,7 @@ function tableView(container,doc)
         inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false); 
     }
     
-    function tableEditOnBlurWrap(node) 
+    function tableEditOnBlurWrap(node)
     {
         return function tableEditOnBlur(e) 
         {

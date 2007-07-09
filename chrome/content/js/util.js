@@ -308,7 +308,6 @@ function matrixTD(obj, asImage, doc) {
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
-    
     var image;
     if (obj.termType == 'literal') {
         td.appendChild(doc.createTextNode(obj.value));
@@ -460,4 +459,21 @@ function AJARImage(src, alt, tt, doc) {
     if (typeof tt != 'undefined')
         image.setAttribute('title',tt);
     return image;
+}
+
+//returns an array containing x1,y1,x2,y2,etc for some uri
+//http://blah.org/f.html?x1=y1&x2=y2, where results[x1]=y1
+function getURIQueryParameters(uri){
+    var results =new Array();
+    var getDataString=new String(window.location);
+    var questionMarkLocation=getDataString.search(/\?/);
+    if (questionMarkLocation!=-1){
+        getDataString=getDataString.substr(questionMarkLocation+1);
+        var getDataArray=getDataString.split(/&/g);
+        for (var i=0;i<getDataArray.length;i++){
+            var nameValuePair=getDataArray[i].split(/=/);
+            results[decodeURIComponent(nameValuePair[0])]=decodeURIComponent(nameValuePair[1]);
+        }
+    }
+    return results;
 }

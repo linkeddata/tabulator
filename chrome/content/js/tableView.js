@@ -592,7 +592,7 @@ TableViewFactory = {
         return "chrome://tabulator/content/icons/table.png";
     },
 
-    getValidDocument: function() {
-        return "chrome://tabulator/content/table.html";
+    getValidDocument: function(q) {
+        return "chrome://tabulator/content/table.html?query="+q.id;
     }
 }

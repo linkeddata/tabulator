@@ -149,6 +149,18 @@ function timelineView(timelineContainer) {
     }
 } // timelineView
 
+function queryHasTimeData(q){
+    var n = q.pat.statements.length;
+    for (var i = 0; i < n; i++){
+	var qst = q.pat.statements[i];
+	var calType = findCalType(qst.predicate.toString());
+	if (calType!=null && calType!='summary'){
+	    return true;
+	}
+    }
+    return false;
+}
+
 
 TimelineViewFactory = {
     name: "Timeline View",

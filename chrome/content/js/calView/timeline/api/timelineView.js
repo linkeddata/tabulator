@@ -184,7 +184,7 @@ TimelineViewFactory = {
         return "chrome://tabulator/content/icons/appointment-new.png";
     },
 
-    getValidDocument: function() {
-        return "chrome://tabulator/content/view.html";
+    getValidDocument: function(q) {
+        return "chrome://tabulator/content/timeline.html?query="+q.id;
     }
 }

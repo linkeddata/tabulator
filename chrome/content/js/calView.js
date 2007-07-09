@@ -727,7 +727,8 @@ CalViewFactory = {
         return "chrome://tabulator/content/icons/x-office-calendar.png";
     },
 
-    getValidDocument: function() {
-        return "chrome://tabulator/content/view.html";
+    //Generate a document URI which will display this query.
+    getValidDocument: function(q) {
+        return "chrome://tabulator/content/calendar.html?query="+q.id;
     }
 }

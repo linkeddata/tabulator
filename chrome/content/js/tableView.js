@@ -149,7 +149,7 @@ function tableView(container,doc)
         form.setAttribute('textAlign','right');
         but.setAttribute('type','button');
         but.setAttribute('id','addRowButton');
-        but.addEVentListener('click',addRow,true);
+        but.addEventListener('click',addRow,true);
         but.setAttribute('value','+');
         form.appendChild(but);
         thisTable.container.appendChild(form);
@@ -222,7 +222,7 @@ function tableView(container,doc)
         form.setAttribute('textAlign','right');
         but.setAttribute('type','button');
         but.setAttribute('id','exportButton');
-        but.onclick=exportTable // they should all be like this?
+        but.addEventListener('click',exportTable,true);
         but.setAttribute('value','Export to HTML');
         form.appendChild(but);
         thisTable.container.appendChild(form);
@@ -497,6 +497,6 @@ TableViewFactory = {
     },
 
     getValidDocument: function() {
-        return "chrome://tabulator/content/view.html";
+        return "chrome://tabulator/content/table.html";
     }
 }

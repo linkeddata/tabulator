@@ -1,7 +1,5 @@
 function tableView(container,doc) 
 {
-    // Problem: the focus keeps shifting back to the header for long files
-    //var tabulator;
     if(isExtension) {
         tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
             getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -81,10 +79,9 @@ function tableView(container,doc)
         
         //********** key mvmt activation code *********//
         var a = document.createElement('a');
-        a.focus();
-        a.setAttribute('display', 'none');
         th.appendChild(a); 
         a.setAttribute('id', 'anchor');
+        a.focus();
         //********** key mvmt activation code *****///
     }
     //***************** End drawQuery *****************//
@@ -95,11 +92,11 @@ function tableView(container,doc)
     function onClickCell(e) 
     {
         if (selectedNode != null) { 
-            // handle if some other node is already selected
+            // some other node is already selected
             clearSelected(selectedNode);
         }
         var node = e.target;
-
+        // check this
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
         setSelected(node);
         var t = document.getElementById('tabulated_data');
@@ -136,6 +133,7 @@ function tableView(container,doc)
                 col = iCol;
                 var newNode = getTDNode(row, col)
                 setSelected(newNode);
+                newNode.scrollIntoView(false); // ...
             }
             if (e.keyCode==39) { //right
                 row = iRow;
@@ -148,6 +146,7 @@ function tableView(container,doc)
                 col = iCol;
                 var newNode = getTDNode(row, col);
                 setSelected(newNode);
+                newNode.scrollIntoView(false);
             }
             if (e.keyCode==13) { //return
                 onEdit(node);
@@ -168,11 +167,14 @@ function tableView(container,doc)
     {
         if (!node) return;
         if (node.tagName != "TD") return;
-        var a = document.getElementById('anchor');
-        a.focus();
-        // TODO: add an anchor node, focus on it, then remove the node
+        // FOCUS FIX: add an anchor node, focus on it, then remove the node
         // try removing it in clearSelected?
-        
+        // highlighting is one off for long files :(
+        var a = document.createElement('a');
+        a.setAttribute('id', 'focustest');
+        node.appendChild(a);
+        a.focus();
+
         var t = document.getElementById('tabulated_data');
         listener = makeKeyListener(node);
         t.addEventListener('keypress', listener, false);
@@ -196,6 +198,8 @@ function tableView(container,doc)
     
     function clearSelected(node) 
     {
+        var a = document.getElementById('focustest');
+        if (a != null) {a.parentNode.removeChild(a);};
         var t = document.getElementById('tabulated_data');
         t.removeEventListener('keypress', listener, false);
         node.style.backgroundColor = 'white';

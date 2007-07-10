@@ -137,11 +137,13 @@ function Outline(doc) {
 	    node.appendChild(img)
 	    return img
 	} //appendAccessIcon
+        
+        
 	/** make the td for an object (grammatical object) 
 	 *  @param obj - an RDF term
 	 *  @param view - a VIEW function (rather than a bool asImage)
 	 **/
-	this.outline_objectTD=function outline_objectTD(obj, view, deleteNode) {
+	this.outline_objectTD = function outline_objectTD(obj, view, deleteNode) {
 	    //set about
 	    var td = myDocument.createElement('td');
 	    
@@ -177,7 +179,7 @@ function Outline(doc) {
 	    return td;
 	} //outline_objectTD
 	
-	this.outline_predicateTD=function outline_predicateTD(predicate,newTr,inverse,internal){
+	this.outline_predicateTD = function outline_predicateTD(predicate,newTr,inverse,internal){
 	    
         var td_p = myDocument.createElement("TD")
 		td_p.setAttribute('about', predicate.toNT())
@@ -219,13 +221,17 @@ function Outline(doc) {
 	expandedHeaderTR.td.setAttribute('colspan', '2');
 	expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_collapse, 'collapse'));
 	expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
+	expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_internals, 'internals'));
 	expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
-	function expandedHeaderTR(subject) {
+	
+        function expandedHeaderTR(subject) {
 	    var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
 	    tr.firstChild.setAttribute('about', subject.toNT());
 	    tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
 	    return tr;
 	} //expandedHeaderTR
+        
+        
     function propertyTable(subject, table, details) {
 	    tabulator.log.debug("Property table for: "+ subject)
 	    subject = kb.canon(subject)
@@ -258,12 +264,13 @@ function Outline(doc) {
 		appendPropertyTRs(table, plist, true, details)
 		
 		return table
-	    } else {  // New display of existing table
+	    } else {  // New display of existing table, keeping expanded bits
+                tabulator.log.info('Re-expand: '+table)
 		table.replaceChild(expandedHeaderTR(subject),table.firstChild)
 		var row, s
 		var expandedNodes = {}
 	
-		for (row = table.firstChild; row; row = row.nextSibling) {
+		for (row = table.firstChild; row; row = row.nextSibling) { // Note which p,o pairs are exppanded
 		    if (row.childNodes[1]
 			&& row.childNodes[1].firstChild.nodeName == 'table') {
 			s = row.AJAR_statement
@@ -275,7 +282,7 @@ function Outline(doc) {
 		    }
 		}
 	
-		table = propertyTable(subject, undefined, details)
+		table = propertyTable(subject, undefined, details)  // Re-build table
 	
 		for (row = table.firstChild; row; row = row.nextSibling) {
 		    s = row.AJAR_statement
@@ -285,7 +292,7 @@ function Outline(doc) {
 				expandedNodes[s.predicate.toString()][s.object.toString()]
 			    if (node) {
 				row.childNodes[1].replaceChild(node,
-							       row.childNodes[1].firstChild)
+                                                row.childNodes[1].firstChild)
 			    }
 			}
 		    }
@@ -381,21 +388,22 @@ function Outline(doc) {
 	            td_p.setAttribute('rowspan',2)  
                 }
                 for(l=1;l<k;l++){
-	        if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
-	            s=plist[j+l];
-	            defaultpropview = views.defaults[s.predicate.uri];
-                    var trObj=myDocument.createElement('tr');
-                    trObj.style.colspan='1';
-                    trObj.appendChild(thisOutline.outline_objectTD(sel(plist[j+l]),defaultpropview));
-                    trObj.AJAR_statement=s;
-                    trObj.AJAR_inverse=inverse;
-                    parent.appendChild(trObj);
-                    if (l>=show){
-	                trObj.style.display='none';
-                        showLaterArray.push(trObj);
-	            }
-            }
-            }
+                    if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
+                        s=plist[j+l];
+                        defaultpropview = views.defaults[s.predicate.uri];
+                        var trObj=myDocument.createElement('tr');
+                        trObj.style.colspan='1';
+                        trObj.appendChild(thisOutline.outline_objectTD(
+                            sel(plist[j+l]),defaultpropview));
+                        trObj.AJAR_statement=s;
+                        trObj.AJAR_inverse=inverse;
+                        parent.appendChild(trObj);
+                        if (l>=show){
+                            trObj.style.display='none';
+                            showLaterArray.push(trObj);
+                        }
+                    }
+                }
             }
 
             if (show<predDups){ //Add the x more <TR> here
@@ -457,7 +465,10 @@ function Outline(doc) {
 		j += k-1  // extra push
 	    }
 	}
-	
+
+///////////////////////////  termWidget
+//
+//	
     termWidget={}
 	termWidget.construct = function () {
 		td = myDocument.createElement('TD')
@@ -496,34 +507,6 @@ function Outline(doc) {
 		termWidget.addIcon (td, newIcon)
 	}	
 	
-	////////// Views of classes mentioned in a document
-	function appendClassViewTRs(parent, subject) {
-	 /*   var statements = kb.statementsMatching(
-	            undefined, rdf('type'), undefined, subject)
-	    n = statements.length
-	    alert(statements[0]);
-	    for (var x=0; x<n;x++)
-	    {
-	    	kb.add(subject,
-	    		new RDFSymbol('http://dig.csail.mit.edu/2005/ajar/ajaw/ont#mentions'),statements[x].object, subject)
-	    	//kb.add(subject,rdf('type'),statements[x].object, subject)
-	    }
-	    /*var statements = kb.statementsMatching(
-	            undefined, rdf('type'), undefined, subject)
-	    var classes = [], i, n = statements.length
-	    for (i=0; i<n; i++) {
-		classes[statements[i].object] = true;
-	    }
-	
-	    var c; for (c in classes) {
-	        var tr = myDocument.createElement('TR')
-	        var td1 = myDocument.createElement('TD')
-	        tr.appendChild(td1)
-	        td1.appendChild(myDocument.createTextNode('mentions'))   // was: 'mentions class'
-	        tr.appendChild(outline_objectTD(kb.fromNT(c)))
-	        parent.appendChild(tr)
-	    }*/
-	}
 	
 	//////// Human-readable content of a document
 	function documentContentTABLE(subject) {
@@ -1065,7 +1048,7 @@ function Outline(doc) {
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
                         sf.addCallback('done',setSelectedAfterward);
                         sf.addCallback('fail',setSelectedAfterward);
-                        outline_expand(selectedTd,obj,false);
+                        outline_expand(selectedTd, obj, false);
                     }
                     setSelectedAfterward();                   
                 }
@@ -1117,7 +1100,7 @@ function Outline(doc) {
 	        if (PosY+selection[0].clientHeight > window.scrollY+window.innerHeight) getEyeFocus(selection[0],true,true);
 	        if (PosY<window.scrollY+54) getEyeFocus(selection[0],true);
 	    }
-    };
+        };
 	this.OutlinerMouseclickPanel=function(e){
 	    switch(thisOutline.UserInput._tabulatorMode){
 	        case 0:
@@ -1148,9 +1131,9 @@ function Outline(doc) {
 	        return
 	    }
 	    //not input then clear
-        thisOutline.UserInput.clearMenu();
-        if(!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)
-            thisOutline.UserInput.clearInputAndSave(e);
+            thisOutline.UserInput.clearMenu();
+            if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)
+                thisOutline.UserInput.clearInputAndSave(e);
 	    if (tname != "IMG") {
 	        if(about && myDocument.getElementById('UserURI')) { 
 	            myDocument.getElementById('UserURI').value = 
@@ -1249,15 +1232,20 @@ function Outline(doc) {
 		    var returnSignal=thisOutline.UserInput.addTriple(e);
 		    if (returnSignal){ //when expand signal returned
 		        outline_expand(returnSignal[0],returnSignal[1],false);
-                for (var trIterator=returnSignal[0].firstChild.firstChild;trIterator;trIterator=trIterator.nextSibling){
-                    var st=trIterator.AJAR_statement;
-                    if (!st) continue;
-                    if (st.predicate.termType=='collection') break;
-                }
-                thisOutline.UserInput.Click(e,trIterator.lastChild);
+                        for (var trIterator=returnSignal[0].firstChild.firstChild;
+                            trIterator; trIterator=trIterator.nextSibling) {
+                            var st=trIterator.AJAR_statement;
+                            if (!st) continue;
+                            if (st.predicate.termType=='collection') break;
+                        }
+                        thisOutline.UserInput.Click(e,trIterator.lastChild);
 		    }
 		    break;
-		case Icon.src.icon_show_choices:
+                case Icon.src.icon_internals:
+                    outline_expand(p, subject, true, true); //  details, already
+                    break;
+                    
+                case Icon.src.icon_show_choices: // @@?? what is this?
             /*  SELECT ?pred 
                 WHERE{
                     about tabont:element ?pred.
@@ -1273,16 +1261,17 @@ function Outline(doc) {
 	    //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
 	    if (e) e.stopPropagation();
 	} //function
-	// added source-getting to outline expand 4/27/06
-	function outline_expand(p, subject1, details) {
+        
+
+	function outline_expand(p, subject1, details, already) {
 	    //remove callback to prevent unexpected repaint
-        sf.removeCallback('done','expand');
-        sf.removeCallback('fail','expand');
+            sf.removeCallback('done','expand');
+            sf.removeCallback('fail','expand');
 	    
 	    var subject = kb.canon(subject1)
 	    var requTerm = subject.uri?kb.sym(Util.uri.docpart(subject.uri)):subject
 	    var subj_uri = subject.uri
-	    var already = false
+	    var already = !!already
 	    
 	    function render() {
 		subject = kb.canon(subject)
@@ -1293,8 +1282,11 @@ function Outline(doc) {
 		if (!already) { // first expand
 		    newTable = propertyTable(subject, undefined, details)
 		} else {
+
+                    tabulator.log.info(" ... p is  " + p);
 		    for (newTable = p.firstChild; newTable.nextSibling;
-			 newTable = newTable.nextSibling) {
+ 			 newTable = newTable.nextSibling) {
+                        tabulator.log.info(" ... checking node "+newTable);
 			if (newTable.nodeName == 'table') break
 		    }
 		    newTable = propertyTable(subject, newTable, details)
@@ -1384,11 +1376,13 @@ function Outline(doc) {
 	            if (returnCode[1]) outlineElement.removeChild(outlineElement.lastChild);
 	            return;
 	        }
-        }
+            }
 	    sf.lookUpThing(subject);
 	    render()  // inital open, or else full if re-open
 	
 	} //outline_expand
+        
+        
 	function outline_collapse(p, subject) {
 	    var row = ancestor(p, 'TR');
 	    row = ancestor(row.parentNode, 'TR'); //two levels up
@@ -1421,6 +1415,7 @@ function Outline(doc) {
 	    level.parentNode.replaceChild(outline.outline_objectTD(subject,
 							   myview, deleteNode), level);
 	} //outline_collapse
+        
 	function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
 	    var outer = null
 	    for (var level=p.parentNode; level; level=level.parentNode) {
@@ -1431,6 +1426,7 @@ function Outline(doc) {
 	    myDocument.title = label("Tabulator: "+subject);
 	    outer.setAttribute('about', subject.toNT());
 	} //outline_refocus
+        
 	// Inversion is turning the outline view inside-out
 	function outline_inversion(p, subject) { // re-root at subject
 	

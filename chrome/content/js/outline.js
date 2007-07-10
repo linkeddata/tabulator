@@ -90,6 +90,7 @@ function Outline(doc) {
     //  Represent an object in summary form as a table cell
     function appendRemoveIcon(node, subject, removeNode) {
         var image = AJARImage(Icon.src.icon_remove_node, 'remove')
+        image.setAttributes('align', 'right')
         image.node = removeNode
         image.setAttribute('about', subject.toNT())
         image.style.marginLeft="5px"
@@ -223,7 +224,10 @@ function Outline(doc) {
     expandedHeaderTR.td.setAttribute('colspan', '2');
     expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_collapse, 'collapse'));
     expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
-    expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_internals, 'internals'));
+    {   var ico = AJARImage(Icon.src.icon_internals, 'internals');
+        ico.setAttribute('align','right');
+        expandedHeaderTR.td.appendChild(ico);
+    }
     expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
     
     function expandedHeaderTR(subject) {
@@ -233,7 +237,70 @@ function Outline(doc) {
         return tr;
     } //expandedHeaderTR
     
+    /*   Default Pane
+    **
+    **  This outline pane contains the properties which are
+    **  normaly displayed to the user. See also: innternalPane
+    */
+    defaultPane = {};
+    defaultPane.icon = Icon.src.icon_internals;
+    defaultPane.render = function(subject, container) {
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'defaultPane')
+        appendRemoveIcon(div);
+        table.appendChild(div);
+                  
+        var plist = kb.statementsMatching(subject)
+        appendPropertyTRs(div, plist, false, false)
+        plist = kb.statementsMatching(undefined, undefined, subject)
+        appendPropertyTRs(div, plist, true, false)    
+    }
     
+    /*   Internal Pane
+    **
+    **  This outline pane contains the properties which are
+    ** internal to the user's interaction with the web, and are not normaly displayed
+    */
+    internalPane = {};
+    internalPane.icon = Icon.src.icon_internals;
+    internalPane.render = function(subject, container) {
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'internalPane')
+        appendRemoveIcon(div);
+        table.appendChild(div)
+                  
+        var plist = kb.statementsMatching(subject)
+        appendPropertyTRs(div, plist, false, true)
+        plist = kb.statementsMatching(undefined, undefined, subject)
+        appendPropertyTRs(div, plist, true, true)    
+    }
+    
+    /*   Human-readable Pane
+    **
+    **  This outline pane contains the document contents for an HTML document
+    */
+    humanReadablePane = {};
+    humanReadablePane.icon = Icon.src.icon_visit;
+    humanReadablePane.render = function(subject, container) {
+    //////// Human-readable content of a document
+    function documentContentTABLE(subject) {
+        var div = myDocument.createElement("div")
+    
+        div.setAttribute('class', 'docView')
+        div.appendChild(expandedHeaderTR(subject))
+    
+        var iframe = myDocument.createElement("IFRAME")
+        iframe.setAttribute('src', subject.uri)
+        iframe.setAttribute('class', 'doc')
+        iframe.setAttribute('height', '480')
+        iframe.setAttribute('width', '640')
+        var tr = myDocument.createElement('TR')
+        tr.appendChild(iframe)
+        div.appendChild(tr)
+        return div
+    }
+
+
     function propertyTable(subject, table, details) {
         tabulator.log.debug("Property table for: "+ subject)
         subject = kb.canon(subject)
@@ -259,11 +326,16 @@ function Outline(doc) {
                 }
             }
             
+            if (details) {
+                table.appendChild(internalPane.render(subject))
+            }
+
+            var div = myDocument.createElement('div')
+            table.appendChild(div)
             var plist = kb.statementsMatching(subject)
-            appendPropertyTRs(table, plist, false, details)
-            
+            appendPropertyTRs(div, plist, false, false)
             plist = kb.statementsMatching(undefined, undefined, subject)
-            appendPropertyTRs(table, plist, true, details)
+            appendPropertyTRs(div, plist, true, false)
             
             return table
             
@@ -325,7 +397,7 @@ function Outline(doc) {
             var s = plist[j]
         //      if (s.object == parentSubject) continue; // that we knew
             var internal = (typeof internals[''+s.predicate.uri] != 'undefined')
-            if (!details && internal) {
+            if ((!details && internal) || (details && !internal)) { // exclusive-or only in JS 2.0
                 continue;
             }
             var k;
@@ -374,12 +446,15 @@ function Outline(doc) {
              * shown, and dangling at the end is '1 more' (which is easily ignored)
              * Therefore more objects are shown than hidden.
              */
-            /* Kenny's Annotation:
+             
+            /* Kenny's question:
                var k  //how many rows have the same predicate?
                var dups //It's supposed to mean the number of triple duplicates
                         // but with "if (dups!=0) alert(dups);"
                         // it never shows anything even when opening Tim's profile
                         // (testing required)
+                Tim's rely:  dups is not 'duplicates' it is the number of
+                        objects with the same predicate.
             */ 
             tr.showNobj = function(n){
                 var predDups=k-dups;
@@ -515,23 +590,6 @@ function Outline(doc) {
     }	
     
     
-    //////// Human-readable content of a document
-    function documentContentTABLE(subject) {
-        var table = myDocument.createElement("TABLE")
-    
-        table.setAttribute('class', 'docView')
-        table.appendChild(expandedHeaderTR(subject))
-    
-        var iframe = myDocument.createElement("IFRAME")
-        iframe.setAttribute('src', subject.uri)
-        iframe.setAttribute('class', 'doc')
-        iframe.setAttribute('height', '480')
-        iframe.setAttribute('width', '640')
-        var tr = myDocument.createElement('TR')
-        tr.appendChild(iframe)
-        table.appendChild(tr)
-        return table
-    }
     
     ////////////////////////////////////////////////////// VALUE BROWSER VIEW
 
@@ -1228,7 +1286,7 @@ function Outline(doc) {
                 break;
             case Icon.src.icon_remove_node:
                 var node = target.node;
-                if (node.childNodes.length>1) node=target.parentNode; //parallel outline view
+                if (node.childNodes.length>1) node=target.parentNode; //parallel outline view @@ Hack
                 node.parentNode.removeChild(node);
                 
                 break;
@@ -1577,10 +1635,12 @@ function Outline(doc) {
         } //boring defaults.
         tabulator.log.debug("contents: "+rep.innerHTML);
         return rep;
-    }  //boring_default!
+    }  //boring_default
+    
     function VIEWAS_image(obj) {
         return AJARImage(obj.uri, label(obj), label(obj));
     }
+    
     function VIEWAS_mbox(obj) {
         var anchor = myDocument.createElement('a');
         // previous implementation assumed email address was Literal. fixed.
@@ -1710,3 +1770,5 @@ function newVariableName() {
 function clearVariableNames() { 
     NextVariable = 0;
 } //clear
+
+// ends

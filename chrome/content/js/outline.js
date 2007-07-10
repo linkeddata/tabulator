@@ -90,7 +90,7 @@ function Outline(doc) {
     //  Represent an object in summary form as a table cell
     function appendRemoveIcon(node, subject, removeNode) {
         var image = AJARImage(Icon.src.icon_remove_node, 'remove')
-        image.setAttributes('align', 'right')
+        image.setAttribute('align', 'right')
         image.node = removeNode
         image.setAttribute('about', subject.toNT())
         image.style.marginLeft="5px"
@@ -98,12 +98,13 @@ function Outline(doc) {
         node.appendChild(image)
         return image
     }
+    
     this.appendAccessIcon = function(node, term) {
         if (typeof term.termType == 'undefined') tabulator.log.error("??"+ term);
         if (term.termType != 'symbol') return '';
         var state = sf.getState(term);
         var icon, alt, info;
-    //    tabulator.log.debug("State of " + doc + ": " + state)
+        //    tabulator.log.debug("State of " + doc + ": " + state)
         switch (state) {
             case 'unrequested': 
                 icon = Icon.src.icon_unrequested;
@@ -236,6 +237,15 @@ function Outline(doc) {
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
         return tr;
     } //expandedHeaderTR
+
+    /*  PANES
+    **
+    **     Panes are regions of the outline view in which a particular subject is
+    ** displayed in a particular way.  They are like views but views are for query results.
+    ** subject panes are currently stacked vertically.
+    */
+    
+    panes = []
     
     /*   Default Pane
     **
@@ -243,8 +253,9 @@ function Outline(doc) {
     **  normaly displayed to the user. See also: innternalPane
     */
     defaultPane = {};
+    panes.push(defaultPane);
     defaultPane.icon = Icon.src.icon_internals;
-    defaultPane.render = function(subject, container) {
+    defaultPane.render = function(subject) {
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'defaultPane')
         appendRemoveIcon(div);
@@ -262,8 +273,9 @@ function Outline(doc) {
     ** internal to the user's interaction with the web, and are not normaly displayed
     */
     internalPane = {};
+    panes.push(internalPane);
     internalPane.icon = Icon.src.icon_internals;
-    internalPane.render = function(subject, container) {
+    internalPane.render = function(subject) {
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
         appendRemoveIcon(div);
@@ -280,10 +292,9 @@ function Outline(doc) {
     **  This outline pane contains the document contents for an HTML document
     */
     humanReadablePane = {};
+    panes.push(humanReadablePane);
     humanReadablePane.icon = Icon.src.icon_visit;
-    humanReadablePane.render = function(subject, container) {
-    //////// Human-readable content of a document
-    function documentContentTABLE(subject) {
+    humanReadablePane.render = function(subject) {
         var div = myDocument.createElement("div")
     
         div.setAttribute('class', 'docView')

@@ -238,14 +238,16 @@ RDFFormula.prototype.list = function (values) {
 }
 
 
-/*RDFFormula.prototype.queryFormula = function() {
-	return new RDFQueryFormula()
-}*/
+/*  Variable
+**
+** Variables are placeholders used in patterns to be matched.
+** In cwm they are symbols which are the formula's list of quantified variables.
+** In sparl they are not visibily URIs.  Here we compromise, by having
+** a common special base URI for variables.
+*/
 
 RDFVariableBase = "varid:"; // We deem variabe x to be the symbol varid:x 
 
-//An RDFVariable is a type of s/p/o that's not literal. All it holds is it's URI.
-//It has type 'variable', and a function toNT that turns it into NTriple form
 function RDFVariable(rel) {
     this.uri = URIjoin(rel, RDFVariableBase);
     return this;
@@ -273,6 +275,11 @@ RDFVariable.prototype.hashString = RDFVariable.prototype.toNT;
 function Namespace(nsuri) {
     return function(ln) { return new RDFSymbol(nsuri+ln) }
 }
+
+RDFFormula.prototype.ns = function(nsuri) {
+    return function(ln) { return new RDFSymbol(nsuri+ln) }
+}
+
 
 // Parse a single token
 //

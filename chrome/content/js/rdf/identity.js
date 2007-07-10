@@ -247,15 +247,19 @@ RDFIndexedFormula.prototype.uris = function(term) {
 // We do not redirect literals
 function RDFMakeTerm(formula,val) {
     if (typeof val != 'object') {   
-	if (typeof val == 'string') {
+	if (typeof val == 'string')
 	    return new RDFLiteral(val);
-	} else if (typeof val == 'number') {
+        if (typeof val == 'number')
+            return new RDFLiteral(val); // @@ differet types
+        if (typeof val == 'boolean')
+            return new RDFLiteral(val?"1":"0", undefined, 
+                                            RDFSymbol.prototype.XSDboolean);
+	else if (typeof val == 'number')
 	    return new RDFLiteral(''+val);   // @@ datatypes
-	} else if (typeof val == 'undefined') {
+	else if (typeof val == 'undefined')
 	    return undefined;
-	} else {   // @@ add converting of dates and numbers
-	    throw "Can't make term from " + val + " of type " + typeof val; 
-	}
+	else    // @@ add converting of dates and numbers
+	    throw "Can't make Term from " + val + " of type " + typeof val; 
     }
     if (typeof formula.redirection == 'undefined') {
 	throw 'Internal: No redirection index for formula: '+ formula+', term: '+val;

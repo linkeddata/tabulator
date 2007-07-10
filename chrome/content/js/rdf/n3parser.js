@@ -124,31 +124,13 @@ stringFromCharCode = function(uesc) {
 }
 
 
-// http://developer.mozilla.org/en/docs/Reading_textual_data
-// First, get and initialize the converter
-if (typeof Components != 'undefined') { // Only in Mozillaland
-    var UTF8_converter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
-                              .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-    UTF8_converter.charset = /* The character encoding you want, using UTF-8 here */ "UTF-8";
-
-    String.prototype.encode = function(encoding) {
-        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
-        return UTF8_converter.ConvertFromUnicode(this);
-    }
-    String.prototype.decode = function(encoding) {
-        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
-        return UTF8_converter.ConvertToUnicode(this);
-    }
-    // var text = converter.ConvertToUnicode(chunk);
-} else {
-    String.prototype.encode = function(encoding) {
-        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
-        return Utf8.encode(this);
-    }
-    String.prototype.decode = function(encoding) {
-        if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
-        return Utf8.decode(this);
-    }
+String.prototype.encode = function(encoding) {
+    if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
+    return Utf8.encode(this);
+}
+String.prototype.decode = function(encoding) {
+    if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
+    return Utf8.decode(this);
 }
 
 
@@ -178,7 +160,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3326 2007-07-07 12:17:08Z timbl $
+$Id: n3parser.js 3369 2007-07-10 18:19:55Z timbl $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -1175,11 +1157,7 @@ __SinkParser.prototype.variable = function(str, i, res) {
     if ((this._parentContext == null)) {
     throw BadSyntax(this._thisDoc, this.lines, str, j,  ( "Can't use ?xxx syntax for variable in outermost level: " + pyjslib_slice(str,  ( j - 1 ) , i) ) );
     }
-    var varURI = this._store.sym( (  ( this._baseURI + "#" )  + pyjslib_slice(str, j, i) ) );
-    if ((this._parentVariables.indexOf(varURI) < 0)) {
-    this._parentVariables[varURI] = ( this._parentContext.newUniversal(varURI, this._reason2));
-    }
-    res.push(this._parentVariables[varURI]);
+    res.push(this._store.variable(pyjslib_slice(str, j, i)));
     return i;
 };
 __SinkParser.prototype.bareWord = function(str, i, res) {
@@ -1317,11 +1295,15 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
     throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad number syntax");
     }
     var j =  ( i + number_syntax.lastIndex ) ;
-    if ((pyjslib_slice(str, i, j).indexOf(".") >= 0)) {
-    res.push(parseFloat(pyjslib_slice(str, i, j)));
+    var val = pyjslib_slice(str, i, j);
+    if ((val.indexOf("e") >= 0)) {
+    res.push(this._store.literal(parseFloat(val), undefined, kb.sym(FLOAT_DATATYPE)));
+    }
+    else if ((pyjslib_slice(str, i, j).indexOf(".") >= 0)) {
+    res.push(this._store.literal(parseFloat(val), undefined, kb.sym(DECIMAL_DATATYPE)));
     }
     else {
-    res.push(parseInt(pyjslib_slice(str, i, j)));
+    res.push(this._store.literal(parseInt(val), undefined, kb.sym(INTEGER_DATATYPE)));
     }
     return j;
     }

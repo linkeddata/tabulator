@@ -50,7 +50,7 @@ function Outline(doc) {
         }   
         qs.addQuery(q);
 
-    	function resetOutliner(pat) {
+        function resetOutliner(pat) {
             optionalSubqueriesIndex=[]
             var i, n = pat.statements.length, pattern, tr;
             for (i=0; i<n; i++) {
@@ -85,7 +85,7 @@ function Outline(doc) {
         benchmark.lastkbsize = kb.statements.length;
         return return_value;
     } //benchmark
-	
+    
     ///////////////////////// Representing data
     //  Represent an object in summary form as a table cell
     function appendRemoveIcon(node, subject, removeNode) {
@@ -142,14 +142,34 @@ function Outline(doc) {
         return img
     } //appendAccessIcon
     
+    //Six different Creative Commons Licenses:
+    //1. http://creativecommons.org/licenses/by-nc-nd/3.0/ 
+    //2. http://creativecommons.org/licenses/by-nc-sa/3.0/
+    //3. http://creativecommons.org/licenses/by-nc/3.0/
+    //4. http://creativecommons.org/licenses/by-nd/3.0/
+    //5. http://creativecommons.org/licenses/by-sa/3.0/
+    //6. http://creativecommons.org/licenses/by/3.0/
     
     /** make the td for an object (grammatical object) 
      *  @param obj - an RDF term
      *  @param view - a VIEW function (rather than a bool asImage)
      **/
-    this.outline_objectTD = function outline_objectTD(obj, view, deleteNode) {
+    this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why) {
         //set about
         var td = myDocument.createElement('td');
+        var theClass = "obj";
+        var licenses = kb.each(why, kb.sym('http://creativecommons.org/ns#license'));
+        tabulator.log.info('licenses:'+ why+': '+ licenses)
+        for (i=0; i< licenses.length; i++) {
+            if(licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/') {
+                theClass += ' licOkay';
+                break;
+            }
+            if(licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/'){
+                theClass += ' licOkay2';
+                break;                    
+            }
+        }
         
         //---------------------------------------------------------------------------
         //var divInTd=myDocument.createElement('div'); //for identifying border of <td>
@@ -158,7 +178,12 @@ function Outline(doc) {
         
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
             td.setAttribute('about', obj.toNT());
-        td.setAttribute('class', 'obj');      //this is how you find an object
+            
+         td.setAttribute('class', theClass);      //this is how you find an object
+         tabulator.log.info('class on '+td)
+         var check = td.getAttribute('class')
+         tabulator.log.info('td has class:' + check)
+         
         if (kb.statementsMatching(obj,rdf('type'),tabont('Request')).length) td.className='undetermined';
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
             td.appendChild(AJARImage(Icon.src.icon_expand, 'expand'));
@@ -207,7 +232,7 @@ function Outline(doc) {
         td_p.appendChild(labelTD);
         labelTD.style.width='100%'
         td_p.appendChild(termWidget.construct()); //termWidget is global???
-        for (var w in Icon.termWidgets)	{
+        for (var w in Icon.termWidgets) {
             if(!newTr||!newTr.AJAR_statement) break; //case for TBD as predicate
                     //alert(Icon.termWidgets[w]+"   "+Icon.termWidgets[w].filter)
             if (Icon.termWidgets[w].filter
@@ -323,7 +348,7 @@ function Outline(doc) {
             
             /*   This should be a beautiful system not a quick kludge - timbl 
             **   Put  link to inferenceWeb browsers for anything which is a proof
-            */	
+            */  
             var classes = kb.each(subject, rdf('type'))
             var i=0, n=classes.length;
             for (i=0; i<n; i++) {
@@ -390,7 +415,7 @@ function Outline(doc) {
         }
     } /* propertyTable */
     
-    ///////////// Property list	
+    ///////////// Property list 
     function appendPropertyTRs(parent, plist, inverse, details) {
         tabulator.log.debug("Property list length = " + plist.length)
         if (plist.length == 0) return "";
@@ -442,7 +467,7 @@ function Outline(doc) {
             if (myLang > 0 && langTagged == dups+1) {
                 for (k=j; k <= j+dups; k++) {
                     if (sel(plist[k]).lang.indexOf(LanguagePreference) >=0) {
-                        tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview))
+                        tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview, undefined, s.why))
                         break;
                     }
                 }
@@ -450,7 +475,7 @@ function Outline(doc) {
                 continue;
             }
     
-            tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview));
+            tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why));
     
             /* Note: showNobj shows between n to 2n objects.
              * This is to prevent the case where you have a long list of objects
@@ -538,7 +563,7 @@ function Outline(doc) {
             //tr.showAllobj();
             DisplayOptions["display:block on"].setupHere(
                     [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
-                    "appendPropertyTRs()");	
+                    "appendPropertyTRs()"); 
             tr.showNobj(10);
             
             if (HCIoptions["bottom insert highlights"].enabled){
@@ -561,7 +586,7 @@ function Outline(doc) {
 
 /*   termWidget
 **
-*/	
+*/  
     termWidget={}
     termWidget.construct = function () {
             td = myDocument.createElement('TD')
@@ -598,7 +623,7 @@ function Outline(doc) {
     termWidget.replaceIcon = function (td, oldIcon, newIcon) {
             termWidget.removeIcon (td, oldIcon)
             termWidget.addIcon (td, newIcon)
-    }	
+    }   
     
     
     
@@ -826,7 +851,7 @@ function Outline(doc) {
                 if (req.indexOf('#') >= 0) alert('Should have no hash in '+req)
                 if (!target) {
                     return false
-                }		   
+                }          
                 if (!ancestor(target,'DIV')) return false;
                 if (term.termType != "symbol") { return true }
                 if (req == fireOn) {
@@ -942,7 +967,7 @@ function Outline(doc) {
             this.GotoSubject(aa,true);
     }
 
-    function ResultsDoubleClick(event) {	
+    function ResultsDoubleClick(event) {    
         var target = getTarget(event);
         var aa = getAbout(kb, target)
         if (!aa) return;
@@ -994,7 +1019,7 @@ function Outline(doc) {
         sortables_init(); //make table headers sortable
     }
 
-    /** get the target of an event **/	
+    /** get the target of an event **/  
     this.targetOf=function(e) {
         var target;
         if (!e) var e = window.event
@@ -1196,7 +1221,7 @@ function Outline(doc) {
     // collapse
     // refocus
     // select
-    // visit/open a page	
+    // visit/open a page    
     function TabulatorMousedown(e) {
         var target = thisOutline.targetOf(e);
         if (!target) return;
@@ -1273,7 +1298,7 @@ function Outline(doc) {
                     (tsrc == Icon.src.icon_expand ? outline_expand : outline_collapse);
                 mode(p, subject, details);
                 break;
-                //	case Icon.src.icon_visit:
+                //  case Icon.src.icon_visit:
                 //emptyNode(p.parentNode).appendChild(documentContentTABLE(subject));
                 //document.url = subject.uri;   // How to jump to new page?
                 //var newWin = window.open(''+subject.uri,''+subject.uri,'width=500,height=500,resizable=1,scrollbars=1');
@@ -1400,7 +1425,7 @@ function Outline(doc) {
                 if (!as) return false;
                 for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
                     for (var rd = Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
-    //		    tabulator.log.info('@@@@@ cursubj='+cursubj+', rd='+rd)
+    //          tabulator.log.info('@@@@@ cursubj='+cursubj+', rd='+rd)
                         if (uri == rd) return true;
                     }
                 }
@@ -1542,7 +1567,7 @@ function Outline(doc) {
         }
         var text="GotoSubject()@outline.js";
         var td=DisplayOptions["outliner rotate left"].setupHere([table,subject],text,GotoSubject_default);
-        if (!td) td=GotoSubject_default(); //the first tr is required	    
+        if (!td) td=GotoSubject_default(); //the first tr is required       
         if (expand) {
             outline_expand(td, subject)
             myDocument.title = "Tabulator: "+label(subject)
@@ -1707,7 +1732,7 @@ function Outline(doc) {
      * name: YAHOO.cal1__2006_3_2 for anchor inside calendar cell 
      * of date 3/02/2006
      * 
-     */	
+     */ 
     function VIEWAS_cal(obj) {
         prefix = 'cal';
         var cal = prefix + uni(prefix);

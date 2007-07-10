@@ -89,9 +89,9 @@ function tableView(container,doc)
     }
     //***************** End drawQuery *****************//
 
+    //***************** Table Editing *****************//
     var selectedNode;
     var listener;
-    //***************** Table Editing *****************//
     function onClickCell(e) 
     {
         if (selectedNode != null) { 
@@ -107,7 +107,7 @@ function tableView(container,doc)
     }
     
     function getRowIndex(node)
-    { // given a node, returns the row that the node is
+    { // given a node, returns the row that the node is on
         var trNode = node.parentNode
         var rowArray = trNode.parentNode.childNodes;
         var rowArrayLength = trNode.parentNode.childNodes.length;
@@ -170,7 +170,8 @@ function tableView(container,doc)
         if (node.tagName != "TD") return;
         var a = document.getElementById('anchor');
         a.focus();
-        // add an anchor node, focus on it, then remove the node
+        // TODO: add an anchor node, focus on it, then remove the node
+        // try removing it in clearSelected?
         
         var t = document.getElementById('tabulated_data');
         listener = makeKeyListener(node);

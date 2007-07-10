@@ -1,0 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html id='docHTML'>
+<head>
+    <title>Tabulator: Async Javascript And Semantic Web</title>
+    <link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css" />
+    <script src="tableutil.js" type="text/javascript"></script>
+    <script src="mapView-int.js" type="text/javascript"></script>
+    <script src="js/util.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <iframe id="mapViewFrame" onload="mapLoader()" src="file:///C:/Documents%20and%20Settings/Jambo/tab/ext/chrome/content/mapremote.html" style="width:550px;height:550px" style="border:none;">
+    </iframe>
+</body>
+<script type="text/javascript">
+      function mapLoader() {
+        tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+        //Horrible global vars :(
+        kb = tabulator.kb;
+        sf = tabulator.sf;
+        qs = tabulator.qs;
+        var myMapView = new mapView(document.getElementById('viewArea'));
+        qs.addListener(myMapView);
+        //extract the query ID Here!
+        var q = qs.queries[getURIQueryParameters(window.location)['query']];
+        myMapView.drawQuery(q);
+      }
+      //document.onLoad=mapLoader();
+</script>
+</html>

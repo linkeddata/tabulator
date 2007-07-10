@@ -1,5 +1,6 @@
 function tableView(container,doc) 
 {
+    // Problem: the focus keeps shifting back to the header for long files
     //var tabulator;
     if(isExtension) {
         tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].

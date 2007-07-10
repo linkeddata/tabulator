@@ -7,7 +7,7 @@ function tableView(container,doc)
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
     }
     var numRows; // assigned in makeKeyListener
-    var numCols; // assigned at bottom of drawQuery
+    var numCols; // assigned at bottom of onClickCell
     var activeSingleQuery = null;
     
     thisTable = this;  // fixes a problem with calling this.container
@@ -27,7 +27,6 @@ function tableView(container,doc)
     //***************** this.drawQuery *****************//
     this.drawQuery = function (q) 
     {
-        //***************** this.onBinding *****************//
         this.onBinding = function (bindings) 
         {
             var i, tr, td;
@@ -43,8 +42,7 @@ function tableView(container,doc)
                 tr.appendChild(matrixTD(bindings[v]));
             } //for each query var, make a row
         }
-        //***************** End this.onBinding *****************//
-        
+
         var i, td, th, j, v;
         var t = thisTable.document.createElement('table');
         var tr = thisTable.document.createElement('tr');
@@ -82,7 +80,7 @@ function tableView(container,doc)
         th.appendChild(a); 
         a.setAttribute('id', 'anchor');
         a.focus();
-        //********** key mvmt activation code *****///
+        //********** key mvmt activation code *********///
     }
     //***************** End drawQuery *****************//
 
@@ -91,10 +89,7 @@ function tableView(container,doc)
     var listener;
     function onClickCell(e) 
     {
-        if (selectedNode != null) { 
-            // some other node is already selected
-            clearSelected(selectedNode);
-        }
+        if (selectedNode != null) clearSelected(selectedNode);
         var node = e.target;
         // check this
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
@@ -114,7 +109,6 @@ function tableView(container,doc)
     }
     
     // use this wrapper so that the node can be passed to the event handler
-    
     function makeKeyListener(node) {
         return function keyListener(e) 
         {
@@ -168,8 +162,6 @@ function tableView(container,doc)
         if (!node) return;
         if (node.tagName != "TD") return;
         // FOCUS FIX: add an anchor node, focus on it, then remove the node
-        // try removing it in clearSelected?
-        // highlighting is one off for long files :(
         var a = document.createElement('a');
         a.setAttribute('id', 'focustest');
         node.appendChild(a);
@@ -227,8 +219,8 @@ function tableView(container,doc)
             parent.replaceChild(newTD, node);
             newTD.appendChild(inputObj);
         }
-        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
-        inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false); 
+        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);  
+        inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
     }
     
     function tableEditOnBlurWrap(node)
@@ -241,7 +233,8 @@ function tableView(container,doc)
             var col = node.cellIndex;
             var row = node.parentNode.rowIndex;
             setSelected(node);
-            // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
+            // Add code here to handle SPARQL query.  
+            // Make a call to clearInputAndSave.
             e.stopPropagation();
             e.preventDefault();
         }

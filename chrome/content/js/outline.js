@@ -1,14 +1,6 @@
 var selection=[]
 //WE MUST KILL THIS GLOBAL.
 
-//Kenny: I made this.TabulatorMousedown -> TabulatorMousedown
-//              targetOf -> this.targetOf // this can be changed back 
-//              outline_objectTD -> this.outline_objectTD
-//              AJAR_hideNext -> this.hideNext
-//              GotoFormURI_enterKey -> this.GotoFormURI_enterKey
-//              GotoFormURI -> this.GotoFormURI
-//              createTabURI -> this.createTabURI
-//              GotoURIAndOpen -> this.GotoURIAndOpen
 
 function Outline(doc) {
     var myDocument=doc;
@@ -250,16 +242,20 @@ function Outline(doc) {
     expandedHeaderTR.td.setAttribute('colspan', '2');
     expandedHeaderTR.td.appendChild(AJARImage(Icon.src.icon_collapse, 'collapse'));
     expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
-    {   var ico = AJARImage(Icon.src.icon_internals, 'internals');
-        ico.setAttribute('align','right');
-        expandedHeaderTR.td.appendChild(ico);
-    }
     expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
     
     function expandedHeaderTR(subject) {
         var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
+        for (var i=0; i< panes.length; i++) {
+            var pane = panes[i];
+            var ico = AJARImage(pane.icon, pane.label);
+            ico.setAttribute('align','right');
+            ico.setAttribute('class', 'paneHidden')
+            tr.firstChild.appendChild(ico);
+        }
+
         return tr;
     } //expandedHeaderTR
 
@@ -271,6 +267,12 @@ function Outline(doc) {
     */
     
     panes = []
+    paneForIcon = []
+    
+    registerPane = function(p) {
+        panes.push(p);
+        if (p.icon) paneForIcon[p.icon] = p;
+    }
     
     /*   Default Pane
     **
@@ -278,19 +280,20 @@ function Outline(doc) {
     **  normaly displayed to the user. See also: innternalPane
     */
     defaultPane = {};
-    panes.push(defaultPane);
     defaultPane.icon = Icon.src.icon_internals;
+    defaultPane.label = 'data';
     defaultPane.render = function(subject) {
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'defaultPane')
-        appendRemoveIcon(div);
-        table.appendChild(div);
+        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
         appendPropertyTRs(div, plist, false, false)
         plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, false)    
+        appendPropertyTRs(div, plist, true, false)
+        return div    
     }
+    // registerPane(defaultPane);
     
     /*   Internal Pane
     **
@@ -298,32 +301,33 @@ function Outline(doc) {
     ** internal to the user's interaction with the web, and are not normaly displayed
     */
     internalPane = {};
-    panes.push(internalPane);
     internalPane.icon = Icon.src.icon_internals;
+    internalPane.label = "under the hood";
     internalPane.render = function(subject) {
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
-        appendRemoveIcon(div);
-        table.appendChild(div)
+        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
         appendPropertyTRs(div, plist, false, true)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, true)    
+        return div
     }
+    registerPane(internalPane);
     
     /*   Human-readable Pane
     **
     **  This outline pane contains the document contents for an HTML document
     */
     humanReadablePane = {};
-    panes.push(humanReadablePane);
     humanReadablePane.icon = Icon.src.icon_visit;
+    humanReadablePane.label = "view";
     humanReadablePane.render = function(subject) {
         var div = myDocument.createElement("div")
     
         div.setAttribute('class', 'docView')
-        div.appendChild(expandedHeaderTR(subject))
+//        div.appendChild(expandedHeaderTR(subject))
     
         var iframe = myDocument.createElement("IFRAME")
         iframe.setAttribute('src', subject.uri)
@@ -335,6 +339,7 @@ function Outline(doc) {
         div.appendChild(tr)
         return div
     }
+    registerPane(humanReadablePane);
 
 
     function propertyTable(subject, table, details) {
@@ -362,16 +367,7 @@ function Outline(doc) {
                 }
             }
             
-            if (details) {
-                table.appendChild(internalPane.render(subject))
-            }
-
-            var div = myDocument.createElement('div')
-            table.appendChild(div)
-            var plist = kb.statementsMatching(subject)
-            appendPropertyTRs(div, plist, false, false)
-            plist = kb.statementsMatching(undefined, undefined, subject)
-            appendPropertyTRs(div, plist, true, false)
+            table.appendChild(defaultPane.render(subject));
             
             return table
             
@@ -483,15 +479,6 @@ function Outline(doc) {
              * Therefore more objects are shown than hidden.
              */
              
-            /* Kenny's question:
-               var k  //how many rows have the same predicate?
-               var dups //It's supposed to mean the number of triple duplicates
-                        // but with "if (dups!=0) alert(dups);"
-                        // it never shows anything even when opening Tim's profile
-                        // (testing required)
-                Tim's rely:  dups is not 'duplicates' it is the number of
-                        objects with the same predicate.
-            */ 
             tr.showNobj = function(n){
                 var predDups=k-dups;
                 var show = ((2*n)<predDups) ? n: predDups;
@@ -881,24 +868,24 @@ function Outline(doc) {
             {
             while (true)
             {
-                    if (n.getAttribute('predTR'))
+                if (n.getAttribute('predTR'))
+                {
+                    var num = n.getAttribute('parentOfSelected')
+                    if (!num) num = 0;
+                    else num = parseInt(num);
+                    if (num==0 && inc>0) termWidget.addIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
+                    num = num+inc;
+                    n.setAttribute('parentOfSelected',num)
+                    if (num==0) 
                     {
-                            var num = n.getAttribute('parentOfSelected')
-                            if (!num) num = 0;
-                            else num = parseInt(num);
-                            if (num==0 && inc>0) termWidget.addIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
-                            num = num+inc;
-                            n.setAttribute('parentOfSelected',num)
-                            if (num==0) 
-                            {
-                                    n.removeAttribute('parentOfSelected')
-                                    termWidget.removeIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
-                            }
-                            break;
+                        n.removeAttribute('parentOfSelected')
+                        termWidget.removeIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
                     }
-                    else if (n.previousSibling && n.previousSibling.nodeName == 'TR')
-                            n=n.previousSibling;
-                    else break;
+                    break;
+                }
+                else if (n.previousSibling && n.previousSibling.nodeName == 'TR')
+                    n=n.previousSibling;
+                else break;
             }
         }
     }
@@ -908,32 +895,31 @@ function Outline(doc) {
         var cla = node.getAttribute('class')
         if (!cla) cla = ""
         if (newValue) {
-                cla += ' selected'
-                if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
-                if (cla.indexOf('pred') >= 0)
-                    HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
-                selection.push(node)
-                tabulator.log.debug("Selecting "+node)
-                var source
-                try{node.parentNode.AJAR_statement}catch(e){alert(node.textContent)}
-                if (node.AJAR_statement) source = node.AJAR_statement.why
-                else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
-                tabulator.log.info('Source to highlight: '+source);
-                if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
+            cla += ' selected'
+            if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
+            if (cla.indexOf('pred') >= 0)
+                HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
+            selection.push(node)
+            tabulator.log.debug("Selecting "+node)
+            var source
+            try{node.parentNode.AJAR_statement}catch(e){alert('setSelected: '+node.textContent)}
+            if (node.AJAR_statement) source = node.AJAR_statement.why
+            else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
+            tabulator.log.info('Source to highlight: '+source);
+            if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
         } else {
-                tabulator.log.debug("cla=$"+cla+"$")
-                if (cla=='selected') cla=''; // for header <TD>
-                cla = cla.replace(' selected','')
-                if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
-                if (cla.indexOf('pred') >=0)
-                    HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
-                RDFArrayRemove(selection, node)
-                tabulator.log.debug("Deselecting "+node)
-                tabulator.log.debug("cla=$"+cla+"$")
-                //if (node.AJAR_statement) source=node.AJAR_statement.why
-                //else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why
-                //if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false)
-                //Kenny: why display source when deselct? I don't understand
+            tabulator.log.debug("cla=$"+cla+"$")
+            if (cla=='selected') cla=''; // for header <TD>
+            cla = cla.replace(' selected','')
+            if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
+            if (cla.indexOf('pred') >=0)
+                HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
+            RDFArrayRemove(selection, node)
+            tabulator.log.debug("Deselecting "+node);
+            tabulator.log.debug("cla=$"+cla+"$");
+            if (node.AJAR_statement) source=node.AJAR_statement.why;
+            else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why;
+            if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false);
         }
         node.setAttribute('class', cla)
     }
@@ -1280,7 +1266,7 @@ function Outline(doc) {
             var tsrc = target.src
             var outer
             var i = tsrc.indexOf('/icons/')
-      //TODO: This check could definitely be made cleaner.
+            //TODO: This check could definitely be made cleaner.
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
             if (!about) {
@@ -1344,23 +1330,51 @@ function Outline(doc) {
                     thisOutline.UserInput.Click(e,trIterator.lastChild);
                 }
                 break;
-            case Icon.src.icon_internals:
-                outline_expand(p, subject, true, true); //  details, already
-                break;
-                
+
+                 
             case Icon.src.icon_show_choices: // @@?? what is this?
-        /*  SELECT ?pred 
-            WHERE{
-                about tabont:element ?pred.
-            }
-        */
-        //Query Error because of getAbout->kb.fromNT
-        var choiceQuery=SPARQLToQuery("SELECT ?pred\nWHERE{ "+about+tabont('element')+" ?pred.}");
+                /*  SELECT ?pred 
+                            WHERE{
+                            about tabont:element ?pred.
+                                }
+                */
+                // Query Error because of getAbout->kb.fromNT
+                var choiceQuery=SPARQLToQuery("SELECT ?pred\nWHERE{ "+about+tabont('element')+" ?pred.}");
                 thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',choiceQuery,{'clickedTd':p.parentNode});
                 break;
-            default: //nothing
-            }
-        }  // IMG
+            default:
+                var pane = paneForIcon[tsrc];
+                
+                // Find the containing table for this subject 
+                for (var t = p; t.parentNode;  t = t.parentNode) {
+                    if (t.nodeName == 'TABLE') break;
+                }
+                if  (t.nodeName != 'TABLE') throw "outline: internal error"+t;
+
+                // If the view already exists, remove it
+                var state = 'paneShown';
+                for (var d = t.firstChild; d; d = d.nextSibling) {
+                    if (typeof d.pane != 'undefined') {
+                        if (d.pane == pane) {
+                            d.parentNode.removeChild(d);
+                            state = 'paneHidden';
+                            break;
+                        }
+                    }
+                }
+                // If the view does not exist, create it
+                if (state == 'paneShown') {
+                    var paneDiv = pane.render(subject);
+                    var second = t.firstChild.nextSibling;
+                    if (second) t.insertBefore(paneDiv, second);
+                    else t.appendChild(paneDiv);
+                    paneDiv.pane = pane;
+                }
+                target.setAttribute('class', state) // set the button state
+                // outline_expand(p, subject, true, true); //  details, already
+                break;
+           }
+        }  // else IMG
         //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
         if (e) e.stopPropagation();
     } //function

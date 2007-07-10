@@ -74,7 +74,7 @@ function tableView(container,doc)
         drawExport();
         drawAddRow();
         sortables_init();
-    
+        
         t.addEventListener('click', onClickCell, false);
         numCols = nv;
         
@@ -93,8 +93,8 @@ function tableView(container,doc)
     //***************** Table Editing *****************//
     function onClickCell(e) 
     {
-        if (selectedNode != null) 
-        { // handle if some other node is already selected
+        if (selectedNode != null) { 
+            // handle if some other node is already selected
             clearSelected(selectedNode);
         }
         var node = e.target;
@@ -184,8 +184,7 @@ function tableView(container,doc)
     {
         selectedNode.removeEventListener('click', onCellClickSecond, false); 
         // DOES THIS WORK?
-        if (e.target == selectedNode) 
-        {
+        if (e.target == selectedNode) {
             clearSelected(selectedNode);
             onEdit(selectedNode);
             e.stopPropagation();
@@ -213,13 +212,10 @@ function tableView(container,doc)
         
         if (!oldTxt)
             inputObj.value = ' ';
-        if (node.firstChild) // node of the form <td> text </td>
-        {
+        if (node.firstChild) { // node of the form <td> text </td>
             node.replaceChild(inputObj, node.firstChild);
             inputObj.select();
-        }
-        else // we have a node of the form <td />
-        {
+        } else { // we have a node of the form <td />
             var parent = node.parentNode;
             var newTD = thisTable.document.createElement('TD');
             parent.replaceChild(newTD, node);
@@ -240,7 +236,6 @@ function tableView(container,doc)
             var row = node.parentNode.rowIndex;
             setSelected(node);
             // Add code here to handle SPARQL query.  Make a call to clearInputAndSave.
-            
             e.stopPropagation();
             e.preventDefault();
         }
@@ -277,8 +272,7 @@ function tableView(container,doc)
         var td;
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
-        for (i=0; i<numCols; i++) 
-        {
+        for (i=0; i<numCols; i++) {
             if (literalNodeRC(numRows, i)) 
                 td = createNonLiteralNode();
             else 

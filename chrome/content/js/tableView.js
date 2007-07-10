@@ -1,5 +1,12 @@
 function tableView(container,doc) 
 {
+    var tabulator;
+    if(isExtension) {
+        tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
+            getService(Components.interfaces.nsISupports).wrappedJSObject;
+        //wrap sparql update code with if(isExtension).
+        //tabulator.sparql.*;  //see js/sparqlUpdate.js
+    }
     var numRows; // assigned in makeKeyListener
     var numCols; // assigned at bottom of drawQuery
     var activeSingleQuery = null;
@@ -78,7 +85,6 @@ function tableView(container,doc)
         th.appendChild(a); 
         a.setAttribute('id', 'anchor');
         //********** key mvmt activation code *****///
-        
     }
     //***************** End drawQuery *****************//
 
@@ -420,165 +426,6 @@ function exportTable()
             break;
     }*/
 }
-
-       
-//***************** Table Resize *****************//       
-/* 
-document.getElementById('tabulated_data').addEventListener('mousemove', tableResizeOnMouseMoveBefore, false);
-document.getElementById('tabulated_data').addEventListener('mousedown', tableResizeOnMouseDown, false);
-window.addEventListener("load", tableResizeCreateResizeBar,0);
-
-var resizeElement = "TH"; //Elements to be resized
-var edgeThreshold = 2;
-var rBarID = "rBar";
-
-var resizeTarget = null; //position and distance moved
-var startX = null;
-var endX = null;
-var sizeX = null;
-var adjacentCell = null;
-
-//Creates rBar on load 
-function tableResizeCreateResizeBar() 
-{
-    var objItem = document.getElementById(rBarID);
-    if(!objItem) 
-    {
-        objItem = document.createElement("DIV");
-        objItem.id = rBarID;
-        objItem.style.position = "absolute";
-        objItem.style.top = "0px";
-        objItem.style.left = "0px";
-        objItem.style.height = "100px";
-        objItem.style.border = "1px solid black";
-        objItem.style.display = "none";
-        document.body.appendChild(objItem);
-    }
-}
-
-function tableResizeGetHeader(objReference) 
-{
-    var oElement = objReference;
-    if(oElement.tagName.toUpperCase() == resizeElement)
-        return oElement; //print alert?
-    return null;
-}
-
-function tableResizeCleanUp() 
-{
-    //document.getElementById('debug').value += 'Entered CleanUp\n';
-    var rBar = document.getElementById(rBarID);
-    if(rBar) 
-        rBar.style.display = "none";
-    endX = null;
-    sizeX = null;
-    startX = null;
-    resizeTarget = null;
-    adjacentCell = null;
-    return true;
-}
-
-function tableResizeOnMouseMoveBefore (event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseMoveBefore\n';
-    var objTH = tableResizeGetHeader(event.target); if (!objTH ) return;
-
-    //document.getElementById('coords').value += "event.clientX " + event.clientX + "\n";
-    //document.getElementById('coords').value += "event.layerX " + event.layerX + "\n";
-    //document.getElementById('coords').value += "offsetWidth " + objTH.offsetWidth+ "\n";
-    if (event.layerX >= (objTH.offsetWidth - edgeThreshold)) 
-        objTH.style.cursor = "e-resize";
-    else 
-        objTH.style.cursor = "";
-    return true;
-}
-
-// In order to use layerX, each TH must have style="position: relative"; 
-
-function tableResizeOnMouseDown(event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseDown\n';
-    objTable = this;
-    var objTH = tableResizeGetHeader(event.target); if (!objTH) return;
-    var rBar = document.getElementById(rBarID); if(!rBar) return;
-    // adjacentCell = objTH.nextSibling.nextSibling;
-    // alert(objTH.innerHTML);
-    // alert(adjacentCell.innerHTML);
-    
-    //IT DOESN"T SEEM TO GET PAST THIS STEP!
-
-    if ((objTH.tagName.toUpperCase() == resizeElement) && (objTH.style.cursor == "e-resize")) 
-    { 
-        startX = event.clientX;
-        resizeTarget = objTH;
-        
-        rBar.style.left = event.clientX + window.pageXOffset;
-        rBar.style.top = objTable.parentNode.offsetTop + window.pageYOffset;
-        rBar.style.height = objTable.parentNode.clientHeight;
-        rBar.style.display = "inline"; // THIS IS CRUCIAL
-    }
-    document.getElementById("tabulated_data").addEventListener("mousemove", tableResizeOnMouseMoveAfter, true);  
-    document.getElementById("tabulated_data").addEventListener("mouseup", tableResizeHeaderProblem, true); //this handles a problem with clickling on the header and then not exiting OnMouseMoveAfter
-    document.getElementById(rBarID).addEventListener("mouseup", tableResizeOnMouseUp, true);
-    alert("EventListeners added");
-}
-
-function tableResizeHeaderProblem (event) 
-{
-    document.getElementById('debug').value += 'Entered HeaderProblem\n';
-    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResizeOnMouseMoveAfter, true);
-}
-
-
-// doesn't seem like I ever enter OnMouseAfter
-
-function tableResizeOnMouseMoveAfter(event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseMoveAfter\n';
-    rBar.style.left = event.clientX + window.pageXOffset;
-    //document.getElementById("coords").value += rBar.style.left + "\n"; 
-    event.stopPropagation();
-}
-
-function tableResizeOnMouseUp(event) 
-{
-    //document.getElementById('debug').value += 'Entered OnMouseUp\n';
-    var iAdjCellOldWidth = 0;
-    var iResizeOldWidth = 0;
-    var rBar = document.getElementById(rBarID); 
-
-    //resize target is already defined in onmousedown
-    var adjacentCell = resizeTarget.nextSibling.nextSibling;
-    //alert(adjacentCell);
-    
-    //---------------------------------------------------------
-    // set the width on resizeTarget
-    // the distance that resizeTarget moves is startX+endX ----
-    var endX = event.clientX;
-    // startX is already defined
-    var distanceMoved = endX - startX;
-    var newPosition = startX + distanceMoved;
-    var oldCellWidth = resizeTarget.offsetWidth;
-    //document.getElementById("coords").value += "startX " + startX + "\n";
-    //document.getElementById("coords").value += "endX " + endX + "\n";
-    //document.getElementById("coords").value += "oldCellWidth " + oldCellWidth + "\n"
-    resizeTarget.style.width = oldCellWidth + distanceMoved;
-    //document.getElementById("coords").value += "newCellWidth " + newCellWidth + "\n"; 
-    
-    //-------------------------------------------------
-    // set the width on adjacent Cell
-    // the distance that the adjacentCell moves is ---- 
-    var oldAdjacentWidth = adjacentCell.offsetWidth;
-    adjacentCell.style.width = oldAdjacentWidth - distanceMoved;
-    
-    document.getElementById("tabulated_data").removeEventListener("mousemove", tableResizeOnMouseMoveAfter, true);
-    document.getElementById(rBarID).removeEventListener("mouseup", tableResizeOnMouseUp, true);
-    event.stopPropagation();
-    tableResizeCleanUp();
-}
-// Write getAdjacentCell function
-*/
-//***************** End Table Resize *****************//
 
 TableViewFactory = {
     name: "Table View",

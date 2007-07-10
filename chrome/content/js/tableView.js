@@ -1,6 +1,6 @@
 function tableView(container,doc) 
 {
-    var tabulator;
+    //var tabulator;
     if(isExtension) {
         tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
             getService(Components.interfaces.nsISupports).wrappedJSObject;

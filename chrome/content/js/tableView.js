@@ -86,7 +86,7 @@ function tableView(container,doc)
 
     //***************** Table Editing *****************//
     var selectedNode;
-    var listener;
+    var keyListener;
     function onClickCell(e) 
     {
         if (selectedNode != null) clearSelected(selectedNode);
@@ -161,15 +161,15 @@ function tableView(container,doc)
     {
         if (!node) return;
         if (node.tagName != "TD") return;
-        // FOCUS FIX: add an anchor node, focus on it, then remove the node
+        // FOCUS FIX: add an anchor node, focus on it, then remove the anchor
         var a = document.createElement('a');
         a.setAttribute('id', 'focustest');
         node.appendChild(a);
         a.focus();
 
         var t = document.getElementById('tabulated_data');
-        listener = makeKeyListener(node);
-        t.addEventListener('keypress', listener, false);
+        keyListener = makeKeyListener(node);
+        t.addEventListener('keypress', keyListener, false);
         node.style.backgroundColor = "#8F3";
         
         selectedNode = node;
@@ -193,7 +193,7 @@ function tableView(container,doc)
         var a = document.getElementById('focustest');
         if (a != null) {a.parentNode.removeChild(a);};
         var t = document.getElementById('tabulated_data');
-        t.removeEventListener('keypress', listener, false);
+        t.removeEventListener('keypress', keyListener, false);
         node.style.backgroundColor = 'white';
     }
 
@@ -205,7 +205,7 @@ function tableView(container,doc)
         var oldTxt = node.innerHTML;
         var inputObj = document.createElement('INPUT');
         inputObj.type = "TEXT";
-        inputObj.style.width = "99%";
+        inputObj.style.width = "98%";
         inputObj.value = oldTxt;
         
         if (!oldTxt)

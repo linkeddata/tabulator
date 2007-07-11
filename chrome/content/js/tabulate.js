@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3290 2007-07-03 08:55:44Z kennyluck $
+// SVN ID: $Id: tabulate.js 3388 2007-07-11 14:56:31Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -80,6 +80,7 @@ Icon.src.icon_expand = 'icons/tbl-expand-trans.png';
 Icon.src.icon_more = 'icons/tbl-more-trans.png'; // looks just like expand, diff semantics
 // Icon.src.icon_expand = 'icons/clean/Icon.src.Icon.src.icon_expand.png';
 Icon.src.icon_collapse = 'icons/tbl-collapse.png';
+Icon.src.icon_internals = 'icons/tango/22-emblem-system.png'
 Icon.src.icon_shrink = 'icons/tbl-shrink.png';  // shrink list back up
 Icon.src.icon_rows = 'icons/tbl-rows.png';
 // Icon.src.Icon.src.icon_columns = 'icons/tbl-columns.png';
@@ -89,7 +90,7 @@ Icon.src.icon_fetched = 'icons/16dot-green.gif';
 Icon.src.icon_failed = 'icons/16dot-red.gif';
 Icon.src.icon_requested = 'icons/16dot-yellow.gif';
 // Icon.src.icon_maximize = 'icons/clean/Icon.src.Icon.src.icon_con_max.png';
-Icon.src.icon_visit = 'icons/document.png';
+Icon.src.icon_visit = 'icons/tango/22-text-x-generic.png';
 // actions for sources;
 Icon.src.icon_retract = 'icons/retract.gif';
 Icon.src.icon_refresh = 'icons/refresh.gif';
@@ -100,22 +101,23 @@ Icon.src.icon_retracted = Icon.src.icon_unrequested
 Icon.src.icon_retracted = Icon.src.icon_unrequested;
 Icon.src.icon_time = 'icons/Wclocksmall.png';
 Icon.src.icon_remove_node = 'icons/tbl-x-small.png'
-Icon.src.icon_add_triple = 'icons/userinput_add_triple.png';
+Icon.src.icon_add_triple = 'icons/tango/22-list-add.png';
 Icon.src.icon_show_choices = 'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
 Icon.tooltips = [];
-Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
-{
-	this.src=src;
-	this.alt=alt;
-	this.width=width;
-	this.tooltip=tooltip;
-	this.filter=filter;
-       //filter: RDFStatement,('subj'|'pred'|'obj')->boolean, inverse->boolean (whether the statement is an inverse).
-       //Filter on whether to show this icon for a term; optional property.
-       //If filter is not passed, this icon will never AUTOMATICALLY be shown.
-       //You can show it with termWidget.addIcon
-	return this;
+
+Icon.OutlinerIcon= function (src, width, alt, tooltip, filter){
+    this.src=src;
+    this.alt=alt;
+    this.width=width;
+    this.tooltip=tooltip;
+    this.filter=filter;
+   //filter: RDFStatement,('subj'|'pred'|'obj')->boolean, inverse->boolean (whether the statement is an inverse).
+   //Filter on whether to show this icon for a term; optional property.
+   //If filter is not passed, this icon will never AUTOMATICALLY be shown.
+   //You can show it with termWidget.addIcon
+    return this;
 }
+
 Icon.termWidgets = {}
 Icon.termWidgets.optOn = new Icon.OutlinerIcon(Icon.src.icon_opton,20,'opt on','Make this branch of your query mandatory.');
 Icon.termWidgets.optOff = new Icon.OutlinerIcon(Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
@@ -148,16 +150,18 @@ Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add
 function menuable(statement,type,inverse){return (statement.predicate.termType=='collection');}
 Icon.termWidgets.showChoices=new Icon.OutlinerIcon(Icon.src.icon_show_choices,20,'show choices',"Choose another term",menuable);
 
-Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
-Icon.tooltips[Icon.src.icon_expand]='View details.'
+Icon.tooltips[Icon.src.icon_add_triple] = 'Add more'
+Icon.tooltips[Icon.src.icon_remove_node] = 'Remove'
+Icon.tooltips[Icon.src.icon_expand] = 'View details.'
 Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
-Icon.tooltips[Icon.src.icon_collapse] = 'Hide list.'
+Icon.tooltips[Icon.src.icon_shrink] = 'Shrink list.'
+Icon.tooltips[Icon.src.icon_internals] = 'Under the hood'
 Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
 Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
 Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'
 Icon.tooltips[Icon.src.icon_failed] = 'Failed to load. Click to retry.'
 Icon.tooltips[Icon.src.icon_requested] = 'Being fetched. Please wait...'
-Icon.tooltips[Icon.src.icon_visit] = 'View the HTML content of this page within tabulator.'
+Icon.tooltips[Icon.src.icon_visit] = 'View document'
 Icon.tooltips[Icon.src.icon_retract] = 'Remove this source and all its data from tabulator.'
 Icon.tooltips[Icon.src.icon_refresh] = 'Refresh this source and reload its triples.'
 
@@ -188,7 +192,7 @@ internals = []
 internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#request'] = 1;
 internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#requestedBy'] = 1;
 internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#source'] = 1;
-internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 1;
+internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 2; // 2=ignore
 internals['http://www.w3.org/2006/link#uri'] = 1;
 internals['http://www.w3.org/2006/link#Document'] = 1;
 if (!SourceOptions["seeAlso not internal"].enabled)

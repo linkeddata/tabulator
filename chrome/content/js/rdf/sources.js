@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3369 2007-07-10 18:19:55Z timbl $
+ * SVN ID: $Id: sources.js 3388 2007-07-11 14:56:31Z timbl $
  *
  ************************************************************/
 
@@ -599,6 +599,9 @@ function SourceFetcher(store, timeout, async) {
 		    sf.fireCallbacks('recv',args)
 		    
 		    kb.add(req,kb.sym('http','status'),kb.literal(xhr.status),
+			   sf.appNode)
+                    if (xhr.status-0 == 200) 
+                        kb.add(docterm, kb.sym('rdf','type'),kb.sym('tab','Document'),
 			   sf.appNode)
 		    kb.add(req,kb.sym('http','statusText'),
 			   kb.literal(xhr.statusText), sf.appNode)

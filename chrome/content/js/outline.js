@@ -250,10 +250,11 @@ function Outline(doc) {
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
         for (var i=0; i< panes.length; i++) {
             var pane = panes[i];
+            if (!pane.test(subject)) continue;
             var ico = AJARImage(pane.icon, pane.label);
-            ico.setAttribute('align','right');
+//            ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
             ico.setAttribute('class', 'paneHidden')
-            tr.firstChild.appendChild(ico);
+            tr.firstChild.childNodes[1].appendChild(ico);
         }
 
         return tr;
@@ -303,6 +304,15 @@ function Outline(doc) {
     internalPane = {};
     internalPane.icon = Icon.src.icon_internals;
     internalPane.label = "under the hood";
+    internalPane.test = function(subject) {
+        var sts = kb.statementsMatching(subject);
+        sts = sts.concat(kb.statementsMatching(undefined, undefined, subject));
+        for (var i=0; i<sts.length; i++) {
+            if (internals[sts[i].predicate.uri] == 1) // worth displaing
+                return true;
+        }
+        return false
+    }
     internalPane.render = function(subject) {
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
@@ -323,6 +333,10 @@ function Outline(doc) {
     humanReadablePane = {};
     humanReadablePane.icon = Icon.src.icon_visit;
     humanReadablePane.label = "view";
+    humanReadablePane.test = function(subject) {
+        return !!(kb.anyStatementMatching(
+            subject, kb.sym('rdf', 'type'), kb.sym('tab', 'Document')));
+    }
     humanReadablePane.render = function(subject) {
         var div = myDocument.createElement("div")
     
@@ -341,6 +355,46 @@ function Outline(doc) {
     }
     registerPane(humanReadablePane);
 
+ /*   Class member Pane
+    **
+    **  This outline pane contains lists the members of a class
+    */
+    classInstancePane = {};
+    classInstancePane.icon = Icon.src.icon_visit;
+    classInstancePane.label = "List";
+    classInstancePane.test = function(subject) {
+        return !!(kb.anyStatementMatching(
+            undefined, kb.sym('rdf', 'type'), subject));
+    }
+    classInstancePane.render = function(subject) {
+        var div = myDocument.createElement("div")
+    
+        div.setAttribute('class', 'instanceView')
+//        div.appendChild(expandedHeaderTR(subject))
+        var members = kb.each(subject, kb.sym('rdf', 'type'))
+        var tr = myDocument.createElement('TR')
+        tr.appendChild(myDocument.createTextNode(''+members.length));
+        div.appendChild(tr)
+        for (var i=0; i<members.length; i++) {
+            var tr = myDocument.createElement('TR')
+            
+            div.appendChild(tr)
+        }
+        return div
+    }
+    
+    registerPane(classInstancePane);
+
+    // Remove a node from the DOM so that Firefox refreshes the screen OK
+    // Just deleting it cause whitespace to accumulate.
+    removeAndRefresh = function(d) {
+        var table = d.parentNode
+        var par = table.parentNode
+        var placeholder = myDocument.createElement('table')
+        par.replaceChild(placeholder, table)
+        table.removeChild(d);
+        par.replaceChild(table, placeholder) // Attempt to 
+    }
 
     function propertyTable(subject, table, details) {
         tabulator.log.debug("Property table for: "+ subject)
@@ -1022,6 +1076,7 @@ function Outline(doc) {
         return target;
     } //targetOf
 
+
     //Keyboard Input: we can consider this as...
     //1. a fast way to modify data - enter will go to next predicate
     //2. an alternative way to input - enter at the end of a predicate will create a new statement
@@ -1309,7 +1364,7 @@ function Outline(doc) {
             case Icon.src.icon_remove_node:
                 var node = target.node;
                 if (node.childNodes.length>1) node=target.parentNode; //parallel outline view @@ Hack
-                node.parentNode.removeChild(node);
+                removeAndRefresh(node); // @@ update icons for pane?
                 
                 break;
             case Icon.src.icon_map:
@@ -1339,10 +1394,13 @@ function Outline(doc) {
                                 }
                 */
                 // Query Error because of getAbout->kb.fromNT
-                var choiceQuery=SPARQLToQuery("SELECT ?pred\nWHERE{ "+about+tabont('element')+" ?pred.}");
-                thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',choiceQuery,{'clickedTd':p.parentNode});
+                var choiceQuery=SPARQLToQuery(
+                    "SELECT ?pred\nWHERE{ "+about+tabont('element')+" ?pred.}");
+                thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
+                    choiceQuery,{'clickedTd':p.parentNode});
                 break;
-            default:
+                
+            default:  // Look up any icons for panes
                 var pane = paneForIcon[tsrc];
                 
                 // Find the containing table for this subject 
@@ -1356,7 +1414,8 @@ function Outline(doc) {
                 for (var d = t.firstChild; d; d = d.nextSibling) {
                     if (typeof d.pane != 'undefined') {
                         if (d.pane == pane) {
-                            d.parentNode.removeChild(d);
+                            removeAndRefresh(d)
+                            // If we just delete the node d, ffox doesn't refresh the display properly.
                             state = 'paneHidden';
                             break;
                         }
@@ -1644,6 +1703,7 @@ function Outline(doc) {
             rep.setAttribute('about', obj.toNT());
             thisOutline.appendAccessIcon(rep, obj);
             rep.appendChild(myDocument.createTextNode(label(obj)));
+  /*          
             if ((obj.termType == 'symbol') &&
                 (obj.uri.indexOf("#") < 0) &&
                 (Util.uri.protocol(obj.uri)=='http'
@@ -1653,14 +1713,16 @@ function Outline(doc) {
                     linkButton.type='image';
                     linkButton.src='icons/document.png';
                     linkButton.alt='Open in new window';
-                    /*linkButton.onclick= function () {
+                    linkButton.onclick= function () {
                         return window.open(''+obj.uri,
                                            ''+obj.uri,
                                            'width=500,height=500,resizable=1,scrollbars=1')
-                    }*///TODO: Reimplement this.
+                    }  ///TODO: Reimplement this.  See humanReadablePane
                     linkButton.title='View in a new window';
                     rep.appendChild(linkButton);
+    
             }
+            */
         } else if (obj.termType=='collection'){
             // obj.elements is an array of the elements in the collection
             rep = myDocument.createElement('table');

@@ -24,7 +24,11 @@ Util.uri.join = function (given, base) {
     var colon = given.indexOf(':')
     if (colon >= 0) return given	// Absolute URI form overrides base URI
     var baseColon = base.indexOf(':')
-    if (baseColon<0) {alert("Invalid base URL "+ base); return given}
+    if (base == "") return given;
+    if (baseColon < 0) {
+        alert("Invalid base: "+ base + ' in join with ' +given);
+        return given
+    }
     var baseScheme = base.slice(0,baseColon+1)  // eg http:
     if (given.indexOf("//") == 0)     // Starts with //
 	return baseScheme + given;

@@ -1,4 +1,39 @@
+function queryHasTimeData(q){
+    var n = q.pat.statements.length;
+    for (var i = 0; i < n; i++){
+	var qst = q.pat.statements[i];
+	var calType = findCalType(qst.predicate.toString());
+	if (calType!=null && calType!='summary'){
+	    return true;
+	}
+    }
+    return false;
+}
+
+
 function timelineView(timelineContainer) {
+    this.queryHasTimeData = function(q){
+        var n = q.pat.statements.length;
+        for (var i = 0; i < n; i++){
+            var qst = q.pat.statements[i];
+            var calType = this.findCalType(qst.predicate.toString());
+            if (calType!=null && calType!='summary'){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    this.findCalType = function(pred) {
+        var types = {'http://www.w3.org/2002/12/cal/icaltzd#dtend':'end', 'http://www.w3.org/2002/12/cal/icaltzd#dtstart':'start', 'http://www.w3.org/2002/12/cal/icaltzd#summary':'summary', 'http://www.w3.org/2002/12/cal/icaltzd#Vevent':'event', 'http://www.w3.org/2002/12/cal/icaltzd#component':'component', 'date':'dateThing'};
+        for (var key in types){
+            // match: finds substrings
+            if(pred.toLowerCase().match(key.toLowerCase())!=null){
+                return types[key];
+            }
+        }
+        return null;
+    }
     //The necessary vars for a View...
     this.name="Timeline";        //Display name of this view.
     var queryStates = [];
@@ -132,7 +167,7 @@ function timelineView(timelineContainer) {
     this.addQuery = function (q) {
 	// adds all queries. if queries don't have any relevant calendar data,
 	// the calendar will be blank.
-	this.queryStates[q.id]= queryHasTimeData(q) ? 0 : 2;
+	this.queryStates[q.id]= this.queryHasTimeData(q) ? 0 : 2;
     }
 
     this.removeQuery = function (q) {
@@ -148,19 +183,6 @@ function timelineView(timelineContainer) {
         }
     }
 } // timelineView
-
-function queryHasTimeData(q){
-    var n = q.pat.statements.length;
-    for (var i = 0; i < n; i++){
-	var qst = q.pat.statements[i];
-	var calType = findCalType(qst.predicate.toString());
-	if (calType!=null && calType!='summary'){
-	    return true;
-	}
-    }
-    return false;
-}
-
 
 TimelineViewFactory = {
     name: "Timeline View",

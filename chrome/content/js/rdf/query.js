@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 3252 2007-06-27 16:44:48Z jambo $
+// SVN ID: $Id: query.js 3392 2007-07-11 15:10:00Z jambo $
 
 //  Variable
 //
@@ -351,7 +351,10 @@ function RDFBind(x, binding) {
 
 // fetcher returns > 0 if it has requested a URI to be looked up
 // fetcher() waits for all the requested URIs to come in
-RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) { 
+RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) {
+    if(!fetcher) {
+      fetcher=myFetcher;
+    } 
     //prepare, oncallback: match1
     //match1: fetcher, oncallback: match2
     //match2, oncallback: populatetable

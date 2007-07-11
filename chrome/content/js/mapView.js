@@ -179,7 +179,7 @@ function mapView(container) {
             }
         }
         if(this.queryStates[q.id]!=2) {
-            kb.query(q, this.onBinding, myFetcher);
+            kb.query(q, this.onBinding);
             this.queryStates[q.id]=1;
             this.addKeyEntry(q);
             allMarkers[q.id]=markers;

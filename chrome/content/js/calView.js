@@ -115,7 +115,7 @@ function calView(container) {
 	// it's a little silly that this.onBinding keeps getting rebound each time this.drawQuery is invoked. will change that later. @TODO
         this.onBinding = makeTimeViewOnBindingFn(q, eventFunction, colorCellCss);
 
-        kb.query(q, this.onBinding, myFetcher);
+        kb.query(q, this.onBinding);
         // show number of events
         calendar.currentMonthEventCount();
     } //this.drawQuery

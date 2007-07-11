@@ -711,33 +711,6 @@ function Outline(doc) {
             myDocument.getElementById("queryJump").appendChild(next);
       }
 
-    /** tabulate this! **/
-    function AJAR_Tabulate(event) {
-        makeQueryLines();
-        matrixTable(myQuery, sortables_init)
-        sortables_init(); //make table headers sortable
-    } //AJAR_Tabulate
-
-    function makeQueryLines() {
-        var i, n=selection.length, j, m, tr, sel, st;
-        for (i=0; i<n; i++) {
-            sel = selection[i]
-            tr = sel.parentNode
-            st = tr.AJAR_statement
-            tabulator.log.debug("Statement "+st)
-            if (sel.getAttribute('class').indexOf('pred') >= 0) {
-                    tabulator.log.info("   We have a predicate")
-                    patternFromTR(tr) //defined in tabulate.js, currently..
-            }
-            if (sel.getAttribute('class').indexOf('obj') >=0) {
-                    tabulator.log.info("   We have an object")
-                    patternFromTR(tr,true)
-            }
-        }
-        tabulator.log.debug("Vars now: "+myQuery.vars)
-        tabulator.log.info("Query pattern now:\n"+myQuery.pat+"\n")
-    }
-
     /** add a row to global myQuery using tr **/
     function patternFromTR(tr, constraint) {
         var nodes = tr.childNodes, n = tr.childNodes.length, inverse=tr.AJAR_inverse,
@@ -825,64 +798,6 @@ function Outline(doc) {
         emptyNode(div);
         return false;
     } //AJAR_ClearTable
-
-    /** build the tabulator table 
-      * @param q - a query pattern (RDFFormula) 
-      * @param matrixTableCB - function pointer **/
-    function matrixTable(q, matrixTableCB) {
-        function onBinding(bindings) { //Creates a row of the table and sticks all the columns in it
-            tabulator.log.info("making a row w/ bindings " + bindings);
-            var i, tr, td
-            tr = myDocument.createElement('tr')
-            t.appendChild(tr)
-            for (i=0; i<nv; i++) {
-                v = q.vars[i]
-                tr.appendChild(matrixTD(bindings[v]))
-            } //for each query var, make a row
-        }
-        var i, nv=q.vars.length, td, th, j, v
-        var t = myDocument.createElement('table')
-    
-        tr = myDocument.createElement('tr')
-        t.appendChild(tr)
-        t.setAttribute('class', 'results sortable')
-        t.setAttribute('id', 'tabulated_data'); //needed to make sortable
-        var div = myDocument.getElementById('results')
-        emptyNode(div).appendChild(t) // See results as we go
-        for (i=0; i<nv; i++) {
-            v = q.vars[i]
-            tabulator.log.debug("table header cell for " + v + ': '+v.label)
-            th = myDocument.createElement('th')
-            
-            th.appendChild(myDocument.createTextNode(v.label))
-            tr.appendChild(th)
-        }
-        use_callback = 1
-        use_fetcher = 1
-        if (use_callback) {
-            kb.query(myQuery, onBinding, use_fetcher ? myFetcher : null); 
-            //queries myQuery with use_fetcher, creating a callback to onBinding when it is fetched
-            //It passes onBinding an association list of all the vars with their associated values in this subgraph
-            //kb.query essentially routes to kb.match, which passes all matching subsets of kb, each to onBinding
-            //kb.query(myQuery, queryCB)
-        } else {
-            var nbs = kb.query(myQuery.pat)
-            var j, tr, nb, bindings, what
-            for (j=0; j<nbs.length; j++) {
-                tr = myDocument.createElement('tr')
-                t.appendChild(tr)
-                bindings = nbs[j][0]  // [bindings, reason]
-                for (i=0; i<nv; i++) {
-                v = q.vars[i]
-                td = myDocument.createElement('td')
-                what = bindings[v]
-            //      tabulator.log.debug("    table cell "+v+": "+what + " type="+what.termType)
-                tr.appendChild(matrixTD(what))
-                }
-            }
-        }
-        return t
-    }
     
     function addButtonCallbacks(target, term) {
         var fireOn = Util.uri.docpart(term.uri)
@@ -1050,13 +965,6 @@ function Outline(doc) {
                 ((domain) ? "; domain=" + domain : "") +
                 "; expires=Thu, 01-Jan-70 00:00:01 GMT";
         }
-    }
-
-    function QuerySPARQLText() {
-        var txt=myDocument.getElementById('SPARQLTextArea').value;
-        myQuery =  SPARQLToQuery(txt);
-        matrixTable(myQuery, sortables_init)
-        sortables_init(); //make table headers sortable
     }
 
     /** get the target of an event **/  

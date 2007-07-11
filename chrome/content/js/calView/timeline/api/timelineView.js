@@ -106,7 +106,7 @@ function timelineView(timelineContainer) {
 						     eventFunction(e)}
 						 , colorCellCss);
         
-        kb.query(q, this.onBinding, myFetcher);
+        kb.query(q, this.onBinding);
     } //this.drawQuery
 
     this.undrawQuery = function (q) {

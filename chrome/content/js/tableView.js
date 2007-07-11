@@ -62,7 +62,7 @@ function tableView(container,doc)
             tr.appendChild(th);
         }
         
-        kb.query(q, this.onBinding, myFetcher);
+        kb.query(q, this.onBinding);
         activeSingleQuery = q;
         this.queryStates[q.id]=1;
         

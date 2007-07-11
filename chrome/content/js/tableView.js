@@ -1,12 +1,12 @@
 function tableView(container,doc) 
 {
-    if(isExtension) {
+    /*if(isExtension) {
         tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
             getService(Components.interfaces.nsISupports).wrappedJSObject;
         //wrap sparql update code with if(isExtension).
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
-    }
-    var numRows; // assigned in makeKeyListener
+    }*/
+    var numRows; // assigned in makeKeyHandler
     var numCols; // assigned at bottom of onClickCell
     var activeSingleQuery = null;
     
@@ -33,8 +33,7 @@ function tableView(container,doc)
             tabulator.log.info("making a row w/ bindings " + bindings);
             tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
-            for (i=0; i<nv; i++)
-            {
+            for (i=0; i<nv; i++) {
                 v = q.vars[i];
                 //alert("calling matrixTD");
                 //alert(matrixTD(bindings[v]).innerHTML);
@@ -55,8 +54,7 @@ function tableView(container,doc)
         
         emptyNode(thisTable.container).appendChild(t); // See results as we go
         
-        for (i=0; i<nv; i++)
-        {
+        for (i=0; i<nv; i++) {
             v = q.vars[i];
             //tabulator.log.debug("table header cell for " + v + ': '+v.label)
             th = thisTable.document.createElement('th');
@@ -80,13 +78,28 @@ function tableView(container,doc)
         th.appendChild(a); 
         a.setAttribute('id', 'anchor');
         a.focus();
-        //********** key mvmt activation code *********///
+        //********** End key mvmt activation code *****//
     }
     //***************** End drawQuery *****************//
 
     //***************** Table Editing *****************//
+    var lastModified; // lastModified is the text
+    // for lastModified I have access to 
+    var lastModifiedStat // I don't have access to AJAR_statement
+    // lastModifiedStat = statementsMatching(s,p,o) 
+    
+/*     SELECT ?v0 ?v1 
+WHERE 
+{ 
+    <http://dig.csail.mit.edu/2005/ajar/ajaw/data#Tabulator> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?v0 .
+    ?v0 <http://www.w3.org/2000/01/rdf-schema#comment> ?v1 .
+} */
+    // s is the about from the previous node
+    // p should be generated somewhere based on the SPARQL query
+    // o is the lastModified text, I think o has to be an object though
+    
     var selectedNode;
-    var keyListener;
+    var keyHandler;
     function onClickCell(e) 
     {
         if (selectedNode != null) clearSelected(selectedNode);
@@ -109,8 +122,8 @@ function tableView(container,doc)
     }
     
     // use this wrapper so that the node can be passed to the event handler
-    function makeKeyListener(node) {
-        return function keyListener(e) 
+    function makeKeyHandler(node) {
+        return function keyHandler(e) 
         {
             var iRow = getRowIndex(node);
             var iCol = node.cellIndex;
@@ -168,8 +181,8 @@ function tableView(container,doc)
         a.focus();
 
         var t = document.getElementById('tabulated_data');
-        keyListener = makeKeyListener(node);
-        t.addEventListener('keypress', keyListener, false);
+        keyHandler = makeKeyHandler(node);
+        t.addEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = "#8F3";
         
         selectedNode = node;
@@ -193,7 +206,7 @@ function tableView(container,doc)
         var a = document.getElementById('focustest');
         if (a != null) {a.parentNode.removeChild(a);};
         var t = document.getElementById('tabulated_data');
-        t.removeEventListener('keypress', keyListener, false);
+        t.removeEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = 'white';
     }
 

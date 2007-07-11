@@ -6,18 +6,13 @@
   <script type="application/x-javascript" src="prefs.js"/>
   <script type="application/x-javascript" src="js/util.js"/>
   <script type="application/x-javascript" src="js/configuration.js"/>  
-  <script type="application/x-javascript" src="js/sorttable.js"/>
-  <script type="application/x-javascript" src="js/tableView.js"/>
-  <script type="application/x-javascript" src="js/mapView.js"/>
   <script type="application/x-javascript" src="js/rdf/sparql.js"/>
   <script type="application/x-javascript" src="js/uri.js"/>
   <script type="application/x-javascript" src="js/rdf/term.js"/>
   <script type="application/x-javascript" src="js/rdf/match.js"/>
-  <script type="application/x-javascript" src="js/rdf/rdfparser.js"/>
   <script type="application/x-javascript" src="js/rdf/identity.js"/>
   <script type="application/x-javascript" src="js/rdf/query.js"/>
   <script type="application/x-javascript" src="js/rdf/sources.js"/>
-  <script type="application/x-javascript" src="js/sparqlUpdate.js"/>
   <script type="application/x-javascript" src="js/userinput.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
   <script type="application/x-javascript" src="sources-ext.js"/>

@@ -46,12 +46,10 @@ function Tabulator() {
   loader.loadSubScript("chrome://tabulator/content/js/uri.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/sorttable.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/tableView.js"/*, rootObj*/);
-  loader.loadSubScript("chrome://tabulator/content/js/mapView.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/mapView-ext.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/calView.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timelineView.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/sparqlUpdate.js"/*, rootObj*/);
-  //loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timeline-api.js"/*, rootObj*/);
-  //loader.loadSubScript("chrome://tabulator/content/js/calView/calView.js"/*, rootObj*/);
   this.kb = new RDFIndexedFormula();
   this.sf = new SourceFetcher(this.kb);
   this.qs = new QuerySource();
@@ -233,8 +231,12 @@ function string_startswith(str, pref) { // missing library routines
         newView.drawQuery(query);
         gBrowser.selectedBrowser.removeEventListener('load',onLoad,true);
     }
-    //viewFactory.getViewURI
-    gBrowser.selectedTab = gBrowser.addTab(viewFactory.getValidDocument(query));
+    var viewURI = viewFactory.getValidDocument(query)
+    if(viewURI) {
+        gBrowser.selectedTab = gBrowser.addTab(viewFactory.getValidDocument(query));
+    } else {
+        return; //TODO:Some kind of error? is this even an error? maybe it doesnt display to a URI.
+    }
     //gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
   }
 

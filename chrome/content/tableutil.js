@@ -1,3 +1,6 @@
+isExtension = true;
+
+
 function Namespace(nsuri) {
     return function(ln) { return new RDFSymbol(nsuri+ln) }
 }

@@ -139,8 +139,14 @@ var tabExtension = {
         }
       },true);
     }
+  },
+  
+  externalQueryRequestListener: function(e) {
+
   }
 }
+
+document.addEventListener("TabulatorQueryRequest", function(e) {tabExtension.externalQueryRequestListener(e);},false,true);
 
 function OutlineLoader(target,uri) {
   onLoadEvent = function(e) {

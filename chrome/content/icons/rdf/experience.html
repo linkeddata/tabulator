@@ -1,0 +1,96 @@
+<html>
+<head>
+  <meta http-equiv="content-type" content="">
+  <title></title>
+</head>
+
+<body>
+<p>Breadcrumbs ... deevloping the javascript RDF tabulator code</p>
+
+<p></p>
+
+<p></p>
+
+<h2>Javascript weirdnesses</h2>
+
+<p>Coming forom python (and before that Objective C and C) the strageest
+thing was the iterations over arrays which don't in fact gve the array
+elements but their indexes</p>
+
+<p></p>
+
+<p>- Safari bug:</p>
+
+<p></p>
+
+<p>when you read the innerHTML of an element, it is a mixed content, but the
+&lt; in the text are not escaped. You therefore can't read it and write it
+back again. This bug does not existin Firefox. Javascript weirdnesses: for (x
+in myArray) does not make x iterate through the members of myArray, but
+through the indeces!  It is the same as (more or less) fot x in
+range(len((myArray)) in pythonm, not for x in myArray.</p>
+
+<p></p>
+
+<h3>No network access</h3>
+
+<p></p>
+
+<p>i had to work offline when deevloping. The XMLHTTP method is just that --
+it gets XML using HTTP. So running in file: space was not possible my mapping
+URIs.</p>
+
+<p></p>
+<ol>
+  <li>In System Preferences, under Sharing, turn on "Web sharing"</li>
+  <li>Make soft links as folows:</li>
+</ol>
+
+<p></p>
+<pre>$ cd /Library/Webserver/Documents
+
+$ ln -s /devel/WWW/2000 2000
+$ ln -s /devel/WWW/2001 2001
+
+$ ln -s /devel/WWW/2002 2002
+$ ln -s /devel/WWW/2003 2003
+$ ln -s /devel/WWW/2004 2004
+$ ln -s /devel/WWW/2006 2006
+
+</pre>
+
+<p>And in the script, I put a URI mapper which wirks when the document.domain
+is 'localhost'. SiteMap[ "http://www.w3.org/" ] =</p>
+
+<p> "http://localhost/www.w3.org/"  // Salt to taste</p>
+
+<p></p>
+
+<p>The server does need security: not good to give access to all the
+filesystem</p>
+
+<p></p>
+<pre>Notes on local apache server
+Need mod_rewrite.c
+# Try this:
+LoadModule rewrite_module     libexec/httpd/mod_rewrite.so
+AddModule mod_rewrite.c# Authentication 
+- local access only to this server
+RewriteEngine on
+RewriteRule   ^/$  /devel/WWW/
+&lt;Directory /devel/WWW/&gt;
+Order Deny,Allow
+Deny from all
+Allow from localhost
+&lt;/Directory&gt;
+</pre>
+
+<p>- Using the RDF API to test it out</p>
+
+<p>- </p>
+
+<p></p>
+
+<p></p>
+</body>
+</html>

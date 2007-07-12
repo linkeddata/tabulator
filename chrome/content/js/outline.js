@@ -82,7 +82,7 @@ function Outline(doc) {
     //  Represent an object in summary form as a table cell
     function appendRemoveIcon(node, subject, removeNode) {
         var image = AJARImage(Icon.src.icon_remove_node, 'remove')
-        image.setAttribute('align', 'right')
+        // image.setAttribute('align', 'right')  Causes icon to be moved down
         image.node = removeNode
         image.setAttribute('about', subject.toNT())
         image.style.marginLeft="5px"
@@ -366,7 +366,7 @@ function Outline(doc) {
         iframe.setAttribute('src', subject.uri)
         iframe.setAttribute('class', 'doc')
         iframe.setAttribute('height', '480')
-//        iframe.setAttribute('width', '640')
+        iframe.setAttribute('width', '640')
         var tr = myDocument.createElement('TR')
         tr.appendChild(iframe)
         div.appendChild(tr)

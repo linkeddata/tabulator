@@ -313,7 +313,6 @@ clipboardInit: function clipboardInit(address){
     kb.add(kb.sym(address),tabont('objects'),kb.collection())
     kb.add(kb.sym(address),tabont('predicates'),kb.collection())
     kb.add(kb.sym(address),tabont('all'),kb.collection())
-    internals[tabont('all').uri]=1;
 },
 
 copyToClipboard: function copyToClipboard(address,selectedTd){

@@ -248,10 +248,11 @@ function Outline(doc) {
         var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
-        for (var i=0; i< panes.length; i++) {
-            var pane = panes[i];
-            if (!pane.test(subject)) continue;
-            var ico = AJARImage(pane.icon, pane.label);
+        for (var i=0; i< panes.list.length; i++) {
+            var pane = panes.list[i];
+            var lab = pane.label(subject);
+            if (!lab) continue;
+            var ico = AJARImage(pane.icon, lab, lab);
 //            ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
             ico.setAttribute('class', 'paneHidden')
             tr.firstChild.childNodes[1].appendChild(ico);
@@ -267,12 +268,18 @@ function Outline(doc) {
     ** subject panes are currently stacked vertically.
     */
     
-    panes = []
-    paneForIcon = []
-    
-    registerPane = function(p) {
-        panes.push(p);
-        if (p.icon) paneForIcon[p.icon] = p;
+    panes = {}
+    panes.list = [];
+    panes.paneForIcon = []
+    panes.paneForPredicate = []
+    panes.register = function(p) {
+        panes.list.push(p);
+        if (p.icon) panes.paneForIcon[p.icon] = p;
+        if (p.predicates) {
+            for (x in p.predicates) {
+                panes.paneForPredicate[x] = {pred: x, code: p.predicates[x]};
+            }
+        }
     }
     
     /*   Default Pane
@@ -282,7 +289,7 @@ function Outline(doc) {
     */
     defaultPane = {};
     defaultPane.icon = Icon.src.icon_internals;
-    defaultPane.label = 'data';
+    defaultPane.label = function(subject) { return 'about' };
     defaultPane.render = function(subject) {
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'defaultPane')
@@ -294,7 +301,7 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, true, false)
         return div    
     }
-    // registerPane(defaultPane);
+    // panes.register(defaultPane);
     
     /*   Internal Pane
     **
@@ -303,15 +310,14 @@ function Outline(doc) {
     */
     internalPane = {};
     internalPane.icon = Icon.src.icon_internals;
-    internalPane.label = "under the hood";
-    internalPane.test = function(subject) {
+    internalPane.label = function(subject) {
         var sts = kb.statementsMatching(subject);
         sts = sts.concat(kb.statementsMatching(undefined, undefined, subject));
         for (var i=0; i<sts.length; i++) {
-            if (internals[sts[i].predicate.uri] == 1) // worth displaing
-                return true;
+            if (internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
+                return "under the hood";
         }
-        return false
+        return null
     }
     internalPane.render = function(subject) {
         var div = myDocument.createElement('div')
@@ -324,7 +330,19 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, true, true)    
         return div
     }
-    registerPane(internalPane);
+    internalPane.predicates = {// Predicates used for inner workings. Under the hood
+        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#request': 1,
+        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#requestedBy': 1,
+        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#source': 1,
+        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session': 2, // 2=  test neg but display
+        'http://www.w3.org/2006/link#uri': 1,
+        'http://www.w3.org/2006/link#Document': 1,
+    }
+    internalPane.predicates[tabont('all').uri]=1;  // From userinput.js
+    if (!SourceOptions["seeAlso not internal"].enabled)
+        internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
+    
+    panes.register(internalPane);
     
     /*   Human-readable Pane
     **
@@ -332,10 +350,11 @@ function Outline(doc) {
     */
     humanReadablePane = {};
     humanReadablePane.icon = Icon.src.icon_visit;
-    humanReadablePane.label = "view";
-    humanReadablePane.test = function(subject) {
-        return !!(kb.anyStatementMatching(
-            subject, kb.sym('rdf', 'type'), kb.sym('tab', 'Document')));
+    humanReadablePane.label = function(subject) {
+        if (!kb.anyStatementMatching(
+            subject, kb.sym('rdf', 'type'), kb.sym('tab', 'Document')))
+            return null;
+        return "view";
     }
     humanReadablePane.render = function(subject) {
         var div = myDocument.createElement("div")
@@ -347,43 +366,58 @@ function Outline(doc) {
         iframe.setAttribute('src', subject.uri)
         iframe.setAttribute('class', 'doc')
         iframe.setAttribute('height', '480')
-        iframe.setAttribute('width', '640')
+//        iframe.setAttribute('width', '640')
         var tr = myDocument.createElement('TR')
         tr.appendChild(iframe)
         div.appendChild(tr)
         return div
     }
-    registerPane(humanReadablePane);
+    panes.register(humanReadablePane);
 
- /*   Class member Pane
+    /*   Class member Pane
     **
     **  This outline pane contains lists the members of a class
     */
     classInstancePane = {};
-    classInstancePane.icon = Icon.src.icon_visit;
-    classInstancePane.label = "List";
+    classInstancePane.icon = Icon.src.icon_instances;
+    classInstancePane.label = function(subject) {
+        var n = kb.statementsMatching(
+            undefined, kb.sym('rdf', 'type'), subject).length;
+        if (n == 0) return null;
+        return "List "+n;
+    }
     classInstancePane.test = function(subject) {
         return !!(kb.anyStatementMatching(
             undefined, kb.sym('rdf', 'type'), subject));
     }
     classInstancePane.render = function(subject) {
         var div = myDocument.createElement("div")
-    
-        div.setAttribute('class', 'instanceView')
-//        div.appendChild(expandedHeaderTR(subject))
-        var members = kb.each(subject, kb.sym('rdf', 'type'))
+        div.setAttribute('class', 'instancePane');
+        var sts = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
         var tr = myDocument.createElement('TR')
-        tr.appendChild(myDocument.createTextNode(''+members.length));
-        div.appendChild(tr)
-        for (var i=0; i<members.length; i++) {
-            var tr = myDocument.createElement('TR')
-            
+        if (sts.length > 10) {
+            tr.appendChild(myDocument.createTextNode(''+sts.length));
             div.appendChild(tr)
+        }
+        for (var i=0; i<sts.length; i++) {
+            var tr = myDocument.createElement('TR');
+            if (i==0) {
+                var td = myDocument.createElement('TD'); // dummy for editing
+                td.setAttribute('class', 'pred');
+                td.setAttribute('rowspan', ''+sts.length);
+                tr.appendChild(td);
+            }
+            var td = thisOutline.outline_objectTD(
+                            sts[i].subject, undefined, undefined, sts[i].why)
+            tr.appendChild(td);
+            div.appendChild(tr);
         }
         return div
     }
-    
-    registerPane(classInstancePane);
+    panes.register(classInstancePane);
+
+
+//////////////////////////////////////////////////////////////////////////////
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK
     // Just deleting it cause whitespace to accumulate.
@@ -482,7 +516,7 @@ function Outline(doc) {
         for (j=0; j<max; j++) { //squishing together equivalent properties I think
             var s = plist[j]
         //      if (s.object == parentSubject) continue; // that we knew
-            var internal = (typeof internals[''+s.predicate.uri] != 'undefined')
+            var internal = (typeof internalPane.predicates[''+s.predicate.uri] != 'undefined')
             if ((!details && internal) || (details && !internal)) { // exclusive-or only in JS 2.0
                 continue;
             }
@@ -1309,7 +1343,7 @@ function Outline(doc) {
                 break;
                 
             default:  // Look up any icons for panes
-                var pane = paneForIcon[tsrc];
+                var pane = panes.paneForIcon[tsrc];
                 
                 // Find the containing table for this subject 
                 for (var t = p; t.parentNode;  t = t.parentNode) {

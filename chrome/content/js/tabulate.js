@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3388 2007-07-11 14:56:31Z timbl $
+// SVN ID: $Id: tabulate.js 3434 2007-07-12 17:16:29Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -81,6 +81,7 @@ Icon.src.icon_more = 'icons/tbl-more-trans.png'; // looks just like expand, diff
 // Icon.src.icon_expand = 'icons/clean/Icon.src.Icon.src.icon_expand.png';
 Icon.src.icon_collapse = 'icons/tbl-collapse.png';
 Icon.src.icon_internals = 'icons/tango/22-emblem-system.png'
+Icon.src.icon_instances = 'icons/tango/22-folder-open.png'
 Icon.src.icon_shrink = 'icons/tbl-shrink.png';  // shrink list back up
 Icon.src.icon_rows = 'icons/tbl-rows.png';
 // Icon.src.Icon.src.icon_columns = 'icons/tbl-columns.png';
@@ -156,6 +157,7 @@ Icon.tooltips[Icon.src.icon_expand] = 'View details.'
 Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
 Icon.tooltips[Icon.src.icon_shrink] = 'Shrink list.'
 Icon.tooltips[Icon.src.icon_internals] = 'Under the hood'
+Icon.tooltips[Icon.src.icon_instances] = 'List'
 Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
 Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
 Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'
@@ -166,7 +168,7 @@ Icon.tooltips[Icon.src.icon_retract] = 'Remove this source and all its data from
 Icon.tooltips[Icon.src.icon_refresh] = 'Refresh this source and reload its triples.'
 
 // Special knowledge of properties
-tabont = Namespace("http://dig.csail.mit.edu/2005/ajar/ajaw#")
+tabont = Namespace("http://www.w3.org/2007/ont/link#")
 foaf = Namespace("http://xmlns.com/foaf/0.1/")
 rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
@@ -187,16 +189,6 @@ labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
 labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
 
-// Predicates used for inner workings. Under the hood
-internals = []
-internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#request'] = 1;
-internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#requestedBy'] = 1;
-internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#source'] = 1;
-internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 2; // 2=ignore
-internals['http://www.w3.org/2006/link#uri'] = 1;
-internals['http://www.w3.org/2006/link#Document'] = 1;
-if (!SourceOptions["seeAlso not internal"].enabled)
-internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
 
 /** returns true if str starts with pref, case sensitive, space sensitive **/
 function string_startswith(str, pref) { // missing library routines
@@ -618,7 +610,7 @@ function AJAR_initialisePage() {
     //Make sw.sources and sf.requested syncronized to each other should be the better way - Kenny
     var ThisSession=kb.the(undefined,RDFS('label'),kb.literal("This Session"));
     sf.requestURI('http://www.w3.org/2000/01/rdf-schema',ThisSession,true);
-    sf.requestURI('http://dig.csail.mit.edu/2005/ajar/ajaw/ont',ThisSession,true);
+    sf.requestURI('http://www.w3.org/2007/ont/link',ThisSession,true);
 
     initialiseGetData();
     var browser = document.getElementById('outline');

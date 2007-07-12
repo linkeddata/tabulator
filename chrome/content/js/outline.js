@@ -153,7 +153,7 @@ function Outline(doc) {
         var licenses = kb.each(why, kb.sym('http://creativecommons.org/ns#license'));
         tabulator.log.info('licenses:'+ why+': '+ licenses)
         for (i=0; i< licenses.length; i++) {
-            if(licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/' || 'http://creativecommons.org/licenses/by-nc-nd/3.0/') {
+            if(licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/' || licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') {
                 theClass += ' licOkay';
                 break;
             }

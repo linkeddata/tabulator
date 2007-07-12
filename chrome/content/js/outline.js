@@ -581,7 +581,7 @@ function Outline(doc) {
                             var trObj=myDocument.createElement('tr');
                             trObj.style.colspan='1';
                             trObj.appendChild(thisOutline.outline_objectTD(
-                                sel(plist[j+l]),defaultpropview));
+                                sel(plist[j+l]),defaultpropview, undefined, s.why));
                             trObj.AJAR_statement=s;
                             trObj.AJAR_inverse=inverse;
                             parent.appendChild(trObj);

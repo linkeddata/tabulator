@@ -1689,7 +1689,9 @@ function Outline(doc) {
     }  //boring_default
     
     function VIEWAS_image(obj) {
-        return AJARImage(obj.uri, label(obj), label(obj));
+        img = AJARImage(obj.uri, label(obj), label(obj));
+        img.setAttribute('class', 'outlineImage')
+        return img
     }
     
     function VIEWAS_mbox(obj) {

@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3447 2007-07-13 01:55:37Z timbl $
+// SVN ID: $Id: tabulate.js 3451 2007-07-13 11:26:24Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -85,13 +85,20 @@ Icon.src.icon_instances = 'icons/tango/22-folder-open.png'
 Icon.src.icon_shrink = 'icons/tbl-shrink.png';  // shrink list back up
 Icon.src.icon_rows = 'icons/tbl-rows.png';
 // Icon.src.Icon.src.icon_columns = 'icons/tbl-columns.png';
+
+// Status balls:
+
 Icon.src.icon_unrequested = 'icons/16dot-blue.gif';
 // Icon.src.Icon.src.icon_parse = 'icons/18x18-white.gif';
 Icon.src.icon_fetched = 'icons/16dot-green.gif';
 Icon.src.icon_failed = 'icons/16dot-red.gif';
 Icon.src.icon_requested = 'icons/16dot-yellow.gif';
 // Icon.src.icon_maximize = 'icons/clean/Icon.src.Icon.src.icon_con_max.png';
+
+// Panes:
+
 Icon.src.icon_visit = 'icons/tango/22-text-x-generic.png';
+
 // actions for sources;
 Icon.src.icon_retract = 'icons/retract.gif';
 Icon.src.icon_refresh = 'icons/refresh.gif';
@@ -100,6 +107,10 @@ Icon.src.icon_opton = 'icons/optional_on.PNG';
 Icon.src.icon_map = 'icons/compassrose.png';
 Icon.src.icon_retracted = Icon.src.icon_unrequested 
 Icon.src.icon_retracted = Icon.src.icon_unrequested;
+
+// Within outline mode:
+
+Icon.src.icon_telephone = 'icons/silk/telephone.png';
 Icon.src.icon_time = 'icons/Wclocksmall.png';
 Icon.src.icon_remove_node = 'icons/tbl-x-small.png'
 Icon.src.icon_add_triple = 'icons/tango/22-list-add.png';
@@ -270,10 +281,12 @@ function SourceWidget() {
 	
 	    var rbtn = outline.appendAccessIcon(iconCell, udoc)
 	    var xbtn = AJARImage(Icon.src.icon_remove_node, 'remove');
-	    rbtn.style.marginRight = "0.8em"
-	    rbtn.onclick = function () {
-		sf.refresh(udoc)
-	    }
+            if (rbtn) {
+                rbtn.style.marginRight = "0.8em"
+                rbtn.onclick = function () {
+                    sf.refresh(udoc)
+                }
+            }
 	    xbtn.onclick = function () {
 		sf.retract(udoc)
 		sw.ele.removeChild(row)

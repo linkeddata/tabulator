@@ -97,6 +97,7 @@ function Outline(doc) {
     this.appendAccessIcon = function(node, term) {
         if (typeof term.termType == 'undefined') tabulator.log.error("??"+ term);
         if (term.termType != 'symbol') return '';
+        if (term.uri.slice(0,5) != 'http:') return '';
         var state = sf.getState(term);
         var icon, alt, info;
         //    tabulator.log.debug("State of " + doc + ": " + state)
@@ -1649,7 +1650,23 @@ function Outline(doc) {
             rep = myDocument.createElement('span');
             rep.setAttribute('about', obj.toNT());
             thisOutline.appendAccessIcon(rep, obj);
-            rep.appendChild(myDocument.createTextNode(label(obj)));
+            if (obj.termType == 'symbol') { 
+                if (obj.uri.slice(0,4) == 'tel:') {
+                    var num = obj.uri.slice(4);
+                    var anchor = myDocument.createElement('a');
+                    rep.appendChild(myDocument.createTextNode(num));
+                    anchor.setAttribute('href', obj.uri);
+                    anchor.appendChild(AJARImage(Icon.src.icon_telephone,
+                        'phone', 'phone '+num))
+                    rep.appendChild(anchor);
+                    anchor.firstChild.setAttribute('class', 'phoneIcon');
+                } else { // not tel:
+                    rep.appendChild(myDocument.createTextNode(label(obj)));
+                }
+            } else {  // bnode
+                rep.appendChild(myDocument.createTextNode(label(obj)));
+            }
+
   /*          
             if ((obj.termType == 'symbol') &&
                 (obj.uri.indexOf("#") < 0) &&

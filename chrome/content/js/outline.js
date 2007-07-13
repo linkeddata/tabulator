@@ -147,24 +147,22 @@ function Outline(doc) {
      *  @param view - a VIEW function (rather than a bool asImage)
      **/
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why) {
-        //set about
         var td = myDocument.createElement('td');
         var theClass = "obj";
+        
+        // check the IPR on the data
         var licenses = kb.each(why, kb.sym('http://creativecommons.org/ns#license'));
         tabulator.log.info('licenses:'+ why+': '+ licenses)
         for (i=0; i< licenses.length; i++) {
-            if(licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/' || licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') {
+            if(licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/' 
+            || licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') {
                 theClass += ' licOkay';
                 break;
             }
             
         }
         
-        //---------------------------------------------------------------------------
-        //var divInTd=myDocument.createElement('div'); //for identifying border of <td>
-        //td.appendChild( divInTd );
-        //---------------------------------------------------------------abandoned approach
-        
+        //set about
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
             td.setAttribute('about', obj.toNT());
             
@@ -1341,6 +1339,7 @@ function Outline(doc) {
                 
             default:  // Look up any icons for panes
                 var pane = panes.paneForIcon[tsrc];
+                if (!pane) break;
                 
                 // Find the containing table for this subject 
                 for (var t = p; t.parentNode;  t = t.parentNode) {

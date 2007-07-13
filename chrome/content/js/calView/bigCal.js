@@ -1,4 +1,95 @@
 
+/* need to make unique calendar containers and names
+ * YAHOO.namespace(namespace) returns the namespace specified 
+ * and creates it if it doesn't exist
+ * function 'uni' creates a unique namespace for a calendar and 
+ * returns number ending
+ * ex: uni('cal') may create namespace YAHOO.cal1 and return 1
+ *
+ * YAHOO.namespace('foo.bar') makes YAHOO.foo.bar defined as an object,
+ * which can then have properties
+ */
+
+function uni(prefix){
+    var n = counter();
+    var name = prefix + n;
+    YAHOO.namespace(name);
+    return n;
+}
+
+// counter for calendar ids, 
+counter = function(){
+	var n = 0;
+	return function(){
+		n+=1;
+		return n;
+	}
+}() // *note* those ending parens! I'm using function scope
+
+var renderHoliday = function(workingDate, cell) { 
+	YAHOO.util.Dom.addClass(cell, "holiday");
+} 
+
+
+/* toggles whether element is displayed
+ * if elt.getAttribute('display') returns null, 
+ * it will be assigned 'block'
+ */
+function toggle(eltname){
+	var elt = document.getElementById(eltname);
+	elt.style.display = (elt.style.display=='none')?'block':'none'
+}
+
+/* Example of calendar Id: cal1
+ * 42 cells in one calendar. from top left counting, each table cell has
+ * ID: YAHOO.cal1_cell0 ... YAHOO.cal.1_cell41
+ * name: YAHOO.cal1__2006_3_2 for anchor inside calendar cell 
+ * of date 3/02/2006
+ * 
+ */	
+function VIEWAS_cal(obj) {
+	prefix = 'cal';
+	var cal = prefix + uni(prefix);
+
+	var containerId = cal + 'Container';
+	var table = document.createElement('table');
+	
+	
+	// create link to hide/show calendar
+	var a = document.createElement('a');
+	// a.appendChild(document.createTextNode('[toggle]'))
+	a.innerHTML="<small>mm-dd: " + obj.value + "[toggle]</small>";
+	//a.setAttribute('href',":toggle('"+containerId+"')");
+	a.onclick = function(){toggle(containerId)};
+	table.appendChild(a);
+
+	var dateArray = obj.value.split("-");
+	var m = dateArray[0];
+	var d = dateArray[1];
+	var yr = (dateArray.length>2)?dateArray[2]:(new Date()).getFullYear();
+
+	// hack: calendar will be appended to divCal at first, but will
+	// be moved to new location
+	document.getElementById('divCal').appendChild(table);
+	var div = table.appendChild(document.createElement('DIV'));
+	div.setAttribute('id', containerId);
+	// default hide calendar
+	div.style.display = 'none';
+	div.setAttribute('tag','calendar');
+	YAHOO[cal] = new YAHOO.widget.Calendar("YAHOO." + cal, containerId, m+"/"+yr);
+
+	YAHOO[cal].addRenderer(m+"/"+d, renderHoliday); 
+
+	YAHOO[cal].render();
+	// document.childNodes.removeChild(table);
+	return table;
+}
+
+ ///////////////////////////////////////////////////
+
+
+
+
 /** 
  * @param e : DOM Event
  * This function is used to restrict input of a text field to numbers

@@ -52,49 +52,70 @@ var views = {
 Icon = {}
 Icon.src= []
 Icon.tooltips= []
-
 var iconPrefix = 'chrome://tabulator/content/';
-Icon.src.icon_expand = iconPrefix+'icons/tbl-expand-trans.png';
-Icon.src.icon_more = iconPrefix+'icons/tbl-more-trans.png'; // looks just like expand, diff semantics
-// Icon.src.icon_expand = iconPrefix+'icons/clean/Icon.src.Icon.src.icon_expand.png';
-Icon.src.icon_collapse = iconPrefix+'icons/tbl-collapse.png';
-Icon.src.icon_internals = iconPrefix+'icons/tango/22-emblem-system.png'
-Icon.src.icon_instances = iconPrefix+'icons/tango/22-folder-open.png'
-Icon.src.icon_shrink = iconPrefix+'icons/tbl-shrink.png';  // shrink list back up
-Icon.src.icon_rows = iconPrefix+'icons/tbl-rows.png';
-// Icon.src.Icon.src.icon_columns = iconPrefix+'icons/tbl-columns.png';
-Icon.src.icon_unrequested = iconPrefix+'icons/16dot-blue.gif';
-// Icon.src.Icon.src.icon_parse = iconPrefix+'icons/18x18-white.gif';
-Icon.src.icon_fetched = iconPrefix+'icons/16dot-green.gif';
-Icon.src.icon_failed = iconPrefix+'icons/16dot-red.gif';
-Icon.src.icon_requested = iconPrefix+'icons/16dot-yellow.gif';
-// Icon.src.icon_maximize = iconPrefix+'icons/clean/Icon.src.Icon.src.icon_con_max.png';
-Icon.src.icon_visit = iconPrefix+'icons/tango/22-text-x-generic.png';
+
+////////////////////////// Common icons with extension version
+
+Icon.src.icon_expand = iconPrefix + 'icons/tbl-expand-trans.png';
+Icon.src.icon_more = iconPrefix + 'icons/tbl-more-trans.png'; // looks just like expand, diff semantics
+// Icon.src.icon_expand = iconPrefix + 'icons/clean/Icon.src.Icon.src.icon_expand.png';
+Icon.src.icon_collapse = iconPrefix + 'icons/tbl-collapse.png';
+Icon.src.icon_internals = iconPrefix + 'icons/tango/22-emblem-system.png'
+Icon.src.icon_instances = iconPrefix + 'icons/tango/22-folder-open.png'
+Icon.src.icon_shrink = iconPrefix + 'icons/tbl-shrink.png';  // shrink list back up
+Icon.src.icon_rows = iconPrefix + 'icons/tbl-rows.png';
+// Icon.src.Icon.src.icon_columns = 'icons/tbl-columns.png';
+
+// Status balls:
+
+Icon.src.icon_unrequested = iconPrefix + 'icons/16dot-blue.gif';
+// Icon.src.Icon.src.icon_parse = iconPrefix + 'icons/18x18-white.gif';
+Icon.src.icon_fetched = iconPrefix + 'icons/16dot-green.gif';
+Icon.src.icon_failed = iconPrefix + 'icons/16dot-red.gif';
+Icon.src.icon_requested = iconPrefix + 'icons/16dot-yellow.gif';
+// Icon.src.icon_maximize = iconPrefix + 'icons/clean/Icon.src.Icon.src.icon_con_max.png';
+
+// Panes:
+
+Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
+
 // actions for sources;
-Icon.src.icon_retract = iconPrefix+'icons/retract.gif';
-Icon.src.icon_refresh = iconPrefix+'icons/refresh.gif';
-Icon.src.icon_optoff = iconPrefix+'icons/optional_off.PNG';
-Icon.src.icon_opton = iconPrefix+'icons/optional_on.PNG';
-Icon.src.icon_map = iconPrefix+'icons/compassrose.png';
+Icon.src.icon_retract = iconPrefix + 'icons/retract.gif';
+Icon.src.icon_refresh = iconPrefix + 'icons/refresh.gif';
+Icon.src.icon_optoff = iconPrefix + 'icons/optional_off.PNG';
+Icon.src.icon_opton = iconPrefix + 'icons/optional_on.PNG';
+Icon.src.icon_map = iconPrefix + 'icons/compassrose.png';
 Icon.src.icon_retracted = Icon.src.icon_unrequested 
 Icon.src.icon_retracted = Icon.src.icon_unrequested;
-Icon.src.icon_time = iconPrefix+'icons/Wclocksmall.png';
-Icon.src.icon_remove_node = iconPrefix+'icons/tbl-x-small.png'
-Icon.src.icon_add_triple = iconPrefix+'icons/tango/22-list-add.png';
-Icon.src.icon_show_choices = iconPrefix+'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
 
-Icon.tooltips[Icon.src.icon_remove_node]='Remove this.'
-Icon.tooltips[Icon.src.icon_expand]='View details.'
+Icon.src.icon_time = iconPrefix+'icons/Wclocksmall.png';
+
+// Within outline mode:
+
+Icon.src.icon_telephone = iconPrefix + 'icons/silk/telephone.png';
+Icon.src.icon_time = iconPrefix + 'icons/Wclocksmall.png';
+Icon.src.icon_remove_node = iconPrefix + 'icons/tbl-x-small.png'
+Icon.src.icon_add_triple = iconPrefix + 'icons/tango/22-list-add.png';
+Icon.src.icon_show_choices = iconPrefix + 'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
+
+
+Icon.tooltips[Icon.src.icon_add_triple] = 'Add more'
+Icon.tooltips[Icon.src.icon_remove_node] = 'Remove'
+Icon.tooltips[Icon.src.icon_expand] = 'View details.'
 Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
-Icon.tooltips[Icon.src.icon_collapse] = 'Hide list.'
+Icon.tooltips[Icon.src.icon_shrink] = 'Shrink list.'
+Icon.tooltips[Icon.src.icon_internals] = 'Under the hood'
+Icon.tooltips[Icon.src.icon_instances] = 'List'
 Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
 Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
 Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'
 Icon.tooltips[Icon.src.icon_failed] = 'Failed to load. Click to retry.'
 Icon.tooltips[Icon.src.icon_requested] = 'Being fetched. Please wait...'
-Icon.tooltips[Icon.src.icon_visit] = 'View the HTML content of this page within tabulator.'
+Icon.tooltips[Icon.src.icon_visit] = 'View document'
 Icon.tooltips[Icon.src.icon_retract] = 'Remove this source and all its data from tabulator.'
 Icon.tooltips[Icon.src.icon_refresh] = 'Refresh this source and reload its triples.'
+
+///////////////////////////////// End comon area
 
 Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
 {

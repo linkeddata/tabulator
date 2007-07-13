@@ -9,13 +9,21 @@ body {background-color: white ; font-size: 80%; font-family: sans-serif}
 
 .warning { color: red; }
 .selected {background-color: #8F3}
+
+.licOkay {background-color: #dfd}
+.licOkay2 {background-color: #fff}
+
 strong { font-size: 120%; color: #333 }
 div.Outliner { padding: 0.8em; }
 form#TabulateForm { padding: 0.8em }
 div#addViewForm { padding: 0.8em }
 iframe { background: white }
 
+/* Map */
+
 img.pic { max-height: 20em }
+
+/* Sources */
 
 .fetched { background-color: #eeffee }
 .requested { background-color: yellow }
@@ -24,7 +32,22 @@ img.pic { max-height: 20em }
 
 pre#status { font-size: 100% }
 
+/* Panes */
+
 td.internal  { color: #080 }
+div.internalPane { background-color: #ddd5f0; padding: 0.5em; -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
+
+div.instancePane { border-top: 1px #777; border-bottom: 1px #777; }
+
+.paneShown { border-top: #222 0.1em; border-left: #222 0.1em; border-bottom: #eee 0.1em; border-right: #eee 0.1em; 
+            padding: 3px; background-color: #ddd; }
+            
+.paneHidden { padding: 3px;  }
+
+/* outline object view */
+img.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
+
+img.phoneIcon { border: 0; margin-left: 1em}
 
 table#sources { width: 100% }
 
@@ -93,7 +116,12 @@ Supposed to leave layoutunchanged. So we float it too. */
 
 /* Try to get the icons to flush right in the cell */
 
-.sortheader {color: black; text-decoration: none }
+.sortheader {
+    color: black; 
+    text-decoration: none; 
+    position: relative;
+}
+
 .colclose { float: right; color: #aaa } /* Should be 67% transp black */
 .sortarrow {float: right; color: #aaa }
 
@@ -212,7 +240,7 @@ td.checkboxTD {
 }
 
 .sourceHighlight {
-	background-color:yellow;
+    background-color:yellow;
 }
 
 #MenuBar {
@@ -261,7 +289,6 @@ span.openQuerySpan {
     z-index:1;
 }
 
-/*UserInput style since here*/
 input.textinput{
     border: none;
     font-size:95%;
@@ -280,23 +307,23 @@ td.undetermined{
 
 /*revert back*/
 td.undetermined table{
-	color: black;
-	font-style: normal;
+    color: black;
+    font-style: normal;
 }
 
 /*color style from http://developer.yahoo.com/yui/docs/module_menu.html*/
 .outlineMenu{
-	position:absolute;
-	width:10em;
-	height:10em;
-	background: #FFFFFF none repeat scroll 0%;
-	overflow-x: hidden;
-	overflow-y: auto;
-	border: 1px solid;
-	/*padding:.2em;*/
+    position:absolute;
+    /*width:10em;*/
+    height:10em;
+    background: #FFFFFF none repeat scroll 0%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid;
+    /*padding:.2em;*/
 }
 .outlineMenu table{cursor:default;width:100%;text-align:left;padding:5px 5px;}
-.outlineMenu div{width:6em; overflow:auto; white-space:nowrap;}
+.outlineMenu div{/*width:6em;*/ overflow:auto; white-space:nowrap;}
 .outlineMenu td{color:#654d6c;}
 tr.activeItem{background: #D1C6DA;}
 
@@ -309,7 +336,7 @@ div.bottom-border-active{
     cursor: copy;
     border: .2em solid;
     border-color: rgb(100%,65%,0%);
-}	
+}   
 
 td{
     margin: 0;

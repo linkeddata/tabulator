@@ -164,8 +164,7 @@ WHERE
             if (e.keyCode==13) { //enter
                 onEdit(node);
             }
-            if (e.shiftKey || e.keyCode == 16) { 
-            // shift-tab, weird, but works
+            if (e.shiftKey && e.keyCode == 9) {
                 newRow = oldRow;
                 newCol = (oldCol>0)?(oldCol-1):oldCol;
                 if (oldCol == 0) {

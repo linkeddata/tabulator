@@ -582,21 +582,22 @@ function Outline(doc) {
                     if ((show<predDups)&&(show==1)){ //what case is this...
                         td_p.setAttribute('rowspan',2)  
                     }
+                    var l_shown=0
                     for(l=1;l<k;l++){
-                        if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
-                            s=plist[j+l];
-                            defaultpropview = views.defaults[s.predicate.uri];
-                            var trObj=myDocument.createElement('tr');
-                            trObj.style.colspan='1';
-                            trObj.appendChild(thisOutline.outline_objectTD(
-                                sel(plist[j+l]),defaultpropview, undefined, s.why));
-                            trObj.AJAR_statement=s;
-                            trObj.AJAR_inverse=inverse;
-                            parent.appendChild(trObj);
-                            if (l>=show){
-                                trObj.style.display='none';
-                                showLaterArray.push(trObj);
-                            }
+                        if (sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))) continue; //same triple, neglect
+                        l_shown++; //the number of l(s) that are shown
+                        s=plist[j+l];
+                        defaultpropview = views.defaults[s.predicate.uri];
+                        var trObj=myDocument.createElement('tr');
+                        trObj.style.colspan='1';
+                        trObj.appendChild(thisOutline.outline_objectTD(
+                            sel(plist[j+l]),defaultpropview, undefined, s.why));
+                        trObj.AJAR_statement=s;
+                        trObj.AJAR_inverse=inverse;
+                        parent.appendChild(trObj);
+                        if (l_shown>=show){
+                            trObj.style.display='none';
+                            showLaterArray.push(trObj);
                         }
                     }
                 } // if

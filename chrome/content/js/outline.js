@@ -13,9 +13,12 @@ function Outline(doc) {
     this.UserInput=new UserInput(this);
     this.clipboardAddress="tabulator:clipboard";
     this.UserInput.clipboardInit(this.clipboardAddress);
-    this.outlineElement=myDocument.getElementById('outline');
     var outlineElement=this.outlineElement;
 
+    this.init = function(){
+        var table=myDocument.getElementById('outline');
+        table.outline=this;
+    }    
     
     this.viewAndSaveQuery = function() {
         if(isExtension) {
@@ -186,16 +189,10 @@ function Outline(doc) {
         if (deleteNode) {
             appendRemoveIcon(td, obj, deleteNode)
         }
-        /*
-        var bottomDiv=document.createElement('div');
-        bottomDiv.className="bottom-border";
-        td.appendChild(bottomDiv);
-        */
-        //set event handlers
-        //addEvent(td,'mouseover',UserInput.tdMouseover,false);
-        //addEvent(divInTd,'mouseover',UserInput.Mouseover,false);
-        //divInTd.onmouseover=UserInput.Mouseover;
-        
+
+        //set DOM methods
+        td.tabulatorSelect = function (){setSelected(this,true);};
+        td.tabulatorDeselect = function(){setSelected(this,false);};            
         //td.appendChild( iconBox.construct(document.createTextNode('bla')) );
         return td;
     } //outline_objectTD
@@ -232,6 +229,10 @@ function Outline(doc) {
                                 inverse))
                 termWidget.addIcon(td_p,Icon.termWidgets[w])
         }
+        
+        //set DOM methods
+        td_p.tabulatorSelect = function (){setSelected(this,true);};
+        td_p.tabulatorDeselect = function(){setSelected(this,false);}; 
         return td_p;              
     } //outline_predicateTD
 
@@ -257,7 +258,10 @@ function Outline(doc) {
             ico.setAttribute('class', 'paneHidden')
             tr.firstChild.childNodes[1].appendChild(ico);
         }
-
+        
+        //set DOM methods
+        tr.firstChild.tabulatorSelect = function (){setSelected(this,true);};
+        tr.firstChild.tabulatorDeselect = function(){setSelected(this,false);};   
         return tr;
     } //expandedHeaderTR
 
@@ -1814,8 +1818,11 @@ function Outline(doc) {
     //doc.getElementById('outline').addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
     HCIoptions["right click to switch mode"][0].setupHere([],"end of class Outline")
 
+
+    //a way to expose variables to UserInput without making them propeties/methods
     this.UserInput.setSelected=setSelected;
     this.UserInput.deselectAll=deselectAll;
+    this.UserInput.views=views;
 
     return this;
 }//END OF OUTLINE

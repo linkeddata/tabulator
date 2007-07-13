@@ -156,6 +156,10 @@ RDFFormula.prototype.the = function(s,p,o,w) {
 	tabulator.log.error("No value found for the(){" + s + " " + p + " " + o + "}.")
     return x
 }
+
+RDFFormula.prototype.whether = function(s,p,o,w) {
+    return this.statementsMatching(s,p,o,w).length;
+}
  
 // Not a method. For use in sorts
 function RDFComparePredicateObject(self, other) {

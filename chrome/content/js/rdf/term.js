@@ -135,7 +135,13 @@ RDFCollection.prototype.toString = RDFCollection.prototype.toNT
 RDFCollection.prototype.append = function (el) {
     this.elements.push(el)
 }
-
+RDFCollection.prototype.unshift=function(el){
+    this.elements.unshift(el);
+}
+RDFCollection.prototype.shift=function(){
+    return this.elements.shift();
+}
+        
 RDFCollection.prototype.close = function () {
     this.closed = true
 }

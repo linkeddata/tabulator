@@ -298,24 +298,36 @@ addTriple: function addTriple(e){
   3. make a clipboard class?
 */
 clipboardInit: function clipboardInit(address){
-    RDFCollection.prototype.unshift=function(el){
-        this.elements.unshift(el);
-    }
-
-    RDFCollection.prototype.shift=function(){
-        return this.elements.shift();
-    }
-        
-    RDFIndexedFormula.prototype.whether = function (subject,predicate,object,why){
-        return this.statementsMatching(subject,predicate,object,why).length;
-    }
-
     kb.add(kb.sym(address),tabont('objects'),kb.collection())
     kb.add(kb.sym(address),tabont('predicates'),kb.collection())
     kb.add(kb.sym(address),tabont('all'),kb.collection())
+    //alert('clipboardInit');
+    //alert(kb instanceof RDFIndexedFormula); this returns false for some reason...
 },
 
 copyToClipboard: function copyToClipboard(address,selectedTd){
+    /*
+    var clip  = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard);
+    if (!clip) return false;
+    var clipid = Components.interfaces.nsIClipboard;
+
+    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
+    if (!trans) return false;
+    
+    var copytext = "Tabulator!!";
+
+    var str   = Components.classes["@mozilla.org/supports-string;1"].
+                       createInstance(Components.interfaces.nsISupportsString);
+    if (!str) return false;
+
+    str.data  = copytext;
+    
+    trans.addDataFlavor("text/x-moz-url");
+    trans.setTransferData("text/x-mox-url", str, copytext.length * 2);
+    
+    clip.setData(trans, null, clipid.kGlobalClipboard);
+    */
+    
     var term=getTerm(selectedTd);
     switch (selectedTd.className){
         case 'selected': //table header
@@ -336,7 +348,51 @@ copyToClipboard: function copyToClipboard(address,selectedTd){
     all.unshift(term);
 },
 
-pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
+insertTermTo: function insertTermTo(selectedTd,term,isObject){
+    switch (selectedTd.className){
+        case 'undetermined selected':
+            var defaultpropview = this.views.defaults[selectedTd.parentNode.AJAR_statement.predicate.uri];
+            this.fillInRequest(selectedTd.nextSibling ? 'predicate':'object',selectedTd,term);
+            break;
+        case 'pred selected': //paste objects into this predicate          
+            var insertTr=this.appendToPredicate(selectedTd);
+            var preStat=selectedTd.parentNode.AJAR_statement;
+            var defaultpropview = this.views.defaults[preStat.predicate.uri];
+            insertTr.appendChild(outline.outline_objectTD(term, defaultpropview));
+            //modify store and update here
+            var isInverse=selectedTd.parentNode.AJAR_inverse;
+            if (!isInverse)
+                insertTr.AJAR_statement=kb.add(preStat.subject,preStat.predicate,term,preStat.why);
+            else
+                insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
+            insertTr.AJAR_inverse=isInverse;
+            break;            
+        case 'selected': //header <TD>, undetermined generated
+            var newTr=ancestor(selectedTd,'TABLE').lastChild.appendChild(myDocument.createElement('tr'));
+            //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
+            if (HCIoptions["bottom insert highlights"].enabled)
+                var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
+            else
+                var preStat=newTr.previousSibling.AJAR_statement;
+            var isObject;
+            if (typeof isObect=='undefined') isObject=true;
+            if (isObject){//object inserted
+                this.formUndetStat(newTr,preStat.subject,this.generateRequest('(TBD)',newTr,true),term,preStat.why,false);
+                //defaultpropview temporaily not dealt with
+                newTr.appendChild(outline.outline_objectTD(term));
+            
+            }else{//predicate inserted
+                //existing predicate not expected
+                var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)",newTr);
+                this.formUndetStat(newTr,preStat.subject,term,reqTerm,preStat.why,false);
+
+                newTr.insertBefore(outline.outline_predicateTD(term,newTr,false,false),newTr.firstChild);
+            }
+            break;
+    } 
+},
+
+pasteFromClipboard: function pasteFromClipboard(address,selectedTd){  
     function termFrom(fromCode){
         function theCollection(from){return kb.the(kb.sym(address),tabont(from));}
         var term=theCollection(fromCode).shift();
@@ -363,52 +419,24 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
         }
         return term;
     }
+    var term;
     switch (selectedTd.className){
         case 'undetermined selected':
-            var term=selectedTd.nextSibling?termFrom('predicates'):termFrom('objects');
+            term=selectedTd.nextSibling?termFrom('predicates'):termFrom('objects');
             if (!term) return;
-            var defaultpropview = views.defaults[selectedTd.parentNode.AJAR_statement.predicate.uri];
-            this.fillInRequest(selectedTd.nextSibling ? 'predicate':'object',selectedTd,term);
             break;
         case 'pred selected': //paste objects into this predicate
-            var term=termFrom('objects');
+            term=termFrom('objects');
             if (!term) return;            
-            var insertTr=this.appendToPredicate(selectedTd);
-            var preStat=selectedTd.parentNode.AJAR_statement;
-            var defaultpropview = views.defaults[preStat.predicate.uri];
-            insertTr.appendChild(outline.outline_objectTD(term, defaultpropview));
-            //modify store and update here
-            var isInverse=selectedTd.parentNode.AJAR_inverse;
-            if (!isInverse)
-                insertTr.AJAR_statement=kb.add(preStat.subject,preStat.predicate,term,preStat.why);
-            else
-                insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
-            insertTr.AJAR_inverse=isInverse;
             break;            
         case 'selected': //header <TD>, undetermined generated
             var returnArray=termFrom('all');
             if (!returnArray) return;
-            var term=returnArray[0];
-            var newTr=ancestor(selectedTd,'TABLE').appendChild(myDocument.createElement('tr'));
-            //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
-            if (HCIoptions["bottom insert highlights"].enabled) 
-                var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
-            else
-                var preStat=newTr.previousSibling.AJAR_statement;
-            if (returnArray[1]){//object inserted
-                this.formUndetStat(newTr,preStat.subject,this.generateRequest('(TBD)',newTr,true),term,preStat.why,false);
-                //defaultpropview temporaily not dealt with
-                newTr.appendChild(outline.outline_objectTD(term));
-            
-            }else{//predicate inserted
-                //existing predicate not expected
-                var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)",newTr);
-                this.formUndetStat(newTr,preStat.subject,term,reqTerm,preStat.why,false);
-
-                newTr.insertBefore(outline.outline_predicateTD(term,newTr,false,false),newTr.firstChild);
-            }
-            break;
-    }                        
+            term=returnArray[0];
+            this.insertTermTo(selectedTd,term,returnArray[1]);
+            return;
+    }
+    this.insertTermTo(selectedTd,term);                        
 },
 
 Refill: function Refill(e,selectedTd){
@@ -617,7 +645,7 @@ borderClick: function borderClick(e){
     var This=outline.UserInput;
     var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
     var insertTr=myDocument.createElement('tr');
-    ancestor(target,'TABLE').insertBefore(insertTr,ancestor(target,'TR').nextSibling);
+    ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR').nextSibling);
     var tempTr=myDocument.createElement('tr');
     var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
     insertTr.appendChild(tempTr.firstChild);
@@ -974,15 +1002,15 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     if (type=='predicate'){
         tr.replaceChild(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
-        kb.remove(stat);
         kb.add(stat.subject,inputTerm,stat.object) //ToDo: why and inverse
+        kb.remove(stat);
     }else if (type=='object'){
         var newTd=outline.outline_objectTD(inputTerm);
         tr.replaceChild(newTd,selectedTd);
         
         //modify store and update here
-        kb.remove(stat);
         kb.add(stat.subject,stat.predicate,inputTerm);
+        kb.remove(stat);
         
         this.setSelected(newTd,true);        
     }
@@ -1035,3 +1063,5 @@ _tabulatorMode: 0
 };
 
 }
+
+

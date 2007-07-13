@@ -1,3 +1,5 @@
+// Places to generate SPARQL Update: tableEditOnBlur or some wrapper
+
 function tableView(container,doc) 
 {
     /*if(isExtension) {
@@ -6,7 +8,7 @@ function tableView(container,doc)
         //wrap sparql update code with if(isExtension).
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
     }*/
-    var numRows; // assigned in makeKeyHandler
+    var numRows; // assigned in makeKeyHandler, includes header
     var numCols; // assigned at bottom of onClickCell
     var activeSingleQuery = null;
     
@@ -35,9 +37,6 @@ function tableView(container,doc)
             t.appendChild(tr);
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
-                //alert("calling matrixTD");
-                //alert(matrixTD(bindings[v]).innerHTML);
-                //alert(bindings[v].termType);
                 tr.appendChild(matrixTD(bindings[v]));
             } //for each query var, make a row
         }
@@ -56,7 +55,7 @@ function tableView(container,doc)
         
         for (i=0; i<nv; i++) {
             v = q.vars[i];
-            //tabulator.log.debug("table header cell for " + v + ': '+v.label)
+            tabulator.log.debug("table header cell for " + v + ': '+v.label)
             th = thisTable.document.createElement('th');
             th.appendChild(thisTable.document.createTextNode(v.label));
             tr.appendChild(th);
@@ -83,9 +82,9 @@ function tableView(container,doc)
     //***************** End drawQuery *****************//
 
     //***************** Table Editing *****************//
-    var lastModified; // lastModified is the text
-    // for lastModified I have access to 
-    var lastModifiedStat // I don't have access to AJAR_statement
+    // I should make a tableClearInputAndSave in tableEditOnBlur
+    var lastModified; // lastModified is last text that was modified, not an object
+    var lastModifiedStat; 
     // lastModifiedStat = statementsMatching(s,p,o) 
     
 /*     SELECT ?v0 ?v1 
@@ -94,25 +93,32 @@ WHERE
     <http://dig.csail.mit.edu/2005/ajar/ajaw/data#Tabulator> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?v0 .
     ?v0 <http://www.w3.org/2000/01/rdf-schema#comment> ?v1 .
 } */
-    // s is the about from the previous node
+
+/*
+<http://usefulinc.com/ns/doap#Project> <http://www.w3.org/2000/01/rdf-schema#comment> 
+[A project., Un projet., Un proyeto.]
+*/
+    // s is the about from the previous node, kb.sym("http://somewhere")
     // p should be generated somewhere based on the SPARQL query
-    // o is the lastModified text, I think o has to be an object though
+    // o is the lastModified text, o does not have to be an object.
     
-    var selectedNode;
+    
+    // attach to each header the subject and predicate.  Then when you need statementsMatching, you can just get those values from the header elements.  
+    var selectedTD;
     var keyHandler;
     function onClickCell(e) 
     {
-        if (selectedNode != null) clearSelected(selectedNode);
+        if (selectedTD != null) clearSelected(selectedTD);
         var node = e.target;
         // check this
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
         setSelected(node);
         var t = document.getElementById('tabulated_data');
-        numRows = t.childNodes.length - 1; // numRows - 1 is the number of rows minus the header
+        numRows = t.childNodes.length 
     }
     
     function getRowIndex(node)
-    { // given a node, returns the row that the node is on
+    { 
         var trNode = node.parentNode
         var rowArray = trNode.parentNode.childNodes;
         var rowArrayLength = trNode.parentNode.childNodes.length;
@@ -125,39 +131,68 @@ WHERE
     function makeKeyHandler(node) {
         return function keyHandler(e) 
         {
-            var iRow = getRowIndex(node);
-            var iCol = node.cellIndex;
+            var oldRow = getRowIndex(node); //includes header
+            var oldCol = node.cellIndex;
             var t = document.getElementById('tabulated_data');
             clearSelected(node);
             if(e.keyCode==37) { //left
-                row = iRow;
-                col = (iCol>0)?(iCol-1):iCol;
-                var newNode = getTDNode(row, col);
+                newRow = oldRow;
+                newCol = (oldCol>0)?(oldCol-1):oldCol;
+                var newNode = getTDNode(newRow, newCol);
                 setSelected(newNode);
             }
             if (e.keyCode==38) { //up
-                row = (iRow>1)?(iRow-1):iRow;
-                col = iCol;
-                var newNode = getTDNode(row, col)
+                newRow = (oldRow>1)?(oldRow-1):oldRow;
+                newCol = oldCol;
+                var newNode = getTDNode(newRow, newCol)
                 setSelected(newNode);
                 newNode.scrollIntoView(false); // ...
             }
             if (e.keyCode==39) { //right
-                row = iRow;
-                col = (iCol<numCols-1)?(iCol+1):iCol;
-                var newNode = getTDNode(row, col);
+                newRow = oldRow;
+                newCol = (oldCol<numCols-1)?(oldCol+1):oldCol;
+                var newNode = getTDNode(newRow, newCol);
                 setSelected(newNode);
             }
             if (e.keyCode==40) { //down
-                row = (iRow<numRows)?(iRow+1):iRow;
-                col = iCol;
-                var newNode = getTDNode(row, col);
+                newRow = (oldRow<numRows-1)?(oldRow+1):oldRow;
+                newCol = oldCol;
+                var newNode = getTDNode(newRow, newCol);
                 setSelected(newNode);
                 newNode.scrollIntoView(false);
             }
-            if (e.keyCode==13) { //return
+            if (e.keyCode==13) { //enter
                 onEdit(node);
             }
+            if (e.shiftKey || e.keyCode == 16) { 
+            // shift-tab, weird, but works
+                newRow = oldRow;
+                newCol = (oldCol>0)?(oldCol-1):oldCol;
+                if (oldCol == 0) {
+                    newRow = oldRow-1;
+                    newCol = numCols-1;
+                }
+                if (oldRow == 1) {newRow = 1;}
+                
+                var newNode = getTDNode(newRow, newCol);
+                setSelected(newNode);
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+            }
+            if (e.keyCode == 9) { // tab
+                newRow = oldRow;
+                newCol = (oldCol<numCols-1)?(oldCol+1):oldCol;
+                if (oldCol == numCols-1) {
+                    newRow = oldRow+1;
+                    newCol = 0;
+                }
+                if (oldRow == numRows-1) {newRow = numRows-1;}
+                
+                var newNode = getTDNode(newRow, newCol);
+                setSelected(newNode);
+            }
+
             e.stopPropagation();
             e.preventDefault();
         }
@@ -174,7 +209,7 @@ WHERE
     {
         if (!node) return;
         if (node.tagName != "TD") return;
-        // FOCUS FIX: add an anchor node, focus on it, then remove the anchor
+        // focus fix: add an anchor node, focus on it, then remove the anchor
         var a = document.createElement('a');
         a.setAttribute('id', 'focustest');
         node.appendChild(a);
@@ -185,23 +220,23 @@ WHERE
         t.addEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = "#8F3";
         
-        selectedNode = node;
-        selectedNode.addEventListener('click', onCellClickSecond, false);
+        selectedTD = node;
+        selectedTD.addEventListener('click', onCellClickSecond, false);
     }
     
-    function onCellClickSecond(e) 
+    function onCellClickSecond(e)
     {
-        selectedNode.removeEventListener('click', onCellClickSecond, false); 
-        // DOES THIS WORK?
-        if (e.target == selectedNode) {
-            clearSelected(selectedNode);
-            onEdit(selectedNode);
+        selectedTD.removeEventListener('click', onCellClickSecond, false); 
+        // this is odd, but it works
+        if (e.target == selectedTD) {
+            clearSelected(selectedTD);
+            onEdit(selectedTD);
             e.stopPropagation();
             e.preventDefault();
         }
     }
     
-    function clearSelected(node) 
+    function clearSelected(node)
     {
         var a = document.getElementById('focustest');
         if (a != null) {a.parentNode.removeChild(a);};
@@ -212,13 +247,13 @@ WHERE
 
     function onEdit(node)
     {
-        if (literalNodeTD(node)) {setSelected(node); return; }
+        if (literalTD(node)) {setSelected(node); return; }
         var t = document.getElementById('tabulated_data');
 
         var oldTxt = node.innerHTML;
         var inputObj = document.createElement('INPUT');
         inputObj.type = "TEXT";
-        inputObj.style.width = "98%";
+        inputObj.style.width = "99%";
         inputObj.value = oldTxt;
         
         if (!oldTxt)
@@ -232,13 +267,13 @@ WHERE
             parent.replaceChild(newTD, node);
             newTD.appendChild(inputObj);
         }
-        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);  
+        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
         inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
     }
     
     function tableEditOnBlurWrap(node)
     {
-        return function tableEditOnBlur(e) 
+        return function tableEditOnBlur(e)
         {
             var srcElem = e.target;  // getTarget(e)
             node.innerHTML = srcElem.value
@@ -285,23 +320,23 @@ WHERE
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
         for (i=0; i<numCols; i++) {
-            if (literalNodeRC(numRows, i)) 
-                td = createNonLiteralNode();
+            if (literalRC(numRows-1, i)) 
+                td = createNonLiteralTD();
             else 
-                td = createLiteralNode();
+                td = createLiteralTD();
             tr.appendChild(td);
         }
         t.appendChild(tr);
     }
     
-    function createLiteralNode() 
+    function createLiteralTD() 
     {
         var td = thisTable.document.createElement("TD");
         td.innerHTML = " ";
         return td;
     }
     
-    function createNonLiteralNode() 
+    function createNonLiteralTD() 
     {
         var td = thisTable.document.createElement("TD");
         td.setAttribute('about', '');
@@ -312,17 +347,17 @@ WHERE
     }
     
     // checks to see if a TD element has the about attribute to determine if it is a literal node
-    function literalNodeTD (tdNode) 
+    function literalTD (tdNode) 
     {
         if (tdNode.getAttributeNode('about') != null) return true; 
     }
     
     // same as the above except it checks using row, col specifications
-    function literalNodeRC (row, col) 
+    function literalRC (row, col) 
     {
         var t = thisTable.document.getElementById('tabulated_data'); 
         var tdNode = t.childNodes[row].childNodes[col];
-        if (literalNodeTD (tdNode)) return true;
+        if (literalTD (tdNode)) return true;
     }
     //***************** End Add Row *****************//
 

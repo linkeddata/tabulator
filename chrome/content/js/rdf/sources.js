@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3388 2007-07-11 14:56:31Z timbl $
+ * SVN ID: $Id: sources.js 3460 2007-07-14 19:47:12Z timbl $
  *
  ************************************************************/
 
@@ -496,11 +496,6 @@ function SourceFetcher(store, timeout, async) {
 		this.requestURI(Util.uri.docpart(uris[i]), rterm, force)
 	    }
 	}
-/*	var args = []
-	args.push(term.uri)
-	tabulator.log.debug('Lookup: firing callbacks: '+args)
-	this.fireCallbacks('done', args) ; /// @@@@@ only if count==0
-*/
 	return uris.length
     }
     
@@ -525,16 +520,6 @@ function SourceFetcher(store, timeout, async) {
 	tabulator.log.debug("requestURI: dereferencing "+ uri)
 	//this.fireCallbacks('request',args)
 	
-
-/*
-	if (term.uri) { // we have a URI instead of a blank node
-	    var uri = kb.sym(Util.uri.docpart(term.uri))
-	} else {
-	    tabulator.log.info(uri + " isn't a resource to fetch. Skipping.")
-	    this.fireCallbacks('done',args)
-	    return
-	}
-*/
 	if (!force && typeof this.requested[docuri]!="undefined") {
 	    tabulator.log.debug("We already have "+docuri+". Skipping.")
 	    var newArgs=[];
@@ -600,9 +585,6 @@ function SourceFetcher(store, timeout, async) {
 		    
 		    kb.add(req,kb.sym('http','status'),kb.literal(xhr.status),
 			   sf.appNode)
-                    if (xhr.status-0 == 200) 
-                        kb.add(docterm, kb.sym('rdf','type'),kb.sym('tab','Document'),
-			   sf.appNode)
 		    kb.add(req,kb.sym('http','statusText'),
 			   kb.literal(xhr.statusText), sf.appNode)
 		    
@@ -622,9 +604,24 @@ function SourceFetcher(store, timeout, async) {
 			}
 		    }
 
+                    // deduce some things from the HTTP
+                    var addType = function(cla) {
+                        kb.add(docterm, kb.sym('rdf','type'), cla,
+			   sf.appNode)
+                    }
+                    if (xhr.status-0 == 200) {
+                        addType(kb.sym('tab','Document'));
+                        var ct = xhr.headers['content-type'];
+                        if (ct.indexOf('image/') == 0)
+                            addType(kb.sym('http://purl.org/dc/terms/Image'));
+                        if (ct.indexOf('text/') == 0)
+                            addType(kb.sym('tab','TextDocument'));
+
+                    }
+
 		    if (Util.uri.protocol(xhr.uri.uri) == 'file') {
 			tabulator.log.info("Assuming local file is some flavor of XML.")
-			xhr.headers['content-type'] = 'text/xml'
+			xhr.headers['content-type'] = 'text/xml' // @@ kludge
 		    }
 		    
 		    var loc = xhr.headers['content-location']
@@ -714,9 +711,10 @@ function SourceFetcher(store, timeout, async) {
 				    Util.enablePrivilege("UniversalXPConnect")
             }
 				    if (xhr.aborted) return
-				    var kb = sf.store
+				    var kb = sf.store;
+                                    var newURI = newC.URI.spec;
 				    sf.addStatus(xhr,"Redirected: "+ 
-					xhr.status + " to <" + newC.URI.spec + ">");
+					xhr.status + " to <" + newURI + ">");
 
 				    kb.add(xhr.req, kb.sym('http','status'), kb.literal(xhr.status),
 					   sf.appNode);
@@ -725,26 +723,38 @@ function SourceFetcher(store, timeout, async) {
 
 				    kb.add(xhr.req,
 					kb.sym('http','location'),
-					newC.URI.spec, sf.appNode);
+					newURI, sf.appNode);
 
 
 
-				    kb.HTTPRedirects[xhr.uri.uri] = newC.URI.spec;
+				    kb.HTTPRedirects[xhr.uri.uri] = newURI;
 				    if (xhr.status == 302) {
 					var msg ='Warning: '+xhr.uri +
-					    ' has moved to <'+newC.URI.spec + '>. Link in '+
-					    rterm + 'should be changed';
+					    ' has moved to <'+newURI + '>.';
+                                        if (rterm) {
+                                            msg += ' Link in '+
+                                                rterm + 'should be changed';
+                                            kb.add(rterm,
+                                                kb.sym('http://www.w3.org/2006/link#warning'),
+                                                 msg, sf.appNode);	
+                                        }
 					tabulator.log.warn(msg);
-					kb.add(xhr.req,
-					    kb.sym('http://www.w3.org/2006/link#warning'),
-					     msg, sf.appNode);	
 				    }
 				    xhr.abort()
 				    xhr.aborted = true
 
 				    sf.addStatus(xhr,'done') // why
 				    sf.fireCallbacks('done',args)
-				    xhr2 = sf.requestURI(newC.URI.spec, xhr.uri)
+                                    
+                                    var hash = newURI.indexOf('#');
+                                    if (hash >= 0) {
+                                        var msg = ('Warning: '+xhr.uri+' HTTP redirects to'
+                                            + newURI + ' which should not contain a "#" sign');
+                                        tabulator.log.warn(msg);
+                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2006/link#warning'), msg)
+                                        newURI = newURI.slice(0,hash);
+                                    }
+				    xhr2 = sf.requestURI(newURI, xhr.uri)
 				    if (xhr2 && xhr2.req) kb.add(xhr.req, 
 					kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
 					xhr2.req, sf.appNode);
@@ -862,23 +872,6 @@ function SourceFetcher(store, timeout, async) {
     }
 }
 
-/*
-remote.js: refreshButtons, sources_check_callbacks, sources_xml
-
-    function loadSPARQLEndpoints(subject) {
- 	if (!subject.uri) return;
- 	var sparqlEndpoints = kb.statementsMatching(undefined, kb.sym(
-							'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#sparqlEndpoint'), undefined, kb.sym(uri_docpart(subject.uri)))
-	for (var x=0;x<sparqlEndpoints.length;x++)
-	{
-	    ep = sparqlEndpoints[x];
-	    if (ep.subject.uri && ep.object.uri) {
-		tabulator.log.debug("Retrieving data for "+subject+" from SPARQL endpoint at "+ep.uri);
-		kb.spEndpointIndex[ep.subject.uri]=ep.object.uri;
-	    }
-	}	
-    }
-*/
 
 function isExternal (uri)
 {
@@ -932,68 +925,3 @@ function requestFetch(subject) {
     sources_request_new(subject);
 } //requestFetch
 
-/*
-function sources_add_html(uri) {
-    var i = sources.status[uri].number; //index
-    var x = document.getElementById('sources');
-    if (!x) tabulator.log.error("no sources table!");
-    if (x) {
-        var addendum = document.createElement("tr");
-        addendum.setAttribute('class', 'requested');
-        addendum.setAttribute('id', 'source'+i);
-        
-        var td = document.createElement('td');
-        addendum.appendChild(td);
-        var tn = document.createTextNode(uri);
-        td.appendChild(tn);
-        td.setAttribute('id','Source:'+uri);
-	alert("@@ seting id on source tr: "+ 'Source:'+uri) 
-        td = document.createElement('td');
-        addendum.appendChild(td);
-        tn = document.createTextNode('requested');
-        td.appendChild(tn);
-        var actions = document.createElement('td');
-        
-        var retr = AJARImage(icon_retract, 'retract');
-        var refr = AJARImage(icon_refresh, 'refresh');
-        addEvent(retr, 'mousedown', function() { sources_retract(uri); });
-        addEvent(refr, 'mousedown', function() { sources_refresh(uri); });
-        //retr.setAttribute('onmousedown', 'sources_retract("'+uri+'")');
-        //refr.setAttribute('onmousedown', 'sources_refresh("'+uri+'")');
-        actions.appendChild(retr);
-        actions.appendChild(refr);
-        addendum.appendChild(actions);
-        
-        x.appendChild(addendum);
-        }
-} //sources_add_html
-
-function sources_remove_html(index)
-{
-    var row = document.getElementById('source'+index);
-    if (!row) {
-        tabulator.log.warn("no such source: " + index);
-        return;
-    }
-    row.parentNode.removeChild(row);
-} //sources_remove_html
-
-*/
-
-/** update the sources table **/
-/*
-function sources_update_html(uri, status, external) {
-	if (external) var uri=externalSource(uri,external)
-    var mystate = sources.status[uri].state, myindex = sources.status[uri].number;
-    var x = document.getElementById('source'+myindex);
-    if (!x)
-        alert("What? no source"+myindex);
-    else
-        x.setAttribute('class', mystate);
-    var td = x.childNodes[1];
-    var tn = td.childNodes[0];
-    tabulator.log.info("td="+td+" tn="+tn+" response="+status);
-    td.replaceChild(document.createTextNode(status), tn);
-} //sources_update_html
-
-*/

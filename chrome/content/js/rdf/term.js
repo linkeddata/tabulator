@@ -78,16 +78,12 @@ RDFBlankNode.prototype.toString = RDFBlankNode.prototype.toNT
 
 //	Literal
 
-//LiteralSmush = []
-
 function RDFLiteral(value, lang, datatype) {
     this.value = value
     this.lang=lang;	  // string
     this.datatype=datatype;  // term
     this.toString = RDFLiteralToString
     this.toNT = RDFLiteral_toNT
-    //if (LiteralSmush[this.toNT()]) return LiteralSmush[this.toNT()];
-    //else LiteralSmush[this.toNT()]=this;
     return this
 }
 
@@ -103,7 +99,6 @@ function RDFLiteral_toNT() {
     str = '"' + str + '"'  //'
 
     if (this.datatype){
-    //alert(this.datatype.termType+"   "+typeof this.datatype)
 	str = str + '^^' + this.datatype//.toNT()
     }
     if (this.lang) {
@@ -185,14 +180,6 @@ function RDFFormula() {
     this.optional = []
     return this
 }
-
-/*function RDFQueryFormula() {
-	this.statements = []
-	this.constraints = []
-	this.initBindings = []
-	this.optional = []
-	return this
-}*/
 
 function RDFFormula_toNT() {
     return "{\n" + this.statements.join('\n') + "}"

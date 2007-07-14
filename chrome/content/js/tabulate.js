@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3453 2007-07-13 19:52:56Z timbl $
+// SVN ID: $Id: tabulate.js 3460 2007-07-14 19:47:12Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -102,6 +102,10 @@ Icon.src.icon_requested = iconPrefix + 'icons/16dot-yellow.gif';
 // Panes:
 
 Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
+Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
+Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
+
+// For that one we need a document with grid lines.  Make data-x-generix maybe
 
 // actions for sources;
 Icon.src.icon_retract = iconPrefix + 'icons/retract.gif';

@@ -266,6 +266,8 @@ function Outline(doc) {
         return tr;
     } //expandedHeaderTR
 
+/////////////////////////////////////////////////////////////////////////////
+
     /*  PANES
     **
     **     Panes are regions of the outline view in which a particular subject is
@@ -349,6 +351,7 @@ function Outline(doc) {
     
     panes.register(internalPane);
     
+    
     /*   Human-readable Pane
     **
     **  This outline pane contains the document contents for an HTML document
@@ -357,7 +360,7 @@ function Outline(doc) {
     humanReadablePane.icon = Icon.src.icon_visit;
     humanReadablePane.label = function(subject) {
         if (!kb.anyStatementMatching(
-            subject, kb.sym('rdf', 'type'), kb.sym('tab', 'Document')))
+            subject, kb.sym('rdf', 'type'), kb.sym('tab', 'TextDocument')))
             return null;
         return "view";
     }
@@ -379,6 +382,73 @@ function Outline(doc) {
     }
     panes.register(humanReadablePane);
 
+
+/*   Image Pane
+    **
+    **  This outline pane contains the document contents for an HTML document
+    */
+    imagePane = {};
+    imagePane.icon = Icon.src.icon_imageContents;
+    imagePane.label = function(subject) {
+        if (!kb.anyStatementMatching(
+            subject, kb.sym('rdf', 'type'),
+            kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
+            return null;
+        return "view";
+    }
+    imagePane.render = function(subject) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'imageView')
+        var img = myDocument.createElement("IMG")
+        img.setAttribute('src', subject.uri) // w640 h480
+        div.style['max-width'] = '640';
+        div.style['max-height'] = '480';
+        var tr = myDocument.createElement('TR')  // why need tr?
+        tr.appendChild(img)
+        div.appendChild(tr)
+        return div
+    }
+    panes.register(imagePane);
+
+
+    /*      Data content Pane
+    **
+    **  This pane shows the content of a particular RDF resource
+    ** or at least the RDF semantics we attribute to that resource.
+    */
+
+    // To do:  - Only take data from one graph
+    //         - Only do forwards not backward?
+    //         - Expand automatically all the way down
+    //         - original source view?  Use ffox view source
+
+    dataContentPane = {};
+    dataContentPane.icon = Icon.src.icon_dataContents;
+    dataContentPane.label = function(subject) {
+        var n = kb.statementsMatching(
+            undefined, undefined, undefined, subject).length;
+        if (n == 0) return null;
+        return "Data ("+n+")";
+    }
+
+    dataContentPane.render = function(subject) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'dataContentPane');
+
+        var sz = Serializer(subject);
+        var roots = sz.scan();
+        for (var i=0; i<roots.length(); i++) {
+            var tr = myDocument.createElement("TR");
+            tr.style.verticalAlign="top";
+            var td = this.outline.outline_objectTD(subject, undefined, tr)
+            tr.appendChild(td)
+            div.appendChild(tr);
+            outline_expand(td, subject);
+        }
+        return div
+    }
+    panes.register(dataContentPane);
+
     /*   Class member Pane
     **
     **  This outline pane contains lists the members of a class
@@ -391,10 +461,7 @@ function Outline(doc) {
         if (n == 0) return null;
         return "List "+n;
     }
-    classInstancePane.test = function(subject) {
-        return !!(kb.anyStatementMatching(
-            undefined, kb.sym('rdf', 'type'), subject));
-    }
+
     classInstancePane.render = function(subject) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
@@ -420,6 +487,7 @@ function Outline(doc) {
         return div
     }
     panes.register(classInstancePane);
+
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -521,10 +589,15 @@ function Outline(doc) {
         for (j=0; j<max; j++) { //squishing together equivalent properties I think
             var s = plist[j]
         //      if (s.object == parentSubject) continue; // that we knew
+        
+            // Avoid predicates from other panes
             var internal = (typeof internalPane.predicates[''+s.predicate.uri] != 'undefined')
             if ((!details && internal) || (details && !internal)) { // exclusive-or only in JS 2.0
                 continue;
             }
+            if (inverse && (s.predicate.uri == 
+                    "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) continue; 
+                    
             var k;
             var dups = 0; // How many rows have the same predicate, -1?
             var langTagged = 0;  // how many objects have language tags?
@@ -582,22 +655,21 @@ function Outline(doc) {
                     if ((show<predDups)&&(show==1)){ //what case is this...
                         td_p.setAttribute('rowspan',2)  
                     }
-                    var l_shown=0
                     for(l=1;l<k;l++){
-                        if (sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))) continue; //same triple, neglect
-                        l_shown++; //the number of l(s) that are shown
-                        s=plist[j+l];
-                        defaultpropview = views.defaults[s.predicate.uri];
-                        var trObj=myDocument.createElement('tr');
-                        trObj.style.colspan='1';
-                        trObj.appendChild(thisOutline.outline_objectTD(
-                            sel(plist[j+l]),defaultpropview, undefined, s.why));
-                        trObj.AJAR_statement=s;
-                        trObj.AJAR_inverse=inverse;
-                        parent.appendChild(trObj);
-                        if (l_shown>=show){
-                            trObj.style.display='none';
-                            showLaterArray.push(trObj);
+                        if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
+                            s=plist[j+l];
+                            defaultpropview = views.defaults[s.predicate.uri];
+                            var trObj=myDocument.createElement('tr');
+                            trObj.style.colspan='1';
+                            trObj.appendChild(thisOutline.outline_objectTD(
+                                sel(plist[j+l]),defaultpropview, undefined, s.why));
+                            trObj.AJAR_statement=s;
+                            trObj.AJAR_inverse=inverse;
+                            parent.appendChild(trObj);
+                            if (l>=show){
+                                trObj.style.display='none';
+                                showLaterArray.push(trObj);
+                            }
                         }
                     }
                 } // if
@@ -957,6 +1029,7 @@ function Outline(doc) {
         var target = getTarget(event);
         var tname = target.tagName;
         tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
+        if (tname == "IMG") return; // icons only click once, panes toggle on second click
         var aa = getAbout(kb, target);
         if (!aa) return;
             this.GotoSubject(aa,true);
@@ -1417,7 +1490,7 @@ function Outline(doc) {
                 newTable = propertyTable(subject, newTable, details)
             }
             already = true
-            if (p.parentNode.parentNode.style.backgroundColor=='white') {
+            if (ancestor(p, 'TABLE').style.backgroundColor=='white') {
                 newTable.style.backgroundColor='#eee'
             } else {
                 newTable.style.backgroundColor='white'
@@ -1592,7 +1665,7 @@ function Outline(doc) {
         if (!td) td=GotoSubject_default(); //the first tr is required       
         if (expand) {
             outline_expand(td, subject)
-            myDocument.title = "Tabulator: "+label(subject)
+            myDocument.title = label(subject)  // "Tabulator: "+  No need to advertize
             tr=td.parentNode;
             getEyeFocus(tr,false);//instantly: false
         }

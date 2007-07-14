@@ -1,7 +1,7 @@
 //  Identity management and indexing for RDF
 //
-// This file provides  RDFIndexedFormula a formula (set of triples) which indexed
-// by predicate, subject and object.
+// This file provides  RDFIndexedFormula a formula (set of triples) which
+// indexed by predicate, subject and object.
 //
 // It "smushes"  (merges into a single node) things which are identical 
 // according to owl:sameAs or an owl:InverseFunctionalProperty
@@ -18,8 +18,8 @@
 owl_ns = "http://www.w3.org/2002/07/owl#";
 link_ns = "http://www.w3.org/2006/link#";
 
-/* hashString functions are used as array indeces. This
-** is done to avoid conflict with existing properties of arrays such as length and map.
+/* hashString functions are used as array indeces. This is done to avoid
+** conflict with existing properties of arrays such as length and map.
 ** See issue 139.
 */
 RDFLiteral.prototype.hashString = RDFLiteral.prototype.toNT;
@@ -43,7 +43,7 @@ RDFArrayRemove = function(a, x) {  //removes all elements equal to x from a
 };
 
 //Stores an associative array that maps URIs to functions
-function RDFIndexedFormula() {
+function RDFIndexedFormula(features) {
     this.statements = [];    // As in RDFFormula
     this.propertyAction = []; // What to do when getting statement with {s X o}
     //maps <uri> to f(F,s,p,o)
@@ -55,6 +55,9 @@ function RDFIndexedFormula() {
     this.predicateIndex = [];  // Array of statements with this X as subject
     this.objectIndex = [];  // Array of statements with this X as object
     this.namespaces = {} // Dictionary of namespace prefixes
+    if (typeof features == 'undefined') features = ["sameAs",
+                    "InverseFunctionalProperty", "FunctionalProperty"];
+//    this.features = features
 
     // Callbackify?
     
@@ -72,40 +75,37 @@ function RDFIndexedFormula() {
 	'<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>'] = handleRDFType;
 
     // Assumption: these terms are not redirected @@fixme
-    this.propertyAction['<http://www.w3.org/2002/07/owl#sameAs>'] =
+    if ("sameAs" in features)
+        this.propertyAction['<http://www.w3.org/2002/07/owl#sameAs>'] =
 	function(formula, subj, pred, obj, why) {
             formula.equate(subj,obj);
             return true; // true if statement given is NOT needed in the store
 	}; //sameAs -> equate & don't add to index
-    
-    this.propertyAction['<http://www.w3.org/2006/link#obsoletes>'] =
-	function(formula, subj, pred, obj, why) {
-            formula.replaceWith(obj, subj);
-            return false; // statement given IS needed
-	}; //sameAs -> equate & don't add to index
-    
+
     function newPropertyAction(formula, pred, action) {
 	tabulator.log.debug("newPropertyAction:  "+pred);
         formula.propertyAction[pred] = action;
-	var fixEndA = formula.statementsMatching(undefined, pred, undefined);
+	var toBeFixed = formula.statementsMatching(undefined, pred, undefined);
 	var i;
-	for (i=0; i<fixEndA.length; i++) { // NOT optimized - sort fixEndA etc
-	    if (action(formula, fixEndA[i].subject, pred, fixEndA[i].object)) {
-		tabulator.log.debug("newPropertyAction: NOT removing "+fixEndA[i]);
+	for (i=0; i<toBeFixed.length; i++) { // NOT optimized - sort toBeFixed etc
+	    if (action(formula, toBeFixed[i].subject, pred, toBeFixed[i].object)) {
+		tabulator.log.debug("newPropertyAction: NOT removing "+toBeFixed[i]);
 	    }
 	}
 	return false;
     }
 
-    this.classAction["<"+owl_ns+"InverseFunctionalProperty>"] =
-	function(formula, subj, pred, obj, addFn) {
-	    return newPropertyAction(formula, subj, handle_IFP); // yes subj not pred!
-	}; //IFP -> handle_IFP, do add to index
+    if ("InverseFunctionalProperty" in features)
+        this.classAction["<"+owl_ns+"InverseFunctionalProperty>"] =
+            function(formula, subj, pred, obj, addFn) {
+                return newPropertyAction(formula, subj, handle_IFP); // yes subj not pred!
+            }; //IFP -> handle_IFP, do add to index
 
-    this.classAction["<"+owl_ns+"FunctionalProperty>"] =
-	function(formula, subj, proj, obj, addFn) {
-	    return newPropertyAction(formula, subj, handle_FP);
-	}; //FP => handleFP, do add to index
+    if ("FunctionalProperty" in features)
+        this.classAction["<"+owl_ns+"FunctionalProperty>"] =
+            function(formula, subj, proj, obj, addFn) {
+                return newPropertyAction(formula, subj, handle_FP);
+            }; //FP => handleFP, do add to index
 
     function handle_IFP(formula, subj, pred, obj)  {
         var s1 = formula.any(undefined, pred, obj);
@@ -123,6 +123,7 @@ function RDFIndexedFormula() {
     
 } /* end RDFIndexedFormula */
 
+RDFPlainFormula = function() { return RDFIndexedFormula([]); } // No features
 
 RDFIndexedFormula.prototype.register = function(prefix, nsuri) {
     this.namespaces[prefix] = nsuri
@@ -150,43 +151,39 @@ RDFIndexedFormula.prototype.equate = function(u1, u2) {
 //
 RDFIndexedFormula.prototype.replaceWith = function(big, small) {
 
-    var i, matches, fixEndA, hash;
-    fixEndA = this.statementsMatching(big, undefined, undefined);
-    matches = fixEndA.length;
+    var i, toBeFixed, hash;
+    toBeFixed = this.statementsMatching(big, undefined, undefined);
     tabulator.log.debug("Replacing "+big+" with "+small) // @@
 
-    for (i=0; i<matches; i++) {
-        fixEndA[i].subject = small;
+    for (i=0; i < toBeFixed.length; i++) {
+        toBeFixed[i].subject = small;
 	hash = small.hashString();
         if (typeof this.subjectIndex[hash] == 'undefined')
                 this.subjectIndex[hash] = [];
-        this.subjectIndex[hash].push(fixEndA[i]);
+        this.subjectIndex[hash].push(toBeFixed[i]);
     }
     delete this.subjectIndex[big.hashString()];
 
     // If we allow equating predicates we must index them.
-    fixEndA = this.statementsMatching(undefined, big, undefined);
-    matches = fixEndA.length;
+    toBeFixed = this.statementsMatching(undefined, big, undefined);
     
-    for (i=0; i<matches; i++) {
-	fixEndA[i].predicate = small;
+    for (i = 0; i < toBeFixed.length; i++) {
+	toBeFixed[i].predicate = small;
 	hash = small.hashString();
 	if (typeof this.predicateIndex[hash] == 'undefined')
 	    this.predicateIndex[hash] = [];
-	this.predicateIndex[hash].push(fixEndA[i]);
+	this.predicateIndex[hash].push(toBeFixed[i]);
     }
     delete this.predicateIndex[big.hashString()];
     
-    fixEndA = this.statementsMatching(undefined, undefined, big);
-    matches = fixEndA.length;
-
-    for (i=0; i<matches; i++) {
+    toBeFixed = this.statementsMatching(undefined, undefined, big);
+    for (i=0; i < toBeFixed.length; i++) {
         //  RDFArrayRemove(this.objectIndex[big], st)
-        fixEndA[i].object = small;
+        toBeFixed[i].object = small;
 	hash = small.hashString()
         if (typeof this.objectIndex[hash] == 'undefined')
                 this.objectIndex[hash] = [];
-        this.objectIndex[hash].push(fixEndA[i]);
+        this.objectIndex[hash].push(toBeFixed[i]);
     }
     delete this.objectIndex[big.hashString()];
     
@@ -197,7 +194,6 @@ RDFIndexedFormula.prototype.replaceWith = function(big, small) {
 	this.aliases[small.hashString()].push(big); // Back link
 
 	this.add(small, this.sym('http://www.w3.org/2006/link#uri'), big.uri)
-    //    this.add(small, this.sym('http://www.w3.org/2002/07/owl#sameAs'), big) // problem: gets smushed away!
 
 	// If two things are equal, and one is requested, we should request the other.
 	if (this.sf) {
@@ -415,24 +411,27 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
 
 /** remove a particular statement from the bank **/
 RDFIndexedFormula.prototype.remove = function (st) {
-  tabulator.log.debug("entering remove w/ st=" + st);
-  var subj = st.subject, pred = st.predicate, obj = st.object;
-  if (typeof this.subjectIndex[subj.hashString()] == 'undefined') tabulator.log.warn ("statement not in sbj index: "+st);
-  if (typeof this.predicateIndex[pred.hashString()] == 'undefined') tabulator.log.warn ("statement not in pred index: "+st);
-  if (typeof this.objectIndex[obj.hashString()] == 'undefined') tabulator.log.warn ("statement not in obj index: " +st);
+    tabulator.log.debug("entering remove w/ st=" + st);
+    var subj = st.subject, pred = st.predicate, obj = st.object;
+    if (typeof this.subjectIndex[subj.hashString()] == 'undefined')
+        tabulator.log.warn ("statement not in sbj index: "+st);
+    if (typeof this.predicateIndex[pred.hashString()] == 'undefined')
+        tabulator.log.warn ("statement not in pred index: "+st);
+    if (typeof this.objectIndex[obj.hashString()] == 'undefined')
+        tabulator.log.warn ("statement not in obj index: " +st);
 
-  RDFArrayRemove(this.subjectIndex[subj.hashString()], st);
-  RDFArrayRemove(this.predicateIndex[pred.hashString()], st);
-  RDFArrayRemove(this.objectIndex[obj.hashString()], st);
-  RDFArrayRemove(this.statements, st);
+    RDFArrayRemove(this.subjectIndex[subj.hashString()], st);
+    RDFArrayRemove(this.predicateIndex[pred.hashString()], st);
+    RDFArrayRemove(this.objectIndex[obj.hashString()], st);
+    RDFArrayRemove(this.statements, st);
 }; //remove
 
 /** remove all statements matching args (within limit) **/
 RDFIndexedFormula.prototype.removeMany = function (subj, pred, obj, why, limit) {
-  tabulator.log.debug("entering removeMany w/ subj,pred,obj,why,limit = " + subj +", "+ pred+", " + obj+", " + why+", " + limit);
-  var statements = this.statementsMatching (subj, pred, obj, why, false);
-  if (limit) statements = statements.slice(0, limit);
-  for (var st in statements) this.remove(statements[st]);
+    tabulator.log.debug("entering removeMany w/ subj,pred,obj,why,limit = " + subj +", "+ pred+", " + obj+", " + why+", " + limit);
+    var statements = this.statementsMatching (subj, pred, obj, why, false);
+    if (limit) statements = statements.slice(0, limit);
+    for (var st in statements) this.remove(statements[st]);
 }; //removeMany
 
 /** Load a resorce into the store **/

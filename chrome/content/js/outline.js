@@ -1497,7 +1497,7 @@ function Outline(doc) {
             } else {
                 newTable.style.backgroundColor='white'
             }
-            if (YAHOO.util.Event) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');
+            if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');
             emptyNode(p).appendChild(newTable)
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
             tabulator.log.debug("expand: Node for " + subject + " expanded")

@@ -191,6 +191,7 @@ function Outline(doc) {
             appendRemoveIcon(td, obj, deleteNode)
         }
 
+        try{var DDtd = new YAHOO.util.DDExternalProxy(td);}catch(e){dump("drag and drop not supported");}
         //set DOM methods
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
@@ -230,7 +231,8 @@ function Outline(doc) {
                                 inverse))
                 termWidget.addIcon(td_p,Icon.termWidgets[w])
         }
-        
+
+        try{var DDtd = new YAHOO.util.DDExternalProxy(td_p);}catch(e){dump("drag and drop not supported");}        
         //set DOM methods
         td_p.tabulatorSelect = function (){setSelected(this,true);};
         td_p.tabulatorDeselect = function(){setSelected(this,false);}; 
@@ -1495,6 +1497,7 @@ function Outline(doc) {
             } else {
                 newTable.style.backgroundColor='white'
             }
+            if (YAHOO.util.Event) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');
             emptyNode(p).appendChild(newTable)
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
             tabulator.log.debug("expand: Node for " + subject + " expanded")
@@ -1900,7 +1903,7 @@ function Outline(doc) {
     }
 
     doc.getElementById('docHTML').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
-    doc.getElementById('outline').addEventListener('click',thisOutline.OutlinerMouseclickPanel,false);
+    doc.getElementById('outline').addEventListener('mousedown',thisOutline.OutlinerMouseclickPanel,false);
     //doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
     //Kenny: I cannot make this work. The target of keypress is always <html>.
     //       I tried doc.getElementById('outline').focus();

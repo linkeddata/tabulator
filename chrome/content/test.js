@@ -179,7 +179,7 @@ var tabExtension = {
           }
         }
       },true);
-      gBrowser.setAttribute('ondraggesture', 'nsDragAndDrop.startDrag(event, TabulatorOutlinerObserver)');
+      //gBrowser.setAttribute('ondraggesture', 'nsDragAndDrop.startDrag(event, TabulatorOutlinerObserver)');
       gBrowser.setAttribute('ondragdrop' ,'nsDragAndDrop.drop(event,TabulatorOutlinerObserver)');
       gBrowser.setAttribute('ondragenter','nsDragAndDrop.dragEnter(event,TabulatorOutlinerObserver)');
       gBrowser.setAttribute('ondragexit' ,'nsDragAndDrop.dragExit(event,TabulatorOutlinerObserver)');

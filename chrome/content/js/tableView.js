@@ -1,4 +1,4 @@
-// Places to generate SPARQL Update: tableEditOnBlur or some wrapper
+// Places to generate SPARQL Update: onEdit
 
 function tableView(container,doc) 
 {
@@ -32,7 +32,8 @@ function tableView(container,doc)
         this.onBinding = function (bindings) 
         {
             var i, tr, td;
-            tabulator.log.info("making a row w/ bindings " + bindings);
+            tabulator.log.info('making a row w/ bindings ' + bindings);
+            tabulator.log.debug('making a row w/bindings ' + bindings);
             tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
             for (i=0; i<nv; i++) {
@@ -69,6 +70,7 @@ function tableView(container,doc)
         drawAddRow();
         sortables_init();
         
+        // Table Edit Code
         t.addEventListener('click', onClickCell, false);
         numCols = nv;
         
@@ -82,8 +84,8 @@ function tableView(container,doc)
     //***************** End drawQuery *****************//
 
     //***************** Table Editing *****************//
-    // I should make a tableClearInputAndSave in tableEditOnBlur
-    var lastModified; // lastModified is last text that was modified, not an object
+
+    var newText; // last text that was modified, not an object
     var lastModifiedStat; 
     // lastModifiedStat = statementsMatching(s,p,o) 
     
@@ -95,7 +97,8 @@ WHERE
 } */
 
 /*
-<http://usefulinc.com/ns/doap#Project> <http://www.w3.org/2000/01/rdf-schema#comment> 
+<http://usefulinc.com/ns/doap#Project> 
+<http://www.w3.org/2000/01/rdf-schema#comment> 
 [A project., Un projet., Un proyeto.]
 */
     // s is the about from the previous node, kb.sym("http://somewhere")
@@ -103,14 +106,14 @@ WHERE
     // o is the lastModified text, o does not have to be an object.
     
     
-    // attach to each header the subject and predicate.  Then when you need statementsMatching, you can just get those values from the header elements.  
-    var selectedTD;
+    // attach to each TD the subject and predicate.  Then when you need statementsMatching, you can just get the values you need
+    var selectedTD; // null to selectedTD whenever clearSelected is called?
     var keyHandler;
+    
     function onClickCell(e) 
     {
         if (selectedTD != null) clearSelected(selectedTD);
         var node = e.target;
-        // check this
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
         setSelected(node);
         var t = document.getElementById('tabulated_data');
@@ -164,14 +167,15 @@ WHERE
             if (e.keyCode==13) { //enter
                 onEdit(node);
             }
-            if (e.shiftKey && e.keyCode == 9) {
+            if (e.shiftKey && e.keyCode == 9) {  //shift+tab
                 newRow = oldRow;
                 newCol = (oldCol>0)?(oldCol-1):oldCol;
                 if (oldCol == 0) {
                     newRow = oldRow-1;
                     newCol = numCols-1;
                 }
-                if (oldRow == 1) {newRow = 1;}
+                if (oldRow==1) {newRow=1;}
+                if (oldRow==1 && oldCol==0) {newRow=1; newCol = 0;}
                 
                 var newNode = getTDNode(newRow, newCol);
                 setSelected(newNode);
@@ -187,11 +191,12 @@ WHERE
                     newCol = 0;
                 }
                 if (oldRow == numRows-1) {newRow = numRows-1;}
+                if (oldRow == numRows-1 && oldCol == numCols-1) 
+                {newRow = numRows-1; newCol = numCols-1}
                 
                 var newNode = getTDNode(newRow, newCol);
                 setSelected(newNode);
             }
-
             e.stopPropagation();
             e.preventDefault();
         }
@@ -242,6 +247,8 @@ WHERE
         var t = document.getElementById('tabulated_data');
         t.removeEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = 'white';
+        // include this?
+        // selectedTD.addEventListener('click', onCellClickSecond, false);
     }
 
     function onEdit(node)
@@ -260,7 +267,7 @@ WHERE
         if (node.firstChild) { // node of the form <td> text </td>
             node.replaceChild(inputObj, node.firstChild);
             inputObj.select();
-        } else { // we have a node of the form <td />
+        } else { // node of the form <td />
             var parent = node.parentNode;
             var newTD = thisTable.document.createElement('TD');
             parent.replaceChild(newTD, node);
@@ -295,6 +302,20 @@ WHERE
                 tableEditOnBlurWrap(node)(e);
             }
         }
+    }
+    
+    // checks to see if a TD element has the about attribute to determine if it is a literal node
+    function literalTD (tdNode) 
+    {
+        if (tdNode.getAttributeNode('about') != null) return true; 
+    }
+    
+    // same as the above except it checks using row, col specifications
+    function literalRC (row, col) 
+    {
+        var t = thisTable.document.getElementById('tabulated_data'); 
+        var tdNode = t.childNodes[row].childNodes[col];
+        if (literalTD (tdNode)) return true;
     }
     //***************** End Table Editing *****************//
         
@@ -343,20 +364,6 @@ WHERE
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
         // SET ATTRIBUTES HERE;
         return td;
-    }
-    
-    // checks to see if a TD element has the about attribute to determine if it is a literal node
-    function literalTD (tdNode) 
-    {
-        if (tdNode.getAttributeNode('about') != null) return true; 
-    }
-    
-    // same as the above except it checks using row, col specifications
-    function literalRC (row, col) 
-    {
-        var t = thisTable.document.getElementById('tabulated_data'); 
-        var tdNode = t.childNodes[row].childNodes[col];
-        if (literalTD (tdNode)) return true;
     }
     //***************** End Add Row *****************//
 

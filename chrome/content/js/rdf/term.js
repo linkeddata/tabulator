@@ -178,6 +178,7 @@ function RDFFormula() {
     this.constraints = []
     this.initBindings = []
     this.optional = []
+    this.superFormula = null;
     return this
 }
 
@@ -230,7 +231,16 @@ RDFFormula.prototype.list = function (values) {
     return li;
 }
 
-
+RDFFormula.instances={};
+RDFFormula.prototype.registerFormula = function(accesskey){
+    var superFormula = this.superFormula || this;
+    RDFFormula.instances[accesskey] = this;
+    var formulaTerm = superFormula.bnode();
+    superFormula.add(formulaTerm,rdf('type'),superFormula.sym("http://www.w3.org/2000/10/swap/log#Formula"));
+    superFormula.add(formulaTerm,foaf('name'),superFormula.literal(accesskey));
+    superFormula.add(formulaTerm,tabont('accesskey'),superFormula.literal(accesskey));
+    //RDFFormula.instances.push("accesskey");
+}
 /*  Variable
 **
 ** Variables are placeholders used in patterns to be matched.

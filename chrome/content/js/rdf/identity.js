@@ -30,6 +30,7 @@ RDFCollection.prototype.hashString = RDFCollection.prototype.toNT;
 RDFIndexedFormula.prototype = new RDFFormula();
 RDFIndexedFormula.prototype.constructor = RDFIndexedFormula;
 // RDFIndexedFormula.superclass = RDFFormula.prototype;
+RDFIndexedFormula.SuperClass = RDFFormula;
 
 RDFArrayRemove = function(a, x) {  //removes all elements equal to x from a
     var i;
@@ -471,6 +472,36 @@ RDFIndexedFormula.prototype.load = function(url) {
 }
 
 
+/** Utility**/
+
+/*  @method: copyTo
+    @discription: replace @template with @target and add appropriate triples (no triple removed)
+                  one-direction replication 
+*/ 
+RDFIndexedFormula.prototype.copyTo = function(template,target){
+    var statList=this.statementsMatching(template);
+    for (var i=0;i<statList.length;i++){
+        var st=statList[i];
+        switch (st.object.termType){
+            case 'symbol':
+                this.add(target,st.predicate,st.object);
+                break;
+            case 'literal':
+            case 'bnode':
+            case 'collection':
+                this.add(target,st.predicate,st.object.copy(this));
+        }
+    }
+};
+//for the case when you alter this.value (text modified in userinput.js)
+RDFLiteral.prototype.copy = function(){ 
+    return new RDFLiteral(this.value,this.lang,this.datatype);
+};
+RDFBlankNode.prototype.copy = function(formula){ //depends on the formula
+    var bnodeNew=new RDFBlankNode();
+    formula.copyTo(this,bnodeNew);
+    return bnodeNew;
+}
 /**  Full N3 bits  -- placeholders only to allow parsing, no functionality! **/
 
 RDFIndexedFormula.prototype.newUniversal = function(uri) {

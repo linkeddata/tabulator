@@ -484,6 +484,7 @@ function Outline(doc) {
             var td = thisOutline.outline_objectTD(
                             sts[i].subject, undefined, undefined, sts[i].why)
             tr.appendChild(td);
+            tr.AJAR_statement=sts[i];
             div.appendChild(tr);
         }
         return div
@@ -768,7 +769,10 @@ function Outline(doc) {
         for (var x = 0; x<iconTD.childNodes.length; x++){
             var elt = iconTD.childNodes[x];
             var eltSrc = elt.src;
-            var baseURI = myDocument.location.href.split('?')[0]; // ignore first '?' and everything after it
+            
+            // ignore first '?' and everything after it //Kenny doesn't know what this is for
+            try{var baseURI = myDocument.location.href.split('?')[0];}
+            catch(e){ dump(e);var baseURI="";}
             var relativeIconSrc = Util.uri.join(icon.src,baseURI);
             if (eltSrc == relativeIconSrc) {
                 iconTD.removeChild(elt);

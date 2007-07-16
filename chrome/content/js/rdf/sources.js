@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3460 2007-07-14 19:47:12Z timbl $
+ * SVN ID: $Id: sources.js 3464 2007-07-16 10:51:49Z kennyluck $
  *
  ************************************************************/
 
@@ -398,7 +398,7 @@ function SourceFetcher(store, timeout, async) {
 		   this.appNode);
 
 
-    ['http','https','file'].map(this.addProtocol); // ftp?
+    ['http','https','file','chrome'].map(this.addProtocol); // ftp?
 
     [SourceFetcher.RDFXMLHandler,
      SourceFetcher.XHTMLHandler,
@@ -619,9 +619,21 @@ function SourceFetcher(store, timeout, async) {
 
                     }
 
-		    if (Util.uri.protocol(xhr.uri.uri) == 'file') {
-			tabulator.log.info("Assuming local file is some flavor of XML.")
-			xhr.headers['content-type'] = 'text/xml' // @@ kludge
+		    if (Util.uri.protocol(xhr.uri.uri) == 'file' || Util.uri.protocol(xhr.uri.uri) == 'chrome') {
+			//tabulator.log.info("Assuming local file is some flavor of XML.")
+			//xhr.headers['content-type'] = 'text/xml' // @@ kludge 
+			//Kenny asks: why text/xml
+			
+			switch (xhr.uri.uri.split('.').pop()){
+			    case 'rdf':
+			        xhr.headers['content-type'] = 'application/rdf+xml';
+			        break;
+			    case 'n3':
+			        xhr.headers['content-type'] = 'text/rdf+n3';
+			        break;
+			    default:
+                    xhr.headers['content-type'] = 'text/xml';			        
+			}
 		    }
 		    
 		    var loc = xhr.headers['content-location']

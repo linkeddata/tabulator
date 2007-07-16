@@ -1,0 +1,50 @@
+#This is some knowledge that is used in the Tabulator.
+#As opposed to the Tabulator ontology, this should be totally configurable.
+
+@prefix tabont: <http://dig.csail.mit.edu/2005/ajar/ajaw/ont#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix dc: <http://purl.org/dc/elements/1.1/>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.    
+@keywords a.
+
+#### Template for new documents
+
+#{?file a tabont:NewRDFDocument} => {?file...}
+
+tabont:NewRDFDocument rdfs:subClassOf tabont:Document.
+
+#confusion between document and it's content formula, anyway, a shortcut
+defaultNew a tabont:NewRDFDocument, log:Formula;
+           dc:format [a tabont:Request; tabont:message "(Please select a document format.)"];
+           owl:unionOf [a tabont:Request; 
+                        tabont:message "(Please drag data you want to output into this field.)";
+                        tabont:onfillin """
+// function WriteToFileRepresentedBy (subject){
+      var filePath=subject.uri.split('file://')[1];
+
+      var file = Components.classes["@mozilla.org/file/local;1"]
+                           .createInstance(Components.interfaces.nsILocalFile);
+      file.initWithPath(filePath);      
+      var foStream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                         .createInstance(Components.interfaces.nsIFileOutputStream);
+      foStream.init(file, 0x02 | 0x10 ,0666,0); // write, append
+      var outputFormulaTerm=kb.any(subject,OWL('unionOf'));
+      var accesskey=kb.the(outputFormulaTerm,tabont('accesskey')).value
+      var theClass=(accesskey=="knowledge base")?kb.constructor.SuperClass:RDFFormula;
+      var outputFormula=theClass.instances[accesskey];
+      var data=outputFormula.toString().slice(2,-1);
+      foStream.write(data, data.length);
+      foStream.close();
+// }
+                        """^^tabont:JavaScript].
+                        
+#interesting logic we should discuss...
+log:Formula dc:alternative "RDFCollection";
+            tabont:collectionOf rdf:Statement.
+log:Formula rdfs:subClassOf tabont:Collection.
+tabont:Collection dc:alternative "Set";
+                  rdfs:seeAlso <urn:>.
+tabont:Collection subClassOf owl:Class.
+

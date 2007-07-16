@@ -250,7 +250,17 @@ onDrop: function(e,aXferData,dragSession){
     var url = transferUtils.retrieveURLFromData(aXferData.data, contentType);
     if (!url) return;
     if (contentType=='application/x-moz-file') {
-        if (aXferData.data.fileSize==0);
+        if (aXferData.data.fileSize==0){
+            var templateDoc=kb.sym("chrome://tabulator/content/internalKnowledge.n3#defaultNew");
+            kb.copyTo(templateDoc,kb.sym(url));
+            /*
+            function WriteToFileRepresentedBy (subject){
+                var outputFormulaTerm=kb.any(subject,OWL('unionOf'));
+                var theClass =  kb.constructor.SuperClass;
+                var outputFormula= theClass.instances[kb.the(outputFormulaTerm,tabont('accesskey')).value];
+            }
+            */
+        }
     }
     var targetTd=selection[0];
     var table=ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE');
@@ -277,14 +287,15 @@ onDragExit: function(e,dragSession){
 },
 onDropInside: function(){ //a special case that you draganddrop totally inside a <tabbrowser>
     var targetTd=selection[0];
-    var table=ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE');
+    var table=targetTd.ownerDocument.getElementById('outline');
+    //var table=ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE');
     var thisOutline=table.outline;
     thisOutline.UserInput.insertTermTo(targetTd,getAbout(kb,this.dragTarget));    
 },
 onDragStart: function(x,y,td){
     /* seeAlso nsDragAndDrop.js::nsDragAndDrop.startDrag */
     //ToDo for myself: understand the connections in firefox, x, screenX
-
+    
     this.dragTarget=td;
     const kDSIID = Components.interfaces.nsIDragService;
     var dragAction = { action: kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_MOVE + kDSIID.DRAGDROP_ACTION_LINK };    
@@ -297,7 +308,19 @@ onDragStart: function(x,y,td){
     region.init(); //this is important
     region.unionRect(tdBox.screenX,tdBox.screenY,tdBox.width,tdBox.height);
     var transferDataSet = {data:null};
-    transferDataSet.data = this.URItoTransferDataSet(getAbout(kb,td).uri);
+    var term=getTerm(td);
+    switch (term.termType){
+        case 'symbol':       
+            transferDataSet.data = this.URItoTransferDataSet(term.uri);
+            break;
+        case 'bnode':
+            transferDataSet.data = this.URItoTransferDataSet(term.toNT());
+            break;
+        case 'literal':
+            transferDataSet.data = this.URItoTransferDataSet(term.value);
+            break; 
+    }
+            
     transferDataSet = transferDataSet.data; //quite confusing, anyway...
     var transArray = Components.classes["@mozilla.org/supports-array;1"]
                                .createInstance(Components.interfaces.nsISupportsArray);

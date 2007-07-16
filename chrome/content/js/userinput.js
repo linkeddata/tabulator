@@ -7,6 +7,7 @@
     clipboard: 'predicates' 'objects' 'all'(internal)
     request: 'from' 'to' 'message' 'Request'
 */
+var UserInputFormula; //Formula to store references of user's work
 function UserInput(outline){
 
 var myDocument=outline.document; //is this ok?
@@ -24,6 +25,11 @@ this.namespaces["contact"] = "http://www.w3.org/2000/10/swap/pim/contact#";
 this.namespaces["mo"] = "http://purl.org/ontology/mo/";
 this.namespaces["doap"] = "http://usefulinc.com/ns/doap#";
 var NameSpaces=this.namespaces;
+if (!UserInputFormula){
+    UserInputFormula=new RDFFormula();
+    UserInputFormula.superFormula=kb;
+    UserInputFormula.registerFormula("Your Work"); 
+}
 
 return {
 lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
@@ -163,8 +169,10 @@ clearInputAndSave: function clearInputAndSave(e){
             //sparqlUpdate.setObject(makeTerm(this.lastModified.value));
                
         //fire text modified??
+                    UserInputFormula.statements.push(s);
                     break;
                 case 'bnode': //a request refill with text
+                    var newStat;
                     var textTerm=kb.literal(this.lastModified.value,"");
                     if (s.predicate.termType=='collection'){ //case: add triple
                         var selectedPredicate=s.predicate.elements[0];
@@ -172,13 +180,15 @@ clearInputAndSave: function clearInputAndSave(e){
                             this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
                         else{
                             kb.remove(s);
-                            kb.add(s.subject,selectedPredicate,textTerm);
+                            newStat=kb.add(s.subject,selectedPredicate,textTerm);
                         }
                         //table_refresh ??? auto?                           
                     }else{
                     kb.remove(s);
                     s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
+                    newStat=s;
                     }
+                    UserInputFormula.statements.push(newStat);
                     break;
                 case 'symbol'://no longer allow user to edit URI
                     /* 
@@ -366,6 +376,7 @@ insertTermTo: function insertTermTo(selectedTd,term,isObject){
             else
                 insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
             insertTr.AJAR_inverse=isInverse;
+            UserInputFormula.statements.push(insertTr.AJAR_statement);
             break;            
         case 'selected': //header <TD>, undetermined generated
             var newTr=ancestor(selectedTd,'TABLE').lastChild.appendChild(myDocument.createElement('tr'));
@@ -999,22 +1010,29 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     var tr=selectedTd.parentNode
     var stat=tr.AJAR_statement;
+    var reqTerm = (type=='object')?stat.object:stat.predicate;
+    var newStat;
+    var eventhandler;
+    if (kb.any(reqTerm,tabont('onfillin'))){
+        eventhandler = new Function("subject",kb.any(reqTerm,tabont('onfillin')).value);
+    }
     if (type=='predicate'){
         tr.replaceChild(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
-        kb.add(stat.subject,inputTerm,stat.object) //ToDo: why and inverse
+        newStat=kb.add(stat.subject,inputTerm,stat.object) //ToDo: why and inverse
         kb.remove(stat);
     }else if (type=='object'){
         var newTd=outline.outline_objectTD(inputTerm);
         tr.replaceChild(newTd,selectedTd);
         
         //modify store and update here
-        kb.add(stat.subject,stat.predicate,inputTerm);
+        newStat=kb.add(stat.subject,stat.predicate,inputTerm);
         kb.remove(stat);
         
         this.setSelected(newTd,true);        
     }
-
+    UserInputFormula.statements.push(newStat);
+    if (eventhandler) eventhandler(stat.subject);
 },
 
 formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){

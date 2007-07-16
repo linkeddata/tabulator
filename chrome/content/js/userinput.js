@@ -165,9 +165,8 @@ clearInputAndSave: function clearInputAndSave(e){
             switch (obj.termType){
                 case 'literal':
                     obj.value=this.lastModified.value;
-            // send sparql update with new values
-            //sparqlUpdate.setObject(makeTerm(this.lastModified.value));
-               
+                    sparqlUpdate.setObject(makeTerm(this.lastModified.value));
+
         //fire text modified??
                     UserInputFormula.statements.push(s);
                     break;

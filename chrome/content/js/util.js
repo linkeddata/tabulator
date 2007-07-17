@@ -331,26 +331,37 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
 } //AJAR_handleNewTerm
 
 function myFetcher(x, requestedBy) {
+    tabulator.log.test('Entered myFetcher');
     if (x == null) {
         tabulator.log.debug("@@ SHOULD SYNC NOW") // what does this mean?
     } else {
         tabulator.log.debug("Fetcher: "+x)
+        tabulator.log.test('Fetcher: ' + x);
         AJAR_handleNewTerm(kb, x, requestedBy)
     }
 }
 
 // 
-function matrixTD(obj, asImage, doc) {
+function matrixTD(arrayStatement, asImage, doc) {
     //alert (obj.termType);
+    
+    s = arrayStatement[0];//Added
+    p = arrayStatement[1];//Added
+    obj = arrayStatement[2];//Added
+    
 	if (!doc) doc=document;
     var td = doc.createElement('TD');
     if (!obj) var obj = new RDFLiteral(".");
     if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+        td.setAttribute('s', s); //Added
+        td.setAttribute('p', p); //Added
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
     var image;
     if (obj.termType == 'literal') {
+        td.setAttribute('s', s); //Added
+        td.setAttribute('p', p); //Added
         td.appendChild(doc.createTextNode(obj.value));
     } 
     else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {

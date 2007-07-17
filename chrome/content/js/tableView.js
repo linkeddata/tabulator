@@ -8,6 +8,7 @@ function tableView(container,doc)
         //wrap sparql update code with if(isExtension).
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
     }*/
+    //tabulator.log.test('Entered tableView');
     var numRows; // assigned in makeKeyHandler, includes header
     var numCols; // assigned at bottom of onClickCell
     var activeSingleQuery = null;
@@ -29,16 +30,41 @@ function tableView(container,doc)
     //***************** this.drawQuery *****************//
     this.drawQuery = function (q) 
     {
+    //tabulator.log.test('Entered drawQuery');
         this.onBinding = function (bindings) 
         {
+            //tabulator.log.test('Entered onBinding');
             var i, tr, td;
-            tabulator.log.info('making a row w/ bindings ' + bindings);
-            tabulator.log.debug('making a row w/bindings ' + bindings);
+            //tabulator.log.info('making a row w/ bindings ' + bindings);
+            //tabulator.log.test('making a row w/bindings ' + bindings.length + '     there');
+            //tabulator.log.test('q.pat: ' + q.pat);
+            //tabulator.log.test('first term in q.pat ' + q.pat.statements[0]);
+            //tabulator.log.test('second term in q.pat ' + q.pat.statements[1]);
             tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
+            numStats = q.pat.statements.length; // Added
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
-                tr.appendChild(matrixTD(bindings[v]));
+
+                
+                //**** td node creation ****//
+                for (j = 0; j<numStats; j++) {
+                testStatement = q.pat.statements[j];
+                reSpace = / /;
+                arrayStatement = testStatement.toString().split(reSpace);
+                if (arrayStatement[2] == v) {
+                    arrayStatementForMatrixTD = [arrayStatement[0], arrayStatement[1], bindings[v]];
+                    if (arrayStatement[0][0] == '?') {
+                        // arrayStatement of form: [?v0, <#tab>, ?v1]
+                        arrayStatementForMatrixTD[0] = bindings[arrayStatement[0]];
+                    }
+                    break;
+                }
+                }
+                //**** End td node creation ****//
+                
+                //tabulator.log.test('v = ' + v + ' making td with bindings[v] = ' + bindings[v]);
+                tr.appendChild(matrixTD(arrayStatementForMatrixTD)); // Changed
             } //for each query var, make a row
         }
 
@@ -61,6 +87,7 @@ function tableView(container,doc)
             th.appendChild(thisTable.document.createTextNode(v.label));
             tr.appendChild(th);
         }
+        
         
         kb.query(q, this.onBinding);
         activeSingleQuery = q;
@@ -86,27 +113,8 @@ function tableView(container,doc)
     //***************** Table Editing *****************//
 
     var newText; // last text that was modified, not an object
-    var lastModifiedStat; 
-    // lastModifiedStat = statementsMatching(s,p,o) 
+    var lastModifiedStat; // construct this from table properties
     
-/*     SELECT ?v0 ?v1 
-WHERE 
-{ 
-    <http://dig.csail.mit.edu/2005/ajar/ajaw/data#Tabulator> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?v0 .
-    ?v0 <http://www.w3.org/2000/01/rdf-schema#comment> ?v1 .
-} */
-
-/*
-<http://usefulinc.com/ns/doap#Project> 
-<http://www.w3.org/2000/01/rdf-schema#comment> 
-[A project., Un projet., Un proyeto.]
-*/
-    // s is the about from the previous node, kb.sym("http://somewhere")
-    // p should be generated somewhere based on the SPARQL query
-    // o is the lastModified text, o does not have to be an object.
-    
-    
-    // attach to each TD the subject and predicate.  Then when you need statementsMatching, you can just get the values you need
     var selectedTD; // null to selectedTD whenever clearSelected is called?
     var keyHandler;
     
@@ -117,12 +125,12 @@ WHERE
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
         setSelected(node);
         var t = document.getElementById('tabulated_data');
-        numRows = t.childNodes.length 
+        numRows = t.childNodes.length;
     }
     
     function getRowIndex(node)
     { 
-        var trNode = node.parentNode
+        var trNode = node.parentNode;
         var rowArray = trNode.parentNode.childNodes;
         var rowArrayLength = trNode.parentNode.childNodes.length;
         for (i = 1; i<rowArrayLength; i++) {
@@ -248,7 +256,7 @@ WHERE
         t.removeEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = 'white';
         // include this?
-        // selectedTD.addEventListener('click', onCellClickSecond, false);
+        // selectedTD.RemoveEventListener('click', onCellClickSecond, false);
     }
 
     function onEdit(node)

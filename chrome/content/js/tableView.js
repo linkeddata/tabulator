@@ -1,4 +1,4 @@
-// Places to generate SPARQL Update: onEdit
+// Places to generate SPARQL Update: onEdit and tableEditOnBlurWrap
 
 function tableView(container,doc) 
 {
@@ -46,7 +46,7 @@ function tableView(container,doc)
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
 
-                
+                // generate the subject and predicate for each tdNode in the tableView for a statement for sparqlUpdate
                 //**** td node creation ****//
                 for (j = 0; j<numStats; j++) {
                 testStatement = q.pat.statements[j];
@@ -112,9 +112,6 @@ function tableView(container,doc)
 
     //***************** Table Editing *****************//
 
-    var newText; // last text that was modified, not an object
-    var lastModifiedStat; // construct this from table properties
-    
     var selectedTD; // null to selectedTD whenever clearSelected is called?
     var keyHandler;
     
@@ -259,6 +256,9 @@ function tableView(container,doc)
         // selectedTD.RemoveEventListener('click', onCellClickSecond, false);
     }
 
+    var lastModifiedStat;
+    var sparqlUpdate;
+    
     function onEdit(node)
     {
         if (literalTD(node)) {setSelected(node); return; }
@@ -283,6 +283,12 @@ function tableView(container,doc)
         }
         inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
         inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
+        
+        //**** sparqlUpdate code ****//
+        lastModifiedStatement= new RDFStatement( makeTerm(node.getAttribute('s')), makeTerm(node.getAttribute('p')), makeTerm(node.getAttribute('about')));
+        sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStatement);
+        // more in tableEditOnBlurWrap
+        //**** sparqlUpdate code ****//
     }
     
     function tableEditOnBlurWrap(node)
@@ -299,6 +305,10 @@ function tableView(container,doc)
             // Make a call to clearInputAndSave.
             e.stopPropagation();
             e.preventDefault();
+            
+            //**** sparqlUpdate ****//
+            sparqlUpdate.setObject(makeTerm(srcElem.value));
+            //**** sparqlUpdate ****//
         }
     }
     

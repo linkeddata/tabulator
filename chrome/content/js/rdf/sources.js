@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3464 2007-07-16 10:51:49Z kennyluck $
+ * SVN ID: $Id: sources.js 3477 2007-07-18 18:03:33Z timbl $
  *
  ************************************************************/
 
@@ -340,13 +340,13 @@ function SourceFetcher(store, timeout, async) {
     Util.callbackify(this,['request', 'recv', 'load', 'fail', 'refresh',
 			   'retract', 'done'])
 
-    this.store.register('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
-    this.store.register('owl', "http://www.w3.org/2002/07/owl#")
-    this.store.register('tab',"http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
-    this.store.register('http',"http://dig.csail.mit.edu/2005/ajar/ajaw/http#")
-    this.store.register('httph',
+    this.store.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
+    this.store.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
+    this.store.setPrefixForURI('tab',"http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
+    this.store.setPrefixForURI('http',"http://dig.csail.mit.edu/2005/ajar/ajaw/http#")
+    this.store.setPrefixForURI('httph',
 			"http://dig.csail.mit.edu/2005/ajar/ajaw/httph#")
-    this.store.register('ical',"http://www.w3.org/2002/12/cal/icaltzd#")
+    this.store.setPrefixForURI('ical',"http://www.w3.org/2002/12/cal/icaltzd#")
 
     this.addProtocol = function (proto) {
 	sf.store.add(sf.appNode,

@@ -180,7 +180,7 @@ function Outline(doc) {
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
          
-        if (kb.statementsMatching(obj,rdf('type'),tabont('Request')).length) td.className='undetermined';
+        if (kb.statementsMatching(obj,rdf('type'),tabont('Request')).length) td.className='undetermined'; //@@? why-timbl
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
             td.appendChild(AJARImage(Icon.src.icon_expand, 'expand'));
         } //expandable
@@ -201,21 +201,21 @@ function Outline(doc) {
     
     this.outline_predicateTD = function outline_predicateTD(predicate,newTr,inverse,internal){
         
-    var td_p = myDocument.createElement("TD")
-            td_p.setAttribute('about', predicate.toNT())
-    td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
-    
-    switch (predicate.termType){
-        case 'bnode': //TBD
-            td_p.className='undetermined';
-        case 'symbol': 
-                var lab = predicateLabelForXML(predicate, inverse);
-                break;
-                case 'collection': // some choices of predicate
-                    lab = predicateLabelForXML(predicate.elements[0],inverse);
-    }
-    lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
-    //if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
+        var td_p = myDocument.createElement("TD")
+                td_p.setAttribute('about', predicate.toNT())
+        td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
+        
+        switch (predicate.termType){
+            case 'bnode': //TBD
+                td_p.className='undetermined';
+            case 'symbol': 
+                    var lab = predicateLabelForXML(predicate, inverse);
+                    break;
+                    case 'collection': // some choices of predicate
+                        lab = predicateLabelForXML(predicate.elements[0],inverse);
+        }
+        lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
+        //if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
 
         var labelTD = document.createElement('TD')
         labelTD.setAttribute('notSelectable','true')
@@ -297,20 +297,28 @@ function Outline(doc) {
     **  normaly displayed to the user. See also: innternalPane
     */
     defaultPane = {};
-    defaultPane.icon = Icon.src.icon_internals;
-    defaultPane.label = function(subject) { return 'about' };
+    defaultPane.icon = Icon.src.icon_defaultPane;
+    defaultPane.label = function(subject) { return 'about ';};
+    defaultPane.filter = function(pred, inverse) {
+        if (typeof internalPane.predicates[pred.uri] != 'undefined')
+            return false;
+        if (inverse && (pred.uri == 
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) return false;
+        return true;
+    }
     defaultPane.render = function(subject) {
         var div = myDocument.createElement('div')
+        
         div.setAttribute('class', 'defaultPane')
         appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
-        appendPropertyTRs(div, plist, false, false)
+        appendPropertyTRs(div, plist, false, defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, false)
+        appendPropertyTRs(div, plist, true, defaultPane.filter)
         return div    
     }
-    // panes.register(defaultPane);
+    panes.register(defaultPane);
     
     /*   Internal Pane
     **
@@ -329,14 +337,17 @@ function Outline(doc) {
         return null
     }
     internalPane.render = function(subject) {
+        function filter(pred, inverse) {
+            return  !!(typeof internalPane.predicates[pred.uri] != 'undefined');
+        }
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
         appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
-        appendPropertyTRs(div, plist, false, true)
+        appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, true)    
+        appendPropertyTRs(div, plist, true, filter)    
         return div
     }
     internalPane.predicates = {// Predicates used for inner workings. Under the hood
@@ -436,20 +447,71 @@ function Outline(doc) {
     dataContentPane.render = function(subject) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'dataContentPane');
-
-        var sz = Serializer(subject);
-        var roots = sz.scan();
-        for (var i=0; i<roots.length(); i++) {
+        // Because of smushing etc, this will not be a copy of the original source
+        // We could instead either fetch and re-parse the source,
+        // or we could keep all the pre-smushed triples.
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        /*
+        var kludge = kb.formula([]); // No features
+        for (var i=0; i< sts.length; i++) {
+            s = sts[i];
+            kludge.add(s.subject, s.predicate, s.object);
+        }
+        */
+        var sz = Serializer();
+        var res = sz.rootSubjects(sts);
+        var roots = res[0]
+        for (var i=0; i<roots.length; i++) {
             var tr = myDocument.createElement("TR");
+            root = roots[i];
             tr.style.verticalAlign="top";
-            var td = this.outline.outline_objectTD(subject, undefined, tr)
+            var td = thisOutline.outline_objectTD(root, undefined, tr)
             tr.appendChild(td)
             div.appendChild(tr);
-            outline_expand(td, subject);
+            outline_expand(td, root, dataContentPane);
         }
         return div
     }
     panes.register(dataContentPane);
+
+    /*      Notation3 content Pane
+    **
+    **  This pane shows the content of a particular RDF resource
+    ** or at least the RDF semantics we attribute to that resource,
+    ** in generated N3 syntax.
+    */
+
+
+    n3Pane = {};
+    n3Pane.icon = Icon.src.icon_n3Pane;
+    n3Pane.label = function(subject) {
+        var s = dataPane.label;
+        if (!s) return null;
+        return s + 'as N3';
+    }
+
+    n3Pane.render = function(subject) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'n3Pane');
+        // Because of smushing etc, this will not be a copy of the original source
+        // We could instead either fetch and re-parse the source,
+        // or we could keep all the pre-smushed triples.
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        /*
+        var kludge = kb.formula([]); // No features
+        for (var i=0; i< sts.length; i++) {
+            s = sts[i];
+            kludge.add(s.subject, s.predicate, s.object);
+        }
+        */
+        var sz = Serializer();
+        var str = sz.toN3(sts, kb.namespaces)
+        var pre = myDocument.createElement('PRE');
+        pre.applendChild(myDocument.createTextNode(str));
+        div.append(str);
+        return div
+    }
+    panes.register(n3Pane);
 
     /*   Class member Pane
     **
@@ -468,26 +530,17 @@ function Outline(doc) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
         var sts = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
-        var tr = myDocument.createElement('TR')
         if (sts.length > 10) {
-            tr.appendChild(myDocument.createTextNode(''+sts.length));
-            div.appendChild(tr)
-        }
-        for (var i=0; i<sts.length; i++) {
             var tr = myDocument.createElement('TR');
-            if (i==0) {
-                var td = myDocument.createElement('TD'); // dummy for editing
-                td.setAttribute('class', 'pred');
-                td.setAttribute('rowspan', ''+sts.length);
-                tr.appendChild(td);
-            }
-            var td = thisOutline.outline_objectTD(
-                            sts[i].subject, undefined, undefined, sts[i].why)
-            tr.appendChild(td);
+            tr.appendChild(myDocument.createTextNode(''+sts.length));
             tr.AJAR_statement=sts[i];
             div.appendChild(tr);
         }
-        return div
+
+        // Don't need to check in the filter as the plist is already trimmed
+        var plist = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
+        appendPropertyTRs(div, plist, true, function(pred){return true;})
+        return div;
     }
     panes.register(classInstancePane);
 
@@ -506,9 +559,10 @@ function Outline(doc) {
         par.replaceChild(table, placeholder) // Attempt to 
     }
 
-    function propertyTable(subject, table, details) {
+    function propertyTable(subject, table, pane) {
         tabulator.log.debug("Property table for: "+ subject)
         subject = kb.canon(subject)
+        if (!pane) pane = defaultPane;
         
         if (!table) { // Create a new property table
             var table = myDocument.createElement('table')
@@ -544,7 +598,7 @@ function Outline(doc) {
     
             for (row = table.firstChild; row; row = row.nextSibling) { // Note which p,o pairs are exppanded
                 if (row.childNodes[1]
-                    && row.childNodes[1].firstChild.nodeName == 'table') {
+                    && row.childNodes[1].firstChild.nodeName == 'TABLE') {
                     s = row.AJAR_statement
                     if (!expandedNodes[s.predicate.toString()]) {
                         expandedNodes[s.predicate.toString()] = {}
@@ -554,7 +608,7 @@ function Outline(doc) {
                 }
             }
     
-            table = propertyTable(subject, undefined, details)  // Re-build table
+            table = propertyTable(subject, undefined, pane)  // Re-build table
     
             for (row = table.firstChild; row; row = row.nextSibling) {
                 s = row.AJAR_statement
@@ -576,7 +630,7 @@ function Outline(doc) {
     } /* propertyTable */
     
     ///////////// Property list 
-    function appendPropertyTRs(parent, plist, inverse, details) {
+    function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
         tabulator.log.debug("Property list length = " + plist.length)
         if (plist.length == 0) return "";
         var sel
@@ -594,13 +648,15 @@ function Outline(doc) {
         //      if (s.object == parentSubject) continue; // that we knew
         
             // Avoid predicates from other panes
+            if (!predicateFilter(s.predicate, inverse)) continue;
+            /*
             var internal = (typeof internalPane.predicates[''+s.predicate.uri] != 'undefined')
             if ((!details && internal) || (details && !internal)) { // exclusive-or only in JS 2.0
                 continue;
             }
             if (inverse && (s.predicate.uri == 
                     "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) continue; 
-                    
+            */
             var k;
             var dups = 0; // How many rows have the same predicate, -1?
             var langTagged = 0;  // how many objects have language tags?
@@ -618,10 +674,10 @@ function Outline(doc) {
             parent.appendChild(tr)
             tr.AJAR_statement = s
             tr.AJAR_inverse = inverse
-            tr.AJAR_variable
+            tr.AJAR_variable  // @@ ??
             tr.setAttribute('predTR','true')
-            var td_p = thisOutline.outline_predicateTD(s.predicate,tr,inverse,internal);
-            tr.appendChild(td_p)
+            var td_p = thisOutline.outline_predicateTD(s.predicate, tr, inverse);
+            tr.appendChild(td_p) // @@ add "internal" to td_p's class for style? mno
 
             var defaultpropview = views.defaults[s.predicate.uri];
             
@@ -745,20 +801,20 @@ function Outline(doc) {
 */  
     termWidget={}
     termWidget.construct = function () {
-            td = myDocument.createElement('TD')
-            td.setAttribute('class','iconTD')
-            td.setAttribute('notSelectable','true')
-            td.style.width = '0px';
-            return td
+        td = myDocument.createElement('TD')
+        td.setAttribute('class','iconTD')
+        td.setAttribute('notSelectable','true')
+        td.style.width = '0px';
+        return td
     }
     termWidget.addIcon = function (td, icon) {
-            var img = AJARImage(icon.src,icon.alt,icon.tooltip)
-            var iconTD = td.childNodes[1];
-            var width = iconTD.style.width;
-            width = parseInt(width);
-            width = width + icon.width;
-            iconTD.style.width = width+'px';
-            iconTD.appendChild(img);
+        var img = AJARImage(icon.src,icon.alt,icon.tooltip)
+        var iconTD = td.childNodes[1];
+        var width = iconTD.style.width;
+        width = parseInt(width);
+        width = width + icon.width;
+        iconTD.style.width = width+'px';
+        iconTD.appendChild(img);
     }
     termWidget.removeIcon = function (td, icon) {
         var iconTD = td.childNodes[1];
@@ -829,64 +885,6 @@ function Outline(doc) {
             myDocument.getElementById("queryJump").appendChild(next);
       }
 
-    /** add a row to global myQuery using tr **/
-    function patternFromTR(tr, constraint) {
-        var nodes = tr.childNodes, n = tr.childNodes.length, inverse=tr.AJAR_inverse,
-            i, hasVar = 0, pattern, v, c, parentVar=null, level;
-        
-        function makeRDFStatement(freeVar, parent)
-        {
-            if (inverse)
-                    return new RDFStatement(freeVar, st.predicate, parent)
-                else
-                    return new RDFStatement(parent, st.predicate, freeVar)
-            }
-            
-        var st = tr.AJAR_statement; 
-        for (level=tr.parentNode; level; level=level.parentNode) {
-            if (typeof level.AJAR_statement != 'undefined') {
-                tabulator.log.debug("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
-                /*for(c=0;c<level.parentNode.childNodes.length;c++) //This makes sure the same variable is used for a subject
-                    if(level.parentNode.childNodes[c].AJAR_variable)
-                            level.AJAR_variable = level.parentNode.childNodes[c].AJAR_variable;*/
-                if (!level.AJAR_variable)
-                    patternFromTR(level);
-                parentVar = level.AJAR_variable
-                break;
-            }
-        }
-        var constraintVar = tr.AJAR_inverse? st.subject:st.object; //this is only used for constraints
-        var hasParent=true
-        if (constraintVar.isBlank && constraint) 
-                            alert("Warning: you are constraining your query with a blank node. The query will only find entries with the same blank node. Try constraining with a variable inside this node.");
-        if (!parentVar)
-        {
-            hasParent=false;
-            parentVar = inverse? st.object : st.subject; //if there is no parents, uses the sub/obj
-            }
-            tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
-            v = tr.AJAR_variable? tr.AJAR_variable : kb.variable(newVariableName());
-        myQuery.vars.push(v)
-        v.label = hasParent? parentVar.label : label(parentVar);
-        alert('Susepct this code is  not used')
-        v.label += " "+ predicateLabelForXML(st.predicate, inverse);
-        tabulator.log.warn('@@ temp2: v.label='+v.label)
-        pattern = makeRDFStatement(v,parentVar);
-        //alert(pattern);
-        v.label = v.label.slice(0,1).toUpperCase() + v.label.slice(1)// init cap
-        
-        if (constraint)   //binds the constrained variable to its selected value
-            myQuery.pat.initBindings[v]=constraintVar;
-            
-        tabulator.log.info('Pattern: '+pattern);
-        pattern.tr = tr
-        tr.AJAR_pattern = pattern    // Cross-link UI and query line
-        tr.AJAR_variable = v;
-        tabulator.log.debug('Final variable: '+tr.AJAR_variable)
-        tabulator.log.debug("Query pattern: "+pattern)
-        myQuery.pat.statements.push(pattern)
-        return v
-    } //patternFromTR
 
     function resetQuery() {
             function resetOutliner(pat)
@@ -979,6 +977,7 @@ function Outline(doc) {
 
     function setSelected(node, newValue) {
         if (newValue == selected(node)) return;
+        if (node.nodeName != 'TD') throw 'Expected TD in setSelected: '+node.ndoeName;
         var cla = node.getAttribute('class')
         if (!cla) cla = ""
         if (newValue) {
@@ -1108,26 +1107,29 @@ function Outline(doc) {
     //1. a fast way to modify data - enter will go to next predicate
     //2. an alternative way to input - enter at the end of a predicate will create a new statement
     this.OutlinerKeypressPanel=function OutlinerKeypressPanel(e){
-    function showURI(about){
-        if(about && myDocument.getElementById('UserURI')) { 
-                myDocument.getElementById('UserURI').value = 
-                     (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+
+        function showURI(about){
+            if(about && myDocument.getElementById('UserURI')) { 
+                    myDocument.getElementById('UserURI').value = 
+                         (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+            }
         }
-    }
-    if (getTarget(e).tagName=='TEXTAREA') return;
-        if (getTarget(e).id=="UserURI") return;
-        if (selection.length>1) return;
-        if (selection.length==0){
-            if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39){
-                setSelected(thisOutline.focusTd.firstChild.childNodes[1].lastChild,true);
-            showURI(getAbout(kb,selection[0]));            
-            }    
-            return;    
-    }
+
+        if (getTarget(e).tagName=='TEXTAREA') return;
+            if (getTarget(e).id=="UserURI") return;
+            if (selection.length>1) return;
+            if (selection.length==0){
+                if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39){
+                    setSelected(thisOutline.focusTd.firstChild.childNodes[1].lastChild,true);
+                showURI(getAbout(kb,selection[0]));            
+                }    
+                return;    
+        }
         var selectedTd=selection[0];
-    //if not done, Have to deal with redraw...
-    sf.removeCallback('done',"setSelectedAfterward");
-    sf.removeCallback('fail',"setSelectedAfterward");
+        //if not done, Have to deal with redraw...
+        sf.removeCallback('done',"setSelectedAfterward");
+        sf.removeCallback('fail',"setSelectedAfterward");
+
         function goNext(directionCode){
                 var newSelTd;
                 switch (directionCode){
@@ -1148,6 +1150,7 @@ function Outline(doc) {
                 if (newSelTd.hasAttribute('notSelectable')) goNext(directionCode);
                 return newSelTd;
         }
+        
         switch (e.keyCode){
             case 13://enter
                 if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
@@ -1194,67 +1197,70 @@ function Outline(doc) {
                 setSelected(newSelTd,true);*/
                 e.stopPropagation();
                 e.preventDefault();
-        }
+        } // switch
+        
         if (getTarget(e).tagName=='INPUT') return;
+        
         switch (e.keyCode){
             case 8://delete
                 e.preventDefault();//prevent from going back
                 break;
-        case 37://left
-            var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
-            var titleTd=parentTr.lastChild.firstChild.firstChild.firstChild;
-            outline_collapse(titleTd,getAbout(kb,titleTd));
-            setSelected(parentTr.lastChild,true);
-            break;
-        case 39://right
-            var obj=getAbout(kb,selectedTd);
-            if (obj){
-                function setSelectedAfterward(uri){
-                    if (arguments[3]) return true;
-                    deselectAll();
-                    setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
-                    showURI(getAbout(kb,selection[0]));
-                    return true;
+            case 37://left
+                var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
+                var titleTd=parentTr.lastChild.firstChild.firstChild.firstChild;
+                outline_collapse(titleTd,getAbout(kb,titleTd));
+                setSelected(parentTr.lastChild,true);
+                break;
+            case 39://right
+                var obj=getAbout(kb,selectedTd);
+                if (obj){
+                    function setSelectedAfterward(uri){
+                        if (arguments[3]) return true;
+                        deselectAll();
+                        setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
+                        showURI(getAbout(kb,selection[0]));
+                        return true;
+                    }
+                    if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
+                        sf.addCallback('done',setSelectedAfterward);
+                        sf.addCallback('fail',setSelectedAfterward);
+                        outline_expand(selectedTd, obj, defaultPane);
+                    }
+                    setSelectedAfterward();                   
                 }
-                if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
-                    sf.addCallback('done',setSelectedAfterward);
-                    sf.addCallback('fail',setSelectedAfterward);
-                    outline_expand(selectedTd, obj, false);
-                }
-                setSelectedAfterward();                   
-            }
-            break;
-        case 38://up
-        case 40://down
-            break;    
+                break;
+            case 38://up
+            case 40://down
+                break;    
             default:
                 switch(e.charCode){
-                case 99: //c for Copy
-                    if (e.ctrlKey){
-                        thisOutline.UserInput.copyToClipboard(thisOutline.clipboardAddress,selectedTd);
-                    break;
-                    }
-                case 118: //v
-                case 112: //p for Paste
-                    if (e.ctrlKey){
-                        thisOutline.UserInput.pasteFromClipboard(thisOutline.clipboardAddress,selectedTd);
-                        //myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
-                        //window.focus();
-                        //e.stopPropagation();                   
+                    case 99: //c for Copy
+                        if (e.ctrlKey){
+                            thisOutline.UserInput.copyToClipboard(thisOutline.clipboardAddress,selectedTd);
                         break;
-                    }
-                default:
-                if (getTarget(e).tagName=='HTML'){
-                thisOutline.UserInput.Click(e,selectedTd);
-                thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
-                if (selectedTd.className=='undetermined selected') thisOutline.UserInput.AutoComplete(e.charCode)
-                //Events are not reliable...
-                //var e2=document.createEvent("KeyboardEvent");
-                //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);
-                //UserInput.lastModified.dispatchEvent(e2);
+                        }
+                    case 118: //v
+                    case 112: //p for Paste
+                        if (e.ctrlKey){
+                            thisOutline.UserInput.pasteFromClipboard(thisOutline.clipboardAddress,selectedTd);
+                            //myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
+                            //window.focus();
+                            //e.stopPropagation();                   
+                            break;
+                        }
+                    default:
+                    if (getTarget(e).tagName=='HTML'){
+                    thisOutline.UserInput.Click(e,selectedTd);
+                    thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
+                    if (selectedTd.className=='undetermined selected') thisOutline.UserInput.AutoComplete(e.charCode)
+                    //Events are not reliable...
+                    //var e2=document.createEvent("KeyboardEvent");
+                    //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);
+                    //UserInput.lastModified.dispatchEvent(e2);
                 }
             }
         }//end of switch
+
     showURI(getAbout(kb,selection[0]));
     //alert(window);alert(doc);
     /*
@@ -1361,10 +1367,10 @@ function Outline(doc) {
             switch (tsrc) {
             case Icon.src.icon_expand:
             case Icon.src.icon_collapse:
-                var details = e.altKey;
+                var pane = e.altKey? internalPane : defaultPane;
                 var mode = e.shiftKey ? outline_refocus :
                     (tsrc == Icon.src.icon_expand ? outline_expand : outline_collapse);
-                mode(p, subject, details);
+                mode(p, subject, pane);
                 break;
                 //  case Icon.src.icon_visit:
                 //emptyNode(p.parentNode).appendChild(documentContentTABLE(subject));
@@ -1402,7 +1408,7 @@ function Outline(doc) {
             case Icon.src.icon_add_triple:
                 var returnSignal=thisOutline.UserInput.addTriple(e);
                 if (returnSignal){ //when expand signal returned
-                    outline_expand(returnSignal[0],returnSignal[1],false);
+                    outline_expand(returnSignal[0],returnSignal[1],internalPane);
                     for (var trIterator=returnSignal[0].firstChild.firstChild;
                         trIterator; trIterator=trIterator.nextSibling) {
                         var st=trIterator.AJAR_statement;
@@ -1458,7 +1464,7 @@ function Outline(doc) {
                     paneDiv.pane = pane;
                 }
                 target.setAttribute('class', state) // set the button state
-                // outline_expand(p, subject, true, true); //  details, already
+                // outline_expand(p, subject, internalPane, true); //  pane, already
                 break;
            }
         }  // else IMG
@@ -1467,7 +1473,7 @@ function Outline(doc) {
     } //function
     
 
-    function outline_expand(p, subject1, details, already) {
+    function outline_expand(p, subject1, pane, already) {
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
         sf.removeCallback('fail','expand');
@@ -1484,7 +1490,7 @@ function Outline(doc) {
             var newTable
             tabulator.log.info('@@ REPAINTING ')
             if (!already) { // first expand
-                newTable = propertyTable(subject, undefined, details)
+                newTable = propertyTable(subject, undefined, pane)
             } else {
 
                 tabulator.log.info(" ... p is  " + p);
@@ -1493,10 +1499,10 @@ function Outline(doc) {
                     tabulator.log.info(" ... checking node "+newTable);
                     if (newTable.nodeName == 'table') break
                 }
-                newTable = propertyTable(subject, newTable, details)
+                newTable = propertyTable(subject, newTable, pane)
             }
             already = true
-            if (ancestor(p, 'TABLE').style.backgroundColor=='white') {
+            if (ancestor(p, 'TABLE') && ancestor(p, 'TABLE').style.backgroundColor=='white') {
                 newTable.style.backgroundColor='#eee'
             } else {
                 newTable.style.backgroundColor='white'
@@ -1506,13 +1512,13 @@ function Outline(doc) {
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
             tabulator.log.debug("expand: Node for " + subject + " expanded")
             //fetch seeAlso when render()
-         var seeAlsoStats = sf.store.statementsMatching(subject,RDFS('seeAlso'))
-         seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
+            var seeAlsoStats = sf.store.statementsMatching(subject,RDFS('seeAlso'))
+            seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
         } 
     
         function expand(uri)  {
-        if (arguments[3]) return true;//already fetched indicator
-        if (uri=="https://svn.csail.mit.edu/kennyluck/data") var debug=true;
+            if (arguments[3]) return true;//already fetched indicator
+            if (uri=="https://svn.csail.mit.edu/kennyluck/data") var debug=true;
             var cursubj = kb.canon(subject)  // canonical identifier may have changed
                 tabulator.log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
             var term = kb.sym(uri)
@@ -1547,6 +1553,7 @@ function Outline(doc) {
             }
             return true
         }
+        // Body of outline_expand
         tabulator.log.debug("outline_expand: dereferencing "+subject)
         var status = myDocument.createElement("span")
         p.appendChild(status)
@@ -1574,7 +1581,7 @@ function Outline(doc) {
                                  //I might make a class for this
         SourceOptions["javascript2rdf"][1].setupHere([returnConditions],"outline_expand()");
         SourceOptions["tabulator internal terms"].setupHere([returnConditions],"outline_expand()");
-        for (var i=0;i<returnConditions.length;i++){
+        for (var i=0; i<returnConditions.length; i++){
             var returnCode;
             if (returnCode=returnConditions[i](subject)){
                 render();
@@ -1680,7 +1687,6 @@ function Outline(doc) {
     }
     this.GotoURIAndOpen = function(uri) {
        var sbj = GotoURI(uri);
-    //   outline_expand(document.getElementById('browser'), sbj);  Wrong element
     }
 
 ////////////////////////////////////////////////////////
@@ -1787,7 +1793,7 @@ function Outline(doc) {
                 row.appendChild(thisOutline.outline_objectTD(elt));
             }
         } else {
-            tabulator.log.error("unknown term type: " + obj.termType);
+            tabulator.log.error("Object "+obj+" has unknown term type: " + obj.termType);
             rep = myDocument.createTextNode("[unknownTermType:" + obj.termType +"]");
         } //boring defaults.
         tabulator.log.debug("contents: "+rep.innerHTML);

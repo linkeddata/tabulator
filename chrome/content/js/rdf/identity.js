@@ -33,8 +33,7 @@ RDFIndexedFormula.prototype.constructor = RDFIndexedFormula;
 RDFIndexedFormula.SuperClass = RDFFormula;
 
 RDFArrayRemove = function(a, x) {  //removes all elements equal to x from a
-    var i;
-    for(i=0; i<a.length; i++) {
+    for(var i=0; i<a.length; i++) {
 	if (a[i] == x) {
             a.splice(i,1);
             return;
@@ -126,6 +125,12 @@ function RDFIndexedFormula(features) {
 
 RDFPlainFormula = function() { return RDFIndexedFormula([]); } // No features
 
+
+RDFIndexedFormula.prototype.setPrefixForURI = function(prefix, nsuri) {
+    this.namespaces[prefix] = nsuri
+}
+
+// Deprocated ... name too generic
 RDFIndexedFormula.prototype.register = function(prefix, nsuri) {
     this.namespaces[prefix] = nsuri
 }
@@ -392,9 +397,8 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
     
     if (typeof candidates == 'undefined') return [];
 //    tabulator.log.debug("Matching {"+s+" "+p+" "+o+"} against "+n+" stmts")
-    var i;
     var st;
-    for(i=0; i<candidates.length; i++) {
+    for(var i=0; i<candidates.length; i++) {
         st = candidates[i]; //for each candidate, match terms of candidate with input, then return all
         // tabulator.log.debug("  Matching against st=" + st +" why="+st.why);
         if (RDFTermMatch(pred, st.predicate) &&  // first as simplest
@@ -523,8 +527,8 @@ RDFIndexedFormula.prototype.declareExistential = function(x) {
     return x;
 }
 
-RDFIndexedFormula.prototype.formula = function() {
-    return new RDFIndexedFormula();
+RDFIndexedFormula.prototype.formula = function(features) {
+    return new RDFIndexedFormula(features);
 }
 
 RDFIndexedFormula.prototype.close = function() {

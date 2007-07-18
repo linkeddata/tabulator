@@ -248,7 +248,7 @@ function predicateLabelForXML(p, inverse) {
     
     lab = labelForXML(p)
     if (inverse) {
-	if (lab =='type') return 'e.g.'; // Not "is type of"
+	if (lab =='type') return '...'; // Not "is type of"
 	return "is "+lab+" of";
     }
     return lab

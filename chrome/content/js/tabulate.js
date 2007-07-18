@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3460 2007-07-14 19:47:12Z timbl $
+// SVN ID: $Id: tabulate.js 3477 2007-07-18 18:03:33Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -18,10 +18,10 @@ var outline;
 
 kb.sf = sf // Make knowledge base aware of source fetcher to allow sameAs to propagate a fetch
 
-kb.register('dc', "http://purl.org/dc/elements/1.1/")
-kb.register('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-kb.register('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
-kb.register('owl', "http://www.w3.org/2002/07/owl#")
+kb.setPrefixForURI('dc', "http://purl.org/dc/elements/1.1/")
+kb.setPrefixForURI('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+kb.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
+kb.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
 
 
 function AJAR_handleNewTerm(kb, p, requestedBy) {
@@ -101,8 +101,10 @@ Icon.src.icon_requested = iconPrefix + 'icons/16dot-yellow.gif';
 
 // Panes:
 
+Icon.src.icon_defaultPane = iconPrefix + 'icons/table.png';
 Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
 Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
+Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3-small.png';  //@@ Bad .. find better
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
 
 // For that one we need a document with grid lines.  Make data-x-generix maybe
@@ -339,9 +341,15 @@ function SourceWidget() {
 		       return true
 		   })
 		   
-    this.highlight = function(u, on) {
-	if (!u) return;
-	try{this.sources[u.uri].setAttribute('class', on ? 'sourceHighlight' : '')}catch(e){alert(u.uri);}
+    this.highlight = function(term, on) {
+        tabulator.log.debug('Source highlight ='+on+' for '+term)
+	if (!term) return;
+	try{
+            this.sources[term.uri].setAttribute('class', on ? 'sourceHighlight' : '')
+        }
+        catch(e){
+            alert('tabulate.js: source highlight: uri='+term.uri+ ', error: '+e);
+        }
     }
 }
 

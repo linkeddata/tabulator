@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 3392 2007-07-11 15:10:00Z jambo $
+// SVN ID: $Id: query.js 3477 2007-07-18 18:03:33Z timbl $
 
 //  Variable
 //
@@ -114,42 +114,44 @@ function viewAndSaveQuery()
 }
 
 
-function saveQuery()
-{
+function saveQuery() {
+
     var q= new Query()
     var i, n=selection.length, j, m, tr, sel, st;
     for (i=0; i<n; i++) {
         sel = selection[i]
        	tr = sel.parentNode
        	st = tr.AJAR_statement
-       	tabulator.log.debug("Statement "+st)
+       	tabulator.log.debug("Selected statement: "+st)
        	if (sel.getAttribute('class').indexOf('pred') >= 0) {
-           	tabulator.log.info("   We have a predicate")
-           	makeQueryRow(q,tr)
+            tabulator.log.info("   We have a predicate")
+            makeQueryRow(q,tr)
        	}
        	if (sel.getAttribute('class').indexOf('obj') >=0) {
        		tabulator.log.info("   We have an object")
        		makeQueryRow(q,tr,true)
        	}
     }    
+    
     qs.addQuery(q);
-	function resetOutliner(pat)
-	{
-		optionalSubqueriesIndex=[]
-		var i, n = pat.statements.length, pattern, tr;
-		for (i=0; i<n; i++) {
-	    	pattern = pat.statements[i];
-	    	tr = pattern.tr;
-	   	 	//tabulator.log.debug("tr: " + tr.AJAR_statement);
-	    	if (typeof tr!='undefined')
-	    	{
-	    		delete tr.AJAR_pattern;
-	    		delete tr.AJAR_variable;
-	    	}
-		}
-		for (x in pat.optional)
-			resetOutliner(pat.optional[x])
+
+    function resetOutliner(pat) {
+        optionalSubqueriesIndex=[]
+        var i, n = pat.statements.length, pattern, tr;
+        for (i=0; i<n; i++) {
+        pattern = pat.statements[i];
+        tr = pattern.tr;
+        //tabulator.log.debug("tr: " + tr.AJAR_statement);
+        if (typeof tr!='undefined') {
+                delete tr.AJAR_pattern;
+                delete tr.AJAR_variable;
+        }
     }
+
+    for (x in pat.optional)
+            resetOutliner(pat.optional[x])
+    }
+
     resetOutliner(q.pat);
     NextVariable=0;
     return q;
@@ -171,12 +173,11 @@ function predParentOf(node)
 var optionalSubqueriesIndex = []
 
 function makeQueryRow(q, tr, constraint) {
-	//predtr = predParentOf(tr);
+    //predtr = predParentOf(tr);
     var nodes = tr.childNodes, n = tr.childNodes.length, inverse=tr.AJAR_inverse,
         i, hasVar = 0, pattern, v, c, parentVar=null, level, pat;
     
-    function makeRDFStatement(freeVar, parent)
-    {
+    function makeRDFStatement(freeVar, parent) {
     	if (inverse)
 	    return new RDFStatement(freeVar, st.predicate, parent)
 	else
@@ -184,9 +185,10 @@ function makeQueryRow(q, tr, constraint) {
     }
     
     var optionalSubqueryIndex = null;
+
     for (level=tr.parentNode; level; level=level.parentNode) {
         if (typeof level.AJAR_statement != 'undefined') {   // level.AJAR_statement
-        	level.setAttribute('bla',level.AJAR_statement)
+            level.setAttribute('bla',level.AJAR_statement)  // @@? -timbl
             tabulator.log.debug("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
             /*for(c=0;c<level.parentNode.childNodes.length;c++) //This makes sure the same variable is used for a subject
             	if(level.parentNode.childNodes[c].AJAR_variable)
@@ -195,11 +197,10 @@ function makeQueryRow(q, tr, constraint) {
                 makeQueryRow(q, level);
             parentVar = level.AJAR_variable
             var predLevel = predParentOf(level)
-            if (predLevel.getAttribute('optionalSubqueriesIndex'))
-            { 
+            if (predLevel.getAttribute('optionalSubqueriesIndex')) { 
             	optionalSubqueryIndex = predLevel.getAttribute('optionalSubqueriesIndex')
             	pat = optionalSubqueriesIndex[optionalSubqueryIndex]
-            	}
+            }
             break;
         }
     }
@@ -232,13 +233,12 @@ function makeQueryRow(q, tr, constraint) {
     var hasParent=true
     if (constraintVar.isBlank && constraint) 
 			alert("You cannot constrain a query with a blank node. No constraint will be added.");
-    if (!parentVar)
-    {
+    if (!parentVar) {
     	hasParent=false;
     	parentVar = inverse? st.object : st.subject; //if there is no parents, uses the sub/obj
-	}
-	tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
-	v = tr.AJAR_variable? tr.AJAR_variable : kb.variable(newVariableName());
+    }
+    tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
+    v = tr.AJAR_variable? tr.AJAR_variable : kb.variable(newVariableName());
     q.vars.push(v)
     v.label = hasParent? parentVar.label : label(parentVar);
     v.label += " "+ predicateLabelForXML(st.predicate, inverse);

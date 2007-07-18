@@ -160,7 +160,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3369 2007-07-10 18:19:55Z timbl $
+$Id: n3parser.js 3477 2007-07-18 18:03:33Z timbl $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -452,6 +452,7 @@ __SinkParser.prototype.directive = function(str, i) {
     }
     assertFudge((ns.indexOf(":") >= 0));
     this._bindings[t[0][0]] = ( ns);
+
     this.bind(t[0][0], hexify(ns));
     return j;
     }
@@ -476,12 +477,10 @@ __SinkParser.prototype.directive = function(str, i) {
     return -1;
 };
 __SinkParser.prototype.bind = function(qn, uri) {
-    return;
     if ((qn == "")) {
-    this._store.setDefaultNamespace(uri);
     }
     else {
-    this._store.bind(qn, uri);
+    this._store.setPrefixForURI(qn, uri);
     }
 };
 __SinkParser.prototype.setKeywords = function(k) {
@@ -1523,43 +1522,6 @@ function stripCR(str) {
 
 
 function dummyWrite(x) {
-}
-
-
-function hexify(ustr) {
-/*
-Use URL encoding to return an ASCII string
-    corresponding to the given UTF8 string
-
-    >>> hexify("http://example/a b")
-    'http://example/a%20b'
-    
-    */
-
-    var str = "";
-
-        var __ch = new pyjslib_Iterator(ustr);
-        try {
-            while (true) {
-                var ch = __ch.next();
-                
-        
-    if ((ord(ch) > 126) || (ord(ch) < 33)) {
-    var ch = "%%%02X" % ord(ch);
-    }
-    else {
-    var ch = "%c" % ord(ch);
-    }
-    var str =  ( str + ch ) ;
-
-            }
-        } catch (e) {
-            if (e != StopIteration) {
-                throw e;
-            }
-        }
-        
-    return str;
 }
 
 

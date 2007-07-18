@@ -85,22 +85,4 @@ uri_docpart = Util.uri.docpart
 uri_protocol = Util.uri.protocol
 
 
-/** returns true if has a protocol & domain **/
-/* No -- this is general URI code.  Not all URIs have protocol and domain.
-** Eg file:, mailto: etc
-
-function uri_valid(uri) {
-	return (uri.match(/(.+?):\/\/(.+?)/));  
-} //valid
-
-
-// returns the filename of a uri @fixme
-function uri_filename(uri) {
-	if (uri_valid(uri))
-		return uri.slice(uri.lastIndexOf('/')+1);
-} //filename
-
-*/
-
-
 //ends

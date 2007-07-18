@@ -67,15 +67,15 @@ Click: function Click(e,selectedTd,isEnter){
     else if (selectedTd) //case: add triple, auto-complete
         var target=selectedTd;
     else    
-        var target=outline.targetOf(e);
+        var target=getTarget(e);
     if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
     try{
         var obj=this.getStatementAbout(target).object;
         var trNode=ancestor(target,'TR');
-    }catch(e){/*alert(target+'getStatement');*/}
+    }catch(e){alert(getAbout(kb,selectedTd));tabulator.log.error(target+"getStatement Error");}
     this.clearInputAndSave();
     
-    try{var tdNode=trNode.lastChild;}catch(ec){alert(selectedTd.childNode);}
+    try{var tdNode=trNode.lastChild;}catch(e){tabulator.log.error(e+"@"+target);}
     //seems to be a event handling problem of firefox3
     if (e.type!='keypress'&&selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined'){ 
         this.Refill(e,selectedTd);
@@ -450,6 +450,7 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
 },
 
 Refill: function Refill(e,selectedTd){
+    tabulator.log.info("Refill"+selectedTd.textContent);
     var isPredicate=selectedTd.nextSibling;    
     if (isPredicate){ //predicateTd
         if (selectedTd.nextSibling.className=='undetermined') {
@@ -475,8 +476,7 @@ Refill: function Refill(e,selectedTd){
                       "?pred "+rdf('type')+rdf('Property')+".\n"+
                       subjectClass+RDFS('subClassOf')+" ?class.\n"+
                       "?pred "+RDFS('domain')+" ?class.\n}";              
-        var predicateQuery=sparqlText.map(SPARQLToQuery);
-        
+        var predicateQuery=sparqlText.map(SPARQLToQuery);  
                                   
         }else{
         //------selector
@@ -652,6 +652,7 @@ Mousedown: function(e){
     */
 },
 borderClick: function borderClick(e){
+    if (getTarget(e).className != 'bottom-border-active') return;
     var This=outline.UserInput;
     var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
     var insertTr=myDocument.createElement('tr');
@@ -679,6 +680,7 @@ borderClick: function borderClick(e){
 },
 
 Mouseover: function Mouseover(e){
+    if (e.layerX-findPos(this)[0]>30) return;
     this.className='bottom-border-active';
 /*
 if (getTarget(e).tagName=='SPAN'){
@@ -736,10 +738,12 @@ if (this._tabulatorMode==1){
  * Utilities
  */
 getStatementAbout: function getStatementAbout(something){
+    //var trNode=something.parentNode;
     var trNode=ancestor(something,'TR');
     try{
         var statement=trNode.AJAR_statement;
     }catch(e){
+        //alert(something.textContent+" has ancestor "+trNode);
         //throw "TR not a statement TR";
         return;
     }
@@ -995,7 +999,8 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
         default:
             switch (inputQuery.constructor.name){
             case 'Array':
-                for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),function(){});
+                var nullFetcher=function(){};
+                for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),nullFetcher);
                 break;
             case 'undefined':
                 alert("query is not defined");

@@ -106,11 +106,18 @@ function ts_resortTable(lnk) {
   newRows.sort(sortfn);
   
   if (span.getAttribute("sortdir") == 'down') {
-    ARROW = '&nbsp;&nbsp;&uarr;';
+    ARROW = document.createElement('img');
+    ARROW.setAttribute('src', 'icons/tbl-up.png');
+    ARROW.setAttribute('height', '10');
+    ARROW.setAttribute('width', '10');
     newRows.reverse();
     span.setAttribute('sortdir','up');
   } else {
-    ARROW = '&nbsp;&nbsp;&darr;';
+    //ARROW = '&nbsp;&nbsp;&darr;';
+    ARROW = document.createElement('img');
+    ARROW.setAttribute('src', 'icons/tbl-down.png');
+    ARROW.setAttribute('height', '10');
+    ARROW.setAttribute('width', '10');
     span.setAttribute('sortdir','down');
   }
   
@@ -135,7 +142,7 @@ function ts_resortTable(lnk) {
     }
   }
   
-  span.innerHTML = ARROW;
+  span.appendChild(ARROW); // the border around it might be a CSS style
 }
 
 function getParent(el, pTagName) {

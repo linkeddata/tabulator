@@ -976,7 +976,7 @@ function Outline(doc) {
     }
 
     function setSelected(node, newValue) {
-        if (newValue == selected(node)) return;
+        //if (newValue == selected(node)) return; //we might not need this anymore...
         if (node.nodeName != 'TD') throw 'Expected TD in setSelected: '+node.ndoeName;
         var cla = node.getAttribute('class')
         if (!cla) cla = ""
@@ -1309,8 +1309,6 @@ function Outline(doc) {
         }
         //not input then clear
         thisOutline.UserInput.clearMenu();
-        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)
-            thisOutline.UserInput.clearInputAndSave(e);
         if (tname != "IMG") {
             if(about && myDocument.getElementById('UserURI')) { 
                 myDocument.getElementById('UserURI').value = 
@@ -1331,6 +1329,7 @@ function Outline(doc) {
             } else {
                 //setSelected(node, !selected(node))
                 deselectAll()
+                thisOutline.UserInput.clearInputAndSave(e);   
                 setSelected(node, true)
                 
                 if (e.detail==2){//dobule click -> quit TabulatorMousedown()
@@ -1340,7 +1339,6 @@ function Outline(doc) {
                 //if (sel) UserInput.Click(e); = the following
                 var text="TabulatorMouseDown@Outline()";
                 HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
-                
             }
             tabulator.log.debug("Was node selected after: "+selected(node)
                 +", count="+selection.length)
@@ -1349,7 +1347,8 @@ function Outline(doc) {
                     var why = tr.AJAR_statement.why
                     tabulator.log.info("Information from "+why);
                 }
-            
+            e.stopPropagation();
+            return; //this is important or conflict between deslect and userinput happens
         } else { // IMG
             var tsrc = target.src
             var outer
@@ -1469,6 +1468,10 @@ function Outline(doc) {
            }
         }  // else IMG
         //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
+        //have to put this here or this conflicts with deselectAll()
+        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)
+            thisOutline.UserInput.clearInputAndSave(e);        
+        thisOutline.UserInput.clearMenu();
         if (e) e.stopPropagation();
     } //function
     

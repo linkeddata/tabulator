@@ -422,20 +422,24 @@ function getAbout(kb, target) {
     return undefined
 }
 
-function getTerm(target){ //works only for <TD>
-    var statementTr=ancestor(target,'TR');
+function getTerm(target){ //works only for selected <TD>
+    var statementTr=target.parentNode;
+    var st=statementTr.AJAR_statement;
+
     switch (target.className){
         case 'pred selected':
-            return statementTr.AJAR_statement.predicate;
+            return st.predicate;
             break;
         case 'obj selected':
             if (!statementTr.AJAR_inverse)
-                return statementTr.AJAR_statement.object;
+                return st.object;
             else
-                return statementTr.AJAR_statement.subject;
+                return st.subject;
             break;
         case 'selected': //header TD
             return getAbout(kb,target); //kb to be changed
+        case 'undetermined selected':
+            return (target.nextSibling)?st.predicate:((!statementTr.AJAR_inverse)?st.object:st.subject);
     }
 }
 //////////////////////////////////////Source Utility

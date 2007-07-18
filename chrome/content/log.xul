@@ -18,7 +18,7 @@
                   <menuitem oncommand="tabulatorLog.setLevel(tabulatorLog.TERROR+tabulatorLog.TWARN)" label="Errors and Warnings"/>
                   <menuitem oncommand="tabulatorLog.setLevel(tabulatorLog.TERROR+tabulatorLog.TWARN+tabulatorLog.TMESG)" label="Errors, Warnings, and Messages" selected="true"/>
                   <menuitem oncommand="tabulatorLog.setLevel(tabulatorLog.TERROR+tabulatorLog.TWARN+tabulatorLog.TMESG+tabulatorLog.TSUCCESS)" label="Errors, Warnings, Messages, and Successes"/>
-                  <menuitem oncommand="tabulatorLog.setLevel(tabulatorLog.TERROR+tabulatorLog.TWARN+tabulatorLog.TMESG+tabulatorLog.TSUCCESS)" label="Errors, Warnings, Messages, Successes, and Info"/>
+                  <menuitem oncommand="tabulatorLog.setLevel(tabulatorLog.TERROR+tabulatorLog.TWARN+tabulatorLog.TMESG+tabulatorLog.TSUCCESS+tabulatorLog.TINFO)" label="Errors, Warnings, Messages, Successes, and Info"/>
                 </menupopup>
             </menulist>
             <button id="tablog-clear"  accesskey="C" oncommand="tabulatorLog.clear()" label="Clear"/>

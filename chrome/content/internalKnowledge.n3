@@ -9,6 +9,9 @@
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.    
 @keywords a.
 
+#### Ontological (if accepted, move to tabont)
+tabont:onfillin a owl:DatatypeProperty, rdf:Property;
+                rdfs:domain tabont:Request.
 #### Template for new documents
 
 #{?file a tabont:NewRDFDocument} => {?file...}
@@ -45,6 +48,6 @@ log:Formula dc:alternative "RDFCollection";
             tabont:collectionOf rdf:Statement.
 log:Formula rdfs:subClassOf tabont:Collection.
 tabont:Collection dc:alternative "Set";
-                  rdfs:seeAlso <urn:>.
+                  rdfs:seeAlso <urn:isbn:0412808307>.
 tabont:Collection subClassOf owl:Class.
 

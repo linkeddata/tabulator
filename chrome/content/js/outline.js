@@ -485,7 +485,7 @@ function Outline(doc) {
     n3Pane = {};
     n3Pane.icon = Icon.src.icon_n3Pane;
     n3Pane.label = function(subject) {
-        var s = dataPane.label;
+        var s = dataPane.label(subject);
         if (!s) return null;
         return s + 'as N3';
     }

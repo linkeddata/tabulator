@@ -507,8 +507,8 @@ function Outline(doc) {
         var sz = Serializer();
         var str = sz.toN3(sts, kb.namespaces)
         var pre = myDocument.createElement('PRE');
-        pre.applendChild(myDocument.createTextNode(str));
-        div.append(str);
+        pre.appendChild(myDocument.createTextNode(str));
+        div.appendChild(pre);
         return div
     }
     panes.register(n3Pane);

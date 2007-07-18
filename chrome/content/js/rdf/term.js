@@ -202,9 +202,6 @@ RDFFormula.prototype.sym = function(uri,name) {
     if (name != null) {
 	uri = this.namespaces[uri] + name
     }
-    if (uri[0] == '<') { // uri of form <http://test>
-        uri = uri.match(/[^<].*[^>]/)[0];
-    }
     return new RDFSymbol(uri)
 }
 

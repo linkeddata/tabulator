@@ -331,12 +331,12 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
 } //AJAR_handleNewTerm
 
 function myFetcher(x, requestedBy) {
-    tabulator.log.test('Entered myFetcher');
+    //tabulator.log.test('Entered myFetcher');
     if (x == null) {
         tabulator.log.debug("@@ SHOULD SYNC NOW") // what does this mean?
     } else {
         tabulator.log.debug("Fetcher: "+x)
-        tabulator.log.test('Fetcher: ' + x);
+        //tabulator.log.test('Fetcher: ' + x);
         AJAR_handleNewTerm(kb, x, requestedBy)
     }
 }

@@ -259,6 +259,12 @@ function tableView(container,doc)
     var lastModifiedStat;
     var sparqlUpdate;
     
+    function convertToURI(x) { // x = <http://test>
+        if (x[0] = '<') {
+            return x.toString().match(/[^<].*[^>]/)[0];
+        } else {return x;}
+    }
+    
     function onEdit(node)
     {
         if (literalTD(node)) {setSelected(node); return; }
@@ -281,14 +287,51 @@ function tableView(container,doc)
             parent.replaceChild(newTD, node);
             newTD.appendChild(inputObj);
         }
-        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
-        inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
         
         //**** sparqlUpdate code ****//
-        lastModifiedStatement= new RDFStatement( makeTerm(node.getAttribute('s')), makeTerm(node.getAttribute('p')), makeTerm(node.getAttribute('about')));
+        lastModifiedStatement= new RDFStatement(
+        kb.sym(convertToURI(node.getAttribute('s'))), 
+        kb.sym(convertToURI(node.getAttribute('p'))), 
+        kb.literal(oldTxt))
+
+        // s = <http://usefulinc.com/ns/doap#Project>
+        // p = <http://www.w3.org/2000/01/rdf-schema#comment>
+        // o = A project.
+        
+        //<http://usefulinc.com/ns/doap#Project> <http://www.w3.org/2000/01/rdf-schema#comment> "A project."@en .
+        //alert(kb.literal("A project.", en));
+/*         alert(kb.statementsMatching(
+        kb.sym('http://usefulinc.com/ns/doap#Project'),
+        kb.sym('http://www.w3.org/2000/01/rdf-schema#comment')))
+        alert(kb.statementsMatching(
+        kb.sym('http://usefulinc.com/ns/doap#Project'),
+        kb.sym('http://www.w3.org/2000/01/rdf-schema#comment'))[0].why) */
+        
+        //<http://www.w3.org/People/Berners-Lee/card#i> <http://xmlns.com/foaf/0.1/name> "Timothy Berners-Lee" .
+        /*
+        alert(kb.statementsMatching(kb.sym('http://www.w3.org/People/Berners-Lee/card#i'), kb.sym('http://xmlns.com/foaf/0.1/name')))
+        test = kb.statementsMatching(
+        kb.sym('http://www.w3.org/People/Berners-Lee/card#i'), 
+        kb.sym('http://xmlns.com/foaf/0.1/name'))[0].object
+        alert(test.termType);
+        alert(kb.statementsMatching(
+        kb.sym('http://www.w3.org/People/Berners-Lee/card#i'),
+        kb.sym('http://xmlns.com/foaf/0.1/name'),
+        new RDFLiteral("Timothy Berners-Lee","")))
+        */
+        
+        //<http://www.w3.org/2006/link#uri> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty>
+        
+        //alert(kb.statementsMatching(
+        //kb.sym('http://www.w3.org/2006/link#uri'),
+        //kb.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+        //kb.sym('http://www.w3.org/2002/07/owl#DatatypeProperty')))
         sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStatement);
         // more in tableEditOnBlurWrap
         //**** sparqlUpdate code ****//
+        
+        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
+        inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
     }
     
     function tableEditOnBlurWrap(node)

@@ -85,6 +85,7 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     var subjects = null; // set later
 
     var prefixes = [];
+    var namespaceCounts = []; // which have been used
     var px;
     for (px in namespaces) {
         prefixes[namespaces[px]] = px;
@@ -271,7 +272,10 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
                     return ':' + localid;
                 }
                 var prefix = prefixes[namesp];
-                if (prefix) return prefix + ':' + localid;
+                if (prefix) {
+                    namespaceCounts[namesp] = true;
+                    return prefix + ':' + localid;
+                }
                 if (uri.slice(0, j) == this.base)
                     return '<#' + localid + '>';
                 // Fall though if can't do qname
@@ -285,6 +289,14 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
         return '<'+uri+'>';
     }
     
+    function prefixDirectives() {
+        str = '';
+        for (var ns in namespaceCounts) {
+            str += '@prefix ' + prefixes[ns] + ': <'+ns+'>.\n';
+        }
+        return str + '\n';
+    }
+    
     function stringToN3(str) {
         return '"""'+str+'"""'; //    @@ Placeholder for the real thing!
     }
@@ -293,7 +305,7 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     
     var tree = statementListToTree(sts);
 //    print('Tree: '+tree);
-    return treeToString(tree);
+    return prefixDirectives() + treeToString(tree);
     
 }
 

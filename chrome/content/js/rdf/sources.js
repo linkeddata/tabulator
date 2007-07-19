@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3477 2007-07-18 18:03:33Z timbl $
+ * SVN ID: $Id: sources.js 3493 2007-07-19 06:29:03Z timbl $
  *
  ************************************************************/
 
@@ -612,27 +612,30 @@ function SourceFetcher(store, timeout, async) {
                     if (xhr.status-0 == 200) {
                         addType(kb.sym('tab','Document'));
                         var ct = xhr.headers['content-type'];
-                        if (ct.indexOf('image/') == 0)
-                            addType(kb.sym('http://purl.org/dc/terms/Image'));
-                        if (ct.indexOf('text/') == 0)
-                            addType(kb.sym('tab','TextDocument'));
-
+                        if (!ct) alert('No content-type on 200 response for '+xhr.uri)
+                        else {
+                            if (ct.indexOf('image/') == 0)
+                                addType(kb.sym('http://purl.org/dc/terms/Image'));
+                            if (ct.indexOf('text/') == 0)
+                                addType(kb.sym('tab','TextDocument'));
+                        }
                     }
 
 		    if (Util.uri.protocol(xhr.uri.uri) == 'file' || Util.uri.protocol(xhr.uri.uri) == 'chrome') {
 			//tabulator.log.info("Assuming local file is some flavor of XML.")
 			//xhr.headers['content-type'] = 'text/xml' // @@ kludge 
 			//Kenny asks: why text/xml
+                        // Timbl replies: I think so as to make it get parsed as XML
 			
 			switch (xhr.uri.uri.split('.').pop()){
 			    case 'rdf':
 			        xhr.headers['content-type'] = 'application/rdf+xml';
 			        break;
-			    case 'n3':
+			    case 'n3': case 'nt':
 			        xhr.headers['content-type'] = 'text/rdf+n3';
 			        break;
 			    default:
-                    xhr.headers['content-type'] = 'text/xml';			        
+                        xhr.headers['content-type'] = 'text/xml';			        
 			}
 		    }
 		    

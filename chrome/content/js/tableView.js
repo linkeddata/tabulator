@@ -45,10 +45,6 @@ function tableView(container,doc)
             //tabulator.log.test('Entered onBinding');
             var i, tr, td;
             //tabulator.log.info('making a row w/ bindings ' + bindings);
-            //tabulator.log.test('making a row w/bindings ' + bindings.length + '     there');
-            //tabulator.log.test('q.pat: ' + q.pat);
-            //tabulator.log.test('first term in q.pat ' + q.pat.statements[0]);
-            //tabulator.log.test('second term in q.pat ' + q.pat.statements[1]);
             tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
             numStats = q.pat.statements.length; // Added
@@ -71,8 +67,7 @@ function tableView(container,doc)
                 }
                 }
                 //**** End td node creation ****//
-                
-                //tabulator.log.test('v = ' + v + ' making td with bindings[v] = ' + bindings[v]);
+
                 tr.appendChild(matrixTD(arrayStatementForMatrixTD)); // Changed
             } //for each query var, make a row
         }
@@ -89,11 +84,30 @@ function tableView(container,doc)
         
         emptyNode(thisTable.container).appendChild(t); // See results as we go
         
+/*         function deleteColumn(src) {
+
+// I need an array of all the rows in the table, use the table ID
+// I need the row number of the cell that was clicked
+    var allRows= document.getElementById('tabulated_data').rows;
+    var colNum = src.parentNode.cellIndex
+    
+    for (var i=0; i<allRows.length; i++) {
+        allRows[i].deleteCell(colNum);
+    }
+} */
+        
+        
+        var th;
         for (i=0; i<nv; i++) {
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
             th = thisTable.document.createElement('th');
-            th.appendChild(thisTable.document.createTextNode(v.label));
+            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\'></img>')
+            
+            sp = document.createElement('div');
+            //span.addEventListener('click', deleteColumn(e), false);
+            
+            th.appendChild(text);
             tr.appendChild(th);
         }
         
@@ -543,5 +557,14 @@ TableViewFactory = {
 
     getValidDocument: function(q) {
         return "chrome://tabulator/content/table.html?query="+q.id;
+    }
+}
+
+function deleteColumn (src) {
+    var allRows = document.getElementById('tabulated_data').childNodes;
+    var colNum = src.parentNode.cellIndex;
+    
+    for (var i = 0; i<allRows.length; i++) {
+        allRows[i].deleteCell(colNum);
     }
 }

@@ -14,7 +14,7 @@ body {background-color: white ; font-size: 80%; font-family: sans-serif}
 .licOkay2 {background-color: #fff}
 
 strong { font-size: 120%; color: #333 }
-div.Outliner { padding: 0.8em; }
+div.Outliner { margin-top: 2em; padding: 0.8em; }
 form#TabulateForm { padding: 0.8em }
 div#addViewForm { padding: 0.8em }
 iframe { background: white }
@@ -34,18 +34,33 @@ pre#status { font-size: 100% }
 
 /* Panes */
 
-td.internal  { color: #080 }
-div.internalPane { background-color: #ddd5f0; padding: 0.5em; -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
+td.internal  {  }
+div.internalPane { background-color: #ddddff; padding: 0.5em;
+ -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
 
-div.instancePane { border-top: 1px #777; border-bottom: 1px #777; }
+div.instancePane {
+        border-top: solid 1px #777; border-bottom: solid 1px #777; 
+        margin-top: 0.5em; margin-bottom: 0.5em }
 
-.paneShown { border-top: #222 0.1em; border-left: #222 0.1em; border-bottom: #eee 0.1em; border-right: #eee 0.1em; 
+div.dataContentPane {
+    border-top: solid 2px black;
+    border-left: solid 2px black;
+    border-bottom: solid 2px #777;
+    border-right: solid 2px #777;
+    color: #404;
+}
+.imageView { border: 1em white; margin: 1em; }
+
+/* ane icons: */
+.paneShown { border-top: #222 0.1em; border-left:
+ #222 0.1em; border-bottom: #eee 0.1em; border-right: #eee 0.1em; 
             padding: 3px; background-color: #ddd; }
             
 .paneHidden { padding: 3px;  }
 
 /* outline object view */
 img.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
+/* Compare facebook which only limits width -> lots of tall images! */
 
 img.phoneIcon { border: 0; margin-left: 1em}
 
@@ -68,6 +83,7 @@ td {    font-size: 100%;
 /*    display: compact;    Causes console errors in ffox */
      }
 
+td.pred { padding-left: 0.5em }
 /*td.optButton { display: none }
 tr[parentOfSelected] > td.pred td.optButton { display: block }
 */
@@ -250,7 +266,7 @@ td.checkboxTD {
     bottom: auto;
     left: 0;
     right: 0;
-    background-color: #ccc;
+    background-color: #eee;
     border: 0.1em solid #aaa;
 }
 

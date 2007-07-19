@@ -75,7 +75,7 @@ function RDFIndexedFormula(features) {
 	'<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>'] = handleRDFType;
 
     // Assumption: these terms are not redirected @@fixme
-    if ("sameAs" in features)
+    if (features.indexOf("sameAs") >=0)
         this.propertyAction['<http://www.w3.org/2002/07/owl#sameAs>'] =
 	function(formula, subj, pred, obj, why) {
             formula.equate(subj,obj);
@@ -95,13 +95,13 @@ function RDFIndexedFormula(features) {
 	return false;
     }
 
-    if ("InverseFunctionalProperty" in features)
+    if (features.indexOf("InverseFunctionalProperty") >= 0)
         this.classAction["<"+owl_ns+"InverseFunctionalProperty>"] =
             function(formula, subj, pred, obj, addFn) {
                 return newPropertyAction(formula, subj, handle_IFP); // yes subj not pred!
             }; //IFP -> handle_IFP, do add to index
 
-    if ("FunctionalProperty" in features)
+    if (features.indexOf("FunctionalProperty") >= 0)
         this.classAction["<"+owl_ns+"FunctionalProperty>"] =
             function(formula, subj, proj, obj, addFn) {
                 return newPropertyAction(formula, subj, handle_FP);
@@ -142,7 +142,8 @@ We replace the bigger with the smaller.
 
 */
 RDFIndexedFormula.prototype.equate = function(u1, u2) {
-    tabulator.log.debug("Equating "+u1+" and "+u2)
+    tabulator.log.info("Equating "+u1+" and "+u2)
+    
     var d = u1.compareTerm(u2);
     if (!d) return true; // No information in {a = a}
     var big, small;

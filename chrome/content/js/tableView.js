@@ -256,8 +256,8 @@ function tableView(container,doc)
         var t = document.getElementById('tabulated_data');
         t.removeEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = 'white';
-        // include this?
-        // selectedTD.RemoveEventListener('click', onCellClickSecond, false);
+        //Recently Added
+        selectedTD.removeEventListener('click', onCellClickSecond, false); 
     }
 
     var lastModifiedStat;

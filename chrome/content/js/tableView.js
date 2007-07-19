@@ -4,8 +4,7 @@
 
 // Method
 // - when TDs are being created, attach to each TDs the subject and predicate
-// - when edits occur (onEdit), reconstruct the statement and send that to the sparqlUpdate object
-// - the why is the same as the subject since we only edit literal nodes
+// - when edits occur (onEdit), reconstruct the statement and send that to the; the why is the same as the subject since we only edit literal nodes
 // - when edits are done (tableEditOnBlur), send the newTxt with setObject
 // - there are no pointers to things in the original store
 
@@ -83,30 +82,12 @@ function tableView(container,doc)
         t.setAttribute('id', 'tabulated_data'); 
         
         emptyNode(thisTable.container).appendChild(t); // See results as we go
-        
-/*         function deleteColumn(src) {
 
-// I need an array of all the rows in the table, use the table ID
-// I need the row number of the cell that was clicked
-    var allRows= document.getElementById('tabulated_data').rows;
-    var colNum = src.parentNode.cellIndex
-    
-    for (var i=0; i<allRows.length; i++) {
-        allRows[i].deleteCell(colNum);
-    }
-} */
-        
-        
-        var th;
         for (i=0; i<nv; i++) {
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
             th = thisTable.document.createElement('th');
-            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\'></img>')
-            
-            sp = document.createElement('div');
-            //span.addEventListener('click', deleteColumn(e), false);
-            
+            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' class=\'noborder\'></img>')
             th.appendChild(text);
             tr.appendChild(th);
         }

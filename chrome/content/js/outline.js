@@ -316,6 +316,18 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, false, defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
+        if (!HCIoptions["bottom insert highlights"].enabled){
+            var holdingTr=myDocument.createElement('tr');
+            var holdingTd=myDocument.createElement('td');
+            holdingTd.setAttribute('colspan','2');
+            var bottomDiv=myDocument.createElement('div');
+            bottomDiv.className='bottom-border';
+            holdingTd.setAttribute('notSelectable','true');
+            bottomDiv.addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
+            bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
+            bottomDiv.addEventListener('click',thisOutline.UserInput.borderClick,false);
+            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
+        }        
         return div    
     }
     panes.register(defaultPane);

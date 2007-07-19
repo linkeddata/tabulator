@@ -302,7 +302,7 @@ delete temp_DO;
 //HCIoptions["right click to switch mode"].enable();
 HCIoptions["able to edit in Discovery Mode by mouse"].enable();
 //HCIoptions["favorite dock"].enabled=true;
-HCIoptions["bottom insert highlights"].enable();
+//HCIoptions["bottom insert highlights"].enable();
 
 //##Enable this to play with javascript:variableName
 //'javascript:document' is not working fine but 'javascript:document.firstChild' is OK

@@ -665,7 +665,11 @@ borderClick: function borderClick(e){
     //there should be an elegant way of doing this
     
     var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
-    This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
+    var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+    if (!isInverse)
+        This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
+    else
+        This.formUndetStat(insertTr,preStat.object,reqTerm1,reqTerm2,preStat.why,false);
     
 		var holdingTr=myDocument.createElement('tr');
 		var holdingTd=myDocument.createElement('td');
@@ -680,7 +684,7 @@ borderClick: function borderClick(e){
 },
 
 Mouseover: function Mouseover(e){
-    if (e.layerX-findPos(this)[0]>30) return;
+    if (HCIoptions["bottom insert highlights"].enabled) if (e.layerX-findPos(this)[0]>30) return;
     this.className='bottom-border-active';
 /*
 if (getTarget(e).tagName=='SPAN'){

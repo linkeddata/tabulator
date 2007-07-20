@@ -252,6 +252,7 @@ function RDFParser(store) {
      * @param {Object} why The context to which this resource belongs
      */
     this['parse'] = function (document, base, why) {
+        // alert('parse base:'+base);
 	var children = document['childNodes']
 
 	// clean up for the next run
@@ -281,6 +282,7 @@ function RDFParser(store) {
 	// our topmost frame
 
 	var f = this['frameFactory'](this)
+        this['base'] = base
 	f['base'] = base
 	f['lang'] = ''
 	
@@ -536,6 +538,14 @@ function RDFParser(store) {
 	// remove all extraneous xml and xmlns attributes
 	for (var x = attrs['length']-1; x >= 0; x--) {
 	    if (attrs[x]['nodeName']['substr'](0,3) == "xml") {
+                if (attrs[x].name.slice(0,6)=='xmlns:') {
+                    var uri = attrs[x].nodeValue;
+                    // alert('base for namespac attr:'+this.base);
+                    if (this.base) uri = Util.uri.join(uri, this.base);
+                    this.store.setPrefixForURI(attrs[x].name.slice(6),
+                                                uri);
+                }
+//		alert('rdfparser: xml atribute: '+attrs[x].name) //@@
 		element['removeAttributeNode'](attrs[x])
 	    }
 	}

@@ -14,7 +14,7 @@ function Outline(doc) {
     this.clipboardAddress="tabulator:clipboard";
     this.UserInput.clipboardInit(this.clipboardAddress);
     var outlineElement=this.outlineElement;
-
+ 
     this.init = function(){
         var table=myDocument.getElementById('outline');
         table.outline=this;
@@ -151,20 +151,102 @@ function Outline(doc) {
      *  @param obj - an RDF term
      *  @param view - a VIEW function (rather than a bool asImage)
      **/
+    
+     
+     this.openCheckBox = function ()
+     
+                 {
+     
+                 //alert(checkbox.checkOne);
+     
+                 display=window.open('','NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
+     
+                 display.tabulator = tabulator;
+                                  
+                 var message="<font face='arial' size='2'><form name ='checkboxes'>";
+     
+                 message+="<input type='checkbox' name = 'one'/>CC: BY-NC-ND: <br />";
+     
+                 message+="<input type='checkbox' name = 'two'/>CC: BY-NC-SA:<br />";
+     
+                 message+="<input type='checkbox' name = 'three'/>CC: BY-NC:<br />";
+     
+                 message+="<input type='checkbox' name = 'four'/>CC: BY-ND:<br />";
+     
+                 message+="<input type='checkbox' name = 'five'/>CC: BY-SA:<br />";
+     
+                 message+="<input type='checkbox' name = 'six'/>CC: BY:<br /> <br />";
+     
+                 message+= "<input type='button' onClick = 'tabulator.options.submit()' value='Submit' /> <br/>";
+     
+                 message+="</form></font>";
+     
+                 display.document.write(message);
+     
+     
+            }
+    
+    
+    tabulator.options = {}
+    tabulator.options.checkedLicenses = []
+    
+    tabulator.options.submit = function()
+    {
+    alert("outline.js - sonia");
+    if(display.document.checkboxes.one.checked){
+                tabulator.options.checkedLicenses[0] = true;
+                }
+            else{
+                tabulator.options.checkedLicenses[0] = false;
+                }
+            if(display.document.checkboxes.two.checked){
+                 tabulator.options.checkedLicenses[1] = true;
+                }
+            else{
+                 tabulator.options.checkedLicenses[1] = false;
+                }
+            if(display.document.checkboxes.three.checked){
+                 tabulator.options.checkedLicenses[2] = true;
+                }
+            else{
+                 tabulator.options.checkedLicenses[2] = false;
+                }
+            if(display.document.checkboxes.four.checked){
+                 tabulator.options.checkedLicenses[3] = true;
+                }
+            else{
+                 tabulator.options.checkedLicenses[3] = false;
+                }
+            if(display.document.checkboxes.five.checked){
+                 tabulator.options.checkedLicenses[4] = true;
+                }
+            else{
+                 tabulator.options.checkedLicenses[4] = false;
+                }
+            if(display.document.checkboxes.six.checked){
+                 tabulator.options.checkedLicenses[5] = true;
+                }
+            else{
+                 tabulator.options.checkedLicenses[5] = false;
+                }
+        display.close();
+    }
+    
+            
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why) {
         var td = myDocument.createElement('td');
         var theClass = "obj";
-        
+                
         // check the IPR on the data
         var licenses = kb.each(why, kb.sym('http://creativecommons.org/ns#license'));
         tabulator.log.info('licenses:'+ why+': '+ licenses)
         for (i=0; i< licenses.length; i++) {
-            if( licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/' || 
-                licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-sa/3.0/' ||
-                licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/' ||
-                licenses[i].uri == 'http://creativecommons.org/licenses/by-nd/3.0/' ||
-                licenses[i].uri == 'http://creativecommons.org/licenses/by-sa/3.0/' ||
-                licenses[i].uri == 'http://creativecommons.org/licenses/by/3.0/')
+            if((tabulator.options.checkedLicenses[0] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') || 
+               (tabulator.options.checkedLicenses[1] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-sa/3.0/') ||
+               (tabulator.options.checkedLicenses[2] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/') ||
+               (tabulator.options.checkedLicenses[3] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nd/3.0/') ||
+               (tabulator.options.checkedLicenses[4] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-sa/3.0/') ||
+               (tabulator.options.checkedLicenses[5] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by/3.0/'))
             {
                 theClass += ' licOkay';
                 break;
@@ -172,6 +254,7 @@ function Outline(doc) {
             
         }
         
+              
         //set about
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
             td.setAttribute('about', obj.toNT());

@@ -143,7 +143,6 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
                 if (branch.length > 1 && substr.length < 10*(width-indent*level) && // Save time on huge bits
                             substr.indexOf('"""') < 0) {// Don't mess up multiline strings
                     var line = treeToLine(branch);
-                    // print("Line: "+line);
                     if (line.length < (width-indent*level))
                         substr = spaces(indent*(level+1))+line+'\n';
                 }
@@ -228,7 +227,7 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
         }
     }
     
-    ////////////////////////////////////////////// Terms
+    ////////////////////////////////////////////// Atomic Terms
     
     //  Deal with term level things
     
@@ -297,14 +296,53 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
         return str + '\n';
     }
     
-    function stringToN3(str) {
-        return '"""'+str+'"""'; //    @@ Placeholder for the real thing!
+    var forbidden1 = new RegExp(/[\\"\b\f\r\v\t\n\u0080-\uffff]/gm);
+    var forbidden3 = new RegExp(/[\\"\b\f\r\v\u0080-\uffff]/gm);
+    function stringToN3(str, flags) {
+        if (!flags) flags = "e";
+        var res = '', i=0, j=0;
+        var delim;
+        var forbidden;
+        if (str.length > 20 // Long enough to make sense
+                && str.slice(-1) != '"'  // corner case'
+                && flags.indexOf('n') <0  // Force single line
+                && (str.indexOf('\n') >0 || str.indexOf('"') > 0)) {
+            delim = '"""';
+            forbidden =  forbidden3;
+        } else {
+            delim = '"';
+            forbidden = forbidden1;
+        }
+        for(i=0; i<str.length;) {
+            forbidden.lastIndex = 0;
+            var m = forbidden.exec(str.slice(i));
+            if (m == null) break;
+            j = i + forbidden.lastIndex -1;
+            res += str.slice(i,j);
+            var ch = str[j];
+            if (ch=='"' && delim == '"""' &&  str.slice(j,j+3) != '"""') {
+                res += ch;
+            } else {
+                var k = '\b\f\r\t\v\n\\"'.indexOf(ch); // No escaping of bell (7)?
+                if (k >= 0) {
+                    res += "\\" + 'bfrtvn\\"'[k];
+                } else  {
+                    if (flags.indexOf('e')>=0) {
+                        res += '\\u' + ('000'+
+                         ch.charCodeAt(0).toString(16).toLowerCase()).slice(-4)
+                    } else { // no 'e' flag
+                        res += ch;
+                    }
+                }
+            }
+            i = j+1;
+        }
+        return delim + res + str.slice(i) + delim
     }
 
     // Body of toN3:
     
     var tree = statementListToTree(sts);
-//    print('Tree: '+tree);
     return prefixDirectives() + treeToString(tree);
     
 }

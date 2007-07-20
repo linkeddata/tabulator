@@ -90,6 +90,7 @@ function Outline(doc) {
         image.setAttribute('about', subject.toNT())
         image.style.marginLeft="5px"
         image.style.marginRight="10px"
+        image.style.border="solid #777 1px"; //Added
         node.appendChild(image)
         return image
     }

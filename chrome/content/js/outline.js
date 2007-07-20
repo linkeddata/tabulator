@@ -375,6 +375,28 @@ function Outline(doc) {
         }
     }
     
+    /*   Pane within Document data content view
+    **
+    **  This outline pane contains docuemnts from a specific source document only.
+    */
+    withinDocumentPane = {};
+    withinDocumentPane.icon = Icon.src.icon_withinDocumentPane; // should not show
+    withinDocumentPane.label = function(subject) { return 'about ';};
+    withinDocumentPane.filter = function(pred, inverse) {
+        return true; // show all
+    }
+    withinDocumentPane.render = function(subject, source) {
+        var div = myDocument.createElement('div')
+        
+        div.setAttribute('class', 'withinDocumentPane')
+        appendRemoveIcon(div, subject, div);
+                  
+        var plist = kb.statementsMatching(subject, undefined, undefined, source)
+        appendPropertyTRs(div, plist, false, withinDocumentPane.filter)
+        return div    
+    }
+    panes.register(withinDocumentPane);
+    
     /*   Default Pane
     **
     **  This outline pane contains the properties which are

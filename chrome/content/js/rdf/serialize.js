@@ -6,6 +6,8 @@ __Serializer = function(){
     this.base = null;
     this.prefixes = [];
     this.keywords = ['a']; // The only one we generate at the moment
+    this.prefixchars = "abcdefghijklmnopqustuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
     /* pass */
 }
 
@@ -33,6 +35,36 @@ __Serializer.prototype.suggestNamespaces = function(namespaces) {
         this.prefixes[namespaces[px]] = px;
     }
 }
+
+// Make up an unused prefix for a random namespace
+__Serializer.prototype.makeUpPrefix = function(uri) {
+    var p = uri;
+    var namespaces = [];
+    var pok;
+    
+    function canUse(pp) {
+        if (namespaces[pp]) return false; // already used
+        sz.prefixes[uri] = pp;
+        pok = pp;
+        return true
+    }
+    for (var ns in sz.prefixes) namespaces[sz.prefixes[ns]] = ns; // reverse index
+    if ('#/'.indexOf(p[p.length-1]) >= 0) p = p.slice(0, -1);
+    var slash = p.lastIndexOf('/');
+    if (slash >= 0) p = p.slice(slash+1);
+    var i = 0;
+    while (i < p.length)
+        if (sz.prefixchars.indexOf(p[i])) i++; else break;
+    p = p.slice(0,i);
+    if (p.length < 6 && canUse(p)) return pok; // exact i sbest
+    if (canUse(p.slice(0,3))) return pok;
+    if (canUse(p.slice(0,2))) return pok;
+    if (canUse(p.slice(0,4))) return pok;
+    if (canUse(p.slice(0,1))) return pok;
+    if (canUse(p.slice(0,5))) return pok;
+    for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
+}
+
 
 /* The scan is to find out which nodes will have to be the roots of trees
 ** in the serialized form. This will be any symbols, and any bnodes
@@ -181,7 +213,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         return str;
     };
 
-    ////////////////////////////////////////////// Structure
+    ////////////////////////////////////////////// Structure for N3
     
     
     function statementListToTree(statements) {
@@ -234,7 +266,6 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 
     // Convert a set of statements into a nested tree of lists and strings
     function objectTree(obj) {
-        // print('Object tree for '+obj);
         switch(obj.termType) {
             case 'symbol':
             case 'literal':
@@ -325,6 +356,8 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         return str + '\n';
     }
     
+    //  stringToN3:  String escaping for N3
+    //
     var forbidden1 = new RegExp(/[\\"\b\f\r\v\t\n\u0080-\uffff]/gm);
     var forbidden3 = new RegExp(/[\\"\b\f\r\v\u0080-\uffff]/gm);
     function stringToN3(str, flags) {
@@ -376,7 +409,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     
 }
 
-// String ecaping utilities
+// String ecaping utilities 
 
 function hexify(str) { // also used in parser
     var res = '';
@@ -404,4 +437,191 @@ function backslashUify(str) {
     }
     return res;
 }
+
+
+
+
+
+
+//////////////////////////////////////////////// XML serialization
+
+__Serializer.prototype.statementsToXML = function(sts) {
+    var indent = 4;
+    var width = 80;
+    var subjects = null; // set later
+    var sz = this;
+
+    var namespaceCounts = []; // which have been used
+
+    
+    ////////////////////////// Arrange the bits of XML text 
+
+    var spaces=function(n) {
+        var s='';
+        for(var i=0; i<n; i++) s+=' ';
+        return s
+    }
+
+    XMLtreeToLine = function(tree) {
+        var str = '';
+        for (var i=0; i<tree.length; i++) {
+            var branch = tree[i];
+            var s2 = (typeof branch == 'string') ? branch : XMLtreeToLine(branch);
+            str += s2;
+        }
+        return str;
+    }
+    
+    // Convert a nested tree of lists and strings to a string
+    XMLtreeToString = function(tree, level) {
+        var str = '';
+        var lastLength = 100000;
+        if (!level) level = 0;
+        for (var i=0; i<tree.length; i++) {
+            var branch = tree[i];
+            if (typeof branch != 'string') {
+                var substr = XMLtreeToString(branch, level +1);
+                if (
+                    substr.length < 10*(width-indent*level)
+                    && substr.indexOf('"""') < 0) {// Don't mess up multiline strings
+                    var line = XMLtreeToLine(branch);
+                    if (line.length < (width-indent*level)) {
+                        branch = '   '+line; //   @@ Hack: treat as string below
+                        substr = ''
+                    }
+                }
+                if (substr) lastLength = 10000;
+                str += substr;
+            }
+            if (typeof branch == 'string') {
+                if (lastLength < (indent*level+4)) { // continue
+                    str = str.slice(0,-1) + ' ' + branch + '\n';
+                    lastLength += branch.length + 1;
+                } else {
+                    var line = spaces(indent*level) +branch;
+                    str += line +'\n'; 
+                    lastLength = line.length;
+                }
+ 
+            } else { // not string
+            }
+        }
+        return str;
+    };
+
+    function statementListToXMLTree(statements) {
+        sz.suggestPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
+        var res = [];
+        var pair = __Serializer.prototype.rootSubjects(statements);
+        var roots = pair[0];
+        subjects = pair[1];
+        results = []
+        for (var i=0; i<roots.length; i++) {
+            root = roots[i];
+            results.push(subjectXMLTree(root))
+        }
+        return results;
+    }
+    
+    function escapeForXML(str) {
+        if (typeof str == 'undefined') return '@@@undefined@@@@';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    }
+
+    function relURI(term) {
+        return escapeForXML((sz.base) ? Util.uri.refTo(this.base, term.uri) : term.uri);
+    }
+
+    // The tree for a subject
+    function subjectXMLTree(subject) {
+        return [ '<rdf:Description about="'+ relURI(subject)+'">' ].concat(
+                [propertyXMLTree(subject)]).concat(["</rdf:Description>"]);
+    }
+    function collectionXMLTree(subject) {
+        res = []
+        for (var i=0; i< subject.length; i++) {
+            res.push(subjectXMLTree(subject[i]));
+         }
+         return res;
+    }   
+
+    // The property tree for a single subject or anonymos node
+    function propertyXMLTree(subject) {
+        var results = []
+        var sts = subjects[subject.toNT()]; // relevant statements
+        sts.sort();
+        for (var i=0; i<sts.length; i++) {
+            var st = sts[i];
+            switch (st.object.termType) {
+                case 'bnode':
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
+                        propertyXMLTree(st.object),
+                        '</'+qname(st.predicate)+'>']);
+                    break;
+                case 'symbol':
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:resource="'
+                            + relURI(st.object)+'"/>']); 
+                    break;
+                case 'literal':
+                    results = results.concat(['<'+qname(st.predicate)
+                        + (st.object.dt ? ' rdf:datatype="'+escapeForXML(st.object.dt.uri)+'"' : '') 
+                        + (st.object.lang ? ' xml:lang="'+st.object.lang+'"' : '') 
+                        + '>' + escapeForXML(st.object.value)
+                        + '</'+qname(st.predicate)+'>']);
+                    break;
+                case 'collection':
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Collection">', 
+                        collectionXMLTree(st.object),
+                        '</'+qname(st.predicate)+'>']);
+                    break;
+                default:
+                    throw "Can't serialize object of type "+st.object.termType +" into XML";
+                
+            } // switch
+        }
+        return results;
+    }
+
+    function qname(term) {
+        var uri = term.uri;
+
+        var j = uri.indexOf('#');
+        if (j<0 && sz.flags.indexOf('/') < 0) {
+            j = uri.lastIndexOf('/');
+        }
+        if (j < 0) throw ("Cannot make qname out of <"+uri+">")
+
+        var canSplit = true;
+        for (var k=j+1; k<uri.length; k++) {
+            if (_notNameChars.indexOf(uri[k]) >=0) {
+                throw ('Invalid character "'+uri[k] +'" cannot be in XML qname'); 
+            }
+        }
+        var localid = uri.slice(j+1);
+        var namesp = uri.slice(0,j+1);
+        if (sz.defaultNamespace && sz.defaultNamespace == namesp
+            && sz.flags.indexOf('d') < 0) {// d -> suppress default
+            return localid;
+        }
+        var prefix = sz.prefixes[namesp];
+        if (!prefix) prefix = sz.makeUpPrefix(namesp);
+        namespaceCounts[namesp] = true;
+        return prefix + ':' + localid;
+//        throw ('No prefix for namespace "'+namesp +'" for XML qname for '+uri+', namespaces: '+sz.prefixes+' sz='+sz); 
+    }
+
+    // Body of toXML:
+    
+    var tree = statementListToXMLTree(sts);
+    var str = '<rdf:RDF';
+    for (var ns in namespaceCounts) {
+        str += '\n xmlns:' + sz.prefixes[ns] + '="'+escapeForXML(ns)+'"';
+    }
+    str += '>';
+
+    var tree2 = [str, tree, '</rdf:RDF>'];  //@@ namespace declrations
+    return XMLtreeToString(tree2, -1);
+
+
+} // End @@ body
 

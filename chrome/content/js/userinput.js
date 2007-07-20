@@ -69,11 +69,13 @@ Click: function Click(e,selectedTd,isEnter){
     else    
         var target=getTarget(e);
     if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
+    var about = this.getStatementAbout(target); // timbl - to avoid alert from random clicks
+    if (!about) return;
     try{
-        var obj=this.getStatementAbout(target).object;
+        var obj = about.object;
         var trNode=ancestor(target,'TR');
     }catch(e){
-        alert('userinput.js: no About: '+e+getAbout(kb,selectedTd));
+        alert('userinput.js: '+e+getAbout(kb,selectedTd));
         tabulator.log.error(target+" getStatement Error:"+e);
     }
     this.clearInputAndSave();

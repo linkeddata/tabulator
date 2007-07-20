@@ -86,12 +86,22 @@ function tableView(container,doc)
         for (i=0; i<nv; i++) {
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
+            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' style=\'border:solid #777 1px\'> </img>');
+            // I have to do it like this because of weird settings in sorttable
+            
             th = thisTable.document.createElement('th');
-            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' class=\'noborder\'></img>')
+            // a = document.createElement('a');
+            // th.appendChild(a);
+            // text = document.createTextNode(v.label);
+            // img = document.createElement('img');
+            // img.setAttribute('src', 'icons/tbl-x-small.png');
+            // img.setAttribute('onclick', 'deleteColumn(this)'); //Works???
+            // img.removeButton.style.border='solid';
+            // img..style.borderWidth = '1px';
+            
             th.appendChild(text);
             tr.appendChild(th);
         }
-        
         
         kb.query(q, this.onBinding);
         activeSingleQuery = q;
@@ -305,13 +315,13 @@ function tableView(container,doc)
         //**** sparqlUpdate code ****//
         // since we're only editing the literal nodes, the subject
         // and why are the same, except maybe for the #
-        lastModifiedStatement= new RDFStatement(
+        lastModifiedStat= new RDFStatement(
         kb.sym(convertToURI(node.getAttribute('s'))), 
         kb.sym(convertToURI(node.getAttribute('p'))), 
         kb.literal(oldTxt, ''),
         kb.sym(convertToURI(node.getAttribute('s'))))
         
-        sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStatement);
+        sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStat);
         // more in tableEditOnBlurWrap
         //**** sparqlUpdate code ****//
 

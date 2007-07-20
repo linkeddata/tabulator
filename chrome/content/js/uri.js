@@ -81,12 +81,9 @@ Util.uri.refTo = function(base, uri) {
         if (uri[i] == base[i]) i++;
         else break;
     if (base.slice(0,i).match(Util.uri.commonHost)) {
-//        alert('Base <'+base+'> and uri <'+uri+'> share "'+uri.slice(0,i)+'" and match common host')
         var k = uri.indexOf('//');
         if (k<0) k=-2; // no host
         var l = uri.indexOf('/', k+2);   // First *single* slash
-        //alert('Base <'+base+'> and uri <'+uri+'> share "'+uri.slice(0,i)+
-        //                '" and match commonHost, k='+k+', l='+l)
         if (uri.slice(l+1, l+2) != '/' && base.slice(l+1, l+2) != '/'
                            && uri.slice(0,l) == base.slice(0,l)) // common path to single slash
             return uri.slice(l); // but no other common path segments
@@ -101,8 +98,6 @@ Util.uri.refTo = function(base, uri) {
     if (base.indexOf(':', i) >0) return uri; // unshared ':'
     var n = 0;
     for (var j=i; j<base.length; j++) if (base[j]=='/') n++;
-    alert('Base <'+base+'> and uri <'+uri+'> share to slash "'+uri.slice(0,i)+
-                        '" then base has slashes n='+n)
     if (n==0 && i < uri.length && uri[i] =='#') return './' + uri.slice(i);
     if (n==0 && i == uri.length) return './';
     var str = '';

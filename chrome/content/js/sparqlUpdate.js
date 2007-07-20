@@ -49,7 +49,7 @@ sparql.prototype.prepareUpdate = function(statement) {
         where: contextToWhere(context),
 
         setObject: function(obj) {
-            function fire(query) {
+            function fire(uri,query) {
                 var xhr = Util.XMLHTTPFactory();
 
                 /* // asynchronous request callback
@@ -77,7 +77,7 @@ sparql.prototype.prepareUpdate = function(statement) {
                     }
                 }
                 
-                xhr.open('POST', 'http://presbrey.mit.edu/sparql/', false);
+                xhr.open('POST', uri, false);
                 xhr.setRequestHeader('Content-type', 'application/sparql-query');
                 xhr.send(query);
                 
@@ -87,20 +87,29 @@ sparql.prototype.prepareUpdate = function(statement) {
                     alert(xhr.responseText);
                 }
             }
-            
+
+/*  algae does not yet support named graphs
             query = "WHERE { GRAPH " +
-                    this.statement[3].toNT() + "\n" +
-                    this.where + " }\n";
+            this.statement[3].toNT() + "\n" +
+            this.where + " }\n";
             query += "DELETE { GRAPH " +
-                    this.statement[3].toNT() + " { " +
-                    this.statementNT + " } }\n";
+                this.statement[3].toNT() + " { " +
+                this.statementNT + " } }\n";
             query += "INSERT { GRAPH " +
-                    this.statement[3].toNT() + " { " +
-                    anonymize(this.statement[0]) + " " +
-                    anonymize(this.statement[1]) + " " +
-                    anonymize(obj) + " " + " . } }\n";
-            
-            fire(query);
+                this.statement[3].toNT() + " { " +
+                anonymize(this.statement[0]) + " " +
+                anonymize(this.statement[1]) + " " +
+                anonymize(obj) + " " + " . } }\n";
+*/
+
+            query = this.where.length > 0 ? "WHERE " + this.where + "\n" : "";
+            query += "DELETE { " + this.statementNT + " }\n";
+            query += "INSERT { " +
+                anonymize(this.statement[0]) + " " +
+                anonymize(this.statement[1]) + " " +
+                anonymize(obj) + " " + " . }\n";
+
+            fire(this.statement[3].uri, query);
         }
     }
 }

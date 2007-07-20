@@ -50,7 +50,7 @@ switchMode: function(){ //should be part of global UI
             document.getElementsByName('mode')[0].checked=true;
             break;
         default:
-            alert("mode does not exist");
+            throw "userinput.js: Unknown mode: " + this._tabulatorMode;
     }
 },
     
@@ -72,7 +72,10 @@ Click: function Click(e,selectedTd,isEnter){
     try{
         var obj=this.getStatementAbout(target).object;
         var trNode=ancestor(target,'TR');
-    }catch(e){alert(getAbout(kb,selectedTd));tabulator.log.error(target+"getStatement Error");}
+    }catch(e){
+        alert('userinput.js: no About: '+e+getAbout(kb,selectedTd));
+        tabulator.log.error(target+" getStatement Error:"+e);
+    }
     this.clearInputAndSave();
     
     try{var tdNode=trNode.lastChild;}catch(e){tabulator.log.error(e+"@"+target);}

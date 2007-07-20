@@ -2,12 +2,20 @@
 */
 
 __Serializer = function(){
-    this._flags = "";
+    this.flags = "";
+    this.base = null;
+    this.prefixes = [];
+    this.keywords = ['a']; // The only one we generate at the moment
     /* pass */
 }
 
 Serializer = function() {return new __Serializer()}; 
 
+__Serializer.prototype.setBase = function(base)
+    { this.base = base };
+
+__Serializer.prototype.setFlags = function(flags)
+    { this.flags = flags?flags: '' };
 
 /* Accumulate Namespaces
 ** 
@@ -15,9 +23,16 @@ Serializer = function() {return new __Serializer()};
 ** There is therefore no guarantee in general.
 */
 
-//__Serializer.prototype.setPrefixForURI = function(prefix, uri) {
-//    this.prefixes[uri] = prefix;
-//}
+__Serializer.prototype.suggestPrefix = function(prefix, uri) {
+    this.prefixes[uri] = prefix;
+}
+
+// Takes a namespace -> prefix map
+__Serializer.prototype.suggestNamespaces = function(namespaces) {
+    for (var px in namespaces) {
+        this.prefixes[namespaces[px]] = px;
+    }
+}
 
 /* The scan is to find out which nodes will have to be the roots of trees
 ** in the serialized form. This will be any symbols, and any bnodes
@@ -78,18 +93,17 @@ __Serializer.prototype.rootSubjects = function(sts) {
 
 ////////////////////////////////////////////////////////
 
+__Serializer.prototype.toN3 = function(f) {
+    return this.statementsToN3(f.statements);
+}
     
-__Serializer.prototype.toN3 = function(sts, namespaces, flags) {
+__Serializer.prototype.statementsToN3 = function(sts) {
     var indent = 4;
     var width = 80;
     var subjects = null; // set later
+    var sz = this;
 
-    var prefixes = [];
     var namespaceCounts = []; // which have been used
-    var px;
-    for (px in namespaces) {
-        prefixes[namespaces[px]] = px;
-    }
 
     predMap = {
         'http://www.w3.org/2002/07/owl#sameAs': '=',
@@ -99,7 +113,6 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     
 
     
-    if (!flags) flags = '';
     
     ////////////////////////// Arrange the bits of text 
 
@@ -113,10 +126,9 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
         var str = '';
         for (var i=0; i<tree.length; i++) {
             var branch = tree[i];
-            if (i!=0) str += ' ';
-            if (typeof branch == 'string')
-                str += branch;
-            else str += treeToLine(branch);
+            var s2 = (typeof branch == 'string') ? branch : treeToLine(branch);
+            if (i!=0 && s2 != ',' && s2 != ';' && s2 != '.') str += ' ';
+            str += s2;
         }
         return str;
     }
@@ -124,29 +136,46 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     // Convert a nested tree of lists and strings to a string
     treeToString = function(tree, level) {
         var str = '';
+        var lastLength = 100000;
         if (!level) level = 0;
         for (var i=0; i<tree.length; i++) {
             var branch = tree[i];
+            if (typeof branch != 'string') {
+                var substr = treeToString(branch, level +1);
+                if (
+                    substr.length < 10*(width-indent*level)
+                    && substr.indexOf('"""') < 0) {// Don't mess up multiline strings
+                    var line = treeToLine(branch);
+                    if (line.length < (width-indent*level)) {
+                        branch = '   '+line; //   @@ Hack: treat as string below
+                        substr = ''
+                    }
+                }
+                if (substr) lastLength = 10000;
+                str += substr;
+            }
             if (typeof branch == 'string') {
                 if (branch.length == '1' && str.slice(-1) == '\n') {
-                    if (",.;".indexOf(branch) >=0)
+                    if (",.;".indexOf(branch) >=0) {
                         str = str.slice(0,-1) + branch + '\n'; //  slip punct'n on end
-                    else if ("])}".indexOf(branch) >=0)
+                        lastLength += 1;
+                        continue;
+                    } else if ("])}".indexOf(branch) >=0) {
                         str = str.slice(0,-1) + ' ' + branch + '\n';
-                    else
-                        str += spaces(indent*level) +branch +'\n'; 
+                        lastLength += 2;
+                        continue;
+                    }
                 }
-                else
-                    str += spaces(indent*level) +branch +'\n'; 
-            } else {
-                var substr = treeToString(branch, level +1);
-                if (branch.length > 1 && substr.length < 10*(width-indent*level) && // Save time on huge bits
-                            substr.indexOf('"""') < 0) {// Don't mess up multiline strings
-                    var line = treeToLine(branch);
-                    if (line.length < (width-indent*level))
-                        substr = spaces(indent*(level+1))+line+'\n';
+                if (lastLength < (indent*level+4)) { // continue
+                    str = str.slice(0,-1) + ' ' + branch + '\n';
+                    lastLength += branch.length + 1;
+                } else {
+                    var line = spaces(indent*level) +branch;
+                    str += line +'\n'; 
+                    lastLength = line.length;
                 }
-                str += substr;
+ 
+            } else { // not string
             }
         }
         return str;
@@ -250,10 +279,10 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     
     function symbolToN3(uri) {  // c.f. symbolString() in notation3.py
         var j = uri.indexOf('#');
-        if (j<0 && flags.indexOf('/') < 0) {
+        if (j<0 && sz.flags.indexOf('/') < 0) {
             j = uri.lastIndexOf('/');
         }
-        if (j >= 0 && flags.indexOf('p') < 0)  { // Can split at namespace
+        if (j >= 0 && sz.flags.indexOf('p') < 0)  { // Can split at namespace
             var canSplit = true;
             for (var k=j+1; k<uri.length; k++) {
                 if (_notNameChars.indexOf(uri[k]) >=0) {
@@ -263,26 +292,26 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
             if (canSplit) {
                 var localid = uri.slice(j+1);
                 var namesp = uri.slice(0,j+1);
-                if (this.defaultNamespace && this.defaultNamespace == namesp
-                    && flags.indexOf('d') < 0) {// d -> suppress default
-                    if (flags.indexOf('k') >= 0 &&
-                        this.keyords.indexOf(localid) <0)
+                if (sz.defaultNamespace && sz.defaultNamespace == namesp
+                    && sz.flags.indexOf('d') < 0) {// d -> suppress default
+                    if (sz.flags.indexOf('k') >= 0 &&
+                        sz.keyords.indexOf(localid) <0)
                         return localid; 
                     return ':' + localid;
                 }
-                var prefix = prefixes[namesp];
+                var prefix = sz.prefixes[namesp];
                 if (prefix) {
                     namespaceCounts[namesp] = true;
                     return prefix + ':' + localid;
                 }
-                if (uri.slice(0, j) == this.base)
+                if (uri.slice(0, j) == sz.base)
                     return '<#' + localid + '>';
                 // Fall though if can't do qname
             }
         }
-        if (flags.indexOf('r') < 0 && this.base)
-            uri = uri.refTo(this.base, uri);
-        else if (flags.indexOf('u') >= 0)
+        if (sz.flags.indexOf('r') < 0 && sz.base)
+            uri = Util.uri.refTo(sz.base, uri);
+        else if (sz.flags.indexOf('u') >= 0)
             uri = backslashUify(uri);
         else uri = hexify(uri);
         return '<'+uri+'>';
@@ -291,7 +320,7 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     function prefixDirectives() {
         str = '';
         for (var ns in namespaceCounts) {
-            str += '@prefix ' + prefixes[ns] + ': <'+ns+'>.\n';
+            str += '@prefix ' + sz.prefixes[ns] + ': <'+ns+'>.\n';
         }
         return str + '\n';
     }
@@ -343,7 +372,7 @@ __Serializer.prototype.toN3 = function(sts, namespaces, flags) {
     // Body of toN3:
     
     var tree = statementListToTree(sts);
-    return prefixDirectives() + treeToString(tree);
+    return prefixDirectives() + treeToString(tree, -1);
     
 }
 

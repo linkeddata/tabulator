@@ -499,7 +499,7 @@ function Outline(doc) {
     n3Pane.label = function(subject) {
         var s = dataContentPane.label(subject);
         if (!s) return null;
-        return s + 'as N3';
+        return s + ' as N3';
     }
 
     n3Pane.render = function(subject) {
@@ -517,7 +517,9 @@ function Outline(doc) {
         }
         */
         var sz = Serializer();
-        var str = sz.toN3(sts, kb.namespaces)
+        sz.suggestNamespaces(kb.namespaces);
+        sz.setBase(subject.uri);
+        var str = sz.statementsToN3(sts)
         var pre = myDocument.createElement('PRE');
         pre.appendChild(myDocument.createTextNode(str));
         div.appendChild(pre);

@@ -100,7 +100,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     function accountedFor(x, start) {
         if (x.termType != 'bnode') return true; // will be subject
         var zz = incoming[x];
-        if (zz.length != 1) return true;
+        if (!zz || zz.length != 1) return true;
         if (loopBreakers[x]) return true;
         if (zz[0] == start) return false;
         return accountedFor(zz[0], start);

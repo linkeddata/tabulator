@@ -7,6 +7,7 @@ __Serializer = function(){
     this.prefixes = [];
     this.keywords = ['a']; // The only one we generate at the moment
     this.prefixchars = "abcdefghijklmnopqustuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    this.incoming = null;  // Array not calculated yet
 
     /* pass */
 }
@@ -120,6 +121,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         tabulator.log.debug(' sz potential subject *: '+sts[i].subject)
         loopBreakers[x] = 1;
     }
+    this.incoming = incoming; // Keep for serializing
     return [roots, subjects];
 }
 
@@ -219,7 +221,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     function statementListToTree(statements) {
         // print('Statement tree for '+statements.length);
         var res = [];
-        var pair = __Serializer.prototype.rootSubjects(statements);
+        var pair = sz.rootSubjects(statements);
         var roots = pair[0];
         // print('Roots: '+roots)
         subjects = pair[1];
@@ -233,6 +235,8 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     
     // The tree for a subject
     function subjectTree(subject) {
+        if (subject.termType == 'bnode' && !sz.incoming[subject])
+            return objectTree(subject).concat(["."]); // Anonymous bnode subject
         return [ termToN3(subject) ].concat([propertyTree(subject)]).concat(["."]);
     }
     
@@ -512,7 +516,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     function statementListToXMLTree(statements) {
         sz.suggestPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
         var res = [];
-        var pair = __Serializer.prototype.rootSubjects(statements);
+        var pair = sz.rootSubjects(statements);
         var roots = pair[0];
         subjects = pair[1];
         results = []
@@ -534,7 +538,18 @@ __Serializer.prototype.statementsToXML = function(sts) {
 
     // The tree for a subject
     function subjectXMLTree(subject) {
-        return [ '<rdf:Description about="'+ relURI(subject)+'">' ].concat(
+        var start
+        if (subject.termType == 'bnode') {
+            if (!sz.incoming[subject]) { // anonymous bnode
+                var start = '<rdf:Description>';
+            } else {
+                var start = '<rdf:Description rdf:ID="'+subject.toNT.slice(2)+'">';
+            }
+        } else {
+            var start = '<rdf:Description about="'+ relURI(subject)+'">';
+        }
+
+        return [ start ].concat(
                 [propertyXMLTree(subject)]).concat(["</rdf:Description>"]);
     }
     function collectionXMLTree(subject) {

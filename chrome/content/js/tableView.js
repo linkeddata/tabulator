@@ -309,13 +309,30 @@ function tableView(container,doc)
         //**** sparqlUpdate ****//
         // since we're only editing the literal nodes, the subject
         // and why are the same, except maybe for the #
-        lastModifiedStat= new RDFStatement(
-        kb.sym(convertToURI(node.getAttribute('s'))), 
-        kb.sym(convertToURI(node.getAttribute('p'))), 
-        kb.literal(oldTxt, ''),
-        kb.sym(convertToURI(node.getAttribute('s'))))
+        var s = node.getAttribute('s');
+        var p = node.getAttribute('p');
+        var o = node.getAttribute('o');
         
-        sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStat);
+        var st = kb.anyStatementMatching(
+        kb.sym(convertToURI(s)),
+        kb.sym(convertToURI(p)),
+        kb.literal(o, ''))
+        if (!st)  throw ('no why for '+s+p+o);
+        var why = st.why;
+        if (!why) throw "Unknown provenence for {"+s+p+o+"}";
+        
+        alert(s);
+        alert(p);
+        alert(o);
+        alert(why);
+        
+        lastModifiedStat= new RDFStatement(
+        kb.sym(convertToURI(s)), 
+        kb.sym(convertToURI(p)), 
+        kb.literal(o, ''),
+        kb.sym(why))
+        
+        // sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStat);
         // more in tableEditOnBlurWrap
         //**** End sparqlUpdate ****//
 
@@ -338,7 +355,7 @@ function tableView(container,doc)
             e.preventDefault();
             
             //**** sparqlUpdate ****//
-            sparqlUpdate.setObject(kb.literal(newTxt, ''));
+            //sparqlUpdate.setObject(kb.literal(newTxt, ''));
             //**** End sparqlUpdate ****//
         }
     }
@@ -361,19 +378,27 @@ function tableView(container,doc)
     //***************** Add Row *****************//
     
     // has no about attribute = literal 
-    function literalTD (tdNode) 
-    {
+    function literalTD (tdNode) {
         if (tdNode.getAttributeNode('about')==undefined) return true; 
     }
     
     // checks using row, col specs
-    function literalRC (row, col) 
-    {
+    function literalRC (row, col) {
         var t = thisTable.document.getElementById('tabulated_data'); 
         var tdNode = t.childNodes[row].childNodes[col];
         if (literalTD (tdNode)) return true;
     } 
+
+    function bnodeTD (tdNode) {
+        if(tdNode.getAttributeNode('about')[0]=='_') return true;
+    } 
     
+    function bnodeRC (row, col) {
+        var t = thisTable.document.getElementById('tabulated_data');
+        var tdNode = t.childNodes[row].childNodes[col];
+        if (bnodeTD (tdNode)) return true;
+    }
+
     function drawAddRow () 
     {
         var form = thisTable.document.createElement('form');
@@ -395,11 +420,26 @@ function tableView(container,doc)
         var td;
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
+        // I need to add the s and p nodes
         for (i=0; i<numCols; i++) {
             if (literalRC(1, i)) {
-                td = createLiteralTD(); }
+                td = createLiteralTD(); 
+                refNode = getTDNode(1, i);
+                td.setAttribute('s', refNode.getAttribute('s'));
+                td.setAttribute('p', refNode.getAttribute('p')); 
+            }
+            if (bnodeTD(1, i)) {
+                td = createBNodeTD(); 
+                refNode = getTDNode(1, i);
+                td.setAttribute('s', refNode.getAttribute('s'));
+                td.setAttribute('p', refNode.getAttribute('p')); 
+            }
             else { 
-                td = createSymbolTD(); }
+                td = createSymbolTD(); 
+                refNode = getTDNode(1, i);
+                td.setAttribute('s', refNode.getAttribute('s'));
+                td.setAttribute('p', refNode.getAttribute('p')); 
+            }
             tr.appendChild(td);
         }
         t.appendChild(tr);
@@ -419,6 +459,15 @@ function tableView(container,doc)
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
         // SET ATTRIBUTES HERE;
+        return td;
+    }
+
+    function createBNodeTD() {
+        var td = thisTable.document.createElement('TD');
+        bnode = kb.bnode();
+        td.setAttribute('about', bnode.toNT());
+        td.setAttribute('style', 'color:#4444ff');
+        td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
         return td;
     }
 

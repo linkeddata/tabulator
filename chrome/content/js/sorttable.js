@@ -111,6 +111,7 @@ function ts_resortTable(lnk) {
     ARROW.setAttribute('height', '10');
     ARROW.setAttribute('width', '10');
     ARROW.setAttribute('class', 'noborder');
+    ARROW.setAttribute('align', 'left');
     newRows.reverse();
     span.setAttribute('sortdir','up');
   } else {
@@ -120,6 +121,7 @@ function ts_resortTable(lnk) {
     ARROW.setAttribute('height', '10');
     ARROW.setAttribute('width', '10');
     ARROW.setAttribute('class', 'noborder');
+    ARROW.setAttribute('align', 'left');
     span.setAttribute('sortdir','down');
   }
   

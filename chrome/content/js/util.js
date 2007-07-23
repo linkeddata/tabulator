@@ -358,15 +358,16 @@ function matrixTD(arrayStatement, asImage, doc) {
     var td = doc.createElement('TD');
     if (!obj) var obj = new RDFLiteral(".");
     if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
-        td.setAttribute('s', s); //Added
-        td.setAttribute('p', p); //Added
+        td.setAttribute('s', s); 
+        td.setAttribute('p', p); 
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
     var image;
     if (obj.termType == 'literal') {
-        td.setAttribute('s', s); //Added
-        td.setAttribute('p', p); //Added
+        td.setAttribute('s', s); 
+        td.setAttribute('p', p); 
+        td.setAttribute('o', obj.value);
         td.appendChild(doc.createTextNode(obj.value));
     } 
     else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {

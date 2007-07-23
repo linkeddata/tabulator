@@ -192,7 +192,6 @@ function Outline(doc) {
     
     tabulator.options.submit = function()
     {
-    alert("outline.js - sonia");
     if(display.document.checkboxes.one.checked){
                 tabulator.options.checkedLicenses[0] = true;
                 }

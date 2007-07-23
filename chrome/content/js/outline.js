@@ -1667,7 +1667,7 @@ function Outline(doc) {
             } else {
                 newTable.style.backgroundColor='white'
             }
-            if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');
+            try{if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');}catch(e){dump("YAHOO")}
             emptyNode(p).appendChild(newTable)
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
             tabulator.log.debug("expand: Node for " + subject + " expanded")
@@ -1739,6 +1739,10 @@ function Outline(doc) {
                        
         var returnConditions=[]; //this is quite a general way to do cut and paste programming
                                  //I might make a class for this
+        if (subject.uri && subject.uri.split(':')[0]=='rdf') {
+            render()
+            return;
+        }
         SourceOptions["javascript2rdf"][1].setupHere([returnConditions],"outline_expand()");
         SourceOptions["tabulator internal terms"].setupHere([returnConditions],"outline_expand()");
         for (var i=0; i<returnConditions.length; i++){

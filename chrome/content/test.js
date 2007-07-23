@@ -20,6 +20,7 @@ var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(
   kb = tabulator.kb;
   sf = tabulator.sf;
   qs = tabulator.qs;
+  lb = tabulator.lb;
   sourceWidget=tabulator.sourceWidget;
   
 

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3493 2007-07-19 06:29:03Z timbl $
+ * SVN ID: $Id: sources.js 3527 2007-07-23 10:08:14Z kennyluck $
  *
  ************************************************************/
 
@@ -563,12 +563,15 @@ function SourceFetcher(store, timeout, async) {
 	kb.add(req, kb.sym('tab','handler'), handlers, sf.appNode)
 
 	kb.add(req, kb.sym('tab','status'), status, sf.appNode)
-
+     
 	if (typeof kb.anyStatementMatching(this.appNode,
 					   kb.sym('tab',"protocol"),
 					   Util.uri.protocol(uri))
 	    == "undefined") {
 	    // update the status before we break out
+	    if (Util.uri.protocol(uri)=='rdf') {
+	        xhr.abort();
+	    }
 	    this.failFetch(xhr,"Unsupported protocol")
 	    return xhr
 	}

@@ -194,6 +194,7 @@ function findLabelSubProperties() {
 }
 
 function label(x, trimSlash) {
+    /*
     var i,n
     var plist = kb.statementsMatching(x);
     var y, best = 0, lab = ""
@@ -211,6 +212,10 @@ function label(x, trimSlash) {
 	}
     }
     if (lab) {return lab};
+    */
+    var labEntry=lb.label[x.hashString()];
+    if (labEntry) return labEntry[0];
+    //load #foo to Labeler?
 
     if (x.termType == 'bnode') {
 	return "...";

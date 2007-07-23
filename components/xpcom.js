@@ -51,6 +51,7 @@ function Tabulator() {
   loader.loadSubScript("chrome://tabulator/content/js/calView.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timelineView.js"/*, rootObj*/);
   loader.loadSubScript("chrome://tabulator/content/js/sparqlUpdate.js"/*, rootObj*/);
+  loader.loadSubScript("chrome://tabulator/content/js/labeler.js");
   this.kb = new RDFIndexedFormula();
   this.sf = new SourceFetcher(this.kb);
   this.qs = new QuerySource();
@@ -89,7 +90,6 @@ rss = Namespace("http://purl.org/rss/1.0/")
 xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
 contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
 mo = Namespace("http://purl.org/ontology/mo/")
-
 
 Icon = {}
 Icon.src= []
@@ -151,6 +151,7 @@ labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
 labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
 
+this.lb = new Labeler(this.kb,LanguagePreference);
 
 kb.predicateCallback = AJAR_handleNewTerm;
 kb.typeCallback = AJAR_handleNewTerm;
@@ -241,10 +242,31 @@ function string_startswith(str, pref) { // missing library routines
     //gBrowser.selectedBrowser.addEventListener('load',onLoad,true);
   }
 
+  //this.registerViewType(OutlinerViewFactory);  
   this.registerViewType(TableViewFactory);
   this.registerViewType(MapViewFactory);
   this.registerViewType(CalViewFactory);
   this.registerViewType(TimelineViewFactory);
+  
+OutlinerViewFactory = {
+    name: "Outliner View",
+
+    canDrawQuery: function(q) {
+        return true;
+    },
+
+    makeView: function(container,doc) {
+        return new tableView(container,doc);
+    },
+
+    getIcon: function() {
+        return "chrome://tabulator/content/icons/table.png";
+    },
+
+    getValidDocument: function(q) {
+        return "chrome://tabulator/content/table.html?query="+q.id;
+    }
+} 
 
 }//Tabulator
 

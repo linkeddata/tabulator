@@ -321,11 +321,6 @@ function tableView(container,doc)
         var why = st.why;
         if (!why) throw "Unknown provenence for {"+s+p+o+"}";
         
-        alert(s);
-        alert(p);
-        alert(o);
-        alert(why);
-        
         lastModifiedStat= new RDFStatement(
         kb.sym(convertToURI(s)), 
         kb.sym(convertToURI(p)), 

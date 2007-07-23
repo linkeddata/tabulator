@@ -163,17 +163,17 @@ function Outline(doc) {
                                   
                  var message="<font face='arial' size='2'><form name ='checkboxes'>";
      
-                 message+="<input type='checkbox' name = 'one'/> <br />";
+                 message+="<input type='checkbox' name = 'one'/> CC: BY-NC-ND<br />";
      
-                 message+="<input type='checkbox' name = 'two'/>CC: BY-NC-SA:<br />";
+                 message+="<input type='checkbox' name = 'two'/>CC: BY-NC-SA<br />";
      
-                 message+="<input type='checkbox' name = 'three'/>CC: BY-NC:<br />";
+                 message+="<input type='checkbox' name = 'three'/>CC: BY-NC<br />";
      
-                 message+="<input type='checkbox' name = 'four'/>CC: BY-ND:<br />";
+                 message+="<input type='checkbox' name = 'four'/>CC: BY-ND<br />";
      
-                 message+="<input type='checkbox' name = 'five'/>CC: BY-SA:<br />";
+                 message+="<input type='checkbox' name = 'five'/>CC: BY-SA<br />";
      
-                 message+="<input type='checkbox' name = 'six'/>CC: BY:<br /> <br />";
+                 message+="<input type='checkbox' name = 'six'/>CC: BY<br /> <br />";
                  
                  message+="<a href='http://creativecommons.org/about/licenses/meet-the-licenses' target = '_blank'>More about CC licenses...</a>";
                       

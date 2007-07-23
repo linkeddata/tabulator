@@ -157,9 +157,7 @@ function Outline(doc) {
      
                  {
      
-                 //alert(checkbox.checkOne);
-     
-                 display=window.open('','NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
+                 display=window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
      
                  display.tabulator = tabulator;
                                   
@@ -182,6 +180,8 @@ function Outline(doc) {
                  message+="</form></font>";
      
                  display.document.write(message);
+                 
+                 display.document.close();
      
      
             }

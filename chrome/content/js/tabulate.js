@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3519 2007-07-21 01:09:52Z timbl $
+// SVN ID: $Id: tabulate.js 3534 2007-07-23 15:59:03Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -207,6 +207,7 @@ xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
 contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
 mo = Namespace("http://purl.org/ontology/mo/")
 
+var lb = new Labeler(kb);
 // labels  -- maybe, extend this with a propertyAction
 labelPriority = []
 labelPriority[foaf('name').uri] = 10

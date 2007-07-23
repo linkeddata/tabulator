@@ -285,7 +285,7 @@ function tableView(container,doc)
     
     function onEdit(node)
     {
-        if (literalTD(node)) {setSelected(node); return; }
+        if (!literalTD(node)) {setSelected(node); return; }
         var t = document.getElementById('tabulated_data');
 
         var oldTxt = node.innerHTML;
@@ -371,8 +371,6 @@ function tableView(container,doc)
     {
         var t = thisTable.document.getElementById('tabulated_data'); 
         var tdNode = t.childNodes[row].childNodes[col];
-        alert(tdNode.innerHTML);
-        alert(literalTD(tdNode));
         if (literalTD (tdNode)) return true;
     } 
     
@@ -398,12 +396,9 @@ function tableView(container,doc)
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
         for (i=0; i<numCols; i++) {
-            alert('col num ' + i);
             if (literalRC(1, i)) {
-                alert('creating literal');
                 td = createLiteralTD(); }
             else { 
-                alert('creating symbol');
                 td = createSymbolTD(); }
             tr.appendChild(td);
         }

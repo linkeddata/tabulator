@@ -1,10 +1,11 @@
+// Last Modified By: David Li
 // Places generating SPARQL Update: onEdit and tableEditOnBlur
 // SPARQL update should work for literal nodes that don't have a language spec
 // multiple languages are not handled
 
 // Method
 // - when TDs are being created, attach to each TDs the subject and predicate
-// - when edits occur (onEdit), reconstruct the statement and send that to the; the why is the same as the subject since we only edit literal nodes
+// - when edits occur (onEdit), reconstruct the statement; the why is the same as the subject since we only edit literal nodes
 // - when edits are done (tableEditOnBlur), send the newTxt with setObject
 // - there are no pointers to things in the original store
 
@@ -29,7 +30,7 @@ function tableView(container,doc)
         this.document=document;
     
     // The necessary vars for a View
-    this.name="Table";               //Display name of this view.
+    this.name="Table";              //Display name of this view.
     this.queryStates=[];            //All Queries currently in this view.
     this.container=container;       //HTML DOM parent node for this view.
     this.container.setAttribute('ondblclick','tableDoubleClick(event)');
@@ -50,32 +51,31 @@ function tableView(container,doc)
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
 
-                // generate the subject and predicate for each tdNode in the tableView for a statement for sparqlUpdate
+                // generate the subject and predicate for each tdNode 
                 //**** td node creation ****//
                 for (j = 0; j<numStats; j++) {
-                testStatement = q.pat.statements[j];
-                reSpace = / /;
-                arrayStatement = testStatement.toString().split(reSpace);
-                if (arrayStatement[2] == v) {
-                    arrayStatementForMatrixTD = [arrayStatement[0], arrayStatement[1], bindings[v]];
-                    if (arrayStatement[0][0] == '?') {
-                        // arrayStatement of form: [?v0, <#tab>, ?v1]
-                        arrayStatementForMatrixTD[0] = bindings[arrayStatement[0]];
+                    testStatement = q.pat.statements[j]; // <#subj> <#pred> ?v0 .
+                    reSpace = / /;
+                    arrayStatement = testStatement.toString().split(reSpace); // [<#subj>, <#subj>, ?v0, .]
+                    if (arrayStatement[2] == v) {
+                        arrayStatementForMatrixTD = [arrayStatement[0], arrayStatement[1], bindings[v]];
+                        if (arrayStatement[0][0] == '?') {
+                            // arrayStatement: [?v0, <#pred>, ?v1, .]
+                            arrayStatementForMatrixTD[0] = bindings[arrayStatement[0]];
+                        }
+                        break;
                     }
-                    break;
-                }
                 }
                 //**** End td node creation ****//
 
-                tr.appendChild(matrixTD(arrayStatementForMatrixTD)); // Changed
+                tr.appendChild(matrixTD(arrayStatementForMatrixTD));
             } //for each query var, make a row
         }
 
         var i, td, th, j, v;
         var t = thisTable.document.createElement('table');
         var tr = thisTable.document.createElement('tr');
-        
-        nv = q.vars.length;
+        var nv = q.vars.length;
         
         t.appendChild(tr);
         t.setAttribute('class', 'results sortable'); //needed to make sortable
@@ -86,18 +86,14 @@ function tableView(container,doc)
         for (i=0; i<nv; i++) {
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
-            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' style=\'border:solid #777 1px\'> </img>');
+            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' title=\'Delete Column.\' style=\'border:solid #777 1px\'> </img>');
             // I have to do it like this because of weird settings in sorttable
+            // I will use AJARImage eventually
             
             th = thisTable.document.createElement('th');
             // a = document.createElement('a');
             // th.appendChild(a);
             // text = document.createTextNode(v.label);
-            // img = document.createElement('img');
-            // img.setAttribute('src', 'icons/tbl-x-small.png');
-            // img.setAttribute('onclick', 'deleteColumn(this)'); //Works???
-            // img.removeButton.style.border='solid';
-            // img..style.borderWidth = '1px';
             
             th.appendChild(text);
             tr.appendChild(th);
@@ -115,18 +111,18 @@ function tableView(container,doc)
         t.addEventListener('click', onClickCell, false);
         numCols = nv;
         
-        //********** key mvmt activation code *********//
+        // key mvmt activation code
         var a = document.createElement('a');
         th.appendChild(a); 
         a.setAttribute('id', 'anchor');
         a.focus();
-        //********** End key mvmt activation code *****//
+        numRows = t.childNodes.length;
     }
     //***************** End drawQuery *****************//
 
     //***************** Table Editing *****************//
 
-    var selectedTD; // null to selectedTD whenever clearSelected is called?
+    var selectedTD;
     var keyHandler;
     
     function onClickCell(e) 
@@ -150,7 +146,8 @@ function tableView(container,doc)
     }
     
     // use this wrapper so that the node can be passed to the event handler
-    function makeKeyHandler(node) {
+    function makeKeyHandler(node) 
+    {
         return function keyHandler(e) 
         {
             var oldRow = getRowIndex(node); //includes header
@@ -250,7 +247,6 @@ function tableView(container,doc)
     function onCellClickSecond(e)
     {
         selectedTD.removeEventListener('click', onCellClickSecond, false); 
-        // this is odd, but it works
         if (e.target == selectedTD) {
             clearSelected(selectedTD);
             onEdit(selectedTD);
@@ -262,12 +258,10 @@ function tableView(container,doc)
     function clearSelected(node)
     {
         var a = document.getElementById('focustest');
-        if (a != null) {a.parentNode.removeChild(a);};
+        if (a != null) { a.parentNode.removeChild(a); };
         var t = document.getElementById('tabulated_data');
         t.removeEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = 'white';
-        //Recently Added
-        selectedTD.removeEventListener('click', onCellClickSecond, false); 
     }
 
     var lastModifiedStat;
@@ -312,7 +306,7 @@ function tableView(container,doc)
             newTD.appendChild(inputObj);
         }
         
-        //**** sparqlUpdate code ****//
+        //**** sparqlUpdate ****//
         // since we're only editing the literal nodes, the subject
         // and why are the same, except maybe for the #
         lastModifiedStat= new RDFStatement(
@@ -323,7 +317,7 @@ function tableView(container,doc)
         
         sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStat);
         // more in tableEditOnBlurWrap
-        //**** sparqlUpdate code ****//
+        //**** End sparqlUpdate ****//
 
         inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
         inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
@@ -340,14 +334,12 @@ function tableView(container,doc)
             var col = node.cellIndex;
             var row = node.parentNode.rowIndex;
             setSelected(node);
-            // Add code here to handle SPARQL query.  
-            // Make a call to clearInputAndSave.
             e.stopPropagation();
             e.preventDefault();
             
             //**** sparqlUpdate ****//
             sparqlUpdate.setObject(kb.literal(newTxt, ''));
-            //**** sparqlUpdate ****//
+            //**** End sparqlUpdate ****//
         }
     }
     
@@ -355,28 +347,35 @@ function tableView(container,doc)
     {
         return function tableEditOnKeyPress(e) 
         {
-            if (e.keyCode == 13) {
+            if (e.keyCode == 13) { //enter
+                tableEditOnBlurWrap(node)(e);
+            }
+            if (e.keyCode == 27) { //esc
                 tableEditOnBlurWrap(node)(e);
             }
         }
     }
+   
+    //***************** End Table Editing *****************//
+        
+    //***************** Add Row *****************//
     
-    // checks to see if a TD element has the about attribute to determine if it is a literal node
+    // has no about attribute = literal 
     function literalTD (tdNode) 
     {
-        if (tdNode.getAttributeNode('about') != null) return true; 
+        if (tdNode.getAttributeNode('about')==undefined) return true; 
     }
     
-    // same as the above except it checks using row, col specifications
+    // checks using row, col specs
     function literalRC (row, col) 
     {
         var t = thisTable.document.getElementById('tabulated_data'); 
         var tdNode = t.childNodes[row].childNodes[col];
+        alert(tdNode.innerHTML);
+        alert(literalTD(tdNode));
         if (literalTD (tdNode)) return true;
-    }
-    //***************** End Table Editing *****************//
-        
-    //***************** Add Row *****************//
+    } 
+    
     function drawAddRow () 
     {
         var form = thisTable.document.createElement('form');
@@ -389,7 +388,9 @@ function tableView(container,doc)
         form.appendChild(but);
         thisTable.container.appendChild(form);
     }
-    
+    // use kb.sym for symbols
+    // use kb.bnode for blank nodes
+    // use kb.literal for literal nodes 
     function addRow () 
     {
         var i;
@@ -397,10 +398,13 @@ function tableView(container,doc)
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
         for (i=0; i<numCols; i++) {
-            if (literalRC(numRows-1, i)) 
-                td = createNonLiteralTD();
-            else 
-                td = createLiteralTD();
+            alert('col num ' + i);
+            if (literalRC(1, i)) {
+                alert('creating literal');
+                td = createLiteralTD(); }
+            else { 
+                alert('creating symbol');
+                td = createSymbolTD(); }
             tr.appendChild(td);
         }
         t.appendChild(tr);
@@ -413,7 +417,7 @@ function tableView(container,doc)
         return td;
     }
     
-    function createNonLiteralTD() 
+    function createSymbolTD() 
     {
         var td = thisTable.document.createElement("TD");
         td.setAttribute('about', '');
@@ -422,6 +426,7 @@ function tableView(container,doc)
         // SET ATTRIBUTES HERE;
         return td;
     }
+
     //***************** End Add Row *****************//
 
     function drawExport () 
@@ -559,3 +564,5 @@ function deleteColumn (src) {
         allRows[i].deleteCell(colNum);
     }
 }
+
+//closeQueryButton.style.border='solid #777 1px';

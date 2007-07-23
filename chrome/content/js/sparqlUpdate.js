@@ -84,7 +84,7 @@ sparql.prototype.prepareUpdate = function(statement) {
                 if (xhr.status < 200 || xhr.status >= 300) {
                     alert("HTTP Error " + xhr.status + "\n\n" + xhr.responseText);
                 } else if (xhr.responseText.length > 0) {
-                    alert(xhr.responseText);
+                    //alert(xhr.responseText);
                 }
             }
 

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3527 2007-07-23 10:08:14Z kennyluck $
+ * SVN ID: $Id: sources.js 3530 2007-07-23 15:09:43Z presbrey $
  *
  ************************************************************/
 
@@ -710,7 +710,8 @@ function SourceFetcher(store, timeout, async) {
 	}
 
 	// Setup the request
-	xhr.open('GET', uri2, this.async)
+    xhr.open('GET', uri2, this.async)
+    webdav.manager.register(uri,function(uri,success){});
 
 	// Set redirect callback and request headers
 	if (Util.uri.protocol(xhr.uri.uri) == 'http'

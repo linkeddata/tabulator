@@ -88,12 +88,20 @@ webdav = new function() {
                             return token == this._locks.shift();
                         }
                     };
-                    callback(client, true);
+                    callback(uri, true);
                 } else {
-                    callback(client, false);
+                    callback(uri, false);
                 }
             }
             client.OPTIONS(register_OPTIONS);
+        }
+        
+        this.editable = function(uri) {
+            if (this.documents[uri]) {
+                lock = this.documents[uri].lock();
+                return this.documents[uri].client.enabled;
+            }
+            return null;
         }
 
         this.set_data = function(uri, data, callback) {

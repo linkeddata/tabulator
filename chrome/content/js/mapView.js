@@ -332,7 +332,7 @@ function mapView(container) {
         keyClose.style.textAlign='right';
         keyClose.style.color='#777';
         keyCloseImg.onclick = function () { return thisMapView.hideKey(); }
-        keyCloseImg.style.border='solid #777 1px';
+        //keyCloseImg.style.border='solid #777 1px';
         keyClose.appendChild(keyCloseImg);
         keyClose.style.padding='2px';
         keyArea.setAttribute('class','mapKeyDiv');

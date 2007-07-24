@@ -20,11 +20,11 @@ function TabbedContainer(source) {
         closeQueryButton=document.createElement('img');
         openQueryButton =document.createElement('img');
         openQueryButton.src='icons/tbl-expand.png';
-        openQueryButton.style.border='solid #777 1px';
+        //openQueryButton.style.border='solid #777 1px';
         openQueryButton.title='Show Query Bar';
         openQueryButton.onclick=function () { return displayQueryColumn(); };
         closeQueryButton.src='icons/tbl-x-small.png';
-        closeQueryButton.style.border='solid #777 1px';
+        //closeQueryButton.style.border='solid #777 1px';
         closeQueryButton.title='Hide Query Bar';
         closeQueryButton.onclick=function () { return suppressQueryColumn(); };
         document.getElementById('openQuerySpan').appendChild(openQueryButton);
@@ -95,8 +95,8 @@ function TabbedContainer(source) {
           newTab.removeButton.setAttribute('src', 'icons/tbl-x-small.png');
           newTab.removeButton.setAttribute('title', 'Close View.');
           newTab.removeButton.setAttribute('type', 'button');
-          newTab.removeButton.style.border='solid';
-          newTab.removeButton.style.borderWidth = '1px';
+          //newTab.removeButton.style.border='solid';
+          //newTab.removeButton.style.borderWidth = '1px';
    
           newTab.removeButton.style.cursor='pointer';
           newTab.removeButton.style.padding='0';

@@ -43,15 +43,16 @@ function ts_makeSortable(table) {
     tabulator.log.debug("making header clickable: " + txt); // See style sheet: float right changes order!
     cell.innerHTML = 
     '<a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">' +
-        '<span class="sortarrow"></span>' + txt+'</a>';
+        '<span class="sortarrow"></span>' + txt+'</a>' + 
+    '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' title=\'Delete Column.\' clear="right"; align="right"> </img>';
         //alert(cell.innerHTML);
   }
 }
 
 function ts_getInnerText(el) {
-  if (typeof el == "string") return el;
-  if (typeof el == "undefined") { return el };
-  if (el.innerText) return el.innerText;  //Not needed but it is faster
+  if (typeof el == "string") {alert("string"); return el;}
+  if (typeof el == "undefined") {alert("undefined"); { return el };}
+  if (el.innerText) {alert("third cond"); return el.innerText; } //Not needed but it is faster
   var str = "";
   
   var cs = el.childNodes;
@@ -110,8 +111,7 @@ function ts_resortTable(lnk) {
     ARROW.setAttribute('src', 'icons/tbl-up.png');
     ARROW.setAttribute('height', '10');
     ARROW.setAttribute('width', '10');
-    ARROW.setAttribute('class', 'noborder');
-    ARROW.setAttribute('align', 'left');
+    ARROW.setAttribute('border','none');
     newRows.reverse();
     span.setAttribute('sortdir','up');
   } else {
@@ -120,8 +120,7 @@ function ts_resortTable(lnk) {
     ARROW.setAttribute('src', 'icons/tbl-down.png');
     ARROW.setAttribute('height', '10');
     ARROW.setAttribute('width', '10');
-    ARROW.setAttribute('class', 'noborder');
-    ARROW.setAttribute('align', 'left');
+    ARROW.setAttribute('border','none');
     span.setAttribute('sortdir','down');
   }
   

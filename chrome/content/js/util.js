@@ -351,9 +351,9 @@ function myFetcher(x, requestedBy) {
 function matrixTD(arrayStatement, asImage, doc) {
     //alert (obj.termType);
     
-    s = arrayStatement[0];//Added
-    p = arrayStatement[1];//Added
-    obj = arrayStatement[2];//Added
+    s = arrayStatement[0];
+    p = arrayStatement[1];
+    obj = arrayStatement[2];
     
 	if (!doc) doc=document;
     var td = doc.createElement('TD');

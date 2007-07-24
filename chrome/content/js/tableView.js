@@ -86,9 +86,12 @@ function tableView(container,doc)
         for (i=0; i<nv; i++) {
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
-            text = document.createTextNode(v.label + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' title=\'Delete Column.\' style=\'border:solid #777 1px\'> </img>');
+            text = document.createTextNode(v.label)// + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' title=\'Delete Column.\' style=\'border:solid #777 1px\'> </img>');
             // I have to do it like this because of weird settings in sorttable
             // I will use AJARImage eventually
+            img = document.createElement('a');
+            //img.src = 'icons/tbl-x-small.png';
+            
             
             th = thisTable.document.createElement('th');
             // a = document.createElement('a');
@@ -96,6 +99,7 @@ function tableView(container,doc)
             // text = document.createTextNode(v.label);
             
             th.appendChild(text);
+            th.appendChild(img);
             tr.appendChild(th);
         }
         
@@ -385,7 +389,7 @@ function tableView(container,doc)
     } 
 
     function bnodeTD (tdNode) {
-        if(tdNode.getAttributeNode('about')[0]=='_') return true;
+        //if(tdNode.getAttributeNode('about')[0]=='_') return true;
     } 
     
     function bnodeRC (row, col) {
@@ -415,25 +419,28 @@ function tableView(container,doc)
         var td;
         var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
-        // I need to add the s and p nodes
+        // I need to add the s, p, o nodes
         for (i=0; i<numCols; i++) {
             if (literalRC(1, i)) {
                 td = createLiteralTD(); 
-                refNode = getTDNode(1, i);
-                td.setAttribute('s', refNode.getAttribute('s'));
-                td.setAttribute('p', refNode.getAttribute('p')); 
+                //refNode = getTDNode(1, i);
+                //td.setAttribute('s', refNode.getAttribute('s'));
+                //td.setAttribute('p', refNode.getAttribute('p')); 
+                //td.setAttribute('o', refNode.getAttribute('o'));
             }
             if (bnodeTD(1, i)) {
                 td = createBNodeTD(); 
-                refNode = getTDNode(1, i);
-                td.setAttribute('s', refNode.getAttribute('s'));
-                td.setAttribute('p', refNode.getAttribute('p')); 
+                //refNode = getTDNode(1, i);
+                //td.setAttribute('s', refNode.getAttribute('s'));
+                //td.setAttribute('p', refNode.getAttribute('p')); 
+                //td.setAttribute('about', refNode.getAttribute('about'));
             }
             else { 
                 td = createSymbolTD(); 
-                refNode = getTDNode(1, i);
-                td.setAttribute('s', refNode.getAttribute('s'));
-                td.setAttribute('p', refNode.getAttribute('p')); 
+                //refNode = getTDNode(1, i);
+                //td.setAttribute('s', refNode.getAttribute('s'));
+                //td.setAttribute('p', refNode.getAttribute('p')); 
+                //td.setAttribute('about', refNode.getAttribute('about'));
             }
             tr.appendChild(td);
         }

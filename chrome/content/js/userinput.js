@@ -220,7 +220,7 @@ clearInputAndSave: function clearInputAndSave(e){
     
     trNode.removeChild(trNode.lastChild);
     
-    var defaultpropview = views.defaults[s.predicate.uri];
+    var defaultpropview = this.views.defaults[s.predicate.uri];
     if (!this.statIsInverse)
         trNode.appendChild(outline.outline_objectTD(s.object, defaultpropview));
     else
@@ -536,7 +536,7 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
     if (!tdNode) tdNode=InputBox.parentNode //argument tdNode seems to be not neccessary
     if (!mode) mode=tdNode.nextSibling?'predicate':'all';
     e.pageX=findPos(tdNode)[0];
-    e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
+    e.pageY=findPos(tdNode)[1]+3*tdNode.clientHeight; //ToDo: remove this stupid kludge...
    
     if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
         var newText=InputBox.value;
@@ -568,18 +568,18 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             }
         }
         //alert(InputBox.choices.length);
-        var i;
-        for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
+        //for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
         if (mode=='all') {
             outline.UserInput.clearMenu();
-            outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
-            i=10;
+            //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
+            outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText});
         }
         var menu=myDocument.getElementById(outline.UserInput.menuID); 
-        menu.scrollTop=i*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
+        //menu.scrollTop=i*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
         //adjustment for firefox3 required
+        if (!menu) return; //no matches
         if (menu.lastHighlight) menu.lastHighlight.className='';
-        menu.lastHighlight=menu.firstChild.childNodes[i];
+        menu.lastHighlight=menu.firstChild.firstChild;
         menu.lastHighlight.className='activeItem';   
         return;
     }//end of autoScroll, start of menu generation
@@ -618,6 +618,7 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
         this.showMenu(e,'PredicateAutoComplete',undefined,{'isPredicate':true,'selectedTd':tdNode,'predicates':InputBox.choices});
     else{
         //this.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices});
+        /*
         var choices=InputBox.choices;
         InputBox.choices=[];
         var lastChoiceNT='';
@@ -627,6 +628,7 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             lastChoiceNT=thisNT;
             InputBox.choices.push({'NT':choices[i].NT,'label':choices[i].label})
         }
+        */
     }
 },
 //ToDo: shrink rows when \n+backspace
@@ -988,7 +990,27 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             }
             break;
         case 'GeneralAutoComplete':
-            var choices=extraInformation.choices;
+            var inputText=extraInformation.inputText;
+            var results=lb.search(inputText);
+            var entries=results[0]; //[label, subject,priority]
+            var types=results[1];
+            if (entries.length==0){
+                this.clearMenu();
+                return;
+            }
+            for (var i=0;i<entries.length&&i<30;i++){ //do not show more than 30 items
+                var thisNT=entries[i][1].toNT();
+                var tr=table.appendChild(myDocument.createElement('tr'));
+                tr.setAttribute('about',thisNT);
+                var th=tr.appendChild(myDocument.createElement('th'))
+                th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(entries[i][0]));
+                var theTerm=entries[i][1];
+                //var type=theTerm?kb.any(kb.fromNT(thisNT),rdf('type')):undefined;
+                var type=types[i];
+                var typeLabel=type?lb.label(type):"";
+                tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
+            }
+            /*var choices=extraInformation.choices;
             var index=extraInformation.index;
             for (var i=index-10;i<index+20;i++){ //show 30 items
                 if (i<0) i=0;
@@ -1004,6 +1026,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
             }
             //alert(extraInformation.choices.length);
+            */
             break;
         default:
             switch (inputQuery.constructor.name){

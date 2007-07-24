@@ -39,9 +39,9 @@ function Labeler(kb,lang){
 Labeler.prototype={
 //[label,subject,strength]
 entry: [],
-label:{},
-getLabel: function(term){
-    var candidate=this.label[term.hashString()]
+labelDirectory:{},
+label: function(term){
+    var candidate=this.labelDirectory[term.hashString()]
     return candidate?candidate[0]:"";
 },
 addLabelProperty: function(property, priority){
@@ -78,10 +78,10 @@ addLabelProperty: function(property, priority){
 },
 optimize: function(entry){
     var subjectID=entry[1].hashString();
-    var preEntry=this.label[subjectID];
+    var preEntry=this.labelDirectory[subjectID];
     var prePriority=preEntry?preEntry[2]:0;
     if (entry[2] > prePriority) {
-        this.label[subjectID]=entry;
+        this.labelDirectory[subjectID]=entry;
     }
 },
 search: function(searchString){
@@ -96,7 +96,7 @@ search: function(searchString){
         else if (match &&!string_startswith(matchingString,label))
             break;
         if (match){
-            results.push(this.entry[i][0]);
+            results.push(this.entry[i]);
             types.push(this.kb.any(this.entry[i][1],rdf('type')));
         }
     }

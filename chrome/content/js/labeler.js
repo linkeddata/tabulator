@@ -7,6 +7,7 @@
 function Labeler(kb,lang){
     this.kb=kb;
     this.lang=lang; // a universal version? how to sort?
+    this.addLabelProperty(tabont('message'),20); //quite a different semantic, cause confusion?
     this.addLabelProperty(foaf('name'),10);
     this.addLabelProperty(dc('title'),8);
     this.addLabelProperty(rss('title'),6);   // = dc:title?
@@ -54,6 +55,7 @@ addLabelProperty: function(property, priority){
     if (this.kb.propertyAction[property.hashString()]) return true; //this is already loaded
     this.kb.propertyAction[property.hashString()]=function (formula,subject,predicate,object,why){
         if (typeof object.lang !='undefined' && object.lang!="" && object.lang!=lb.lang) return;
+        if (object.termType!='literal') return; //Request
         var label=object.value.toLowerCase();
         //var hashS=subject.hashString();
         var entryVol=lb.entry.length;
@@ -78,7 +80,6 @@ optimize: function(entry){
     var subjectID=entry[1].hashString();
     var preEntry=this.label[subjectID];
     var prePriority=preEntry?preEntry[2]:0;
-    this.label[subjectID]=prePriority;
     if (entry[2] > prePriority) {
         this.label[subjectID]=entry;
     }

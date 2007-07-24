@@ -264,7 +264,7 @@ function Outline(doc) {
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
          
-        if (kb.statementsMatching(obj,rdf('type'),tabont('Request')).length) td.className='undetermined'; //@@? why-timbl
+        if (kb.whether(obj,rdf('type'),tabont('Request'))) td.className='undetermined'; //@@? why-timbl
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
             td.appendChild(AJARImage(Icon.src.icon_expand, 'expand'));
         } //expandable
@@ -1635,7 +1635,8 @@ function Outline(doc) {
         }  // else IMG
         //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
         //have to put this here or this conflicts with deselectAll()
-        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)
+        if (!target.src||(target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices
+                       &&target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_add_triple))
             thisOutline.UserInput.clearInputAndSave(e);        
         thisOutline.UserInput.clearMenu();
         if (e) e.stopPropagation();

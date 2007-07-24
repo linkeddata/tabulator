@@ -283,7 +283,7 @@ addTriple: function addTriple(e){
         this.lastModified.isNew=true;
 
         this.lastModified.select();
-        this.statIsInverse=false;        
+        this.statIsInverse=false;     
     } else { //inference work...
         var tiptext="(To be determined. Re-type of drag an object onto this field)";
         var reqTerm=this.generateRequest(tiptext,insertTr,false);

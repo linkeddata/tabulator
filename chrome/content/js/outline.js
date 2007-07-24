@@ -336,13 +336,19 @@ function Outline(doc) {
         var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
+        tr.firstPane = null;
         for (var i=0; i< panes.list.length; i++) {
             var pane = panes.list[i];
             var lab = pane.label(subject);
             if (!lab) continue;
             var ico = AJARImage(pane.icon, lab, lab);
+            var state = 'paneHidden';
+            if (!tr.firstPane) {
+                tr.firstPane = pane;
+                state = 'paneShown'
+            }
 //            ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
-            ico.setAttribute('class', 'paneHidden')
+            ico.setAttribute('class', state)
             tr.firstChild.childNodes[1].appendChild(ico);
         }
         
@@ -375,6 +381,38 @@ function Outline(doc) {
         }
     }
     
+    /*   Class member Pane
+    **
+    **  This outline pane contains lists the members of a class
+    */
+    classInstancePane = {};
+    classInstancePane.icon = Icon.src.icon_instances;
+    classInstancePane.label = function(subject) {
+        var n = kb.statementsMatching(
+            undefined, kb.sym('rdf', 'type'), subject).length;
+        if (n == 0) return null;
+        return "List "+n;
+    }
+
+    classInstancePane.render = function(subject) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'instancePane');
+        var sts = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
+        if (sts.length > 10) {
+            var tr = myDocument.createElement('TR');
+            tr.appendChild(myDocument.createTextNode(''+sts.length));
+            tr.AJAR_statement=sts[i];
+            div.appendChild(tr);
+        }
+
+        // Don't need to check in the filter as the plist is already trimmed
+        var plist = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
+        appendPropertyTRs(div, plist, true, function(pred){return true;})
+        return div;
+    }
+    panes.register(classInstancePane);
+
+
     /*   Pane within Document data content view
     **
     **  This outline pane contains docuemnts from a specific source document only.
@@ -498,9 +536,7 @@ function Outline(doc) {
     humanReadablePane.render = function(subject) {
         var div = myDocument.createElement("div")
     
-        div.setAttribute('class', 'docView')
-//        div.appendChild(expandedHeaderTR(subject))
-    
+        div.setAttribute('class', 'docView')    
         var iframe = myDocument.createElement("IFRAME")
         iframe.setAttribute('src', subject.uri)
         iframe.setAttribute('class', 'doc')
@@ -670,38 +706,6 @@ function Outline(doc) {
     }
     panes.register(RDFXMLPane);
 
-    /*   Class member Pane
-    **
-    **  This outline pane contains lists the members of a class
-    */
-    classInstancePane = {};
-    classInstancePane.icon = Icon.src.icon_instances;
-    classInstancePane.label = function(subject) {
-        var n = kb.statementsMatching(
-            undefined, kb.sym('rdf', 'type'), subject).length;
-        if (n == 0) return null;
-        return "List "+n;
-    }
-
-    classInstancePane.render = function(subject) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'instancePane');
-        var sts = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
-        if (sts.length > 10) {
-            var tr = myDocument.createElement('TR');
-            tr.appendChild(myDocument.createTextNode(''+sts.length));
-            tr.AJAR_statement=sts[i];
-            div.appendChild(tr);
-        }
-
-        // Don't need to check in the filter as the plist is already trimmed
-        var plist = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
-        appendPropertyTRs(div, plist, true, function(pred){return true;})
-        return div;
-    }
-    panes.register(classInstancePane);
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -742,7 +746,8 @@ function Outline(doc) {
                 }
             }
             
-            table.appendChild(defaultPane.render(subject));
+//            table.appendChild(defaultPane.render(subject));
+            if (tr1.firstPane) table.appendChild(tr1.firstPane.render(subject));
             
             return table
             

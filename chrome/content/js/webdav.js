@@ -5,10 +5,10 @@
 // Example usage:
 //
 // <script type="text/javascript">
-// var uri = 'http://localhost/dav/test';
+// var uri = 'http://localhost/dav/test.html';
 // webdav.manager.register(uri, function(uri, success){});
 // </script>
-// <textarea onKeyPress="webdav.manager.set_data(uri, this.value)"></textarea>
+// <textarea onKeyUp="webdav.manager.set_data(uri, this.value)"></textarea>
 
 webdav = new function() {
     var webdav = this;
@@ -44,9 +44,20 @@ webdav = new function() {
     
     this.client.prototype._request = function(method, data, handler) {
         if (this.enabled) {
-            var req = webdav._request(method, this.uri.base + this.uri.path, handler, this);
+            this.busy = true;
+            var req = webdav._request(method,
+                                      this.uri.base + this.uri.path,
+                                      this._request_handler(handler),
+                                      this);
             req.send(data);
             return req;
+        }
+    }
+
+    this.client.prototype._request_handler = function(handler) {
+        return function(status, headers, body) {
+            this.busy = false;
+            handler.call(this, status, headers, body);
         }
     }
     
@@ -108,7 +119,8 @@ webdav = new function() {
                     lock = doc.lock();
                     if (doc.data_is_new && !doc.client.busy) {
                         doc.data_is_new = false;
-                        doc.client.PUT(doc.data, function(){});
+                        doc.client.PUT(doc.data, function(status,headers,body){
+                        });
                     }
                     if (!doc.release(lock))
                         alert('Locking error for URI:\n' + uri);

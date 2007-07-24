@@ -747,7 +747,11 @@ function Outline(doc) {
             }
             
 //            table.appendChild(defaultPane.render(subject));
-            if (tr1.firstPane) table.appendChild(tr1.firstPane.render(subject));
+            if (tr1.firstPane) {
+                var paneDiv = tr1.firstPane.render(subject);
+                table.appendChild(paneDiv);
+                paneDiv.pane = tr1.firstPane;
+            }
             
             return table
             

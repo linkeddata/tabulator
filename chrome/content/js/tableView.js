@@ -602,7 +602,6 @@ TableViewFactory = {
 }
 
 function deleteColumn (src) { // src = the delete image
-
     var t = document.getElementById('tabulated_data');
     var colNum = src.parentNode.cellIndex;
     var allRows = t.childNodes;
@@ -611,18 +610,16 @@ function deleteColumn (src) { // src = the delete image
     if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
     var numCols = firstRow.childNodes.length;
     
-    // if the colNum = numCols-1, then attach the image to the left
-    
     for (var i = 0; i<allRows.length; i++) {
         allRows[i].cells[colNum].style.display = 'none';
     }
     
-    var img = document.createElement('img');
-    img.setAttribute('src', 'icons/tbl-expand.png');
+    var img = document.createElement('img'); // points left
+    img.setAttribute('src', 'icons/tbl-expand-l.png');
     img.setAttribute('align', 'left');
     img.addEventListener('click', tableExpandWrap(src), false);
     
-    var imgL = document.createElement('img');
+    var imgL = document.createElement('img'); // points right
     imgL.setAttribute('src', 'icons/tbl-expand.png');
     imgL.setAttribute('align', 'right');
     var origImg = src
@@ -631,7 +628,6 @@ function deleteColumn (src) { // src = the delete image
     if (colNum == numCols-1 || rightCell.style.display =='none') 
         leftCell.insertBefore(imgL, leftCell.firstChild);
     else rightCell.insertBefore(img, rightCell.firstChild);
-    
 }
 
 function tableExpandWrap(src) { //src = the original delete image

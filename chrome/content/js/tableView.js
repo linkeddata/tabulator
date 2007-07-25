@@ -291,7 +291,7 @@ function tableView(container,doc)
     {
         if (!literalTD(node)) {setSelected(node); return; }
         var t = document.getElementById('tabulated_data');
-
+        
         var oldTxt = node.innerHTML;
         var inputObj = document.createElement('INPUT');
         inputObj.type = "TEXT";
@@ -317,19 +317,19 @@ function tableView(container,doc)
         var p = node.getAttribute('p');
         var o = node.getAttribute('o');
         
-        var st = kb.anyStatementMatching(
-        kb.sym(convertToURI(s)),
-        kb.sym(convertToURI(p)),
-        kb.literal(o, ''))
-        if (!st)  throw ('no why for '+s+p+o);
-        var why = st.why;
-        if (!why) throw "Unknown provenence for {"+s+p+o+"}";
+        // var st = kb.anyStatementMatching(
+        // kb.sym(convertToURI(s)),
+        // kb.sym(convertToURI(p)),
+        // kb.literal(o, ''))
+        //if (!st)  alert ('no statement for '+s+p+o); or throw
+        //var why = st.why;
+        //if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
         
-        lastModifiedStat= new RDFStatement(
-        kb.sym(convertToURI(s)), 
-        kb.sym(convertToURI(p)), 
-        kb.literal(o, ''),
-        kb.sym(why))
+        // lastModifiedStat= new RDFStatement(
+        // kb.sym(convertToURI(s)), 
+        // kb.sym(convertToURI(p)), 
+        // kb.literal(o, ''),
+        // kb.sym(why))
         
         // sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStat);
         // more in tableEditOnBlurWrap
@@ -345,8 +345,15 @@ function tableView(container,doc)
         {
             var srcElem = e.target;  // getTarget(e)
             newTxt = srcElem.value;
-            node.innerHTML = newTxt;
-
+            
+            if (newTxt != '') {
+                node.innerHTML = newTxt;
+            }
+            else {
+                node.innerHTML = 'Empty';
+            }
+            
+            alert(node.parentNode);
             var col = node.cellIndex;
             var row = node.parentNode.rowIndex;
             setSelected(node);
@@ -389,7 +396,7 @@ function tableView(container,doc)
     } 
 
     function bnodeTD (tdNode) {
-        //if(tdNode.getAttributeNode('about')[0]=='_') return true;
+        //if(tdNode.getAttribute('about')[0]=='_') return true;
     } 
     
     function bnodeRC (row, col) {
@@ -450,7 +457,7 @@ function tableView(container,doc)
     function createLiteralTD() 
     {
         var td = thisTable.document.createElement("TD");
-        td.innerHTML = " ";
+        td.innerHTML = 'Empty';
         return td;
     }
     

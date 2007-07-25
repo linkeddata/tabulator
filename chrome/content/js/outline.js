@@ -337,19 +337,24 @@ function Outline(doc) {
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
         tr.firstPane = null;
+        var relevantPanes = [];
         for (var i=0; i< panes.list.length; i++) {
             var pane = panes.list[i];
             var lab = pane.label(subject);
             if (!lab) continue;
-            var ico = AJARImage(pane.icon, lab, lab);
-            var state = 'paneHidden';
-            if (!tr.firstPane) {
-                tr.firstPane = pane;
-                state = 'paneShown'
+            relevantPanes.push(pane);
+        }
+        
+        if (!relevantPanes) relevantPanes.push(internalPane);
+        tr.firstPane = relevantPanes[0];
+        if (relevantPanes.length != 1) { // if only one, simplify interface
+            for (var i=0; i<relevantPanes.length; i++) {
+                var pane = relevantPanes[i];
+                var ico = AJARImage(pane.icon, lab, lab);
+                // ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
+                ico.setAttribute('class',  i ? 'paneHidden':'paneShown')
+                tr.firstChild.childNodes[1].appendChild(ico);
             }
-//            ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
-            ico.setAttribute('class', state)
-            tr.firstChild.childNodes[1].appendChild(ico);
         }
         
         //set DOM methods

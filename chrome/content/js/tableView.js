@@ -1,4 +1,5 @@
 // Last Modified By: David Li
+
 // Places generating SPARQL Update: onEdit and tableEditOnBlur
 // SPARQL update should work for literal nodes that don't have a language spec
 // multiple languages are not handled
@@ -86,20 +87,13 @@ function tableView(container,doc)
         for (i=0; i<nv; i++) {
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
-            text = document.createTextNode(v.label)// + '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' title=\'Delete Column.\' style=\'border:solid #777 1px\'> </img>');
-            // I have to do it like this because of weird settings in sorttable
-            // I will use AJARImage eventually
-            img = document.createElement('a');
-            //img.src = 'icons/tbl-x-small.png';
-            
-            
+            text = document.createTextNode(v.label)
             th = thisTable.document.createElement('th');
             // a = document.createElement('a');
             // th.appendChild(a);
             // text = document.createTextNode(v.label);
             
             th.appendChild(text);
-            th.appendChild(img);
             tr.appendChild(th);
         }
         
@@ -350,10 +344,9 @@ function tableView(container,doc)
                 node.innerHTML = newTxt;
             }
             else {
-                node.innerHTML = 'Empty';
+                node.innerHTML = '---';
             }
             
-            alert(node.parentNode);
             var col = node.cellIndex;
             var row = node.parentNode.rowIndex;
             setSelected(node);
@@ -435,7 +428,7 @@ function tableView(container,doc)
                 //td.setAttribute('p', refNode.getAttribute('p')); 
                 //td.setAttribute('o', refNode.getAttribute('o'));
             }
-            if (bnodeTD(1, i)) {
+            else if (bnodeTD(1, i)) {
                 td = createBNodeTD(); 
                 //refNode = getTDNode(1, i);
                 //td.setAttribute('s', refNode.getAttribute('s'));
@@ -457,7 +450,7 @@ function tableView(container,doc)
     function createLiteralTD() 
     {
         var td = thisTable.document.createElement("TD");
-        td.innerHTML = 'Empty';
+        td.innerHTML = '---';
         return td;
     }
     
@@ -466,7 +459,7 @@ function tableView(container,doc)
         var td = thisTable.document.createElement("TD");
         td.setAttribute('about', '');
         td.setAttribute('style', 'color:#4444ff');
-        td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
+        td.innerHTML = "<form> <select style=\'width:100%\'> <option> --- </option> </select> </form>";
         // SET ATTRIBUTES HERE;
         return td;
     }
@@ -479,7 +472,6 @@ function tableView(container,doc)
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
         return td;
     }
-
     //***************** End Add Row *****************//
 
     function drawExport () 
@@ -610,12 +602,37 @@ TableViewFactory = {
 }
 
 function deleteColumn (src) {
-    var allRows = document.getElementById('tabulated_data').childNodes;
+    var t = document.getElementById('tabulated_data');
+    var allRows = t.childNodes;
     var colNum = src.parentNode.cellIndex;
+    var firstRow = allRows[0];
+    var refCol = firstRow.cells[colNum+1];
     
     for (var i = 0; i<allRows.length; i++) {
-        allRows[i].deleteCell(colNum);
+        allRows[i].cells[colNum].style.display = 'none';
     }
+    
+    var img = document.createElement('img');
+    img.setAttribute('src', 'icons/tbl-expand.png');
+    img.setAttribute('align', 'left');
+    img.addEventListener('click', tableExpandWrap(src), false)
+    //img.setAttribute('onclick', 'tableExpand(this)');
+    refCol.insertBefore(img, refCol.firstChild);
 }
 
+function tableExpandWrap(src) {
+    return function tableExpand(e) {
+        var t = document.getElementById('tabulated_data');
+        var allRows = t.childNodes;
+        var colNum = src.parentNode.cellIndex;
+        var firstRow = allRows[0];
+        var refCol = firstRow.cells[colNum+1];
+        
+        for (var i = 0; i<allRows.length; i++) {
+            allRows[i].cells[colNum].style.display = 'inline';
+        }
+        
+        refCol.removeChild(refCol.firstChild);
+    }
+}
 //closeQueryButton.style.border='solid #777 1px';

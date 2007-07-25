@@ -214,8 +214,8 @@ function label(x, trimSlash) {
     if (lab) {return lab};
     */
     //var labEntry=lb.label[x.hashString()];
-    var lab=lb.label(x);
-    if (lab) return lab;
+    //var lab=lb.label(x);
+    //if (lab) return lab;
     //load #foo to Labeler?
 
     if (x.termType == 'bnode') {

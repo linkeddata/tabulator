@@ -2,6 +2,7 @@
 
 var SORT_COLUMN_INDEX;
 
+// 
 function sortables_init() {
   //alert("Entered sortables_init");
   // Find all tables with class sortable and make them sortable
@@ -42,9 +43,9 @@ function ts_makeSortable(table) {
 //THE FUNCTION DOESN"T EXIST --ALERER
     tabulator.log.debug("making header clickable: " + txt); // See style sheet: float right changes order!
     cell.innerHTML = 
+    '<img src="icons/tbl-x-small.png" onclick="deleteColumn(this)" title="Delete Column." class="deleteCol"> </img>' +
     '<a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">' +
-        '<span class="sortarrow"></span>' + txt+'</a>' + 
-    '<img src=\'icons/tbl-x-small.png\' onclick=\'deleteColumn(this)\' title=\'Delete Column.\' clear="right"; align="right"> </img>';
+        '<span class="sortarrow"></span>' + txt+'</a>'
         //alert(cell.innerHTML);
   }
 }
@@ -75,6 +76,8 @@ function ts_resortTable(lnk) {
   // get the span
   //tabulator.log.debug ("entering ts_resortTable");
   var span;
+  //var th = lnk.parentNode;
+  //alert(th.innerHTML);
   for (var ci=0;ci<lnk.childNodes.length;ci++) {
     if (lnk.childNodes[ci].tagName && lnk.childNodes[ci].tagName.toLowerCase() == 'span') span = lnk.childNodes[ci];
   }
@@ -140,7 +143,7 @@ function ts_resortTable(lnk) {
   for (var ci=0;ci<allspans.length;ci++) {
     if (allspans[ci].className == 'sortarrow') {
       if (getParent(allspans[ci],"table") == getParent(lnk,"table")) { // in the same table as us?
-        allspans[ci].innerHTML = '&nbsp;&nbsp;&nbsp;';
+        allspans[ci].innerHTML = '';
       }
     }
   }

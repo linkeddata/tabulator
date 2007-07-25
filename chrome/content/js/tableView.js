@@ -601,12 +601,17 @@ TableViewFactory = {
     }
 }
 
-function deleteColumn (src) {
+function deleteColumn (src) { // src = the delete image
+
     var t = document.getElementById('tabulated_data');
-    var allRows = t.childNodes;
     var colNum = src.parentNode.cellIndex;
+    var allRows = t.childNodes;
     var firstRow = allRows[0];
-    var refCol = firstRow.cells[colNum+1];
+    var rightCell = firstRow.cells[colNum+1]; //header
+    if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
+    var numCols = firstRow.childNodes.length;
+    
+    // if the colNum = numCols-1, then attach the image to the left
     
     for (var i = 0; i<allRows.length; i++) {
         allRows[i].cells[colNum].style.display = 'none';
@@ -615,24 +620,41 @@ function deleteColumn (src) {
     var img = document.createElement('img');
     img.setAttribute('src', 'icons/tbl-expand.png');
     img.setAttribute('align', 'left');
-    img.addEventListener('click', tableExpandWrap(src), false)
-    //img.setAttribute('onclick', 'tableExpand(this)');
-    refCol.insertBefore(img, refCol.firstChild);
+    img.addEventListener('click', tableExpandWrap(src), false);
+    
+    var imgL = document.createElement('img');
+    imgL.setAttribute('src', 'icons/tbl-expand.png');
+    imgL.setAttribute('align', 'right');
+    var origImg = src
+    imgL.addEventListener('click', tableExpandWrap(origImg), false);
+    
+    if (colNum == numCols-1 || rightCell.style.display =='none') 
+        leftCell.insertBefore(imgL, leftCell.firstChild);
+    else rightCell.insertBefore(img, rightCell.firstChild);
+    
 }
 
-function tableExpandWrap(src) {
+function tableExpandWrap(src) { //src = the original delete image
     return function tableExpand(e) {
         var t = document.getElementById('tabulated_data');
+        var colNum = src.parentNode.cellIndex; 
         var allRows = t.childNodes;
-        var colNum = src.parentNode.cellIndex;
         var firstRow = allRows[0];
-        var refCol = firstRow.cells[colNum+1];
+        var rightCell = firstRow.cells[colNum+1];
+
+        if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
+        var numCols = firstRow.childNodes.length;
+        var currCell = src.parentNode;
+        //alert(colNum);
+        //alert(numCols);
         
         for (var i = 0; i<allRows.length; i++) {
-            allRows[i].cells[colNum].style.display = 'inline';
+            allRows[i].cells[colNum].style.display = 'table-cell';
         }
         
-        refCol.removeChild(refCol.firstChild);
+        if (colNum == numCols-1 || rightCell.style.display =='none') 
+            { leftCell.removeChild(leftCell.firstChild);}
+        else rightCell.removeChild(rightCell.firstChild);
     }
 }
-//closeQueryButton.style.border='solid #777 1px';
+//closeQueryButton.style.border='solid #777 1px';  //reference

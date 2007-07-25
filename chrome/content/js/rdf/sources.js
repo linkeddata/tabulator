@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3530 2007-07-23 15:09:43Z presbrey $
+ * SVN ID: $Id: sources.js 3560 2007-07-25 12:24:56Z timbl $
  *
  ************************************************************/
 
@@ -720,15 +720,15 @@ function SourceFetcher(store, timeout, async) {
 		xhr.channel.notificationCallbacks = {
 		    getInterface: 
 		    function (iid) {
-            if(!isExtension){
+                        if(!isExtension){
 			    Util.enablePrivilege("UniversalXPConnect")
-            }
+                        }
 			if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
 			    return {
 				onChannelRedirect: function (oldC,newC,flags) {
-            if(!isExtension) {
-				    Util.enablePrivilege("UniversalXPConnect")
-            }
+                                        if(!isExtension) {
+                                            Util.enablePrivilege("UniversalXPConnect")
+                                        }
 				    if (xhr.aborted) return
 				    var kb = sf.store;
                                     var newURI = newC.URI.spec;

@@ -174,6 +174,10 @@ function Outline(doc) {
                  message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()'/>CC: BY-SA<br />";
                      
                  message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()'/>CC: BY<br /> <br />";
+                 
+                 message+="<a onclick='tabulator.options.selectAll()'>[Select All] </a>";
+                 
+                 message+="<a onclick='tabulator.options.deselectAll()'> [Deselect All]</a>";
      
                  message+="</form></font>";
                  
@@ -187,9 +191,33 @@ function Outline(doc) {
     tabulator.options = {}
     tabulator.options.checkedLicenses = []
     
+   
+    tabulator.options.selectAll = function()
+    {
+        display.document.checkboxes.one.checked = true;
+        display.document.checkboxes.two.checked = true;
+        display.document.checkboxes.three.checked = true;
+        display.document.checkboxes.four.checked = true;
+        display.document.checkboxes.five.checked = true;
+        display.document.checkboxes.six.checked = true;
+    }
+    
+    tabulator.options.deselectAll = function()
+    {
+        display.document.checkboxes.one.checked = false;
+        display.document.checkboxes.one.checked = false;
+        display.document.checkboxes.two.checked = false;
+        display.document.checkboxes.three.checked = false;
+        display.document.checkboxes.four.checked = false;
+        display.document.checkboxes.five.checked = false;
+        display.document.checkboxes.six.checked = false;
+    
+    }
+    
+    
     tabulator.options.submit = function()
     {
-    if(display.document.checkboxes.one.checked){
+            if(display.document.checkboxes.one.checked){
                 tabulator.options.checkedLicenses[0] = true;
                 }
             else{

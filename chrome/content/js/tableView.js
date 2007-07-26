@@ -10,8 +10,11 @@
 // - when edits are done (tableEditOnBlur), send the newTxt with setObject
 // - there are no pointers to things in the original store
 
+var autoCompArray = [];
+
 function tableView(container,doc) 
 {
+    
     /*if(isExtension) {
         tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
             getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -38,6 +41,7 @@ function tableView(container,doc)
     
     //***************** drawQuery *****************//
     this.drawQuery = function (q) {
+    
     //tabulator.log.test('Entered drawQuery');
         this.onBinding = function (bindings) {
             //tabulator.log.test('Entered onBinding');
@@ -107,12 +111,15 @@ function tableView(container,doc)
         numCols = nv;
         numRows = t.childNodes.length;
         
-        // key mvmt activation
-        //var a = document.createElement('a');
-        //th.appendChild(a); 
-        //a.setAttribute('id', 'anchor');
-        //a.focus();
+        // auto completion array
+        var entryArray = lb.entry;
+        for (i = 0; i<lb.entry.length; i++) {
+            autoCompArray.push(entryArray[i][0]); // autoCompArray is global
+            entryArray = entryArray.slice(0);
+        }
+        // I still need to set the attributes, but this is a start
     }
+    
     //***************** End drawQuery *****************//
 
     //***************** Table Editing *****************//
@@ -260,11 +267,6 @@ function tableView(container,doc)
         } else {return x;}
     }
     
-    function convertToSymbol(x) { // x = <http://test>
-        uri = convertToURI(x);
-        return kb.sym(uri);
-    }
-    
     function convertToLiteral(x) { // x = "David Li"
         return kb.literal(x, ''); // parser requires second arg
         // Handle other languages here
@@ -309,38 +311,31 @@ function tableView(container,doc)
 						"Armed Forces Africa","Armed Forces Americas","Armed Forces Canada",
 						"Armed Forces Europe","Armed Forces Middle East","Armed Forces Pacific");
                         
-        if (node.getAttribute('type') == 'sym' && node.getAttribute('autocomp') == 'true') {
-        new AutoSuggest(document.getElementById('test'), test); }
+        if (node.getAttribute('type') == 'sym' && 
+        node.getAttribute('autocomp') == 'true') {
+            new autoSuggest(document.getElementById('test'), autoCompArray); 
+        }
         
+        if (sparqlTest=='true') {
         //**** sparqlUpdate ****//
-        // since we're only editing the literal nodes, the subject
-        // and why are the same, except maybe for the #
         var s = node.getAttribute('s');
         var p = node.getAttribute('p');
         var o = node.getAttribute('about');
         
-        // var st = kb.anyStatementMatching(
-        // kb.sym(convertToURI(s)),
-        // kb.sym(convertToURI(p)),
-        // kb.literal(o, ''))
-        //if (!st)  alert ('no statement for '+s+p+o); or throw
-        //var why = st.why;
-        //if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
+        var st = kb.anyStatementMatching(
+        kb.sym(convertToURI(s)),
+        kb.sym(convertToURI(p)),
+        kb.literal(o, ''));
+        if (!st)  alert ('no statement for '+s+p+o); 
+        if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
         
-        // lastModifiedStat= new RDFStatement(
-        // kb.sym(convertToURI(s)), 
-        // kb.sym(convertToURI(p)), 
-        // kb.literal(o, ''),
-        // kb.sym(why))
-        
-        // sparqlUpdate = new sparql(kb).prepareUpdate(lastModifiedStat);
-        // more in tableEditOnBlurWrap
-        //**** End sparqlUpdate ****//
+        sparqlUpdate = new sparql(kb).prepareUpdate(st);
+        }//**** End sparqlUpdate ****//
 
         inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
         inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
     }
-    
+    var sparqlTest='true';
     function tableEditOnBlurWrap(node) {
         return function tableEditOnBlur(e) {
             var srcElem = e.target;  // getTarget(e)
@@ -352,6 +347,7 @@ function tableView(container,doc)
             else {
                 node.innerHTML = '---';
             }
+            node.setAttribute('about', newTxt);
             
             var col = node.cellIndex;
             var row = node.parentNode.rowIndex;
@@ -359,9 +355,10 @@ function tableView(container,doc)
             e.stopPropagation();
             e.preventDefault();
             
+            if (sparqlTest=='true') {
             //**** sparqlUpdate ****//
-            //sparqlUpdate.setObject(kb.literal(newTxt, ''));
-            //**** End sparqlUpdate ****//
+            sparqlUpdate.setObject(kb.literal(newTxt, ''));
+            }//**** End sparqlUpdate ****//
         }
     }
     
@@ -418,19 +415,28 @@ function tableView(container,doc)
         var i; var td; var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
         // I need to add the s, p, o to each node
+        sparqlTest='false';
         for (i=0; i<numCols; i++) {
             if (literalRC(1, i)) {
                 td = createLiteralTD(); 
-                //refNode = getTDNode(1, i);
-                //td.setAttribute('s', refNode.getAttribute('s'));
-                //td.setAttribute('p', refNode.getAttribute('p')); 
-                //td.setAttribute('about', refNode.getAttribute('about'));
+                refNode = getTDNode(1, i);
+                td.setAttribute('s', refNode.getAttribute('s'));
+                td.setAttribute('p', refNode.getAttribute('p')); 
+                td.setAttribute('about', '---');
+                //this gets assigned when you edit
             }
             else if (bnodeRC(1, i)) {
                 td = createBNodeTD(); 
             }
             else if (symbolRC (1, i)) { 
                 td = createSymbolTD();
+                refNode = getTDNode(1, i);
+                td.setAttribute('s', refNode.getAttribute('s'));
+                td.setAttribute('p', refNode.getAttribute('p')); 
+                td.setAttribute('about', '---');
+                // this gets assigned when you edit
+                // I need to create fake paths for the entire graph,
+                // this only handles the end point
             }
             else {alert('addRow problem')} // throw error eventually
             tr.appendChild(td);
@@ -638,53 +644,36 @@ function tableExpandWrap(src) { //src = the original delete image
     }
 }
 
-function AutoSuggest(elem, suggestions)
+// move this to a separate file later
+// mostly copied from http://gadgetopia.com/post/3773
+function autoSuggest(elem, suggestions)
 {
-
 	//The 'me' variable allow you to access the AutoSuggest object
 	//from the elem's event handlers defined below.
 	var me = this;
-
 	//A reference to the element we're binding the list to.
 	this.elem = elem;
-
 	this.suggestions = suggestions;
-
 	//Arrow to store a subset of eligible suggestions that match the user's input
 	this.eligible = new Array();
-
 	//The text input by the user.
 	this.inputText = null;
-
 	//A pointer to the index of the highlighted eligible item. -1 means nothing highlighted.
 	this.highlighted = -1;
-
 	//A div to use to create the dropdown.
 	this.div = document.getElementById("autosuggest");
-
-
 	//Do you want to remember what keycode means what? Me neither.
 	var TAB = 9;
 	var ESC = 27;
 	var KEYUP = 38;
 	var KEYDN = 40;
     var ENTER = 13;
-	
-
-	//The browsers' own autocomplete feature can be problematic, since it will 
-	//be making suggestions from the users' past input.
-	//Setting this attribute should turn it off.
-	elem.setAttribute("autocomplete","off");
-
 	//We need to be able to reference the elem by id. If it doesn't have an id, set one.
-	if(!elem.id)
-	{
+	if(!elem.id) {
 		var id = "autosuggest" + idCounter;
 		idCounter++;
-
 		elem.id = id;
 	}
-
 
 	/********************************************************
 	onkeydown event handler for the input elem.
@@ -700,6 +689,7 @@ function AutoSuggest(elem, suggestions)
 		{
 			case ENTER:
 			me.useSuggestion();
+            me.hideDiv();
 			break;
 
 			case ESC:
@@ -732,40 +722,35 @@ function AutoSuggest(elem, suggestions)
 	elem.onkeyup = function(ev) 
 	{
 		var key = me.getKeyCode(ev);
-		switch(key)
-		{
+		switch(key) {
 		//The control keys were already handled by onkeydown, so do nothing.
-		case ENTER:
+		case TAB:
 		case ESC:
 		case KEYUP:
 		case KEYDN:
 			return;
+            
 		default:
-
-			if (this.value != me.inputText && this.value.length > 0)
-			{
+			if (this.value != me.inputText && this.value.length > 0) {
 				me.inputText = this.value;
 				me.getEligible();
 				me.createDiv();
 				me.positionDiv();
 				me.showDiv();
 			}
-			else
-			{
+			else {
 				me.hideDiv();
 			}
 		}
 	};
 
-
 	/********************************************************
 	Insert the highlighted suggestion into the input box, and 
 	remove the suggestion dropdown.
 	********************************************************/
-	this.useSuggestion = function()
-	{
-		if (this.highlighted > -1)
-		{
+	this.useSuggestion = function() 
+	{ // This is where I can move the onblur stuff
+		if (this.highlighted > -1) {
 			this.elem.value = this.eligible[this.highlighted];
 			this.hideDiv();
 			//It's impossible to cancel the Tab key's default behavior. 
@@ -798,16 +783,12 @@ function AutoSuggest(elem, suggestions)
 	this.changeHighlight = function()
 	{
 		var lis = this.div.getElementsByTagName('LI');
-		for (i in lis)
-		{
+		for (i in lis) {
 			var li = lis[i];
-
-			if (this.highlighted == i)
-			{
+			if (this.highlighted == i) {
 				li.className = "selected";
 			}
-			else
-			{
+			else {
 				li.className = "";
 			}
 		}
@@ -823,8 +804,7 @@ function AutoSuggest(elem, suggestions)
 		var y = el.offsetHeight;
 	
 		//Walk up the DOM and add up all of the offset positions.
-		while (el.offsetParent && el.tagName.toUpperCase() != 'BODY')
-		{
+		while (el.offsetParent && el.tagName.toUpperCase() != 'BODY') {
 			x += el.offsetLeft;
 			y += el.offsetTop;
 			el = el.offsetParent;
@@ -845,8 +825,7 @@ function AutoSuggest(elem, suggestions)
 		var ul = document.createElement('ul');
 	
 		//Create an array of LI's for the words.
-		for (i in this.eligible)
-		{
+		for (i in this.eligible) {
 			var word = this.eligible[i];
 	
 			var li = document.createElement('li');
@@ -855,8 +834,7 @@ function AutoSuggest(elem, suggestions)
 			a.innerHTML = word;
 			li.appendChild(a);
 	
-			if (me.highlighted == i)
-			{
+			if (me.highlighted == i) {
 				li.className = "selected";
 			}
 	
@@ -864,7 +842,6 @@ function AutoSuggest(elem, suggestions)
 		}
 	
 		this.div.replaceChild(ul,this.div.childNodes[0]);
-	
 
 		/********************************************************
 		mouseover handler for the dropdown ul
@@ -933,8 +910,7 @@ function AutoSuggest(elem, suggestions)
 	********************************************************/
 	this.getKeyCode = function(ev)
 	{
-		if(ev)			//Moz
-		{
+		if(ev) {
 			return ev.keyCode;
 		}
 	};
@@ -944,8 +920,7 @@ function AutoSuggest(elem, suggestions)
 	********************************************************/
 	this.getEventSource = function(ev)
 	{
-		if(ev)			//Moz
-		{
+		if(ev) {
 			return ev.target;
 		}
 	};
@@ -956,8 +931,7 @@ function AutoSuggest(elem, suggestions)
 	********************************************************/
 	this.cancelEvent = function(ev)
 	{
-		if(ev)			//Moz
-		{
+		if(ev) {
 			ev.preventDefault();
 			ev.stopPropagation();
 		}
@@ -966,3 +940,5 @@ function AutoSuggest(elem, suggestions)
 
 //counter to help create unique ID's
 var idCounter = 0;
+
+

@@ -193,7 +193,7 @@ function findLabelSubProperties() {
     }
 }
 
-function label(x, trimSlash) {
+function label(x, trimSlash) { // x is an object
     
     var i,n
     var plist = kb.statementsMatching(x);
@@ -364,6 +364,7 @@ function matrixTD(arrayStatement, asImage, doc) {
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
+    
     if (obj.termType =='symbol') {
         td.setAttribute('type', 'sym');
     }
@@ -373,6 +374,7 @@ function matrixTD(arrayStatement, asImage, doc) {
     if (obj.termType =='literal') {
         td.setAttribute('type', 'lit');
     }
+    
     var image;
     if (obj.termType == 'literal') {
         td.setAttribute('s', s); 
@@ -385,7 +387,7 @@ function matrixTD(arrayStatement, asImage, doc) {
             image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
             image.setAttribute('class', 'pic');
             td.appendChild(image);
-        } 
+        }
         else {
             td.appendChild(doc.createTextNode(label(obj)));
         }

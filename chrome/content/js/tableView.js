@@ -5,8 +5,8 @@
 // multiple languages are not handled
 
 // Method
-// - when TDs are being created, attach to each TDs the subject and predicate
-// - when edits occur (onEdit), reconstruct the statement; the why is the same as the subject since we only edit literal nodes
+// - when TDs are being created, attach to each TDs the subj, pred, obj
+// - when edits occur (onEdit), reconstruct the statement
 // - when edits are done (tableEditOnBlur), send the newTxt with setObject
 // - there are no pointers to things in the original store
 
@@ -19,8 +19,8 @@ function tableView(container,doc)
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
     }*/
     //tabulator.log.test('Entered tableView');
-    var numRows; // assigned in makeKeyHandler, includes header
-    var numCols; // assigned at bottom of onClickCell
+    var numRows; // assigned in click, includes header
+    var numCols; // assigned at bottom of click
     var activeSingleQuery = null;
     
     thisTable = this;  // fixes a problem with calling this.container
@@ -35,14 +35,11 @@ function tableView(container,doc)
     this.queryStates=[];            //All Queries currently in this view.
     this.container=container;       //HTML DOM parent node for this view.
     this.container.setAttribute('ondblclick','tableDoubleClick(event)');
-    // this.container.setAttribute('onclick', 'onClickCell');
     
-    //***************** this.drawQuery *****************//
-    this.drawQuery = function (q) 
-    {
+    //***************** drawQuery *****************//
+    this.drawQuery = function (q) {
     //tabulator.log.test('Entered drawQuery');
-        this.onBinding = function (bindings) 
-        {
+        this.onBinding = function (bindings) {
             //tabulator.log.test('Entered onBinding');
             var i, tr, td;
             //tabulator.log.info('making a row w/ bindings ' + bindings);
@@ -52,7 +49,7 @@ function tableView(container,doc)
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
 
-                // generate the subject and predicate for each tdNode 
+                // generate the subj and pred for each tdNode 
                 //**** td node creation ****//
                 for (j = 0; j<numStats; j++) {
                     testStatement = q.pat.statements[j]; // <#subj> <#pred> ?v0 .
@@ -105,26 +102,24 @@ function tableView(container,doc)
         drawAddRow();
         sortables_init();
         
-        // Table Edit Code
-        t.addEventListener('click', onClickCell, false);
+        // Table Edit
+        t.addEventListener('click', click, false);
         numCols = nv;
-        
-        // key mvmt activation code
-        var a = document.createElement('a');
-        th.appendChild(a); 
-        a.setAttribute('id', 'anchor');
-        a.focus();
         numRows = t.childNodes.length;
+        
+        // key mvmt activation
+        //var a = document.createElement('a');
+        //th.appendChild(a); 
+        //a.setAttribute('id', 'anchor');
+        //a.focus();
     }
     //***************** End drawQuery *****************//
 
     //***************** Table Editing *****************//
-
     var selectedTD;
     var keyHandler;
     
-    function onClickCell(e) 
-    {
+    function click(e) {
         if (selectedTD != null) clearSelected(selectedTD);
         var node = e.target;
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
@@ -133,8 +128,7 @@ function tableView(container,doc)
         numRows = t.childNodes.length;
     }
     
-    function getRowIndex(node)
-    { 
+    function getRowIndex(node) { 
         var trNode = node.parentNode;
         var rowArray = trNode.parentNode.childNodes;
         var rowArrayLength = trNode.parentNode.childNodes.length;
@@ -144,10 +138,8 @@ function tableView(container,doc)
     }
     
     // use this wrapper so that the node can be passed to the event handler
-    function makeKeyHandler(node) 
-    {
-        return function keyHandler(e) 
-        {
+    function makeKeyHandler(node) {
+        return function keyHandler(e) {
             var oldRow = getRowIndex(node); //includes header
             var oldCol = node.cellIndex;
             var t = document.getElementById('tabulated_data');
@@ -216,15 +208,23 @@ function tableView(container,doc)
         }
     }
     
-    function getTDNode(iRow, iCol)
-    {
+    function getTDNode(iRow, iCol) {
         var t = document.getElementById('tabulated_data');
         //return t.rows[iRow].cells[iCol];  // relies on tbody
         return t.childNodes[iRow].childNodes[iCol];
     }
     
-    function setSelected(node) 
-    {
+    function clickSecond(e) {
+        selectedTD.removeEventListener('click', clickSecond, false); 
+        if (e.target == selectedTD) {
+            clearSelected(selectedTD);
+            onEdit(selectedTD);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }
+    
+    function setSelected(node) {
         if (!node) return;
         if (node.tagName != "TD") return;
         // focus fix: add an anchor node, focus on it, then remove the anchor
@@ -236,25 +236,13 @@ function tableView(container,doc)
         var t = document.getElementById('tabulated_data');
         keyHandler = makeKeyHandler(node);
         t.addEventListener('keypress', keyHandler, false);
-        node.style.backgroundColor = "#8F3";
+        node.style.backgroundColor = "#8F3"; // maybe make a CSS for this
         
         selectedTD = node;
-        selectedTD.addEventListener('click', onCellClickSecond, false);
+        selectedTD.addEventListener('click', clickSecond, false);
     }
     
-    function onCellClickSecond(e)
-    {
-        selectedTD.removeEventListener('click', onCellClickSecond, false); 
-        if (e.target == selectedTD) {
-            clearSelected(selectedTD);
-            onEdit(selectedTD);
-            e.stopPropagation();
-            e.preventDefault();
-        }
-    }
-    
-    function clearSelected(node)
-    {
+    function clearSelected(node) {
         var a = document.getElementById('focustest');
         if (a != null) { a.parentNode.removeChild(a); };
         var t = document.getElementById('tabulated_data');
@@ -265,6 +253,7 @@ function tableView(container,doc)
     var lastModifiedStat;
     var sparqlUpdate;
     
+    // utilities for rebuilding pieces for sparqlUpdate
     function convertToURI(x) { // x = <http://test>
         if (x[0] = '<') {
             return x.toString().match(/[^<].*[^>]/)[0];
@@ -280,10 +269,11 @@ function tableView(container,doc)
         return kb.literal(x, ''); // parser requires second arg
         // Handle other languages here
     }
+    // end utilities for rebuilding pieces
     
-    function onEdit(node)
-    {
-        if (!literalTD(node)) {setSelected(node); return; }
+    function onEdit(node) {
+        // check autocomp and symbol
+        if ((node.getAttribute('autocomp') == undefined) && (node.getAttribute('type') == 'sym')) {setSelected(node); return; }
         var t = document.getElementById('tabulated_data');
         
         var oldTxt = node.innerHTML;
@@ -293,23 +283,41 @@ function tableView(container,doc)
         inputObj.value = oldTxt;
         
         if (!oldTxt)
-            inputObj.value = ' ';
-        if (node.firstChild) { // node of the form <td> text </td>
+            inputObj.value = ' ';  // ????
+        if (node.firstChild) { // node = <td> text </td>
             node.replaceChild(inputObj, node.firstChild);
             inputObj.select();
-        } else { // node of the form <td />
+        } else { // node = <td />
             var parent = node.parentNode;
             var newTD = thisTable.document.createElement('TD');
             parent.replaceChild(newTD, node);
             newTD.appendChild(inputObj);
         }
         
+        inputObj.setAttribute('id', 'test');
+        // replace this with a function generator
+        var test = new Array("Alabama","Alaska","American Samoa","Arizona","Arkansas","California",
+						"Colorado","Connecticut","Delaware","District of Columbia",
+						"Federated States of Micronesia","Florida","Georgia","Guam","Hawaii","Idaho","Illinois",
+						"Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine",
+						"Marshall Islands","Maryland","Massachusetts","Michigan","Minnesota","Mississippi",
+						"Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico",
+						"New York","North Carolina","North Dakota",
+						"Northern Mariana Islands","Ohio","Oklahoma","Oregon","Palau","Pennsylvania","Puerto Rico",
+						"Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont",
+						"Virgin Islands","Virginia","Washington","West Virginia","Wisconsin","Wyoming",
+						"Armed Forces Africa","Armed Forces Americas","Armed Forces Canada",
+						"Armed Forces Europe","Armed Forces Middle East","Armed Forces Pacific");
+                        
+        if (node.getAttribute('type') == 'sym' && node.getAttribute('autocomp') == 'true') {
+        new AutoSuggest(document.getElementById('test'), test); }
+        
         //**** sparqlUpdate ****//
         // since we're only editing the literal nodes, the subject
         // and why are the same, except maybe for the #
         var s = node.getAttribute('s');
         var p = node.getAttribute('p');
-        var o = node.getAttribute('o');
+        var o = node.getAttribute('about');
         
         // var st = kb.anyStatementMatching(
         // kb.sym(convertToURI(s)),
@@ -333,10 +341,8 @@ function tableView(container,doc)
         inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
     }
     
-    function tableEditOnBlurWrap(node)
-    {
-        return function tableEditOnBlur(e)
-        {
+    function tableEditOnBlurWrap(node) {
+        return function tableEditOnBlur(e) {
             var srcElem = e.target;  // getTarget(e)
             newTxt = srcElem.value;
             
@@ -359,10 +365,8 @@ function tableView(container,doc)
         }
     }
     
-    function tableEditOnKeyPressWrap(node) 
-    {
-        return function tableEditOnKeyPress(e) 
-        {
+    function tableEditOnKeyPressWrap(node) {
+        return function tableEditOnKeyPress(e) {
             if (e.keyCode == 13) { //enter
                 tableEditOnBlurWrap(node)(e);
             }
@@ -371,35 +375,31 @@ function tableView(container,doc)
             }
         }
     }
-   
     //***************** End Table Editing *****************//
         
     //***************** Add Row *****************//
-    
-    // has no about attribute = literal 
-    function literalTD (tdNode) {
-        if (tdNode.getAttributeNode('about')==undefined) return true; 
-    }
-    
-    // checks using row, col specs
+    // node type checking
+
     function literalRC (row, col) {
         var t = thisTable.document.getElementById('tabulated_data'); 
         var tdNode = t.childNodes[row].childNodes[col];
-        if (literalTD (tdNode)) return true;
+        if (tdNode.getAttribute('type') =='lit') return true;
     } 
 
-    function bnodeTD (tdNode) {
-        //if(tdNode.getAttribute('about')[0]=='_') return true;
-    } 
-    
     function bnodeRC (row, col) {
         var t = thisTable.document.getElementById('tabulated_data');
         var tdNode = t.childNodes[row].childNodes[col];
-        if (bnodeTD (tdNode)) return true;
+        if (tdNode.getAttribute('type') =='bnode') return true;
     }
 
-    function drawAddRow () 
-    {
+    function symbolRC(row, col) {
+        var t = thisTable.document.getElementById('tabulated_data');
+        var tdNode = t.childNodes[row].childNodes[col];
+        if (tdNode.getAttribute('type') == 'sym') return true;
+    }
+    // End note type checking
+    
+    function drawAddRow () {
         var form = thisTable.document.createElement('form');
         var but = thisTable.document.createElement('input');
         form.setAttribute('textAlign','right');
@@ -410,72 +410,65 @@ function tableView(container,doc)
         form.appendChild(but);
         thisTable.container.appendChild(form);
     }
+    
     // use kb.sym for symbols
     // use kb.bnode for blank nodes
     // use kb.literal for literal nodes 
-    function addRow () 
-    {
-        var i;
-        var td;
-        var tr = thisTable.document.createElement('tr');
+    function addRow () {
+        var i; var td; var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
-        // I need to add the s, p, o nodes
+        // I need to add the s, p, o to each node
         for (i=0; i<numCols; i++) {
             if (literalRC(1, i)) {
                 td = createLiteralTD(); 
                 //refNode = getTDNode(1, i);
                 //td.setAttribute('s', refNode.getAttribute('s'));
                 //td.setAttribute('p', refNode.getAttribute('p')); 
-                //td.setAttribute('o', refNode.getAttribute('o'));
+                //td.setAttribute('about', refNode.getAttribute('about'));
             }
-            else if (bnodeTD(1, i)) {
+            else if (bnodeRC(1, i)) {
                 td = createBNodeTD(); 
-                //refNode = getTDNode(1, i);
-                //td.setAttribute('s', refNode.getAttribute('s'));
-                //td.setAttribute('p', refNode.getAttribute('p')); 
-                //td.setAttribute('about', refNode.getAttribute('about'));
             }
-            else { 
-                td = createSymbolTD(); 
-                //refNode = getTDNode(1, i);
-                //td.setAttribute('s', refNode.getAttribute('s'));
-                //td.setAttribute('p', refNode.getAttribute('p')); 
-                //td.setAttribute('about', refNode.getAttribute('about'));
+            else if (symbolRC (1, i)) { 
+                td = createSymbolTD();
             }
+            else {alert('addRow problem')} // throw error eventually
             tr.appendChild(td);
         }
         t.appendChild(tr);
     }
     
-    function createLiteralTD() 
-    {
+    // td creation for each type
+    function createLiteralTD() {
         var td = thisTable.document.createElement("TD");
+        td.setAttribute('type', 'lit');
         td.innerHTML = '---';
         return td;
     }
     
-    function createSymbolTD() 
-    {
+    function createSymbolTD() {
         var td = thisTable.document.createElement("TD");
-        td.setAttribute('about', '');
+        td.setAttribute('type', 'sym');
+        td.setAttribute('autocomp', 'true');
         td.setAttribute('style', 'color:#4444ff');
-        td.innerHTML = "<form> <select style=\'width:100%\'> <option> --- </option> </select> </form>";
-        // SET ATTRIBUTES HERE;
+        td.innerHTML = "---";
         return td;
     }
 
     function createBNodeTD() {
         var td = thisTable.document.createElement('TD');
         bnode = kb.bnode();
-        td.setAttribute('about', bnode.toNT());
+        td.setAttribute('o', bnode.toNT());
+        td.setAttribute('type', 'bnode');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
         return td;
     }
+    // end td creation for each type
+    
     //***************** End Add Row *****************//
 
-    function drawExport () 
-    {
+    function drawExport () {
         var form= thisTable.document.createElement('form');
         var but = thisTable.document.createElement('input');
         form.setAttribute('textAlign','right');
@@ -487,8 +480,7 @@ function tableView(container,doc)
         thisTable.container.appendChild(form);
     }
 
-    this.undrawQuery = function(q) 
-    {
+    this.undrawQuery = function(q) {
         if(q===activeSingleQuery) 
         {
             this.queryStates[q.id]=0;
@@ -497,38 +489,33 @@ function tableView(container,doc)
         }
     }
 
-    this.addQuery = function(q) 
-    {
+    this.addQuery = function(q) {
         this.queryStates[q.id]=0;
     }
 
-    this.removeQuery = function (q) 
-    {
+    this.removeQuery = function (q) {
         this.undrawQuery(q);
         delete this.queryStates[q.id];
         return;
     }
 
-    this.clearView = function () 
-    {
+    this.clearView = function () {
         this.undrawQuery(activeSingleQuery);
         activeSingleQuery=null;
         emptyNode(this.container);
     }
 } // tableView
 
-function tableDoubleClick(event) 
-{
+function tableDoubleClick(event) {
     var target = getTarget(event);
     var tname = target.tagName;
-    var aa = getAbout(kb, target);
+    var aa = getAbout(kb, target); 
     tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName)
     if (!aa) return;
     GotoSubject(aa);
 }
 
-function exportTable()
-{
+function exportTable() {
     /*sel=document.getElementById('exportType')
     var type = sel.options[sel.selectedIndex].value
     
@@ -601,7 +588,7 @@ TableViewFactory = {
     }
 }
 
-function deleteColumn (src) { // src = the delete image
+function deleteColumn (src) { // src = the original delete image
     var t = document.getElementById('tabulated_data');
     var colNum = src.parentNode.cellIndex;
     var allRows = t.childNodes;
@@ -622,8 +609,7 @@ function deleteColumn (src) { // src = the delete image
     var imgL = document.createElement('img'); // points right
     imgL.setAttribute('src', 'icons/tbl-expand.png');
     imgL.setAttribute('align', 'right');
-    var origImg = src
-    imgL.addEventListener('click', tableExpandWrap(origImg), false);
+    imgL.addEventListener('click', tableExpandWrap(src), false);
     
     if (colNum == numCols-1 || rightCell.style.display =='none') 
         leftCell.insertBefore(imgL, leftCell.firstChild);
@@ -641,8 +627,6 @@ function tableExpandWrap(src) { //src = the original delete image
         if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
         var numCols = firstRow.childNodes.length;
         var currCell = src.parentNode;
-        //alert(colNum);
-        //alert(numCols);
         
         for (var i = 0; i<allRows.length; i++) {
             allRows[i].cells[colNum].style.display = 'table-cell';
@@ -653,4 +637,332 @@ function tableExpandWrap(src) { //src = the original delete image
         else rightCell.removeChild(rightCell.firstChild);
     }
 }
-//closeQueryButton.style.border='solid #777 1px';  //reference
+
+function AutoSuggest(elem, suggestions)
+{
+
+	//The 'me' variable allow you to access the AutoSuggest object
+	//from the elem's event handlers defined below.
+	var me = this;
+
+	//A reference to the element we're binding the list to.
+	this.elem = elem;
+
+	this.suggestions = suggestions;
+
+	//Arrow to store a subset of eligible suggestions that match the user's input
+	this.eligible = new Array();
+
+	//The text input by the user.
+	this.inputText = null;
+
+	//A pointer to the index of the highlighted eligible item. -1 means nothing highlighted.
+	this.highlighted = -1;
+
+	//A div to use to create the dropdown.
+	this.div = document.getElementById("autosuggest");
+
+
+	//Do you want to remember what keycode means what? Me neither.
+	var TAB = 9;
+	var ESC = 27;
+	var KEYUP = 38;
+	var KEYDN = 40;
+    var ENTER = 13;
+	
+
+	//The browsers' own autocomplete feature can be problematic, since it will 
+	//be making suggestions from the users' past input.
+	//Setting this attribute should turn it off.
+	elem.setAttribute("autocomplete","off");
+
+	//We need to be able to reference the elem by id. If it doesn't have an id, set one.
+	if(!elem.id)
+	{
+		var id = "autosuggest" + idCounter;
+		idCounter++;
+
+		elem.id = id;
+	}
+
+
+	/********************************************************
+	onkeydown event handler for the input elem.
+	Tab key = use the highlighted suggestion, if there is one.
+	Esc key = get rid of the autosuggest dropdown
+	Up/down arrows = Move the highlight up and down in the suggestions.
+	********************************************************/
+	elem.onkeydown = function(ev)
+	{
+		var key = me.getKeyCode(ev);
+
+		switch(key)
+		{
+			case ENTER:
+			me.useSuggestion();
+			break;
+
+			case ESC:
+			me.hideDiv();
+			break;
+
+			case KEYUP:
+			if (me.highlighted > 0)
+			{
+				me.highlighted--;
+			}
+			me.changeHighlight(key);
+			break;
+
+			case KEYDN:
+			if (me.highlighted < (me.eligible.length - 1))
+			{
+				me.highlighted++;
+			}
+			me.changeHighlight(key);
+			break; 
+		}
+	};
+
+	/********************************************************
+	onkeyup handler for the elem
+	If the text is of sufficient length, and has been changed, 
+	then display a list of eligible suggestions.
+	********************************************************/
+	elem.onkeyup = function(ev) 
+	{
+		var key = me.getKeyCode(ev);
+		switch(key)
+		{
+		//The control keys were already handled by onkeydown, so do nothing.
+		case ENTER:
+		case ESC:
+		case KEYUP:
+		case KEYDN:
+			return;
+		default:
+
+			if (this.value != me.inputText && this.value.length > 0)
+			{
+				me.inputText = this.value;
+				me.getEligible();
+				me.createDiv();
+				me.positionDiv();
+				me.showDiv();
+			}
+			else
+			{
+				me.hideDiv();
+			}
+		}
+	};
+
+
+	/********************************************************
+	Insert the highlighted suggestion into the input box, and 
+	remove the suggestion dropdown.
+	********************************************************/
+	this.useSuggestion = function()
+	{
+		if (this.highlighted > -1)
+		{
+			this.elem.value = this.eligible[this.highlighted];
+			this.hideDiv();
+			//It's impossible to cancel the Tab key's default behavior. 
+			//So this undoes it by moving the focus back to our field right after
+			//the event completes.
+			//setTimeout("document.getElementById('" + this.elem.id + "').focus()",0);
+		}
+	};
+
+	/********************************************************
+	Display the dropdown. Pretty straightforward.
+	********************************************************/
+	this.showDiv = function()
+	{
+		this.div.style.display = 'block';
+	};
+
+	/********************************************************
+	Hide the dropdown and clear any highlight.
+	********************************************************/
+	this.hideDiv = function()
+	{
+		this.div.style.display = 'none';
+		this.highlighted = -1;
+	};
+
+	/********************************************************
+	Modify the HTML in the dropdown to move the highlight.
+	********************************************************/
+	this.changeHighlight = function()
+	{
+		var lis = this.div.getElementsByTagName('LI');
+		for (i in lis)
+		{
+			var li = lis[i];
+
+			if (this.highlighted == i)
+			{
+				li.className = "selected";
+			}
+			else
+			{
+				li.className = "";
+			}
+		}
+	};
+
+	/********************************************************
+	Position the dropdown div below the input text field.
+	********************************************************/
+	this.positionDiv = function()
+	{
+		var el = this.elem;
+		var x = 0;
+		var y = el.offsetHeight;
+	
+		//Walk up the DOM and add up all of the offset positions.
+		while (el.offsetParent && el.tagName.toUpperCase() != 'BODY')
+		{
+			x += el.offsetLeft;
+			y += el.offsetTop;
+			el = el.offsetParent;
+		}
+
+		x += el.offsetLeft;
+		y += el.offsetTop;
+
+		this.div.style.left = x + 'px';
+		this.div.style.top = y + 'px';
+	};
+
+	/********************************************************
+	Build the HTML for the dropdown div
+	********************************************************/
+	this.createDiv = function()
+	{
+		var ul = document.createElement('ul');
+	
+		//Create an array of LI's for the words.
+		for (i in this.eligible)
+		{
+			var word = this.eligible[i];
+	
+			var li = document.createElement('li');
+			var a = document.createElement('a');
+			a.href="javascript:false";
+			a.innerHTML = word;
+			li.appendChild(a);
+	
+			if (me.highlighted == i)
+			{
+				li.className = "selected";
+			}
+	
+			ul.appendChild(li);
+		}
+	
+		this.div.replaceChild(ul,this.div.childNodes[0]);
+	
+
+		/********************************************************
+		mouseover handler for the dropdown ul
+		move the highlighted suggestion with the mouse
+		********************************************************/
+		ul.onmouseover = function(ev)
+		{
+			//Walk up from target until you find the LI.
+			var target = me.getEventSource(ev);
+			while (target.parentNode && target.tagName.toUpperCase() != 'LI')
+			{
+				target = target.parentNode;
+			}
+		
+			var lis = me.div.getElementsByTagName('LI');
+			
+	
+			for (i in lis)
+			{
+				var li = lis[i];
+				if(li == target)
+				{
+					me.highlighted = i;
+					break;
+				}
+			}
+			me.changeHighlight();
+		};
+
+		/********************************************************
+		click handler for the dropdown ul
+		insert the clicked suggestion into the input
+		********************************************************/
+		ul.onclick = function(ev)
+		{
+			me.useSuggestion();
+			me.hideDiv();
+			me.cancelEvent(ev);
+			return false;
+		};
+	
+		this.div.className="suggestion_list";
+		this.div.style.position = 'absolute';
+
+	};
+
+	/********************************************************
+	determine which of the suggestions matches the input
+	********************************************************/
+	this.getEligible = function()
+	{
+		this.eligible = new Array();
+		for (i in this.suggestions) 
+		{
+			var suggestion = this.suggestions[i];
+			
+			if(suggestion.toLowerCase().indexOf(this.inputText.toLowerCase()) == "0")
+			{
+				this.eligible[this.eligible.length]=suggestion;
+			}
+		}
+	};
+
+	/********************************************************
+	Helper function to determine the keycode pressed
+	********************************************************/
+	this.getKeyCode = function(ev)
+	{
+		if(ev)			//Moz
+		{
+			return ev.keyCode;
+		}
+	};
+
+	/********************************************************
+	Helper function to determine the event source element
+	********************************************************/
+	this.getEventSource = function(ev)
+	{
+		if(ev)			//Moz
+		{
+			return ev.target;
+		}
+	};
+
+	/********************************************************
+	Helper function to cancel an event
+	(Returning false helps too).
+	********************************************************/
+	this.cancelEvent = function(ev)
+	{
+		if(ev)			//Moz
+		{
+			ev.preventDefault();
+			ev.stopPropagation();
+		}
+	}
+}
+
+//counter to help create unique ID's
+var idCounter = 0;

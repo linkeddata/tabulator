@@ -349,8 +349,8 @@ function myFetcher(x, requestedBy) {
 
 // 
 function matrixTD(arrayStatement, asImage, doc) {
-    //alert (obj.termType);
-    
+    // alert (obj.termType);
+    // the fact that we use "about" instead of obj or o is annoying
     s = arrayStatement[0];
     p = arrayStatement[1];
     obj = arrayStatement[2];
@@ -364,11 +364,20 @@ function matrixTD(arrayStatement, asImage, doc) {
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
+    if (obj.termType =='symbol') {
+        td.setAttribute('type', 'sym');
+    }
+    if (obj.termType =='bnode') {
+        td.setAttribute('type', 'bnode');
+    }
+    if (obj.termType =='literal') {
+        td.setAttribute('type', 'lit');
+    }
     var image;
     if (obj.termType == 'literal') {
         td.setAttribute('s', s); 
         td.setAttribute('p', p); 
-        td.setAttribute('o', obj.value);
+        td.setAttribute('about', obj.value);
         td.appendChild(doc.createTextNode(obj.value));
     } 
     else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {

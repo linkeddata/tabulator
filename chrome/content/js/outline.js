@@ -155,41 +155,76 @@ function Outline(doc) {
      
      this.openCheckBox = function ()
      
-                 {
+     {
      
-                 display=window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
+        display=window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
      
-                 display.tabulator = tabulator;
+        display.tabulator = tabulator;
                                   
-                 var message="<font face='arial' size='2'><form name ='checkboxes'>";
+        var message="<font face='arial' size='2'><form name ='checkboxes'>";
+                 
+        if(tabulator.options.checkedLicenses[0]){    
+            message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+        }
+        
+        else{
+            message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+        }
+        
+        if(tabulator.options.checkedLicenses[1]){    
+            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+        }
+                
+        else{
+            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+        }
+        if(tabulator.options.checkedLicenses[2]){    
+            message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+        }
+                
+                else{
+                    message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+        }
+         if(tabulator.options.checkedLicenses[3]){    
+                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+                }
+                
+                else{
+                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+        }
+         if(tabulator.options.checkedLicenses[4]){    
+                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+                }
+                
+                else{
+                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+        }
+         if(tabulator.options.checkedLicenses[5]){    
+                    message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+                }
+                
+         else{
+             message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+        }
+                 
+        message+="<br /> <a onclick='tabulator.options.selectAll()'>[Select All] </a>";
+                 
+        message+="<a onclick='tabulator.options.deselectAll()'> [Deselect All]</a>";
+                 
+        //message+="<p>Licenses identification: </p> <img src= '../tut/tabulator_screenshots/licenseGreenlegend.jpg'/>";
      
-                 message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
-                     
-                 message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()'/>CC: BY-NC-SA<br />";
-                     
-                 message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()'/>CC: BY-NC<br />";
-                     
-                 message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()'/>CC: BY-ND<br />";
-                     
-                 message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()'/>CC: BY-SA<br />";
-                     
-                 message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()'/>CC: BY<br /> <br />";
+        message+="</form></font>";
                  
-                 message+="<a onclick='tabulator.options.selectAll()'>[Select All] </a>";
+        display.document.write(message);
                  
-                 message+="<a onclick='tabulator.options.deselectAll()'> [Deselect All]</a>";
-     
-                 message+="</form></font>";
-                 
-                 display.document.write(message);
-                 
-                 display.document.close();     
+        display.document.close();     
      
             }
     
     
     tabulator.options = {}
     tabulator.options.checkedLicenses = []
+    tabulator.options.checkedLicenses[0] = false;
     
    
     tabulator.options.selectAll = function()
@@ -200,6 +235,10 @@ function Outline(doc) {
         display.document.checkboxes.four.checked = true;
         display.document.checkboxes.five.checked = true;
         display.document.checkboxes.six.checked = true;
+        //temporary fix
+        for(i=0; i< 6; i++){
+            tabulator.options.checkedLicenses[i] = true;
+            }
     }
     
     tabulator.options.deselectAll = function()
@@ -211,6 +250,10 @@ function Outline(doc) {
         display.document.checkboxes.four.checked = false;
         display.document.checkboxes.five.checked = false;
         display.document.checkboxes.six.checked = false;
+        //temporary fix
+        for(i=0; i< 6; i++){
+                    tabulator.options.checkedLicenses[i] = false;
+            }
     
     }
     

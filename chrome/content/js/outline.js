@@ -404,11 +404,13 @@ function Outline(doc) {
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
         tr.firstPane = null;
         var relevantPanes = [];
+        var labels = []
         for (var i=0; i< panes.list.length; i++) {
             var pane = panes.list[i];
             var lab = pane.label(subject);
             if (!lab) continue;
             relevantPanes.push(pane);
+            labels.push(lab)
         }
         
         if (!relevantPanes) relevantPanes.push(internalPane);
@@ -416,7 +418,7 @@ function Outline(doc) {
         if (relevantPanes.length != 1) { // if only one, simplify interface
             for (var i=0; i<relevantPanes.length; i++) {
                 var pane = relevantPanes[i];
-                var ico = AJARImage(pane.icon, lab, lab);
+                var ico = AJARImage(pane.icon, labels[i], labels[i]);
                 // ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
                 ico.setAttribute('class',  i ? 'paneHidden':'paneShown')
                 tr.firstChild.childNodes[1].appendChild(ico);

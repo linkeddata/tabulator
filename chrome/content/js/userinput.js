@@ -25,6 +25,7 @@ this.namespaces["contact"] = "http://www.w3.org/2000/10/swap/pim/contact#";
 this.namespaces["mo"] = "http://purl.org/ontology/mo/";
 this.namespaces["doap"] = "http://usefulinc.com/ns/doap#";
 var NameSpaces=this.namespaces;
+var sparqlService=new sparql(kb);
 if (!UserInputFormula){
     UserInputFormula=new RDFFormula();
     UserInputFormula.superFormula=kb;
@@ -159,16 +160,21 @@ clearInputAndSave: function clearInputAndSave(e){
              var obj=this.getStatementAbout(this.lastModified).object;
         }catch(e){return;}
     }
-    var s=this.lastModifiedStat;
+    var s=this.lastModifiedStat; //when 'isNew' this is set at addTriple()
     if(this.lastModified.value != this.lastModified.defaultValue){
-        // generate path and nailing from current values
-        sparqlUpdate = new sparql(kb).prepareUpdate(s);
         if (this.lastModified.isNew){
+            s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
+            try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
+                //back out
+                alert(e);return;
+            }
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
         }
         else{ 
             switch (obj.termType){
                 case 'literal':
+                    // generate path and nailing from current values
+                    sparqlUpdate = sparqlService.prepareUpdate(s);
                     obj.value=this.lastModified.value;
                     sparqlUpdate.setObject(makeTerm(this.lastModified.value));
 
@@ -180,13 +186,23 @@ clearInputAndSave: function clearInputAndSave(e){
                     var textTerm=kb.literal(this.lastModified.value,"");
                     if (s.predicate.termType=='collection'){ //case: add triple
                         var selectedPredicate=s.predicate.elements[0];
-                        if (kb.any(undefined,selectedPredicate,textTerm))
+                        if (kb.any(undefined,selectedPredicate,textTerm)){
+                            if (!e){ //keyboard
+                                var tdNode=this.lastModified.parentNode;
+                                e={}
+                                e.pageX=findPos(tdNode)[0];
+                                e.pageY=findPos(tdNode)[1]+3*tdNode.clientHeight; //ToDo: remove this stupid kludge...
+                            }
                             this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
-                        else{
+                        }else{
                             kb.remove(s);
                             newStat=kb.add(s.subject,selectedPredicate,textTerm);
+                            //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
+                            //this add will cause a repainting
                         }
-                        //table_refresh ??? auto?                           
+                        var enclosingTd=ancestor(this.lastModified.parentNode.parentNode,'TD');
+                        outline.outline_expand(enclosingTd,s.subject,defaultPane,true);
+                        outline.walk('right',outline.focusTd);                         
                     }else{
                     kb.remove(s);
                     s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
@@ -194,16 +210,6 @@ clearInputAndSave: function clearInputAndSave(e){
                     }
                     UserInputFormula.statements.push(newStat);
                     break;
-                case 'symbol'://no longer allow user to edit URI
-                    /* 
-                    kb.remove(s);
-                    if(!this.statIsInverse)
-                        s=kb.add(s.subject,s.predicate,kb.sym(this.lastModified.value),s.why); //fire!
-                                                                           //'why' to be changed
-                    else
-                        s=kb.add(kb.sym(this.lastModified.value),s.predicate,s.object,s.why); //fire!!
-                    // send sparql update with new values
-                    sparqlUpdate.setObject(kb.sym(this.lastModified.value));*/ //
             }
         }
     }else if(this.lastModified.isNew){//generate 'Request', there is no way you can input ' (Please Input) '
@@ -214,20 +220,26 @@ clearInputAndSave: function clearInputAndSave(e){
         //this why being the same as the previous statement
         this.lastModified=null;
         return;        
+    }else if(s.predicate.termType=='collection'){
+        kb.removeMany(s.subject);
+        var upperTr=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR');
+        var preStat=upperTr.AJAR_statement;
+        var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
+        this.formUndetStat(upperTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
+        outline.replaceTD(outline.outline_objectTD(reqTerm,defaultpropview),upperTr.lastChild);
+        this.lastModified=null;
+        return;
     }
     //case modified:
     var trNode=ancestor(this.lastModified,'TR');
-    
-    trNode.removeChild(trNode.lastChild);
-    
+        
     var defaultpropview = this.views.defaults[s.predicate.uri];
     if (!this.statIsInverse)
-        trNode.appendChild(outline.outline_objectTD(s.object, defaultpropview));
+        outline.replaceTD(outline.outline_objectTD(s.object, defaultpropview),trNode.lastChild);
     else
-        trNode.appendChild(outline.outline_objectTD(s.subject, defaultpropview));
+        outline.replaceTD(outline.outline_objectTD(s.subject, defaultpropview),trNode.lastChild);
     trNode.AJAR_statement=s;//you don't have to set AJAR_inverse because it's not changed
     //This is going to be painful when predicate-edit allowed
-
     this.lastModified = null;  
 },
 
@@ -302,6 +314,7 @@ addTriple: function addTriple(e){
         this.formUndetStat(insertTr,reqTerm,predicateTerm,preStat.subject,preStat.why,true);
         this.lastModified = null;
     }
+    outline.walk('moveTo',insertTr.lastChild);
     //this.statIsInverse=false;
 },
 
@@ -523,7 +536,7 @@ Refill: function Refill(e,selectedTd){
 	       var sparqlText="SELECT ?class WHERE{?class "+rdf('type')+RDFS('Class')+".}"; 
 	       //I should just use kb.each
 	       var classQuery=SPARQLToQuery(sparqlText);
-	       this.showMenu(e,'TypeChoice',classQuery,{'isPredicate': isPredicate});
+	       this.showMenu(e,'TypeChoice',classQuery,{'isPredicate': isPredicate,'selectedTd': selectedTd});
 	    }
 	    
 	
@@ -572,7 +585,7 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
         if (mode=='all') {
             outline.UserInput.clearMenu();
             //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
-            outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText});
+            outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
         }
         var menu=myDocument.getElementById(outline.UserInput.menuID); 
         //menu.scrollTop=i*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
@@ -594,12 +607,14 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             }
             break;
         case 'all':
+            /*
             for each (var indexedStore in [kb.subjectIndex,kb.predicateIndex,kb.objectIndex]){
             for (var theNT in indexedStore){
                 var term=kb.fromNT(theNT);
                 if (term) InputBox.choices.push({'NT':theNT,'label':label(term)});
             }            
-            }                        
+            }
+            */                        
     }
 
     function sortLabel(a,b){
@@ -854,6 +869,7 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
 
 showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
    //ToDo:order, make a class?
+    var This=this;
     var menu=myDocument.createElement('div');
     menu.id=this.menuID;
     menu.className='outlineMenu';
@@ -903,6 +919,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 var newTd=outline.outline_predicateTD(tr.AJAR_statement.predicate,tr);
                 tr.insertBefore(newTd,clickedTd);
                 tr.removeChild(clickedTd);
+                This.lastModified.select();
             }
             break;
         case 'PredicateAutoComplete':
@@ -923,15 +940,9 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             }
     }       
     table.addEventListener('click',selectItem,false);
-    if (menuType=='DidYouMeanDialog') return;
     
     //Add Items to the list
-	var bindingsCount=0;
-	function addPredicateChoice(selectedQuery){
-	    return function (bindings){
-	    bindingsCount++; 
-	    //if(bindingsCount==10) menu.style.width='11em';
-        var predicate=bindings[selectedQuery.vars[0]]
+    function addMenuItem(predicate){
 	    var Label = predicateLabelForXML(predicate, false);
 		//Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
 
@@ -949,6 +960,11 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
         var th=tr.appendChild(myDocument.createElement('th'))
         th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
         tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
+    }    
+	function addPredicateChoice(selectedQuery){
+	    return function (bindings){
+            var predicate=bindings[selectedQuery.vars[0]]
+            addMenuItem(predicate);
         }
     }
     switch (menuType){
@@ -1028,6 +1044,15 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             //alert(extraInformation.choices.length);
             */
             break;
+        case 'LimitedPredicateChoice':
+            var choiceTerm=getAbout(kb,extraInformation.clickedTd);
+            //because getAbout relies on kb.fromNT, which does not deal with
+            //the 'collection' termType. This termType is ambiguous anyway.
+            choiceTerm.termType='collection';
+            var choices=kb.each(choiceTerm,tabont('element'));            
+            for (var i=0;i<choices.length;i++)
+                addMenuItem(choices[i]);
+            break;
         default:
             switch (inputQuery.constructor.name){
             case 'Array':
@@ -1053,27 +1078,28 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         eventhandler = new Function("subject",kb.any(reqTerm,tabont('onfillin')).value);
     }
     if (type=='predicate'){
-        tr.replaceChild(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
+        outline.replaceTD(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
         newStat=kb.add(stat.subject,inputTerm,stat.object) //ToDo: why and inverse
+        tr.AJAR_statement=newStat;
         kb.remove(stat);
     }else if (type=='object'){
         var newTd=outline.outline_objectTD(inputTerm);
-        tr.replaceChild(newTd,selectedTd);
+        outline.replaceTD(newTd,selectedTd);
+
         
         //modify store and update here
         newStat=kb.add(stat.subject,stat.predicate,inputTerm);
-        kb.remove(stat);
-        
-        this.setSelected(newTd,true);        
+        tr.AJAR_statement=newStat;
+        kb.remove(stat);     
     }
     UserInputFormula.statements.push(newStat);
     if (eventhandler) eventhandler(stat.subject);
 },
 
 formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){
-    trNode.AJAR_statement=kb.add(subject,predicate,object,why);
     trNode.AJAR_inverse=inverse;
+    return trNode.AJAR_statement=kb.add(subject,predicate,object,why);
 },
 /** ABANDONED APPROACH
 //determine whether the event happens at around the bottom border of the element

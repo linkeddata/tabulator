@@ -14,7 +14,7 @@ function Outline(doc) {
     this.clipboardAddress="tabulator:clipboard";
     this.UserInput.clipboardInit(this.clipboardAddress);
     var outlineElement=this.outlineElement;
- 
+     
     this.init = function(){
         var table=myDocument.getElementById('outline');
         table.outline=this;
@@ -359,10 +359,10 @@ function Outline(doc) {
             case 'bnode': //TBD
                 td_p.className='undetermined';
             case 'symbol': 
-                    var lab = predicateLabelForXML(predicate, inverse);
-                    break;
-                    case 'collection': // some choices of predicate
-                        lab = predicateLabelForXML(predicate.elements[0],inverse);
+                var lab = predicateLabelForXML(predicate, inverse);
+                break;
+            case 'collection': // some choices of predicate
+                lab = predicateLabelForXML(predicate.elements[0],inverse);
         }
         lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
         //if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
@@ -831,7 +831,8 @@ function Outline(doc) {
         } else {  // New display of existing table, keeping expanded bits
         
             tabulator.log.info('Re-expand: '+table)
-            table.replaceChild(expandedHeaderTR(subject),table.firstChild)
+            try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
+            catch(e){}   // kludge... Todo: remove this (seeAlso UserInput::clearInputAndSave)
             var row, s
             var expandedNodes = {}
     
@@ -1342,6 +1343,41 @@ function Outline(doc) {
     } //targetOf
 
 
+    this.walk = function walk(directionCode,inputTd){
+         var selectedTd=inputTd||selection[0];
+         var newSelTd;
+         switch (directionCode){
+             case 'down':
+                 try{newSelTd=selectedTd.parentNode.nextSibling.lastChild;}catch(e){
+                     this.walk('up');
+                     return;
+                 }//end
+                 deselectAll();
+                 setSelected(newSelTd,true);
+                 break;
+             case 'up':
+                 try{newSelTd=selectedTd.parentNode.previousSibling.lastChild;}catch(e){return;}//top
+                 deselectAll();
+                 setSelected(newSelTd,true);
+                 break;
+             case 'right':
+                 deselectAll();
+                 setSelected(selectedTd.firstChild.childNodes[1].childNodes[1].lastChild,true);
+                 break;
+             case 'left':
+                 deselectAll();
+                 setSelected(ancestor(selectedTd.parentNode,'TD'),true); //supplied by thieOutline.focusTd
+                 break;
+             case 'moveTo':
+                 deselectAll();
+                 setSelected(inputTd,true);
+                 break;          
+         }
+         if (directionCode=='down'||directionCode=='up') 
+             if (!newSelTd.tabulatorSelect) this.walk(directionCode);
+         //return newSelTd;
+    }
+    
     //Keyboard Input: we can consider this as...
     //1. a fast way to modify data - enter will go to next predicate
     //2. an alternative way to input - enter at the end of a predicate will create a new statement
@@ -1359,8 +1395,8 @@ function Outline(doc) {
             if (selection.length>1) return;
             if (selection.length==0){
                 if (e.keyCode==13||e.keyCode==38||e.keyCode==40||e.keyCode==37||e.keyCode==39){
-                    setSelected(thisOutline.focusTd.firstChild.childNodes[1].lastChild,true);
-                showURI(getAbout(kb,selection[0]));            
+                    this.walk('right',thisOutline.focusTd);
+                    showURI(getAbout(kb,selection[0]));            
                 }    
                 return;    
         }
@@ -1368,27 +1404,6 @@ function Outline(doc) {
         //if not done, Have to deal with redraw...
         sf.removeCallback('done',"setSelectedAfterward");
         sf.removeCallback('fail',"setSelectedAfterward");
-
-        function goNext(directionCode){
-                var newSelTd;
-                switch (directionCode){
-                    case 'down':
-                        try{newSelTd=selectedTd.parentNode.nextSibling.lastChild;}catch(e){
-                            goNext('up');
-                            return;
-                        }//end
-                        deselectAll();
-                        setSelected(newSelTd,true);
-                        break;
-                    case 'up':
-                        try{newSelTd=selectedTd.parentNode.previousSibling.lastChild;}catch(e){return;}//top
-                        deselectAll();
-                        setSelected(newSelTd,true);            
-                }
-                selectedTd=selection[0];
-                if (newSelTd.hasAttribute('notSelectable')) goNext(directionCode);
-                return newSelTd;
-        }
         
         switch (e.keyCode){
             case 13://enter
@@ -1410,10 +1425,8 @@ function Outline(doc) {
                     }
                 }else{
                 //var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
-                var notEnd=goNext('down')//bug with input at the end
-                    //deselectAll();
-                    if(!thisOutline.UserInput.Keypress(e)&&notEnd) goNext('up');
-                //setSelected(newSelTd,true);
+                this.UserInput.Keypress(e);
+                var notEnd=this.walk('down');//bug with input at the end
                 //myDocument.getElementById('docHTML').focus(); //have to set this or focus blurs
                 e.stopPropagation();
                 }
@@ -1421,19 +1434,13 @@ function Outline(doc) {
             case 38://up
                 //thisOutline.UserInput.clearInputAndSave(); 
                 //^^^ does not work because up and down not captured...
-                goNext('up');/*
-                deselectAll();
-                var newSelTd=selectedTd.parentNode.previousSibling.lastChild;
-                setSelected(newSelTd,true);*/
+                this.walk('up');
                 e.stopPropagation();
                 e.preventDefault();
                 break;
             case 40://down
                 //thisOutline.UserInput.clearInputAndSave();
-                goNext('down');/*
-                deselectAll();
-                var newSelTd=selectedTd.parentNode.nextSibling.lastChild;
-                setSelected(newSelTd,true);*/
+                this.walk('down');
                 e.stopPropagation();
                 e.preventDefault();
         } // switch
@@ -1445,18 +1452,17 @@ function Outline(doc) {
                 e.preventDefault();//prevent from going back
                 break;
             case 37://left
-                var parentTr=selectedTd.parentNode.parentNode.parentNode.parentNode;
-                var titleTd=parentTr.lastChild.firstChild.firstChild.firstChild;
-                outline_collapse(titleTd,getAbout(kb,titleTd));
-                setSelected(parentTr.lastChild,true);
+                this.walk('left');
+                var titleTd=ancestor(selectedTd.parentNode,'TD');
+                outline_collapse(selectedTd,getAbout(kb,titleTd));
                 break;
             case 39://right
                 var obj=getAbout(kb,selectedTd);
                 if (obj){
+                    var walk=this.walk;
                     function setSelectedAfterward(uri){
                         if (arguments[3]) return true;
-                        deselectAll();
-                        setSelected(selectedTd.firstChild.childNodes[1].lastChild,true);
+                        walk('right',selectedTd);
                         showURI(getAbout(kb,selection[0]));
                         return true;
                     }
@@ -1647,14 +1653,19 @@ function Outline(doc) {
                 var returnSignal=thisOutline.UserInput.addTriple(e);
                 if (returnSignal){ //when expand signal returned
                     outline_expand(returnSignal[0],returnSignal[1],internalPane);
-                    for (var trIterator=returnSignal[0].firstChild.firstChild;
+                    for (var trIterator=returnSignal[0].firstChild.childNodes[1].firstChild;
                         trIterator; trIterator=trIterator.nextSibling) {
                         var st=trIterator.AJAR_statement;
                         if (!st) continue;
                         if (st.predicate.termType=='collection') break;
                     }
                     thisOutline.UserInput.Click(e,trIterator.lastChild);
+                    thisOutline.walk('moveTo',trIterator.lastChild);
                 }
+                thisOutline.UserInput.clearMenu();
+                e.stopPropagation();
+                e.preventDefault();
+                return;
                 break;
 
                  
@@ -1710,8 +1721,9 @@ function Outline(doc) {
         //have to put this here or this conflicts with deselectAll()
         if (!target.src||(target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices
                        &&target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_add_triple))
-            thisOutline.UserInput.clearInputAndSave(e);        
-        thisOutline.UserInput.clearMenu();
+            thisOutline.UserInput.clearInputAndSave(e);
+        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=Icon.src.icon_show_choices)        
+            thisOutline.UserInput.clearMenu();
         if (e) e.stopPropagation();
     } //function
     
@@ -1735,7 +1747,7 @@ function Outline(doc) {
             if (!already) { // first expand
                 newTable = propertyTable(subject, undefined, pane)
             } else {
-
+                   
                 tabulator.log.info(" ... p is  " + p);
                 for (newTable = p.firstChild; newTable.nextSibling;
                      newTable = newTable.nextSibling) {
@@ -1854,12 +1866,6 @@ function Outline(doc) {
                 return
             }
         }
-        //deselects everything being collapsed. This goes backwards because
-        //deselecting an element decreases selection.length
-        for (var x=selection.length-1;x>-1;x--)
-            for (elt=selection[x];elt.parentNode;elt=elt.parentNode)
-                if (elt===row)
-                    setSelected(selection[x],false)
                             
         tabulator.log.debug("Collapsing subject "+subject);
         var myview;
@@ -1871,9 +1877,23 @@ function Outline(doc) {
         if (level.parentNode.parentNode.id == 'outline') {
             var deleteNode = level.parentNode
         }
-        level.parentNode.replaceChild(outline.outline_objectTD(subject,
-                                                       myview, deleteNode), level);
+        thisOutline.replaceTD(thisOutline.outline_objectTD(subject,myview,deleteNode),level);                                                
     } //outline_collapse
+    
+    this.replaceTD = function replaceTD(newTd,replacedTd){
+        var reselect;
+        if (selected(replacedTd)) reselect=true;
+        
+        //deselects everything being collapsed. This goes backwards because
+        //deselecting an element decreases selection.length        
+        for (var x=selection.length-1;x>-1;x--)
+            for (var elt=selection[x];elt.parentNode;elt=elt.parentNode)
+                if (elt===replacedTd)
+                    setSelected(selection[x],false)
+                    
+        replacedTd.parentNode.replaceChild(newTd, replacedTd);
+        if (reselect) setSelected(newTd,true);                             
+    }
     
     function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
         var outer = null
@@ -2159,7 +2179,7 @@ function Outline(doc) {
           myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
     }
 
-    doc.getElementById('docHTML').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
+    doc.getElementById('docHTML').addEventListener('keypress',function(e){thisOutline.OutlinerKeypressPanel.apply(thisOutline,[e])},false);
     doc.getElementById('outline').addEventListener('mousedown',thisOutline.OutlinerMouseclickPanel,false);
     //doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
     //Kenny: I cannot make this work. The target of keypress is always <html>.
@@ -2174,6 +2194,7 @@ function Outline(doc) {
     this.UserInput.setSelected=setSelected;
     this.UserInput.deselectAll=deselectAll;
     this.UserInput.views=views;
+    this.outline_expand=outline_expand;
 
     return this;
 }//END OF OUTLINE

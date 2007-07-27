@@ -18,7 +18,8 @@ sparql = function(store) {
 }
 
 sparql.prototype.prepareUpdate = function(statement) {
-    if (statement == undefined || statement.why == undefined) return;
+    //statement==undefined means updating a new statement
+    if (statement && statement.why == undefined) return;
 
     function contextToWhere(context) {
         return (context == undefined || context.length == 0)
@@ -29,7 +30,7 @@ sparql.prototype.prepareUpdate = function(statement) {
     context = [];
     s = statement;
     while(1) {
-        if (s.subject == undefined) break;
+        if (!s || s.subject == undefined) break;
         s = this.store.statementsMatching(undefined,undefined,s.subject,statement.why);
         if (s == undefined || s.length == 0) break;
         if (s.length == 1) {
@@ -44,8 +45,8 @@ sparql.prototype.prepareUpdate = function(statement) {
     return {
         complete: false,
         success: false,
-        statement: [statement.subject, statement.predicate, statement.object, statement.why],
-        statementNT: anonymizeNT(statement),
+        statement: statement?[statement.subject, statement.predicate, statement.object, statement.why]:undefined,
+        statementNT: statement?anonymizeNT(statement):undefined,
         where: contextToWhere(context),
 
         setObject: function(obj) {
@@ -82,7 +83,7 @@ sparql.prototype.prepareUpdate = function(statement) {
                 xhr.send(query);
                 
                 if (xhr.status < 200 || xhr.status >= 300) {
-                    alert("HTTP Error " + xhr.status + "\n\n" + xhr.responseText);
+                    throw new Error("HTTP Error " + xhr.status + "\n\n" + xhr.responseText);
                 } else if (xhr.responseText.length > 0) {
                     //alert(xhr.responseText);
                 }
@@ -108,8 +109,41 @@ sparql.prototype.prepareUpdate = function(statement) {
                 anonymize(this.statement[0]) + " " +
                 anonymize(this.statement[1]) + " " +
                 anonymize(obj) + " " + " . }\n";
-
+                
             fire(this.statement[3].uri, query);
+        },
+        
+        setStatement: function (st){
+            function fire(uri,query) {
+                var xhr = Util.XMLHTTPFactory();
+                // Get privileges for cross-domain XHR
+                if(!isExtension) {
+                    try {
+                        Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
+                    } catch(e) {
+                        alert("Failed to get privileges: " + e)
+                    }
+                }
+                
+                xhr.open('POST', uri, false);
+                xhr.setRequestHeader('Content-type', 'application/sparql-query');
+                xhr.send(query);
+                
+                if (xhr.status < 200 || xhr.status >= 300) {
+                    throw new Error("HTTP Error " + xhr.status + "\n\n" + xhr.responseText);
+                } else if (xhr.responseText.length > 0) {
+                    //alert(xhr.responseText);
+                }
+            }
+            query = this.where.length > 0 ? "WHERE " + this.where + "\n" : "";
+            //query += "DELETE { " + this.statementNT + " }\n";
+            query += "INSERT { " +
+                anonymize(st.subject) + " " +
+                anonymize(st.predicate) + " " +
+                anonymize(st.object) + " " + " . }\n";
+                
+            fire(st.why.uri, query);
+            //I am sure this copy and paste is bad           
         }
     }
 }

@@ -204,9 +204,14 @@ clearInputAndSave: function clearInputAndSave(e){
                         outline.outline_expand(enclosingTd,s.subject,defaultPane,true);
                         outline.walk('right',outline.focusTd);                         
                     }else{
-                    kb.remove(s);
-                    s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
-                    newStat=s;
+                        var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
+                        try{sparqlService.prepareUpdate().setStatement(st)}catch(e){
+                            //back out
+                            alert(e);return; //maybe throw?
+                        }                        
+                        kb.remove(s);
+                        s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
+                        newStat=s;
                     }
                     UserInputFormula.statements.push(newStat);
                     break;
@@ -1078,18 +1083,34 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         eventhandler = new Function("subject",kb.any(reqTerm,tabont('onfillin')).value);
     }
     if (type=='predicate'){
+        if (selectedTd.nextSibling.className!='undetermined'){
+            var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
+            try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
+                //error not because of 403 but probably because of 500
+                //back out
+                alert(e);
+                return;
+            }        
+        }
         outline.replaceTD(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
-        newStat=kb.add(stat.subject,inputTerm,stat.object) //ToDo: why and inverse
+        newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why) //ToDo: why and inverse
         tr.AJAR_statement=newStat;
         kb.remove(stat);
     }else if (type=='object'){
         var newTd=outline.outline_objectTD(inputTerm);
-        outline.replaceTD(newTd,selectedTd);
-
-        
+        if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
+            var s= new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
+            try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
+                //error not because of 403 but probably because of 500
+                //back out
+                alert(e);
+                return;
+            }
+        }                
+        outline.replaceTD(newTd,selectedTd);        
         //modify store and update here
-        newStat=kb.add(stat.subject,stat.predicate,inputTerm);
+        newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
         tr.AJAR_statement=newStat;
         kb.remove(stat);     
     }

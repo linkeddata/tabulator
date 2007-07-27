@@ -8,10 +8,13 @@
 // - when edits are done (tableEditOnBlur), send the newTxt with setObject
 // - there are no pointers to things in the original store
 
-// TODO:
+// SPARQL todo:
 // currently, SPARQL update is turned off when the add row button is pressed
 // for add row, need to add s,p, and about to each new node that is created so that SPARQL update can be sent
 // for add row, SPARQL update requires multiple statements to be sent (for the newly created subgraph)
+// use the SPARQL query pattern for doing the add row
+
+// Other todo:
 // prevent users from entering their own values in autosuggest
 // add the hotkey control+shift+a to add a new row
 
@@ -123,7 +126,6 @@ function tableView(container,doc)
             autoCompArray.push(entryArray[i][0]); // autoCompArray is global
             entryArray = entryArray.slice(0);
         }
-        // I still need to set the attributes, but this is a start
     }
     //***************** End drawQuery *****************//
 
@@ -167,15 +169,48 @@ function tableView(container,doc)
     /***************************************************** 
     Table Editing 
     ******************************************************/
-    var selectedTD;
-    var keyHandler;
-    var st;  //lastModifiedStat
+    var selTD;
+    var inputObj;
     var sparqlUpdate;
     var sparqlTest='true'; 
     // sparqlTest = 'false' when addRow is called
     
+    function clearSelected(node) {
+        var a = document.getElementById('focustest');
+        if (a != null) { a.parentNode.removeChild(a); };
+        var t = document.getElementById('tabulated_data');
+        t.removeEventListener('keypress', keyHandler, false);
+        node.style.backgroundColor = 'white';
+    }
+    
+    function clickSecond(e) {
+        selTD.removeEventListener('click', clickSecond, false); 
+        if (e.target == selTD) {
+            clearSelected(selTD);
+            onEdit();
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }
+    
+    function setSelected(node) {
+        if (!node) alert('not a node');
+        if (node.tagName != "TD") alert("not a TD");
+        var a = document.createElement('a');
+        a.setAttribute('id', 'focustest');
+        node.appendChild(a);
+        a.focus();
+
+        var t = document.getElementById('tabulated_data');
+        t.addEventListener('keypress', keyHandler, false);
+        node.style.backgroundColor = "#8F3";
+        
+        selTD = node;
+        selTD.addEventListener('click', clickSecond, false);
+    }
+    
     function click(e) {
-        if (selectedTD != null) clearSelected(selectedTD);
+        if (selTD != null) clearSelected(selTD);
         var node = e.target;
         if (node.firstChild && node.firstChild.tagName == "INPUT") return;
         setSelected(node);
@@ -192,122 +227,83 @@ function tableView(container,doc)
         }
     }
     
-    // use this wrapper so that the node can be passed to the event handler
-    function makeKeyHandler(node) {
-        return function keyHandler(e) {
-            var oldRow = getRowIndex(node); //includes header
-            var oldCol = node.cellIndex;
-            var t = document.getElementById('tabulated_data');
-            clearSelected(node);
-            if(e.keyCode==37) { //left
-                newRow = oldRow;
-                newCol = (oldCol>0)?(oldCol-1):oldCol;
-                var newNode = getTDNode(newRow, newCol);
-                setSelected(newNode);
+    function keyHandler(e) {
+        var oldRow = getRowIndex(selTD); //includes header
+        var oldCol = selTD.cellIndex;
+        var t = document.getElementById('tabulated_data');
+        clearSelected(selTD);
+        if(e.keyCode==37) { //left
+            newRow = oldRow;
+            newCol = (oldCol>0)?(oldCol-1):oldCol;
+            var newNode = getTDNode(newRow, newCol);
+            setSelected(newNode);
+        }
+        if (e.keyCode==38) { //up
+            newRow = (oldRow>1)?(oldRow-1):oldRow;
+            newCol = oldCol;
+            var newNode = getTDNode(newRow, newCol)
+            setSelected(newNode);
+            newNode.scrollIntoView(false); // ...
+        }
+        if (e.keyCode==39) { //right
+            newRow = oldRow;
+            newCol = (oldCol<numCols-1)?(oldCol+1):oldCol;
+            var newNode = getTDNode(newRow, newCol);
+            setSelected(newNode);
+        }
+        if (e.keyCode==40) { //down
+            newRow = (oldRow<numRows-1)?(oldRow+1):oldRow;
+            newCol = oldCol;
+            var newNode = getTDNode(newRow, newCol);
+            setSelected(newNode);
+            newNode.scrollIntoView(false);
+        }
+        if (e.keyCode==13) { //enter
+            onEdit();
+        }
+        if (e.shiftKey && e.keyCode == 9) {  //shift+tab
+            newRow = oldRow;
+            newCol = (oldCol>0)?(oldCol-1):oldCol;
+            if (oldCol == 0) {
+                newRow = oldRow-1;
+                newCol = numCols-1;
             }
-            if (e.keyCode==38) { //up
-                newRow = (oldRow>1)?(oldRow-1):oldRow;
-                newCol = oldCol;
-                var newNode = getTDNode(newRow, newCol)
-                setSelected(newNode);
-                newNode.scrollIntoView(false); // ...
-            }
-            if (e.keyCode==39) { //right
-                newRow = oldRow;
-                newCol = (oldCol<numCols-1)?(oldCol+1):oldCol;
-                var newNode = getTDNode(newRow, newCol);
-                setSelected(newNode);
-            }
-            if (e.keyCode==40) { //down
-                newRow = (oldRow<numRows-1)?(oldRow+1):oldRow;
-                newCol = oldCol;
-                var newNode = getTDNode(newRow, newCol);
-                setSelected(newNode);
-                newNode.scrollIntoView(false);
-            }
-            if (e.keyCode==13) { //enter
-                onEdit(node);
-            }
-            if (e.shiftKey && e.keyCode == 9) {  //shift+tab
-                newRow = oldRow;
-                newCol = (oldCol>0)?(oldCol-1):oldCol;
-                if (oldCol == 0) {
-                    newRow = oldRow-1;
-                    newCol = numCols-1;
-                }
-                if (oldRow==1) {newRow=1;}
-                if (oldRow==1 && oldCol==0) {newRow=1; newCol = 0;}
-                
-                var newNode = getTDNode(newRow, newCol);
-                setSelected(newNode);
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-            }
-            if (e.keyCode == 9) { // tab
-                newRow = oldRow;
-                newCol = (oldCol<numCols-1)?(oldCol+1):oldCol;
-                if (oldCol == numCols-1) {
-                    newRow = oldRow+1;
-                    newCol = 0;
-                }
-                if (oldRow == numRows-1) {newRow = numRows-1;}
-                if (oldRow == numRows-1 && oldCol == numCols-1) 
-                {newRow = numRows-1; newCol = numCols-1}
-                
-                var newNode = getTDNode(newRow, newCol);
-                setSelected(newNode);
-            }
-            if (e.keyCode == 17 && e.keyCode == 16 && e.keyCode == 65) { 
-                // ctrl+shift+a: hotkey for addRow
-                alert('add row hotkey');
-                addRow();
-            }
+            if (oldRow==1) {newRow=1;}
+            if (oldRow==1 && oldCol==0) {newRow=1; newCol = 0;}
+            
+            var newNode = getTDNode(newRow, newCol);
+            setSelected(newNode);
             e.stopPropagation();
             e.preventDefault();
+            return;
         }
+        if (e.keyCode == 9) { // tab
+            newRow = oldRow;
+            newCol = (oldCol<numCols-1)?(oldCol+1):oldCol;
+            if (oldCol == numCols-1) {
+                newRow = oldRow+1;
+                newCol = 0;
+            }
+            if (oldRow == numRows-1) {newRow = numRows-1;}
+            if (oldRow == numRows-1 && oldCol == numCols-1) 
+            {newRow = numRows-1; newCol = numCols-1}
+            
+            var newNode = getTDNode(newRow, newCol);
+            setSelected(newNode);
+        }
+        if (e.keyCode == 17 && e.keyCode == 16 && e.keyCode == 65) { 
+            // ctrl+shift+a: hotkey for addRow; doesn't work
+            alert('add row hotkey');
+            addRow();
+        }
+        e.stopPropagation();
+        e.preventDefault();
     }
     
     function getTDNode(iRow, iCol) {
         var t = document.getElementById('tabulated_data');
         //return t.rows[iRow].cells[iCol];  // relies on tbody
         return t.childNodes[iRow].childNodes[iCol];
-    }
-    
-    function clickSecond(e) {
-        selectedTD.removeEventListener('click', clickSecond, false); 
-        if (e.target == selectedTD) {
-            clearSelected(selectedTD);
-            onEdit(selectedTD);
-            e.stopPropagation();
-            e.preventDefault();
-        }
-    }
-    
-    function setSelected(node) {
-        if (!node) return;
-        if (node.tagName != "TD") return;
-        // focus fix: add an anchor node, focus on it, then remove the anchor
-        var a = document.createElement('a');
-        a.setAttribute('id', 'focustest');
-        node.appendChild(a);
-        a.focus();
-
-        var t = document.getElementById('tabulated_data');
-        keyHandler = makeKeyHandler(node);
-        t.addEventListener('keypress', keyHandler, false);
-        node.style.backgroundColor = "#8F3"; // maybe make a CSS for this
-        
-        selectedTD = node;
-        selectedTD.addEventListener('click', clickSecond, false);
-    }
-    
-    function clearSelected(node) {
-        var a = document.getElementById('focustest');
-        if (a != null) { a.parentNode.removeChild(a); };
-        var t = document.getElementById('tabulated_data');
-        t.removeEventListener('keypress', keyHandler, false);
-        node.style.backgroundColor = 'white';
     }
     
     // utilities for rebuilding pieces for sparqlUpdate
@@ -321,102 +317,94 @@ function tableView(container,doc)
         return kb.literal(x, ''); // parser requires second arg
         // Handle other languages here
     }
-    // end utilities for rebuilding pieces
     
-    function onEdit(node) {
-        if ((node.getAttribute('autocomp') == undefined) && 
-        (node.getAttribute('type') == 'sym')) { 
-            setSelected(node); return; 
+    function onEdit() {
+        if ((selTD.getAttribute('autocomp') == undefined) && 
+        (selTD.getAttribute('type') == 'sym')) { 
+            setSelected(selTD); return; 
         }
         var t = document.getElementById('tabulated_data');
         
-        var oldTxt = node.innerHTML;
-        var inputObj = document.createElement('INPUT');
+        var oldTxt = selTD.innerHTML;
+        inputObj = document.createElement('INPUT');
         inputObj.type = "TEXT";
         inputObj.style.width = "99%";
         inputObj.value = oldTxt;
         
+        // replace old text with input box
         if (!oldTxt)
             inputObj.value = ' ';  // ????
-        if (node.firstChild) { // node = <td> text </td>
-            node.replaceChild(inputObj, node.firstChild);
+        if (selTD.firstChild) { // selTD = <td> text </td>
+            selTD.replaceChild(inputObj, selTD.firstChild);
             inputObj.select();
-        } else { // node = <td />
-            var parent = node.parentNode;
+        } else { // selTD = <td />
+            var parent = selTD.parentNode;
             var newTD = thisTable.document.createElement('TD');
-            parent.replaceChild(newTD, node);
+            parent.replaceChild(newTD, selTD);
             newTD.appendChild(inputObj);
         }
         
-        if (node.getAttribute('autocomp') == 'true') {
-            var auto = new autoSuggest(inputObj, autoCompArray);
-            inputObj.addEventListener ("keypress", 
-            makeTableEditOnKeyPress(node), false);
+        // make autocomplete input or just regular input
+        if (selTD.getAttribute('autocomp') == 'true') {
+            autoSuggest(inputObj, autoCompArray);
         }
         else {
             inputObj.addEventListener ("blur", 
-            makeTableEditOnBlur(node), false);
+            tableEditOnBlur, false);
             inputObj.addEventListener ("keypress", 
-            makeTableEditOnKeyPress(node), false);
+            tableEditOnKeyPress, false);
         }
         
-        //**** sparqlUpdate ****//
         if (sparqlTest=='true') {
-            var s = node.getAttribute('s');
-            var p = node.getAttribute('p');
-            var o = node.getAttribute('about');
-            
-            var st = kb.anyStatementMatching(
+            var s = selTD.getAttribute('s');
+            var p = selTD.getAttribute('p');
+            var o = selTD.getAttribute('about');
+            var st = kb.anyStatementMatching( // st = lastModifiedStat
             kb.sym(convertToURI(s)),
             kb.sym(convertToURI(p)),
             kb.literal(o, ''));
             //if (!st)  alert ('no statement for '+s+p+o); 
             //if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
-            
             sparqlUpdate = new sparql(kb).prepareUpdate(st);
-        }//**** End sparqlUpdate ****//
+        }
     }
     
-    function makeTableEditOnBlur(node) {
-        return function tableEditOnBlur(e) { 
-            var inputObj = e.target;  // getTarget(e) = inputObj
-            newText = inputObj.value;
-            
-            node.setAttribute('about', newText);
-            if (newText != '') {
-                node.innerHTML = newText;
-            }
-            else {
-                node.innerHTML = '---';
-            }
-            
-            var col = node.cellIndex;
-            var row = node.parentNode.rowIndex;
-            setSelected(node);
-            e.stopPropagation();
-            e.preventDefault();
-            
-            if (sparqlTest=='true') {
-            //**** sparqlUpdate ****//
+    function tableEditOnBlur(e) { 
+        newText = inputObj.value;
+        selTD.setAttribute('about', newText);
+        
+        if (newText != '') {
+            selTD.innerHTML = newText;
+        }
+        else {
+            selTD.innerHTML = '---';
+        }
+       
+        setSelected(selTD);
+        e.stopPropagation();
+        e.preventDefault();
+        
+        if (sparqlTest=='true') {
             sparqlUpdate.setObject(kb.literal(newText, ''));
-            }//**** End sparqlUpdate ****//
+        }
+    }
+
+    function tableEditOnKeyPress(e) {
+        if (e.keyCode == 13) { //enter
+            tableEditOnBlur(e);
         }
     }
     
-    function makeTableEditOnKeyPress(node) {
-        return function tableEditOnKeyPress(e) { 
-            if (e.keyCode == 13) { //enter
-                makeTableEditOnBlur(node)(e);
-            }
-        }
+    function saveRow(newText) { // 
+        alert(newText);
     }
+        
     //***************** End Table Editing *****************//
         
     /******************************************************
     Add Row
     *******************************************************/
     // node type checking
-
     function literalRC (row, col) {
         var t = thisTable.document.getElementById('tabulated_data'); 
         var tdNode = t.childNodes[row].childNodes[col];
@@ -624,8 +612,15 @@ function tableView(container,doc)
         { // This is where I can move the onblur stuff
             if (this.highlighted > -1) {
                 this.elem.value = this.eligible[this.highlighted];
+                
+                var newText = this.elem.value;
+                selTD.innerHTML = newText;
+                //setSelected(selTD);
+                //saveRow(newText);
+                
                 this.hideDiv();
-                this.suggestionUsed = 'true';
+                this.suggestionUsed = 'true'
+                
                 //It's impossible to cancel the Tab key's default behavior. 
                 //So this undoes it by moving the focus back to our field right after
                 //the event completes.
@@ -778,7 +773,6 @@ function tableView(container,doc)
             }
         };
         
-        // this can be eliminated, originally handled multiple browsers
         this.getKeyCode = function(ev)
         {
             if(ev) {
@@ -805,6 +799,7 @@ function tableView(container,doc)
 } // tableView
 
 function tableDoubleClick(event) {
+    alert('double clicked');
     var target = getTarget(event);
     var tname = target.tagName;
     var aa = getAbout(kb, target); 
@@ -864,7 +859,6 @@ function exportTable() {
             alert('Please select a file type');
             break;
     }*/
-    
 }
 
 TableViewFactory = {

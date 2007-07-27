@@ -347,54 +347,6 @@ function myFetcher(x, requestedBy) {
     }
 }
 
-// 
-function matrixTD(arrayStatement, asImage, doc) {
-    // alert (obj.termType);
-    // the fact that we use "about" instead of obj or o is annoying
-    s = arrayStatement[0];
-    p = arrayStatement[1];
-    obj = arrayStatement[2];
-    
-	if (!doc) doc=document;
-    var td = doc.createElement('TD');
-    if (!obj) var obj = new RDFLiteral(".");
-    if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
-        td.setAttribute('s', s); 
-        td.setAttribute('p', p); 
-		td.setAttribute('about', obj.toNT());
-		td.setAttribute('style', 'color:#4444ff');
-    }
-    
-    if (obj.termType =='symbol') {
-        td.setAttribute('type', 'sym');
-    }
-    if (obj.termType =='bnode') {
-        td.setAttribute('type', 'bnode');
-    }
-    if (obj.termType =='literal') {
-        td.setAttribute('type', 'lit');
-    }
-    
-    var image;
-    if (obj.termType == 'literal') {
-        td.setAttribute('s', s); 
-        td.setAttribute('p', p); 
-        td.setAttribute('about', obj.value);
-        td.appendChild(doc.createTextNode(obj.value));
-    } 
-    else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
-        if (asImage) {
-            image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
-            image.setAttribute('class', 'pic');
-            td.appendChild(image);
-        }
-        else {
-            td.appendChild(doc.createTextNode(label(obj)));
-        }
-    }
-    return td;
-}
-
 function getTarget(e) {
     var target
     if (!e) var e = window.event

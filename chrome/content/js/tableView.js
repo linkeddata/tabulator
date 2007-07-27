@@ -1,20 +1,24 @@
 // Last Modified By: David Li
 
 // Places generating SPARQL Update: onEdit and tableEditOnBlur
-// SPARQL update should work for literal nodes that don't have a language spec
-// multiple languages are not handled
-
-// Method
+// SPARQL update should work for literal nodes without a language spec
+// Method for SPARQL Update:
 // - when TDs are being created, attach to each TDs the subj, pred, obj
 // - when edits occur (onEdit), reconstruct the statement
 // - when edits are done (tableEditOnBlur), send the newTxt with setObject
 // - there are no pointers to things in the original store
 
+// TODO:
+// currently, SPARQL update is turned off when the add row button is pressed
+// for add row, need to add s,p, and about to each new node that is created so that SPARQL update can be sent
+// for add row, SPARQL update requires multiple statements to be sent (for the newly created subgraph)
+// prevent users from entering their own values in autosuggest
+// add the hotkey control+shift+a to add a new row
+
 var autoCompArray = [];
 
 function tableView(container,doc) 
 {
-    
     /*if(isExtension) {
         tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
             getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -39,7 +43,9 @@ function tableView(container,doc)
     this.container=container;       //HTML DOM parent node for this view.
     this.container.setAttribute('ondblclick','tableDoubleClick(event)');
     
-    //***************** drawQuery *****************//
+    /*****************************************************
+    drawQuery 
+    ******************************************************/
     this.drawQuery = function (q) {
     
     //tabulator.log.test('Entered drawQuery');
@@ -119,12 +125,54 @@ function tableView(container,doc)
         }
         // I still need to set the attributes, but this is a start
     }
-    
     //***************** End drawQuery *****************//
 
-    //***************** Table Editing *****************//
+    function drawExport () {
+        var form= thisTable.document.createElement('form');
+        var but = thisTable.document.createElement('input');
+        form.setAttribute('textAlign','right');
+        but.setAttribute('type','button');
+        but.setAttribute('id','exportButton');
+        but.addEventListener('click',exportTable,true);
+        but.setAttribute('value','Export to HTML');
+        form.appendChild(but);
+        thisTable.container.appendChild(form);
+    }
+
+    this.undrawQuery = function(q) {
+        if(q===activeSingleQuery) 
+        {
+            this.queryStates[q.id]=0;
+            activeSingleQuery=null;
+            emptyNode(this.container);
+        }
+    }
+
+    this.addQuery = function(q) {
+        this.queryStates[q.id]=0;
+    }
+
+    this.removeQuery = function (q) {
+        this.undrawQuery(q);
+        delete this.queryStates[q.id];
+        return;
+    }
+
+    this.clearView = function () {
+        this.undrawQuery(activeSingleQuery);
+        activeSingleQuery=null;
+        emptyNode(this.container);
+    }
+    
+    /***************************************************** 
+    Table Editing 
+    ******************************************************/
     var selectedTD;
     var keyHandler;
+    var st;  //lastModifiedStat
+    var sparqlUpdate;
+    var sparqlTest='true'; 
+    // sparqlTest = 'false' when addRow is called
     
     function click(e) {
         if (selectedTD != null) clearSelected(selectedTD);
@@ -210,6 +258,11 @@ function tableView(container,doc)
                 var newNode = getTDNode(newRow, newCol);
                 setSelected(newNode);
             }
+            if (e.keyCode == 17 && e.keyCode == 16 && e.keyCode == 65) { 
+                // ctrl+shift+a: hotkey for addRow
+                alert('add row hotkey');
+                addRow();
+            }
             e.stopPropagation();
             e.preventDefault();
         }
@@ -256,9 +309,6 @@ function tableView(container,doc)
         t.removeEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = 'white';
     }
-
-    var lastModifiedStat;
-    var sparqlUpdate;
     
     // utilities for rebuilding pieces for sparqlUpdate
     function convertToURI(x) { // x = <http://test>
@@ -274,8 +324,10 @@ function tableView(container,doc)
     // end utilities for rebuilding pieces
     
     function onEdit(node) {
-        // check autocomp and symbol
-        if ((node.getAttribute('autocomp') == undefined) && (node.getAttribute('type') == 'sym')) {setSelected(node); return; }
+        if ((node.getAttribute('autocomp') == undefined) && 
+        (node.getAttribute('type') == 'sym')) { 
+            setSelected(node); return; 
+        }
         var t = document.getElementById('tabulated_data');
         
         var oldTxt = node.innerHTML;
@@ -296,58 +348,47 @@ function tableView(container,doc)
             newTD.appendChild(inputObj);
         }
         
-        inputObj.setAttribute('id', 'test');
-        // replace this with a function generator
-        var test = new Array("Alabama","Alaska","American Samoa","Arizona","Arkansas","California",
-						"Colorado","Connecticut","Delaware","District of Columbia",
-						"Federated States of Micronesia","Florida","Georgia","Guam","Hawaii","Idaho","Illinois",
-						"Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine",
-						"Marshall Islands","Maryland","Massachusetts","Michigan","Minnesota","Mississippi",
-						"Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico",
-						"New York","North Carolina","North Dakota",
-						"Northern Mariana Islands","Ohio","Oklahoma","Oregon","Palau","Pennsylvania","Puerto Rico",
-						"Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont",
-						"Virgin Islands","Virginia","Washington","West Virginia","Wisconsin","Wyoming",
-						"Armed Forces Africa","Armed Forces Americas","Armed Forces Canada",
-						"Armed Forces Europe","Armed Forces Middle East","Armed Forces Pacific");
-                        
-        if (node.getAttribute('type') == 'sym' && 
-        node.getAttribute('autocomp') == 'true') {
-            new autoSuggest(document.getElementById('test'), autoCompArray); 
+        if (node.getAttribute('autocomp') == 'true') {
+            var auto = new autoSuggest(inputObj, autoCompArray);
+            inputObj.addEventListener ("keypress", 
+            makeTableEditOnKeyPress(node), false);
+        }
+        else {
+            inputObj.addEventListener ("blur", 
+            makeTableEditOnBlur(node), false);
+            inputObj.addEventListener ("keypress", 
+            makeTableEditOnKeyPress(node), false);
         }
         
-        if (sparqlTest=='true') {
         //**** sparqlUpdate ****//
-        var s = node.getAttribute('s');
-        var p = node.getAttribute('p');
-        var o = node.getAttribute('about');
-        
-        var st = kb.anyStatementMatching(
-        kb.sym(convertToURI(s)),
-        kb.sym(convertToURI(p)),
-        kb.literal(o, ''));
-        if (!st)  alert ('no statement for '+s+p+o); 
-        if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
-        
-        sparqlUpdate = new sparql(kb).prepareUpdate(st);
-        }//**** End sparqlUpdate ****//
-
-        inputObj.addEventListener ("blur", tableEditOnBlurWrap(node), false);
-        inputObj.addEventListener ("keypress", tableEditOnKeyPressWrap(node), false);
-    }
-    var sparqlTest='true';
-    function tableEditOnBlurWrap(node) {
-        return function tableEditOnBlur(e) {
-            var srcElem = e.target;  // getTarget(e)
-            newTxt = srcElem.value;
+        if (sparqlTest=='true') {
+            var s = node.getAttribute('s');
+            var p = node.getAttribute('p');
+            var o = node.getAttribute('about');
             
-            if (newTxt != '') {
-                node.innerHTML = newTxt;
+            var st = kb.anyStatementMatching(
+            kb.sym(convertToURI(s)),
+            kb.sym(convertToURI(p)),
+            kb.literal(o, ''));
+            //if (!st)  alert ('no statement for '+s+p+o); 
+            //if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
+            
+            sparqlUpdate = new sparql(kb).prepareUpdate(st);
+        }//**** End sparqlUpdate ****//
+    }
+    
+    function makeTableEditOnBlur(node) {
+        return function tableEditOnBlur(e) { 
+            var inputObj = e.target;  // getTarget(e) = inputObj
+            newText = inputObj.value;
+            
+            node.setAttribute('about', newText);
+            if (newText != '') {
+                node.innerHTML = newText;
             }
             else {
                 node.innerHTML = '---';
             }
-            node.setAttribute('about', newTxt);
             
             var col = node.cellIndex;
             var row = node.parentNode.rowIndex;
@@ -357,24 +398,23 @@ function tableView(container,doc)
             
             if (sparqlTest=='true') {
             //**** sparqlUpdate ****//
-            sparqlUpdate.setObject(kb.literal(newTxt, ''));
+            sparqlUpdate.setObject(kb.literal(newText, ''));
             }//**** End sparqlUpdate ****//
         }
     }
     
-    function tableEditOnKeyPressWrap(node) {
-        return function tableEditOnKeyPress(e) {
+    function makeTableEditOnKeyPress(node) {
+        return function tableEditOnKeyPress(e) { 
             if (e.keyCode == 13) { //enter
-                tableEditOnBlurWrap(node)(e);
-            }
-            if (e.keyCode == 27) { //esc
-                tableEditOnBlurWrap(node)(e);
+                makeTableEditOnBlur(node)(e);
             }
         }
     }
     //***************** End Table Editing *****************//
         
-    //***************** Add Row *****************//
+    /******************************************************
+    Add Row
+    *******************************************************/
     // node type checking
 
     function literalRC (row, col) {
@@ -412,10 +452,10 @@ function tableView(container,doc)
     // use kb.bnode for blank nodes
     // use kb.literal for literal nodes 
     function addRow () {
+        sparqlTest='false';
         var i; var td; var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
         // I need to add the s, p, o to each node
-        sparqlTest='false';
         for (i=0; i<numCols; i++) {
             if (literalRC(1, i)) {
                 td = createLiteralTD(); 
@@ -467,49 +507,301 @@ function tableView(container,doc)
         td.setAttribute('o', bnode.toNT());
         td.setAttribute('type', 'bnode');
         td.setAttribute('style', 'color:#4444ff');
-        td.innerHTML = "<form> <select style=\'width:100%\'> <option> nonliteral </option> </select> </form>";
+        td.innerHTML = "---";
         return td;
     }
     // end td creation for each type
     
     //***************** End Add Row *****************//
 
-    function drawExport () {
-        var form= thisTable.document.createElement('form');
-        var but = thisTable.document.createElement('input');
-        form.setAttribute('textAlign','right');
-        but.setAttribute('type','button');
-        but.setAttribute('id','exportButton');
-        but.addEventListener('click',exportTable,true);
-        but.setAttribute('value','Export to HTML');
-        form.appendChild(but);
-        thisTable.container.appendChild(form);
-    }
+    // mostly copied from http://gadgetopia.com/post/3773
+    //counter to help create unique ID's
+    var idCounter = 0;
+    function autoSuggest(elem, suggestions)
+    {
+        //The 'me' variable allow you to access the AutoSuggest object
+        //from the elem's event handlers defined below.
+        var me = this;
+        //A reference to the element we're binding the list to.
+        this.elem = elem;
+        this.suggestions = suggestions;
+        //Arrow to store a subset of eligible suggestions that match the user's input
+        this.eligible = new Array();
+        //The text input by the user.
+        this.inputText = null;
+        //A pointer to the index of the highlighted eligible item. -1 means nothing highlighted.
+        this.highlighted = -1;
+        //A div to use to create the dropdown.
+        this.div = document.getElementById("autosuggest");
+        //Do you want to remember what keycode means what? Me neither.
+        var TAB = 9;
+        var ESC = 27;
+        var KEYUP = 38;
+        var KEYDN = 40;
+        var ENTER = 13;
+        //We need to be able to reference the elem by id. If it doesn't have an id, set one.
+        if(!elem.id) {
+            var id = "autosuggest" + idCounter;
+            idCounter++;
+            elem.id = id;
+        }
 
-    this.undrawQuery = function(q) {
-        if(q===activeSingleQuery) 
+        /********************************************************
+        onkeydown event handler for the input elem.
+        Enter key = use the highlighted suggestion, if there is one.
+        Esc key = get rid of the autosuggest dropdown
+        Up/down arrows = Move the highlight up and down in the suggestions.
+        ********************************************************/
+        elem.onkeydown = function(ev)
         {
-            this.queryStates[q.id]=0;
-            activeSingleQuery=null;
-            emptyNode(this.container);
+            var key = me.getKeyCode(ev);
+
+            switch(key)
+            {
+                case ENTER:
+                me.useSuggestion();
+                me.hideDiv();
+                break;
+
+                case ESC:
+                me.hideDiv();
+                break;
+
+                case KEYUP:
+                if (me.highlighted > 0)
+                {
+                    me.highlighted--;
+                }
+                me.changeHighlight(key);
+                break;
+
+                case KEYDN:
+                if (me.highlighted < (me.eligible.length - 1))
+                {
+                    me.highlighted++;
+                }
+                me.changeHighlight(key);
+                break; 
+            }
+        };
+
+        /********************************************************
+        onkeyup handler for the elem
+        If the text is of sufficient length, and has been changed, 
+        then display a list of eligible suggestions.
+        ********************************************************/
+        elem.onkeyup = function(ev) 
+        {
+            var key = me.getKeyCode(ev);
+            switch(key) {
+            //The control keys were already handled by onkeydown, so do nothing.
+            case TAB:
+            case ESC:
+            case KEYUP:
+            case KEYDN:
+                return;
+                
+            default:
+                if (this.value != me.inputText && this.value.length > 0) {
+                    me.inputText = this.value;
+                    me.getEligible();
+                    me.createDiv();
+                    me.positionDiv();
+                    me.showDiv();
+                }
+                else {
+                    me.hideDiv();
+                }
+            }
+        };
+        
+        this.suggestionUsed = 'false';
+        /********************************************************
+        Insert the highlighted suggestion into the input box, and 
+        remove the suggestion dropdown.
+        ********************************************************/
+        this.useSuggestion = function() 
+        { // This is where I can move the onblur stuff
+            if (this.highlighted > -1) {
+                this.elem.value = this.eligible[this.highlighted];
+                this.hideDiv();
+                this.suggestionUsed = 'true';
+                //It's impossible to cancel the Tab key's default behavior. 
+                //So this undoes it by moving the focus back to our field right after
+                //the event completes.
+                //setTimeout("document.getElementById('" + this.elem.id + "').focus()",0);
+            }
+        };
+
+        /********************************************************
+        Display the dropdown. Pretty straightforward.
+        ********************************************************/
+        this.showDiv = function()
+        {
+            this.div.style.display = 'block';
+        };
+
+        /********************************************************
+        Hide the dropdown and clear any highlight.
+        ********************************************************/
+        this.hideDiv = function()
+        {
+            this.div.style.display = 'none';
+            this.highlighted = -1;
+        };
+
+        /********************************************************
+        Modify the HTML in the dropdown to move the highlight.
+        ********************************************************/
+        this.changeHighlight = function()
+        {
+            var lis = this.div.getElementsByTagName('LI');
+            for (i in lis) {
+                var li = lis[i];
+                if (this.highlighted == i) {
+                    li.className = "selected";
+                }
+                else {
+                    li.className = "";
+                }
+            }
+        };
+
+        /********************************************************
+        Position the dropdown div below the input text field.
+        ********************************************************/
+        this.positionDiv = function()
+        {
+            var el = this.elem;
+            var x = 0;
+            var y = el.offsetHeight;
+
+            //Walk up the DOM and add up all of the offset positions.
+            while (el.offsetParent && el.tagName.toUpperCase() != 'BODY') {
+                x += el.offsetLeft;
+                y += el.offsetTop;
+                el = el.offsetParent;
+            }
+
+            x += el.offsetLeft;
+            y += el.offsetTop;
+
+            this.div.style.left = x + 'px';
+            this.div.style.top = y + 'px';
+        };
+
+        /********************************************************
+        Build the HTML for the dropdown div
+        ********************************************************/
+        this.createDiv = function()
+        {
+            var ul = document.createElement('ul');
+
+            //Create an array of LI's for the words.
+            for (i in this.eligible) {
+                var word = this.eligible[i];
+
+                var li = document.createElement('li');
+                var a = document.createElement('a');
+                a.href="javascript:false";
+                a.innerHTML = word;
+                li.appendChild(a);
+
+                if (me.highlighted == i) {
+                    li.className = "selected";
+                }
+
+                ul.appendChild(li);
+            }
+
+            this.div.replaceChild(ul,this.div.childNodes[0]);
+
+            /********************************************************
+            mouseover handler for the dropdown ul
+            move the highlighted suggestion with the mouse
+            ********************************************************/
+            ul.onmouseover = function(ev)
+            {
+                //Walk up from target until you find the LI.
+                var target = me.getEventSource(ev);
+                while (target.parentNode && target.tagName.toUpperCase() != 'LI')
+                {
+                    target = target.parentNode;
+                }
+            
+                var lis = me.div.getElementsByTagName('LI');
+                
+
+                for (i in lis)
+                {
+                    var li = lis[i];
+                    if(li == target)
+                    {
+                        me.highlighted = i;
+                        break;
+                    }
+                }
+                me.changeHighlight();
+            };
+
+            /********************************************************
+            click handler for the dropdown ul
+            insert the clicked suggestion into the input
+            ********************************************************/
+            ul.onclick = function(ev)
+            {
+                me.useSuggestion();
+                me.hideDiv();
+                me.cancelEvent(ev);
+                return false;
+            };
+
+            this.div.className="suggestion_list";
+            this.div.style.position = 'absolute';
+
+        };
+
+        /********************************************************
+        determine which of the suggestions matches the input
+        ********************************************************/
+        this.getEligible = function()
+        {
+            this.eligible = new Array();
+            for (i in this.suggestions) 
+            {
+                var suggestion = this.suggestions[i];
+                
+                if(suggestion.toLowerCase().indexOf(this.inputText.toLowerCase()) == "0")
+                {
+                    this.eligible[this.eligible.length]=suggestion;
+                }
+            }
+        };
+        
+        // this can be eliminated, originally handled multiple browsers
+        this.getKeyCode = function(ev)
+        {
+            if(ev) {
+                return ev.keyCode;
+            }
+        };
+
+        this.getEventSource = function(ev)
+        {
+            if(ev) {
+                return ev.target;
+            }
+        };
+
+        this.cancelEvent = function(ev)
+        {
+            if(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
         }
     }
 
-    this.addQuery = function(q) {
-        this.queryStates[q.id]=0;
-    }
-
-    this.removeQuery = function (q) {
-        this.undrawQuery(q);
-        delete this.queryStates[q.id];
-        return;
-    }
-
-    this.clearView = function () {
-        this.undrawQuery(activeSingleQuery);
-        activeSingleQuery=null;
-        emptyNode(this.container);
-    }
 } // tableView
 
 function tableDoubleClick(event) {
@@ -572,6 +864,7 @@ function exportTable() {
             alert('Please select a file type');
             break;
     }*/
+    
 }
 
 TableViewFactory = {
@@ -610,20 +903,20 @@ function deleteColumn (src) { // src = the original delete image
     var img = document.createElement('img'); // points left
     img.setAttribute('src', 'icons/tbl-expand-l.png');
     img.setAttribute('align', 'left');
-    img.addEventListener('click', tableExpandWrap(src), false);
+    img.addEventListener('click', makeColumnExpand(src), false);
     
-    var imgL = document.createElement('img'); // points right
-    imgL.setAttribute('src', 'icons/tbl-expand.png');
-    imgL.setAttribute('align', 'right');
-    imgL.addEventListener('click', tableExpandWrap(src), false);
+    var imgR = document.createElement('img'); // points right
+    imgR.setAttribute('src', 'icons/tbl-expand.png');
+    imgR.setAttribute('align', 'right');
+    imgR.addEventListener('click', makeColumnExpand(src), false);
     
     if (colNum == numCols-1 || rightCell.style.display =='none') 
-        leftCell.insertBefore(imgL, leftCell.firstChild);
+        leftCell.insertBefore(imgR, leftCell.firstChild);
     else rightCell.insertBefore(img, rightCell.firstChild);
 }
 
-function tableExpandWrap(src) { //src = the original delete image
-    return function tableExpand(e) {
+function makeColumnExpand(src) { //src = the original delete image
+    return function columnExpand(e) {
         var t = document.getElementById('tabulated_data');
         var colNum = src.parentNode.cellIndex; 
         var allRows = t.childNodes;
@@ -644,301 +937,48 @@ function tableExpandWrap(src) { //src = the original delete image
     }
 }
 
-// move this to a separate file later
-// mostly copied from http://gadgetopia.com/post/3773
-function autoSuggest(elem, suggestions)
-{
-	//The 'me' variable allow you to access the AutoSuggest object
-	//from the elem's event handlers defined below.
-	var me = this;
-	//A reference to the element we're binding the list to.
-	this.elem = elem;
-	this.suggestions = suggestions;
-	//Arrow to store a subset of eligible suggestions that match the user's input
-	this.eligible = new Array();
-	//The text input by the user.
-	this.inputText = null;
-	//A pointer to the index of the highlighted eligible item. -1 means nothing highlighted.
-	this.highlighted = -1;
-	//A div to use to create the dropdown.
-	this.div = document.getElementById("autosuggest");
-	//Do you want to remember what keycode means what? Me neither.
-	var TAB = 9;
-	var ESC = 27;
-	var KEYUP = 38;
-	var KEYDN = 40;
-    var ENTER = 13;
-	//We need to be able to reference the elem by id. If it doesn't have an id, set one.
-	if(!elem.id) {
-		var id = "autosuggest" + idCounter;
-		idCounter++;
-		elem.id = id;
-	}
-
-	/********************************************************
-	onkeydown event handler for the input elem.
-	Tab key = use the highlighted suggestion, if there is one.
-	Esc key = get rid of the autosuggest dropdown
-	Up/down arrows = Move the highlight up and down in the suggestions.
-	********************************************************/
-	elem.onkeydown = function(ev)
-	{
-		var key = me.getKeyCode(ev);
-
-		switch(key)
-		{
-			case ENTER:
-			me.useSuggestion();
-            me.hideDiv();
-			break;
-
-			case ESC:
-			me.hideDiv();
-			break;
-
-			case KEYUP:
-			if (me.highlighted > 0)
-			{
-				me.highlighted--;
-			}
-			me.changeHighlight(key);
-			break;
-
-			case KEYDN:
-			if (me.highlighted < (me.eligible.length - 1))
-			{
-				me.highlighted++;
-			}
-			me.changeHighlight(key);
-			break; 
-		}
-	};
-
-	/********************************************************
-	onkeyup handler for the elem
-	If the text is of sufficient length, and has been changed, 
-	then display a list of eligible suggestions.
-	********************************************************/
-	elem.onkeyup = function(ev) 
-	{
-		var key = me.getKeyCode(ev);
-		switch(key) {
-		//The control keys were already handled by onkeydown, so do nothing.
-		case TAB:
-		case ESC:
-		case KEYUP:
-		case KEYDN:
-			return;
-            
-		default:
-			if (this.value != me.inputText && this.value.length > 0) {
-				me.inputText = this.value;
-				me.getEligible();
-				me.createDiv();
-				me.positionDiv();
-				me.showDiv();
-			}
-			else {
-				me.hideDiv();
-			}
-		}
-	};
-
-	/********************************************************
-	Insert the highlighted suggestion into the input box, and 
-	remove the suggestion dropdown.
-	********************************************************/
-	this.useSuggestion = function() 
-	{ // This is where I can move the onblur stuff
-		if (this.highlighted > -1) {
-			this.elem.value = this.eligible[this.highlighted];
-			this.hideDiv();
-			//It's impossible to cancel the Tab key's default behavior. 
-			//So this undoes it by moving the focus back to our field right after
-			//the event completes.
-			//setTimeout("document.getElementById('" + this.elem.id + "').focus()",0);
-		}
-	};
-
-	/********************************************************
-	Display the dropdown. Pretty straightforward.
-	********************************************************/
-	this.showDiv = function()
-	{
-		this.div.style.display = 'block';
-	};
-
-	/********************************************************
-	Hide the dropdown and clear any highlight.
-	********************************************************/
-	this.hideDiv = function()
-	{
-		this.div.style.display = 'none';
-		this.highlighted = -1;
-	};
-
-	/********************************************************
-	Modify the HTML in the dropdown to move the highlight.
-	********************************************************/
-	this.changeHighlight = function()
-	{
-		var lis = this.div.getElementsByTagName('LI');
-		for (i in lis) {
-			var li = lis[i];
-			if (this.highlighted == i) {
-				li.className = "selected";
-			}
-			else {
-				li.className = "";
-			}
-		}
-	};
-
-	/********************************************************
-	Position the dropdown div below the input text field.
-	********************************************************/
-	this.positionDiv = function()
-	{
-		var el = this.elem;
-		var x = 0;
-		var y = el.offsetHeight;
-	
-		//Walk up the DOM and add up all of the offset positions.
-		while (el.offsetParent && el.tagName.toUpperCase() != 'BODY') {
-			x += el.offsetLeft;
-			y += el.offsetTop;
-			el = el.offsetParent;
-		}
-
-		x += el.offsetLeft;
-		y += el.offsetTop;
-
-		this.div.style.left = x + 'px';
-		this.div.style.top = y + 'px';
-	};
-
-	/********************************************************
-	Build the HTML for the dropdown div
-	********************************************************/
-	this.createDiv = function()
-	{
-		var ul = document.createElement('ul');
-	
-		//Create an array of LI's for the words.
-		for (i in this.eligible) {
-			var word = this.eligible[i];
-	
-			var li = document.createElement('li');
-			var a = document.createElement('a');
-			a.href="javascript:false";
-			a.innerHTML = word;
-			li.appendChild(a);
-	
-			if (me.highlighted == i) {
-				li.className = "selected";
-			}
-	
-			ul.appendChild(li);
-		}
-	
-		this.div.replaceChild(ul,this.div.childNodes[0]);
-
-		/********************************************************
-		mouseover handler for the dropdown ul
-		move the highlighted suggestion with the mouse
-		********************************************************/
-		ul.onmouseover = function(ev)
-		{
-			//Walk up from target until you find the LI.
-			var target = me.getEventSource(ev);
-			while (target.parentNode && target.tagName.toUpperCase() != 'LI')
-			{
-				target = target.parentNode;
-			}
-		
-			var lis = me.div.getElementsByTagName('LI');
-			
-	
-			for (i in lis)
-			{
-				var li = lis[i];
-				if(li == target)
-				{
-					me.highlighted = i;
-					break;
-				}
-			}
-			me.changeHighlight();
-		};
-
-		/********************************************************
-		click handler for the dropdown ul
-		insert the clicked suggestion into the input
-		********************************************************/
-		ul.onclick = function(ev)
-		{
-			me.useSuggestion();
-			me.hideDiv();
-			me.cancelEvent(ev);
-			return false;
-		};
-	
-		this.div.className="suggestion_list";
-		this.div.style.position = 'absolute';
-
-	};
-
-	/********************************************************
-	determine which of the suggestions matches the input
-	********************************************************/
-	this.getEligible = function()
-	{
-		this.eligible = new Array();
-		for (i in this.suggestions) 
-		{
-			var suggestion = this.suggestions[i];
-			
-			if(suggestion.toLowerCase().indexOf(this.inputText.toLowerCase()) == "0")
-			{
-				this.eligible[this.eligible.length]=suggestion;
-			}
-		}
-	};
-
-	/********************************************************
-	Helper function to determine the keycode pressed
-	********************************************************/
-	this.getKeyCode = function(ev)
-	{
-		if(ev) {
-			return ev.keyCode;
-		}
-	};
-
-	/********************************************************
-	Helper function to determine the event source element
-	********************************************************/
-	this.getEventSource = function(ev)
-	{
-		if(ev) {
-			return ev.target;
-		}
-	};
-
-	/********************************************************
-	Helper function to cancel an event
-	(Returning false helps too).
-	********************************************************/
-	this.cancelEvent = function(ev)
-	{
-		if(ev) {
-			ev.preventDefault();
-			ev.stopPropagation();
-		}
-	}
+function matrixTD(arrayStatement, asImage, doc) {
+    // alert (obj.termType);
+    s = arrayStatement[0];
+    p = arrayStatement[1];
+    obj = arrayStatement[2];
+    
+	if (!doc) doc=document;
+    var td = doc.createElement('TD');
+    if (!obj) var obj = new RDFLiteral(".");
+    if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+        td.setAttribute('s', s); 
+        td.setAttribute('p', p); 
+		td.setAttribute('about', obj.toNT());
+		td.setAttribute('style', 'color:#4444ff');
+    }
+    
+    if (obj.termType =='symbol') {
+        td.setAttribute('type', 'sym');
+    }
+    if (obj.termType =='bnode') {
+        td.setAttribute('type', 'bnode');
+    }
+    if (obj.termType =='literal') {
+        td.setAttribute('type', 'lit');
+    }
+    
+    var image;
+    if (obj.termType == 'literal') {
+        td.setAttribute('s', s); 
+        td.setAttribute('p', p); 
+        td.setAttribute('about', obj.value);
+        td.appendChild(doc.createTextNode(obj.value));
+    } 
+    else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+        if (asImage) {
+            image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
+            image.setAttribute('class', 'pic');
+            td.appendChild(image);
+        }
+        else {
+            td.appendChild(doc.createTextNode(label(obj)));
+        }
+    }
+    return td;
 }
-
-//counter to help create unique ID's
-var idCounter = 0;
-
-

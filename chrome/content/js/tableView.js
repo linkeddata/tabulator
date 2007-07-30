@@ -1,9 +1,8 @@
 // Last Modified By: David Li
 
-// Places generating SPARQL Update: onEdit and tableEditOnBlur
+// Places generating SPARQL Update: onEdit, tableEditOnBlur, useSuggestion (autosuggest),and saveRow
 // SPARQL update should work for literal nodes without a language spec
-// method: in matrixTD attach a pointer to the statement on 
-// each td, called stat
+// method: in matrixTD attach a pointer to the statement on each td, called stat
 
 // SPARQL todo:
 // currently, SPARQL update is turned off when the add row button is pressed
@@ -12,8 +11,6 @@
 // Other todo:
 // prevent users from entering their own values in autosuggest
 // add the hotkey control+shift+a to add a new row
-
-var autoCompArray = [];
 
 function tableView(container,doc) 
 {
@@ -43,8 +40,8 @@ function tableView(container,doc)
     /*****************************************************
     drawQuery 
     ******************************************************/
-
-    this.drawQuery = function (q) {
+    this.drawQuery = function (q) 
+    {
         this.onBinding = function (bindings) {
             var i, tr, td;
             //tabulator.log.info('making a row w/ bindings ' + bindings);
@@ -57,19 +54,22 @@ function tableView(container,doc)
                 for (j = 0; j<numStats; j++) {
                     var testStat = q.pat.statements[j];
                     // statClone = <#s> <#p> ?v0 .
-                    var statClone = new RDFStatement(testStat.subject,
+                    var testClone = new RDFStatement(testStat.subject,
                     testStat.predicate, testStat.object, testStat.why);
-                    if (statClone.object == v) {
-                        statClone.object = bindings[v];
-                        var testString = statClone.subject.toString();
+                    if (testClone.object == v) {
+                        testClone.object = bindings[v];
+                        var testString = testClone.subject.toString();
                         if (testString[0] == '?') { 
                             // statClone = ?v0 <#p> <#o> .
-                            statClone.subject = bindings[statClone.subject];
+                            testClone.subject = bindings[testClone.subject];
                         }
                         break;
                     }
                 }
-                tr.appendChild(matrixTD(statClone.object, statClone));
+                var st = kb.anyStatementMatching(testClone.subject, testClone.predicate, testClone.object);
+                if (!st) {alert('no statement for '+st.subject+st.predicate+st.object);}
+                if (!st.why) {alert("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
+                tr.appendChild(matrixTD(st.object, st));
             } //for each query var, make a row
         }
 
@@ -108,12 +108,12 @@ function tableView(container,doc)
         // Table Edit
         t.addEventListener('click', click, false);
         numCols = nv;
-        numRows = t.childNodes.length;
+        var autoCompArray = [];
         
         // auto completion array
         var entryArray = lb.entry;
         for (i = 0; i<lb.entry.length; i++) {
-            autoCompArray.push(entryArray[i][0]); // autoCompArray is global
+            autoCompArray.push(entryArray[i][0]);
             entryArray = entryArray.slice(0);
         }
     }
@@ -184,13 +184,12 @@ function tableView(container,doc)
     }
     
     function setSelected(node) {
-        if (!node) alert('not a node');
-        if (node.tagName != "TD") alert("not a TD");
+        if (!node) {return;}
+        if (node.tagName != "TD") {return;}
         var a = document.createElement('a');
         a.setAttribute('id', 'focus');
         node.appendChild(a);
         a.focus();
-
         var t = document.getElementById('tabulated_data');
         t.addEventListener('keypress', keyHandler, false);
         node.style.backgroundColor = "#8F3";
@@ -281,11 +280,11 @@ function tableView(container,doc)
             var newNode = getTDNode(newRow, newCol);
             setSelected(newNode);
         }
-        if (e.keyCode == 17 && e.keyCode == 16 && e.keyCode == 65) { 
+/*         if (e.keyCode == 17 && e.keyCode == 16 && e.keyCode == 65) { 
             // ctrl+shift+a: hotkey for addRow; doesn't work
             alert('add row hotkey');
             addRow();
-        }
+        } */
         e.stopPropagation();
         e.preventDefault();
     }
@@ -305,8 +304,8 @@ function tableView(container,doc)
         
         var t = document.getElementById('tabulated_data');
         var oldTxt = selTD.innerHTML;
-        inputObj = document.createElement('INPUT');
-        inputObj.type = "TEXT";
+        inputObj = document.createElement('input');
+        inputObj.type = "text";
         inputObj.style.width = "99%";
         inputObj.value = oldTxt;
         
@@ -333,7 +332,6 @@ function tableView(container,doc)
             inputObj.addEventListener ("keypress", 
             tableEditOnKeyPress, false);
         }
-        
         if (sparqlTest=='true') {
             sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
         }
@@ -361,10 +359,6 @@ function tableView(container,doc)
         if (e.keyCode == 13) { //enter
             tableEditOnBlur(e);
         }
-    }
-    
-    function saveRow(newText) { // 
-        alert(newText);
     }
         
     //***************** End Table Editing *****************//
@@ -416,9 +410,6 @@ function tableView(container,doc)
             if (literalRC(1, i)) {
                 td = createLiteralTD(); 
                 refNode = getTDNode(1, i);
-                td.setAttribute('s', refNode.getAttribute('s'));
-                td.setAttribute('p', refNode.getAttribute('p')); 
-                td.setAttribute('about', '---');
                 //this gets assigned when you edit
             }
             else if (bnodeRC(1, i)) {
@@ -427,9 +418,6 @@ function tableView(container,doc)
             else if (symbolRC (1, i)) { 
                 td = createSymbolTD();
                 refNode = getTDNode(1, i);
-                td.setAttribute('s', refNode.getAttribute('s'));
-                td.setAttribute('p', refNode.getAttribute('p')); 
-                td.setAttribute('about', '---');
                 // this gets assigned when you edit
                 // I need to create fake paths for the entire graph,
                 // this only handles the end point
@@ -465,6 +453,10 @@ function tableView(container,doc)
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "---";
         return td;
+    }
+    
+    function saveRow(newText) { // 
+        alert(newText);
     }
     //***************** End Add Row *****************//
 
@@ -767,7 +759,6 @@ function tableView(container,doc)
 } // tableView
 
 function tableDoubleClick(event) {
-    alert('double clicked');
     var target = getTarget(event);
     var tname = target.tagName;
     var aa = getAbout(kb, target); 

@@ -2,16 +2,11 @@
 
 // Places generating SPARQL Update: onEdit and tableEditOnBlur
 // SPARQL update should work for literal nodes without a language spec
-// Method for SPARQL Update:
-// - when TDs are being created, attach to each TDs the subj, pred, obj
-// - when edits occur (onEdit), reconstruct the statement
-// - when edits are done (tableEditOnBlur), send the newTxt with setObject
-// - there are no pointers to things in the original store
+// method: in matrixTD attach a pointer to the statement on 
+// each td, called stat
 
 // SPARQL todo:
 // currently, SPARQL update is turned off when the add row button is pressed
-// for add row, need to add s,p, and about to each new node that is created so that SPARQL update can be sent
-// for add row, SPARQL update requires multiple statements to be sent (for the newly created subgraph)
 // use the SPARQL query pattern for doing the add row
 
 // Other todo:
@@ -28,7 +23,6 @@ function tableView(container,doc)
         //wrap sparql update code with if(isExtension).
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
     }*/
-    //tabulator.log.test('Entered tableView');
     var numRows; // assigned in click, includes header
     var numCols; // assigned at bottom of click
     var activeSingleQuery = null;
@@ -49,11 +43,9 @@ function tableView(container,doc)
     /*****************************************************
     drawQuery 
     ******************************************************/
+
     this.drawQuery = function (q) {
-    
-    //tabulator.log.test('Entered drawQuery');
         this.onBinding = function (bindings) {
-            //tabulator.log.test('Entered onBinding');
             var i, tr, td;
             //tabulator.log.info('making a row w/ bindings ' + bindings);
             tr = thisTable.document.createElement('tr');
@@ -61,25 +53,23 @@ function tableView(container,doc)
             numStats = q.pat.statements.length; // Added
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
-
                 // generate the subj and pred for each tdNode 
-                //**** td node creation ****//
                 for (j = 0; j<numStats; j++) {
-                    testStatement = q.pat.statements[j]; // <#subj> <#pred> ?v0 .
-                    reSpace = / /;
-                    arrayStatement = testStatement.toString().split(reSpace); // [<#subj>, <#subj>, ?v0, .]
-                    if (arrayStatement[2] == v) {
-                        arrayStatementForMatrixTD = [arrayStatement[0], arrayStatement[1], bindings[v]];
-                        if (arrayStatement[0][0] == '?') {
-                            // arrayStatement: [?v0, <#pred>, ?v1, .]
-                            arrayStatementForMatrixTD[0] = bindings[arrayStatement[0]];
+                    var testStat = q.pat.statements[j];
+                    // statClone = <#s> <#p> ?v0 .
+                    var statClone = new RDFStatement(testStat.subject,
+                    testStat.predicate, testStat.object, testStat.why);
+                    if (statClone.object == v) {
+                        statClone.object = bindings[v];
+                        var testString = statClone.subject.toString();
+                        if (testString[0] == '?') { 
+                            // statClone = ?v0 <#p> <#o> .
+                            statClone.subject = bindings[statClone.subject];
                         }
                         break;
                     }
                 }
-                //**** End td node creation ****//
-
-                tr.appendChild(matrixTD(arrayStatementForMatrixTD));
+                tr.appendChild(matrixTD(statClone.object, statClone));
             } //for each query var, make a row
         }
 
@@ -176,7 +166,7 @@ function tableView(container,doc)
     // sparqlTest = 'false' when addRow is called
     
     function clearSelected(node) {
-        var a = document.getElementById('focustest');
+        var a = document.getElementById('focus');
         if (a != null) { a.parentNode.removeChild(a); };
         var t = document.getElementById('tabulated_data');
         t.removeEventListener('keypress', keyHandler, false);
@@ -197,7 +187,7 @@ function tableView(container,doc)
         if (!node) alert('not a node');
         if (node.tagName != "TD") alert("not a TD");
         var a = document.createElement('a');
-        a.setAttribute('id', 'focustest');
+        a.setAttribute('id', 'focus');
         node.appendChild(a);
         a.focus();
 
@@ -306,25 +296,14 @@ function tableView(container,doc)
         return t.childNodes[iRow].childNodes[iCol];
     }
     
-    // utilities for rebuilding pieces for sparqlUpdate
-    function convertToURI(x) { // x = <http://test>
-        if (x[0] = '<') {
-            return x.toString().match(/[^<].*[^>]/)[0];
-        } else {return x;}
-    }
-    
-    function convertToLiteral(x) { // x = "David Li"
-        return kb.literal(x, ''); // parser requires second arg
-        // Handle other languages here
-    }
-    
     function onEdit() {
         if ((selTD.getAttribute('autocomp') == undefined) && 
-        (selTD.getAttribute('type') == 'sym')) { 
+        (selTD.getAttribute('type') == 'sym')) 
+        { 
             setSelected(selTD); return; 
         }
-        var t = document.getElementById('tabulated_data');
         
+        var t = document.getElementById('tabulated_data');
         var oldTxt = selTD.innerHTML;
         inputObj = document.createElement('INPUT');
         inputObj.type = "TEXT";
@@ -356,30 +335,19 @@ function tableView(container,doc)
         }
         
         if (sparqlTest=='true') {
-            var s = selTD.getAttribute('s');
-            var p = selTD.getAttribute('p');
-            var o = selTD.getAttribute('about');
-            var st = kb.anyStatementMatching( // st = lastModifiedStat
-            kb.sym(convertToURI(s)),
-            kb.sym(convertToURI(p)),
-            kb.literal(o, ''));
-            //if (!st)  alert ('no statement for '+s+p+o); 
-            //if (!why) alert ("Unknown provenence for {"+s+p+o+"}");
-            sparqlUpdate = new sparql(kb).prepareUpdate(st);
+            sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
         }
     }
     
     function tableEditOnBlur(e) { 
         newText = inputObj.value;
         selTD.setAttribute('about', newText);
-        
         if (newText != '') {
             selTD.innerHTML = newText;
         }
         else {
             selTD.innerHTML = '---';
         }
-       
         setSelected(selTD);
         e.stopPropagation();
         e.preventDefault();
@@ -498,12 +466,13 @@ function tableView(container,doc)
         td.innerHTML = "---";
         return td;
     }
-    // end td creation for each type
-    
     //***************** End Add Row *****************//
 
+    /******************************************************
+    Autosuggest box
+    *******************************************************/
     // mostly copied from http://gadgetopia.com/post/3773
-    //counter to help create unique ID's
+    // counter to help create unique ID's
     var idCounter = 0;
     function autoSuggest(elem, suggestions)
     {
@@ -616,7 +585,7 @@ function tableView(container,doc)
                 var newText = this.elem.value;
                 selTD.innerHTML = newText;
                 //setSelected(selTD);
-                //saveRow(newText);
+                saveRow(newText);
                 
                 this.hideDiv();
                 this.suggestionUsed = 'true'
@@ -794,8 +763,7 @@ function tableView(container,doc)
                 ev.stopPropagation();
             }
         }
-    }
-
+    } // autosuggest
 } // tableView
 
 function tableDoubleClick(event) {
@@ -931,18 +899,20 @@ function makeColumnExpand(src) { //src = the original delete image
     }
 }
 
-function matrixTD(arrayStatement, asImage, doc) {
-    // alert (obj.termType);
-    s = arrayStatement[0];
-    p = arrayStatement[1];
-    obj = arrayStatement[2];
-    
+function convertToURI(x) { // x = <http://test>
+    if (x[0] = '<') {
+        return x.toString().match(/[^<].*[^>]/)[0];
+    } else {return x;}
+}
+
+function matrixTD(obj, st, asImage, doc) { 
+
 	if (!doc) doc=document;
     var td = doc.createElement('TD');
+    td.stat = st; // pointer to the statement
     if (!obj) var obj = new RDFLiteral(".");
-    if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
-        td.setAttribute('s', s); 
-        td.setAttribute('p', p); 
+    if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || 
+    (obj.termType == 'collection')) {
 		td.setAttribute('about', obj.toNT());
 		td.setAttribute('style', 'color:#4444ff');
     }
@@ -959,8 +929,6 @@ function matrixTD(arrayStatement, asImage, doc) {
     
     var image;
     if (obj.termType == 'literal') {
-        td.setAttribute('s', s); 
-        td.setAttribute('p', p); 
         td.setAttribute('about', obj.value);
         td.appendChild(doc.createTextNode(obj.value));
     } 

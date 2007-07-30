@@ -23,6 +23,7 @@ function tableView(container,doc)
     var numRows; // assigned in click, includes header
     var numCols; // assigned at bottom of click
     var activeSingleQuery = null;
+    var autoCompArray = [];
     
     thisTable = this;  // fixes a problem with calling this.container
     this.document=null;
@@ -108,7 +109,6 @@ function tableView(container,doc)
         // Table Edit
         t.addEventListener('click', click, false);
         numCols = nv;
-        var autoCompArray = [];
         
         // auto completion array
         var entryArray = lb.entry;
@@ -576,7 +576,7 @@ function tableView(container,doc)
                 
                 var newText = this.elem.value;
                 selTD.innerHTML = newText;
-                //setSelected(selTD);
+                //setSelected(selTD); // I can't use setSelected, so when clearSeleced is called later, the input element gets messed up
                 saveRow(newText);
                 
                 this.hideDiv();

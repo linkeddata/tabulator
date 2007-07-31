@@ -1,6 +1,14 @@
 // Joe Presbrey <presbrey@mit.edu>
 // 2007-07-15
 
+/*
+   I think the architecute of this code is quite shaky due to various hacks (by myself).
+   This file might have to be examined and even rewritten becuase a user is more likely 
+   to add new triples but not alter existing ones. The procedure prepareUpdate -> setObject
+                                                                               -> setStatement
+   might be inappropriate.
+                                                                    Kenny 2007-07-31                                                                            
+*/
 anonymize = function (obj) {
     return (obj.toNT().substr(0,2) == "_:")
         ? "?" + obj.toNT().substr(2)

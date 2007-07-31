@@ -4,13 +4,12 @@
 // SPARQL update should work for literal nodes without a language spec
 // method: in matrixTD attach a pointer to the statement on each td, called stat
 
-// SPARQL todo:
+// todo:
 // currently, SPARQL update is turned off when the add row button is pressed
 // use the SPARQL query pattern for doing the add row
-
-// Other todo:
 // prevent users from entering their own values in autosuggest
-// add the hotkey control+shift+a to add a new row
+
+// hotkeys: end adds a new row
 
 function tableView(container,doc) 
 {
@@ -221,6 +220,12 @@ function tableView(container,doc)
         var oldCol = selTD.cellIndex;
         var t = document.getElementById('tabulated_data');
         clearSelected(selTD);
+        if (e.keyCode == 35) { //end
+            addRow();
+            newRow = numRows-1;
+            newCol = oldCol;
+            setSelected(getTDNode(newRow, newCol));
+        }
         if(e.keyCode==37) { //left
             newRow = oldRow;
             newCol = (oldCol>0)?(oldCol-1):oldCol;
@@ -280,11 +285,6 @@ function tableView(container,doc)
             var newNode = getTDNode(newRow, newCol);
             setSelected(newNode);
         }
-/*         if (e.keyCode == 17 && e.keyCode == 16 && e.keyCode == 65) { 
-            // ctrl+shift+a: hotkey for addRow; doesn't work
-            alert('add row hotkey');
-            addRow();
-        } */
         e.stopPropagation();
         e.preventDefault();
     }
@@ -383,6 +383,33 @@ function tableView(container,doc)
     }
     // End note type checking
     
+    // td creation for each type
+    function createLiteralTD() {
+        var td = thisTable.document.createElement("TD");
+        td.setAttribute('type', 'lit');
+        td.innerHTML = '---';
+        return td;
+    }
+    
+    function createSymbolTD() {
+        var td = thisTable.document.createElement("TD");
+        td.setAttribute('type', 'sym');
+        td.setAttribute('autocomp', 'true');
+        td.setAttribute('style', 'color:#4444ff');
+        td.innerHTML = "---";
+        return td;
+    }
+
+    function createBNodeTD() {
+        var td = thisTable.document.createElement('TD');
+        bnode = kb.bnode();
+        td.setAttribute('o', bnode.toNT());
+        td.setAttribute('type', 'bnode');
+        td.setAttribute('style', 'color:#4444ff');
+        td.innerHTML = "---";
+        return td;
+    }
+    
     function drawAddRow () {
         var form = thisTable.document.createElement('form');
         var but = thisTable.document.createElement('input');
@@ -423,33 +450,7 @@ function tableView(container,doc)
             tr.appendChild(td);
         }
         t.appendChild(tr);
-    }
-    
-    // td creation for each type
-    function createLiteralTD() {
-        var td = thisTable.document.createElement("TD");
-        td.setAttribute('type', 'lit');
-        td.innerHTML = '---';
-        return td;
-    }
-    
-    function createSymbolTD() {
-        var td = thisTable.document.createElement("TD");
-        td.setAttribute('type', 'sym');
-        td.setAttribute('autocomp', 'true');
-        td.setAttribute('style', 'color:#4444ff');
-        td.innerHTML = "---";
-        return td;
-    }
-
-    function createBNodeTD() {
-        var td = thisTable.document.createElement('TD');
-        bnode = kb.bnode();
-        td.setAttribute('o', bnode.toNT());
-        td.setAttribute('type', 'bnode');
-        td.setAttribute('style', 'color:#4444ff');
-        td.innerHTML = "---";
-        return td;
+        numRows++;
     }
     
     function saveRow(newText) { // 

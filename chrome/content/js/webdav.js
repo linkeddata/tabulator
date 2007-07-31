@@ -136,7 +136,7 @@ webdav = new function() {
             }).call(this);
         }
 
-        setInterval('webdav.manager._thread()', 5000);
+        //setInterval('webdav.manager._thread()', 5000);
     }();
     
 

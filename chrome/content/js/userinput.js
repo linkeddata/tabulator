@@ -719,7 +719,7 @@ borderClick: function borderClick(e){
     var This=outline.UserInput;
     var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
     var insertTr=myDocument.createElement('tr');
-    ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR').nextSibling);
+    ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR'));
     var tempTr=myDocument.createElement('tr');
     var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
     insertTr.appendChild(tempTr.firstChild);
@@ -740,6 +740,7 @@ borderClick: function borderClick(e){
     else
         This.formUndetStat(insertTr,preStat.object,reqTerm1,reqTerm2,preStat.why,false);
     
+    if (HCIoptions["bottom insert highlights"].enabled){
 		var holdingTr=myDocument.createElement('tr');
 		var holdingTd=myDocument.createElement('td');
 		holdingTd.setAttribute('colspan','2');
@@ -750,6 +751,7 @@ borderClick: function borderClick(e){
 	    bottomDiv.addEventListener('mouseout',This.Mouseout,false);
 	    bottomDiv.addEventListener('click',This.borderClick,false);
 	    insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
+	}
 },
 
 Mouseover: function Mouseover(e){

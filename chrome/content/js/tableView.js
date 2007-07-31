@@ -113,7 +113,7 @@ function tableView(container,doc)
         // auto completion array
         var entryArray = lb.entry;
         for (i = 0; i<lb.entry.length; i++) {
-            autoCompArray.push(entryArray[i][0]);
+            autoCompArray.push(entryArray[i][0].toString());
             entryArray = entryArray.slice(0);
         }
     }
@@ -326,12 +326,9 @@ function tableView(container,doc)
         if (selTD.getAttribute('autocomp') == 'true') {
             autoSuggest(inputObj, autoCompArray);
         }
-        else {
-            inputObj.addEventListener ("blur", 
-            tableEditOnBlur, false);
-            inputObj.addEventListener ("keypress", 
-            tableEditOnKeyPress, false);
-        }
+            inputObj.addEventListener ("blur", tableEditOnBlur, false);
+            inputObj.addEventListener ("keypress", tableEditOnKeyPress, false);
+        
         if (sparqlTest=='true') {
             sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
         }
@@ -574,10 +571,10 @@ function tableView(container,doc)
             if (this.highlighted > -1) {
                 this.elem.value = this.eligible[this.highlighted];
                 
-                var newText = this.elem.value;
-                selTD.innerHTML = newText;
+                //var newText = this.elem.value;
+                //selTD.innerHTML = newText;
                 //setSelected(selTD); // I can't use setSelected, so when clearSeleced is called later, the input element gets messed up
-                saveRow(newText);
+                //saveRow(newText);
                 
                 this.hideDiv();
                 this.suggestionUsed = 'true'

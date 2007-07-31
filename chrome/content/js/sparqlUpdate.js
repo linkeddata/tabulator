@@ -18,6 +18,7 @@ sparql = function(store) {
 }
 
 sparql.prototype.prepareUpdate = function(statement) {
+    var This=this;
     //statement==undefined means updating a new statement
     if (statement && statement.why == undefined) return;
 
@@ -27,20 +28,36 @@ sparql.prototype.prepareUpdate = function(statement) {
             : "{ " + map(anonymizeNT, context).join("\n") + " }";
     }
 
-    context = [];
-    s = statement;
-    while(1) {
-        if (!s || s.subject == undefined) break;
-        s = this.store.statementsMatching(undefined,undefined,s.subject,statement.why);
-        if (s == undefined || s.length == 0) break;
-        if (s.length == 1) {
-            context.push(s[0]);
-        } else {
-            // node is not uniquely identifiable
-            // do some IFP magic but for now,
-            break;
+    var context = [];
+    function setContext(_statement){
+        var s = _statement;
+        for each (var term in [s.subject,s.object]){ //predicate is not likely to be a bnode
+            if (term.termType!='bnode') continue;
+            var labelTerm=lb.label(term);
+            if (labelTerm){
+                s = This.store.statementsMatching(undefined,undefined,labelTerm,_statement.why);
+                if (s.length == 1) context.push(s[0]);           
+            }
+	        
+	        //other identifier    
+		    /*
+		    while(1) {
+		        if (!s || s.subject == undefined) break;
+		        s = this.store.statementsMatching(undefined,undefined,s.subject,statement.why);
+		        if (s == undefined || s.length == 0) break;
+		        if (s.length == 1) {
+		            context.push(s[0]);
+		        } else {
+		            // node is not uniquely identifiable
+		            // do some IFP magic but for now,
+		            break;
+		        }
+		    }
+		    */
         }
+        return context;
     }
+    if (statement) setContext(statement);
 
     return {
         complete: false,
@@ -109,7 +126,7 @@ sparql.prototype.prepareUpdate = function(statement) {
                 anonymize(this.statement[0]) + " " +
                 anonymize(this.statement[1]) + " " +
                 anonymize(obj) + " " + " . }\n";
-                
+            
             fire(this.statement[3].uri, query);
         },
         
@@ -135,15 +152,30 @@ sparql.prototype.prepareUpdate = function(statement) {
                     //alert(xhr.responseText);
                 }
             }
+            this.where=contextToWhere(setContext(st instanceof Array?st[0]:st))
             query = this.where.length > 0 ? "WHERE " + this.where + "\n" : "";
             //query += "DELETE { " + this.statementNT + " }\n";
-            query += "INSERT { " +
-                anonymize(st.subject) + " " +
-                anonymize(st.predicate) + " " +
-                anonymize(st.object) + " " + " . }\n";
-                
-            fire(st.why.uri, query);
-            //I am sure this copy and paste is bad           
+            
+            if (st instanceof Array)
+                anonymize = function(obj) {return obj.toNT()};
+            if (st instanceof Array){
+                query += "INSERT { "+st.map(anonymizeNT).join('\n')+" }\n";
+            }else{
+                query += "INSERT { " +
+                    anonymize(st.subject) + " " +
+                    anonymize(st.predicate) + " " +
+                    anonymize(st.object) + " " + " . }\n";
+            }
+
+            fire(st instanceof Array?st[0].why.uri:st.why.uri, query);
+            
+            //I am sure this copy and paste is bad
+            if (st instanceof Array) {
+            anonymize = function (obj) {
+                return (obj.toNT().substr(0,2) == "_:")
+                ? "?" + obj.toNT().substr(2): obj.toNT();
+            }
+            }                 
         }
     }
 }

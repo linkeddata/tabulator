@@ -1448,6 +1448,7 @@ function Outline(doc) {
         if (getTarget(e).tagName=='INPUT') return;
         
         switch (e.keyCode){
+            case 46:
             case 8://delete
                 e.preventDefault();//prevent from going back
                 break;

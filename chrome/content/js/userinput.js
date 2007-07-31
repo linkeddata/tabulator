@@ -175,9 +175,11 @@ clearInputAndSave: function clearInputAndSave(e){
                 case 'literal':
                     // generate path and nailing from current values
                     sparqlUpdate = sparqlService.prepareUpdate(s);
+                    try{sparqlUpdate.setObject(makeTerm(this.lastModified.value))}catch(e){
+                        alert(e);
+                        return;
+                    }                    
                     obj.value=this.lastModified.value;
-                    sparqlUpdate.setObject(makeTerm(this.lastModified.value));
-
         //fire text modified??
                     UserInputFormula.statements.push(s);
                     break;
@@ -195,8 +197,16 @@ clearInputAndSave: function clearInputAndSave(e){
                             }
                             this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
                         }else{
+                            var s1=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
+                            var s2=new RDFStatement(s.subject,selectedPredicate,textTerm,s.why);
+                            var type=kb.the(s.subject,rdf('type'));
+                            var s3=new RDFStatement(s.subject,rdf('type'),type,s.why)
+                            try{sparqlService.prepareUpdate().setStatement([s1,s2,s3])}catch(e){
+                                //back out
+                                alert(e);return;
+                            }                          
                             kb.remove(s);
-                            newStat=kb.add(s.subject,selectedPredicate,textTerm);
+                            newStat=kb.add(s.subject,selectedPredicate,textTerm,s.why);
                             //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
                             //this add will cause a repainting
                         }
@@ -294,7 +304,8 @@ addTriple: function addTriple(e){
         else
             this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
         return [insertTr.lastChild,tempTerm]; //expand signal
-    } else if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))){
+    } else if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))||
+               kb.whether(predicateTerm,RDFS('domain'),RDFS('Literal'))){
         var td=insertTr.appendChild(myDocument.createElement('td'));
         this.lastModified = this.createInputBoxIn(td," (Please Input) ");
         this.lastModified.isNew=true;
@@ -483,22 +494,33 @@ Refill: function Refill(e,selectedTd){
                ?pred rdfs:domain subjectClass.
            }
         */  
-        /** SELECT ?pred ?class
+        /*  SELECT ?pred ?class
             WHERE{
                ?pred a rdf:Property.
                subjectClass owl:subClassOf ?class.
                ?pred rdfs:domain ?class.
            }
         */
+        /*  SELECT ?pred 
+            WHERE{
+               subject a ?subjectClass.
+               ?pred rdfs:domain ?subjectClass.
+            }
+        */
         var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
         var subjectClass=kb.any(subject,rdf('type'));
         var sparqlText=[];
+        var endl='.\n';
         sparqlText[0]="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
                       "?pred "+RDFS('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
         sparqlText[1]="SELECT ?pred ?class\nWHERE{\n"+
                       "?pred "+rdf('type')+rdf('Property')+".\n"+
                       subjectClass+RDFS('subClassOf')+" ?class.\n"+
-                      "?pred "+RDFS('domain')+" ?class.\n}";              
+                      "?pred "+RDFS('domain')+" ?class.\n}";
+        sparqlText[2]="SELECT ?pred WHERE{\n"+
+                          subject+rdf('type')+kb.variable("subjectClass")+endl+
+                          kb.variable("pred")+RDFS('domain')+kb.variable("subjectClass")+endl+
+                      "}";              
         var predicateQuery=sparqlText.map(SPARQLToQuery);  
                                   
         }else{
@@ -509,14 +531,26 @@ Refill: function Refill(e,selectedTd){
                ?pred rdfs:domain subjectClass.
                ?pred rdfs:range objectClass.
            }
-        */           
+        */
+        //Candidate
+        /* SELECT ?pred
+           WHERE{
+               subject a ?subjectClass.
+               object a ?objectClass.
+               ?pred rdfs:domain ?subjectClass.
+               ?pred rdfs:range ?objectClass.
+        */            
         var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
         var subjectClass=kb.any(subject,rdf('type'));
         var object=selectedTd.parentNode.AJAR_statement.object;
         var objectClass=(object.termType=='literal')?RDFS('Literal'):kb.any(object,rdf('type'));
-        var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
-                       "?pred "+RDFS('domain')+subjectClass+".\n"+
-                       "?pred "+RDFS('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
+        //var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+        //               "?pred "+RDFS('domain')+subjectClass+".\n"+
+        //               "?pred "+RDFS('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
+        var sparqlText="SELECT ?pred WHERE{"+subject+rdf('type')+"?subjectClass"+".\n"+
+                       object +rdf('type')+"?objectClass"+".\n"+
+                       "?pred "+RDFS('domain')+"?subjectClass"+".\n"+
+                       "?pred "+RDFS('range')+"?objectClass"+".\n}"; // \n is required? SPARQL parser bug?
         var predicateQuery=SPARQLToQuery(sparqlText);
         }
         
@@ -527,7 +561,9 @@ Refill: function Refill(e,selectedTd){
         
 	}else{ //objectTd
 	    var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate;
-	    if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))||predicateTerm.termType=='collection'){
+	    if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))||
+	        predicateTerm.termType=='collection'||
+	        kb.whether(predicateTerm,RDFS('range'),RDFS('Literal'))){
 	        selectedTd.className='';
 	        emptyNode(selectedTd);
 	        this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
@@ -691,7 +727,13 @@ borderClick: function borderClick(e){
     insertTr.appendChild(tempTr.firstChild);
     //there should be an elegant way of doing this
     
+    //Take the why of the last TR and write to it. There should be a better way
     var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+    if (!preStat){
+        var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
+        var doc=kb.sym(Util.uri.docpart(subject.uri));
+        preStat=new RDFStatement(subject,undefined,undefined,doc);
+    }
     var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
     if (!isInverse)
         This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
@@ -827,8 +869,10 @@ appendToPredicate: function appendToPredicate(predicateTd){
     
     if (!isEnd)
         trIterator.parentNode.insertBefore(insertTr,trIterator);
-    else if (!HCIoptions["bottom insert highlights"].enabled)
-        predicateTd.parentNode.parentNode.appendChild(insertTr);
+    else if (!HCIoptions["bottom insert highlights"].enabled){
+        var table=predicateTd.parentNode.parentNode;
+        table.insertBefore(insertTr,table.lastChild);
+    }
     else; //anyway, this is buggy
         //predicateTd.parentNode.parentNode.insertBefore(
         
@@ -1028,7 +1072,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 var theTerm=entries[i][1];
                 //var type=theTerm?kb.any(kb.fromNT(thisNT),rdf('type')):undefined;
                 var type=types[i];
-                var typeLabel=type?lb.label(type):"";
+                var typeLabel=type?label(type):"";
                 tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
             }
             /*var choices=extraInformation.choices;
@@ -1059,16 +1103,16 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 addMenuItem(choices[i]);
             break;
         default:
+            var nullFetcher=function(){};
             switch (inputQuery.constructor.name){
             case 'Array':
-                var nullFetcher=function(){};
                 for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),nullFetcher);
                 break;
             case 'undefined':
                 alert("query is not defined");
                 break;
             default:
-                kb.query(inputQuery,addPredicateChoice(inputQuery),myFetcher);
+                kb.query(inputQuery,addPredicateChoice(inputQuery),nullFetcher);
             }                
     }
 },//funciton showMenu

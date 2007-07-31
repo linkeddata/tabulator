@@ -27,12 +27,12 @@ function Labeler(kb,lang){
             var label=st.object.value.toLowerCase();
             for (var i=0;i<this.entry.length;i++){ //O(n) bad!
                 if (label>this.entry[i][0].toLowerCase()){
-                    lb.entry.splice(i+1,0,[st.object.value,st.subject,3]);
+                    lb.entry.splice(i+1,0,[st.object,st.subject,3]);
                     break;
                 }
             }
             //lb.optimize(lb.entry[lb.entry.length-1]);
-            lb.optimize([st.object.value,st.subject,3]);
+            lb.optimize([st.object,st.subject,3]);
         }
     }
 }
@@ -40,9 +40,10 @@ Labeler.prototype={
 //[label,subject,strength]
 entry: [],
 labelDirectory:{},
+//returns a literal term
 label: function(term){
-    var candidate=this.labelDirectory[term.hashString()]
-    return candidate?candidate[0]:"";
+    var candidate=this.labelDirectory[term.hashString()];
+    return candidate?candidate[0]:undefined;
 },
 addLabelProperty: function(property, priority){
     var lb=this;
@@ -60,20 +61,20 @@ addLabelProperty: function(property, priority){
         //var hashS=subject.hashString();
         var entryVol=lb.entry.length;
         if (entryVol==0) 
-            lb.entry.push([object.value,subject,priority]);
-        else if (label>lb.entry[entryVol-1][0].toLowerCase()) 
-            lb.entry.push([object.value,subject,priority])
+            lb.entry.push([object,subject,priority]);
+        else if (label>lb.entry[entryVol-1][0].value.toLowerCase()) 
+            lb.entry.push([object,subject,priority])
         else{
             for (var i=0;i<entryVol;i++){ //O(n) bad!
-                if (label<lb.entry[i][0].toLowerCase()){
+                if (label<lb.entry[i][0].value.toLowerCase()){
                     //lb.entry.splice(i+1,0,[label+">"+lb.entry[i][0].toLowerCase(),subject,priority]);
-                    lb.entry.splice(i,0,[object.value,subject,priority]);
+                    lb.entry.splice(i,0,[object,subject,priority]);
                     break;
                 }
             }
         }
         //lb.optimize(lb.entry[lb.entry.length-1]); //why is this not working.......
-        lb.optimize([object.value,subject,priority]);
+        lb.optimize([object,subject,priority]);
     }
 },
 optimize: function(entry){
@@ -90,7 +91,7 @@ search: function(searchString){
     var results=[];
     var types=[];
     for (var i=0;i<this.entry.length;i++){
-        var matchingString=this.entry[i][0].toLowerCase();
+        var matchingString=this.entry[i][0].value.toLowerCase();
         if (!match && string_startswith(matchingString,label)) 
             match=true;
         else if (match &&!string_startswith(matchingString,label))

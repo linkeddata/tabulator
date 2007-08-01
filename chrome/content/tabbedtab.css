@@ -139,7 +139,7 @@ Supposed to leave layoutunchanged. So we float it too. */
 }
 
 .colclose { float: right; color: #aaa } /* Should be 67% transp black */
-.sortarrow {float: right; color: #aaa }
+.sortarrow { float: left; color: #aaa; border: none;}
 
 
 /* CSS Stuff for tabbed Views.. */
@@ -362,3 +362,47 @@ td{
 }
 */
 
+.deleteIcon {
+    margin-left: 0.1em;
+}
+
+.deleteCol {
+    float: right;
+    display: inline;
+}
+
+ .suggestion_list
+ {
+ background: white;
+ border: 1px solid;
+ padding: 4px;
+ }
+
+ .suggestion_list ul
+ {
+ padding: 0;
+ margin: 0;
+ list-style-type: none;
+ }
+
+ .suggestion_list a
+ {
+ text-decoration: none;
+ color: navy;
+ }
+
+ .suggestion_list .selected
+ {
+ background: navy;
+ color: white;
+ }
+
+ .suggestion_list .selected a
+ {
+ color: white;
+ }
+
+ #autosuggest
+ {
+ display: none;
+ }

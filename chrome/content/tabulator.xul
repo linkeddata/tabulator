@@ -47,11 +47,12 @@
     <menu id="menu_ToolsTabulatorMenu" label="&toolsTabulatorMenu.label;" accesskey="&toolsTabulatorMenu.accesskey;" insertafter="javascriptConsole">
       <menupopup id="menu_ToolsTabulatorPopup">
         <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" oncommand="toggleSetHeader()"/>
-        <menuseparator/>  
-        <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
-        <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
       </menupopup>
     </menu>
+    <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" insertafter="javascriptConsole" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
+  </menupopup>
+  <menupopup id="menu_viewPopup">
+        <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
   </menupopup>
   <script type="application/x-javascript">
     var myCheckbox;

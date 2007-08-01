@@ -84,20 +84,16 @@ function tableView(container,doc)
         
         emptyNode(thisTable.container).appendChild(t); // See results as we go
 
-        for (i=0; i<nv; i++) {
+        for (i=0; i<nv; i++) { // create the header
             v = q.vars[i];
             tabulator.log.debug("table header cell for " + v + ': '+v.label)
             text = document.createTextNode(v.label)
             th = thisTable.document.createElement('th');
-            // a = document.createElement('a');
-            // th.appendChild(a);
-            // text = document.createTextNode(v.label);
-            
             th.appendChild(text);
             tr.appendChild(th);
         }
         
-        kb.query(q, this.onBinding);
+        kb.query(q, this.onBinding); // pulling in the results of the query
         activeSingleQuery = q;
         this.queryStates[q.id]=1;
         
@@ -105,7 +101,7 @@ function tableView(container,doc)
         drawAddRow();
         sortables_init();
         
-        // Table Edit
+        // table edit
         t.addEventListener('click', click, false);
         numCols = nv;
         
@@ -215,6 +211,12 @@ function tableView(container,doc)
         }
     }
     
+    function getTDNode(iRow, iCol) {
+        var t = document.getElementById('tabulated_data');
+        //return t.rows[iRow].cells[iCol];  // relies on tbody
+        return t.childNodes[iRow].childNodes[iCol];
+    }
+    
     function keyHandler(e) {
         var oldRow = getRowIndex(selTD); //includes header
         var oldCol = selTD.cellIndex;
@@ -289,12 +291,6 @@ function tableView(container,doc)
         e.preventDefault();
     }
     
-    function getTDNode(iRow, iCol) {
-        var t = document.getElementById('tabulated_data');
-        //return t.rows[iRow].cells[iCol];  // relies on tbody
-        return t.childNodes[iRow].childNodes[iCol];
-    }
-    
     function onEdit() {
         if ((selTD.getAttribute('autocomp') == undefined) && 
         (selTD.getAttribute('type') == 'sym')) 
@@ -326,8 +322,8 @@ function tableView(container,doc)
         if (selTD.getAttribute('autocomp') == 'true') {
             autoSuggest(inputObj, autoCompArray);
         }
-            inputObj.addEventListener ("blur", tableEditOnBlur, false);
-            inputObj.addEventListener ("keypress", tableEditOnKeyPress, false);
+        inputObj.addEventListener ("blur", tableEditOnBlur, false);
+        inputObj.addEventListener ("keypress", tableEditOnKeyPress, false);
         
         if (sparqlTest=='true') {
             sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
@@ -380,8 +376,7 @@ function tableView(container,doc)
         var t = thisTable.document.getElementById('tabulated_data');
         var tdNode = t.childNodes[row].childNodes[col];
         if (tdNode.getAttribute('type') == 'sym') return true;
-    }
-    // End note type checking
+    } // end note type checking
     
     // td creation for each type
     function createLiteralTD() {
@@ -408,7 +403,7 @@ function tableView(container,doc)
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "---";
         return td;
-    }
+    } //end td creation
     
     function drawAddRow () {
         var form = thisTable.document.createElement('form');
@@ -453,7 +448,7 @@ function tableView(container,doc)
         numRows++;
     }
     
-    function saveRow(newText) { // 
+    function saveRow(newText) {
         alert(newText);
     }
     //***************** End Add Row *****************//
@@ -886,12 +881,6 @@ function makeColumnExpand(src) { //src = the original delete image
             { leftCell.removeChild(leftCell.firstChild);}
         else rightCell.removeChild(rightCell.firstChild);
     }
-}
-
-function convertToURI(x) { // x = <http://test>
-    if (x[0] = '<') {
-        return x.toString().match(/[^<].*[^>]/)[0];
-    } else {return x;}
 }
 
 function matrixTD(obj, st, asImage, doc) { 

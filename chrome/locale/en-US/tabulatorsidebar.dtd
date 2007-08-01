@@ -1,16 +1,16 @@
-<!ENTITY tabulatorsidebar.title "TabulatorSidebar">
+<!ENTITY tabulatorsidebar.title "Data Browser">
 <!ENTITY openTabulatorSidebar.commandkey "E">
 <!ENTITY openTabulatorSidebar.modifierskey "shift accel">
 
 <!ENTITY tabsources.title "Tabulator Sources">
-<!ENTITY tabsources.label "View Data Sources">
-<!ENTITY tabsources.accesskey "s">
+<!ENTITY tabsources.label "Data Sources">
+<!ENTITY tabsources.accesskey "a">
 
 <!ENTITY tablog.title "Tabulator Log">
-<!ENTITY tablog.label "View Tabulator Log">
+<!ENTITY tablog.label "Data Browser Log">
 <!ENTITY tablog.accesskey "l">
 
-<!ENTITY toolsTabulatorMenu.label "Tabulator">
+<!ENTITY toolsTabulatorMenu.label "Data Browser">
 <!ENTITY toolsTabulatorMenu.accesskey "t">
 
 

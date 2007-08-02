@@ -52,21 +52,20 @@ function tableView(container,doc)
                 v = q.vars[i];
                 // generate the subj and pred for each tdNode 
                 for (j = 0; j<numStats; j++) {
-                    var testStat = q.pat.statements[j];
+                    var stat = q.pat.statements[j];
                     // statClone = <#s> <#p> ?v0 .
-                    var testClone = new RDFStatement(testStat.subject,
-                    testStat.predicate, testStat.object, testStat.why);
-                    if (testClone.object == v) {
-                        testClone.object = bindings[v];
-                        var testString = testClone.subject.toString();
-                        if (testString[0] == '?') { 
+                    var statClone = new RDFStatement(stat.subject, stat.predicate, stat.object);
+                    if (statClone.object == v) {
+                        statClone.object = bindings[v];
+                        var sSubj = statClone.subject.toString();
+                        if (sSubj[0] == '?') { 
                             // statClone = ?v0 <#p> <#o> .
-                            testClone.subject = bindings[testClone.subject];
+                            statClone.subject = bindings[testStatClone.subject];
                         }
                         break;
                     }
                 }
-                var st = kb.anyStatementMatching(testClone.subject, testClone.predicate, testClone.object);
+                var st = kb.anyStatementMatching(statClone.subject, statClone.predicate, statClone.object);
                 if (!st) {alert('no statement for '+st.subject+st.predicate+st.object);}
                 if (!st.why) {alert("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
                 tr.appendChild(matrixTD(st.object, st));
@@ -224,9 +223,9 @@ function tableView(container,doc)
         clearSelected(selTD);
         if (e.keyCode == 35) { //end
             addRow();
-            newRow = numRows-1;
-            newCol = oldCol;
-            setSelected(getTDNode(newRow, newCol));
+        }
+        if (e.keyCode==13) { //enter
+            onEdit();
         }
         if(e.keyCode==37) { //left
             newRow = oldRow;
@@ -253,9 +252,6 @@ function tableView(container,doc)
             var newNode = getTDNode(newRow, newCol);
             setSelected(newNode);
             newNode.scrollIntoView(false);
-        }
-        if (e.keyCode==13) { //enter
-            onEdit();
         }
         if (e.shiftKey && e.keyCode == 9) {  //shift+tab
             newRow = oldRow;
@@ -446,6 +442,11 @@ function tableView(container,doc)
         }
         t.appendChild(tr);
         numRows++;
+        clearSelected(selTD);
+        newRow = numRows-1;
+        newCol = 0;
+        selTD = getTDNode(newRow, newCol)
+        setSelected(selTD);
     }
     
     function saveRow(newText) {
@@ -887,7 +888,7 @@ function matrixTD(obj, st, asImage, doc) {
 
 	if (!doc) doc=document;
     var td = doc.createElement('TD');
-    td.stat = st; // pointer to the statement
+    td.stat = st; // pointer to the statement for the td
     if (!obj) var obj = new RDFLiteral(".");
     if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || 
     (obj.termType == 'collection')) {

@@ -1,12 +1,12 @@
 // Last Modified By: David Li
 
-// Places generating SPARQL Update: onEdit, tableEditOnBlur, useSuggestion (autosuggest),and saveRow
-// SPARQL update should work for literal nodes without a language spec
+// Places generating sparql update: tableEditOnBlur, saveRow
+// sparql update should work for literal nodes without a language spec
 // method: in matrixTD attach a pointer to the statement on each td, called stat
 
 // todo:
-// currently, SPARQL update is turned off when the add row button is pressed
-// use the SPARQL query pattern for doing the add row
+// currently, sparql update is turned off when the add row button is pressed
+// use the sparql query pattern for doing the add row
 // prevent users from entering their own values in autosuggest
 
 // hotkeys: end adds a new row
@@ -23,6 +23,8 @@ function tableView(container,doc)
     var numCols; // assigned at bottom of click
     var activeSingleQuery = null;
     var autoCompArray = [];
+    var entryArray = [];
+    var aQueryPatStats; // assigned in onBinding
     
     thisTable = this;  // fixes a problem with calling this.container
     this.document=null;
@@ -48,6 +50,7 @@ function tableView(container,doc)
             tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
             numStats = q.pat.statements.length; // Added
+            aQueryPatStats = q.pat.statements;
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
                 // generate the subj and pred for each tdNode 
@@ -60,7 +63,7 @@ function tableView(container,doc)
                         var sSubj = statClone.subject.toString();
                         if (sSubj[0] == '?') { 
                             // statClone = ?v0 <#p> <#o> .
-                            statClone.subject = bindings[testStatClone.subject];
+                            statClone.subject = bindings[statClone.subject];
                         }
                         break;
                     }
@@ -105,13 +108,14 @@ function tableView(container,doc)
         numCols = nv;
         
         // auto completion array
-        var entryArray = lb.entry;
+        entryArray = lb.entry;
         for (i = 0; i<lb.entry.length; i++) {
             autoCompArray.push(entryArray[i][0].toString());
             entryArray = entryArray.slice(0);
         }
-    }
-    //***************** End drawQuery *****************//
+        alert(entryArray.length);
+        alert(autoCompArray.length);
+    }  //***************** End drawQuery *****************//
 
     function drawExport () {
         var form= thisTable.document.createElement('form');
@@ -150,16 +154,15 @@ function tableView(container,doc)
         emptyNode(this.container);
     }
     
-    /***************************************************** 
-    Table Editing 
+    /*****************************************************
+    Table Editing
     ******************************************************/
     var selTD;
     var inputObj;
     var sparqlUpdate;
-    var sparqlTest='true'; 
-    // sparqlTest = 'false' when addRow is called
     
     function clearSelected(node) {
+        if (!node) {return;}
         var a = document.getElementById('focus');
         if (a != null) { a.parentNode.removeChild(a); };
         var t = document.getElementById('tabulated_data');
@@ -290,7 +293,7 @@ function tableView(container,doc)
     function onEdit() {
         if ((selTD.getAttribute('autocomp') == undefined) && 
         (selTD.getAttribute('type') == 'sym')) 
-        { 
+        {
             setSelected(selTD); return; 
         }
         
@@ -320,10 +323,6 @@ function tableView(container,doc)
         }
         inputObj.addEventListener ("blur", tableEditOnBlur, false);
         inputObj.addEventListener ("keypress", tableEditOnKeyPress, false);
-        
-        if (sparqlTest=='true') {
-            sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
-        }
     }
     
     function tableEditOnBlur(e) { 
@@ -339,9 +338,9 @@ function tableView(container,doc)
         e.stopPropagation();
         e.preventDefault();
         
-        if (sparqlTest=='true') {
-            sparqlUpdate.setObject(kb.literal(newText, ''));
-        }
+        if (!selTD.stat) {alert('no stat attribute'); saveAddRowText(newText);return;};
+        sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
+        sparqlUpdate.setObject(kb.literal(newText, ''));
     }
 
     function tableEditOnKeyPress(e) {
@@ -385,19 +384,19 @@ function tableView(container,doc)
     function createSymbolTD() {
         var td = thisTable.document.createElement("TD");
         td.setAttribute('type', 'sym');
-        td.setAttribute('autocomp', 'true');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "---";
+        td.setAttribute('autocomp', 'true');
         return td;
     }
 
     function createBNodeTD() {
         var td = thisTable.document.createElement('TD');
-        bnode = kb.bnode();
-        td.setAttribute('o', bnode.toNT());
         td.setAttribute('type', 'bnode');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "---";
+        bnode = kb.bnode();
+        td.setAttribute('o', bnode.toNT());
         return td;
     } //end td creation
     
@@ -417,40 +416,96 @@ function tableView(container,doc)
     // use kb.bnode for blank nodes
     // use kb.literal for literal nodes 
     function addRow () {
-        sparqlTest='false';
         var i; var td; var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
-        // I need to add the s, p, o to each node
+        // create the td nodes for the new row
+        // for each td node add the object variable like ?v0
         for (i=0; i<numCols; i++) {
-            if (literalRC(1, i)) {
+            if (symbolRC (1, i)) {
+                td = createSymbolTD();
+                td.v = aQueryPatStats[i].object
+            }
+            else if (literalRC(1, i)) {
                 td = createLiteralTD(); 
-                refNode = getTDNode(1, i);
-                //this gets assigned when you edit
+                td.v = aQueryPatStats[i].object
             }
             else if (bnodeRC(1, i)) {
-                td = createBNodeTD(); 
+                td = createBNodeTD();
+                td.v = aQueryPatStats[i].object
             }
-            else if (symbolRC (1, i)) { 
-                td = createSymbolTD();
-                refNode = getTDNode(1, i);
-                // this gets assigned when you edit
-                // I need to create fake paths for the entire graph,
-                // this only handles the end point
-            }
-            else {alert('addRow problem')} // throw error eventually
+            else {alert('addRow problem')} 
             tr.appendChild(td);
         }
         t.appendChild(tr);
+        // highlight the td in the first column of the new row
         numRows++;
         clearSelected(selTD);
         newRow = numRows-1;
         newCol = 0;
-        selTD = getTDNode(newRow, newCol)
+        selTD = getTDNode(newRow, newCol); // first td of the row
         setSelected(selTD);
+        // clone the qps array and attach a pointer to the clone on the first td of the row
+        var qpsClone = [];
+        for (i=0; i<aQueryPatStats.length;i++) {
+            qpsClone[i] = aQueryPatStats[i];
+        }
+        selTD.qpsClone = qpsClone;
     }
     
-    function saveRow(newText) {
-        alert(newText);
+    function saveAddRowText(newText) {
+        var td = selTD;
+        // get the qps which is stored on the first cell of the row
+        var qpsc = getTDNode(getRowIndex(td), col).qpsClone;
+        var type = td.getAttribute('type');
+        var row = getRowIndex(td);
+        
+        //var autoCompArray = [];
+        //var entryArray = [];
+        function getMatchingURI(text) {
+            for (i=0; i<autoCompArray.length; i++) {
+                if (newText==autoCompArray[i]) {
+                    return entryArray[i][2];
+                }
+                else alert('please make selection');
+            }
+        }
+        
+        // fill in the query pattern based on the newText
+        for (i = 0; i<numCols; i++) {
+            if (qpsc[i].subject == td.v) {
+            // find the type and replace the qps with the correct type of node
+                if (type == 'symbol') {qpsc[i].subject = kb.sym(getMatchingURI(newText));}
+                if (type == 'literal') {qpsc[i].subject = kb.literal(newText);}
+                if (type == 'bnode') {qpsc[i].subject = kb.bnode();}
+            }
+            if (qpsc[i].object == td.v) {
+            // find the type and replace the qps with the correct type of node
+                if (type == 'symbol') {qpsc[i].object = kb.sym(getMatchingURI(newText));}
+                if (type == 'literal') {qpsc[i].object = kb.literal(newText);}
+                if (type == 'bnode') {qpsc[i].object = kb.bnode();}
+            }
+        }
+        
+        // check if all the variables in the query pattern have been filled out
+        var qpscComplete = true; 
+        for (i = 0; i<numCols; i++) {
+            if (qpsc.subject.toString()[0]='?') {qpscComplete = false;}
+            if (qpsc.object.toString()[0]='?') {qpscComplete = false;}
+        }
+        
+        // if all the variables in the query pattern have been filled out, then attach stat pointers to each node, add the stat to the store, and perform the sparql update
+        if (qpscComplete == true) {
+            for (i = 0; i<numCols; i++) {
+                var why = qpsc[0].subject;
+                var st = new RDFStatement(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object, why);
+                getTDNode(row, i).stat = st; 
+                kb.add(st); // add the statements to the store
+            }
+            // sparql update
+            if (!selTD.stat) {alert('no stat attribute'); return;};
+            sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
+            sparqlUpdate.setObject(stat.object);
+        }
     }
     //***************** End Add Row *****************//
 
@@ -458,7 +513,7 @@ function tableView(container,doc)
     Autosuggest box
     *******************************************************/
     // mostly copied from http://gadgetopia.com/post/3773
-    // counter to help create unique ID's
+    // counter to help create unique ID's, not really needed
     var idCounter = 0;
     function autoSuggest(elem, suggestions)
     {
@@ -884,16 +939,15 @@ function makeColumnExpand(src) { //src = the original delete image
     }
 }
 
-function matrixTD(obj, st, asImage, doc) { 
-
-	if (!doc) doc=document;
+function matrixTD(obj, st, asImage, doc) {
+    if (!doc) doc=document;
     var td = doc.createElement('TD');
     td.stat = st; // pointer to the statement for the td
     if (!obj) var obj = new RDFLiteral(".");
     if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || 
     (obj.termType == 'collection')) {
-		td.setAttribute('about', obj.toNT());
-		td.setAttribute('style', 'color:#4444ff');
+        td.setAttribute('about', obj.toNT());
+        td.setAttribute('style', 'color:#4444ff');
     }
     
     if (obj.termType =='symbol') {
@@ -910,7 +964,7 @@ function matrixTD(obj, st, asImage, doc) {
     if (obj.termType == 'literal') {
         td.setAttribute('about', obj.value);
         td.appendChild(doc.createTextNode(obj.value));
-    } 
+    }
     else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
         if (asImage) {
             image = AJARImage(mapURI(obj.uri), label(obj), label(obj));

@@ -168,7 +168,7 @@ clearInputAndSave: function clearInputAndSave(e){
                 //back out
                 alert(e);return;
             }
-            s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
+            s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
         }
         else{ 
             switch (obj.termType){
@@ -220,7 +220,7 @@ clearInputAndSave: function clearInputAndSave(e){
                             alert(e);return; //maybe throw?
                         }                        
                         kb.remove(s);
-                        s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value));
+                        s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
                         newStat=s;
                     }
                     UserInputFormula.statements.push(newStat);
@@ -258,6 +258,35 @@ clearInputAndSave: function clearInputAndSave(e){
     this.lastModified = null;  
 },
 
+deleteTriple: function deleteTriple(selectedTd){
+//ToDo: complete deletion of a node
+    var s=this.getStatementAbout(selectedTd);
+    if (!kb.whether(s.object,rdf('type'),tabont('Request')) &&
+        !kb.whether(s.predicate,rdf('type'),tabont('Request')) &&
+        !kb.whether(s.subject,rdf('type'),tabont('Request'))){
+        try{
+            sparqlService.prepareUpdate(s).setObject();
+        }catch(e){
+            alert(e);
+            return;
+        } 
+    }
+    kb.remove(s);
+    outline.walk('up');
+    var removedTr=selectedTd.parentNode;
+    var trIterator;
+    for (trIterator=removedTr;
+         trIterator.childNodes.length==1;
+         trIterator=trIterator.previousSibling);
+    if (trIterator==removedTr)
+        removedTr.parentNode.removeChild(removedTr);
+    else if (!DisplayOptions["display:block on"].enabled){
+        var predicateTd=trIterator.firstChild;
+        predicateTd.setAttribute('rowspan',parseInt(predicateTd.getAttribute('rowspan'))-1);
+        removedTr.parentNode.removeChild(removedTr);
+    }
+},
+
 addTriple: function addTriple(e){
     var predicateTd=getTarget(e).parentNode.parentNode;
     var predicateTerm=getAbout(kb,predicateTd);
@@ -275,11 +304,12 @@ addTriple: function addTriple(e){
         }
     */
     if (kb.whether(predicateTerm,rdf('type'),OWL('ObjectProperty'))){
+        var preStat=insertTr.previousSibling.AJAR_statement;    
         var tempTerm=kb.bnode();
         var tempType=(!isInverse)?kb.any(predicateTerm,RDFS('range')):kb.any(predicateTerm,RDFS('domain'));
-        if (tempType) kb.add(tempTerm,rdf('type'),tempType);
+        if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
         var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
-        kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest);
+        kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
         /* SELECT ?labelProperty
            WHERE{
                ?labelProperty rdfs:subPropertyOf rdfs:label.
@@ -294,11 +324,10 @@ addTriple: function addTriple(e){
             kb.add(labelChoices,tabont('element'),labelProperties[i]);
         }
         labelChoices.append(RDFS('label'));
-        kb.add(labelChoices,tabont('element'),RDFS('label'));
-        kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true));
+        kb.add(labelChoices,tabont('element'),RDFS('label'),preStat.why);
+        kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
 
         insertTr.appendChild(outline.outline_objectTD(tempTerm));              
-        var preStat=insertTr.previousSibling.AJAR_statement;
         if (!isInverse)
             this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
         else

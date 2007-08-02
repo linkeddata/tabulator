@@ -1462,8 +1462,9 @@ function Outline(doc) {
         if (getTarget(e).tagName=='INPUT') return;
         
         switch (e.keyCode){
-            case 46:
-            case 8://delete
+            case 46://delete
+            case 8://backspace
+                this.UserInput.deleteTriple(selectedTd);
                 e.preventDefault();//prevent from going back
                 break;
             case 37://left

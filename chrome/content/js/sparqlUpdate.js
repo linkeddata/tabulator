@@ -130,10 +130,12 @@ sparql.prototype.prepareUpdate = function(statement) {
 
             query = this.where.length > 0 ? "WHERE " + this.where + "\n" : "";
             query += "DELETE { " + this.statementNT + " }\n";
+            if(obj){
             query += "INSERT { " +
                 anonymize(this.statement[0]) + " " +
                 anonymize(this.statement[1]) + " " +
                 anonymize(obj) + " " + " . }\n";
+            }
             
             fire(this.statement[3].uri, query);
         },

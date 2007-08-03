@@ -5,11 +5,6 @@
 
 <page id="sbTabulatorSidebar"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" >
-    <button id="querySubmitButton"
-      class="dialog"
-      label="Save Query"
-      disabled="true"
-      accesskey="s"/>
 
   <listbox id="queryList"/>
   <toolbar id="queryToolbar" mode="icons"/>

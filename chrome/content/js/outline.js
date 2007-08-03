@@ -538,8 +538,6 @@ function Outline(doc) {
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
         if (!HCIoptions["bottom insert highlights"].enabled){
-            
-            /*
             var holdingTr=myDocument.createElement('tr');
             var holdingTd=myDocument.createElement('td');
             holdingTd.setAttribute('colspan','2');
@@ -550,18 +548,6 @@ function Outline(doc) {
             bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
             bottomDiv.addEventListener('click',thisOutline.UserInput.borderClick,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
-            */
-            
-            var holdingTr=myDocument.createElement('tr'); //these are to minimize required changes
-            var holdingTd=myDocument.createElement('td'); //in userinput.js
-            holdingTd.setAttribute('colspan','2');
-            holdingTd.setAttribute('notSelectable','true');
-            var img=myDocument.createElement('img');
-            img.src=Icon.src.icon_add_triple;
-            img.className='bottom-border-active'
-            img.addEventListener('click',thisOutline.UserInput.borderClick,false);
-            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);
-            
         }        
         return div    
     }
@@ -717,7 +703,7 @@ function Outline(doc) {
         }
         return div
     }
-    panes.register(dataContentPane);
+    // panes.register(dataContentPane); // Not ready for 2007-08-06 cut
 
     /*      Notation3 content Pane
     **
@@ -1622,7 +1608,7 @@ function Outline(doc) {
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
             if (!about) {
-                //alert("No about attribute");
+                alert("No about attribute");
                 return;
             }
             var subject = about;
@@ -2228,3 +2214,4 @@ function clearVariableNames() {
 } //clear
 
 // ends
+2

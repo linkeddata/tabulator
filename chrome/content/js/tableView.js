@@ -1,6 +1,6 @@
 // Last Modified By: David Li
 
-// Places generating sparql update: tableEditOnBlur, saveRow
+// Places generating sparql update: clearInputAndSave, saveAddRowText
 // sparql update should work for literal nodes without a language spec
 // method: in matrixTD attach a pointer to the statement on each td, called stat
 
@@ -113,8 +113,6 @@ function tableView(container,doc)
             autoCompArray.push(entryArray[i][0].toString());
             entryArray = entryArray.slice(0);
         }
-        alert(entryArray.length);
-        alert(autoCompArray.length);
     }  //***************** End drawQuery *****************//
 
     function drawExport () {
@@ -321,11 +319,11 @@ function tableView(container,doc)
         if (selTD.getAttribute('autocomp') == 'true') {
             autoSuggest(inputObj, autoCompArray);
         }
-        inputObj.addEventListener ("blur", tableEditOnBlur, false);
-        inputObj.addEventListener ("keypress", tableEditOnKeyPress, false);
+        inputObj.addEventListener ("blur", clearInputAndSave, false);
+        inputObj.addEventListener ("keypress", inputObjKeyPress, false);
     }
     
-    function tableEditOnBlur(e) { 
+    function clearInputAndSave(e) { 
         newText = inputObj.value;
         selTD.setAttribute('about', newText);
         if (newText != '') {
@@ -338,14 +336,14 @@ function tableView(container,doc)
         e.stopPropagation();
         e.preventDefault();
         
-        if (!selTD.stat) {alert('no stat attribute'); saveAddRowText(newText);return;};
+        if (!selTD.stat) {throw('no stat attribute'); saveAddRowText(newText);return;};
         sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
         sparqlUpdate.setObject(kb.literal(newText, ''));
     }
 
-    function tableEditOnKeyPress(e) {
+    function inputObjKeyPress(e) {
         if (e.keyCode == 13) { //enter
-            tableEditOnBlur(e);
+            clearInputAndSave(e);
         }
     }
         
@@ -438,50 +436,67 @@ function tableView(container,doc)
         }
         t.appendChild(tr);
         // highlight the td in the first column of the new row
-        numRows++;
+        numRows = t.childNodes.length;
         clearSelected(selTD);
         newRow = numRows-1;
         newCol = 0;
         selTD = getTDNode(newRow, newCol); // first td of the row
         setSelected(selTD);
         // clone the qps array and attach a pointer to the clone on the first td of the row
+        
         var qpsClone = [];
-        for (i=0; i<aQueryPatStats.length;i++) {
-            qpsClone[i] = aQueryPatStats[i];
+        var stat = aQueryPatStats[0];
+        for (i = 0; i<aQueryPatStats.length; i++) {
+            var stat = aQueryPatStats[i];
+            var newStat = new RDFStatement(stat.subject, stat.predicate, stat.object, stat.why);
+            qpsClone[i] = newStat;
         }
-        selTD.qpsClone = qpsClone;
+        selTD.qpsClone = qpsClone; // remember that right now selTD is the first td of the row, qpsClone is not a 100% clone
     }
     
     function saveAddRowText(newText) {
         var td = selTD;
-        // get the qps which is stored on the first cell of the row
-        var qpsc = getTDNode(getRowIndex(td), col).qpsClone;
         var type = td.getAttribute('type');
+        // get the qps which is stored on the first cell of the row
+        var qpsc = getTDNode(getRowIndex(td), 0).qpsClone;
         var row = getRowIndex(td);
+        // make sure the user has made a selection
+        function validate() {
+            for (i = 0; i<autoCompArray.length; i++) {
+                if (newText == autoCompArray[i]) {
+                    return true;
+                } 
+            }
+            return false;
+        }
         
-        //var autoCompArray = [];
-        //var entryArray = [];
-        function getMatchingURI(text) {
+        if (validate() == false && type == 'sym') {
+            alert('please make a selection');
+            selTD.innerHTML = '---'; setSelected(selTD);
+            return;
+        }
+        
+        function getMatchingSym(text) {
             for (i=0; i<autoCompArray.length; i++) {
                 if (newText==autoCompArray[i]) {
-                    return entryArray[i][2];
+                    return entryArray[i][1];
                 }
-                else alert('please make selection');
             }
+            alert('no matching sym');
         }
         
         // fill in the query pattern based on the newText
         for (i = 0; i<numCols; i++) {
             if (qpsc[i].subject == td.v) {
             // find the type and replace the qps with the correct type of node
-                if (type == 'symbol') {qpsc[i].subject = kb.sym(getMatchingURI(newText));}
-                if (type == 'literal') {qpsc[i].subject = kb.literal(newText);}
+                if (type == 'sym') {qpsc[i].subject = getMatchingSym(newText);}
+                if (type == 'lit') {qpsc[i].subject = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].subject = kb.bnode();}
             }
             if (qpsc[i].object == td.v) {
             // find the type and replace the qps with the correct type of node
-                if (type == 'symbol') {qpsc[i].object = kb.sym(getMatchingURI(newText));}
-                if (type == 'literal') {qpsc[i].object = kb.literal(newText);}
+                if (type == 'sym') {qpsc[i].object = getMatchingSym(newText);}
+                if (type == 'lit') {qpsc[i].object = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].object = kb.bnode();}
             }
         }
@@ -489,22 +504,24 @@ function tableView(container,doc)
         // check if all the variables in the query pattern have been filled out
         var qpscComplete = true; 
         for (i = 0; i<numCols; i++) {
-            if (qpsc.subject.toString()[0]='?') {qpscComplete = false;}
-            if (qpsc.object.toString()[0]='?') {qpscComplete = false;}
+            if (qpsc[i].subject.toString()[0]=='?') {qpscComplete = false;}
+            if (qpsc[i].object.toString()[0]=='?') {qpscComplete = false;}
         }
-        
         // if all the variables in the query pattern have been filled out, then attach stat pointers to each node, add the stat to the store, and perform the sparql update
         if (qpscComplete == true) {
             for (i = 0; i<numCols; i++) {
-                var why = qpsc[0].subject;
-                var st = new RDFStatement(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object, why);
-                getTDNode(row, i).stat = st; 
-                kb.add(st); // add the statements to the store
+                var st = kb.anyStatementMatching(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object); // existing statement for symbols
+                if (!st) { // brand new statement for literals
+                    var why = qpsc[0].subject;
+                    st = new RDFStatement(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object, why);
+                    kb.add(st.subject, st.predicate, st.object, st.why);
+                }
+                var td = getTDNode(row, i);
+                td.stat = st; 
+                // sparql update
+                sparqlUpdate = new sparql(kb).prepareUpdate(td.stat);
+                sparqlUpdate.setObject(td.stat.object);
             }
-            // sparql update
-            if (!selTD.stat) {alert('no stat attribute'); return;};
-            sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
-            sparqlUpdate.setObject(stat.object);
         }
     }
     //***************** End Add Row *****************//
@@ -914,7 +931,7 @@ function deleteColumn (src) { // src = the original delete image
     
     if (colNum == numCols-1 || rightCell.style.display =='none') 
         leftCell.insertBefore(imgR, leftCell.firstChild);
-    else rightCell.insertBefore(img, rightCell.firstChild);
+    else rightCell.insertBefore(img, rightCell.firstChild)
 }
 
 function makeColumnExpand(src) { //src = the original delete image

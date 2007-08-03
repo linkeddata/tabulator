@@ -4,6 +4,7 @@ function Outline(doc) {
     var outline=this; //Kenny: do we need this?
     var thisOutline=this;
     var selection=[]
+    this.selection=selection;
     
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed

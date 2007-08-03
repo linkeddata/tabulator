@@ -336,7 +336,7 @@ function tableView(container,doc)
         e.stopPropagation();
         e.preventDefault();
         
-        if (!selTD.stat) {throw('no stat attribute'); saveAddRowText(newText);return;};
+        if (!selTD.stat) {saveAddRowText(newText); return;};
         sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
         sparqlUpdate.setObject(kb.literal(newText, ''));
     }

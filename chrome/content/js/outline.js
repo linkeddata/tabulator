@@ -1,12 +1,9 @@
-var selection=[]
-//WE MUST KILL THIS GLOBAL.
-
-
 function Outline(doc) {
     var myDocument=doc;
     this.document=doc;
     var outline=this; //Kenny: do we need this?
     var thisOutline=this;
+    var selection=[]
     
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
@@ -21,9 +18,15 @@ function Outline(doc) {
     }    
     
     this.viewAndSaveQuery = function() {
+        var q = saveQuery();
         if(isExtension) {
-            var q = saveQuery();
             tabulator.drawInBestView(q);
+        } else {
+            var i;
+            for(i=0; i<qs.listeners.length; i++) {
+                qs.listeners[i].getActiveView().view.drawQuery(q);
+                qs.listeners[i].updateQueryControls(qs.listeners[i].getActiveView()); 
+            }
         }
     }
     function saveQuery() {

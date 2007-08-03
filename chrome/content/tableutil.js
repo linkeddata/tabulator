@@ -1,4 +1,9 @@
 isExtension = true;
+if ((typeof lb) == "undefined") {
+      lb = Components.classes["@dig.csail.mit.edu/tabulator;1"]
+                    .getService(Components.interfaces.nsISupports)
+                    .wrappedJSObject.lb;
+}
 
 
 function Namespace(nsuri) {

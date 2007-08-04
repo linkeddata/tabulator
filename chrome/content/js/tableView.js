@@ -1,6 +1,6 @@
 // Last Modified By: David Li
 
-// Places generating sparql update: clearInputAndSave, saveAddRowText
+// Places generating sparql update: inputObjBlur, saveAddRowText
 // sparql update should work for literal nodes without a language spec
 // method: in matrixTD attach a pointer to the statement on each td, called stat
 
@@ -42,7 +42,7 @@ function tableView(container,doc)
     /*****************************************************
     drawQuery 
     ******************************************************/
-    this.drawQuery = function (q) 
+    this.drawQuery = function (q)
     {
         this.onBinding = function (bindings) {
             var i, tr, td;
@@ -319,11 +319,12 @@ function tableView(container,doc)
         if (selTD.getAttribute('autocomp') == 'true') {
             autoSuggest(inputObj, autoCompArray);
         }
-        inputObj.addEventListener ("blur", clearInputAndSave, false);
+        inputObj.addEventListener ("blur", inputObjBlur, false);
         inputObj.addEventListener ("keypress", inputObjKeyPress, false);
     }
     
-    function clearInputAndSave(e) { 
+    function inputObjBlur(e) { 
+        document.getElementById("autosuggest").style.display = 'none';
         newText = inputObj.value;
         selTD.setAttribute('about', newText);
         if (newText != '') {
@@ -343,11 +344,9 @@ function tableView(container,doc)
 
     function inputObjKeyPress(e) {
         if (e.keyCode == 13) { //enter
-            clearInputAndSave(e);
+            inputObjBlur(e);
         }
-    }
-        
-    //***************** End Table Editing *****************//
+    } //***************** End Table Editing *****************//
         
     /******************************************************
     Add Row
@@ -523,15 +522,14 @@ function tableView(container,doc)
                 sparqlUpdate.setObject(td.stat.object);
             }
         }
-    }
-    //***************** End Add Row *****************//
+    } //***************** End Add Row *****************//
 
     /******************************************************
     Autosuggest box
     *******************************************************/
     // mostly copied from http://gadgetopia.com/post/3773
     // counter to help create unique ID's, not really needed
-    var idCounter = 0;
+    //var idCounter = 0;
     function autoSuggest(elem, suggestions)
     {
         //The 'me' variable allow you to access the AutoSuggest object
@@ -555,11 +553,11 @@ function tableView(container,doc)
         var KEYDN = 40;
         var ENTER = 13;
         //We need to be able to reference the elem by id. If it doesn't have an id, set one.
-        if(!elem.id) {
+        /* if(!elem.id) {
             var id = "autosuggest" + idCounter;
             idCounter++;
             elem.id = id;
-        }
+        } */
 
         /********************************************************
         onkeydown event handler for the input elem.
@@ -682,8 +680,10 @@ function tableView(container,doc)
                 var li = lis[i];
                 if (this.highlighted == i) {
                     li.className = "selected";
+                    elem.value = li.firstChild.innerHTML;
                 }
                 else {
+                    if (!li) return; // fixes a bug involving "li has no properties"
                     li.className = "";
                 }
             }
@@ -764,6 +764,7 @@ function tableView(container,doc)
                     }
                 }
                 me.changeHighlight();
+                
             };
 
             /********************************************************
@@ -772,6 +773,7 @@ function tableView(container,doc)
             ********************************************************/
             ul.onclick = function(ev)
             {
+                
                 me.useSuggestion();
                 me.hideDiv();
                 me.cancelEvent(ev);
@@ -780,7 +782,7 @@ function tableView(container,doc)
 
             this.div.className="suggestion_list";
             this.div.style.position = 'absolute';
-
+            
         };
 
         /********************************************************
@@ -821,7 +823,7 @@ function tableView(container,doc)
                 ev.stopPropagation();
             }
         }
-    } // autosuggest
+    } //*************** autosuggest ********************//
 } // tableView
 
 function tableDoubleClick(event) {

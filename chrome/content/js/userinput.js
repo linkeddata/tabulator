@@ -614,7 +614,10 @@ Refill: function Refill(e,selectedTd){
 },
 
 AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
-    var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
+    //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
+    //                                           but not [wrapped ...]
+    //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
+    var InputBox=this.lastModified||outline.selection[0].firstChild;
     var e={};
     if (!tdNode) tdNode=InputBox.parentNode //argument tdNode seems to be not neccessary
     if (!mode) mode=tdNode.nextSibling?'predicate':'all';
@@ -1114,9 +1117,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 },//funciton showMenu
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
-    var tr=selectedTd.parentNode;
-    var stat=tr.AJAR_statement;
-    if (!stat) alert(tr.textContent+" "+tr.AJAR_statement);
+    var stat=this.getStatementAbout(selectedTd);
     var reqTerm = (type=='object')?stat.object:stat.predicate;
     var newStat;
     var eventhandler;

@@ -763,7 +763,7 @@ function tableView(container,doc)
             if(ev) { ev.preventDefault(); ev.stopPropagation(); }
         }
     } // autosuggest
-    document.write('<div id="autosuggest"><ul></ul></div>');
+    //document.write('<div id="autosuggest"><ul></ul></div>');
 } // tableView
 
 function tableDoubleClick(event) {

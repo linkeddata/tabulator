@@ -767,7 +767,7 @@ function tableView(container,doc)
     //document.write('<div id="autosuggest"><ul></ul></div>');
     var div = document.createElement('div');
     div.setAttribute('id','autosuggest');
-    document.body.appendChild(f);
+    document.body.appendChild(div);
     div.appendChild(document.createElement('ul'));
 } // tableView
 

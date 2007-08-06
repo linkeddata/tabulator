@@ -13,6 +13,7 @@ function tableView(container,doc)
         //wrap sparql update code with if(isExtension).
         //tabulator.sparql.*;  //see js/sparqlUpdate.js
     }*/
+    
     var numRows; // assigned in click, includes header
     var numCols; // assigned at bottom of click
     var activeSingleQuery = null;
@@ -764,6 +765,10 @@ function tableView(container,doc)
         }
     } // autosuggest
     //document.write('<div id="autosuggest"><ul></ul></div>');
+    var div = document.createElement('div');
+    div.setAttribute('id','autosuggest');
+    document.body.appendChild(f);
+    div.appendChild(document.createElement('ul'));
 } // tableView
 
 function tableDoubleClick(event) {

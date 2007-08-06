@@ -525,17 +525,12 @@ function tableView(container,doc)
         //The 'me' variable allow you to access the AutoSuggest object
         //from the elem's event handlers defined below.
         var me = this;
-        //A reference to the element we're binding the list to.
-        this.elem = elem;
-        this.suggestions = suggestions;
         //Arrow to store a subset of eligible suggestions that match the user's input
-        this.eligible = new Array();
-        //The text input by the user.
-        this.inputText = null;
+        var eligible = new Array();
         //A pointer to the index of the highlighted eligible item. -1 means nothing highlighted.
-        this.highlighted = -1;
+        var highlighted = -1;
         //A div to use to create the dropdown.
-        this.div = document.getElementById("autosuggest");
+        var div = document.getElementById("autosuggest");
         //Do you want to remember what keycode means what? Me neither.
         var TAB = 9;
         var ESC = 27;
@@ -565,31 +560,28 @@ function tableView(container,doc)
                 break;
 
                 case KEYUP:
-                if (me.highlighted > 0)
+                if (highlighted > 0)
                 {
-                    me.highlighted--;
+                    highlighted--;
                 }
                 me.changeHighlight(key);
                 break;
 
                 case KEYDN:
-                if (me.highlighted < (me.eligible.length - 1))
+                if (highlighted < (eligible.length - 1))
                 {
-                    me.highlighted++;
+                    highlighted++;
                 }
                 me.changeHighlight(key);
                 
                 case 16: break;
 
                 default:
-                if (this.value != me.inputText && this.value.length > 0) {
-                    me.inputText = this.value;
+                if (elem.value.length > 0) {
                     me.getEligible();
                     me.createDiv();
                     me.positionDiv();
                     me.showDiv();
-                    tabulator.log.error(this.value);
-                    tabulator.log.error(me.inputText);
                     tabulator.log.error(elem.value);
                 }
                 else {
@@ -604,11 +596,11 @@ function tableView(container,doc)
         ********************************************************/
         this.useSuggestion = function() 
         { // This is where I can move the onblur stuff
-            if (this.highlighted > -1) {
-                this.elem.value = this.eligible[this.highlighted];
+            if (highlighted > -1) {
+                elem.value = eligible[highlighted];
                 this.hideDiv();
  
-                setTimeout("document.getElementById('" + this.elem.id + "').focus()",0);
+                setTimeout("document.getElementById('" + elem.id + "').focus()",0);
             }
         };
 
@@ -617,7 +609,7 @@ function tableView(container,doc)
         ********************************************************/
         this.showDiv = function()
         {
-            this.div.style.display = 'block';
+            div.style.display = 'block';
         };
 
         /********************************************************
@@ -625,8 +617,8 @@ function tableView(container,doc)
         ********************************************************/
         this.hideDiv = function()
         {
-            this.div.style.display = 'none';
-            this.highlighted = -1;
+            div.style.display = 'none';
+            highlighted = -1;
         };
 
         /********************************************************
@@ -634,10 +626,10 @@ function tableView(container,doc)
         ********************************************************/
         this.changeHighlight = function()
         {
-            var lis = this.div.getElementsByTagName('LI');
+            var lis = div.getElementsByTagName('LI');
             for (i in lis) {
                 var li = lis[i];
-                if (this.highlighted == i) {
+                if (highlighted == i) {
                     li.className = "selected";
                     elem.value = li.firstChild.innerHTML;
                 }
@@ -653,7 +645,7 @@ function tableView(container,doc)
         ********************************************************/
         this.positionDiv = function()
         {
-            var el = this.elem;
+            var el = elem;
             var x = 0;
             var y = el.offsetHeight;
 
@@ -667,8 +659,8 @@ function tableView(container,doc)
             x += el.offsetLeft;
             y += el.offsetTop;
 
-            this.div.style.left = x + 'px';
-            this.div.style.top = y + 'px';
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
         };
 
         /********************************************************
@@ -679,8 +671,8 @@ function tableView(container,doc)
             var ul = document.createElement('ul');
 
             //Create an array of LI's for the words.
-            for (i in this.eligible) {
-                var word = this.eligible[i];
+            for (i in eligible) {
+                var word = eligible[i];
 
                 var li = document.createElement('li');
                 var a = document.createElement('a');
@@ -688,14 +680,14 @@ function tableView(container,doc)
                 a.innerHTML = word;
                 li.appendChild(a);
 
-                if (me.highlighted == i) {
+                if (highlighted == i) {
                     li.className = "selected";
                 }
 
                 ul.appendChild(li);
             }
 
-            this.div.replaceChild(ul,this.div.childNodes[0]);
+            div.replaceChild(ul,div.childNodes[0]);
 
             /********************************************************
             mouseover handler for the dropdown ul
@@ -710,7 +702,7 @@ function tableView(container,doc)
                     target = target.parentNode;
                 }
             
-                var lis = me.div.getElementsByTagName('LI');
+                var lis = div.getElementsByTagName('LI');
                 
 
                 for (i in lis)
@@ -718,7 +710,7 @@ function tableView(container,doc)
                     var li = lis[i];
                     if(li == target)
                     {
-                        me.highlighted = i;
+                        highlighted = i;
                         break;
                     }
                 }
@@ -738,8 +730,8 @@ function tableView(container,doc)
                 me.cancelEvent(ev);
                 return false;
             };
-            this.div.className="suggestion_list";
-            this.div.style.position = 'absolute';
+            div.className="suggestion_list";
+            div.style.position = 'absolute';
         }; // createDiv
 
         /********************************************************
@@ -747,14 +739,14 @@ function tableView(container,doc)
         ********************************************************/
         this.getEligible = function()
         {
-            this.eligible = new Array();
-            for (i in this.suggestions) 
+            eligible = new Array();
+            for (i in suggestions) 
             {
-                var suggestion = this.suggestions[i];
+                var suggestion = suggestions[i];
                 
-                if(suggestion.toLowerCase().indexOf(this.inputText.toLowerCase()) == "0")
+                if(suggestion.toLowerCase().indexOf(elem.value.toLowerCase()) == "0")
                 {
-                    this.eligible[this.eligible.length]=suggestion;
+                    eligible[eligible.length]=suggestion;
                 }
             }
         };

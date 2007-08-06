@@ -278,8 +278,15 @@ deleteTriple: function deleteTriple(selectedTd){
     for (trIterator=removedTr;
          trIterator.childNodes.length==1;
          trIterator=trIterator.previousSibling);
-    if (trIterator==removedTr)
+    if (trIterator==removedTr){
+        var theNext=trIterator.nextSibling;
+        if (theNext.nextSibling&&theNext.childNodes.length==1){
+            var predicateTd=trIterator.firstChild;
+            predicateTd.setAttribute('rowspan',parseInt(predicateTd.getAttribute('rowspan'))-1);
+            theNext.insertBefore(trIterator.firstChild,theNext.firstChild);           
+        }
         removedTr.parentNode.removeChild(removedTr);
+    }
     else if (!DisplayOptions["display:block on"].enabled){
         var predicateTd=trIterator.firstChild;
         predicateTd.setAttribute('rowspan',parseInt(predicateTd.getAttribute('rowspan'))-1);
@@ -704,8 +711,11 @@ borderClick: function borderClick(e){
     if (getTarget(e).className != 'bottom-border-active') return;
     var This=outline.UserInput;
     var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
+    
     //Take the why of the last TR and write to it. There should be a better way    
     var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+    var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+    
     var insertTr=myDocument.createElement('tr');
     ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR'));
     var tempTr=myDocument.createElement('tr');
@@ -721,7 +731,7 @@ borderClick: function borderClick(e){
         var doc=kb.sym(Util.uri.docpart(subject.uri));
         preStat=new RDFStatement(subject,undefined,undefined,doc);
     }
-    var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+
     if (!isInverse)
         This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
     else
@@ -739,6 +749,7 @@ borderClick: function borderClick(e){
 	    bottomDiv.addEventListener('click',This.borderClick,false);
 	    insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
 	}
+	outline.walk('moveTo',insertTr.firstChild);
 },
 
 Mouseover: function Mouseover(e){
@@ -981,6 +992,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
     
     //Add Items to the list
     function addMenuItem(predicate){
+        if (table.firstChild && table.firstChild.className=='no-suggest') table.removeChild(table.firstChild);
 	    var Label = predicateLabelForXML(predicate, false);
 		//Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
 
@@ -1102,6 +1114,16 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 addMenuItem(choices[i]);
             break;
         default:
+            var tr=table.appendChild(myDocument.createElement('tr'));
+            tr.className='no-suggest';
+            var th=tr.appendChild(myDocument.createElement('th'))
+            th.appendChild(myDocument.createElement('div'))
+              .appendChild(myDocument.createTextNode("No suggested choices. Try to type instead."));
+            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode("OK"));
+            var This=this;
+            function clearMenu(e){This.clearMenu();e.stopPropagation;};
+            tr.addEventListener('click',clearMenu,'false');
+                                        
             var nullFetcher=function(){};
             switch (inputQuery.constructor.name){
             case 'Array':
@@ -1117,7 +1139,8 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 },//funciton showMenu
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
-    var stat=this.getStatementAbout(selectedTd);
+    var tr=selectedTd.parentNode;
+    var stat=tr.AJAR_statement;
     var reqTerm = (type=='object')?stat.object:stat.predicate;
     var newStat;
     var eventhandler;
@@ -1133,7 +1156,8 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
                 alert(e);
                 return;
             }        
-        }
+        }else
+            outline.walk('right');
         outline.replaceTD(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
         newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why) //ToDo: why and inverse
@@ -1149,7 +1173,8 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
                 alert(e);
                 return;
             }
-        }                
+        }else
+            outline.walk('left');              
         outline.replaceTD(newTd,selectedTd);        
         //modify store and update here
         newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);

@@ -97,6 +97,7 @@ search: function(searchString,context,filterType){
         else if (match &&!string_startswith(matchingString,label))
             break;
         if (match){
+            if (this.kb.whether(this.entry[i][1],rdf('type'),tabont('Request'))) continue;
             results.push(this.entry[i]);
             types.push(this.kb.any(this.entry[i][1],rdf('type')));
         }
@@ -117,6 +118,7 @@ searchAdv: function(searchString,context,filterType){ //extends search
         else if (match &&!string_startswith(matchingString,label))
             break;
         if (match){
+            if (this.kb.whether(this.entry[i][1],rdf('type'),tabont('Request'))) continue;
             if (filter && filter(this.entry[i][1])){
                 results.push(this.entry[i]);
                 //ToDo: Context

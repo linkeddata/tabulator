@@ -538,6 +538,7 @@ function Outline(doc) {
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
         if (!HCIoptions["bottom insert highlights"].enabled){
+            /*
             var holdingTr=myDocument.createElement('tr');
             var holdingTd=myDocument.createElement('td');
             holdingTd.setAttribute('colspan','2');
@@ -548,6 +549,17 @@ function Outline(doc) {
             bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
             bottomDiv.addEventListener('click',thisOutline.UserInput.borderClick,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
+            */
+            
+            var holdingTr=myDocument.createElement('tr'); //these are to minimize required changes
+            var holdingTd=myDocument.createElement('td'); //in userinput.js
+            holdingTd.setAttribute('colspan','2');
+            holdingTd.setAttribute('notSelectable','true');
+            var img=myDocument.createElement('img');
+            img.src=Icon.src.icon_add_triple;
+            img.className='bottom-border-active'
+            img.addEventListener('click',thisOutline.UserInput.borderClick,false);
+            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    
     }
@@ -1366,11 +1378,19 @@ function Outline(doc) {
                  break;
              case 'right':
                  deselectAll();
-                 setSelected(selectedTd.firstChild.childNodes[1].childNodes[1].lastChild,true);
+                 if (selectedTd.nextSibling)
+                     setSelected(selectedTd.nextSibling,true);
+                 else
+                     setSelected(selectedTd.firstChild.childNodes[1].childNodes[1].lastChild,true);
                  break;
              case 'left':
                  deselectAll();
-                 setSelected(ancestor(selectedTd.parentNode,'TD'),true); //supplied by thieOutline.focusTd
+                 if (selectedTd.previousSibling && selectedTd.previousSibling.className=='undetermined'){
+                     setSelected(selectedTd.previousSibling,true);
+                     return true; //do not shrink signal
+                 }
+                 else
+                     setSelected(ancestor(selectedTd.parentNode,'TD'),true); //supplied by thieOutline.focusTd
                  break;
              case 'moveTo':
                  deselectAll();
@@ -1458,7 +1478,7 @@ function Outline(doc) {
                 e.preventDefault();//prevent from going back
                 break;
             case 37://left
-                this.walk('left');
+                if (this.walk('left')) return;
                 var titleTd=ancestor(selectedTd.parentNode,'TD');
                 outline_collapse(selectedTd,getAbout(kb,titleTd));
                 break;
@@ -1471,6 +1491,10 @@ function Outline(doc) {
                         walk('right',selectedTd);
                         showURI(getAbout(kb,selection[0]));
                         return true;
+                    }
+                    if (selectedTd.nextSibling) { //when selectedTd is a predicate
+                        this.walk('right');
+                        return;
                     }
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
                         sf.addCallback('done',setSelectedAfterward);
@@ -1608,7 +1632,7 @@ function Outline(doc) {
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
             if (!about) {
-                alert("No about attribute");
+                //alert("No about attribute");
                 return;
             }
             var subject = about;

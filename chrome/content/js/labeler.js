@@ -85,7 +85,7 @@ optimize: function(entry){
         this.labelDirectory[subjectID]=entry;
     }
 },
-search: function(searchString){
+search: function(searchString,context,filterType){
     var label=searchString.toLowerCase(); //case insensitive
     var match=false;
     var results=[];
@@ -99,6 +99,29 @@ search: function(searchString){
         if (match){
             results.push(this.entry[i]);
             types.push(this.kb.any(this.entry[i][1],rdf('type')));
+        }
+    }
+    return [results,types];
+},
+searchAdv: function(searchString,context,filterType){ //extends search
+    var filter = (filterType=='predicate')?function(item){return this.kb.predicateIndex[item.hashString()]}:
+                                           undefined;
+    var label=searchString.toLowerCase(); //case insensitive
+    var match=false;
+    var results=[];
+    var types=[];
+    for (var i=0;i<this.entry.length;i++){
+        var matchingString=this.entry[i][0].value.toLowerCase();
+        if (!match && string_startswith(matchingString,label)) 
+            match=true;
+        else if (match &&!string_startswith(matchingString,label))
+            break;
+        if (match){
+            if (filter && filter(this.entry[i][1])){
+                results.push(this.entry[i]);
+                //ToDo: Context
+                types.push(this.kb.any(this.entry[i][1],rdf('type')));
+            }
         }
     }
     return [results,types];

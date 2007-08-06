@@ -73,3 +73,55 @@
     //if (str) str       = str.value.QueryInterface(Components.interfaces.nsISupportsString);
     //alert(str.data);
     
+//Fragment:userinput::autocomplete
+    
+    InputBox.choices=[] //{NT,label}
+    switch(mode){
+        case 'predicate':
+            for (var predNT in kb.predicateIndex){ //there is supposed to be not smushing on predicates??
+                var pred=kb.fromNT(predNT);
+                if (pred.termType=='symbol') //temporarily deal with symbol only
+                    InputBox.choices.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})   
+            }
+            break;
+        case 'all':
+            /*
+            for each (var indexedStore in [kb.subjectIndex,kb.predicateIndex,kb.objectIndex]){
+            for (var theNT in indexedStore){
+                var term=kb.fromNT(theNT);
+                if (term) InputBox.choices.push({'NT':theNT,'label':label(term)});
+            }            
+            }
+            */                        
+    }
+
+    
+    function sortLabel(a,b){
+        if (a.label < b.label) return -1;
+        if (a.label > b.label) return 1;
+        if (a.label == b.label) {
+            if (a.NT < b.NT) return -1;
+            if (a.NT > b.NT) return 1;
+            if (a.NT == b.NT) return 0;
+        }
+    }
+    InputBox.choices.sort(sortLabel);
+
+    //alert(InputBox.choices.length); //about 1345 for all
+    if (mode=='predicate')
+        this.showMenu(e,'PredicateAutoComplete',undefined,{'isPredicate':true,'selectedTd':tdNode,'predicates':InputBox.choices});
+    else{
+        //this.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices});
+        /*
+        var choices=InputBox.choices;
+        InputBox.choices=[];
+        var lastChoiceNT='';
+        for (var i=0;i<choices.length;i++){
+            var thisNT=choices[i].NT;
+            if (thisNT==lastChoiceNT) continue;
+            lastChoiceNT=thisNT;
+            InputBox.choices.push({'NT':choices[i].NT,'label':choices[i].label})
+        }
+        */
+    }
+       

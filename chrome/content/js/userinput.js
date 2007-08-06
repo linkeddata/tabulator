@@ -656,6 +656,9 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             outline.UserInput.clearMenu();
             //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
             outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
+        }else if(mode=='predicate'){
+            outline.UserInput.clearMenu();
+            outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
         }
         var menu=myDocument.getElementById(outline.UserInput.menuID); 
         //menu.scrollTop=i*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
@@ -666,55 +669,6 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
         menu.lastHighlight.className='activeItem';   
         return;
     }//end of autoScroll, start of menu generation
-    
-    InputBox.choices=[] //{NT,label}
-    switch(mode){
-        case 'predicate':
-            for (var predNT in kb.predicateIndex){ //there is supposed to be not smushing on predicates??
-                var pred=kb.fromNT(predNT);
-                if (pred.termType=='symbol') //temporarily deal with symbol only
-                    InputBox.choices.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})   
-            }
-            break;
-        case 'all':
-            /*
-            for each (var indexedStore in [kb.subjectIndex,kb.predicateIndex,kb.objectIndex]){
-            for (var theNT in indexedStore){
-                var term=kb.fromNT(theNT);
-                if (term) InputBox.choices.push({'NT':theNT,'label':label(term)});
-            }            
-            }
-            */                        
-    }
-
-    function sortLabel(a,b){
-        if (a.label < b.label) return -1;
-        if (a.label > b.label) return 1;
-        if (a.label == b.label) {
-            if (a.NT < b.NT) return -1;
-            if (a.NT > b.NT) return 1;
-            if (a.NT == b.NT) return 0;
-        }
-    }
-    InputBox.choices.sort(sortLabel);
-
-    //alert(InputBox.choices.length); //about 1345 for all
-    if (mode=='predicate')
-        this.showMenu(e,'PredicateAutoComplete',undefined,{'isPredicate':true,'selectedTd':tdNode,'predicates':InputBox.choices});
-    else{
-        //this.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices});
-        /*
-        var choices=InputBox.choices;
-        InputBox.choices=[];
-        var lastChoiceNT='';
-        for (var i=0;i<choices.length;i++){
-            var thisNT=choices[i].NT;
-            if (thisNT==lastChoiceNT) continue;
-            lastChoiceNT=thisNT;
-            InputBox.choices.push({'NT':choices[i].NT,'label':choices[i].label})
-        }
-        */
-    }
 },
 //ToDo: shrink rows when \n+backspace
 Keypress: function(e){
@@ -747,6 +701,8 @@ borderClick: function borderClick(e){
     if (getTarget(e).className != 'bottom-border-active') return;
     var This=outline.UserInput;
     var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
+    //Take the why of the last TR and write to it. There should be a better way    
+    var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
     var insertTr=myDocument.createElement('tr');
     ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR'));
     var tempTr=myDocument.createElement('tr');
@@ -756,8 +712,7 @@ borderClick: function borderClick(e){
     insertTr.appendChild(tempTr.firstChild);
     //there should be an elegant way of doing this
     
-    //Take the why of the last TR and write to it. There should be a better way
-    var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+    //if completely, take the default docuemnt to write
     if (!preStat){
         var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
         var doc=kb.sym(Util.uri.docpart(subject.uri));
@@ -1075,7 +1030,9 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             ans2.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
             break;
         case 'PredicateAutoComplete':
-            var predicates=extraInformation.predicates;
+            var inputText=extraInformation.inputText;
+            var results=lb.searchAdv(inputText,undefined,'predicate');
+            /*
             for (var i=0;i<predicates.length;i++){
                 var tempQuery={};
                 tempQuery.vars=[];
@@ -1084,6 +1041,14 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 tempBinding.Kenny=kb.fromNT(predicates[i].NT);
                 try{addPredicateChoice(tempQuery)(tempBinding);}catch(e){alert(e);}//I'll deal with bnodes later...
             }
+            */
+            var entries=results[0];
+            if (entries.length==0){
+                this.clearMenu();
+                return;
+            }
+            for (var i=0;i<entries.length&&i<30;i++) //do not show more than 30 items
+                addMenuItem(entries[i][1]);
             break;
         case 'GeneralAutoComplete':
             var inputText=extraInformation.inputText;
@@ -1149,8 +1114,9 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 },//funciton showMenu
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
-    var tr=selectedTd.parentNode
+    var tr=selectedTd.parentNode;
     var stat=tr.AJAR_statement;
+    if (!stat) alert(tr.textContent+" "+tr.AJAR_statement);
     var reqTerm = (type=='object')?stat.object:stat.predicate;
     var newStat;
     var eventhandler;

@@ -104,6 +104,7 @@ webdav = new function() {
             return null;
         }
 
+        // polling
         this.set_data = function(uri, data, callback) {
             if (this.documents[uri]) {
                 lock = this.documents[uri].lock();
@@ -117,10 +118,17 @@ webdav = new function() {
             }
         }
 
+        // asynchronous
+        this.save_file = function(uri, data, callback) {
+            if (this.documents[uri]) {
+                this.documents[uri].data = data;
+                while (this.documents[uri].client.busy);
+                this.documents[uri].client.PUT(data, callback);
+                return true;
+            }
+        }
+
         this._thread = function() {
-//            function put_notify(a,b,c) {
-//                lock = manager.documents.lock();
-//            }
             return (function() {
                 for (uri in this.documents) {
                     doc = this.documents[uri];

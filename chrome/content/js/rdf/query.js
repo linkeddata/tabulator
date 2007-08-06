@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 3477 2007-07-18 18:03:33Z timbl $
+// SVN ID: $Id: query.js 3682 2007-08-06 18:37:36Z jambo $
 
 //  Variable
 //
@@ -485,8 +485,12 @@ function match(f, g, bindingsSoFar, level, fetcher, callback, branchCount) {
     if (fetcher) {   //Fetcher is used to fetch URIs, function first term is a URI term, second is the requester
         var id = "match" + match_index++;
 	var fetchResource = function (requestedTerm, id) {
+      var path = requestedTerm.uri;
+      if(path.indexOf("#")!=-1) {
+          path=path.split("#")[0];
+      }
 	    sf.addCallback('done', function(uri) {
-			       if (uri != requestedTerm.uri) {
+			       if ((kb.canon(kb.sym(uri)).uri != path) && (uri != kb.canon(kb.sym(path)))) {
 				   return true
 			       }
 

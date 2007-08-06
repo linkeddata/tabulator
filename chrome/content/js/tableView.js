@@ -515,7 +515,7 @@ function tableView(container,doc)
                 sparqlUpdate.setObject(td.stat.object);
             }
         }
-    } //***************** End Add Row *****************//
+    } // saveAddRowText
 
     /******************************************************
     Autosuggest box
@@ -523,9 +523,6 @@ function tableView(container,doc)
     // mostly copied from http://gadgetopia.com/post/3773
     function autoSuggest(elem, suggestions)
     {
-        //The 'me' variable allow you to access the AutoSuggest object
-        //from the elem's event handlers defined below.
-        var me = this;
         //Arrow to store a subset of eligible suggestions that match the user's input
         var eligible = new Array();
         //A pointer to the index of the highlighted eligible item. -1 means nothing highlighted.
@@ -547,17 +544,17 @@ function tableView(container,doc)
         ********************************************************/
         elem.onkeyup = function(ev)
         {
-            var key = me.getKeyCode(ev);
+            var key = getKeyCode(ev);
 
             switch(key)
             {
                 case ENTER:
-                me.useSuggestion();
-                me.hideDiv();
+                useSuggestion();
+                hideDiv();
                 break;
 
                 case ESC:
-                me.hideDiv();
+                hideDiv();
                 break;
 
                 case KEYUP:
@@ -565,7 +562,7 @@ function tableView(container,doc)
                 {
                     highlighted--;
                 }
-                me.changeHighlight(key);
+                changeHighlight(key);
                 break;
 
                 case KEYDN:
@@ -573,20 +570,20 @@ function tableView(container,doc)
                 {
                     highlighted++;
                 }
-                me.changeHighlight(key);
+                changeHighlight(key);
                 
                 case 16: break;
 
                 default:
                 if (elem.value.length > 0) {
-                    me.getEligible();
-                    me.createDiv();
-                    me.positionDiv();
-                    me.showDiv();
+                    getEligible();
+                    createDiv();
+                    positionDiv();
+                    showDiv();
                     tabulator.log.error(elem.value);
                 }
                 else {
-                    me.hideDiv();
+                    hideDiv();
                 }
             }
         };
@@ -595,11 +592,11 @@ function tableView(container,doc)
         Insert the highlighted suggestion into the input box, and 
         remove the suggestion dropdown.
         ********************************************************/
-        this.useSuggestion = function() 
+        useSuggestion = function() 
         { // This is where I can move the onblur stuff
             if (highlighted > -1) {
                 elem.value = eligible[highlighted];
-                this.hideDiv();
+                hideDiv();
  
                 setTimeout("document.getElementById('" + elem.id + "').focus()",0);
             }
@@ -608,7 +605,7 @@ function tableView(container,doc)
         /********************************************************
         Display the dropdown. Pretty straightforward.
         ********************************************************/
-        this.showDiv = function()
+        showDiv = function()
         {
             div.style.display = 'block';
         };
@@ -616,7 +613,7 @@ function tableView(container,doc)
         /********************************************************
         Hide the dropdown and clear any highlight.
         ********************************************************/
-        this.hideDiv = function()
+        hideDiv = function()
         {
             div.style.display = 'none';
             highlighted = -1;
@@ -625,7 +622,7 @@ function tableView(container,doc)
         /********************************************************
         Modify the HTML in the dropdown to move the highlight.
         ********************************************************/
-        this.changeHighlight = function()
+        changeHighlight = function()
         {
             var lis = div.getElementsByTagName('LI');
             for (i in lis) {
@@ -644,7 +641,7 @@ function tableView(container,doc)
         /********************************************************
         Position the dropdown div below the input text field.
         ********************************************************/
-        this.positionDiv = function()
+        positionDiv = function()
         {
             var el = elem;
             var x = 0;
@@ -667,7 +664,7 @@ function tableView(container,doc)
         /********************************************************
         Build the HTML for the dropdown div
         ********************************************************/
-        this.createDiv = function()
+        createDiv = function()
         {
             var ul = document.createElement('ul');
 
@@ -697,7 +694,7 @@ function tableView(container,doc)
             ul.onmouseover = function(ev)
             {
                 //Walk up from target until you find the LI.
-                var target = me.getEventSource(ev);
+                var target = getEventSource(ev);
                 while (target.parentNode && target.tagName.toUpperCase() != 'LI')
                 {
                     target = target.parentNode;
@@ -715,7 +712,7 @@ function tableView(container,doc)
                         break;
                     }
                 }
-                me.changeHighlight();
+                changeHighlight();
                 
             };
 
@@ -726,9 +723,9 @@ function tableView(container,doc)
             ul.onclick = function(ev)
             {
                 
-                me.useSuggestion();
-                me.hideDiv();
-                me.cancelEvent(ev);
+                useSuggestion();
+                hideDiv();
+                cancelEvent(ev);
                 return false;
             };
             div.className="suggestion_list";
@@ -738,7 +735,7 @@ function tableView(container,doc)
         /********************************************************
         determine which of the suggestions matches the input
         ********************************************************/
-        this.getEligible = function()
+        getEligible = function()
         {
             eligible = new Array();
             for (i in suggestions) 
@@ -752,15 +749,15 @@ function tableView(container,doc)
             }
         };
         
-        this.getKeyCode = function(ev) {
+        getKeyCode = function(ev) {
             if(ev) { return ev.keyCode;}
         };
 
-        this.getEventSource = function(ev) {
+        getEventSource = function(ev) {
             if(ev) { return ev.target; }
         };
 
-        this.cancelEvent = function(ev) {
+        cancelEvent = function(ev) {
             if(ev) { ev.preventDefault(); ev.stopPropagation(); }
         }
     } // autosuggest

@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3534 2007-07-23 15:59:03Z kennyluck $
+// SVN ID: $Id: tabulate.js 3688 2007-08-06 20:31:43Z presbrey $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -226,28 +226,28 @@ function string_startswith(str, pref) { // missing library routines
 
 function StatusWidget() {
     this.ele = document.getElementById('TabulatorStatusWidget')
-    this.pend = 0
+    this.pend = []
     this.errors = {}
     var sw = this
 
     this.recv = function (uri) {
-	sw.pend++
+	sw.pend.push(uri);
 	sw.update()
 	return true
     }
 
     this.quit = function (uri) {
-	sw.pend--
+	sw.pend = filter(function(x) { x != uri; }, sw.pend);
 	sw.update()
 	return true
     }
 
     this.update = function () {
-        if(sw.pend==0)
+        if(sw.pend.length==0)
           sw.ele.style.display="none";
         else
           sw.ele.style.display="inline";
-	sw.ele.textContent = "Sources pending: "+sw.pend
+	sw.ele.textContent = "Sources pending: "+sw.pend.length
 	return true
     }
 

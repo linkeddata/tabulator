@@ -996,3 +996,5 @@ function matrixTD(obj, st, asImage, doc) {
     }
     return td;
 }
+
+document.write('<div id="autosuggest"><ul></ul></div>');

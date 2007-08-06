@@ -1,13 +1,7 @@
 // Last Modified By: David Li
 
 // Places generating sparql update: inputObjBlur, saveAddRowText
-// sparql update should work for literal nodes without a language spec
 // method: in matrixTD attach a pointer to the statement on each td, called stat
-
-// todo:
-// currently, sparql update is turned off when the add row button is pressed
-// use the sparql query pattern for doing the add row
-// prevent users from entering their own values in autosuggest
 
 // hotkeys: end adds a new row
 
@@ -24,7 +18,7 @@ function tableView(container,doc)
     var activeSingleQuery = null;
     var autoCompArray = [];
     var entryArray = [];
-    var aQueryPatStats; // assigned in onBinding
+    var qps; // assigned in onBinding
     
     thisTable = this;  // fixes a problem with calling this.container
     this.document=null;
@@ -50,7 +44,7 @@ function tableView(container,doc)
             tr = thisTable.document.createElement('tr');
             t.appendChild(tr);
             numStats = q.pat.statements.length; // Added
-            aQueryPatStats = q.pat.statements;
+            qps = q.pat.statements;
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
                 // generate the subj and pred for each tdNode 
@@ -420,15 +414,15 @@ function tableView(container,doc)
         for (i=0; i<numCols; i++) {
             if (symbolRC (1, i)) {
                 td = createSymbolTD();
-                td.v = aQueryPatStats[i].object
+                td.v = qps[i].object
             }
             else if (literalRC(1, i)) {
                 td = createLiteralTD(); 
-                td.v = aQueryPatStats[i].object
+                td.v = qps[i].object
             }
             else if (bnodeRC(1, i)) {
                 td = createBNodeTD();
-                td.v = aQueryPatStats[i].object
+                td.v = qps[i].object
             }
             else {alert('addRow problem')} 
             tr.appendChild(td);
@@ -442,11 +436,9 @@ function tableView(container,doc)
         selTD = getTDNode(newRow, newCol); // first td of the row
         setSelected(selTD);
         // clone the qps array and attach a pointer to the clone on the first td of the row
-        
         var qpsClone = [];
-        var stat = aQueryPatStats[0];
-        for (i = 0; i<aQueryPatStats.length; i++) {
-            var stat = aQueryPatStats[i];
+        for (i = 0; i<qps.length; i++) {
+            var stat = qps[i];
             var newStat = new RDFStatement(stat.subject, stat.predicate, stat.object, stat.why);
             qpsClone[i] = newStat;
         }
@@ -470,8 +462,8 @@ function tableView(container,doc)
         }
         
         if (validate() == false && type == 'sym') {
-            alert('please make a selection');
-            td.innerHTML = '---';
+            alert('Please make a selection');
+            td.innerHTML = '---'; clearSelected(td); setSelected(selTD);
             return;
         }
         
@@ -486,13 +478,13 @@ function tableView(container,doc)
         
         // fill in the query pattern based on the newText
         for (i = 0; i<numCols; i++) {
-            if (qpsc[i].subject == td.v) {
+            if (qpsc[i].subject == td.v) { // subject is a variable
             // find the type and replace the qps with the correct type of node
                 if (type == 'sym') {qpsc[i].subject = getMatchingSym(newText);}
                 if (type == 'lit') {qpsc[i].subject = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].subject = kb.bnode();}
             }
-            if (qpsc[i].object == td.v) {
+            if (qpsc[i].object == td.v) { // object is a variable
             // find the type and replace the qps with the correct type of node
                 if (type == 'sym') {qpsc[i].object = getMatchingSym(newText);}
                 if (type == 'lit') {qpsc[i].object = kb.literal(newText);}
@@ -528,8 +520,6 @@ function tableView(container,doc)
     Autosuggest box
     *******************************************************/
     // mostly copied from http://gadgetopia.com/post/3773
-    // counter to help create unique ID's, not really needed
-    //var idCounter = 0;
     function autoSuggest(elem, suggestions)
     {
         //The 'me' variable allow you to access the AutoSuggest object
@@ -552,20 +542,14 @@ function tableView(container,doc)
         var KEYUP = 38;
         var KEYDN = 40;
         var ENTER = 13;
-        //We need to be able to reference the elem by id. If it doesn't have an id, set one.
-        /* if(!elem.id) {
-            var id = "autosuggest" + idCounter;
-            idCounter++;
-            elem.id = id;
-        } */
 
         /********************************************************
-        onkeydown event handler for the input elem.
+        onkeyup event handler for the input elem.
         Enter key = use the highlighted suggestion, if there is one.
         Esc key = get rid of the autosuggest dropdown
         Up/down arrows = Move the highlight up and down in the suggestions.
         ********************************************************/
-        elem.onkeydown = function(ev)
+        elem.onkeyup = function(ev)
         {
             var key = me.getKeyCode(ev);
 
@@ -594,41 +578,26 @@ function tableView(container,doc)
                     me.highlighted++;
                 }
                 me.changeHighlight(key);
-                break; 
-            }
-        };
-
-        /********************************************************
-        onkeyup handler for the elem
-        If the text is of sufficient length, and has been changed, 
-        then display a list of eligible suggestions.
-        ********************************************************/
-        elem.onkeyup = function(ev) 
-        {
-            var key = me.getKeyCode(ev);
-            switch(key) {
-            //The control keys were already handled by onkeydown, so do nothing.
-            case TAB:
-            case ESC:
-            case KEYUP:
-            case KEYDN:
-                return;
                 
-            default:
+                case 16: break;
+
+                default:
                 if (this.value != me.inputText && this.value.length > 0) {
                     me.inputText = this.value;
                     me.getEligible();
                     me.createDiv();
                     me.positionDiv();
                     me.showDiv();
+                    tabulator.log.error(this.value);
+                    tabulator.log.error(me.inputText);
+                    tabulator.log.error(elem.value);
                 }
                 else {
                     me.hideDiv();
                 }
             }
         };
-        
-        this.suggestionUsed = 'false';
+
         /********************************************************
         Insert the highlighted suggestion into the input box, and 
         remove the suggestion dropdown.
@@ -637,19 +606,9 @@ function tableView(container,doc)
         { // This is where I can move the onblur stuff
             if (this.highlighted > -1) {
                 this.elem.value = this.eligible[this.highlighted];
-                
-                //var newText = this.elem.value;
-                //selTD.innerHTML = newText;
-                //setSelected(selTD); // I can't use setSelected, so when clearSeleced is called later, the input element gets messed up
-                //saveRow(newText);
-                
                 this.hideDiv();
-                this.suggestionUsed = 'true'
-                
-                //It's impossible to cancel the Tab key's default behavior. 
-                //So this undoes it by moving the focus back to our field right after
-                //the event completes.
-                //setTimeout("document.getElementById('" + this.elem.id + "').focus()",0);
+ 
+                setTimeout("document.getElementById('" + this.elem.id + "').focus()",0);
             }
         };
 
@@ -779,11 +738,9 @@ function tableView(container,doc)
                 me.cancelEvent(ev);
                 return false;
             };
-
             this.div.className="suggestion_list";
             this.div.style.position = 'absolute';
-            
-        };
+        }; // createDiv
 
         /********************************************************
         determine which of the suggestions matches the input
@@ -802,28 +759,19 @@ function tableView(container,doc)
             }
         };
         
-        this.getKeyCode = function(ev)
-        {
-            if(ev) {
-                return ev.keyCode;
-            }
+        this.getKeyCode = function(ev) {
+            if(ev) { return ev.keyCode;}
         };
 
-        this.getEventSource = function(ev)
-        {
-            if(ev) {
-                return ev.target;
-            }
+        this.getEventSource = function(ev) {
+            if(ev) { return ev.target; }
         };
 
-        this.cancelEvent = function(ev)
-        {
-            if(ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
-            }
+        this.cancelEvent = function(ev) {
+            if(ev) { ev.preventDefault(); ev.stopPropagation(); }
         }
-    } //*************** autosuggest ********************//
+    } // autosuggest
+    document.write('<div id="autosuggest"><ul></ul></div>');
 } // tableView
 
 function tableDoubleClick(event) {
@@ -997,4 +945,3 @@ function matrixTD(obj, st, asImage, doc) {
     return td;
 }
 
-document.write('<div id="autosuggest"><ul></ul></div>');

@@ -471,7 +471,7 @@ function tableView(container,doc)
         
         if (validate() == false && type == 'sym') {
             alert('please make a selection');
-            selTD.innerHTML = '---'; setSelected(selTD);
+            td.innerHTML = '---';
             return;
         }
         

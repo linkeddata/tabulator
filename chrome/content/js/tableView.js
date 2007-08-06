@@ -7,13 +7,6 @@
 
 function tableView(container,doc) 
 {
-    /*if(isExtension) {
-        tabulator = Components.classes["dig.csail.mit.edu/tabulator;1"].
-            getService(Components.interfaces.nsISupports).wrappedJSObject;
-        //wrap sparql update code with if(isExtension).
-        //tabulator.sparql.*;  //see js/sparqlUpdate.js
-    }*/
-    
     var numRows; // assigned in click, includes header
     var numCols; // assigned at bottom of click
     var activeSingleQuery = null;
@@ -68,7 +61,7 @@ function tableView(container,doc)
                 if (!st.why) {alert("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
                 tr.appendChild(matrixTD(st.object, st));
             } //for each query var, make a row
-        }
+        } // onBinding
 
         var i, td, th, j, v;
         var t = thisTable.document.createElement('table');
@@ -108,7 +101,7 @@ function tableView(container,doc)
             autoCompArray.push(entryArray[i][0].toString());
             entryArray = entryArray.slice(0);
         }
-    }  //***************** End drawQuery *****************//
+    } //drawQuery
 
     function drawExport () {
         var form= thisTable.document.createElement('form');
@@ -281,7 +274,7 @@ function tableView(container,doc)
         }
         e.stopPropagation();
         e.preventDefault();
-    }
+    } //keyHandler
     
     function onEdit() {
         if ((selTD.getAttribute('autocomp') == undefined) && 
@@ -316,7 +309,7 @@ function tableView(container,doc)
         }
         inputObj.addEventListener ("blur", inputObjBlur, false);
         inputObj.addEventListener ("keypress", inputObjKeyPress, false);
-    }
+    } //onEdit
     
     function inputObjBlur(e) { 
         document.getElementById("autosuggest").style.display = 'none';
@@ -332,8 +325,10 @@ function tableView(container,doc)
         e.stopPropagation();
         e.preventDefault();
         
+        // sparql update
         if (!selTD.stat) {saveAddRowText(newText); return;};
-        sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);
+        if (isExtension) {sparqlUpdate = sparql.prepareUpdate(selTD.stat);}
+        else {sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);}
         sparqlUpdate.setObject(kb.literal(newText, ''));
     }
 
@@ -444,7 +439,7 @@ function tableView(container,doc)
             qpsClone[i] = newStat;
         }
         selTD.qpsClone = qpsClone; // remember that right now selTD is the first td of the row, qpsClone is not a 100% clone
-    }
+    } //addRow
     
     function saveAddRowText(newText) {
         var td = selTD;
@@ -452,8 +447,8 @@ function tableView(container,doc)
         // get the qps which is stored on the first cell of the row
         var qpsc = getTDNode(getRowIndex(td), 0).qpsClone;
         var row = getRowIndex(td);
-        // make sure the user has made a selection
-        function validate() {
+        
+        function validate() { // make sure the user has made a selection
             for (i = 0; i<autoCompArray.length; i++) {
                 if (newText == autoCompArray[i]) {
                     return true;
@@ -461,7 +456,6 @@ function tableView(container,doc)
             }
             return false;
         }
-        
         if (validate() == false && type == 'sym') {
             alert('Please make a selection');
             td.innerHTML = '---'; clearSelected(td); setSelected(selTD);
@@ -499,6 +493,7 @@ function tableView(container,doc)
             if (qpsc[i].subject.toString()[0]=='?') {qpscComplete = false;}
             if (qpsc[i].object.toString()[0]=='?') {qpscComplete = false;}
         }
+        
         // if all the variables in the query pattern have been filled out, then attach stat pointers to each node, add the stat to the store, and perform the sparql update
         if (qpscComplete == true) {
             for (i = 0; i<numCols; i++) {
@@ -510,8 +505,10 @@ function tableView(container,doc)
                 }
                 var td = getTDNode(row, i);
                 td.stat = st; 
-                // sparql update
-                sparqlUpdate = new sparql(kb).prepareUpdate(td.stat);
+                
+                // sparql update; for each cell in the completed row, send the value of the stat pointer
+                if (isExtension) {sparqlUpdate = sparql.prepareUpdate(td.stat);}
+                else {sparqlUpdate = new sparql(kb).prepareUpdate(td.stat);}
                 sparqlUpdate.setObject(td.stat.object);
             }
         }
@@ -580,7 +577,6 @@ function tableView(container,doc)
                     createDiv();
                     positionDiv();
                     showDiv();
-                    tabulator.log.error(elem.value);
                 }
                 else {
                     hideDiv();
@@ -761,6 +757,7 @@ function tableView(container,doc)
             if(ev) { ev.preventDefault(); ev.stopPropagation(); }
         }
     } // autosuggest
+    
     //document.write('<div id="autosuggest"><ul></ul></div>');
     var div = document.createElement('div');
     div.setAttribute('id','autosuggest');

@@ -43,7 +43,7 @@ function ts_makeSortable(table) {
 //THE FUNCTION DOESN"T EXIST --ALERER
     tabulator.log.debug("making header clickable: " + txt); // See style sheet: float right changes order!
     cell.innerHTML = 
-    '<img src="icons/tbl-x-small.png" onclick="deleteColumn(this)" title="Delete Column." class="deleteCol"> </img>' +
+    //'<img src="icons/tbl-x-small.png" onclick="deleteColumn(this)" title="Delete Column." class="deleteCol"> </img>' +
     '<a href="#" class="sortheader" onclick="ts_resortTable(this);return false;">' +
         '<span class="sortarrow"></span>' + txt+'</a>'
         //alert(cell.innerHTML);

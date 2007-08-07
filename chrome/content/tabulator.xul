@@ -54,9 +54,22 @@
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
   </menupopup>
+
+  <popupset id="mainPopupSet">
+    <menupopup id="tabulatorcopyuri">
+      <menuitem label="Copy URI" oncommand="tabulatorCopyURI()" />
+      <menuitem label="Load in new tab" oncommand="tabulatorLoadStatusURI()" />
+    </menupopup>
+  </popupset>
+
+  <statusbar id="status-bar">
+    <statusbarpanel contextmenu="tabulatorcopyuri" id="tabulator-display" insertafter="statusbar-display" style="display:none"/>
+    <statusbarpanel id="tabulator-source-count" insertbefore="statusbar-progresspanel" />
+  </statusbar>
+
   <script type="application/x-javascript">
     var myCheckbox;
-    tabulatormenu_init = function() {
+    tabulator_init = function() {
       myCheckbox = document.getElementById("tabulator_setaccept");
       var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                           .getService(Components.interfaces.nsIPrefBranch);
@@ -71,6 +84,21 @@
         prefManager.setBoolPref("extensions.tabulator.setheader",true);
         myCheckbox.setAttribute('checked',true);
       }
+
+      var tabulatorDisplay = document.getElementById("tabulator-display");
+      
+
+      new StatusWidget();
+    }
+    function tabulatorCopyURI() {
+        gClipboardHelper = Components.classes["@mozilla.org/widget/clipboardhelper;1"].
+                                    getService(Components.interfaces.nsIClipboardHelper);
+        gClipboardHelper.copyString(document.getElementById("tabulator-display").label);
+    }
+
+    function tabulatorLoadStatusURI() {
+        var tabURIToLoad = document.getElementById("tabulator-display").label;
+        gBrowser.selectedTab = gBrowser.addTab(tabURIToLoad);
     }
 
     function toggleSetHeader() {
@@ -89,6 +117,8 @@
         }
     }
 
-    window.addEventListener("load",tabulatormenu_init, false);
+    window.addEventListener("load",tabulator_init, false);
+
   </script>
+  <script type="application/x-javascript" src="statuswidget.js" ></script>
 </overlay>

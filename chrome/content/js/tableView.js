@@ -278,9 +278,11 @@ function tableView(container,doc)
     
     function onEdit() {
         if ((selTD.getAttribute('autocomp') == undefined) && 
-        (selTD.getAttribute('type') == 'sym')) 
-        {
+        (selTD.getAttribute('type') == 'sym')) {
             setSelected(selTD); return; 
+        }
+        if (selTD.getAttribute('type') == 'bnode') {
+            setSelected(selTD); return;
         }
         
         var t = document.getElementById('tabulated_data');
@@ -364,6 +366,7 @@ function tableView(container,doc)
     
     // td creation for each type
     function createLiteralTD() {
+        tabulator.log.msg('creating literalTD for addRow');
         var td = thisTable.document.createElement("TD");
         td.setAttribute('type', 'lit');
         td.innerHTML = '---';
@@ -371,6 +374,7 @@ function tableView(container,doc)
     }
     
     function createSymbolTD() {
+        tabulator.log.msg('creating symbolTD for addRow');
         var td = thisTable.document.createElement("TD");
         td.setAttribute('type', 'sym');
         td.setAttribute('style', 'color:#4444ff');
@@ -383,8 +387,9 @@ function tableView(container,doc)
         var td = thisTable.document.createElement('TD');
         td.setAttribute('type', 'bnode');
         td.setAttribute('style', 'color:#4444ff');
-        td.innerHTML = "---";
+        td.innerHTML = "...";
         bnode = kb.bnode();
+        tabulator.log.msg('creating bnodeTD for addRow: ' + bnode.toNT());
         td.setAttribute('o', bnode.toNT());
         return td;
     } //end td creation
@@ -857,55 +862,55 @@ TableViewFactory = {
     }
 }
 
-function deleteColumn (src) { // src = the original delete image
-    var t = document.getElementById('tabulated_data');
-    var colNum = src.parentNode.cellIndex;
-    var allRows = t.childNodes;
-    var firstRow = allRows[0];
-    var rightCell = firstRow.cells[colNum+1]; //header
-    if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
-    var numCols = firstRow.childNodes.length;
+// function deleteColumn (src) { // src = the original delete image
+    // var t = document.getElementById('tabulated_data');
+    // var colNum = src.parentNode.cellIndex;
+    // var allRows = t.childNodes;
+    // var firstRow = allRows[0];
+    // var rightCell = firstRow.cells[colNum+1]; //header
+    // if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
+    // var numCols = firstRow.childNodes.length;
     
-    for (var i = 0; i<allRows.length; i++) {
-        allRows[i].cells[colNum].style.display = 'none';
-    }
+    // for (var i = 0; i<allRows.length; i++) {
+        // allRows[i].cells[colNum].style.display = 'none';
+    // }
     
-    var img = document.createElement('img'); // points left
-    img.setAttribute('src', 'icons/tbl-expand-l.png');
-    img.setAttribute('align', 'left');
-    img.addEventListener('click', makeColumnExpand(src), false);
+    // var img = document.createElement('img'); // points left
+    // img.setAttribute('src', 'icons/tbl-expand-l.png');
+    // img.setAttribute('align', 'left');
+    // img.addEventListener('click', makeColumnExpand(src), false);
     
-    var imgR = document.createElement('img'); // points right
-    imgR.setAttribute('src', 'icons/tbl-expand.png');
-    imgR.setAttribute('align', 'right');
-    imgR.addEventListener('click', makeColumnExpand(src), false);
+    // var imgR = document.createElement('img'); // points right
+    // imgR.setAttribute('src', 'icons/tbl-expand.png');
+    // imgR.setAttribute('align', 'right');
+    // imgR.addEventListener('click', makeColumnExpand(src), false);
     
-    if (colNum == numCols-1 || rightCell.style.display =='none') 
-        leftCell.insertBefore(imgR, leftCell.firstChild);
-    else rightCell.insertBefore(img, rightCell.firstChild)
-}
+    // if (colNum == numCols-1 || rightCell.style.display =='none') 
+        // leftCell.insertBefore(imgR, leftCell.firstChild);
+    // else rightCell.insertBefore(img, rightCell.firstChild)
+// }
 
-function makeColumnExpand(src) { //src = the original delete image
-    return function columnExpand(e) {
-        var t = document.getElementById('tabulated_data');
-        var colNum = src.parentNode.cellIndex; 
-        var allRows = t.childNodes;
-        var firstRow = allRows[0];
-        var rightCell = firstRow.cells[colNum+1];
+// function makeColumnExpand(src) { //src = the original delete image
+    // return function columnExpand(e) {
+        // var t = document.getElementById('tabulated_data');
+        // var colNum = src.parentNode.cellIndex; 
+        // var allRows = t.childNodes;
+        // var firstRow = allRows[0];
+        // var rightCell = firstRow.cells[colNum+1];
 
-        if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
-        var numCols = firstRow.childNodes.length;
-        var currCell = src.parentNode;
+        // if (colNum>0) {var leftCell = firstRow.cells[colNum-1];}
+        // var numCols = firstRow.childNodes.length;
+        // var currCell = src.parentNode;
         
-        for (var i = 0; i<allRows.length; i++) {
-            allRows[i].cells[colNum].style.display = 'table-cell';
-        }
+        // for (var i = 0; i<allRows.length; i++) {
+            // allRows[i].cells[colNum].style.display = 'table-cell';
+        // }
         
-        if (colNum == numCols-1 || rightCell.style.display =='none') 
-            { leftCell.removeChild(leftCell.firstChild);}
-        else rightCell.removeChild(rightCell.firstChild);
-    }
-}
+        // if (colNum == numCols-1 || rightCell.style.display =='none') 
+            // { leftCell.removeChild(leftCell.firstChild);}
+        // else rightCell.removeChild(rightCell.firstChild);
+    // }
+// }
 
 function matrixTD(obj, st, asImage, doc) {
     if (!doc) doc=document;

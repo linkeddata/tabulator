@@ -155,6 +155,8 @@ function Outline(doc) {
      *  @param obj - an RDF term
      *  @param view - a VIEW function (rather than a bool asImage)
      **/
+     
+     tabulator.options = {}
     
      
      this.openCheckBox = function ()
@@ -224,10 +226,7 @@ function Outline(doc) {
             }
     
     
-    tabulator.options = {}
-    tabulator.options.checkedLicenses = []
-    tabulator.options.checkedLicenses[0] = false;
-    
+    tabulator.options.checkedLicenses = []    
    
     tabulator.options.selectAll = function()
     {

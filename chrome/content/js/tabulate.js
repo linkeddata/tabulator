@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3688 2007-08-06 20:31:43Z presbrey $
+// SVN ID: $Id: tabulate.js 3694 2007-08-07 16:28:52Z presbrey $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -237,7 +237,7 @@ function StatusWidget() {
     }
 
     this.quit = function (uri) {
-	sw.pend = filter(function(x) { x != uri; }, sw.pend);
+	sw.pend = sw.pend.filter(function(x){ x != uri; });
 	sw.update()
 	return true
     }

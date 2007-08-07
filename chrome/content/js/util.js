@@ -6,23 +6,6 @@ function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);
 }
 
-/**
- * A function emulating Scheme's filter. Should have been part of JavaScript so
- * it is global.
- */
-function filter(func, list) {
-    //tabulator.log.debug("entered filter with list length=" + list.length);
-    var output = [];
-    for (var elt in list) {
-	//tabulator.log.debug("elt=" + list[elt] + ", true? " + func(list[elt]));
-	if (func(list[elt])) {
-	    output.push(list[elt]);
-	}
-    } //construct output
-    //tabulator.log.debug("exiting filter with list length=" + output.length);
-    return output;
-}
-
 /** 
  * A function emulating Scheme's map. Should have been part of JavaScript so it
  * is global.

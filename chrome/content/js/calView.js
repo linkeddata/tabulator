@@ -128,7 +128,7 @@ function calView(container) {
      this.undrawQuery = function (q) {
 	function undrawfn(My, Mm, Md, e){
 	    function filterSameID(e, array){
-		return filter(function(e2){return (e2.id!=e.id);}, array);
+		return array.filter(function(e2){return (e2.id!=e.id);});
 	    }
 	    var dayevents = getSlot([My,Mm,Md], calendar.EC);
 	    var match = dayEventDup(e, dayevents);

@@ -156,14 +156,15 @@ function Outline(doc) {
      *  @param view - a VIEW function (rather than a bool asImage)
      **/
      
-     tabulator.options = {}
-    
+     tabulator.options = {};
+     
+     tabulator.options.references = [];
      
      this.openCheckBox = function ()
      
      {
      
-        display=window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
+        display = window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
      
         display.tabulator = tabulator;
                                   
@@ -221,12 +222,19 @@ function Outline(doc) {
                  
         display.document.write(message);
                  
-        display.document.close();     
+        display.document.close(); 
+        
+        tabulator.options.references[0] = display.document.checkboxes.one;
+        tabulator.options.references[1] = display.document.checkboxes.two;
+        tabulator.options.references[2] = display.document.checkboxes.three;
+        tabulator.options.references[3] = display.document.checkboxes.four;
+        tabulator.options.references[4] = display.document.checkboxes.five;
+        tabulator.options.references[5] = display.document.checkboxes.six;
      
             }
     
     
-    tabulator.options.checkedLicenses = []    
+    tabulator.options.checkedLicenses = [];
    
     tabulator.options.selectAll = function()
     {
@@ -236,69 +244,49 @@ function Outline(doc) {
         display.document.checkboxes.four.checked = true;
         display.document.checkboxes.five.checked = true;
         display.document.checkboxes.six.checked = true;
-        //temporary fix
-        for(i=0; i< 6; i++){
+        
+        for(i=0; i<6; i++){
+            tabulator.options.references[i].checked = true;
             tabulator.options.checkedLicenses[i] = true;
-            }
+        }
+        
     }
     
     tabulator.options.deselectAll = function()
     {
-        display.document.checkboxes.one.checked = false;
         display.document.checkboxes.one.checked = false;
         display.document.checkboxes.two.checked = false;
         display.document.checkboxes.three.checked = false;
         display.document.checkboxes.four.checked = false;
         display.document.checkboxes.five.checked = false;
         display.document.checkboxes.six.checked = false;
-        //temporary fix
-        for(i=0; i< 6; i++){
+        
+        for(i=0; i<6; i++){
+                    tabulator.options.references[i].checked = false;
                     tabulator.options.checkedLicenses[i] = false;
-            }
+        }
     
     }
     
     
     tabulator.options.submit = function()
-    {
-            if(display.document.checkboxes.one.checked){
-                tabulator.options.checkedLicenses[0] = true;
-                }
-            else{
-                tabulator.options.checkedLicenses[0] = false;
-                }
-            if(display.document.checkboxes.two.checked){
-                 tabulator.options.checkedLicenses[1] = true;
-                }
-            else{
-                 tabulator.options.checkedLicenses[1] = false;
-                }
-            if(display.document.checkboxes.three.checked){
-                 tabulator.options.checkedLicenses[2] = true;
-                }
-            else{
-                 tabulator.options.checkedLicenses[2] = false;
-                }
-            if(display.document.checkboxes.four.checked){
-                 tabulator.options.checkedLicenses[3] = true;
-                }
-            else{
-                 tabulator.options.checkedLicenses[3] = false;
-                }
-            if(display.document.checkboxes.five.checked){
-                 tabulator.options.checkedLicenses[4] = true;
-                }
-            else{
-                 tabulator.options.checkedLicenses[4] = false;
-                }
-            if(display.document.checkboxes.six.checked){
-                 tabulator.options.checkedLicenses[5] = true;
-                }
-            else{
-                 tabulator.options.checkedLicenses[5] = false;
-                }
-    }
+    {   
     
+        alert(tabulator.options.references[0].checked);
+        
+        for(i=0; i<6; i++)
+        {
+            if(tabulator.options.references[i].checked)
+            {
+                tabulator.options.checkedLicenses[i] = true;
+            }
+            else
+            {
+                tabulator.options.checkedLicenses[i] = false;
+            }
+        }
+    }
+        
             
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why) {
         var td = myDocument.createElement('td');

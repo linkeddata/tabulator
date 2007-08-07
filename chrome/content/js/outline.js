@@ -176,46 +176,44 @@ function Outline(doc) {
         }
         
         if(tabulator.options.checkedLicenses[1]){    
-            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-SA<br />";        
         }
                 
         else{
-            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' />CC: BY-NC-SA<br />";
         }
         if(tabulator.options.checkedLicenses[2]){    
-            message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+            message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC<br />";        
         }
                 
                 else{
-                    message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+                    message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' />CC: BY-NC<br />";
         }
          if(tabulator.options.checkedLicenses[3]){    
-                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-ND<br />";        
                 }
                 
                 else{
-                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' />CC: BY-ND<br />";
         }
          if(tabulator.options.checkedLicenses[4]){    
-                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-SA<br />";        
                 }
                 
                 else{
-                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' />CC: BY-SA<br />";
         }
          if(tabulator.options.checkedLicenses[5]){    
-                    message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
+                    message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' CHECKED />CC: BY<br />";        
                 }
                 
          else{
-             message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
+             message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' />CC: BY<br />";
         }
                  
         message+="<br /> <a onclick='tabulator.options.selectAll()'>[Select All] </a>";
                  
         message+="<a onclick='tabulator.options.deselectAll()'> [Deselect All]</a>";
-                 
-        //message+="<p>Licenses identification: </p> <img src= '../tut/tabulator_screenshots/licenseGreenlegend.jpg'/>";
      
         message+="</form></font>";
                  

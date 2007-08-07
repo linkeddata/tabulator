@@ -56,8 +56,8 @@ function tableView(container,doc)
                         break;
                     }
                 }
+                tabulator.log.msg('looking for statement in store to attach to node ' + statClone);
                 var st = kb.anyStatementMatching(statClone.subject, statClone.predicate, statClone.object);
-                if (!st) {alert('no statement for '+st.subject+st.predicate+st.object);}
                 if (!st.why) {alert("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
                 tr.appendChild(matrixTD(st.object, st));
             } //for each query var, make a row
@@ -327,6 +327,8 @@ function tableView(container,doc)
         
         // sparql update
         if (!selTD.stat) {saveAddRowText(newText); return;};
+        tabulator.log.msg('sparql update with stat: ' + selTD.stat);
+        tabulator.log.msg('new object will be: ' + kb.literal(newText, ''));
         if (isExtension) {sparqlUpdate = sparql.prepareUpdate(selTD.stat);}
         else {sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);}
         sparqlUpdate.setObject(kb.literal(newText, ''));
@@ -403,11 +405,11 @@ function tableView(container,doc)
     // use kb.bnode for blank nodes
     // use kb.literal for literal nodes 
     function addRow () {
-        var i; var td; var tr = thisTable.document.createElement('tr');
+        var td; var tr = thisTable.document.createElement('tr');
         var t = thisTable.document.getElementById('tabulated_data');
         // create the td nodes for the new row
         // for each td node add the object variable like ?v0
-        for (i=0; i<numCols; i++) {
+        for (var i=0; i<numCols; i++) {
             if (symbolRC (1, i)) {
                 td = createSymbolTD();
                 td.v = qps[i].object
@@ -432,8 +434,9 @@ function tableView(container,doc)
         selTD = getTDNode(newRow, newCol); // first td of the row
         setSelected(selTD);
         // clone the qps array and attach a pointer to the clone on the first td of the row
+        tabulator.log.msg('creating a clone of the qps: ' + qps);
         var qpsClone = [];
-        for (i = 0; i<qps.length; i++) {
+        for (var i = 0; i<qps.length; i++) {
             var stat = qps[i];
             var newStat = new RDFStatement(stat.subject, stat.predicate, stat.object, stat.why);
             qpsClone[i] = newStat;
@@ -442,14 +445,14 @@ function tableView(container,doc)
     } //addRow
     
     function saveAddRowText(newText) {
-        var td = selTD;
+        var td = selTD; // need to use this in case the user switches to a new TD in the middle of the autosuggest process
         var type = td.getAttribute('type');
         // get the qps which is stored on the first cell of the row
         var qpsc = getTDNode(getRowIndex(td), 0).qpsClone;
         var row = getRowIndex(td);
         
         function validate() { // make sure the user has made a selection
-            for (i = 0; i<autoCompArray.length; i++) {
+            for (var i = 0; i<autoCompArray.length; i++) {
                 if (newText == autoCompArray[i]) {
                     return true;
                 } 
@@ -463,7 +466,7 @@ function tableView(container,doc)
         }
         
         function getMatchingSym(text) {
-            for (i=0; i<autoCompArray.length; i++) {
+            for (var i=0; i<autoCompArray.length; i++) {
                 if (newText==autoCompArray[i]) {
                     return entryArray[i][1];
                 }
@@ -471,34 +474,40 @@ function tableView(container,doc)
             alert('no matching sym');
         }
         
+        var rowNum = getRowIndex(td);
         // fill in the query pattern based on the newText
-        for (i = 0; i<numCols; i++) {
-            if (qpsc[i].subject == td.v) { // subject is a variable
-            // find the type and replace the qps with the correct type of node
+        for (var i = 0; i<numCols; i++) {
+            tabulator.log.msg('filling in variable: ' + td.v);
+            tabulator.log.msg('current statment is: ' + qpsc[i]);
+            if (qpsc[i].subject == td.v) { // subj is a variable
                 if (type == 'sym') {qpsc[i].subject = getMatchingSym(newText);}
                 if (type == 'lit') {qpsc[i].subject = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].subject = kb.bnode();}
+                tabulator.log.msg('new qpsc is: ' + qpsc);
             }
-            if (qpsc[i].object == td.v) { // object is a variable
-            // find the type and replace the qps with the correct type of node
+            if (qpsc[i].object == td.v) { // obj is a variable
                 if (type == 'sym') {qpsc[i].object = getMatchingSym(newText);}
                 if (type == 'lit') {qpsc[i].object = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].object = kb.bnode();}
+                tabulator.log.msg('new qpsc is: ' + qpsc);
             }
         }
         
         // check if all the variables in the query pattern have been filled out
         var qpscComplete = true; 
-        for (i = 0; i<numCols; i++) {
+        for (var i = 0; i<numCols; i++) {
             if (qpsc[i].subject.toString()[0]=='?') {qpscComplete = false;}
             if (qpsc[i].object.toString()[0]=='?') {qpscComplete = false;}
         }
         
         // if all the variables in the query pattern have been filled out, then attach stat pointers to each node, add the stat to the store, and perform the sparql update
         if (qpscComplete == true) {
-            for (i = 0; i<numCols; i++) {
+            tabulator.log.msg('qpsc has been filled out: ' + qpsc);
+            for (var i = 0; i<numCols; i++) {
+                tabulator.log.msg('looking for statement in store: ' + qpsc);
                 var st = kb.anyStatementMatching(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object); // existing statement for symbols
                 if (!st) { // brand new statement for literals
+                    tabulator.log.msg('statement not found, making new statement');
                     var why = qpsc[0].subject;
                     st = new RDFStatement(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object, why);
                     kb.add(st.subject, st.predicate, st.object, st.why);
@@ -507,6 +516,7 @@ function tableView(container,doc)
                 td.stat = st; 
                 
                 // sparql update; for each cell in the completed row, send the value of the stat pointer
+                tabulator.log.msg('sparql update with stat: ' + td.stat);
                 if (isExtension) {sparqlUpdate = sparql.prepareUpdate(td.stat);}
                 else {sparqlUpdate = new sparql(kb).prepareUpdate(td.stat);}
                 sparqlUpdate.setObject(td.stat.object);

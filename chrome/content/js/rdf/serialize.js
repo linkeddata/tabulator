@@ -130,6 +130,11 @@ __Serializer.prototype.rootSubjects = function(sts) {
 __Serializer.prototype.toN3 = function(f) {
     return this.statementsToN3(f.statements);
 }
+
+__Serializer.prototype._notQNameChars = "\t\r\n !\"#$%&'()*.,+/;<=>?@[\\]^`{|}~";
+__Serializer.prototype._notNameChars = 
+                    ( __Serializer.prototype._notQNameChars + ":" ) ;
+
     
 __Serializer.prototype.statementsToN3 = function(sts) {
     var indent = 4;
@@ -320,7 +325,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         if (j >= 0 && sz.flags.indexOf('p') < 0)  { // Can split at namespace
             var canSplit = true;
             for (var k=j+1; k<uri.length; k++) {
-                if (_notNameChars.indexOf(uri[k]) >=0) {
+                if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
                     canSplit = false; break;
                 }
             }
@@ -608,7 +613,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
 
         var canSplit = true;
         for (var k=j+1; k<uri.length; k++) {
-            if (_notNameChars.indexOf(uri[k]) >=0) {
+            if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
                 throw ('Invalid character "'+uri[k] +'" cannot be in XML qname'); 
             }
         }

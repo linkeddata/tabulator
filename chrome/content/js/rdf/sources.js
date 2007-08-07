@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3628 2007-07-31 18:34:41Z kennyluck $
+ * SVN ID: $Id: sources.js 3691 2007-08-07 14:41:48Z timbl $
  *
  ************************************************************/
 
@@ -342,10 +342,10 @@ function SourceFetcher(store, timeout, async) {
 
     this.store.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
     this.store.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
-    this.store.setPrefixForURI('tab',"http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
-    this.store.setPrefixForURI('http',"http://dig.csail.mit.edu/2005/ajar/ajaw/http#")
+    this.store.setPrefixForURI('tab',"http://www.w3.org/2007/ont/link#")
+    this.store.setPrefixForURI('http',"http://www.w3.org/2007/ont/http#")
     this.store.setPrefixForURI('httph',
-			"http://dig.csail.mit.edu/2005/ajar/ajaw/httph#")
+			"http://www.w3.org/2007/ont/httph#")
     this.store.setPrefixForURI('ical',"http://www.w3.org/2002/12/cal/icaltzd#")
 
     this.addProtocol = function (proto) {

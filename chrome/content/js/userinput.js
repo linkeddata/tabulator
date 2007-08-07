@@ -13,7 +13,7 @@ function UserInput(outline){
 var myDocument=outline.document; //is this ok?
 this.menuId='predicateMenu1';
 this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
-this.namespaces["tabont"] = "http://dig.csail.mit.edu/2005/ajar/ajaw#";
+this.namespaces["tabont"] = "http://www.w3.org/2007/ont/link#";
 this.namespaces["foaf"] = "http://xmlns.com/foaf/0.1/";
 this.namespaces["rdf"] = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 this.namespaces["RDFS"] = "http://www.w3.org/2000/01/rdf-schema#";
@@ -166,7 +166,7 @@ clearInputAndSave: function clearInputAndSave(e){
             s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
             try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
                 //back out
-                alert(e);return;
+                alert('clearInputAndSave setSatement '+e);return;
             }
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
         }
@@ -176,7 +176,7 @@ clearInputAndSave: function clearInputAndSave(e){
                     // generate path and nailing from current values
                     sparqlUpdate = sparqlService.prepareUpdate(s);
                     try{sparqlUpdate.setObject(makeTerm(this.lastModified.value))}catch(e){
-                        alert(e);
+                        alert('clearInputAndSave setObject'+e);
                         return;
                     }                    
                     obj.value=this.lastModified.value;
@@ -203,7 +203,7 @@ clearInputAndSave: function clearInputAndSave(e){
                             var s3=new RDFStatement(s.subject,rdf('type'),type,s.why)
                             try{sparqlService.prepareUpdate().setStatement([s1,s2,s3])}catch(e){
                                 //back out
-                                alert(e);return;
+                                alert('setstatement2: '+[s1,s2,s3]+ e);return;
                             }                          
                             kb.remove(s);
                             newStat=kb.add(s.subject,selectedPredicate,textTerm,s.why);
@@ -217,7 +217,7 @@ clearInputAndSave: function clearInputAndSave(e){
                         var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
                         try{sparqlService.prepareUpdate().setStatement(st)}catch(e){
                             //back out
-                            alert(e);return; //maybe throw?
+                            alert('setstatement3: '+st+ e);return; //maybe throw?
                         }                        
                         kb.remove(s);
                         s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
@@ -1054,7 +1054,8 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
                 tempQuery.vars.push('Kenny');
                 var tempBinding={};
                 tempBinding.Kenny=kb.fromNT(predicates[i].NT);
-                try{addPredicateChoice(tempQuery)(tempBinding);}catch(e){alert(e);}//I'll deal with bnodes later...
+                try{addPredicateChoice(tempQuery)(tempBinding);}
+                    catch(e){alert('I\'ll deal with bnodes later...'+e);}//I'll deal with bnodes later...
             }
             */
             var entries=results[0];
@@ -1153,7 +1154,7 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
             try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
                 //error not because of 403 but probably because of 500
                 //back out
-                alert(e);
+                alert('Error in settatemet (4) '+s+e);
                 return;
             }        
         }else

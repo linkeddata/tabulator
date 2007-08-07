@@ -538,5 +538,21 @@ RDFIndexedFormula.prototype.close = function() {
 
 RDFIndexedFormula.prototype.hashString = RDFIndexedFormula.prototype.toNT;
 
+/////////////////////////////  Provenance tracking
+//  
+// Where did this statement come from?
+//
+
+/*
+RDFStatement.prototype.original = function() {
+    for (var st = this;; st = st.why.premis[0]) {
+        if (st.why.termType && st.why.termType== 'symbol')
+            return this; // This statement came from a document
+    }
+}
+*/
+
+
+
 // ends
 

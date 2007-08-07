@@ -596,10 +596,10 @@ function Outline(doc) {
         return div
     }
     internalPane.predicates = {// Predicates used for inner workings. Under the hood
-        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#request': 1,
-        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#requestedBy': 1,
-        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#source': 1,
-        'http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session': 2, // 2=  test neg but display
+        'http://www.w3.org/2007/ont/link#request': 1,
+        'http://www.w3.org/2007/ont/link#requestedBy': 1,
+        'http://www.w3.org/2007/ont/link#source': 1,
+        'http://www.w3.org/2007/ont/link#session': 2, // 2=  test neg but display
         'http://www.w3.org/2006/link#uri': 1,
         'http://www.w3.org/2006/link#Document': 1,
     }

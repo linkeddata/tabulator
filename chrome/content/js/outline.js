@@ -1585,6 +1585,13 @@ function Outline(doc) {
             if(about && myDocument.getElementById('UserURI')) { 
                 myDocument.getElementById('UserURI').value = 
                      (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+            } else if(about && isExtension) {
+                var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
+                tabStatusBar.setAttribute('style','display:block');
+                tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+                if(tabStatusBar.label=="") {
+                    tabStatusBar.setAttribute('style','display:none');
+                }
             }
             var node;
             for (node = ancestor(target, 'TD');
@@ -2222,6 +2229,19 @@ function Outline(doc) {
     this.UserInput.deselectAll=deselectAll;
     this.UserInput.views=views;
     this.outline_expand=outline_expand;
+    if(isExtension) {
+      window.addEventListener('unload',function() {
+               var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
+               tabStatusBar.label=="";
+               tabStatusBar.setAttribute('style','display:none');           
+      },true);
+
+      gBrowser.mPanelContainer.addEventListener("select", function() {
+               var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
+               tabStatusBar.label=="";
+               tabStatusBar.setAttribute('style','display:none');           
+      },true);
+    }
 
     return this;
 }//END OF OUTLINE

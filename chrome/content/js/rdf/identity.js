@@ -127,6 +127,11 @@ RDFPlainFormula = function() { return RDFIndexedFormula([]); } // No features
 
 
 RDFIndexedFormula.prototype.setPrefixForURI = function(prefix, nsuri) {
+    //TODO:This is a hack for our own issues, which ought to be fixed post-release
+    //See http://dig.csail.mit.edu/cgi-bin/roundup.cgi/tabulator/issue227
+    if(prefix=="tab" && this.namespaces["tab"]) {
+        return;
+    }
     this.namespaces[prefix] = nsuri
 }
 

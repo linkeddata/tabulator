@@ -509,7 +509,7 @@ function tableView(container,doc)
         if (qpscComplete == true) {
             tabulator.log.msg('qpsc has been filled out: ' + qpsc);
             for (var i = 0; i<numCols; i++) {
-                tabulator.log.msg('looking for statement in store: ' + qpsc);
+                tabulator.log.msg('looking for statement in store: ' + qpsc[i]);
                 var st = kb.anyStatementMatching(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object); // existing statement for symbols
                 if (!st) { // brand new statement for literals
                     tabulator.log.msg('statement not found, making new statement');

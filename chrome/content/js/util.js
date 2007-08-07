@@ -6,20 +6,6 @@ function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);
 }
 
-/** 
- * A function emulating Scheme's map. Should have been part of JavaScript so it
- * is global.
- */
-function map(func, list) {
-    //tabulator.log.debug("entered map with list=" + list.join(", "));
-    var output = [];
-    for (var i in list)  //works on assoc? i hope so
-	output[i] = func(list[i]);
-    return output;
-}
-
-// These are extra
-
 /**
  * @class A utility class
  */
@@ -159,7 +145,6 @@ Util = {
 	},
 
         'enablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.enablePrivilege) || function() { return; },
-
         'disablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.disablePrivilege) || function() { return; }
 }
 //================================================

@@ -475,7 +475,7 @@ makeTimeViewOnBindingFn = function(q, eventFunction, colorCellCss){
 
 		    // 		    return function(obj){
 		    // 			var comps = kb.each(obj, kb.sym('http://www.w3.org/2002/12/cal/icaltzd#component'), undefined);
-		    // 			map(calDF('component'), comps);
+		    // 			comps.map(calDF('component'));
 		    // 		    }
 		    
 		case 'component':

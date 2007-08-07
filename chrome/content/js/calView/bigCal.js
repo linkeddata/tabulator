@@ -344,7 +344,7 @@ function VIEWAS_bigCal(divCal, Date) {
 
     function totalEvents(time){
       if (time instanceof Array){
-        return sumArray(map(totalEvents, time));
+        return sumArray(time.map(totalEvents));
       } else if (time instanceof Event){
         return 1;
       }

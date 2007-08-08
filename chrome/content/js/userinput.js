@@ -2,8 +2,6 @@
 //                                  undetermined statement generated formUndetStat()
 //                                                                 ->fillInRequest()
 
-
-
 /*ontological issues
     temporarily using the tabont namespace
     clipboard: 'predicates' 'objects' 'all'(internal)
@@ -166,10 +164,8 @@ clearInputAndSave: function clearInputAndSave(e){
     if(this.lastModified.value != this.lastModified.defaultValue){
         if (this.lastModified.isNew){
             s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
-            try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
-                //back out
-                alert('clearInputAndSave setSatement '+e);return;
-            }
+            // TODO: DEFINE ERROR CALLBACK
+            sparqlService.insert_statement(s, function(uri,success,error_body){});
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
         }
         else{ 
@@ -177,10 +173,8 @@ clearInputAndSave: function clearInputAndSave(e){
                 case 'literal':
                     // generate path and nailing from current values
                     sparqlUpdate = sparqlService.prepareUpdate(s);
-                    try{sparqlUpdate.setObject(makeTerm(this.lastModified.value))}catch(e){
-                        alert('clearInputAndSave setObject'+e);
-                        return;
-                    }                    
+                    // TODO: DEFINE ERROR CALLBACK
+                    sparqlUpdate.setObject(makeTerm(this.lastModified.value), function(uri,success,error_body){});
                     obj.value=this.lastModified.value;
         //fire text modified??
                     UserInputFormula.statements.push(s);
@@ -201,12 +195,10 @@ clearInputAndSave: function clearInputAndSave(e){
                         }else{
                             var s1=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
                             var s2=new RDFStatement(s.subject,selectedPredicate,textTerm,s.why);
-                            var type=kb.the(s.subject, rdf('type'));
-                            var s3=new RDFStatement(s.subject, rdf('type'),type,s.why)
-                            try{sparqlService.prepareUpdate().setStatement([s1,s2,s3])}catch(e){
-                                //back out
-                                alert('setstatement2: '+[s1,s2,s3]+ e);return;
-                            }                          
+                            var type=kb.the(s.subject,rdf('type'));
+                            var s3=new RDFStatement(s.subject,rdf('type'),type,s.why);
+                            // TODO: DEFINE ERROR CALLBACK
+                            sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){});
                             kb.remove(s);
                             newStat=kb.add(s.subject,selectedPredicate,textTerm,s.why);
                             //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
@@ -217,10 +209,8 @@ clearInputAndSave: function clearInputAndSave(e){
                         outline.walk('right',outline.focusTd);                         
                     }else{
                         var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
-                        try{sparqlService.prepareUpdate().setStatement(st)}catch(e){
-                            //back out
-                            alert('setstatement3: '+st+ e);return; //maybe throw?
-                        }                        
+                        // TODO: DEFINE ERROR CALLBACK
+                        sparqlService.insert_statement(st, function(uri,success,error_body){});
                         kb.remove(s);
                         s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
                         newStat=s;
@@ -266,12 +256,8 @@ deleteTriple: function deleteTriple(selectedTd){
     if (!kb.whether(s.object,rdf('type'),tabulator.ns.link('Request')) && // Better to check provenance not internal?
         !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
         !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
-        try{
-            sparqlService.prepareUpdate(s).setObject();
-        }catch(e){
-            alert(e);
-            return;
-        } 
+        // TODO: DEFINE ERROR CALLBACK
+        sparqlService.delete_statement(s, function(uri,success,error_body){});
     }
     kb.remove(s);
     outline.walk('up');
@@ -1153,12 +1139,8 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     if (type=='predicate'){
         if (selectedTd.nextSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
-            try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
-                //error not because of 403 but probably because of 500
-                //back out
-                alert('Error in settatemet (4) '+s+e);
-                return;
-            }        
+            // TODO: DEFINE ERROR CALLBACK
+            sparqlService.insert_statement(s, function(uri,success,error_body){});
         }else
             outline.walk('right');
         outline.replaceTD(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
@@ -1170,12 +1152,8 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         var newTd=outline.outline_objectTD(inputTerm);
         if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
-            try{sparqlService.prepareUpdate().setStatement(s)}catch(e){
-                //error not because of 403 but probably because of 500
-                //back out
-                alert(e);
-                return;
-            }
+            // TODO: DEFINE ERROR CALLBACK
+            sparqlService.insert_statement(s, function(uri,success,error_body){});
         }else
             outline.walk('left');              
         outline.replaceTD(newTd,selectedTd);        

@@ -472,3 +472,23 @@ function getURIQueryParameters(uri){
     }
     return results;
 }
+
+function parse_headers(headers) {
+    var lines = headers.split('\n');
+    var headers = {};
+    for (var i=0; i < lines.length; i++) {
+        var line = webdav._strip(lines[i]);
+        if (line.length == 0) {
+            continue;
+        }
+        var chunks = line.split(':');
+        var hkey = webdav._strip(chunks.shift()).toLowerCase();
+        var hval = webdav._strip(chunks.join(':'));
+        if (headers[hkey] !== undefined) {
+            headers[hkey].push(hval);
+        } else {
+            headers[hkey] = [hval];
+        }
+    }
+    return headers;
+}

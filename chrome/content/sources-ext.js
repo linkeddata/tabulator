@@ -22,8 +22,8 @@ function SourceWidget(container) {
             if (!uri) { return true }
             var udoc = tabulator.kb.sym(Util.uri.docpart(uri))
             if (udoc.sameTerm(term)) {
-                var req = tabulator.kb.any(udoc, tabulator.kb.sym('tab', 'request')) // @@ what if > 1?
-                var lstat = tabulator.kb.the(req, tabulator.kb.sym('tab','status'))
+                var req = tabulator.kb.any(udoc, tabulator.ns.link('request')) // @@ what if > 1?
+                var lstat = tabulator.kb.the(req, tabulator.ns.link('status'))
                 if (typeof lstat.elements[lstat.elements.length-1]
                     != "undefined") {
                     if(sf.getState(term)=="failed"){

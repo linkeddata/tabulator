@@ -64,7 +64,7 @@
 
   <statusbar id="status-bar">
     <statusbarpanel contextmenu="tabulatorcopyuri" id="tabulator-display" insertafter="statusbar-display" style="display:none"/>
-    <statusbarpanel id="tabulator-source-count" insertbefore="statusbar-progresspanel" />
+    <statusbarpanel id="tabulator-source-count" insertbefore="statusbar-progresspanel" style="display:none"/>
   </statusbar>
 
   <script type="application/x-javascript">

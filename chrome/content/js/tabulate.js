@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3694 2007-08-07 16:28:52Z presbrey $
+// SVN ID: $Id: tabulate.js 3718 2007-08-08 20:28:51Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -12,17 +12,36 @@ isExtension=false;
 LanguagePreference = "en"    // @@ How to set this from the browser? From cookie?
 
 //var tabulator = {}; //This should eventually wrap all global vars.
+
+// Namespaces for general use
+tabulator.ns = {};
+tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = Namespace("http://www.w3.org/2007/ont/link#")
+tabulator.ns.http = Namespace("http://www.w3.org/2007/ont/http#");
+tabulator.ns.httph = Namespace("http://www.w3.org/2007/ont/httph#");
+tabulator.ns.ical = Namespace("http://www.w3.org/2002/12/cal/icaltzd#");
+tabulator.ns.foaf = Namespace("http://xmlns.com/foaf/0.1/");
+tabulator.ns.rdf = rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+tabulator.ns.rdfs = rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#");
+tabulator.ns.owl = owl = Namespace("http://www.w3.org/2002/07/owl#");
+tabulator.ns.dc = dc = Namespace("http://purl.org/dc/elements/1.1/");
+tabulator.ns.rss = rss = Namespace("http://purl.org/rss/1.0/");
+tabulator.ns.xsd = xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
+tabulator.ns.contact = contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#");
+tabulator.ns.mo = mo = Namespace("http://purl.org/ontology/mo/");
+
+var ns = tabulator.ns
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing
 var sf = new SourceFetcher(kb) // This handles resource retrieval
 var outline;
 
 kb.sf = sf // Make knowledge base aware of source fetcher to allow sameAs to propagate a fetch
 
+/* Don't use these use tabulator.ns.*
 kb.setPrefixForURI('dc', "http://purl.org/dc/elements/1.1/")
 kb.setPrefixForURI('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 kb.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
 kb.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
-
+*/
 
 function AJAR_handleNewTerm(kb, p, requestedBy) {
     //tabulator.log.debug("entering AJAR_handleNewTerm w/ kb, p=" + p + ", requestedBy=" + requestedBy);
@@ -166,7 +185,7 @@ Icon.termWidgets = {}
 Icon.termWidgets.optOn = new Icon.OutlinerIcon(Icon.src.icon_opton,20,'opt on','Make this branch of your query mandatory.');
 Icon.termWidgets.optOff = new Icon.OutlinerIcon(Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
 Icon.termWidgets.map = new Icon.OutlinerIcon(Icon.src.icon_map,30,'mappable','You can view this field in the map view.', 
-function (st, type, inverse) { return (type=='pred' && !inverse&& st.predicate.sameTerm(foaf('based_near'))) });
+function (st, type, inverse) { return (type=='pred' && !inverse&& st.predicate.sameTerm(tabulator.ns.foaf('based_near'))) });
 function calendarable(st, type, inverse){
     var obj = (inverse) ? st.subject : st.object;
     var calType = findCalType(st.predicate.toString());
@@ -194,29 +213,17 @@ Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add
 function menuable(statement,type,inverse){return (statement.predicate.termType=='collection');}
 Icon.termWidgets.showChoices=new Icon.OutlinerIcon(Icon.src.icon_show_choices,20,'show choices',"Choose another term",menuable);
 
-
 // Special knowledge of properties
-tabont = Namespace("http://www.w3.org/2007/ont/link#")
-foaf = Namespace("http://xmlns.com/foaf/0.1/")
-rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
-OWL = Namespace("http://www.w3.org/2002/07/owl#")
-dc = Namespace("http://purl.org/dc/elements/1.1/")
-rss = Namespace("http://purl.org/rss/1.0/")
-xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
-contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
-mo = Namespace("http://purl.org/ontology/mo/")
-
 var lb = new Labeler(kb);
 // labels  -- maybe, extend this with a propertyAction
 labelPriority = []
-labelPriority[foaf('name').uri] = 10
-labelPriority[dc('title').uri] = 8
-labelPriority[rss('title').uri] = 6   // = dc:title?
-labelPriority[contact('fullName').uri] = 4
+labelPriority[tabulator.ns.foaf('name').uri] = 10
+labelPriority[tabulator.ns.dc('title').uri] = 8
+labelPriority[tabulator.ns.rss('title').uri] = 6   // = dc:title?
+labelPriority[tabulator.ns.contact('fullName').uri] = 4
 labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
-labelPriority[foaf('nick').uri] = 3
-labelPriority[RDFS('label').uri] = 2
+labelPriority[tabulator.ns.foaf('nick').uri] = 3
+labelPriority[tabulator.ns.rdfs('label').uri] = 2
 
 
 /** returns true if str starts with pref, case sensitive, space sensitive **/
@@ -270,8 +277,8 @@ function SourceWidget() {
 	    if (!uri) { return true }
 	    var udoc = kb.sym(Util.uri.docpart(uri))
 	    if (udoc.sameTerm(term)) {
-		var req = kb.any(udoc, kb.sym('tab', 'request')) // @@ what if > 1?
-		var lstat = kb.the(req, kb.sym('tab','status'))
+		var req = kb.any(udoc, tabulator.ns.link('request')) // @@ what if > 1?
+		var lstat = kb.the(req, tabulator.ns.link('status'))
 		if (typeof lstat.elements[lstat.elements.length-1]
 		    != "undefined") {
 		    node.textContent = lstat.elements[lstat.elements.length-1]
@@ -435,7 +442,7 @@ function AJAR_initialisePage() {
 
     //Force tabulator to load these two again because these are used in "This Session"
     //Make sw.sources and sf.requested syncronized to each other should be the better way - Kenny
-    var ThisSession=kb.the(undefined,RDFS('label'),kb.literal("This Session"));
+    var ThisSession=kb.the(undefined, tabulator.ns.rdfs('label'), kb.literal("This Session"));
     sf.requestURI('http://www.w3.org/2000/01/rdf-schema',ThisSession,true);
     sf.requestURI('http://www.w3.org/2007/ont/link',ThisSession,true);
 
@@ -463,7 +470,7 @@ function AJAR_initialisePage() {
     			  'http://dig.csail.mit.edu/data#DIG':'Decentralised Information Group' };
     	for (q in links)
     	{
-    		kb.add(kb.sym(q),kb.sym('dc',"title"),kb.literal(links[q]));
+    		kb.add(kb.sym(q), tabulator.ns.dc("title"),kb.literal(links[q]));
     		outline.GotoURIinit(q)
     	}
     } //go to an initial uri

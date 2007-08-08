@@ -6,20 +6,21 @@
 //ToDo: sorted array for optimization, I need a binary search tree... 
 function Labeler(kb,lang){
     this.kb=kb;
+    var ns = tabulator.ns;
     this.lang=lang; // a universal version? how to sort?
-    this.addLabelProperty(tabont('message'),20); //quite a different semantic, cause confusion?
-    this.addLabelProperty(foaf('name'),10);
-    this.addLabelProperty(dc('title'),8);
-    this.addLabelProperty(rss('title'),6);   // = dc:title?
-    this.addLabelProperty(contact('fullName'),4);
+    this.addLabelProperty(ns.link('message'),20); //quite a different semantic, cause confusion?
+    this.addLabelProperty(ns.foaf('name'),10);
+    this.addLabelProperty(ns.dc('title'),8);
+    this.addLabelProperty(ns.rss('title'),6);   // = dc:title?
+    this.addLabelProperty(ns.contact('fullName'),4);
     this.addLabelProperty(kb.sym('http://www.w3.org/2001/04/roadmap/org#name'),4);
-    this.addLabelProperty(foaf('nick'),3);
-    this.addLabelProperty(RDFS('label'),2);
+    this.addLabelProperty(ns.foaf('nick'),3);
+    this.addLabelProperty(ns.rdfs('label'),2);
     var lb=this;
-    this.kb.propertyAction[RDFS('subPropertyOf').uri] = function(formula,subject,predicate,object,why){
+    this.kb.propertyAction[ns.rdfs('subPropertyOf').uri] = function(formula,subject,predicate,object,why){
         var hashP=subject.hashString();
         var already;
-        if (object.sameTerm(RDFS('label'))) already=lb.addLabelProperty(subject, 3);
+        if (object.sameTerm(ns.rdfs('label'))) already=lb.addLabelProperty(subject, 3);
         if (already) return;
         for (var i=0;i<this.kb.predicateIndex[hashP].length;i++){
             var st=kb.predicateIndex[hashP][i];
@@ -97,7 +98,7 @@ search: function(searchString,context,filterType){
         else if (match &&!string_startswith(matchingString,label))
             break;
         if (match){
-            if (this.kb.whether(this.entry[i][1],rdf('type'),tabont('Request'))) continue;
+            if (this.kb.whether(this.entry[i][1],rdf('type'),tabulator.ns.link('Request'))) continue;
             results.push(this.entry[i]);
             types.push(this.kb.any(this.entry[i][1],rdf('type')));
         }
@@ -118,7 +119,7 @@ searchAdv: function(searchString,context,filterType){ //extends search
         else if (match &&!string_startswith(matchingString,label))
             break;
         if (match){
-            if (this.kb.whether(this.entry[i][1],rdf('type'),tabont('Request'))) continue;
+            if (this.kb.whether(this.entry[i][1],rdf('type'),tabulator.ns.link('Request'))) continue;
             if (filter && filter(this.entry[i][1])){
                 results.push(this.entry[i]);
                 //ToDo: Context

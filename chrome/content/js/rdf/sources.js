@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3691 2007-08-07 14:41:48Z timbl $
+ * SVN ID: $Id: sources.js 3718 2007-08-08 20:28:51Z timbl $
  *
  ************************************************************/
 
@@ -84,7 +84,7 @@ function SourceFetcher(store, timeout, async) {
 		// dc:title
 		var title = this.dom.getElementsByTagName('title')
 		if (title.length > 0) {
-		    kb.add(xhr.uri,kb.sym('dc','title'),
+		    kb.add(xhr.uri, tabulator.ns.dc('title'),
 			   kb.literal(title[0].textContent),xhr.uri)
 		    tabulator.log.info("Inferring title of "+xhr.uri)
 		}
@@ -99,7 +99,7 @@ function SourceFetcher(store, timeout, async) {
 			var join = Util.uri.join
 			var uri = kb.sym(join(links[x].getAttribute('href'),
 					      xhr.uri.uri))
-			kb.add(xhr.uri,kb.sym('rdfs','seeAlso'),uri,
+			kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'),uri,
 			       xhr.uri)
 			tabulator.log.info("Loading "+uri+" from link rel in "+xhr.uri)
 		    }
@@ -340,6 +340,7 @@ function SourceFetcher(store, timeout, async) {
     Util.callbackify(this,['request', 'recv', 'load', 'fail', 'refresh',
 			   'retract', 'done'])
 
+/* now see tabulator.ns
     this.store.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
     this.store.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
     this.store.setPrefixForURI('tab',"http://www.w3.org/2007/ont/link#")
@@ -348,9 +349,10 @@ function SourceFetcher(store, timeout, async) {
 			"http://www.w3.org/2007/ont/httph#")
     this.store.setPrefixForURI('ical',"http://www.w3.org/2002/12/cal/icaltzd#")
 
+*/
     this.addProtocol = function (proto) {
 	sf.store.add(sf.appNode,
-		     sf.store.sym("tab","protocol"),
+		     tabulator.ns.link("protocol"),
 		     sf.store.literal(proto),
 		     this.appNode)
     }
@@ -363,13 +365,13 @@ function SourceFetcher(store, timeout, async) {
     this.switchHandler = function (handler, xhr, cb, args) {
 	var kb = this.store;
 	(new handler(args)).recv(xhr);
-	kb.the(xhr.req,kb.sym('tab','handler')).append(handler.term)
+	kb.the(xhr.req, tabulator.ns.link('handler')).append(handler.term)
 	xhr.handle(cb)
     }
 
     this.addStatus = function (xhr, status) {
 	var kb = this.store
-	kb.the(xhr.req, kb.sym('tab',"status")).append(kb.literal(status))
+	kb.the(xhr.req, tabulator.ns.link('status')).append(kb.literal(status))
     }
 
     this.failFetch = function (xhr, status) {
@@ -389,11 +391,11 @@ function SourceFetcher(store, timeout, async) {
 **   and the data about the session should be avalable some ofther way .. like a link under 'sources'.
 */    
     this.store.add(this.store.sym('http://dig.csail.mit.edu/2005/ajar/ajaw/data#Tabulator'),
-		   this.store.sym('tab',"session"),
+		   tabulator.ns.link("session"),
 		   this.appNode,
 		   this.appNode)
     this.store.add(this.appNode,
-		   this.store.sym('rdfs','label'),
+		   tabulator.ns.rdfs('label'),
 		   this.store.literal('This Session'),
 		   this.appNode);
 
@@ -414,7 +416,7 @@ function SourceFetcher(store, timeout, async) {
 	     var term = kb.sym(uri)
 	     var udoc=term.uri?kb.sym(Util.uri.docpart(uri)):uri
 
-	     var seeAlso = sf.store.sym('rdfs','seeAlso')
+	     var seeAlso = tabulator.ns.rdfs('seeAlso')
 	     var refs = sf.store.statementsMatching(term,seeAlso) //this fetches seeAlso of docs indefinitely
 	     refs.map(function (x) {
 			  if (!sf.requested[Util.uri.docpart(x.object.uri)]) {
@@ -423,7 +425,7 @@ function SourceFetcher(store, timeout, async) {
 		      })
 
 
-	     var sameAs = sf.store.sym('owl','sameAs') // @@ neaten up
+	     var sameAs = tabulator.ns.owl('sameAs') // @@ neaten up
 
 	     var linkUri = sf.store.sym('http://www.w3.org/2006/link#obsoletes')
 	     var refs = sf.store.each(uri,linkUri)
@@ -452,14 +454,13 @@ function SourceFetcher(store, timeout, async) {
 			  }
 		      })
     */				  
-	     var type = sf.store.sym('rdf','type')
-	     var mentions = sf.store.sym('tab','mentionsClass')
 	     var refs = sf.store.statementsMatching(undefined,
-						    type,
+						    tabulator.ns.rdf('type'),
 						    undefined,
 						    udoc)
 	     refs.map(function (x) {
-			  sf.store.add(udoc,mentions,x.object,udoc)
+			  sf.store.add(udoc, tabulator.ns.link('mentionsClass'),
+                                        x.object,udoc)
 		      })
 	     return true
 	 })
@@ -534,10 +535,10 @@ function SourceFetcher(store, timeout, async) {
 
 	if (rterm) {
 	    if (rterm.uri) {
-		kb.add(docterm, kb.sym('tab',"requestedBy"),
+		kb.add(docterm, tabulator.ns.link("requestedBy"),
 		       kb.sym(Util.uri.docpart(rterm.uri)), this.appNode)
 /*	    } else {   // this shouldn't happen, as the rterm should be a doc not a bnode
-		kb.add(docterm, kb.sym('tab',"requestedBy"),
+		kb.add(docterm, tabulator.ns.link("requestedBy"),
 		       rterm, this.appNode)
 */
 	    }
@@ -554,18 +555,18 @@ function SourceFetcher(store, timeout, async) {
 	var handlers = kb.collection()
 	var sf = this
 
-	kb.add(this.appNode, kb.sym('tab',"source"), docterm, this.appNode)
-	kb.add(docterm, kb.sym('tab',"request"), req, this.appNode)
-	kb.add(req, kb.sym('rdfs',"label"), kb.literal('Request for '+docuri),
+	kb.add(this.appNode, tabulator.ns.link("source"), docterm, this.appNode)
+	kb.add(docterm, tabulator.ns.link("request"), req, this.appNode)
+	kb.add(req, tabulator.ns.rdfs("label"), kb.literal('Request for '+docuri),
 	       this.appNode)
 
 	// This request will have handlers probably
-	kb.add(req, kb.sym('tab','handler'), handlers, sf.appNode)
+	kb.add(req, tabulator.ns.link('handler'), handlers, sf.appNode)
 
-	kb.add(req, kb.sym('tab','status'), status, sf.appNode)
+	kb.add(req, tabulator.ns.link('status'), status, sf.appNode)
      
 	if (typeof kb.anyStatementMatching(this.appNode,
-					   kb.sym('tab',"protocol"),
+					   tabulator.ns.link("protocol"),
 					   Util.uri.protocol(uri))
 	    == "undefined") {
 	    // update the status before we break out
@@ -586,9 +587,9 @@ function SourceFetcher(store, timeout, async) {
 		    
 		    sf.fireCallbacks('recv',args)
 		    
-		    kb.add(req,kb.sym('http','status'),kb.literal(xhr.status),
+		    kb.add(req, tabulator.ns.http('status'),kb.literal(xhr.status),
 			   sf.appNode)
-		    kb.add(req,kb.sym('http','statusText'),
+		    kb.add(req, tabulator.ns.http('statusText'),
 			   kb.literal(xhr.statusText), sf.appNode)
 		    
 		    if (xhr.status >= 400) {
@@ -602,25 +603,25 @@ function SourceFetcher(store, timeout, async) {
 		        || Util.uri.protocol(xhr.uri.uri) == 'https') {
 			xhr.headers = Util.getHTTPHeaders(xhr)
 			for (var h in xhr.headers) {
-			    kb.add(req, kb.sym('httph',h), xhr.headers[h],
+			    kb.add(req, tabulator.ns.httph(h), xhr.headers[h],
 				   sf.appNode)
 			}
 		    }
 
                     // deduce some things from the HTTP
                     var addType = function(cla) {
-                        kb.add(docterm, kb.sym('rdf','type'), cla,
+                        kb.add(docterm, tabulator.ns.rdf('type'), cla,
 			   sf.appNode)
                     }
                     if (xhr.status-0 == 200) {
-                        addType(kb.sym('tab','Document'));
+                        addType(tabulator.ns.link('Document'));
                         var ct = xhr.headers['content-type'];
                         if (!ct) alert('No content-type on 200 response for '+xhr.uri)
                         else {
                             if (ct.indexOf('image/') == 0)
                                 addType(kb.sym('http://purl.org/dc/terms/Image'));
                             if (ct.indexOf('text/') == 0)
-                                addType(kb.sym('tab','TextDocument'));
+                                addType(tabulator.ns.link('TextDocument'));
                         }
                     }
 
@@ -735,13 +736,13 @@ function SourceFetcher(store, timeout, async) {
 				    sf.addStatus(xhr,"Redirected: "+ 
 					xhr.status + " to <" + newURI + ">");
 
-				    kb.add(xhr.req, kb.sym('http','status'), kb.literal(xhr.status),
+				    kb.add(xhr.req, tabulator.ns.http('status'), kb.literal(xhr.status),
 					   sf.appNode);
-				    if (xhr.statusText) kb.add(xhr.req,kb.sym('http','statusText'),
+				    if (xhr.statusText) kb.add(xhr.req, tabulator.ns.http('statusText'),
 					   kb.literal(xhr.statusText), sf.appNode)
 
 				    kb.add(xhr.req,
-					kb.sym('http','location'),
+					tabulator.ns.http('location'),
 					newURI, sf.appNode);
 
 
@@ -877,11 +878,10 @@ function SourceFetcher(store, timeout, async) {
     this.isPending = function (uri) { // sources_pending
 	var req = this.store.anyStatementMatching(
 	    this.store.sym(Util.uri.docpart(uri.uri)),
-	    this.store.sym('tab','request'))
+	    tabulator.ns.link('request'))
 	if (!req) { return false }
 	var status = this.store.anyStatementMatching(req.object,
-						     this.store.sym('tab',
-								    'status'))
+						     tabulator.ns.link('status'))
 	if (!status) { return true }
 	return (this.requested[Util.uri.docpart(uri.uri)]
 		&& !status.object.elements.filter(function (x) {

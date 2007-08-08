@@ -151,7 +151,7 @@ Util = {
 function findLabelSubProperties() {
     var i,n
     tabulator.log.debug("rdfs:label subproperties:");
-    var labelPredicates = kb.each(undefined, RDFS('subPropertyOf'), RDFS('label'));
+    var labelPredicates = kb.each(undefined, tabulator.ns.rdfs('subPropertyOf'), tabulator.ns.rdfs('label'));
     for (i=0, n=labelPredicates.length; i<n; i++) {
         if (labelPriority[labelPredicates[i].uri] == null) {
             labelPriority[labelPredicates[i].uri] = 1
@@ -215,9 +215,9 @@ function labelForXML(x) {
 function predicateLabelForXML(p, inverse) {
     var lab;
     if (inverse) { // If we know an inverse predicate, use its label
-        var ip = kb.any(p, OWL('inverseOf'));
-        if (!ip) ip = kb.any(undefined, OWL('inverseOf'), p);
-        if (ip) return labelForXML(ip)
+	var ip = kb.any(p, tabulator.ns.owl('inverseOf'));
+	if (!ip) ip = kb.any(undefined, tabulator.ns.owl('inverseOf'), p);
+	if (ip) return labelForXML(ip)
     }
         
         lab = labelForXML(p)

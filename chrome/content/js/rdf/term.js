@@ -200,7 +200,8 @@ RDFFormula.prototype.add = function(subj, pred, obj, why) {
 
 RDFFormula.prototype.sym = function(uri,name) {
     if (name != null) {
-	uri = this.namespaces[uri] + name
+        if (!tabulator.ns[uri]) throw 'The prefix "'+uri+'" is not set in the API';
+	uri = tabulator.ns[uri] + name
     }
     return new RDFSymbol(uri)
 }
@@ -237,8 +238,8 @@ RDFFormula.prototype.registerFormula = function(accesskey){
     RDFFormula.instances[accesskey] = this;
     var formulaTerm = superFormula.bnode();
     superFormula.add(formulaTerm,rdf('type'),superFormula.sym("http://www.w3.org/2000/10/swap/log#Formula"));
-    superFormula.add(formulaTerm,foaf('name'),superFormula.literal(accesskey));
-    superFormula.add(formulaTerm,tabont('accesskey'),superFormula.literal(accesskey));
+    superFormula.add(formulaTerm, tabulator.ns.foaf('name'), superFormula.literal(accesskey));
+    superFormula.add(formulaTerm, tabulator.ns.link('accesskey'), superFormula.literal(accesskey));
     //RDFFormula.instances.push("accesskey");
 }
 /*  Variable

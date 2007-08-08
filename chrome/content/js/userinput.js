@@ -2,6 +2,8 @@
 //                                  undetermined statement generated formUndetStat()
 //                                                                 ->fillInRequest()
 
+
+
 /*ontological issues
     temporarily using the tabont namespace
     clipboard: 'predicates' 'objects' 'all'(internal)
@@ -199,8 +201,8 @@ clearInputAndSave: function clearInputAndSave(e){
                         }else{
                             var s1=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
                             var s2=new RDFStatement(s.subject,selectedPredicate,textTerm,s.why);
-                            var type=kb.the(s.subject,rdf('type'));
-                            var s3=new RDFStatement(s.subject,rdf('type'),type,s.why)
+                            var type=kb.the(s.subject, rdf('type'));
+                            var s3=new RDFStatement(s.subject, rdf('type'),type,s.why)
                             try{sparqlService.prepareUpdate().setStatement([s1,s2,s3])}catch(e){
                                 //back out
                                 alert('setstatement2: '+[s1,s2,s3]+ e);return;
@@ -261,9 +263,9 @@ clearInputAndSave: function clearInputAndSave(e){
 deleteTriple: function deleteTriple(selectedTd){
 //ToDo: complete deletion of a node
     var s=this.getStatementAbout(selectedTd);
-    if (!kb.whether(s.object,rdf('type'),tabont('Request')) &&
-        !kb.whether(s.predicate,rdf('type'),tabont('Request')) &&
-        !kb.whether(s.subject,rdf('type'),tabont('Request'))){
+    if (!kb.whether(s.object,rdf('type'),tabulator.ns.link('Request')) && // Better to check provenance not internal?
+        !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
+        !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
         try{
             sparqlService.prepareUpdate(s).setObject();
         }catch(e){
@@ -305,15 +307,15 @@ addTriple: function addTriple(e){
     var insertTr=this.appendToPredicate(predicateTd);
 
     /*
-        switch (kb.whether(term,rdf('type'),OWL(?x))){
+        switch (kb.whether(term,rdf('type'),tabulator.ns.owl(?x))){
             when ?x='ObjectProperty:
             ...
         }
     */
-    if (kb.whether(predicateTerm,rdf('type'),OWL('ObjectProperty'))){
+    if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('ObjectProperty'))){
         var preStat=insertTr.previousSibling.AJAR_statement;    
         var tempTerm=kb.bnode();
-        var tempType=(!isInverse)?kb.any(predicateTerm,RDFS('range')):kb.any(predicateTerm,RDFS('domain'));
+        var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
         if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
         var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
         kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
@@ -325,13 +327,13 @@ addTriple: function addTriple(e){
         */ //this is ideal...but
 
         var labelChoices=kb.collection();
-        var labelProperties = kb.each(undefined,RDFS('subPropertyOf'),RDFS('label'));
+        var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
         for (var i=0;i<labelProperties.length;i++) {
             labelChoices.append(labelProperties[i]);
-            kb.add(labelChoices,tabont('element'),labelProperties[i]);
+            kb.add(labelChoices,tabulator.ns.link('element'),labelProperties[i]);
         }
-        labelChoices.append(RDFS('label'));
-        kb.add(labelChoices,tabont('element'),RDFS('label'),preStat.why);
+        labelChoices.append(tabulator.ns.rdfs('label'));
+        kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
         kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
 
         insertTr.appendChild(outline.outline_objectTD(tempTerm));              
@@ -340,8 +342,8 @@ addTriple: function addTriple(e){
         else
             this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
         return [insertTr.lastChild,tempTerm]; //expand signal
-    } else if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))||
-               kb.whether(predicateTerm,RDFS('domain'),RDFS('Literal'))){
+    } else if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
+               kb.whether(predicateTerm,tabulator.ns.rdfs('domain'),tabulator.ns.rdfs('Literal'))){
         var td=insertTr.appendChild(myDocument.createElement('td'));
         this.lastModified = this.createInputBoxIn(td," (Please Input) ");
         this.lastModified.isNew=true;
@@ -377,9 +379,9 @@ addTriple: function addTriple(e){
   3. make a clipboard class?
 */
 clipboardInit: function clipboardInit(address){
-    kb.add(kb.sym(address),tabont('objects'),kb.collection())
-    kb.add(kb.sym(address),tabont('predicates'),kb.collection())
-    kb.add(kb.sym(address),tabont('all'),kb.collection())
+    kb.add(kb.sym(address),tabulator.ns.link('objects'),kb.collection())
+    kb.add(kb.sym(address),tabulator.ns.link('predicates'),kb.collection())
+    kb.add(kb.sym(address),tabulator.ns.link('all'),kb.collection())
     //alert('clipboardInit');
     //alert(kb instanceof RDFIndexedFormula); this returns false for some reason...
 },
@@ -411,19 +413,19 @@ copyToClipboard: function copyToClipboard(address,selectedTd){
     switch (selectedTd.className){
         case 'selected': //table header
         case 'obj selected':
-            var objects=kb.the(kb.sym(address),tabont('objects'));
+            var objects=kb.the(kb.sym(address),tabulator.ns.link('objects'));
             if (!objects) objects=kb.add(kb.sym(address),kb.sym(address+"#objects"),kb.collection()).object
             objects.unshift(term);
             break;
         case 'pred selected':
         case 'pred internal selected':
-            var predicates=kb.the(kb.sym(address),tabont('predicates'));
+            var predicates=kb.the(kb.sym(address),tabulator.ns.link('predicates'));
             if (!predicates) predicates=kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection()).object;
             predicates.unshift(term);
     }
 
-    var all=kb.the(kb.sym(address),tabont('all'));
-    if (!all) all=kb.add(kb.sym(address),tabont('all'),kb.collection()).object
+    var all=kb.the(kb.sym(address),tabulator.ns.link('all'));
+    if (!all) all=kb.add(kb.sym(address),tabulator.ns.link('all'),kb.collection()).object
     all.unshift(term);
 },
 
@@ -474,7 +476,7 @@ insertTermTo: function insertTermTo(selectedTd,term,isObject){
 
 pasteFromClipboard: function pasteFromClipboard(address,selectedTd){  
     function termFrom(fromCode){
-        function theCollection(from){return kb.the(kb.sym(address),tabont(from));}
+        function theCollection(from){return kb.the(kb.sym(address),tabulator.ns.link(from));}
         var term=theCollection(fromCode).shift();
         if (term==null){
              alert("no more element in clipboard!");
@@ -548,14 +550,14 @@ Refill: function Refill(e,selectedTd){
         var sparqlText=[];
         var endl='.\n';
         sparqlText[0]="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
-                      "?pred "+RDFS('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
+                      "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
         sparqlText[1]="SELECT ?pred ?class\nWHERE{\n"+
                       "?pred "+rdf('type')+rdf('Property')+".\n"+
-                      subjectClass+RDFS('subClassOf')+" ?class.\n"+
-                      "?pred "+RDFS('domain')+" ?class.\n}";
+                      subjectClass+tabulator.ns.rdfs('subClassOf')+" ?class.\n"+
+                      "?pred "+tabulator.ns.rdfs('domain')+" ?class.\n}";
         sparqlText[2]="SELECT ?pred WHERE{\n"+
                           subject+rdf('type')+kb.variable("subjectClass")+endl+
-                          kb.variable("pred")+RDFS('domain')+kb.variable("subjectClass")+endl+
+                          kb.variable("pred")+tabulator.ns.rdfs('domain')+kb.variable("subjectClass")+endl+
                       "}";              
         var predicateQuery=sparqlText.map(SPARQLToQuery);  
                                   
@@ -579,14 +581,14 @@ Refill: function Refill(e,selectedTd){
         var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
         var subjectClass=kb.any(subject,rdf('type'));
         var object=selectedTd.parentNode.AJAR_statement.object;
-        var objectClass=(object.termType=='literal')?RDFS('Literal'):kb.any(object,rdf('type'));
+        var objectClass=(object.termType=='literal')?tabulator.ns.rdfs('Literal'):kb.any(object,rdf('type'));
         //var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
-        //               "?pred "+RDFS('domain')+subjectClass+".\n"+
-        //               "?pred "+RDFS('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
+        //               "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".\n"+
+        //               "?pred "+tabulator.ns.rdfs('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
         var sparqlText="SELECT ?pred WHERE{"+subject+rdf('type')+"?subjectClass"+".\n"+
                        object +rdf('type')+"?objectClass"+".\n"+
-                       "?pred "+RDFS('domain')+"?subjectClass"+".\n"+
-                       "?pred "+RDFS('range')+"?objectClass"+".\n}"; // \n is required? SPARQL parser bug?
+                       "?pred "+tabulator.ns.rdfs('domain')+"?subjectClass"+".\n"+
+                       "?pred "+tabulator.ns.rdfs('range')+"?objectClass"+".\n}"; // \n is required? SPARQL parser bug?
         var predicateQuery=SPARQLToQuery(sparqlText);
         }
         
@@ -597,9 +599,9 @@ Refill: function Refill(e,selectedTd){
         
 	}else{ //objectTd
 	    var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate;
-	    if (kb.whether(predicateTerm,rdf('type'),OWL('DatatypeProperty'))||
+	    if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
 	        predicateTerm.termType=='collection'||
-	        kb.whether(predicateTerm,RDFS('range'),RDFS('Literal'))){
+	        kb.whether(predicateTerm,tabulator.ns.rdfs('range'),tabulator.ns.rdfs('Literal'))){
 	        selectedTd.className='';
 	        emptyNode(selectedTd);
 	        this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
@@ -610,7 +612,7 @@ Refill: function Refill(e,selectedTd){
 	     
 	    //show menu for rdf:type
 	    if (selectedTd.parentNode.AJAR_statement.predicate.sameTerm(rdf('type'))){
-	       var sparqlText="SELECT ?class WHERE{?class "+rdf('type')+RDFS('Class')+".}"; 
+	       var sparqlText="SELECT ?class WHERE{?class "+rdf('type')+tabulator.ns.rdfs('Class')+".}"; 
 	       //I should just use kb.each
 	       var classQuery=SPARQLToQuery(sparqlText);
 	       this.showMenu(e,'TypeChoice',classQuery,{'isPredicate': isPredicate,'selectedTd': selectedTd});
@@ -894,16 +896,16 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
     //var reqTerm=kb.literal("TBD");  
     //this is troblesome since RDFIndexedFormula does not allow me to add <x> <y> "TBD". twice
     //Choice 2:
-    labelPriority[tabont('message').uri] = 20;
+    labelPriority[tabulator.ns.link('message').uri] = 20;
     
     var reqTerm=kb.bnode();
-    kb.add(reqTerm,rdf('type'),tabont("Request"));
+    kb.add(reqTerm,rdf('type'),tabulator.ns.link("Request"));
     if (tipText.length<10)
-        kb.add(reqTerm,tabont('message'),kb.literal(tipText));
+        kb.add(reqTerm,tabulator.ns.link('message'),kb.literal(tipText));
     else
-        kb.add(reqTerm,tabont('message'),kb.literal(tipText));
-    kb.add(reqTerm,tabont('to'),kb.literal("The User"));
-    kb.add(reqTerm,tabont('from'),kb.literal("The User"));
+        kb.add(reqTerm,tabulator.ns.link('message'),kb.literal(tipText));
+    kb.add(reqTerm,tabulator.ns.link('to'),kb.literal("The User"));
+    kb.add(reqTerm,tabulator.ns.link('from'),kb.literal("The User"));
     
     //append the undetermined td
     if (!notShow){
@@ -1029,7 +1031,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             h1th.appendChild(myDocument.createTextNode("Did you mean..."));
             var plist=kb.statementsMatching(dialogTerm);
             var i;
-            for (i=0;i<plist.length;i++) if (kb.whether(plist[i].predicate,rdf('type'),OWL('InverseFunctionalProperty'))) break;
+            for (i=0;i<plist.length;i++) if (kb.whether(plist[i].predicate,rdf('type'),tabulator.ns.owl('InverseFunctionalProperty'))) break;
             var IDpredicate=plist[i].predicate;
             var IDterm=kb.any(dialogTerm,plist[i].predicate);
             var text=label(dialogTerm)+" who has "+label(IDpredicate)+" "+IDterm+"?";
@@ -1110,7 +1112,7 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             //because getAbout relies on kb.fromNT, which does not deal with
             //the 'collection' termType. This termType is ambiguous anyway.
             choiceTerm.termType='collection';
-            var choices=kb.each(choiceTerm,tabont('element'));            
+            var choices=kb.each(choiceTerm,tabulator.ns.link('element'));            
             for (var i=0;i<choices.length;i++)
                 addMenuItem(choices[i]);
             break;
@@ -1145,8 +1147,8 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     var reqTerm = (type=='object')?stat.object:stat.predicate;
     var newStat;
     var eventhandler;
-    if (kb.any(reqTerm,tabont('onfillin'))){
-        eventhandler = new Function("subject",kb.any(reqTerm,tabont('onfillin')).value);
+    if (kb.any(reqTerm,tabulator.ns.link('onfillin'))){
+        eventhandler = new Function("subject",kb.any(reqTerm,tabulator.ns.link('onfillin')).value);
     }
     if (type=='predicate'){
         if (selectedTd.nextSibling.className!='undetermined'){

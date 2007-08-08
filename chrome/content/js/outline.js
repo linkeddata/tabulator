@@ -319,7 +319,8 @@ function Outline(doc) {
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
          
-        if (kb.whether(obj,rdf('type'),tabont('Request'))) td.className='undetermined'; //@@? why-timbl
+        if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
+            td.className='undetermined'; //@@? why-timbl
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
             td.appendChild(AJARImage(Icon.src.icon_expand, 'expand'));
         } //expandable
@@ -354,7 +355,7 @@ function Outline(doc) {
                 lab = predicateLabelForXML(predicate.elements[0],inverse);
         }
         lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
-        //if (kb.statementsMatching(predicate,rdf('type'),tabont('Request')).length) td_p.className='undetermined';
+        //if (kb.statementsMatching(predicate,rdf('type'), tabulator.ns.link('Request')).length) td_p.className='undetermined';
 
         var labelTD = document.createElement('TD')
         labelTD.setAttribute('notSelectable','true')
@@ -451,7 +452,7 @@ function Outline(doc) {
     classInstancePane.icon = Icon.src.icon_instances;
     classInstancePane.label = function(subject) {
         var n = kb.statementsMatching(
-            undefined, kb.sym('rdf', 'type'), subject).length;
+            undefined, tabulator.ns.rdf( 'type'), subject).length;
         if (n == 0) return null;
         return "List "+n;
     }
@@ -459,7 +460,7 @@ function Outline(doc) {
     classInstancePane.render = function(subject) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
-        var sts = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
+        var sts = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
         if (sts.length > 10) {
             var tr = myDocument.createElement('TR');
             tr.appendChild(myDocument.createTextNode(''+sts.length));
@@ -468,7 +469,7 @@ function Outline(doc) {
         }
 
         // Don't need to check in the filter as the plist is already trimmed
-        var plist = kb.statementsMatching(undefined, kb.sym('rdf', 'type'), subject)
+        var plist = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
         appendPropertyTRs(div, plist, true, function(pred){return true;})
         return div;
     }
@@ -588,7 +589,7 @@ function Outline(doc) {
         'http://www.w3.org/2006/link#uri': 1,
         'http://www.w3.org/2006/link#Document': 1,
     }
-    internalPane.predicates[tabont('all').uri]=1;  // From userinput.js
+    internalPane.predicates[tabulator.ns.link('all').uri] = 1;  // From userinput.js
     if (!SourceOptions["seeAlso not internal"].enabled)
         internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
     
@@ -603,7 +604,7 @@ function Outline(doc) {
     humanReadablePane.icon = Icon.src.icon_visit;
     humanReadablePane.label = function(subject) {
         if (!kb.anyStatementMatching(
-            subject, kb.sym('rdf', 'type'), kb.sym('tab', 'TextDocument')))
+            subject, tabulator.ns.rdf( 'type'), tabulator.ns.link( 'TextDocument')))
             return null;
         return "view";
     }
@@ -632,7 +633,7 @@ function Outline(doc) {
     imagePane.icon = Icon.src.icon_imageContents;
     imagePane.label = function(subject) {
         if (!kb.anyStatementMatching(
-            subject, kb.sym('rdf', 'type'),
+            subject, tabulator.ns.rdf( 'type'),
             kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
             return null;
         return "view";
@@ -1699,7 +1700,7 @@ function Outline(doc) {
                 */
                 // Query Error because of getAbout->kb.fromNT
                 var choiceQuery=SPARQLToQuery(
-                    "SELECT ?pred\nWHERE{ "+about+tabont('element')+" ?pred.}");
+                    "SELECT ?pred\nWHERE{ "+about+ tabulator.ns.link('element')+" ?pred.}");
                 thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
                     choiceQuery,{'clickedTd':p.parentNode});
                 break;
@@ -1789,7 +1790,7 @@ function Outline(doc) {
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
             tabulator.log.debug("expand: Node for " + subject + " expanded")
             //fetch seeAlso when render()
-            var seeAlsoStats = sf.store.statementsMatching(subject,RDFS('seeAlso'))
+            var seeAlsoStats = sf.store.statementsMatching(subject, tabulator.ns.rdfs('seeAlso'))
             seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
         } 
     
@@ -1810,16 +1811,10 @@ function Outline(doc) {
                 if (!as) return false;
                 for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
                     for (var rd = Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
-    //          tabulator.log.info('@@@@@ cursubj='+cursubj+', rd='+rd)
                         if (uri == rd) return true;
                     }
                 }
                 if (kb.anyStatementMatching(cursubj,undefined,undefined,docTerm)) return true; //Kenny: inverse?
-                /* This didn't work because of smushing
-                if (kb.anyStatementMatching(docTerm, // or stg. requestedBY the same thing?
-                    kb.sym('tab',"requestedBy"),  // @@ works? -tim
-                                        requTerm)) return true;
-                */
                 return false;
             }
             if (relevant()) {
@@ -2001,17 +1996,18 @@ function Outline(doc) {
             views.defaults[property] = pviewfunc;
     } //addPropertyView
 
+    var ns = tabulator.ns;
     //view that applies to items that are objects of certain properties.
     //views_addPropertyView(property, viewjsfile, default?)
-    views_addPropertyView(foaf('depiction').uri, VIEWAS_image, true);
-    views_addPropertyView(foaf('img').uri, VIEWAS_image, true);
-    views_addPropertyView(foaf('thumbnail').uri, VIEWAS_image, true);
-    views_addPropertyView(foaf('logo').uri, VIEWAS_image, true);
-    //views_addPropertyView(mo('image').uri, VIEWAS_image, true);
-    //views_addPropertyView(foaf('aimChatID').uri, VIEWAS_aim_IMme, true);
-    views_addPropertyView(foaf('mbox').uri, VIEWAS_mbox, true);
-    //views_addPropertyView(foaf('based_near').uri, VIEWAS_map, true);
-    views_addPropertyView(foaf('birthday').uri, VIEWAS_cal, true);
+    views_addPropertyView(ns.foaf('depiction').uri, VIEWAS_image, true);
+    views_addPropertyView(ns.foaf('img').uri, VIEWAS_image, true);
+    views_addPropertyView(ns.foaf('thumbnail').uri, VIEWAS_image, true);
+    views_addPropertyView(ns.foaf('logo').uri, VIEWAS_image, true);
+    //views_addPropertyView(ns.mo('image').uri, VIEWAS_image, true);
+    //views_addPropertyView(ns.foaf('aimChatID').uri, VIEWAS_aim_IMme, true);
+    views_addPropertyView(ns.foaf('mbox').uri, VIEWAS_mbox, true);
+    //views_addPropertyView(ns.foaf('based_near').uri, VIEWAS_map, true);
+    views_addPropertyView(ns.foaf('birthday').uri, VIEWAS_cal, true);
 
     var thisOutline=this;
     /** some builtin simple views **/

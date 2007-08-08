@@ -20,37 +20,29 @@ sparql = function(store) {
 sparql.prototype._context_where = function(context) {
         return (context == undefined || context.length == 0)
         ? ""
-        : "WHERE { " + map(anonymizeNT, context).join("\n") + " }\n";
+        : "WHERE { " + context.map(anonymizeNT).join("\n") + " }\n";
 }
 
-sparql.prototype._statement_context = function(_statement) {
+sparql.prototype._statement_context = function(s) {
+    var uri = s.why;
     var context = [];
-    var s = _statement;
-    /*
+    var attempts = 0;
+    while (1 && attempts++<10) {
         if (!s || s.subject == undefined) break;
-     s = this.store.statementsMatching(undefined,undefined,s.subject,statement.why);
-     if (s == undefined || s.length == 0) break;
-     if (s.length == 1) {
-         context.push(s[0]);
-     } else {
-         // node is not uniquely identifiable
-         // do some IFP magic but for now,
-         break;
-     }
-     */
-    for each (var term in [s.subject,s.object]){ //predicate is not likely to be a bnode
-        if (term.termType!='bnode') continue;
-        var labelTerm=lb.label(term);
-        if (labelTerm){
-            s = this.store.statementsMatching(undefined,undefined,labelTerm,_statement.why);
-            if (s.length == 1)
-                context.push(s[0]);           
+        s = this.store.statementsMatching(undefined,undefined,s.subject,uri);
+        if (s == undefined || s.length == 0) break;
+        if (s.length == 1) {
+            context.push(s[0]);
+        } else {
+            // node is not uniquely identifiable
+            // do some IFP magic but for now,
+            break;
         }
     }
     return context;
 }
 
-_sparql_fire = function(uri, query, callback) {
+sparql.prototype._fire = function(uri, query, callback) {
     var xhr = Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {
@@ -73,7 +65,7 @@ _sparql_fire = function(uri, query, callback) {
     xhr.send(query);
 }
 
-sparql.prototype.prepareUpdate = function(statement) {
+sparql.prototype.update_statement = function(statement) {
     if (statement && statement.why == undefined) return;
 
     var sparql = this;
@@ -84,7 +76,7 @@ sparql.prototype.prepareUpdate = function(statement) {
         statementNT: statement?anonymizeNT(statement):undefined,
         where: sparql._context_where(context),
 
-        setObject: function(obj, callback) {
+        set_object: function(obj, callback) {
             query = this.where;
             query += "DELETE { " + this.statementNT + " }\n";
             if(obj){
@@ -94,7 +86,7 @@ sparql.prototype.prepareUpdate = function(statement) {
                     anonymize(obj) + " " + " . }\n";
             }
             
-            _sparql_fire(this.statement[3].uri, query, callback);
+            sparql._fire(this.statement[3].uri, query, callback);
         },
     }
 }
@@ -111,7 +103,7 @@ sparql.prototype.insert_statement = function(st, callback) {
             anonymize(st.object) + " " + " . }\n";
     }
     
-    _sparql_fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
+    this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
 }
 
 sparql.prototype.delete_statement = function(st, callback) {
@@ -119,5 +111,5 @@ sparql.prototype.delete_statement = function(st, callback) {
     
     query += "DELETE { " + anonymizeNT(st) + " }\n";
     
-    _sparql_fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
+    this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
 }

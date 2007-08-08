@@ -172,9 +172,9 @@ clearInputAndSave: function clearInputAndSave(e){
             switch (obj.termType){
                 case 'literal':
                     // generate path and nailing from current values
-                    sparqlUpdate = sparqlService.prepareUpdate(s);
+                    sparqlUpdate = sparqlService.update_statement(s);
                     // TODO: DEFINE ERROR CALLBACK
-                    sparqlUpdate.setObject(makeTerm(this.lastModified.value), function(uri,success,error_body){});
+                    sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){});
                     obj.value=this.lastModified.value;
         //fire text modified??
                     UserInputFormula.statements.push(s);

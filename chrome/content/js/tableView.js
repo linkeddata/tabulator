@@ -331,10 +331,10 @@ function tableView(container,doc)
         if (!selTD.stat) {saveAddRowText(newText); return;};
         tabulator.log.msg('sparql update with stat: ' + selTD.stat);
         tabulator.log.msg('new object will be: ' + kb.literal(newText, ''));
-        if (isExtension) {sparqlUpdate = sparql.prepareUpdate(selTD.stat);}
-        else {sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);}
+        if (isExtension) {sparqlUpdate = sparql.update_statement(selTD.stat);}
+        else {sparqlUpdate = new sparql(kb).update_statement(selTD.stat);}
         // TODO: DEFINE ERROR CALLBACK
-        sparqlUpdate.setObject(kb.literal(newText, ''), function(uri,success,error_body){
+        sparqlUpdate.set_object(kb.literal(newText, ''), function(uri,success,error_body){
         if (success) {kb.add(selTD.stat}}));
     }
 
@@ -524,10 +524,10 @@ function tableView(container,doc)
                 
                 // sparql update; for each cell in the completed row, send the value of the stat pointer
                 tabulator.log.msg('sparql update with stat: ' + td.stat);
-                if (isExtension) {sparqlUpdate = sparql.prepareUpdate(td.stat);}
-                else {sparqlUpdate = new sparql(kb).prepareUpdate(td.stat);}
+                if (isExtension) {sparqlUpdate = sparql.update_statement(td.stat);}
+                else {sparqlUpdate = new sparql(kb).update_statement(td.stat);}
                 // TODO: DEFINE ERROR CALLBACK
-                sparqlUpdate.setObject(td.stat.object, function(uri,success,error_body){
+                sparqlUpdate.set_object(td.stat.object, function(uri,success,error_body){
                 if (success) {kb.add(td.stat)}});
             }
         }

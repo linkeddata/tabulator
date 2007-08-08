@@ -28,22 +28,6 @@ function Tabulator() {
     tabulator = this;
     this.wrappedJSObject = this;
     
-    // Namespaces for general use
-    this.ns = {};
-    this.ns.link = this.ns.tab = this.ns.tabont = Namespace("http://www.w3.org/2007/ont/link#")
-    this.ns.http = Namespace("http://www.w3.org/2007/ont/http#");
-    this.ns.httph = Namespace("http://www.w3.org/2007/ont/httph#");
-    this.ns.ical = Namespace("http://www.w3.org/2002/12/cal/icaltzd#");
-    this.ns.foaf = Namespace("http://xmlns.com/foaf/0.1/");
-    this.ns.rdf = rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    this.ns.rdfs = rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#");
-    this.ns.owl = owl = Namespace("http://www.w3.org/2002/07/owl#");
-    this.ns.dc = dc = Namespace("http://purl.org/dc/elements/1.1/");
-    this.ns.rss = rss = Namespace("http://purl.org/rss/1.0/");
-    this.ns.xsd = xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
-    this.ns.contact = contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#");
-    this.ns.mo = mo = Namespace("http://purl.org/ontology/mo/");
-
     //Include the javascript that makes up the backend:
     var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
                        .getService(Components.interfaces.mozIJSSubScriptLoader);
@@ -69,7 +53,26 @@ function Tabulator() {
     loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timelineView.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/sparqlUpdate.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/labeler.js");
+
     this.kb = new RDFIndexedFormula();
+
+    // Namespaces for general use
+    this.ns = {};
+    this.ns.link = this.ns.tab = this.ns.tabont = Namespace("http://www.w3.org/2007/ont/link#")
+    this.ns.http = Namespace("http://www.w3.org/2007/ont/http#");
+    this.ns.httph = Namespace("http://www.w3.org/2007/ont/httph#");
+    this.ns.ical = Namespace("http://www.w3.org/2002/12/cal/icaltzd#");
+    this.ns.foaf = Namespace("http://xmlns.com/foaf/0.1/");
+    this.ns.rdf = rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    this.ns.rdfs = rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#");
+    this.ns.owl = owl = Namespace("http://www.w3.org/2002/07/owl#");
+    this.ns.dc = dc = Namespace("http://purl.org/dc/elements/1.1/");
+    this.ns.rss = rss = Namespace("http://purl.org/rss/1.0/");
+    this.ns.xsd = xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
+    this.ns.contact = contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#");
+    this.ns.mo = mo = Namespace("http://purl.org/ontology/mo/");
+
+
     this.sf = new SourceFetcher(this.kb);
     this.qs = new QuerySource();
     this.sourceWidget = new SourceWidget();

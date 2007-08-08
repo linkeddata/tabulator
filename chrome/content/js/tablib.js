@@ -14,7 +14,6 @@ loadScript('rdf/query.js');
 loadScript('rdf/sources.js');
 loadScript('tabulate.js');
 loadScript('sorttable.js');
-loadScript('mapper.js');
 loadScript('mapView.js');
 loadScript('tabviews.js');
 loadScript('rdf/sparql.js');

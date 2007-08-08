@@ -210,7 +210,7 @@ webdav = new function() {
         var isExtension = isExtension;
         if(isExtension == undefined || !isExtension) {
             try {
-                Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
+                Util.enablePrivilege("UniversalBrowserRead")
             } catch(e) {
                 alert("Failed to get privileges: " + e)
             }

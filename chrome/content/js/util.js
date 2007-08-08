@@ -1,5 +1,5 @@
 /**
- * Utility functions for tabulator
+* Utility functions for tabulator
  */
 
 function string_startswith(str, pref) { // missing library routines
@@ -7,42 +7,42 @@ function string_startswith(str, pref) { // missing library routines
 }
 
 /**
- * @class A utility class
+* @class A utility class
  */
 Util = {
     /** A simple debugging function */         
-        'output': function (o) {
+    'output': function (o) {
 	    var k = document.createElement('div')
 	    k.textContent = o
 	    document.body.appendChild(k)
 	},
     /**
-     * A standard way to add callback functionality to an object
+    * A standard way to add callback functionality to an object
      **
      ** Callback functions are indexed by a 'hook' string.
      **
      ** They return true if they want to be called again.
      **
      */
-        'callbackify': function (obj,callbacks) {
+    'callbackify': function (obj,callbacks) {
 	    obj.callbacks = {}
 	    for (var x=callbacks.length-1; x>=0; x--) {
-		obj.callbacks[callbacks[x]] = []
+            obj.callbacks[callbacks[x]] = []
 	    }
 	    
 	    obj.addHook = function (hook) {
-		if (!obj.callbacks[hook]) { obj.callbacks[hook] = [] }
+            if (!obj.callbacks[hook]) { obj.callbacks[hook] = [] }
 	    }
-
+        
 	    obj.addCallback = function (hook, func) {
-		obj.callbacks[hook].push(func)
+            obj.callbacks[hook].push(func)
 	    }
-
+        
         obj.removeCallback = function (hook, funcName) {
             for (var i=0;i<obj.callbacks[hook].length;i++){
                 //alert(obj.callbacks[hook][i].name);
                 if (obj.callbacks[hook][i].name==funcName){
-
+                    
                     obj.callbacks[hook].splice(i,1);
                     return true;
                 }
@@ -50,84 +50,84 @@ Util = {
             return false; 
         }
         obj.insertCallback=function (hook,func){
-        obj.callbacks[hook].unshift(func);
+            obj.callbacks[hook].unshift(func);
         }
 	    obj.fireCallbacks = function (hook, args) {
-		var newCallbacks = []
-		var replaceCallbacks = []
-		var len = obj.callbacks[hook].length
-//	    tabulator.log.info('!@$ Firing '+hook+' call back with length'+len);
-		for (var x=len-1; x>=0; x--) {
-//		    tabulator.log.info('@@ Firing '+hook+' callback '+ obj.callbacks[hook][x])
-		    if (obj.callbacks[hook][x].apply(obj,args)) {
-			newCallbacks.push(obj.callbacks[hook][x])
-		    }
-		}
-
-		for (var x=newCallbacks.length-1; x>=0; x--) {
-		    replaceCallbacks.push(newCallbacks[x])
-		}
-		
-		for (var x=len; x<obj.callbacks[hook].length; x++) {
-		    replaceCallbacks.push(obj.callbacks[hook][x])
-		}
-		
-		obj.callbacks[hook] = replaceCallbacks
+            var newCallbacks = []
+            var replaceCallbacks = []
+            var len = obj.callbacks[hook].length
+            //	    tabulator.log.info('!@$ Firing '+hook+' call back with length'+len);
+            for (var x=len-1; x>=0; x--) {
+                //		    tabulator.log.info('@@ Firing '+hook+' callback '+ obj.callbacks[hook][x])
+                if (obj.callbacks[hook][x].apply(obj,args)) {
+                    newCallbacks.push(obj.callbacks[hook][x])
+                }
+            }
+            
+            for (var x=newCallbacks.length-1; x>=0; x--) {
+                replaceCallbacks.push(newCallbacks[x])
+            }
+            
+            for (var x=len; x<obj.callbacks[hook].length; x++) {
+                replaceCallbacks.push(obj.callbacks[hook][x])
+            }
+            
+            obj.callbacks[hook] = replaceCallbacks
 	    }
 	},
     
     /**
-     * A standard way to create XMLHttpRequest objects
+    * A standard way to create XMLHttpRequest objects
      */
 	'XMLHTTPFactory': function () {
-      if (isExtension) {
-          return Components.
-              classes["@mozilla.org/xmlextras/xmlhttprequest;1"].
-              createInstance().QueryInterface(Components.interfaces.nsIXMLHttpRequest);
-      } else if (window.XMLHttpRequest) {
-		try {
-		    return new XMLHttpRequest()
-		} catch (e) {
-		    return false
-		}
+        if (isExtension) {
+            return Components.
+            classes["@mozilla.org/xmlextras/xmlhttprequest;1"].
+            createInstance().QueryInterface(Components.interfaces.nsIXMLHttpRequest);
+        } else if (window.XMLHttpRequest) {
+            try {
+                return new XMLHttpRequest()
+            } catch (e) {
+                return false
+            }
 	    }
 	    else if (window.ActiveXObject) {
-		try {
-		    return new ActiveXObject("Msxml2.XMLHTTP")
-		} catch (e) {
-		    try {
-			return new ActiveXObject("Microsoft.XMLHTTP")
-		    } catch (e) {
-			return false
-		    }
-		}
+            try {
+                return new ActiveXObject("Msxml2.XMLHTTP")
+            } catch (e) {
+                try {
+                    return new ActiveXObject("Microsoft.XMLHTTP")
+                } catch (e) {
+                    return false
+                }
+            }
 	    }
 	    else {
-		return false
+            return false
 	    }
 	},
     /**
-     * Returns a hash of headers and values
+    * Returns a hash of headers and values
      */
 	'getHTTPHeaders': function (xhr) {
 	    var lines = xhr.getAllResponseHeaders().split("\n")
 	    var headers = {}
 	    var last = undefined
 	    for (var x=0; x<lines.length; x++) {
-		if (lines[x].length > 0) {
-		    var pair = lines[x].split(': ')
-		    if (typeof pair[1] == "undefined") { // continuation
-			headers[last] += "\n"+pair[0]
-		    } else {
-			last = pair[0].toLowerCase()
-			headers[last] = pair[1]
-		    }
-		}
+            if (lines[x].length > 0) {
+                var pair = lines[x].split(': ')
+                if (typeof pair[1] == "undefined") { // continuation
+                    headers[last] += "\n"+pair[0]
+                } else {
+                    last = pair[0].toLowerCase()
+                    headers[last] = pair[1]
+                }
+            }
 	    }
 	    return headers
 	},
-
-        'dtstamp': function () {
+    
+    'dtstamp': function () {
 	    var now = new Date();
 	    var year  = now.getYear() + 1900;
 	    var month = now.getMonth() + 1;
@@ -141,11 +141,11 @@ Util = {
 	    if (minute < 10) minute = "0" + minute;
 	    if (second < 10) second = "0" + second;
 	    return year + "-" + month + "-" + day + "T"
-		+ hour + ":" + minute + ":" + second + "Z";
+            + hour + ":" + minute + ":" + second + "Z";
 	},
-
-        'enablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.enablePrivilege) || function() { return; },
-        'disablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.disablePrivilege) || function() { return; }
+    
+    'enablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.enablePrivilege) || function() { return; },
+    'disablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.disablePrivilege) || function() { return; }
 }
 //================================================
 function findLabelSubProperties() {
@@ -153,51 +153,51 @@ function findLabelSubProperties() {
     tabulator.log.debug("rdfs:label subproperties:");
     var labelPredicates = kb.each(undefined, RDFS('subPropertyOf'), RDFS('label'));
     for (i=0, n=labelPredicates.length; i<n; i++) {
-	if (labelPriority[labelPredicates[i].uri] == null) {
-	    labelPriority[labelPredicates[i].uri] = 1
-	}
-	tabulator.log.debug("rdfs:label subproperty "+ labelPredicates[i]);
-	
+        if (labelPriority[labelPredicates[i].uri] == null) {
+            labelPriority[labelPredicates[i].uri] = 1
+        }
+        tabulator.log.debug("rdfs:label subproperty "+ labelPredicates[i]);
+        
     }
 }
 
 function label(x, trimSlash) { // x is an object
     /*
-    var i,n
-    var plist = kb.statementsMatching(x);
-    var y, best = 0, lab = ""
-    findLabelSubProperties();	// Too slow? Could cache somewhere
-    for (i=0, n=plist.length; i<n; i++) {
-	var st = plist[i]
-	y = labelPriority[st.predicate.uri]
-	if (st.object.value && st.object.lang) {
-	    if (st.object.lang.indexOf(LanguagePreference) >= 0) { y += 1 } // Best
-	    else { y -= 1}  // Prefer no lang to wrong lang (?)
-	}
-	if (y && (y > best) && (st.object.termType=='literal')) {
-	    lab = st.object.value
-	    best = y
-	}
-    }
-    if (lab) {return lab};
-    */
+     var i,n
+     var plist = kb.statementsMatching(x);
+     var y, best = 0, lab = ""
+     findLabelSubProperties();	// Too slow? Could cache somewhere
+     for (i=0, n=plist.length; i<n; i++) {
+         var st = plist[i]
+         y = labelPriority[st.predicate.uri]
+         if (st.object.value && st.object.lang) {
+             if (st.object.lang.indexOf(LanguagePreference) >= 0) { y += 1 } // Best
+             else { y -= 1}  // Prefer no lang to wrong lang (?)
+         }
+         if (y && (y > best) && (st.object.termType=='literal')) {
+             lab = st.object.value
+             best = y
+         }
+     }
+     if (lab) {return lab};
+     */
     
     var lab=lb.label(x);
     if (lab) return lab.value;
     //load #foo to Labeler?
-
+    
     if (x.termType == 'bnode') {
-	return "...";
+        return "...";
     }
     if (x.termType=='collection'){
-	return '(' + x.elements.length + ')';
+        return '(' + x.elements.length + ')';
     }
     var hash = x.uri.indexOf("#")
-    if (hash >=0) { return x.uri.slice(hash+1) }
-
+        if (hash >=0) { return x.uri.slice(hash+1) }
+    
     if (trimSlash) { // only trim URIs, not rdfs:labels
-	var slash = x.uri.lastIndexOf("/");
-	if ((slash >=0) && (slash < x.uri.length)) return x.uri.slice(slash+1);
+        var slash = x.uri.lastIndexOf("/");
+        if ((slash >=0) && (slash < x.uri.length)) return x.uri.slice(slash+1);
     }
     return decodeURIComponent(x.uri)
 }
@@ -215,31 +215,31 @@ function labelForXML(x) {
 function predicateLabelForXML(p, inverse) {
     var lab;
     if (inverse) { // If we know an inverse predicate, use its label
-	var ip = kb.any(p, OWL('inverseOf'));
-	if (!ip) ip = kb.any(undefined, OWL('inverseOf'), p);
-	if (ip) return labelForXML(ip)
+        var ip = kb.any(p, OWL('inverseOf'));
+        if (!ip) ip = kb.any(undefined, OWL('inverseOf'), p);
+        if (ip) return labelForXML(ip)
     }
-    
-    lab = labelForXML(p)
-    if (inverse) {
-	if (lab =='type') return '...'; // Not "is type of"
-	return "is "+lab+" of";
-    }
-    return lab
+        
+        lab = labelForXML(p)
+            if (inverse) {
+                if (lab =='type') return '...'; // Not "is type of"
+                return "is "+lab+" of";
+            }
+        return lab
 } 
 //=====================================
-	///////////////// Utility
-	
+///////////////// Utility
+
 function emptyNode(node) {
     var nodes = node.childNodes, len = nodes.length, i
     for (i=len-1; i>=0; i--) node.removeChild(nodes[i])
-    return node
+        return node
 }
 
 function ArrayContains(a, x) {
     var i, n = a.length
     for (i=0; i<n; i++)
-    if (a[i] == x) return true;
+        if (a[i] == x) return true;
     return false
 }
 
@@ -253,7 +253,7 @@ function isArray(arr) {
 } //isArray
 
 /** turns an HTMLCollection into an Array. Why? um, mostly so map & filter will work, though
-  * i suspect they work on collections too **/
+* i suspect they work on collections too **/
 function HTMLCollection_to_Array(coll) {
     var arr = new Array();
     var len = coll.length;
@@ -271,35 +271,35 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
     var docuri = Util.uri.docpart(p.uri);
     var fixuri;
     if (p.uri.indexOf('#') < 0) { // No hash
-
-	// @@ major hack for dbpedia Categories, which spred indefinitely
-	if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
-
-/*
-        if (string_startswith(p.uri, 'http://xmlns.com/foaf/0.1/')) {
-            fixuri = "http://dig.csail.mit.edu/2005/ajar/ajaw/test/foaf"
-	    // should give HTTP 303 to ontology -- now is :-)
+        
+        // @@ major hack for dbpedia Categories, which spred indefinitely
+        if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
+        
+        /*
+         if (string_startswith(p.uri, 'http://xmlns.com/foaf/0.1/')) {
+             fixuri = "http://dig.csail.mit.edu/2005/ajar/ajaw/test/foaf"
+                            // should give HTTP 303 to ontology -- now is :-)
         } else
-*/
-	if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
-		   || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
+         */
+        if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
+            || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
             fixuri = "http://dublincore.org/2005/06/13/dcq";
-	    //dc fetched multiple times
+                           //dc fetched multiple times
         } else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
             fixuri = "http://xmlns.com/wot/0.1/index.rdf";
         } else if (string_startswith(p.uri, 'http://web.resource.org/cc/')) {
-//            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
+                                                  //            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
             fixuri = "http://web.resource.org/cc/schema.rdf";
         }
     }
     if (fixuri) {
-	docuri = fixuri
+        docuri = fixuri
     }
     if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
     
     if (fixuri) {   // only give warning once: else happens too often
         tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
-	    "> to <" + docuri + ">")	
+                           "> to <" + docuri + ">")	
     }
     sf.requestURI(docuri, requestedBy);
 } //AJAR_handleNewTerm
@@ -318,31 +318,31 @@ function myFetcher(x, requestedBy) {
 function getTarget(e) {
     var target
     if (!e) var e = window.event
-    if (e.target) target = e.target
-    else if (e.srcElement) target = e.srcElement
-    if (target.nodeType == 3) // defeat Safari bug [sic]
-        target = target.parentNode
-	tabulator.log.debug("Click on: " + target.tagName)
-	return target
+        if (e.target) target = e.target
+            else if (e.srcElement) target = e.srcElement
+                if (target.nodeType == 3) // defeat Safari bug [sic]
+                    target = target.parentNode
+                        tabulator.log.debug("Click on: " + target.tagName)
+                        return target
 }
-	
-	//////////////////////////////////// User Interface Events
-	
+
+//////////////////////////////////// User Interface Events
+
 function getAboutLevel(target) {
     var level
     for (level = target; level; level = level.parentNode) {
-    tabulator.log.debug("Level "+level)
-    var aa = level.getAttribute('about')
-    if (aa) return level
+        tabulator.log.debug("Level "+level)
+        var aa = level.getAttribute('about')
+        if (aa) return level
     }
-    return undefined
+        return undefined
 }
 
 function ancestor(target, tagName) {
     var level
     for (level = target; level; level = level.parentNode) {
-    tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
-    if (level.tagName == tagName) return level;
+        tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
+        if (level.tagName == tagName) return level;
     }
     return undefined
 }
@@ -354,16 +354,16 @@ function getAbout(kb, target) {
         aa = level.getAttribute('about')
         if (aa) 
             return kb.fromNT(aa)
-        else if (level.tagName=='TR') //this is to prevent literals passing through
-            return undefined
+                else if (level.tagName=='TR') //this is to prevent literals passing through
+                    return undefined
     }
-    return undefined
+        return undefined
 }
 
 function getTerm(target){ //works only for selected <TD>
     var statementTr=target.parentNode;
     var st=statementTr.AJAR_statement;
-
+    
     switch (target.className){
         case 'pred selected':
             return st.predicate;
@@ -384,7 +384,7 @@ function getTerm(target){ //works only for selected <TD>
 
 /**This is for .js that is not so important**/
 function include(linkstr){
-
+    
     var lnk = document.createElement('script');
     lnk.setAttribute('type', 'text/javascript');
     lnk.setAttribute('src', linkstr);
@@ -434,12 +434,12 @@ function getEyeFocus(element,instantly,isBottom,myWindow) {
     }
     var id=myWindow.setInterval(scrollAmount,50);
     var times=0
-    function scrollAmount(){
-        myWindow.scrollBy(0,totalScroll/10);
-        times++;
-        if (times==10)
-            myWindow.clearInterval(id);
-    }
+        function scrollAmount(){
+            myWindow.scrollBy(0,totalScroll/10);
+            times++;
+            if (times==10)
+                myWindow.clearInterval(id);
+        }
 }
 
 function AJARImage(src, alt, tt, doc) {

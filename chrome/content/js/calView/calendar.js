@@ -289,7 +289,7 @@ YAHOO.widget.Calendar_Core = function(id, containerId, monthyear, selected) {
 }
 
 
-YAHOO.widget.Calendar_Core.IMG_ROOT = '../ajaw/calView/assets/'
+YAHOO.widget.Calendar_Core.IMG_ROOT = 'js/calView/assets/'
 
 /**
 * Type constant used for renderers to represent an individual date (M/D/Y)

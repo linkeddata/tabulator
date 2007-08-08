@@ -30,8 +30,8 @@ function include_css(linkstr) {
     return lnk;
 }
 // add calendar stylesheet
-include_css('calView/assets/calendar.css');
-include_css('calView/assets/bigCal.css');
+include_css('js/calView/assets/calendar.css');
+include_css('js/calView/assets/bigCal.css');
 
 
 function addStyle(str){

@@ -334,7 +334,8 @@ function tableView(container,doc)
         if (isExtension) {sparqlUpdate = sparql.prepareUpdate(selTD.stat);}
         else {sparqlUpdate = new sparql(kb).prepareUpdate(selTD.stat);}
         // TODO: DEFINE ERROR CALLBACK
-        sparqlUpdate.setObject(kb.literal(newText, ''), function(uri,success,error_body){});
+        sparqlUpdate.setObject(kb.literal(newText, ''), function(uri,success,error_body){
+        if (success) {kb.add(selTD.stat}}));
     }
 
     function inputObjKeyPress(e) {
@@ -526,7 +527,8 @@ function tableView(container,doc)
                 if (isExtension) {sparqlUpdate = sparql.prepareUpdate(td.stat);}
                 else {sparqlUpdate = new sparql(kb).prepareUpdate(td.stat);}
                 // TODO: DEFINE ERROR CALLBACK
-                sparqlUpdate.setObject(td.stat.object, function(uri,success,error_body){});
+                sparqlUpdate.setObject(td.stat.object, function(uri,success,error_body){
+                if (success) {kb.add(td.stat)}});
             }
         }
     } // saveAddRowText

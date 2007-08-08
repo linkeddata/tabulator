@@ -1,8 +1,12 @@
 isExtension = true;
-if ((typeof lb) == "undefined") {
-      lb = Components.classes["@dig.csail.mit.edu/tabulator;1"]
+var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
                     .getService(Components.interfaces.nsISupports)
-                    .wrappedJSObject.lb;
+                    .wrappedJSObject;
+if ((typeof lb) == "undefined") {
+    lb = tabulator.lb;
+}
+if ((typeof sparql) == "undefined") {
+    sparql = tabulator.sparql;
 }
 
 

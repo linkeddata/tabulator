@@ -335,7 +335,7 @@ function tableView(container,doc)
         else {sparqlUpdate = new sparql(kb).update_statement(selTD.stat);}
         // TODO: DEFINE ERROR CALLBACK
         sparqlUpdate.set_object(kb.literal(newText, ''), function(uri,success,error_body){
-        if (success) {kb.add(selTD.stat}}));
+        if (success) {kb.add(selTD.stat)}});
     }
 
     function inputObjKeyPress(e) {

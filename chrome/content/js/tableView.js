@@ -5,6 +5,8 @@
 
 // hotkeys: end adds a new row
 
+// migth want to change editable checking, only did it for adding row text
+
 function tableView(container,doc) 
 {
     var numRows; // assigned in click, includes header
@@ -39,18 +41,19 @@ function tableView(container,doc)
             t.appendChild(tr);
             numStats = q.pat.statements.length; // Added
             qps = q.pat.statements;
+            alert('qps: '+qps);
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
                 // generate the subj and pred for each tdNode 
                 for (j = 0; j<numStats; j++) {
                     var stat = q.pat.statements[j];
-                    // statClone = <#s> <#p> ?v0 .
+                    // statClone = <#s> <#p> ?* .
                     var statClone = new RDFStatement(stat.subject, stat.predicate, stat.object);
                     if (statClone.object == v) {
                         statClone.object = bindings[v];
                         var sSubj = statClone.subject.toString();
                         if (sSubj[0] == '?') { 
-                            // statClone = ?v0 <#p> <#o> .
+                            // statClone = ?* <#p> <#o> .
                             statClone.subject = bindings[statClone.subject];
                         }
                         break;
@@ -58,7 +61,7 @@ function tableView(container,doc)
                 }
                 tabulator.log.msg('looking for statement in store to attach to node ' + statClone);
                 var st = kb.anyStatementMatching(statClone.subject, statClone.predicate, statClone.object);
-                if (!st.why) {alert("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
+                if (!st.why) {tabulator.log.warn("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
                 tr.appendChild(matrixTD(st.object, st));
             } //for each query var, make a row
         } // onBinding
@@ -281,6 +284,7 @@ function tableView(container,doc)
         (selTD.getAttribute('type') == 'sym')) {
             setSelected(selTD); return; 
         }
+        if (!selTD.editable && (selTD.getAttribute('type') == 'sym')) {return;}
         if (selTD.getAttribute('type') == 'bnode') {
             setSelected(selTD); return;
         }
@@ -314,6 +318,7 @@ function tableView(container,doc)
     } //onEdit
     
     function inputObjBlur(e) { 
+        // no re-editing of symbols for now
         document.getElementById("autosuggest").style.display = 'none';
         newText = inputObj.value;
         selTD.setAttribute('about', newText);
@@ -334,8 +339,16 @@ function tableView(container,doc)
         if (isExtension) {sparqlUpdate = sparql.update_statement(selTD.stat);}
         else {sparqlUpdate = new sparql(kb).update_statement(selTD.stat);}
         // TODO: DEFINE ERROR CALLBACK
-        sparqlUpdate.set_object(kb.literal(newText, ''), function(uri,success,error_body){
-        if (success) {kb.add(selTD.stat)}});
+        //selTD.stat.object = kb.literal(newText, '');
+        sparqlUpdate.set_object(kb.literal(newText, ''), function(uri,success,error_body) {
+            if (success) {
+                //kb.add(selTD.stat.subject, selTD.stat.predicate, selTD.stat.object, selTD.stat.why)
+                tabulator.log.msg('sparql update success');
+                var newStatement = kb.add(selTD.stat.subject, selTD.stat.predicate, kb.literal(newText, ''), selTD.stat.why);
+                kb.remove(selTD.stat);
+                selTD.stat = newStatement;
+            }
+        });
     }
 
     function inputObjKeyPress(e) {
@@ -378,6 +391,7 @@ function tableView(container,doc)
     function createSymbolTD() {
         tabulator.log.msg('creating symbolTD for addRow');
         var td = thisTable.document.createElement("TD");
+        td.editable=true;
         td.setAttribute('type', 'sym');
         td.setAttribute('style', 'color:#4444ff');
         td.innerHTML = "---";
@@ -429,7 +443,7 @@ function tableView(container,doc)
                 td = createBNodeTD();
                 td.v = qps[i].object
             }
-            else {alert('addRow problem')} 
+            else {tabulator.log.warn('addRow problem')} 
             tr.appendChild(td);
         }
         t.appendChild(tr);
@@ -453,6 +467,7 @@ function tableView(container,doc)
     
     function saveAddRowText(newText) {
         var td = selTD; // need to use this in case the user switches to a new TD in the middle of the autosuggest process
+        td.editable=false;
         var type = td.getAttribute('type');
         // get the qps which is stored on the first cell of the row
         var qpsc = getTDNode(getRowIndex(td), 0).qpsClone;
@@ -478,25 +493,25 @@ function tableView(container,doc)
                     return entryArray[i][1];
                 }
             }
-            alert('no matching sym');
+            tabulator.log.warn('no matching sym');
         }
         
         var rowNum = getRowIndex(td);
         // fill in the query pattern based on the newText
         for (var i = 0; i<numCols; i++) {
-            tabulator.log.msg('filling in variable: ' + td.v);
-            tabulator.log.msg('current statment is: ' + qpsc[i]);
+            tabulator.log.msg('FILLING IN VARIABLE: ' + td.v);
+            tabulator.log.msg('CURRENT STATEMENT IS: ' + qpsc[i]);
             if (qpsc[i].subject == td.v) { // subj is a variable
                 if (type == 'sym') {qpsc[i].subject = getMatchingSym(newText);}
                 if (type == 'lit') {qpsc[i].subject = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].subject = kb.bnode();}
-                tabulator.log.msg('new qpsc is: ' + qpsc);
+                tabulator.log.msg('NEW qpsc is: ' + qpsc);
             }
             if (qpsc[i].object == td.v) { // obj is a variable
                 if (type == 'sym') {qpsc[i].object = getMatchingSym(newText);}
                 if (type == 'lit') {qpsc[i].object = kb.literal(newText);}
                 if (type == 'bnode') {qpsc[i].object = kb.bnode();}
-                tabulator.log.msg('new qpsc is: ' + qpsc);
+                tabulator.log.msg('NEW qpsc is: ' + qpsc);
             }
         }
         
@@ -510,6 +525,7 @@ function tableView(container,doc)
         // if all the variables in the query pattern have been filled out, then attach stat pointers to each node, add the stat to the store, and perform the sparql update
         if (qpscComplete == true) {
             tabulator.log.msg('qpsc has been filled out: ' + qpsc);
+            alert('qpsc is filled out: ' + qpsc);
             for (var i = 0; i<numCols; i++) {
                 tabulator.log.msg('looking for statement in store: ' + qpsc[i]);
                 var st = kb.anyStatementMatching(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object); // existing statement for symbols
@@ -517,18 +533,24 @@ function tableView(container,doc)
                     tabulator.log.msg('statement not found, making new statement');
                     var why = qpsc[0].subject;
                     st = new RDFStatement(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object, why);
-                    kb.add(st.subject, st.predicate, st.object, st.why);
+                    //kb.add(st.subject, st.predicate, st.object, st.why);
                 }
                 var td = getTDNode(row, i);
                 td.stat = st; 
                 
                 // sparql update; for each cell in the completed row, send the value of the stat pointer
                 tabulator.log.msg('sparql update with stat: ' + td.stat);
-                if (isExtension) {sparqlUpdate = sparql.update_statement(td.stat);}
-                else {sparqlUpdate = new sparql(kb).update_statement(td.stat);}
+                if (isExtension) {sparqlUpdate = sparql}
+                else {sparqlUpdate = new sparql(kb)}
                 // TODO: DEFINE ERROR CALLBACK
-                sparqlUpdate.set_object(td.stat.object, function(uri,success,error_body){
-                if (success) {kb.add(td.stat)}});
+                sparqlUpdate.insert_statement(td.stat, function(uri,success,error_body) {
+                    if (success) {
+                        tabulator.log.msg('sparql update success');
+                        var newStatement = kb.add(td.stat.subject, td.stat.predicate, td.stat.object, td.stat.why);
+                        td.stat = newStatement;
+                        alert('sparql update with '+newStatement)
+                    } 
+                });
             }
         }
     } // saveAddRowText

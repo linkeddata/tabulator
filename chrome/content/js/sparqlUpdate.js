@@ -95,7 +95,11 @@ sparql.prototype.insert_statement = function(st, callback) {
     var query = this._context_where(this._statement_context(st instanceof Array?st[0]:st));
     
     if (st instanceof Array) {
-        query += "INSERT { "+st.map(RDFStatement.prototype.toNT.call).join('\n')+" }\n";
+        var stText="";
+        for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
+        //query += "INSERT { "+st.map(RDFStatement.prototype.toNT.call).join('\n')+" }\n";
+        //the above should work, but gives an error "called on imcompatible XUL...scope..."
+        query += "INSERT { " + stText + " }\n";
     } else {
         query += "INSERT { " +
             anonymize(st.subject) + " " +

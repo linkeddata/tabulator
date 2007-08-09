@@ -2213,6 +2213,7 @@ function Outline(doc) {
     this.UserInput.deselectAll=deselectAll;
     this.UserInput.views=views;
     this.outline_expand=outline_expand;
+    
     if(isExtension) {
       window.addEventListener('unload',function() {
                var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");

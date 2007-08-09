@@ -83,7 +83,7 @@ Click: function Click(e,selectedTd,isEnter){
     
     try{var tdNode=trNode.lastChild;}catch(e){tabulator.log.error(e+"@"+target);}
     //seems to be a event handling problem of firefox3
-    if (e.type!='keypress'&&selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined'){ 
+    if (e.type!='keypress'&&(selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined')){
         this.Refill(e,selectedTd);
         return;
     }
@@ -137,11 +137,13 @@ Click: function Click(e,selectedTd,isEnter){
         //Kenny: What if the user just want to edit the title?
         */
     }
+    /*
     if (e.type=='keypress'&&selectedTd.className=='undetermined selected') {
         var completeType=(selectedTd.nextSibling)?'predicate':'all';
         this.AutoComplete(undefined,selectedTd,completeType);
     }
-    if(e) e.stopPropagation();
+    */
+    if(e && e.stopPropagation) e.stopPropagation();
     return true; //this is not a valid modification
 },
 
@@ -507,6 +509,26 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
     this.insertTermTo(selectedTd,term);                        
 },
 
+startFillInText: function startFillInText(selectedTd){
+    switch (this.inputInformationAbout(selectedTd)){
+        case 'predicate':
+        case 'DatatypeProperty-like':
+            this.clearMenu();
+	        selectedTd.className='';
+	        emptyNode(selectedTd);
+	        this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
+	        this.lastModified.isNew=false;
+	        
+	        this.lastModified.select();
+	        break;            
+        case 'ObjectProperty-like':
+        case 'no-idea':
+	        var e={type:'keypress'};
+	        this.Click(e,selectedTd);
+	        this.AutoComplete(1);//1 does not stand for anything but [&= true]
+    }
+},
+
 Refill: function Refill(e,selectedTd){
     tabulator.log.info("Refill"+selectedTd.textContent);
     var isPredicate=selectedTd.nextSibling;    
@@ -626,10 +648,14 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             enterEvent.stopPropagation();  
             switch (enterEvent.keyCode){
                 case 13://enter
+                    if (!menu) {
+                        outline.UserInput.clearInputAndSave();
+                        return;
+                    }
                     var inputTerm=getAbout(kb,menu.lastHighlight)
                     var fillInType=(mode=='predicate')?'predicate':'object';
-                    outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
-                    outline.UserInput.clearMenu();
+                    if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
+                        outline.UserInput.clearMenu();
                     return;
                 case 38://up
                     menu.lastHighlight.className='';
@@ -644,6 +670,10 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
                 case 8://backspace
                     newText=newText.slice(0,-1);
                     break;
+                case 27://esc to enter literal
+                    outline.UserInput.clearMenu();
+                    //InputBox.removeEventListener('keypress',outline.UserInput.Autocomplete,false);
+                    break;
                 default:
                     newText+=String.fromCharCode(enterEvent.charCode)
             }
@@ -654,6 +684,13 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             outline.UserInput.clearMenu();
             //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
             outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
+            if (typeof enterEvent=='number'){
+                var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
+                var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
+                var h1th=h1.appendChild(myDocument.createElement('th'));
+                h1th.appendChild(myDocument.createTextNode("Create new object..."));
+                h1.setAttribute('about',tabulator.ns.tabont('createNew'));
+            }             	                    
         }else if(mode=='predicate'){
             outline.UserInput.clearMenu();
             outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
@@ -738,6 +775,9 @@ borderClick: function borderClick(e){
 	    insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
 	}
 	outline.walk('moveTo',insertTr.firstChild);
+	var e2={type:'keypress'};
+	This.Click(e2,outline.selection[0]);
+	This.AutoComplete(1);//1 does not stand for anything but [&= true]
 },
 
 Mouseover: function Mouseover(e){
@@ -798,6 +838,19 @@ if (this._tabulatorMode==1){
 /**
  * Utilities
  */
+
+inputInformationAbout: function inputInformationAbout(selectedTd){
+    var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate; 
+    if(kb.whether(predicateTerm,tabulator.ns.rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
+       kb.whether(predicateTerm,tabulator.ns.rdfs('range'),tabulator.ns.rdfs('Literal'))||
+	   predicateTerm.termType=='collection')
+	    return 'DatatypeProperty-like';
+	else if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('ObjectProperty')))
+	    return 'ObjectProperty-like';
+	else
+	    return 'no-idea';	       
+},
+ 
 getStatementAbout: function getStatementAbout(something){
     //var trNode=something.parentNode;
     var trNode=ancestor(something,'TR');
@@ -831,6 +884,43 @@ createInputBoxIn: function createInputBoxIn(tdNode,defaultText){
     }
     tdNode.appendChild(inputBox);
     return inputBox;
+},
+
+createNew: function createNew(selectedTd,isInverse){
+    var insertTr=selectedTd.parentNode;
+    //var preStat=insertTr.previousSibling.AJAR_statement;
+    var preStat=insertTr.AJAR_statement;
+    var predicateTerm=preStat.predicate;
+        
+    var tempTerm=kb.bnode();
+    var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
+    if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
+    var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
+    kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
+    /* SELECT ?labelProperty
+       WHERE{
+           ?labelProperty rdfs:subPropertyOf rdfs:label.
+           ?labelProperty rdfs:domain tempType.
+       }
+    */ //this is ideal...but
+
+    var labelChoices=kb.collection();
+    var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
+    for (var i=0;i<labelProperties.length;i++) {
+        labelChoices.append(labelProperties[i]);
+        kb.add(labelChoices,tabulator.ns.link('element'),labelProperties[i]);
+    }
+    labelChoices.append(tabulator.ns.rdfs('label'));
+    kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
+    kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
+
+    //insertTr.appendChild(outline.outline_objectTD(tempTerm));
+    outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);              
+    if (!isInverse)
+        this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
+    else
+        this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
+    return tempTerm;
 },
 
 appendToPredicate: function appendToPredicate(predicateTd){   
@@ -968,12 +1058,13 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             var selectItem=function selectItem(e){
                 var inputTerm=getAbout(kb,getTarget(e))
                 if (isPredicate){
-                    outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm);
+                    if (outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm))
+                        outline.UserInput.clearMenu();
                 }else{
                     //thisInput.fillInRequest('object',selectedTd,inputTerm); //why is this not working?
-                    outline.UserInput.fillInRequest('object',selectedTd,inputTerm);
+                    if (outline.UserInput.fillInRequest('object',selectedTd,inputTerm))
+                        outline.UserInput.clearMenu();
                 }
-                outline.UserInput.clearMenu();
             }
     }       
     table.addEventListener('click',selectItem,false);
@@ -1132,6 +1223,7 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     var stat=tr.AJAR_statement;
     var reqTerm = (type=='object')?stat.object:stat.predicate;
     var newStat;
+    var doNext=false;
     var eventhandler;
     if (kb.any(reqTerm,tabulator.ns.link('onfillin'))){
         eventhandler = new Function("subject",kb.any(reqTerm,tabulator.ns.link('onfillin')).value);
@@ -1140,22 +1232,44 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         if (selectedTd.nextSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
             // TODO: DEFINE ERROR CALLBACK
-            sparqlService.insert_statement(s, function(uri,success,error_body){});
-        }else
+            sparqlService.insert_statement(s, function(uri,success,error_body){
+            if (error_body) alert(error_body);});
+        }else{
             outline.walk('right');
+            doNext=true;
+        }
         outline.replaceTD(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
         newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why) //ToDo: why and inverse
         tr.AJAR_statement=newStat;
         kb.remove(stat);
     }else if (type=='object'){
+        if (inputTerm.sameTerm(tabulator.ns.tabont('createNew'))){
+            var newTerm=this.createNew(selectedTd);
+            var newSelected=outline.selection[0];
+            outline.outline_expand(newSelected,newTerm);
+            var trIterator;
+            for (trIterator=newSelected.firstChild.childNodes[1].firstChild;
+                     trIterator; trIterator=trIterator.nextSibling) {
+                var st=trIterator.AJAR_statement;
+                if (!st) continue;
+                if (st.predicate.termType=='collection') break;
+            }
+            var e={type:'click'};
+            this.Click(e,trIterator.lastChild);
+            outline.walk('moveTo',trIterator.lastChild);
+            return true;
+        }        
         var newTd=outline.outline_objectTD(inputTerm);
         if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
             // TODO: DEFINE ERROR CALLBACK
-            sparqlService.insert_statement(s, function(uri,success,error_body){});
-        }else
-            outline.walk('left');              
+            sparqlService.insert_statement(s, function(uri,success,error_body){
+            if (error_body) alert(error_body);});
+        }else{
+            outline.walk('left');
+            doNext=true;
+        }              
         outline.replaceTD(newTd,selectedTd);        
         //modify store and update here
         newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
@@ -1164,6 +1278,10 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     }
     UserInputFormula.statements.push(newStat);
     if (eventhandler) eventhandler(stat.subject);
+    if (doNext)
+        this.startFillInText(outline.selection[0]);
+    else
+        return true; //can clearMenu
 },
 
 formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){

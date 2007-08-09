@@ -167,18 +167,28 @@ clearInputAndSave: function clearInputAndSave(e){
         if (this.lastModified.isNew){
             s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
             // TODO: DEFINE ERROR CALLBACK
-            sparqlService.insert_statement(s, function(uri,success,error_body){});
+            var trCache=ancestor(this.lastModified,'TR');
+            sparqlService.insert_statement(s, function(uri,success,error_body){
+                if (!success){
+                    alert("Error occurs while inserting "+s+'\n\n'+error_body);
+                    outline.UserInput.deleteTriple(trCache.lastChild,true);
+                }                    
+            });
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
-        }
-        else{ 
+        }else{ 
             switch (obj.termType){
                 case 'literal':
                     // generate path and nailing from current values
                     sparqlUpdate = sparqlService.update_statement(s);
                     // TODO: DEFINE ERROR CALLBACK
-                    sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){});
+                    var oldValue=this.lastModified.defaultValue;
+                    sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){
+                        if (!success){
+                            obj.value=oldValue;
+                            alert("Error occurs while editing "+s+'\n\n'+error_body);
+                        }                                   
+                    });
                     obj.value=this.lastModified.value;
-        //fire text modified??
                     UserInputFormula.statements.push(s);
                     break;
                 case 'bnode': //a request refill with text
@@ -196,11 +206,19 @@ clearInputAndSave: function clearInputAndSave(e){
                             this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
                         }else{
                             var s1=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
-                            var s2=new RDFStatement(s.subject,selectedPredicate,textTerm,s.why);
+                            var s2=kb.add(s.subject,selectedPredicate,textTerm,s.why);
                             var type=kb.the(s.subject,rdf('type'));
-                            var s3=new RDFStatement(s.subject,rdf('type'),type,s.why);
+                            var s3=kb.anyStatementMatching(s.subject,rdf('type'),type,s.why);
                             // TODO: DEFINE ERROR CALLBACK
-                            sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){});
+                            //because the table is reapinted, so...
+                            var trCache=ancestor(ancestor(this.lastModified,'TR'),'TD').parentNode;
+                            sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){
+                                if (!success){
+                                    kb.remove(s2);kb.remove(s3);
+                                    alert("Error occurs while editing "+s1+'\n\n'+error_body);
+                                    outline.UserInput.deleteTriple(trCache.lastChild,true);
+                                }
+                            });
                             kb.remove(s);
                             newStat=kb.add(s.subject,selectedPredicate,textTerm,s.why);
                             //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
@@ -212,10 +230,15 @@ clearInputAndSave: function clearInputAndSave(e){
                     }else{
                         var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
                         // TODO: DEFINE ERROR CALLBACK
-                        sparqlService.insert_statement(st, function(uri,success,error_body){});
+                        var trCache=ancestor(this.lastModified,'TR');
+                        sparqlService.insert_statement(st, function(uri,success,error_body){
+                            if (!success){           
+                                alert("Error occurs while inserting "+st+'\n\n'+error_body);
+                                outline.UserInput.deleteTriple(trCache.lastChild,true);
+                            }
+                        });
                         kb.remove(s);
-                        s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
-                        newStat=s;
+                        newStat=s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);;
                     }
                     UserInputFormula.statements.push(newStat);
                     break;
@@ -252,18 +275,39 @@ clearInputAndSave: function clearInputAndSave(e){
     this.lastModified = null;  
 },
 
-deleteTriple: function deleteTriple(selectedTd){
+deleteTriple: function deleteTriple(selectedTd,isBackOut){
 //ToDo: complete deletion of a node
+    var removedTr;var afterTr;
     var s=this.getStatementAbout(selectedTd);
-    if (!kb.whether(s.object,rdf('type'),tabulator.ns.link('Request')) && // Better to check provenance not internal?
+    if (!isBackOut&&
+        !kb.whether(s.object,rdf('type'),tabulator.ns.link('Request')) && // Better to check provenance not internal?
         !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
         !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
         // TODO: DEFINE ERROR CALLBACK
-        sparqlService.delete_statement(s, function(uri,success,error_body){});
+        sparqlService.delete_statement(s, function(uri,success,error_body){
+            if (!success){
+                removedTr.AJAR_statement=kb.add(s.subject,s.predicate,s.object,s.why);
+                alert("Error occurs while deleting "+s+'\n\n'+error_body);
+                afterTr.parentNode.insertBefore(removedTr,afterTr);
+                if (removedTr.childNodes.length==1 && afterTr.childNodes.length==2 &&
+                    removedTr.AJAR_statement.predicate.sameTerm(afterTr.AJAR_statement.predicate)){
+                    removedTr.insertBefore(afterTr.firstChild,removedTr.firstChild)
+                    removedTr.firstChild.rowSpan++;
+                }else if (removedTr.childNodes.length==1){
+                    var trIterator;
+                    for (trIterator=removedTr;
+                    trIterator.childNodes.length==1;
+                    trIterator=trIterator.previousSibling);
+                    trIterator.firstChild.rowSpan++;
+                }
+                outline.walk('down');
+            }
+        });
     }
     kb.remove(s);
     outline.walk('up');
-    var removedTr=selectedTd.parentNode;
+    removedTr=selectedTd.parentNode;
+    afterTr=removedTr.nextSibling;
     var trIterator;
     for (trIterator=removedTr;
          trIterator.childNodes.length==1;
@@ -1229,16 +1273,21 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         eventhandler = new Function("subject",kb.any(reqTerm,tabulator.ns.link('onfillin')).value);
     }
     if (type=='predicate'){
+        var newTd;
         if (selectedTd.nextSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
             // TODO: DEFINE ERROR CALLBACK
             sparqlService.insert_statement(s, function(uri,success,error_body){
-            if (error_body) alert(error_body);});
+                if (!success){
+                    outline.UserInput.deleteTriple(newTd,true);
+                    alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
+                }
+            });
         }else{
             outline.walk('right');
             doNext=true;
         }
-        outline.replaceTD(outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
+        outline.replaceTD(newTd=outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
         //modify store and update here
         newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why) //ToDo: why and inverse
         tr.AJAR_statement=newStat;
@@ -1265,7 +1314,11 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
             var s= new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
             // TODO: DEFINE ERROR CALLBACK
             sparqlService.insert_statement(s, function(uri,success,error_body){
-            if (error_body) alert(error_body);});
+                if (!success){
+                    alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
+                    outline.UserInput.deleteTriple(newTd,true);
+                }
+            });
         }else{
             outline.walk('left');
             doNext=true;

@@ -70,7 +70,7 @@ sparql.prototype.update_statement = function(statement) {
 
     var sparql = this;
     var context = this._statement_context(statement);
-    
+
     return {
         statement: statement?[statement.subject, statement.predicate, statement.object, statement.why]:undefined,
         statementNT: statement?anonymizeNT(statement):undefined,
@@ -79,13 +79,11 @@ sparql.prototype.update_statement = function(statement) {
         set_object: function(obj, callback) {
             query = this.where;
             query += "DELETE { " + this.statementNT + " }\n";
-            if(obj){
-                query += "INSERT { " +
-                    anonymize(this.statement[0]) + " " +
-                    anonymize(this.statement[1]) + " " +
-                    anonymize(obj) + " " + " . }\n";
-            }
-            
+            query += "INSERT { " +
+                anonymize(this.statement[0]) + " " +
+                anonymize(this.statement[1]) + " " +
+                anonymize(obj) + " " + " . }\n";
+ 
             sparql._fire(this.statement[3].uri, query, callback);
         },
     }

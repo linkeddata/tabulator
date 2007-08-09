@@ -433,15 +433,18 @@ function tableView(container,doc)
         for (var i=0; i<numCols; i++) {
             if (symbolRC (1, i)) {
                 td = createSymbolTD();
-                td.v = qps[i].object
+                td.v = qps[i].object;
+                tabulator.log.msg('FOR COLUMN '+i+' v IS '+td.v);
             }
             else if (literalRC(1, i)) {
                 td = createLiteralTD(); 
                 td.v = qps[i].object
+                tabulator.log.msg('FOR COLUMN '+i+' v IS '+td.v);
             }
             else if (bnodeRC(1, i)) {
                 td = createBNodeTD();
                 td.v = qps[i].object
+                tabulator.log.msg('FOR COLUMN '+i+' v IS '+td.v);
             }
             else {tabulator.log.warn('addRow problem')} 
             tr.appendChild(td);
@@ -455,7 +458,7 @@ function tableView(container,doc)
         selTD = getTDNode(newRow, newCol); // first td of the row
         setSelected(selTD);
         // clone the qps array and attach a pointer to the clone on the first td of the row
-        tabulator.log.msg('creating a clone of the qps: ' + qps);
+        tabulator.log.msg('CREATING A CLONE OF QPS: ' + qps);
         var qpsClone = [];
         for (var i = 0; i<qps.length; i++) {
             var stat = qps[i];
@@ -501,17 +504,18 @@ function tableView(container,doc)
         for (var i = 0; i<numCols; i++) {
             tabulator.log.msg('FILLING IN VARIABLE: ' + td.v);
             tabulator.log.msg('CURRENT STATEMENT IS: ' + qpsc[i]);
-            if (qpsc[i].subject == td.v) { // subj is a variable
+            if (qpsc[i].subject === td.v) { // subj is a variable
                 if (type == 'sym') {qpsc[i].subject = getMatchingSym(newText);}
-                if (type == 'lit') {qpsc[i].subject = kb.literal(newText);}
+                if (type == 'lit') {qpsc[i].subject = kb.literal(newText, '');}
                 if (type == 'bnode') {qpsc[i].subject = kb.bnode();}
-                tabulator.log.msg('NEW qpsc is: ' + qpsc);
+                tabulator.log.msg('NEW QPSC IS: ' + qpsc);
             }
-            if (qpsc[i].object == td.v) { // obj is a variable
+            if (qpsc[i].object === td.v) { // obj is a variable
+                // TODO: DOUBLE QUERY PROBLEM IS PROBABLY HERE
                 if (type == 'sym') {qpsc[i].object = getMatchingSym(newText);}
-                if (type == 'lit') {qpsc[i].object = kb.literal(newText);}
+                if (type == 'lit') {qpsc[i].object = kb.literal(newText, '');}
                 if (type == 'bnode') {qpsc[i].object = kb.bnode();}
-                tabulator.log.msg('NEW qpsc is: ' + qpsc);
+                tabulator.log.msg('NEW QPSC IS: ' + qpsc);
             }
         }
         

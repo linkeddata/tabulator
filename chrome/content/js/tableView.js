@@ -41,7 +41,6 @@ function tableView(container,doc)
             t.appendChild(tr);
             numStats = q.pat.statements.length; // Added
             qps = q.pat.statements;
-            alert('qps: '+qps);
             for (i=0; i<nv; i++) {
                 v = q.vars[i];
                 // generate the subj and pred for each tdNode 

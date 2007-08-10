@@ -48,10 +48,12 @@ sparql.prototype._bnode_context2 = function(x, source, depth) {
     for (var i=0; i<sts.length; i++) {
         if (this.fps[sts[i].predicate.uri]) {
             var y = sts[i].subject;
-            if (y.isBlank) return [ sts[i] ];
+            if (!y.isBlank)
+                return [ sts[i] ];
             if (depth) {
                 var res = this._bnode_context2(y, source, depth-1);
-                if (res != undefined) return [ sts[i] ] + res;
+                if (res != null)
+                    return res.concat([ sts[i] ]);
             }
         }        
     }
@@ -59,10 +61,12 @@ sparql.prototype._bnode_context2 = function(x, source, depth) {
     for (var i=0; i<sts.length; i++) {
         if (this.ifps[sts[i].predicate.uri]) {
             var y = sts[i].object;
-            if (y.isBlank) return [ sts[i] ];
+            if (!y.isBlank)
+                return [ sts[i] ];
             if (depth) {
                 var res = this._bnode_context2(y, source, depth-1);
-                if (res != undefined) return [ sts[i] ] + res;
+                if (res != undefined)
+                    return res.concat([ sts[i] ]);
             }
         }        
     }
@@ -77,7 +81,7 @@ sparql.prototype._bnode_context = function(x, source) {
         var con = this._bnode_context2(x, source, depth);
         if (con != null) return con;
     }
-    throw 'Unable to uniquely identify bnode: '+ x.toNT();
+    throw ('Unable to uniquely identify bnode: '+ x.toNT());
 }
 
 sparql.prototype._statement_context = function(st) {
@@ -91,9 +95,8 @@ sparql.prototype._statement_context = function(st) {
             context = context.concat(st);
         } else {
             this._cache_ifps();
-            var contexts = [];
             for (x in bnodes) {
-                contexts = contexts.concat(this._bnode_context(bnodes[x], st.why));
+                context = context.concat(this._bnode_context(bnodes[x], st.why));
             }
         }
     }
@@ -107,7 +110,6 @@ sparql.prototype._context_where = function(context) {
 }
 
 sparql.prototype._fire = function(uri, query, callback) {
-    alert('sparqlUpdate.js: '+query) // @@
     var xhr = Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {

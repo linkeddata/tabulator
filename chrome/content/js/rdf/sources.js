@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3718 2007-08-08 20:28:51Z timbl $
+ * SVN ID: $Id: sources.js 3751 2007-08-10 20:10:33Z timbl $
  *
  ************************************************************/
 
@@ -608,10 +608,16 @@ function SourceFetcher(store, timeout, async) {
 			}
 		    }
 
-                    // deduce some things from the HTTP
-                    var addType = function(cla) {
-                        kb.add(docterm, tabulator.ns.rdf('type'), cla,
-			   sf.appNode)
+                    // deduce some things from the HTTP transaction
+                    var addType = function(cla) { // add type to all redirected resources too
+                        for(var prev = req; prev;
+                            prev = kb.any(undefined,
+                                    kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
+                                    prev)) {
+                            var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
+                            kb.add(doc, tabulator.ns.rdf('type'), cla,
+                                    sf.appNode);
+                        }
                     }
                     if (xhr.status-0 == 200) {
                         addType(tabulator.ns.link('Document'));
@@ -639,7 +645,7 @@ function SourceFetcher(store, timeout, async) {
 			        xhr.headers['content-type'] = 'text/rdf+n3';
 			        break;
 			    default:
-                        xhr.headers['content-type'] = 'text/xml';			        
+                                xhr.headers['content-type'] = 'text/xml';			        
 			}
 		    }
 		    

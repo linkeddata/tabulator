@@ -34,6 +34,11 @@ function tableView(container,doc)
     ******************************************************/
     this.drawQuery = function (q)
     {
+        var i, td, th, j, v;
+        var t = thisTable.document.createElement('table');
+        var tr = thisTable.document.createElement('tr');
+        var nv = q.vars.length;
+        
         this.onBinding = function (bindings) {
             var i, tr, td;
             //tabulator.log.info('making a row w/ bindings ' + bindings);
@@ -42,7 +47,9 @@ function tableView(container,doc)
             numStats = q.pat.statements.length; // Added
             qps = q.pat.statements;
             for (i=0; i<nv; i++) {
-                v = q.vars[i];
+                var v = q.vars[i];
+                var val = bindings[v];
+                tabulator.log.msg('Variable '+v+'->'+val)
                 // generate the subj and pred for each tdNode 
                 for (j = 0; j<numStats; j++) {
                     var stat = q.pat.statements[j];
@@ -60,16 +67,13 @@ function tableView(container,doc)
                 }
                 tabulator.log.msg('looking for statement in store to attach to node ' + statClone);
                 var st = kb.anyStatementMatching(statClone.subject, statClone.predicate, statClone.object);
-                if (!st.why) {tabulator.log.warn("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
-                tr.appendChild(matrixTD(st.object, st));
+                if (!st) {tabulator.log.warn("Tableview: no statement {"+
+                                    statClone.subject+statClone.predicate+statClone.object+"} from bindings: "+bindings);}
+                else if (!st.why) {tabulator.log.warn("Unknown provenence for {"+st.subject+st.predicate+st.object+"}");}
+                tr.appendChild(matrixTD(val, st));
             } //for each query var, make a row
         } // onBinding
 
-        var i, td, th, j, v;
-        var t = thisTable.document.createElement('table');
-        var tr = thisTable.document.createElement('tr');
-        var nv = q.vars.length;
-        
         t.appendChild(tr);
         t.setAttribute('class', 'results sortable'); //needed to make sortable
         t.setAttribute('id', 'tabulated_data'); 

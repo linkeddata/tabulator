@@ -90,7 +90,7 @@ sparql.prototype._statement_context = function(st) {
     if (bnodes.length) {
         if (this.store.statementsMatching(st.subject.isBlank?undefined:st.subject,
                                   st.predicate.isBlank?undefined:st.predicate,
-                                  st.object.isBlank?undefied:st.object,
+                                  st.object.isBlank?undefined:st.object,
                                   st.why).length <= 1) {
             context = context.concat(st);
         } else {

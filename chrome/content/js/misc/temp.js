@@ -124,4 +124,67 @@
         }
         */
     }
-       
+
+//Fragment:userinput::addTriple
+    /*
+        switch (kb.whether(term,rdf('type'),tabulator.ns.owl(?x))){
+            when ?x='ObjectProperty:
+            ...
+        }
+    */
+    if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('ObjectProperty'))){
+        var preStat=insertTr.previousSibling.AJAR_statement;    
+        var tempTerm=kb.bnode();
+        var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
+        if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
+        var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
+        kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
+        /* SELECT ?labelProperty
+           WHERE{
+               ?labelProperty rdfs:subPropertyOf rdfs:label.
+               ?labelProperty rdfs:domain tempType.
+           }
+        */ //this is ideal...but
+
+        var labelChoices=kb.collection();
+        var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
+        for (var i=0;i<labelProperties.length;i++) {
+            labelChoices.append(labelProperties[i]);
+            kb.add(labelChoices,tabulator.ns.link('element'),labelProperties[i]);
+        }
+        labelChoices.append(tabulator.ns.rdfs('label'));
+        kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
+        kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
+
+        insertTr.appendChild(outline.outline_objectTD(tempTerm));              
+        if (!isInverse)
+            this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
+        else
+            this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
+        return [insertTr.lastChild,tempTerm]; //expand signal
+    } else if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
+               kb.whether(predicateTerm,tabulator.ns.rdfs('domain'),tabulator.ns.rdfs('Literal'))){
+        var td=insertTr.appendChild(myDocument.createElement('td'));
+        this.lastModified = this.createInputBoxIn(td," (Please Input) ");
+        this.lastModified.isNew=true;
+
+        this.lastModified.select();
+        this.statIsInverse=false;     
+    } else { //inference work...
+        var tiptext="(To be determined. Re-type of drag an object onto this field)";
+        var reqTerm=this.generateRequest(tiptext,insertTr,false);
+        var preStat=insertTr.previousSibling.AJAR_statement;
+        if (!isInverse)
+            this.formUndetStat(insertTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
+        else
+            this.formUndetStat(insertTr,reqTerm,preStat.predicate,preStat.object,preStat.why,true);
+    }
+
+
+    if(predicateTd.parentNode.AJAR_inverse) {//generate 'Request';
+        var preStat=insertTr.previousSibling.AJAR_statement;
+        var reqTerm=this.generateRequest("(This is an inverse statement. Drag a subject onto this field)");
+        //I guess it's not making sense...createInputBox and then remove it..
+        this.formUndetStat(insertTr,reqTerm,predicateTerm,preStat.subject,preStat.why,true);
+        this.lastModified = null;
+    }          

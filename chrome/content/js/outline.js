@@ -1685,7 +1685,7 @@ function Outline(doc) {
                     thisOutline.UserInput.Click(e,trIterator.lastChild);
                     thisOutline.walk('moveTo',trIterator.lastChild);
                 }
-                thisOutline.UserInput.clearMenu();
+                //thisOutline.UserInput.clearMenu();
                 e.stopPropagation();
                 e.preventDefault();
                 return;

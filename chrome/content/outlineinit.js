@@ -220,7 +220,7 @@ YAHOO.util.DDM=function DDM(){
             //have to do this as attribute ondragdrop does not recognize any dragdrop event
             //initialized inside <tabbrowser> (strange, I think)
             if (this.dragThreshMet) {
-                TabulatorOutlinerObserver.onDropInside();
+                TabulatorOutlinerObserver.onDropInside(e.target);
                 this.dragThreshMet=false;
             }
             this.dragCurrent=null;
@@ -247,7 +247,7 @@ var TabulatorOutlinerObserver={
 
 
 onDrop: function(e,aXferData,dragSession){
-    var selection = ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE').outline.selection;
+    var selection = ancestor(ancestor(e.originalTarget,'TABLE').parentNode,'TABLE').outline.selection;
     var contentType = aXferData.flavour.contentType;
     var url = transferUtils.retrieveURLFromData(aXferData.data, contentType);
     if (!url) return;
@@ -271,7 +271,8 @@ onDrop: function(e,aXferData,dragSession){
 },
 
 onDragEnter: function(e,dragSession){ //enter or exit something
-    var selection = ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE').outline.selection;
+    try{var selection = ancestor(ancestor(e.originalTarget,'TABLE').parentNode,'TABLE').outline.selection;}
+    catch(e){/*because e.orginalTarget is not defined*/}
     for (var targetTd=e.originalTarget;targetTd;targetTd=targetTd.parentNode){
         if (targetTd.tabulatorSelect) {
             if (selection[0]) {
@@ -288,9 +289,9 @@ onDragEnter: function(e,dragSession){ //enter or exit something
 onDragExit: function(e,dragSession){
     //if (e.originalTarget.tabulatorDeselect) e.originalTarget.tabulatorDeselect();
 },
-onDropInside: function(){ //a special case that you draganddrop totally inside a <tabbrowser>
-    var selection = ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE').outline.selection;
-    var targetTd=selection[0];
+onDropInside: function(targetTd){ //a special case that you draganddrop totally inside a <tabbrowser>
+    //var selection = ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE').outline.selection;
+    //var targetTd=selection[0];
     var table=targetTd.ownerDocument.getElementById('outline');
     //var table=ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE');
     var thisOutline=table.outline;

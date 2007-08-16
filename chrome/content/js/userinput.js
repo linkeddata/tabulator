@@ -1,4 +1,4 @@
-//places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()
+//places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()->insertTermTo();
 //                                  undetermined statement generated formUndetStat()
 //                                                                 ->fillInRequest()
 
@@ -458,11 +458,24 @@ insertTermTo: function insertTermTo(selectedTd,term,isObject){
                 insertTr.AJAR_statement=kb.add(preStat.subject,preStat.predicate,term,preStat.why);
             else
                 insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
+                
+            try{sparqlService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
+                if (!success){
+                    alert("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
+                    outline.UserInput.deleteTriple(insertTr.lastChild,true);
+                }                    
+            })}catch(e){
+                alert("You can not edit statement about this blank node object "+
+                      "becuase it is not identifiable. (Tabulator Bug)");
+                outline.UserInput.deleteTriple(insertTr.lastChild,true);
+                return;
+            }            
             insertTr.AJAR_inverse=isInverse;
             UserInputFormula.statements.push(insertTr.AJAR_statement);
             break;            
         case 'selected': //header <TD>, undetermined generated
-            var newTr=ancestor(selectedTd,'TABLE').lastChild.appendChild(myDocument.createElement('tr'));
+            var paneDiv=ancestor(selectedTd,'TABLE').lastChild;
+            var newTr=paneDiv.insertBefore(myDocument.createElement('tr'),paneDiv.lastChild);
             //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
             if (HCIoptions["bottom insert highlights"].enabled)
                 var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
@@ -474,13 +487,16 @@ insertTermTo: function insertTermTo(selectedTd,term,isObject){
                 this.formUndetStat(newTr,preStat.subject,this.generateRequest('(TBD)',newTr,true),term,preStat.why,false);
                 //defaultpropview temporaily not dealt with
                 newTr.appendChild(outline.outline_objectTD(term));
-            
+                outline.walk('moveTo',newTr.firstChild);
+                this.startFillInText(newTr.firstChild);            
             }else{//predicate inserted
                 //existing predicate not expected
                 var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)",newTr);
                 this.formUndetStat(newTr,preStat.subject,term,reqTerm,preStat.why,false);
 
                 newTr.insertBefore(outline.outline_predicateTD(term,newTr,false,false),newTr.firstChild);
+                outline.walk('moveTo',newTr.lastChild);
+                this.startFillInText(newTr.lastChild);                  
             }
             break;
     } 
@@ -535,7 +551,6 @@ pasteFromClipboard: function pasteFromClipboard(address,selectedTd){
 
 startFillInText: function startFillInText(selectedTd){
     switch (this.inputInformationAbout(selectedTd)){
-        case 'predicate':
         case 'DatatypeProperty-like':
             this.clearMenu();
 	        selectedTd.className='';
@@ -546,6 +561,7 @@ startFillInText: function startFillInText(selectedTd){
 	        this.lastModified.select();
 	        break;            
         case 'ObjectProperty-like':
+        case 'predicate':
         case 'no-idea':
 	        var e={type:'keypress'};
 	        this.Click(e,selectedTd);

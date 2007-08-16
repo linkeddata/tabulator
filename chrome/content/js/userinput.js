@@ -178,12 +178,16 @@ clearInputAndSave: function clearInputAndSave(e){
             s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
             // TODO: DEFINE ERROR CALLBACK
             var trCache=ancestor(this.lastModified,'TR');
-            sparqlService.insert_statement(s, function(uri,success,error_body){
+            try{sparqlService.insert_statement(s, function(uri,success,error_body){
                 if (!success){
                     alert("Error occurs while inserting "+s+'\n\n'+error_body);
                     outline.UserInput.deleteTriple(trCache.lastChild,true);
                 }                    
-            });
+            })}catch(e){
+                alert("You can not edit statement about this blank node object "+
+                      "becuase it is not identifiable. (Tabulator Bug)");
+                return;
+            }
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
         }else{ 
             switch (obj.termType){
@@ -191,13 +195,19 @@ clearInputAndSave: function clearInputAndSave(e){
                     // generate path and nailing from current values
                     sparqlUpdate = sparqlService.update_statement(s);
                     // TODO: DEFINE ERROR CALLBACK
+                    var trCache=ancestor(this.lastModified,'TR');
                     var oldValue=this.lastModified.defaultValue;
-                    sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){
+                    try{sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){
                         if (!success){
                             obj.value=oldValue;
                             alert("Error occurs while editing "+s+'\n\n'+error_body);
+                            trCache.lastChild.textContent=oldValue;
                         }                                   
-                    });
+                    })}catch(e){
+                         alert("You can not edit statement about this blank node object "+
+                               "becuase it is not identifiable. (Tabulator Bug)");
+                         return;
+                    }
                     obj.value=this.lastModified.value;
                     UserInputFormula.statements.push(s);
                     break;
@@ -222,13 +232,17 @@ clearInputAndSave: function clearInputAndSave(e){
                             // TODO: DEFINE ERROR CALLBACK
                             //because the table is reapinted, so...
                             var trCache=ancestor(ancestor(this.lastModified,'TR'),'TD').parentNode;
-                            sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){
+                            try{sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){
                                 if (!success){
                                     kb.remove(s2);kb.remove(s3);
                                     alert("Error occurs while editing "+s1+'\n\n'+error_body);
                                     outline.UserInput.deleteTriple(trCache.lastChild,true);
                                 }
-                            });
+                            })}catch(e){
+                                alert("You can not edit statement about this blank node object "+
+                                "becuase it is not identifiable. (Tabulator Bug)");
+                                return;
+                            }
                             kb.remove(s);
                             newStat=kb.add(s.subject,selectedPredicate,textTerm,s.why);
                             //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
@@ -241,12 +255,16 @@ clearInputAndSave: function clearInputAndSave(e){
                         var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
                         // TODO: DEFINE ERROR CALLBACK
                         var trCache=ancestor(this.lastModified,'TR');
-                        sparqlService.insert_statement(st, function(uri,success,error_body){
+                        try{sparqlService.insert_statement(st, function(uri,success,error_body){
                             if (!success){           
                                 alert("Error occurs while inserting "+st+'\n\n'+error_body);
                                 outline.UserInput.deleteTriple(trCache.lastChild,true);
                             }
-                        });
+                        })}catch(e){
+                            alert("You can not edit statement about this blank node object "+
+                                  "becuase it is not identifiable. (Tabulator Bug)");
+                            return;
+                        }
                         kb.remove(s);
                         newStat=s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);;
                     }
@@ -297,7 +315,7 @@ deleteTriple: function deleteTriple(selectedTd,isBackOut){
         !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
         !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
         // TODO: DEFINE ERROR CALLBACK
-        sparqlService.delete_statement(s, function(uri,success,error_body){
+        try{sparqlService.delete_statement(s, function(uri,success,error_body){
             if (!success){
                 removedTr.AJAR_statement=kb.add(s.subject,s.predicate,s.object,s.why);
                 alert("Error occurs while deleting "+s+'\n\n'+error_body);
@@ -315,7 +333,11 @@ deleteTriple: function deleteTriple(selectedTd,isBackOut){
                 }
                 outline.walk('down');
             }
-        });
+        })}catch(e){
+            alert("You can not edit statement about this blank node object "+
+                  "becuase it is not identifiable. (Tabulator Bug)");
+            return;
+        }
     }
     kb.remove(s);
     outline.walk('up');
@@ -1241,12 +1263,16 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         if (selectedTd.nextSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
             // TODO: DEFINE ERROR CALLBACK
-            sparqlService.insert_statement(s, function(uri,success,error_body){
+            try{sparqlService.insert_statement(s, function(uri,success,error_body){
                 if (!success){
                     outline.UserInput.deleteTriple(newTd,true);
                     alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                 }
-            });
+            })}catch(e){
+                alert("You can not edit statement about this blank node object "+
+                      "becuase it is not identifiable. (Tabulator Bug)");
+                return;
+            }
             this.lastModified=null;
         }else{
             outline.walk('right');
@@ -1278,12 +1304,16 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
             // TODO: DEFINE ERROR CALLBACK
-            sparqlService.insert_statement(s, function(uri,success,error_body){
+            try{sparqlService.insert_statement(s, function(uri,success,error_body){
                 if (!success){
                     alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                     outline.UserInput.deleteTriple(newTd,true);
                 }
-            });
+            })}catch(e){
+                alert("You can not edit statement about this blank node object "+
+                      "becuase it is not identifiable. (Tabulator Bug)");
+                return;
+            }
             this.lastModified=null;
         }else{
             outline.walk('left');

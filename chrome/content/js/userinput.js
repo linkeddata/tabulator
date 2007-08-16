@@ -221,7 +221,7 @@ clearInputAndSave: function clearInputAndSave(e){
                                 var tdNode=this.lastModified.parentNode;
                                 e={}
                                 e.pageX=findPos(tdNode)[0];
-                                e.pageY=findPos(tdNode)[1]+3*tdNode.clientHeight; //ToDo: remove this stupid kludge...
+                                e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
                             }
                             this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
                         }else{
@@ -663,7 +663,7 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
     if (!tdNode) tdNode=InputBox.parentNode //argument tdNode seems to be not neccessary
     if (!mode) mode=tdNode.nextSibling?'predicate':'all';
     e.pageX=findPos(tdNode)[0];
-    e.pageY=findPos(tdNode)[1]+3*tdNode.clientHeight; //ToDo: remove this stupid kludge...
+    e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
    
     if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
         var newText=InputBox.value;

@@ -408,6 +408,11 @@ function addLoadEvent(func) {
 
 //////////////////////////////////View Utility
 function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
+    var myDocument=obj.ownerDocument;
+    var DocBox=myDocument.getBoxObjectFor(myDocument.documentElement);
+    var box=myDocument.getBoxObjectFor(obj);
+    return [box.screenX-DocBox.screenX,box.screenY-DocBox.screenY];
+	/*
 	var curleft = curtop = 0;
 	if (obj.offsetParent) {
 		curleft = obj.offsetLeft
@@ -418,6 +423,7 @@ function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
 		}
 	}
 	return [curleft,curtop];
+	*/
 }
 
 function getEyeFocus(element,instantly,isBottom,myWindow) {

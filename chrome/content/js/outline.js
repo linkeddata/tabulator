@@ -1913,6 +1913,10 @@ function Outline(doc) {
     }
     
     function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
+        if(isExtension && subject.termType != "bnode") {
+            gBrowser.selectedBrowser.loadURI(subject.uri);
+            return;   
+        }
         var outer = null
         for (var level=p.parentNode; level; level=level.parentNode) {
             tabulator.log.debug("level "+ level.tagName)

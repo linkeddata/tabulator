@@ -147,11 +147,16 @@ Click: function Click(e,selectedTd,isEnter){
     return true; //this is not a valid modification
 },
 
+backOut: function backOut(){
+    this.deleteTriple(this.lastModified.parentNode,true);
+    this.lastModified=null;
+},
+
 clearMenu: function clearMenu(){
     var menu=myDocument.getElementById(this.menuID);
     if (menu) {
         menu.parentNode.removeChild(menu);
-        emptyNode(menu);
+        //emptyNode(menu);      
     }
 },
 
@@ -164,7 +169,12 @@ clearInputAndSave: function clearInputAndSave(e){
     }
     var s=this.lastModifiedStat; //when 'isNew' this is set at addTriple()
     if(this.lastModified.value != this.lastModified.defaultValue){
-        if (this.lastModified.isNew){
+        if (this.lastModified.value == ''){
+            //ToDo: remove this
+            this.lastModified.value=this.lastModified.defaultValue;
+            this.clearInputAndSave();
+            return;
+        }else if (this.lastModified.isNew){
             s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
             // TODO: DEFINE ERROR CALLBACK
             var trCache=ancestor(this.lastModified,'TR');
@@ -260,6 +270,9 @@ clearInputAndSave: function clearInputAndSave(e){
         this.formUndetStat(upperTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
         outline.replaceTD(outline.outline_objectTD(reqTerm,defaultpropview),upperTr.lastChild);
         this.lastModified=null;
+        return;
+    }else if(s.object.termType=='bnode'){
+        this.backOut();
         return;
     }
     //case modified:
@@ -660,8 +673,14 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
                     newText=newText.slice(0,-1);
                     break;
                 case 27://esc to enter literal
-                    outline.UserInput.clearMenu();
+                    if (!menu){
+                        outline.UserInput.backOut();
+                        return;
+                    }
+                    outline.UserInput.clearMenu();                   
+                    //Not working? I don't know.
                     //InputBox.removeEventListener('keypress',outline.UserInput.Autocomplete,false);
+                    return;
                     break;
                 default:
                     newText+=String.fromCharCode(enterEvent.charCode)
@@ -673,13 +692,13 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             outline.UserInput.clearMenu();
             //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
             outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
-            if (typeof enterEvent=='number'){
+            /*if (typeof enterEvent=='number'){
                 var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
                 var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
                 var h1th=h1.appendChild(myDocument.createElement('th'));
                 h1th.appendChild(myDocument.createTextNode("Create new object..."));
                 h1.setAttribute('about',tabulator.ns.tabont('createNew'));
-            }          	                    
+            }*/                 
         }else if(mode=='predicate'){
             outline.UserInput.clearMenu();
             outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
@@ -1228,6 +1247,7 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
                     alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                 }
             });
+            this.lastModified=null;
         }else{
             outline.walk('right');
             doNext=true;
@@ -1264,6 +1284,7 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
                     outline.UserInput.deleteTriple(newTd,true);
                 }
             });
+            this.lastModified=null;
         }else{
             outline.walk('left');
             doNext=true;

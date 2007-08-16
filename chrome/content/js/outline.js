@@ -1570,6 +1570,9 @@ function Outline(doc) {
         }
         //not input then clear
         thisOutline.UserInput.clearMenu();
+        //ToDo:remove this and recover X
+        if (thisOutline.UserInput.lastModified&&
+            thisOutline.UserInput.lastModified.parentNode.nextSibling) thisOutline.UserInput.backOut();
         if (tname != "IMG") {
             if(about && myDocument.getElementById('UserURI')) { 
                 myDocument.getElementById('UserURI').value = 

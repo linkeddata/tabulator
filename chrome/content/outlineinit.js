@@ -272,11 +272,11 @@ onDrop: function(e,aXferData,dragSession){
 
 onDragEnter: function(e,dragSession){ //enter or exit something
     try{var selection = ancestor(ancestor(e.originalTarget,'TABLE').parentNode,'TABLE').outline.selection;}
-    catch(e){/*because e.orginalTarget is not defined*/}
+    catch(e){/*because e.orginalTarget is not defined*/ return;}
     for (var targetTd=e.originalTarget;targetTd;targetTd=targetTd.parentNode){
         if (targetTd.tabulatorSelect) {
             if (selection[0]) {
-                try{selection[0].tabulatorDeselect();}catch(e){/*alert(selection[0] +"causes"+e)*/};
+                try{selection[0].tabulatorDeselect();}catch(e){throw(selection[0] +"causes"+e)};
                 YAHOO.util.Event.off(targetTd,'mouseup','dragMouseUp');
             }
             targetTd.tabulatorSelect();

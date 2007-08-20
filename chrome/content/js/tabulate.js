@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3718 2007-08-08 20:28:51Z timbl $
+// SVN ID: $Id: tabulate.js 3846 2007-08-20 21:01:21Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -147,10 +147,12 @@ Icon.src.icon_telephone = iconPrefix + 'icons/silk/telephone.png';
 Icon.src.icon_time = iconPrefix + 'icons/Wclocksmall.png';
 Icon.src.icon_remove_node = iconPrefix + 'icons/tbl-x-small.png'
 Icon.src.icon_add_triple = iconPrefix + 'icons/tango/22-list-add.png';
+Icon.src.icon_add_new_triple = iconPrefix + 'icons/tango/22-list-add-new.png';
 Icon.src.icon_show_choices = iconPrefix + 'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
 
 
 Icon.tooltips[Icon.src.icon_add_triple] = 'Add more'
+Icon.tooltips[Icon.src.icon_add_new_triple] = 'Add new triple'
 Icon.tooltips[Icon.src.icon_remove_node] = 'Remove'
 Icon.tooltips[Icon.src.icon_expand] = 'View details.'
 Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'

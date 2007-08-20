@@ -11,6 +11,7 @@ var UserInputFormula; //Formula to store references of user's work
 function UserInput(outline){
 
 var myDocument=outline.document; //is this ok?
+//alert("myDocument when it's set is "+myDocument.location);
 this.menuId='predicateMenu1';
 this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
 this.namespaces["tabont"] = "http://www.w3.org/2007/ont/link#";
@@ -786,7 +787,8 @@ borderClick: function borderClick(e){
     //Take the why of the last TR and write to it. There should be a better way    
     var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
     var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
-    
+
+    //alert(ancestor(target,'TABLE').textContent);    
     var insertTr=myDocument.createElement('tr');
     ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR'));
     var tempTr=myDocument.createElement('tr');
@@ -824,6 +826,7 @@ borderClick: function borderClick(e){
 	var e2={type:'keypress'};
 	This.Click(e2,outline.selection[0]);
 	This.AutoComplete(1);//1 does not stand for anything but [&= true]
+	
 },
 
 Mouseover: function Mouseover(e){
@@ -915,6 +918,8 @@ getStatementAbout: function getStatementAbout(something){
 },
 
 createInputBoxIn: function createInputBoxIn(tdNode,defaultText){
+    tabulator.log.info("myDocument in createInputBoxIn is now " + myDocument.location);
+    tabulator.log.info("outline.document is now " + outline.document.location);
     var inputBox=myDocument.createElement('input');
     inputBox.setAttribute('value',defaultText);
     inputBox.setAttribute('class','textinput');
@@ -1042,6 +1047,8 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
 
 showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
    //ToDo:order, make a class?
+    tabulator.log.info("myDocument is now " + myDocument.location);
+    tabulator.log.info("outline.doucment is now " + outline.document.location);
     var This=this;
     var menu=myDocument.createElement('div');
     menu.id=this.menuID;
@@ -1193,7 +1200,8 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
             break;
         case 'GeneralAutoComplete':
             var inputText=extraInformation.inputText;
-            var results=lb.search(inputText);
+            try{var results=lb.search(inputText);}
+            catch(e){alert("stop to see what happens "+extraInformation.selectedTd.textContent);}
             var entries=results[0]; //[label, subject,priority]
             var types=results[1];
             if (entries.length==0){

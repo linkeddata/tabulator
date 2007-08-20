@@ -1,6 +1,7 @@
 function Outline(doc) {
     var myDocument=doc;
     this.document=doc;
+    //this.watch('document',function(a,b,c){alert(a+b+c);});
     var outline=this; //Kenny: do we need this?
     var thisOutline=this;
     var selection=[]
@@ -19,6 +20,7 @@ function Outline(doc) {
     }    
     
     this.viewAndSaveQuery = function() {
+        tabulator.log.info("outline.doucment is now " + outline.document.location);    
         var q = saveQuery();
         if(isExtension) {
             tabulator.drawInBestView(q);
@@ -289,6 +291,7 @@ function Outline(doc) {
         
             
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why) {
+        tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
         var td = myDocument.createElement('td');
         var theClass = "obj";
                 
@@ -318,6 +321,7 @@ function Outline(doc) {
          tabulator.log.info('class on '+td)
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
+         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl
@@ -331,7 +335,7 @@ function Outline(doc) {
             appendRemoveIcon(td, obj, deleteNode)
         }
 
-        try{var DDtd = new YAHOO.util.DDExternalProxy(td);}catch(e){dump("drag and drop not supported");}
+        try{var DDtd = new YAHOO.util.DDExternalProxy(td);}catch(e){throw("drag and drop not supported");}
         //set DOM methods
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
@@ -357,9 +361,9 @@ function Outline(doc) {
         lab = lab.slice(0,1).toUpperCase() + lab.slice(1)
         //if (kb.statementsMatching(predicate,rdf('type'), tabulator.ns.link('Request')).length) td_p.className='undetermined';
 
-        var labelTD = document.createElement('TD')
+        var labelTD = myDocument.createElement('TD')
         labelTD.setAttribute('notSelectable','true')
-        labelTD.appendChild(document.createTextNode(lab))
+        labelTD.appendChild(myDocument.createTextNode(lab))
         td_p.appendChild(labelTD);
         labelTD.style.width='100%'
         td_p.appendChild(termWidget.construct()); //termWidget is global???
@@ -503,7 +507,7 @@ function Outline(doc) {
     **  This outline pane contains the properties which are
     **  normaly displayed to the user. See also: innternalPane
     */
-    defaultPane = {};
+    var defaultPane = {};
     defaultPane.icon = Icon.src.icon_defaultPane;
     defaultPane.label = function(subject) { return 'about ';};
     defaultPane.filter = function(pred, inverse) {
@@ -542,9 +546,9 @@ function Outline(doc) {
             holdingTd.setAttribute('colspan','2');
             holdingTd.setAttribute('notSelectable','true');
             var img=myDocument.createElement('img');
-            img.src=Icon.src.icon_add_triple;
+            img.src=Icon.src.icon_add_new_triple;
             img.className='bottom-border-active'
-            img.addEventListener('click',thisOutline.UserInput.borderClick,false);
+            //img.addEventListener('click',thisOutline.UserInput.borderClick,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    
@@ -873,6 +877,8 @@ function Outline(doc) {
     
     ///////////// Property list 
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
+        tabulator.log.info("@appendPropertyTRs, myDocument is now " + this.document.location);
+        tabulator.log.info("@appendPropertyTRs, myDocument is now " + thisOutline.document.location);            
         tabulator.log.debug("Property list length = " + plist.length)
         if (plist.length == 0) return "";
         var sel
@@ -1218,8 +1224,9 @@ function Outline(doc) {
     }
 
     function setSelected(node, newValue) {
+        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));    
         //if (newValue == selected(node)) return; //we might not need this anymore...
-        if (node.nodeName != 'TD') throw 'Expected TD in setSelected: '+node.ndoeName;
+        if (node.nodeName != 'TD') throw 'Expected TD in setSelected: '+node.nodeName+node.textContent;
         var cla = node.getAttribute('class')
         if (!cla) cla = ""
         if (newValue) {
@@ -1228,12 +1235,12 @@ function Outline(doc) {
             if (cla.indexOf('pred') >= 0)
                 HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
             selection.push(node)
-            tabulator.log.debug("Selecting "+node)
+            //tabulator.log.info("Selecting "+node.textContent)
             var source
             try{node.parentNode.AJAR_statement}catch(e){alert('setSelected: '+node.textContent)}
             if (node.AJAR_statement) source = node.AJAR_statement.why
             else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
-            tabulator.log.info('Source to highlight: '+source);
+            //tabulator.log.info('Source to highlight: '+source);
             if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
         } else {
             tabulator.log.debug("cla=$"+cla+"$")
@@ -1243,12 +1250,14 @@ function Outline(doc) {
             if (cla.indexOf('pred') >=0)
                 HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
             RDFArrayRemove(selection, node)
-            tabulator.log.debug("Deselecting "+node);
+            tabulator.log.info("Deselecting "+node.textContent);
             tabulator.log.debug("cla=$"+cla+"$");
             if (node.AJAR_statement) source=node.AJAR_statement.why;
             else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why;
             if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false);
         }
+        tabulator.log.info("selection becomes " +selection.map(function(item){return item.textContent;}).join(", "));
+        //tabulator.log.info("Setting className " + cla);
         node.setAttribute('class', cla)
     }
 
@@ -1379,6 +1388,7 @@ function Outline(doc) {
                      setSelected(ancestor(selectedTd.parentNode,'TD'),true); //supplied by thieOutline.focusTd
                  break;
              case 'moveTo':
+                 //tabulator.log.info(selection[0].textContent+"->"+inputTd.textContent);
                  deselectAll();
                  setSelected(inputTd,true);
                  break;          
@@ -1558,6 +1568,7 @@ function Outline(doc) {
     // select
     // visit/open a page    
     function TabulatorMousedown(e) {
+        tabulator.log.info("@TabulatorMousedown, myDocument is now " + myDocument.location);
         var target = thisOutline.targetOf(e);
         if (!target) return;
         var tname = target.tagName;
@@ -1616,7 +1627,7 @@ function Outline(doc) {
                 var tr = node.parentNode;
                 if (tr.AJAR_statement) {
                     var why = tr.AJAR_statement.why
-                    tabulator.log.info("Information from "+why);
+                    //tabulator.log.info("Information from "+why);
                 }
             e.stopPropagation();
             return; //this is important or conflict between deslect and userinput happens
@@ -1627,7 +1638,7 @@ function Outline(doc) {
             //TODO: This check could definitely be made cleaner.
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
-            if (!about) {
+            if (!about && tsrc!=Icon.src.icon_add_new_triple) {
                 //alert("No about attribute");
                 return;
             }
@@ -1693,8 +1704,12 @@ function Outline(doc) {
                 e.preventDefault();
                 return;
                 break;
-
-                 
+            case Icon.src.icon_add_new_triple:
+                thisOutline.UserInput.borderClick(e);
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+                break;     
             case Icon.src.icon_show_choices: // @@?? what is this?
                 /*  SELECT ?pred 
                             WHERE{
@@ -1755,6 +1770,7 @@ function Outline(doc) {
     
 
     function outline_expand(p, subject1, pane, already) {
+        tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
         sf.removeCallback('fail','expand');

@@ -41,7 +41,7 @@ defaultNew a tabont:NewRDFDocument, log:Formula;
       foStream.write(data, data.length);
       foStream.close();
 // }
-                        """^^tabont:JavaScript].
+                        """^^tabont:ECMAScript].
                         
 #interesting logic we should discuss...
 log:Formula dc:alternative "RDFCollection";

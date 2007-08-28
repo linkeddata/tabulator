@@ -280,6 +280,8 @@ clearInputAndSave: function clearInputAndSave(e){
         this.formUndetStat(trNode,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
         //this why being the same as the previous statement
         this.lastModified=null;
+        
+        //alert("test .isNew)");
         return;        
     }else if(s.predicate.termType=='collection'){
         kb.removeMany(s.subject);
@@ -290,7 +292,8 @@ clearInputAndSave: function clearInputAndSave(e){
         outline.replaceTD(outline.outline_objectTD(reqTerm,defaultpropview),upperTr.lastChild);
         this.lastModified=null;
         return;
-    }else if(s.object.termType=='bnode'){
+    }else if((s.object.termType=='bnode'&&!this.statIsInverse)||
+              s.subject.termType=='bnode'&&this.statIsInverse){
         this.backOut();
         return;
     }
@@ -889,7 +892,8 @@ if (this._tabulatorMode==1){
  */
 
 inputInformationAbout: function inputInformationAbout(selectedTd){
-    var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate; 
+    var predicateTerm=this.getStatementAbout(selectedTd).predicate;
+    //var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate; 
     if(kb.whether(predicateTerm,tabulator.ns.rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
        kb.whether(predicateTerm,tabulator.ns.rdfs('range'),tabulator.ns.rdfs('Literal'))||
 	   predicateTerm.termType=='collection')
@@ -1000,7 +1004,10 @@ appendToPredicate: function appendToPredicate(predicateTd){
         trIterator.parentNode.insertBefore(insertTr,trIterator);
     else if (!HCIoptions["bottom insert highlights"].enabled){
         var table=predicateTd.parentNode.parentNode;
-        table.insertBefore(insertTr,table.lastChild);
+        if (table.className=='defaultPane')
+            table.insertBefore(insertTr,table.lastChild);
+        else
+            table.appendChild(insertTr);
     }
     else; //anyway, this is buggy
         //predicateTd.parentNode.parentNode.insertBefore(

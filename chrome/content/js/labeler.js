@@ -106,8 +106,9 @@ search: function(searchString,context,filterType){
     return [results,types];
 },
 searchAdv: function(searchString,context,filterType){ //extends search
-    var filter = (filterType=='predicate')?function(item){return this.kb.predicateIndex[item.hashString()]}:
-                                           undefined;
+    var filter = (filterType=='predicate')?function(item)
+    {return this.kb.predicateIndex[item.hashString()]||
+            this.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.rdf('Property'));}:undefined;
     var label=searchString.toLowerCase(); //case insensitive
     var match=false;
     var results=[];

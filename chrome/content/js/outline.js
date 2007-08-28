@@ -335,7 +335,8 @@ function Outline(doc) {
             appendRemoveIcon(td, obj, deleteNode)
         }
 
-        try{var DDtd = new YAHOO.util.DDExternalProxy(td);}catch(e){throw("drag and drop not supported");}
+        try{var DDtd = new YAHOO.util.DDExternalProxy(td);}
+        catch(e){tabulator.log.error("drag and drop not supported");}
         //set DOM methods
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
@@ -376,7 +377,8 @@ function Outline(doc) {
                 termWidget.addIcon(td_p,Icon.termWidgets[w])
         }
 
-        try{var DDtd = new YAHOO.util.DDExternalProxy(td_p);}catch(e){dump("drag and drop not supported");}        
+        try{var DDtd = new YAHOO.util.DDExternalProxy(td_p);}
+        catch(e){tabulator.log.error("drag and drop not supported");}        
         //set DOM methods
         td_p.tabulatorSelect = function (){setSelected(this,true);};
         td_p.tabulatorDeselect = function(){setSelected(this,false);}; 

@@ -331,6 +331,20 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     return this.statements[newIndex-1];
 }; //add
 
+// Find out whether a given URI is used as symbol in the formula
+RDFIndexedFormula.prototype.mentionsURI = function(uri) {
+    var hash = '<' + uri + '>';
+    return (!!this.subjectIndex[hash] || !!this.objectIndex[hash]
+            || !!this.predicateIndex[hash]);
+}
+
+// Find an unused id for a file being edited
+RDFIndexedFormula.prototype.newId = function(doc) {
+    for(var i=0;;i++) {
+        var uri = doc.uri + '#n' + i;
+        if (!this.mentionsURI(uri)) return uri;
+    }
+}
 
 RDFIndexedFormula.prototype.anyStatementMatching = function(subj,pred,obj,why) {
     var x = this.statementsMatching(subj,pred,obj,why,true);

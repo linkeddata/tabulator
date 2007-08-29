@@ -2032,7 +2032,7 @@ function Outline(doc) {
     //views_addPropertyView(ns.foaf('aimChatID').uri, VIEWAS_aim_IMme, true);
     views_addPropertyView(ns.foaf('mbox').uri, VIEWAS_mbox, true);
     //views_addPropertyView(ns.foaf('based_near').uri, VIEWAS_map, true);
-    views_addPropertyView(ns.foaf('birthday').uri, VIEWAS_cal, true);
+    //views_addPropertyView(ns.foaf('birthday').uri, VIEWAS_cal, true);
 
     var thisOutline=this;
     /** some builtin simple views **/

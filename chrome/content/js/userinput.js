@@ -190,7 +190,12 @@ clearInputAndSave: function clearInputAndSave(e){
                 return;
             }
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
-        }else{ 
+        }else{
+            if (this.statIsInverse){
+                alert("Invalid Input: a literal can't be a subject in RDF/XML");
+                this.backOut();
+                return;
+            }
             switch (obj.termType){
                 case 'literal':
                     // generate path and nailing from current values
@@ -803,7 +808,7 @@ borderClick: function borderClick(e){
 
     //alert(ancestor(target,'TABLE').textContent);    
     var insertTr=myDocument.createElement('tr');
-    ancestor(target,'TABLE').lastChild.insertBefore(insertTr,ancestor(target,'TR'));
+    ancestor(target,'DIV').insertBefore(insertTr,ancestor(target,'TR'));
     var tempTr=myDocument.createElement('tr');
     var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
     insertTr.appendChild(tempTr.firstChild);

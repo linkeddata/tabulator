@@ -1375,10 +1375,13 @@ function Outline(doc) {
                  break;
              case 'right':
                  deselectAll();
-                 if (selectedTd.nextSibling)
+                 if (selectedTd.nextSibling||selectedTd.lastChild.tagName=='strong')
                      setSelected(selectedTd.nextSibling,true);
-                 else
-                     setSelected(selectedTd.firstChild.childNodes[1].childNodes[1].lastChild,true);
+                 else{
+                     var newSelected=myDocument.evaluate('table/div/tr/td[2]',selectedTd,
+                                                        null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;
+                     setSelected(newSelected,true);
+                 }
                  break;
              case 'left':
                  deselectAll();

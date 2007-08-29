@@ -312,13 +312,16 @@ clearInputAndSave: function clearInputAndSave(e){
 
 deleteTriple: function deleteTriple(selectedTd,isBackOut){
 //ToDo: complete deletion of a node
+    tabulator.log.debug("deleteTriple entered");
     var removedTr;var afterTr;
     var s=this.getStatementAbout(selectedTd);
     if (!isBackOut&&
         !kb.whether(s.object,rdf('type'),tabulator.ns.link('Request')) && // Better to check provenance not internal?
         !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
         !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
-        // TODO: DEFINE ERROR CALLBACK
+        tabulator.log.debug("about to send SPARQLUpdate");
+      //<SPARQLUpdate>
+        //sparqlService.delete_statement(s, function(uri,success,error_body){});
         try{sparqlService.delete_statement(s, function(uri,success,error_body){
             if (!success){
                 removedTr.AJAR_statement=kb.add(s.subject,s.predicate,s.object,s.why);
@@ -338,12 +341,18 @@ deleteTriple: function deleteTriple(selectedTd,isBackOut){
                 outline.walk('down');
             }
         })}catch(e){
+            tabulator.log.error(e);
             alert("You can not edit statement about this blank node object "+
                   "becuase it is not identifiable. (Tabulator Bug)");
             return;
         }
+        
+      //</SPARQLUpdate>
+        tabulator.log.debug("SPARQLUpdate sent");
     }
+    tabulator.log.debug("about to remove "+s);
     kb.remove(s);
+    tabulator.log.debug("removed");
     outline.walk('up');
     removedTr=selectedTd.parentNode;
     afterTr=removedTr.nextSibling;
@@ -469,6 +478,7 @@ insertTermTo: function insertTermTo(selectedTd,term,isObject){
                     outline.UserInput.deleteTriple(insertTr.lastChild,true);
                 }                    
             })}catch(e){
+                tabulator.log.error(e);
                 alert("You can not edit statement about this blank node object "+
                       "becuase it is not identifiable. (Tabulator Bug)");
                 outline.UserInput.deleteTriple(insertTr.lastChild,true);
@@ -1281,29 +1291,34 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
     var tr=selectedTd.parentNode;
-    var stat=tr.AJAR_statement;
+    var stat=tr.AJAR_statement;var isInverse=tr.AJAR_inverse;
     var reqTerm = (type=='object')?stat.object:stat.predicate;
     var newStat;
     var doNext=false;
+    
+    //RDF Event
     var eventhandler;
     if (kb.any(reqTerm,tabulator.ns.link('onfillin'))){
         eventhandler = new Function("subject",kb.any(reqTerm,tabulator.ns.link('onfillin')).value);
     }
+    
     if (type=='predicate'){
         var newTd;
         if (selectedTd.nextSibling.className!='undetermined'){
             var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
-            // TODO: DEFINE ERROR CALLBACK
+          //<SPARQLUpdate>   
             try{sparqlService.insert_statement(s, function(uri,success,error_body){
                 if (!success){
                     outline.UserInput.deleteTriple(newTd,true);
                     alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                 }
             })}catch(e){
+                tabulator.log.error(e);
                 alert("You can not edit statement about this blank node object "+
                       "becuase it is not identifiable. (Tabulator Bug)");
                 return;
             }
+          //</SPARQLUpdate>
             this.lastModified=null;
         }else{
             outline.walk('right');
@@ -1333,18 +1348,24 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         }        
         var newTd=outline.outline_objectTD(inputTerm);
         if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
-            var s= new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
-            // TODO: DEFINE ERROR CALLBACK
+            var s;
+            if (!isInverse)
+                s=new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
+            else
+                s=new RDFStatement(inputTerm,stat.predicate,stat.object,stat.why);
+          //<SPARQLUpdate>
             try{sparqlService.insert_statement(s, function(uri,success,error_body){
                 if (!success){
                     alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                     outline.UserInput.deleteTriple(newTd,true);
                 }
             })}catch(e){
+                tabulator.log.error(e);
                 alert("You can not edit statement about this blank node object "+
                       "becuase it is not identifiable. (Tabulator Bug)");
                 return;
             }
+          //</SPARQLUpdate>
             this.lastModified=null;
         }else{
             outline.walk('left');
@@ -1352,7 +1373,10 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         }              
         outline.replaceTD(newTd,selectedTd);        
         //modify store and update here
-        newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
+        if (!isInverse)
+            newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
+        else
+            newStat=kb.add(inputTerm,stat.predicate,stat.object,stat.why);
         tr.AJAR_statement=newStat;
         kb.remove(stat);     
     }

@@ -1404,7 +1404,7 @@ function Outline(doc) {
     //1. a fast way to modify data - enter will go to next predicate
     //2. an alternative way to input - enter at the end of a predicate will create a new statement
     this.OutlinerKeypressPanel=function OutlinerKeypressPanel(e){
-
+        tabulator.log.info("Key "+e.keyCode+" pressed");
         function showURI(about){
             if(about && myDocument.getElementById('UserURI')) { 
                     myDocument.getElementById('UserURI').value = 

@@ -338,13 +338,22 @@ RDFIndexedFormula.prototype.mentionsURI = function(uri) {
             || !!this.predicateIndex[hash]);
 }
 
+// Find an unused id for a file being edited: return a symbol
+RDFIndexedFormula.prototype.nextSymbol = function(doc) {
+    for(var i=0;;i++) {
+        var uri = doc.uri + '#n' + i;
+        if (!this.mentionsURI(uri)) return kb.sym(uri);
+    }
+}
+
 // Find an unused id for a file being edited
-RDFIndexedFormula.prototype.newId = function(doc) {
+/* RDFIndexedFormula.prototype.newId = function(doc) {
     for(var i=0;;i++) {
         var uri = doc.uri + '#n' + i;
         if (!this.mentionsURI(uri)) return uri;
     }
 }
+*/
 
 RDFIndexedFormula.prototype.anyStatementMatching = function(subj,pred,obj,why) {
     var x = this.statementsMatching(subj,pred,obj,why,true);

@@ -511,8 +511,11 @@ RDFIndexedFormula.prototype.load = function(url) {
     @discription: replace @template with @target and add appropriate triples (no triple removed)
                   one-direction replication 
 */ 
-RDFIndexedFormula.prototype.copyTo = function(template,target){
+RDFIndexedFormula.prototype.copyTo = function(template,target,flags){
+    if (!flags) flags=[];
     var statList=this.statementsMatching(template);
+    if (flags.indexOf('two-direction')!=-1) 
+        statList.concat(this.statementsMatching(undefined,undefined,template));
     for (var i=0;i<statList.length;i++){
         var st=statList[i];
         switch (st.object.termType){
@@ -524,6 +527,7 @@ RDFIndexedFormula.prototype.copyTo = function(template,target){
             case 'collection':
                 this.add(target,st.predicate,st.object.copy(this));
         }
+        if (flags.indexOf('delete')!=-1) this.remove(st);
     }
 };
 //for the case when you alter this.value (text modified in userinput.js)

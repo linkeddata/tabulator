@@ -263,7 +263,7 @@ clearInputAndSave: function clearInputAndSave(e){
                             return;
                         }
                         kb.remove(s);
-                        newStat = s = kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);;
+                        newStat=s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);;
                     }
                     UserInputFormula.statements.push(newStat);
                     break;
@@ -271,7 +271,7 @@ clearInputAndSave: function clearInputAndSave(e){
         }
     }else if(this.lastModified.isNew){//generate 'Request', there is no way you can input ' (Please Input) '
         var trNode=ancestor(this.lastModified,'TR');
-        var reqTerm=this.generateRequest("(To be determined. Re-type or drag an object onto this field)");
+        var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
         var preStat=trNode.previousSibling.AJAR_statement; //the statement of the same predicate
         this.formUndetStat(trNode,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
         //this why being the same as the previous statement
@@ -310,7 +310,7 @@ deleteTriple: function deleteTriple(selectedTd,isBackOut){
 //ToDo: complete deletion of a node
     tabulator.log.debug("deleteTriple entered");
     var removedTr;var afterTr;
-    var s = this.getStatementAbout(selectedTd);
+    var s=this.getStatementAbout(selectedTd);
     if (!isBackOut&&
         !kb.whether(s.object,rdf('type'),tabulator.ns.link('Request')) && // Better to check provenance not internal?
         !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
@@ -383,7 +383,6 @@ addTriple: function addTriple(e){
     var insertTr=this.appendToPredicate(predicateTd);
     var reqTerm=this.generateRequest(" (Error) ",insertTr,false);
     var preStat=insertTr.previousSibling.AJAR_statement;
-    // alert('addTriple inverse '+isInverse)
     if (!isInverse)
         this.formUndetStat(insertTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
     else
@@ -469,17 +468,15 @@ insertTermTo: function insertTermTo(selectedTd,term,isObject){
             else
                 insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
                 
-            try {
-                sparqlService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body) {
-                    if (!success){
-                        alert("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
-                        outline.UserInput.deleteTriple(insertTr.lastChild,true);
-                    }
-                })
-            }catch(e){
+            try{sparqlService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
+                if (!success){
+                    alert("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
+                    outline.UserInput.deleteTriple(insertTr.lastChild,true);
+                }                    
+            })}catch(e){
                 tabulator.log.error(e);
                 alert("You can not edit statement about this blank node object "+
-                      "becuase it is not identifiable. (Tabulator Bug):\n"+e);
+                      "becuase it is not identifiable. (Tabulator Bug)");
                 outline.UserInput.deleteTriple(insertTr.lastChild,true);
                 return;
             }            
@@ -743,11 +740,11 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             outline.UserInput.clearMenu();
             //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
             outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
-            if (typeof enterEvent=='number'){ // Add in the top menu line for a new item
+            if (typeof enterEvent=='number'){
                 var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
                 var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
                 var h1th=h1.appendChild(myDocument.createElement('th'));
-                h1th.appendChild(myDocument.createTextNode("New ..."));
+                h1th.appendChild(myDocument.createTextNode("New..."));
                 h1.setAttribute('about',tabulator.ns.tabont('createNew'));
             }                 
         }else if(mode=='predicate'){
@@ -950,19 +947,46 @@ createInputBoxIn: function createInputBoxIn(tdNode,defaultText){
     return inputBox;
 },
 
-createNew: function createNew(selectedTd){
-    var insertTr = selectedTd.parentNode;
+createNew: function createNew(selectedTd,isInverse){
+    var insertTr=selectedTd.parentNode;
     //var preStat=insertTr.previousSibling.AJAR_statement;
-    var preStat = insertTr.AJAR_statement;
-    var isInverse = insertTr.AJAR_inverse;
-    var predicateTerm = preStat.predicate;
-    var tempTerm=kb.nextSymbol(preStat.why); // new symbol for new item
-    // alert('New term: '+tempTerm+', pred='+predicateTerm+', inverse: '+isInverse); //@@
+    var preStat=insertTr.AJAR_statement;
+    var predicateTerm=preStat.predicate;
+        
+    var tempTerm=kb.bnode();
+    var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
+    if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
+    var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
+    kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
+    /* SELECT ?labelProperty
+       WHERE{
+           ?labelProperty rdfs:subPropertyOf rdfs:label.
+           ?labelProperty rdfs:domain tempType.
+       }
+    */ //this is ideal...but
+
+    /*<lable-choice>
+    var labelChoices=kb.collection();
+    var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
+    for (var i=0;i<labelProperties.length;i++) {
+        labelChoices.append(labelProperties[i]);
+        kb.add(labelChoices,tabulator.ns.link('element'),labelProperties[i]);
+    }
+    labelChoices.append(tabulator.ns.rdfs('label'));
+    kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
+    kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
+    */
+
+    //insertTr.appendChild(outline.outline_objectTD(tempTerm));
+    //outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);              
+    if (!isInverse)
+        this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
+    else
+        this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
     return tempTerm;
 },
 
 appendToPredicate: function appendToPredicate(predicateTd){   
-    // alert('appendToPredicate');
     var isEnd=false;
     var trIterator;
     try{
@@ -999,6 +1023,10 @@ appendToPredicate: function appendToPredicate(predicateTd){
     return insertTr;
 },
 
+bnode2symbol: function bnode2symbol(bnode,symbol){
+    kb.copyTo(bnode,symbol,['two-direction','delete']);
+},
+
 generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
     var trNode;
     if(!notShow){
@@ -1016,7 +1044,6 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
     //Choice 2:
     labelPriority[tabulator.ns.link('message').uri] = 20;
     
-//    var reqTerm = kb.sym(kb.newId(@@))
     var reqTerm=kb.bnode();
     kb.add(reqTerm,rdf('type'),tabulator.ns.link("Request"));
     if (tipText.length<10)
@@ -1265,11 +1292,10 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 },//funciton showMenu
 
 fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
-    var tr = selectedTd.parentNode;
-    var stat = tr.AJAR_statement;
-    var isInverse = tr.AJAR_inverse;
+    var tr=selectedTd.parentNode;
+    var stat=tr.AJAR_statement;var isInverse=tr.AJAR_inverse;
     var reqTerm = (type=='object')?stat.object:stat.predicate;
-    var newStat;
+    var newStat;var isNew;
     var doNext=false;
     
     //RDF Event
@@ -1306,14 +1332,11 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         tr.AJAR_statement=newStat;
         kb.remove(stat);
     }else if (type=='object'){
-        var isNewNode = inputTerm.sameTerm(tabulator.ns.tabont('createNew'));
-        if (isNewNode) inputTerm = kb.nextSymbol(stat.why); 
-        var s = !isInverse ? new RDFStatement(stat.subject, stat.predicate, inputTerm, stat.why)
-                 : new RDFStatement(inputTerm, stat.predicate, stat.object, stat.why);
-                 
-/*
-        if (0){    // This should be moved further how for the new case - open new node 
-                        
+        if (inputTerm.sameTerm(tabulator.ns.tabont('createNew'))){
+            var newTerm=this.createNew(selectedTd);
+            var newSelected=outline.selection[0];
+            //outline.outline_expand(newSelected,newTerm);
+            /*<lable-choice>
             var trIterator;
             for (trIterator=newSelected.firstChild.childNodes[1].firstChild;
                      trIterator; trIterator=trIterator.nextSibling) {
@@ -1324,32 +1347,26 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
             var e={type:'click'};
             this.Click(e,trIterator.lastChild);
             outline.walk('moveTo',trIterator.lastChild);
-            return true;
-        }     
-*/
+            */
+            //return true;
+            inputTerm=kb.nextSymbol(stat.why);
+            //this.bnode2symbol(newTerm,inputTerm);
+            isNew=true;
+        }        
         var newTd=outline.outline_objectTD(inputTerm);
-        if ( isNewNode || (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined')) { // ??
-            // alert('Inserting into '+stat.why+' statement: '+s); //@@
-           // TODO: DEFINE ERROR CALLBACK
-            try{
-                sparqlService.insert_statement(s, function(uri, success, error_body){
-                    if (!success){
-                        alert("Error occurs while inserting "+s+'\ninto '+stat.why+':\n'+error_body);
-                        outline.UserInput.deleteTriple(newTd,true);
-                    } else {
-                        //modify store and update here
-                        kb.add(s.subject, s.predicate, s.object, s.why);
-                        outline.replaceTD(newTd,selectedTd);        
-                        tr.AJAR_statement=newStat;
-                        kb.remove(stat); 
-                        // @@ Exapand the new node if isNewNode
-                        if (isNewNde) {
-                            var newSelected=outline.selection[0];
-                            outline.outline_expand(newSelected,newTerm);
-                        }
-                    }
-                })
-            } catch(e) {
+        if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
+            var s;
+            if (!isInverse)
+                s=new RDFStatement(stat.subject,stat.predicate,inputTerm,stat.why);
+            else
+                s=new RDFStatement(inputTerm,stat.predicate,stat.object,stat.why);
+          //<SPARQLUpdate>
+            try{sparqlService.insert_statement(s, function(uri,success,error_body){
+                if (!success){
+                    alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
+                    outline.UserInput.deleteTriple(newTd,true);
+                }
+            })}catch(e){
                 tabulator.log.error(e);
                 alert("You can not edit statement about this blank node object "+
                       "becuase it is not identifiable. (Tabulator Bug)");
@@ -1360,7 +1377,16 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
         }else{
             outline.walk('left');
             doNext=true;
-        }              
+        }             
+        outline.replaceTD(newTd,selectedTd);  
+        //modify store and update here
+        if (!isInverse)
+            newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
+        else
+            newStat=kb.add(inputTerm,stat.predicate,stat.object,stat.why);
+        tr.AJAR_statement=newStat;
+        kb.remove(stat);
+        if (isNew) outline.outline_expand(outline.selection[0],inputTerm);  
     }
     UserInputFormula.statements.push(newStat);
     if (eventhandler) eventhandler(stat.subject);
@@ -1371,10 +1397,37 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
 },
 
 formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){
-    trNode.AJAR_inverse = inverse;
-    return trNode.AJAR_statement = kb.add(subject,predicate,object,why);
+    trNode.AJAR_inverse=inverse;
+    return trNode.AJAR_statement=kb.add(subject,predicate,object,why);
 },
-
+/** ABANDONED APPROACH
+//determine whether the event happens at around the bottom border of the element
+aroundBorderBottom: function(event,element){
+    //alert(event.pageY);
+    //alert(findPos(element)[1]);
+    var elementPageY=findPos(element)[1]+38; //I'll figure out what this 38 is...
+    
+    function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
+	var curleft = curtop = 0;
+	if (obj.offsetParent) {
+		curleft = obj.offsetLeft
+		curtop = obj.offsetTop
+		while (obj = obj.offsetParent) {
+			curleft += obj.offsetLeft
+			curtop += obj.offsetTop
+		}
+	}
+	return [curleft,curtop];
+    }
+    
+    //alert(elementPageY+element.offsetHeight-event.pageY);
+    //I'm totally confused by these numbers...
+    if(event.pageY-4==elementPageY+element.offsetHeight||event.pageY-5==elementPageY+element.offsetHeight) 
+        return true;
+    else
+        return false;
+},
+**/
 //#include emptyNode(Node) from util.js
 //#include getTerm(node) from util.js
 

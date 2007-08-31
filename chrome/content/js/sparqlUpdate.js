@@ -22,12 +22,17 @@ sparql = function(store) {
 sparql.prototype.editable = function(uri) {
     request = this.store.any(this.store.sym(Util.uri.docpart(uri)), tabulator.ns.link("request"));
     if (request !== undefined) {
-        ns_author_via = tabulator.ns.httph("ms-author-via");
-        author_via = this.store.each(request, ns_author_via);
+        author_via = this.store.each(request, tabulator.ns.httph("ms-author-via"));
         if (author_via.length)
             for (var i = 0; i < author_via.length; i++) {
                 if (author_via[i] == "SPARQL")
                     return true;
+            }
+        status = this.store.each(request, tabulator.ns.http("status"));
+        if (status.length)
+            for (var i = 0; i < status.length; i++) {
+                if (status[i] == 200)
+                    return false;
             }
     }
 }

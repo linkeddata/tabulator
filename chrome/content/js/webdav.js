@@ -99,7 +99,10 @@ webdav = new function() {
         this.editable = function(uri) {
             if (this.documents[uri]) {
                 lock = this.documents[uri].lock();
-                return this.documents[uri].client.enabled;
+                var is_enabled = this.documents[uri].client.enabled;
+                if (!this.documents[uri].release(lock))
+                    alert('Locking error for URI:\n' + uri);
+                return is_enabled;
             }
             return null;
         }

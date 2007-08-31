@@ -383,7 +383,7 @@ addTriple: function addTriple(e){
     var insertTr=this.appendToPredicate(predicateTd);
     var reqTerm=this.generateRequest(" (Error) ",insertTr,false);
     var preStat=insertTr.previousSibling.AJAR_statement;
-    alert('addTriple inverse '+isInverse)
+    // alert('addTriple inverse '+isInverse)
     if (!isInverse)
         this.formUndetStat(insertTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
     else
@@ -962,7 +962,7 @@ createNew: function createNew(selectedTd){
 },
 
 appendToPredicate: function appendToPredicate(predicateTd){   
-    alert('appendToPredicate');
+    // alert('appendToPredicate');
     var isEnd=false;
     var trIterator;
     try{
@@ -1329,7 +1329,7 @@ fillInRequest: function fillInRequest(type,selectedTd,inputTerm){
 */
         var newTd=outline.outline_objectTD(inputTerm);
         if ( isNewNode || (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined')) { // ??
-            alert('Inserting into '+stat.why+' statement: '+s); //@@
+            // alert('Inserting into '+stat.why+' statement: '+s); //@@
            // TODO: DEFINE ERROR CALLBACK
             try{
                 sparqlService.insert_statement(s, function(uri, success, error_body){

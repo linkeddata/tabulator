@@ -9,22 +9,13 @@
 */
 var UserInputFormula; //Formula to store references of user's work
 function UserInput(outline){
-
 var myDocument=outline.document; //is this ok?
 //alert("myDocument when it's set is "+myDocument.location);
 this.menuId='predicateMenu1';
 this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
-this.namespaces["tabont"] = "http://www.w3.org/2007/ont/link#";
-this.namespaces["foaf"] = "http://xmlns.com/foaf/0.1/";
-this.namespaces["rdf"] = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-this.namespaces["RDFS"] = "http://www.w3.org/2000/01/rdf-schema#";
-this.namespaces["OWL"] = "http://www.w3.org/2002/07/owl#";
-this.namespaces["dc"] = "http://purl.org/dc/elements/1.1/";
-this.namespaces["rss"] = "http://purl.org/rss/1.0/";
-this.namespaces["xsd"] = "http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-";
-this.namespaces["contact"] = "http://www.w3.org/2000/10/swap/pim/contact#";
-this.namespaces["mo"] = "http://purl.org/ontology/mo/";
-this.namespaces["doap"] = "http://usefulinc.com/ns/doap#";
+for (var name in tabulator.ns) {
+    this.namespaces[name] = tabulator.ns[name]();
+}
 var NameSpaces=this.namespaces;
 var sparqlService=new sparql(kb);
 if (!UserInputFormula){
@@ -1150,14 +1141,14 @@ showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order){
 	    var Label = predicateLabelForXML(predicate, false);
 		//Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
 
-        var theNamespace="";	    
-	    for (var name in NameSpaces){
-	        if (!predicate.uri) break;//bnode
-            if (string_startswith(predicate.uri,NameSpaces[name])){
-	            theNamespace=name;
-	            break;
-	        }
-	    }
+        var theNamespace="";
+        if (predicate.uri)
+            for (var name in NameSpaces){
+                if (string_startswith(predicate.uri,NameSpaces[name])){
+                    theNamespace=name;
+                    break;
+                }
+            }
 
         var tr=table.appendChild(myDocument.createElement('tr'));
         tr.setAttribute('about',predicate);

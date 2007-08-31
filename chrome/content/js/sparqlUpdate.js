@@ -19,6 +19,19 @@ sparql = function(store) {
     this.fps = {};
 }
 
+sparql.prototype.editable = function(uri) {
+    request = this.store.any(this.store.sym(Util.uri.docpart(uri)), tabulator.ns.link("request"));
+    if (request !== undefined) {
+        ns_author_via = tabulator.ns.httph("ms-author-via");
+        author_via = this.store.each(request, ns_author_via);
+        if (author_via.length)
+            for (var i = 0; i < author_via.length; i++) {
+                if (author_via[i] == "SPARQL")
+                    return true;
+            }
+    }
+}
+
 ///////////  The identification of bnodes
 
 sparql.prototype._statement_bnodes = function(st) {

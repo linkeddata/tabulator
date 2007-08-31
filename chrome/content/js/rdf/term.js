@@ -277,11 +277,11 @@ RDFVariable.prototype.hashString = RDFVariable.prototype.toNT;
 // The namespace function generator 
 
 function Namespace(nsuri) {
-    return function(ln) { return new RDFSymbol(nsuri+ln) }
+    return function(ln) { return new RDFSymbol(nsuri+(ln===undefined?'':ln)) }
 }
 
 RDFFormula.prototype.ns = function(nsuri) {
-    return function(ln) { return new RDFSymbol(nsuri+ln) }
+    return function(ln) { return new RDFSymbol(nsuri+(ln===undefined?'':ln)) }
 }
 
 

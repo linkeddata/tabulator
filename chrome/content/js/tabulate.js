@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3846 2007-08-20 21:01:21Z kennyluck $
+// SVN ID: $Id: tabulate.js 3956 2007-08-31 19:48:19Z presbrey $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -28,6 +28,7 @@ tabulator.ns.rss = rss = Namespace("http://purl.org/rss/1.0/");
 tabulator.ns.xsd = xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
 tabulator.ns.contact = contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#");
 tabulator.ns.mo = mo = Namespace("http://purl.org/ontology/mo/");
+tabulator.ns.doap = doap = Namespace("http://usefulinc.com/ns/doap#");
 
 var ns = tabulator.ns
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing

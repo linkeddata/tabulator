@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3751 2007-08-10 20:10:33Z timbl $
+ * SVN ID: $Id: sources.js 3962 2007-09-01 13:40:32Z timbl $
  *
  ************************************************************/
 
@@ -304,8 +304,8 @@ function SourceFetcher(store, timeout, async) {
 		// Parse the text of this non-XML file
 		var rt = xhr.responseText
 	        var p = SinkParser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
-                p.loadBuf(xhr.responseText)
-/*		try {
+//                p.loadBuf(xhr.responseText)
+		try {
 		    p.loadBuf(xhr.responseText)
 
 		} catch(e) {
@@ -314,9 +314,9 @@ function SourceFetcher(store, timeout, async) {
 		    tabulator.log.warn(msg)
 		    sf.failFetch(xhr, msg)
 		}
-*/
+
 		sf.addStatus(xhr,'N3 parsed: '+p.statementCount 
-					    + ' in '+p.lines+' lines.')
+					    + ' statements in '+p.lines+' lines.')
 		args = [ xhr.uri.uri ]; // Other args needed ever?
 		sf.doneFetch(xhr, args)
 	    }
@@ -376,6 +376,7 @@ function SourceFetcher(store, timeout, async) {
 
     this.failFetch = function (xhr, status) {
 	this.addStatus(xhr,status)
+        kb.add(xhr.uri, tabulator.ns.link('error'), status)
 	this.requested[Util.uri.docpart(xhr.uri.uri)] = false
 	this.fireCallbacks('fail',[xhr.requestedURI])
 	xhr.abort()

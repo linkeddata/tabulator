@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3962 2007-09-01 13:40:32Z timbl $
+ * SVN ID: $Id: sources.js 3963 2007-09-02 03:22:13Z timbl $
  *
  ************************************************************/
 
@@ -615,6 +615,11 @@ function SourceFetcher(store, timeout, async) {
                             prev = kb.any(undefined,
                                     kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
                                     prev)) {
+                            var redirection = kb.any(prev, 
+                                kb.sym('http://www.w3.org/2007/ont/http#status'));
+                            tabulator.log.info('redirection :'+redirection+' for '+prev);
+                            if (!redirection) break;
+                            if ( redirection != '301' &&  redirection != '302') break; 
                             var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
                             kb.add(doc, tabulator.ns.rdf('type'), cla,
                                     sf.appNode);

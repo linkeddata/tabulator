@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3963 2007-09-02 03:22:13Z timbl $
+ * SVN ID: $Id: sources.js 3966 2007-09-03 17:58:47Z timbl $
  *
  ************************************************************/
 
@@ -69,14 +69,14 @@ function SourceFetcher(store, timeout, async) {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
 		if (!this.dom) {
-        var dparser;
-        if(isExtension) {
-            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
-                        .getService(Components.interfaces.nsIDOMParser);
-        } else {
-		        dparser = new DOMParser()
-        }
-		    this.dom = dparser.parseFromString(xhr.responseText,
+                    var dparser;
+                    if(isExtension) {
+                        dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                                    .getService(Components.interfaces.nsIDOMParser);
+                    } else {
+                        dparser = new DOMParser()
+                    }
+                    this.dom = dparser.parseFromString(xhr.responseText,
 						       'application/xml')
 		}
 		var kb = sf.store
@@ -90,19 +90,10 @@ function SourceFetcher(store, timeout, async) {
 		}
 
 		// link rel
-		var links = this.dom.getElementsByTagName('link')
+		var links = this.dom.getElementsByTagName('link');
 		for (var x=links.length-1; x>=0; x--) {
-		    if ((links[x].getAttribute('rel') == 'alternate'
-			 || links[x].getAttribute('rel') == 'seeAlso'
-			 || links[x].getAttribute('rel') == 'meta')
-			&& links[x].getAttribute('href')) {
-			var join = Util.uri.join
-			var uri = kb.sym(join(links[x].getAttribute('href'),
-					      xhr.uri.uri))
-			kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'),uri,
-			       xhr.uri)
-			tabulator.log.info("Loading "+uri+" from link rel in "+xhr.uri)
-		    }
+                    this.linkData(xhr, links[x].getAttribute('rel'),
+                                links[x].getAttribute('href'));
 		}
 
 		//GRDDL
@@ -382,6 +373,19 @@ function SourceFetcher(store, timeout, async) {
 	xhr.abort()
     }
 
+    this.linkData = function(xhr, rel, uri) {
+        var x = xhr.uri;
+        if (!uri) return;
+        if (rel == 'alternate'|| rel == 'seeAlso' || rel == 'meta') {
+            var join = Util.uri.join
+            var obj = kb.sym(join(uri, xhr.uri.uri))
+            kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'), obj,
+                   xhr.uri)
+            tabulator.log.info("Loading "+obj+" from link rel in "+xhr.uri)            
+        }
+    };
+    
+
     this.doneFetch = function (xhr, args) {
 	this.addStatus(xhr,'done')
 	tabulator.log.info("Done with parse, firing 'done' callbacks for "+xhr.uri)
@@ -644,10 +648,10 @@ function SourceFetcher(store, timeout, async) {
                         // Timbl replies: I think so as to make it get parsed as XML
 			
 			switch (xhr.uri.uri.split('.').pop()){
-			    case 'rdf':
+			    case 'rdf': case 'owl':
 			        xhr.headers['content-type'] = 'application/rdf+xml';
 			        break;
-			    case 'n3': case 'nt':
+			    case 'n3': case 'nt': case 'ttl':
 			        xhr.headers['content-type'] = 'text/rdf+n3';
 			        break;
 			    default:
@@ -679,6 +683,19 @@ function SourceFetcher(store, timeout, async) {
 			    break
 			}
 		    }
+                    
+                    var link = xhr.headers['link']; // Only one?
+                    if (link) {
+                        var rel = null;
+                        var arg = link.replace(/ /g, '').split(';');
+                        for (var i=0; i<arg.length; i++) {
+                            lr = arg[i].split('=');
+                            if (lr[0] == 'rel') rel = lr[1];
+                        }
+                        if (rel) // Treat just like HTML link element
+                            sf.linkData(xhr,  rel, arg[0]);
+		    }
+
 		    
 		    if (handler) {
 			handler.recv(xhr)

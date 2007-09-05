@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 3966 2007-09-03 17:58:47Z timbl $
+ * SVN ID: $Id: sources.js 4016 2007-09-05 21:44:34Z timbl $
  *
  ************************************************************/
 
@@ -22,7 +22,7 @@ function SourceFetcher(store, timeout, async) {
 	           +"#SourceFetcher"
     this.timeout = timeout?timeout:30000
     this.async = async!=null?async:true
-    this.appNode = this.store.bnode()
+    this.appNode = this.store.bnode(); // Denoting this session
     this.requested = {}
     this.lookedUp = {}
     this.handlers = []
@@ -92,7 +92,7 @@ function SourceFetcher(store, timeout, async) {
 		// link rel
 		var links = this.dom.getElementsByTagName('link');
 		for (var x=links.length-1; x>=0; x--) {
-                    this.linkData(xhr, links[x].getAttribute('rel'),
+                    sf.linkData(xhr, links[x].getAttribute('rel'),
                                 links[x].getAttribute('href'));
 		}
 
@@ -516,6 +516,10 @@ function SourceFetcher(store, timeout, async) {
         if (uri.indexOf('#') >= 0) { // hash
 	    return alert("requestURI should notbe called with fragid: "+uri)
 	}
+        
+        var pcol = Util.uri.protocol(uri);
+        if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn')
+            return null; // No look-up operaion on these, but they are not errors
 
 	var force = !!force
 	var kb = this.store
@@ -534,7 +538,7 @@ function SourceFetcher(store, timeout, async) {
 	    //this.fireCallbacks('done',newArgs) //comment out here
 	    return null
 	}
-    this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
+        this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
 
 	this.requested[docuri] = true
 
@@ -575,7 +579,7 @@ function SourceFetcher(store, timeout, async) {
 					   Util.uri.protocol(uri))
 	    == "undefined") {
 	    // update the status before we break out
-	    if (Util.uri.protocol(uri)=='rdf') {
+	    if (Util.uri.protocol(uri)=='rdf') {   // ??? eh? rdf: ?? -- tim
 	        xhr.abort();
 	    }
 	    this.failFetch(xhr,"Unsupported protocol")
@@ -615,18 +619,20 @@ function SourceFetcher(store, timeout, async) {
 
                     // deduce some things from the HTTP transaction
                     var addType = function(cla) { // add type to all redirected resources too
-                        for(var prev = req; prev;
+                        var prev = req;
+                        for (;;) {
+                            var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
+                            kb.add(doc, tabulator.ns.rdf('type'), cla,
+                                    sf.appNode);
                             prev = kb.any(undefined,
                                     kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
-                                    prev)) {
+                                    prev);
+                            if (!prev) break;
                             var redirection = kb.any(prev, 
                                 kb.sym('http://www.w3.org/2007/ont/http#status'));
                             tabulator.log.info('redirection :'+redirection+' for '+prev);
                             if (!redirection) break;
                             if ( redirection != '301' &&  redirection != '302') break; 
-                            var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
-                            kb.add(doc, tabulator.ns.rdf('type'), cla,
-                                    sf.appNode);
                         }
                     }
                     if (xhr.status-0 == 200) {

@@ -86,6 +86,7 @@ Icon.src.icon_defaultPane = iconPrefix + 'icons/table.png';
 Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
 Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
+Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
 
 // For that one we need a document with grid lines.  Make data-x-generix maybe

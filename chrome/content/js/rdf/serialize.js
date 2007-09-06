@@ -42,6 +42,7 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     var p = uri;
     var namespaces = [];
     var pok;
+    var sz = this;
     
     function canUse(pp) {
         if (namespaces[pp]) return false; // already used

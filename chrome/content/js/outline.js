@@ -2,10 +2,13 @@ function Outline(doc) {
     var myDocument=doc;
     this.document=doc;
     //this.watch('document',function(a,b,c){alert(a+b+c);});
-    var outline=this; //Kenny: do we need this?
-    var thisOutline=this;
+    var outline = this; //Kenny: do we need this?
+    var thisOutline = this;
     var selection=[]
     this.selection=selection;
+    this.ancestor = ancestor // make available as outline.ancestor in callbacks
+    this.sparql = sparql;
+    this.kb = kb;
     
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
@@ -496,7 +499,7 @@ function Outline(doc) {
         var div = myDocument.createElement('div')
         
         div.setAttribute('class', 'withinDocumentPane')
-        appendRemoveIcon(div, subject, div);
+//        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject, undefined, undefined, source)
         appendPropertyTRs(div, plist, false, withinDocumentPane.filter)
@@ -523,32 +526,20 @@ function Outline(doc) {
         var div = myDocument.createElement('div')
         
         div.setAttribute('class', 'defaultPane')
-        appendRemoveIcon(div, subject, div);
+//        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
         appendPropertyTRs(div, plist, false, defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
-        if (!HCIoptions["bottom insert highlights"].enabled){
-            /*
-            var holdingTr=myDocument.createElement('tr');
-            var holdingTd=myDocument.createElement('td');
-            holdingTd.setAttribute('colspan','2');
-            var bottomDiv=myDocument.createElement('div');
-            bottomDiv.className='bottom-border';
-            holdingTd.setAttribute('notSelectable','true');
-            bottomDiv.addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
-            bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
-            bottomDiv.addEventListener('click',thisOutline.UserInput.borderClick,false);
-            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
-            */
-            
+        if (outline.sparql.prototype.editable(subject.uri, outline.kb) && // Is that the only test?
+            !HCIoptions["bottom insert highlights"].enabled) {
             var holdingTr=myDocument.createElement('tr'); //these are to minimize required changes
             var holdingTd=myDocument.createElement('td'); //in userinput.js
             holdingTd.setAttribute('colspan','2');
             holdingTd.setAttribute('notSelectable','true');
-            var img=myDocument.createElement('img');
-            img.src=Icon.src.icon_add_new_triple;
+            var img = myDocument.createElement('img');
+            img.src = Icon.src.icon_add_new_triple;
             img.className='bottom-border-active'
             //img.addEventListener('click',thisOutline.UserInput.borderClick,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
@@ -579,7 +570,7 @@ function Outline(doc) {
         }
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
-        appendRemoveIcon(div, subject, div);
+//        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
         appendPropertyTRs(div, plist, false, filter)
@@ -1174,7 +1165,7 @@ function Outline(doc) {
                 if (!target) {
                     return false
                 }          
-                if (!ancestor(target,'DIV')) return false;
+                if (!outline.ancestor(target,'DIV')) return false;
                 if (term.termType != "symbol") { return true }
                 if (req == fireOn) {
                     target.src = icon
@@ -1235,7 +1226,8 @@ function Outline(doc) {
             cla += ' selected'
             if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
             if (cla.indexOf('pred') >= 0)
-                HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
+                termWidget.addIcon(node,Icon.termWidgets.addTri);  // was tye line below
+                // HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
             selection.push(node)
             //tabulator.log.info("Selecting "+node.textContent)
             var source
@@ -1250,7 +1242,8 @@ function Outline(doc) {
             cla = cla.replace(' selected','')
             if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
             if (cla.indexOf('pred') >=0)
-                HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
+                termWidget.removeIcon(node,Icon.termWidgets.addTri); // was line below
+                // HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
             RDFArrayRemove(selection, node)
             tabulator.log.info("Deselecting "+node.textContent);
             tabulator.log.debug("cla=$"+cla+"$");
@@ -1475,8 +1468,8 @@ function Outline(doc) {
         switch (e.keyCode){
             case 46://delete
             case 8://backspace
-                this.UserInput.deleteTriple(selectedTd);
                 e.preventDefault();//prevent from going back
+                this.UserInput.deleteTriple(selectedTd);
                 break;
             case 37://left
                 if (this.walk('left')) return;
@@ -1625,7 +1618,8 @@ function Outline(doc) {
                 }
                 //if (sel) UserInput.Click(e); = the following
                 var text="TabulatorMouseDown@Outline()";
-                HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
+                if (sel) thisOutline.UserInput.Click(e, selection[0]); // was next line
+                // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
             }
             tabulator.log.debug("Was node selected after: "+selected(node)
                 +", count="+selection.length)
@@ -1715,7 +1709,7 @@ function Outline(doc) {
                 e.preventDefault();
                 return;
                 break;     
-            case Icon.src.icon_show_choices: // @@?? what is this?
+            case Icon.src.icon_show_choices: // @what is this? A down-traingle like 'collapse'
                 /*  SELECT ?pred 
                             WHERE{
                             about tabont:element ?pred.

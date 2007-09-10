@@ -1,5 +1,8 @@
 /*Preference and Configuration
 
+
+Kenny:
+
   Q: What is this?
   A: This is where I store optional codes and make them into preferences.
   Q: How do I use it?
@@ -19,7 +22,15 @@
   A: It should be easy to extend this architecture to contain "hooks", that is you should be able to
      insert code into certain location defined by Step 3.
                                                                 2007-06-15 kennyluck
-             
+
+Tim (2007/9):
+    Sorry, Kenny. This is some of the most difficult to understand code there is.
+    It makes understanding it by others really hard.  We will have to get rid
+    of it piece by piece. Please do NOT use the features in configuration.js for any more code.
+    
+    This is a system of Kenny's for making optional compilation.  It inserts code
+    defined n blocks here in  various places in the program. This makes it very
+    hard to follow.
 */ 
 
 
@@ -116,6 +127,7 @@ function temp_RCTSM2(){
 HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM2);
 delete temp_RCTSM2;
 
+/*
 //able to edit in Discovery Mode by mouse
 function temp_ATEIDMBM0(sel,e,outline,selectedTd){
     if (sel) outline.UserInput.Click(e,selectedTd);
@@ -134,6 +146,7 @@ function temp_ATEIDMBM2(node){
 }
 HCIoptions["able to edit in Discovery Mode by mouse"].addMoreCode(temp_ATEIDMBM2);
 delete temp_ATEIDMBM2;
+*/
 
 //favorite dock
 function temp_FD0(){
@@ -300,7 +313,7 @@ delete temp_DO;
   * Preferences
   **/
 //HCIoptions["right click to switch mode"].enable();
-HCIoptions["able to edit in Discovery Mode by mouse"].enable();
+// HCIoptions["able to edit in Discovery Mode by mouse"].enable(); // not used 
 //HCIoptions["favorite dock"].enabled=true;
 //HCIoptions["bottom insert highlights"].enable();
 

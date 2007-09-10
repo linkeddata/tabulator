@@ -698,6 +698,7 @@ AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
             enterEvent.stopPropagation();  
             switch (enterEvent.keyCode){
                 case 13://enter
+                case 9: // tab
                     if (!menu) {
                         outline.UserInput.clearInputAndSave();
                         return;
@@ -1041,17 +1042,19 @@ generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
     //Choice 1:
     //var reqTerm=kb.literal("TBD");  
     //this is troblesome since RDFIndexedFormula does not allow me to add <x> <y> "TBD". twice
+    // Choice 2.   Use a variable.
     //Choice 2:
     labelPriority[tabulator.ns.link('message').uri] = 20;
     
+    // We must get rid of this clutter in the store.
     var reqTerm=kb.bnode();
     kb.add(reqTerm,rdf('type'),tabulator.ns.link("Request"));
     if (tipText.length<10)
         kb.add(reqTerm,tabulator.ns.link('message'),kb.literal(tipText));
     else
         kb.add(reqTerm,tabulator.ns.link('message'),kb.literal(tipText));
-    kb.add(reqTerm,tabulator.ns.link('to'),kb.literal("The User"));
-    kb.add(reqTerm,tabulator.ns.link('from'),kb.literal("The User"));
+//    kb.add(reqTerm,tabulator.ns.link('to'),kb.literal("The User"));   Ends up all over the store
+//    kb.add(reqTerm,tabulator.ns.link('from'),kb.literal("The User"));
     
     //append the undetermined td
     if (!notShow){

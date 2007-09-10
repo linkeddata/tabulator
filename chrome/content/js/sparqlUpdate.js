@@ -19,16 +19,17 @@ sparql = function(store) {
     this.fps = {};
 }
 
-sparql.prototype.editable = function(uri) {
-    request = this.store.any(this.store.sym(Util.uri.docpart(uri)), tabulator.ns.link("request"));
+sparql.prototype.editable = function(uri, kb) {
+    if (!kb) kb = this.store;
+    var request = kb.any(kb.sym(Util.uri.docpart(uri)), tabulator.ns.link("request"));
     if (request !== undefined) {
-        author_via = this.store.each(request, tabulator.ns.httph("ms-author-via"));
+        var author_via = kb.each(request, tabulator.ns.httph("ms-author-via"));
         if (author_via.length)
             for (var i = 0; i < author_via.length; i++) {
                 if (author_via[i] == "SPARQL")
                     return true;
             }
-        status = this.store.each(request, tabulator.ns.http("status"));
+        var status = kb.each(request, tabulator.ns.http("status"));
         if (status.length)
             for (var i = 0; i < status.length; i++) {
                 if (status[i] == 200)

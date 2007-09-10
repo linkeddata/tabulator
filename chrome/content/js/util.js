@@ -341,7 +341,7 @@ function getAboutLevel(target) {
 function ancestor(target, tagName) {
     var level
     for (level = target; level; level = level.parentNode) {
-        tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
+        // tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
         if (level.tagName == tagName) return level;
     }
     return undefined

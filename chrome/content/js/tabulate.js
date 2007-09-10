@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 3956 2007-08-31 19:48:19Z presbrey $
+// SVN ID: $Id: tabulate.js 4020 2007-09-10 03:08:49Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -152,8 +152,8 @@ Icon.src.icon_add_new_triple = iconPrefix + 'icons/tango/22-list-add-new.png';
 Icon.src.icon_show_choices = iconPrefix + 'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
 
 
-Icon.tooltips[Icon.src.icon_add_triple] = 'Add more'
-Icon.tooltips[Icon.src.icon_add_new_triple] = 'Add new triple'
+Icon.tooltips[Icon.src.icon_add_triple] = 'Add another'
+Icon.tooltips[Icon.src.icon_add_new_triple] = 'Add data'
 Icon.tooltips[Icon.src.icon_remove_node] = 'Remove'
 Icon.tooltips[Icon.src.icon_expand] = 'View details.'
 Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
@@ -212,7 +212,7 @@ function calendarable(st, type, inverse){
 Icon.termWidgets.time = new Icon.OutlinerIcon(Icon.src.icon_time,20,'time',
 'You can view this field in the calendar or timeline view',
 					      calendarable);
-Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
+Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add another"); // add object to this pred
 function menuable(statement,type,inverse){return (statement.predicate.termType=='collection');}
 Icon.termWidgets.showChoices=new Icon.OutlinerIcon(Icon.src.icon_show_choices,20,'show choices',"Choose another term",menuable);
 

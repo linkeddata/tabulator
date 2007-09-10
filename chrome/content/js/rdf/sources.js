@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 4016 2007-09-05 21:44:34Z timbl $
+ * SVN ID: $Id: sources.js 4020 2007-09-10 03:08:49Z timbl $
  *
  ************************************************************/
 
@@ -511,6 +511,8 @@ function SourceFetcher(store, timeout, async) {
     **      rterm:  the resource which refered to this (for tracking bad links)
     ** Return value:
     **	    The xhr object for the HTTP access
+    **      null if the protocol is not a look-up protocol,
+    **              or URI has already been loaded
     */
     this.requestURI = function (uri, rterm, force) { //sources_request_new
         if (uri.indexOf('#') >= 0) { // hash

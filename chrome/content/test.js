@@ -170,6 +170,7 @@ var tabExtension = {
                            .getService(Components.interfaces.nsICategoryManager);
       catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
       var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+      httpResponseObserver.register(); // timbl
       gBrowser.addEventListener('load',function(e) {
         var doc = e.originalTarget;
         var divs = doc.getElementsByTagName('div');
@@ -295,3 +296,40 @@ function emptyNode(node) {
 function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);
 }
+
+//////////////////////// HTTP Request observer
+// Based on code in
+// http://developer.mozilla.org/en/docs/Setting_HTTP_request_headers
+// and http://developer.mozilla.org/en/docs/Observer_Notifications#HTTP_requests
+//
+var httpResponseObserver =
+{
+  observe: function(subject, topic, data)
+  {
+    if (topic == "http-on-examine-response") {
+      var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
+      var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+      // httpChannel.setRequestHeader("X-Hello", "World", false)
+      tabulator.log.info('httpResponseObserver: status='+httpChannel.status);
+    }
+  },
+
+  get observerService() {
+    return Components.classes["@mozilla.org/observer-service;1"]
+                     .getService(Components.interfaces.nsIObserverService);
+  },
+
+  register: function()
+  {
+    this.observerService.addObserver(this, "http-on-modify-request", false);
+  },
+
+  unregister: function()
+  {
+    this.observerService.removeObserver(this, "http-on-modify-request");
+  }
+};
+
+
+
+

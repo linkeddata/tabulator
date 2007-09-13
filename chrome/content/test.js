@@ -301,33 +301,41 @@ function string_startswith(str, pref) { // missing library routines
 // Based on code in
 // http://developer.mozilla.org/en/docs/Setting_HTTP_request_headers
 // and http://developer.mozilla.org/en/docs/Observer_Notifications#HTTP_requests
-//
+// http://www.xulplanet.com/references/xpcomref/ifaces/nsIHttpChannel.html
+// and http://www.xulplanet.com/references/xpcomref/ifaces/nsIChannel.html
 var httpResponseObserver =
 {
-  observe: function(subject, topic, data)
-  {
-    if (topic == "http-on-examine-response") {
-      var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
-      var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-      // httpChannel.setRequestHeader("X-Hello", "World", false)
-      tabulator.log.info('httpResponseObserver: status='+httpChannel.status);
-    }
-  },
+    observe: function(subject, topic, data) {
+        if (topic == "http-on-examine-response") {
+              var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
+              var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+              // httpChannel.setRequestHeader("X-Hello", "World", false)
+              if (httpChannel.responseStatus == '303') {
+                  tabulator.log.warn('httpResponseObserver: status='+httpChannel.responseStatus+
+                    ' '+httpChannel.responseStatusText+ ' for ' + httpChannel.originalURI.spec);
+                  var newURI = httpChannel.getResponseHeader('location');
+                  tabulator.log.warn('httpResponseObserver: now URI = ' + httpChannel.URI.spec);
+                  tabulator.log.warn('httpResponseObserver: Location: ' + newURI);
+              }
+        }
+    },
 
-  get observerService() {
+    get observerService() {
     return Components.classes["@mozilla.org/observer-service;1"]
                      .getService(Components.interfaces.nsIObserverService);
-  },
+    },
 
-  register: function()
-  {
-    this.observerService.addObserver(this, "http-on-modify-request", false);
-  },
+    register: function()
+    {
+    tabulator.log.warn('test.js: registering observer');
+    //alert('test.js: registering observer')
+    this.observerService.addObserver(this, "http-on-examine-response", false);
+    },
 
-  unregister: function()
-  {
-    this.observerService.removeObserver(this, "http-on-modify-request");
-  }
+    unregister: function()
+    {
+    this.observerService.removeObserver(this, "http-on-examine-response");
+    }
 };
 
 

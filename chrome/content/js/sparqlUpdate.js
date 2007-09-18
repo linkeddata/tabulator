@@ -21,6 +21,7 @@ sparql = function(store) {
 
 sparql.prototype.editable = function(uri, kb) {
     if (!kb) kb = this.store;
+    if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
     var request = kb.any(kb.sym(Util.uri.docpart(uri)), tabulator.ns.link("request"));
     if (request !== undefined) {
         var author_via = kb.each(request, tabulator.ns.httph("ms-author-via"));

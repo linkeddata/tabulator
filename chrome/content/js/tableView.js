@@ -532,7 +532,6 @@ function tableView(container,doc)
         // if all the variables in the query pattern have been filled out, then attach stat pointers to each node, add the stat to the store, and perform the sparql update
         if (qpscComplete == true) {
             tabulator.log.msg('qpsc has been filled out: ' + qpsc);
-            alert('qpsc is filled out: ' + qpsc);
             for (var i = 0; i<numCols; i++) {
                 tabulator.log.msg('looking for statement in store: ' + qpsc[i]);
                 var st = kb.anyStatementMatching(qpsc[i].subject, qpsc[i].predicate, qpsc[i].object); // existing statement for symbols
@@ -555,7 +554,7 @@ function tableView(container,doc)
                         tabulator.log.msg('sparql update success');
                         var newStatement = kb.add(td.stat.subject, td.stat.predicate, td.stat.object, td.stat.why);
                         td.stat = newStatement;
-                        alert('sparql update with '+newStatement)
+                        tabulator.log.msg('sparql update with '+newStatement);
                     } 
                 });
             }

@@ -2,6 +2,8 @@
 * Utility functions for tabulator
  */
 
+if (typeof isExtension == 'undefined') isExtension = false; // stand-alone library
+
 function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);
 }
@@ -9,6 +11,7 @@ function string_startswith(str, pref) { // missing library routines
 /**
 * @class A utility class
  */
+
 Util = {
     /** A simple debugging function */         
     'output': function (o) {

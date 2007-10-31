@@ -92,6 +92,7 @@ RDFLiteral.prototype.termType = 'literal'
 function RDFLiteral_toNT() {
     var str = this.value
     if (typeof str != 'string') {
+        if (typeof str == 'number') return ''+str;
 	throw Error("Value of RDF literal is not string: "+str)
     }
     str = str.replace(/\\/g, '\\\\');  // escape
@@ -108,7 +109,7 @@ function RDFLiteral_toNT() {
 }
 
 function RDFLiteralToString() {
-    return this.value
+    return ''+this.value
 }
     
 RDFLiteral.prototype.toString = RDFLiteralToString   

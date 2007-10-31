@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 4020 2007-09-10 03:08:49Z timbl $
+ * SVN ID: $Id: sources.js 6218 2007-10-31 01:38:11Z timbl $
  *
  ************************************************************/
 
@@ -574,7 +574,7 @@ function SourceFetcher(store, timeout, async) {
 	// This request will have handlers probably
 	kb.add(req, tabulator.ns.link('handler'), handlers, sf.appNode)
 
-	kb.add(req, tabulator.ns.link('status'), status, sf.appNode)
+	kb.add(req, tabulator.ns.link('status'), status, sf.req)
      
 	if (typeof kb.anyStatementMatching(this.appNode,
 					   tabulator.ns.link("protocol"),
@@ -772,6 +772,9 @@ function SourceFetcher(store, timeout, async) {
                                     var newURI = newC.URI.spec;
 				    sf.addStatus(xhr,"Redirected: "+ 
 					xhr.status + " to <" + newURI + ">");
+                                    tabulator.log.warn('@@ sources onChannelRedirect'+
+                                       "Redirected: "+ 
+					xhr.status + " to <" + newURI + ">"); //@@
 
 				    kb.add(xhr.req, tabulator.ns.http('status'), kb.literal(xhr.status),
 					   sf.appNode);

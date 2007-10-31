@@ -794,10 +794,6 @@ borderClick: function borderClick(e){
     var This=outline.UserInput;
     var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
     
-    //Take the why of the last TR and write to it. There should be a better way    
-    var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
-    var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
-
     //alert(ancestor(target,'TABLE').textContent);    
     var insertTr=myDocument.createElement('tr');
     ancestor(target,'DIV').insertBefore(insertTr,ancestor(target,'TR'));
@@ -806,13 +802,21 @@ borderClick: function borderClick(e){
     insertTr.appendChild(tempTr.firstChild);
     var reqTerm2=This.generateRequest("(To be determined. Re-type of drag an object onto this field)",tempTr,false);
     insertTr.appendChild(tempTr.firstChild);
-    //there should be an elegant way of doing this
-    
-    //if completely, take the default docuemnt to write
-    if (!preStat){
+    var preStat, isInverse;
+
+    //Take the why of the last TR and write to it. There should be a better way    
+    if (ancestor(target,'TR').previousSibling &&  // there is a previous predicate/object line
+            ancestor(target,'TR').previousSibling.AJAR_statement) {
+        preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+        isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+
+        //if completely, take the default docuemnt to write
+    } else { // no previous row: write to the document defining the subject
         var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
         var doc=kb.sym(Util.uri.docpart(subject.uri));
-        preStat=new RDFStatement(subject,undefined,undefined,doc);
+        preStat = new RDFStatement(subject,tabulator.ns.rdf('type'),
+                        tabulator.ns.rdf('type'),doc);
+        isInverse = false;
     }
 
     if (!isInverse)

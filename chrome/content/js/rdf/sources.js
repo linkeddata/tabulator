@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 6218 2007-10-31 01:38:11Z timbl $
+ * SVN ID: $Id: sources.js 6650 2007-11-12 16:34:46Z timbl $
  *
  ************************************************************/
 
@@ -785,16 +785,15 @@ function SourceFetcher(store, timeout, async) {
 					tabulator.ns.http('location'),
 					newURI, sf.appNode);
 
-
-
 				    kb.HTTPRedirects[xhr.uri.uri] = newURI;
-				    if (xhr.status == 302) {
+				    if (xhr.status == 302 && rterm) {
+                                        var badDoc = Util.uri.docpart(rterm.uri);
 					var msg ='Warning: '+xhr.uri +
 					    ' has moved to <'+newURI + '>.';
                                         if (rterm) {
                                             msg += ' Link in '+
-                                                rterm + 'should be changed';
-                                            kb.add(rterm,
+                                                badDoc + 'should be changed';
+                                            kb.add(badDoc,
                                                 kb.sym('http://www.w3.org/2006/link#warning'),
                                                  msg, sf.appNode);	
                                         }

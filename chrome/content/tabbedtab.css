@@ -53,7 +53,7 @@ div.dataContentPane {
     border-left: solid 1px black;
     border-bottom: solid 1px #777;
     border-right: solid 1px #777;
-    color: #404; padding: 0.5em;
+     padding: 0.5em; /* color: #404; */
     margin-top: 0.5em; margin-bottom: 0.5em;
 }
 
@@ -63,11 +63,21 @@ div.dataContentPane {
     border-bottom: solid 1px #777;
     border-right: solid 1px #777;
     padding: 0.5em;
+     -moz-border-radius: 0.5em;
 }
 
-div.dataContentPane * td {margin: 0.2em }
+div.dataContentPane td {
+                padding-left: 0.2em;
+                padding-top: 0.1em;
+                padding-right: 0.2em;
+                padding-bottom: 0.05 em;
+                /* background-color: white; */
+                 }
+div.dataContentPane>table>tr { margin-bottom: 0.6em;}
 
-
+div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
+div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */ 
+div.dataContentPane td.pred a { color: #444 } /* Greyish as form field names have less info value */
 div.n3Pane {
     padding: 1em;
     border-top: solid 1px black;
@@ -403,11 +413,12 @@ div.bottom-border-active{
     border-color: rgb(100%,65%,0%);
 }   
 
+/* @@@ This is not specific enough 
 td{
     margin: 0;
     padding: 0;
 }
-
+*/
 .deleteIcon {
     margin-left: 0.1em;
 }

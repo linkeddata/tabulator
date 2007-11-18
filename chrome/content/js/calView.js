@@ -697,7 +697,12 @@ CalViewFactory = {
     name: "Calendar View",
 
     findCalType: function(pred) {
-        var types = {'http://www.w3.org/2002/12/cal/icaltzd#dtend':'end', 'http://www.w3.org/2002/12/cal/icaltzd#dtstart':'start', 'http://www.w3.org/2002/12/cal/icaltzd#summary':'summary', 'http://www.w3.org/2002/12/cal/icaltzd#Vevent':'event', 'http://www.w3.org/2002/12/cal/icaltzd#component':'component', 'date':'dateThing'};
+        var types = {'http://www.w3.org/2002/12/cal/icaltzd#dtend':'end', 
+            'http://www.w3.org/2002/12/cal/icaltzd#dtstart':'start',
+            'http://www.w3.org/2002/12/cal/icaltzd#summary':'summary',
+            'http://www.w3.org/2002/12/cal/icaltzd#Vevent':'event',
+            'http://www.w3.org/2002/12/cal/icaltzd#component':'component',
+            'date':'dateThing'};
         for (var key in types){
             // match: finds substrings
             if(pred.toLowerCase().match(key.toLowerCase())!=null){

@@ -2071,7 +2071,11 @@ function Outline(doc) {
                 if (st.predicate.uri != lastPred) {
                     if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
                     td_p = myDocument.createElement('td');
-                    td_p.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)+": "));
+                    td_p.setAttribute('class', 'pred');
+                    var anchor = myDocument.createElement('a')
+                    anchor.setAttribute('href', st.predicate.uri)
+                    anchor.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)));
+                    td_p.appendChild(anchor);
                     tr.appendChild(td_p);
                     lastPred = st.predicate.uri;
                     same = 0;

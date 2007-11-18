@@ -8,6 +8,7 @@ __Serializer = function(){
     this.keywords = ['a']; // The only one we generate at the moment
     this.prefixchars = "abcdefghijklmnopqustuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     this.incoming = null;  // Array not calculated yet
+    this.formulas = [];  // remebering original formulae from hashes 
 
     /* pass */
 }
@@ -19,6 +20,28 @@ __Serializer.prototype.setBase = function(base)
 
 __Serializer.prototype.setFlags = function(flags)
     { this.flags = flags?flags: '' };
+
+
+__Serializer.prototype.toStr = function(x) {
+        var s = x.toNT();
+        if (x.termType == 'formula') {
+            this.formulas[s] = x; // remember as reverse doesnot work
+        }
+        return s;
+};
+    
+__Serializer.prototype.fromStr = function(s) {
+        if (s[0] == '{') {
+            var x = this.formulas[s];
+            if (!x) alert('No formula object for '+s)
+            return x;
+        }
+        return kb.fromNT(s);
+};
+    
+
+
+
 
 /* Accumulate Namespaces
 ** 
@@ -84,15 +107,17 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
 __Serializer.prototype.rootSubjects = function(sts) {
     var incoming = [];
     var subjects = [];
+    var sz = this;
 
     for (var i = 0; i<sts.length; i++) {
         var x = sts[i].object;
         if (!incoming[x]) incoming[x] = [];
         incoming[x].push(sts[i].subject) // List of things which will cause this to be printed
-        var ss =  subjects[sts[i].subject.toNT()]; // Statements with this as subject
+//        var ss =  subjects[sts[i].subject.toNT()]; // Statements with this as subject
+        var ss =  subjects[sz.toStr(sts[i].subject)]; // Statements with this as subject
         if (!ss) ss = [];
         ss.push(sts[i]);
-        subjects[sts[i].subject.toNT()] = ss; // Make hash. @@ too slow for formula?
+        subjects[this.toStr(sts[i].subject)] = ss; // Make hash. @@ too slow for formula?
         tabulator.log.debug(' sz potential subject: '+sts[i].subject)
     }
 
@@ -108,8 +133,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         return accountedFor(zz[0], start);
     }
     for (var xNT in subjects) {
-//        var x = subjects[x][0].subject; // could use    kb.fromNT(xNT)
-        var x = kb.fromNT(xNT);
+        var x = sz.fromStr(xNT);
         if ((x.termType != 'bnode') || !incoming[x] || (incoming[x].length != 1)){
             roots.push(x);
             tabulator.log.debug(' sz actual subject -: ' + x)
@@ -230,10 +254,10 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         var pair = sz.rootSubjects(statements);
         var roots = pair[0];
         // print('Roots: '+roots)
-        subjects = pair[1];
-        results = []
+        subjects = pair[1]; // not var! - see outer level
+        var results = []
         for (var i=0; i<roots.length; i++) {
-            root = roots[i];
+            var root = roots[i];
             results.push(subjectTree(root))
         }
         return results;
@@ -252,7 +276,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         // print('Proprty tree for '+subject);
         var results = []
         var lastPred = null;
-        var sts = subjects[subject.toNT()]; // relevant statements
+        var sts = subjects[sz.toStr(subject)]; // relevant statements
         sts.sort();
         var objects = [];
         for (var i=0; i<sts.length; i++) {
@@ -276,30 +300,14 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 
     // Convert a set of statements into a nested tree of lists and strings
     function objectTree(obj) {
-        switch(obj.termType) {
-            case 'symbol':
-            case 'literal':
-                return termToN3(obj);
-                
-            case 'bnode':
-                return  ['['].concat(propertyTree(obj)).concat([']']);
-                
-            case 'collection':
-                var res = ['('];
-                for (i=0; i<obj.length; i++) {
-                    res += objectTree(obj[i]);
-                }
-                return  res.concat([')']);
-            case 'formula':
-                var res = ['{'];
-                res = res.concat(statementListToTree(obj.statements));
-                return  res.concat(['}']);
-        }
+        if (obj.termType == 'bnode') 
+            return  ['['].concat(propertyTree(obj)).concat([']']);
+        return termToN3(obj);
     }
     
     ////////////////////////////////////////////// Atomic Terms
     
-    //  Deal with term level things
+    //  Deal with term level things and nesting with no bnode structure
     
     function termToN3(term) {
         switch(term.termType) {
@@ -312,7 +320,17 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                 return str;
             case 'symbol':
                 return symbolToN3(term.uri);
-            default:
+            case 'formula':
+                var res = ['{'];
+                res = res.concat(statementListToTree(term.statements));
+                return  res.concat(['}']);
+            case 'collection':
+                var res = ['('];
+                for (i=0; i<obj.length; i++) {
+                    res += objectTree(term[i]);
+                }
+                return  res.concat([')']);
+           default:
                 throw "Internal: termToN3 cannot handle "+term+" of termType+"+term.termType
                 return ''+term;
         }
@@ -463,7 +481,6 @@ __Serializer.prototype.statementsToXML = function(sts) {
 
     var namespaceCounts = []; // which have been used
 
-    
     ////////////////////////// Arrange the bits of XML text 
 
     var spaces=function(n) {
@@ -569,7 +586,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     // The property tree for a single subject or anonymos node
     function propertyXMLTree(subject) {
         var results = []
-        var sts = subjects[subject.toNT()]; // relevant statements
+        var sts = subjects[sz.toStr(subject)]; // relevant statements
         sts.sort();
         for (var i=0; i<sts.length; i++) {
             var st = sts[i];

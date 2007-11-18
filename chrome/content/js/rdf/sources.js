@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 6650 2007-11-12 16:34:46Z timbl $
+ * SVN ID: $Id: sources.js 6839 2007-11-18 19:00:34Z timbl $
  *
  ************************************************************/
 
@@ -465,7 +465,7 @@ function SourceFetcher(store, timeout, async) {
 						    udoc)
 	     refs.map(function (x) {
 			  sf.store.add(udoc, tabulator.ns.link('mentionsClass'),
-                                        x.object,udoc)
+                                        x.object, sf.appNode)
 		      })
 	     return true
 	 })

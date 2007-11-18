@@ -485,13 +485,74 @@ function Outline(doc) {
     panes.register(classInstancePane);
 
 
+    /*      Data content Pane
+    **
+    **  This pane shows the content of a particular RDF resource
+    ** or at least the RDF semantics we attribute to that resource.
+    */
+
+    // To do:  - Only take data from one graph
+    //         - Only do forwards not backward?
+    //         - Expand automatically all the way down
+    //         - original source view?  Use ffox view source
+
+    dataContentPane = {};
+    dataContentPane.icon = Icon.src.icon_dataContents;
+    dataContentPane.label = function(subject) {
+        var n = kb.statementsMatching(
+            undefined, undefined, undefined, subject).length;
+        if (n == 0) return null;
+        return "Data ("+n+")";
+    }
+
+    // View the data in a file in user-friendly way
+    dataContentPane.render = function(subject) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'dataContentPane');
+        // Because of smushing etc, this will not be a copy of the original source
+        // We could instead either fetch and re-parse the source,
+        // or we could keep all the pre-smushed triples.
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        if (1) {
+            div.appendChild(statementsAsTables(sts));
+            
+        } else {  // An outline mode openable rendering .. might be better
+            var sz = Serializer();
+            var res = sz.rootSubjects(sts);
+            var roots = res[0]
+            var p  = {};
+            // p.icon = dataContentPane.icon
+            p.render = function(s2) {
+                var div = myDocument.createElement('div')
+                
+                div.setAttribute('class', 'withinDocumentPane')
+                var plist = kb.statementsMatching(s2, undefined, undefined, subject)
+                appendPropertyTRs(div, plist, false, withinDocumentPane.filter)
+                return div    
+            }
+            for (var i=0; i<roots.length; i++) {
+                var tr = myDocument.createElement("TR");
+                root = roots[i];
+                tr.style.verticalAlign="top";
+                var td = thisOutline.outline_objectTD(root, undefined, tr)
+                tr.appendChild(td)
+                div.appendChild(tr);
+                outline_expand(td, root,  p);
+            }
+        }
+        return div
+    }
+    panes.register(dataContentPane);
+
+
+
     /*   Pane within Document data content view
     **
     **  This outline pane contains docuemnts from a specific source document only.
     */
     withinDocumentPane = {};
     withinDocumentPane.icon = Icon.src.icon_withinDocumentPane; // should not show
-    withinDocumentPane.label = function(subject) { return 'about ';};
+    withinDocumentPane.label = function(subject) { return 'doc contents';};
     withinDocumentPane.filter = function(pred, inverse) {
         return true; // show all
     }
@@ -603,6 +664,9 @@ function Outline(doc) {
         if (!kb.anyStatementMatching(
             subject, tabulator.ns.rdf( 'type'), tabulator.ns.link( 'TextDocument')))
             return null;
+        var s = dataContentPane.label(subject);
+        // Done to stop Tab'r trying to show nestd RDF and N3 files in Firefox
+        if (s) return null; // If a data document, don't try human readable view.  (?)
         return "view";
     }
     humanReadablePane.render = function(subject) {
@@ -649,56 +713,6 @@ function Outline(doc) {
     }
     panes.register(imagePane);
 
-
-    /*      Data content Pane
-    **
-    **  This pane shows the content of a particular RDF resource
-    ** or at least the RDF semantics we attribute to that resource.
-    */
-
-    // To do:  - Only take data from one graph
-    //         - Only do forwards not backward?
-    //         - Expand automatically all the way down
-    //         - original source view?  Use ffox view source
-
-    dataContentPane = {};
-    dataContentPane.icon = Icon.src.icon_dataContents;
-    dataContentPane.label = function(subject) {
-        var n = kb.statementsMatching(
-            undefined, undefined, undefined, subject).length;
-        if (n == 0) return null;
-        return "Data ("+n+")";
-    }
-
-    dataContentPane.render = function(subject) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'dataContentPane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        /*
-        var kludge = kb.formula([]); // No features
-        for (var i=0; i< sts.length; i++) {
-            s = sts[i];
-            kludge.add(s.subject, s.predicate, s.object);
-        }
-        */
-        var sz = Serializer();
-        var res = sz.rootSubjects(sts);
-        var roots = res[0]
-        for (var i=0; i<roots.length; i++) {
-            var tr = myDocument.createElement("TR");
-            root = roots[i];
-            tr.style.verticalAlign="top";
-            var td = thisOutline.outline_objectTD(root, undefined, tr)
-            tr.appendChild(td)
-            div.appendChild(tr);
-            outline_expand(td, root, dataContentPane);
-        }
-        return div
-    }
-    // panes.register(dataContentPane); // Not ready for 2007-08-06 cut
 
     /*      Notation3 content Pane
     **
@@ -2033,6 +2047,101 @@ function Outline(doc) {
 
     var thisOutline=this;
     /** some builtin simple views **/
+    
+    function statementsAsTables(sts) {
+        var rep = myDocument.createElement('table');
+        var sz = Serializer();
+        // sz.suggestNamespaces(kb.namespaces);
+        var pair = sz.rootSubjects(sts);
+        var roots = pair[0];
+        var subjects = pair[1];
+
+        // The property tree for a single subject or anonymos node
+        function propertyTree(subject) {
+            // print('Proprty tree for '+subject);
+            var rep = myDocument.createElement('table')
+            var lastPred = null;
+            var sts = subjects[sz.toStr(subject)]; // relevant statements
+            sts.sort();
+            var same =0;
+            var td_p; // The cell which holds the predicate
+            for (var i=0; i<sts.length; i++) {
+                var st = sts[i];
+                var tr = myDocument.createElement('tr');
+                if (st.predicate.uri != lastPred) {
+                    if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
+                    td_p = myDocument.createElement('td');
+                    td_p.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)+": "));
+                    tr.appendChild(td_p);
+                    lastPred = st.predicate.uri;
+                    same = 0;
+                }
+                same++;
+                var td_o = myDocument.createElement('td');
+                td_o.appendChild(objectTree(st.object));
+                tr.appendChild(td_o);
+                rep.appendChild(tr);
+            }
+            if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
+            return rep;
+        }
+
+        // Convert a set of statements into a nested tree of tables
+        function objectTree(obj) {
+            switch(obj.termType) {
+                case 'symbol':
+                    var anchor = myDocument.createElement('a')
+                    anchor.setAttribute('href', obj.uri)
+                    anchor.appendChild(myDocument.createTextNode(label(obj)));
+                    return anchor;
+                    
+                case 'literal':
+                    return myDocument.createTextNode(obj.value); // placeholder
+                    
+                case 'bnode':
+                    var newTable =  propertyTree(obj);
+                    if (ancestor(newTable, 'TABLE') && ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
+                        newTable.style.backgroundColor='#eee'
+                    } else {
+                        newTable.style.backgroundColor='white'
+                    }
+                    return newTable;
+                    
+                case 'collection':
+                    var res = myDocument.createElement('table')
+                    res.setAttribute('class', 'collectionAsTables')
+                    for (i=0; i<obj.length; i++) {
+                        var tr = myDocument.createElement('tr');
+                        res.appendChild(tr);
+                        tr.appendChild(objectTree(obj[i]));
+                    }
+                    return  res;
+                case 'formula':
+                    var res = statementsAsTables(obj.statements);
+                    res.setAttribute('class', 'nestedFormula')
+                    return res;
+            }
+            throw "Unhandled node type: "+obj.termType
+        }
+
+        for (var i=0; i<roots.length; i++) {
+            var tr = myDocument.createElement('tr')
+            rep.appendChild(tr);
+            var td_s = myDocument.createElement('td')
+            tr.appendChild(td_s);
+            var td_tree = myDocument.createElement('td')
+            tr.appendChild(td_tree);
+            var root = roots[i];
+            if (root.termType == 'bnode') {
+                td_s.appendChild(myDocument.createTextNode(label(root))); // Don't recurse!
+            } else {
+                td_s.appendChild(objectTree(root)); // won't have tree
+            }
+            td_tree.appendChild(propertyTree(root));
+        }
+        return rep;
+    }
+    
     function VIEWAS_boring_default(obj) {
         //tabulator.log.debug("entered VIEWAS_boring_default...");
         var rep; //representation in html
@@ -2099,6 +2208,26 @@ function Outline(doc) {
                 numcell.innerHTML = (i+1) + ')';
                 row.appendChild(thisOutline.outline_objectTD(elt));
             }
+        } else if (obj.termType=='formula'){
+            rep = myDocument.createElement('table');
+            // rep.setAttribute('about', obj.toNT());
+            var sz = Serializer();
+            sz.suggestNamespaces(kb.namespaces);
+//            sz.setBase(obj.uri);
+            if(0) { // represent as N3 text
+                rep = myDocument.createElement('table');
+                // rep.setAttribute('about', obj.toNT());
+                var sz = Serializer();
+                sz.suggestNamespaces(kb.namespaces);
+    //            sz.setBase(obj.uri);
+                var str = sz.statementsToN3(obj.statements)            
+                var pre = myDocument.createElement('PRE');
+                pre.appendChild(myDocument.createTextNode(str));
+                rep.appendChild(pre);
+            } else { // represent as nested HTML tables
+                rep = statementsAsTables(obj.statements);
+            }
+                        
         } else {
             tabulator.log.error("Object "+obj+" has unknown term type: " + obj.termType);
             rep = myDocument.createTextNode("[unknownTermType:" + obj.termType +"]");

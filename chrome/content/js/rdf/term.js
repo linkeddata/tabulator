@@ -184,7 +184,8 @@ function RDFFormula() {
 }
 
 function RDFFormula_toNT() {
-    return "{\n" + this.statements.join('\n') + "}"
+    // throw 'Who called me?';    
+    return "{" + this.statements.join('\n') + "}"
 }
 
 //RDFQueryFormula.prototype = new RDFFormula()
@@ -243,6 +244,8 @@ RDFFormula.prototype.registerFormula = function(accesskey){
     superFormula.add(formulaTerm, tabulator.ns.link('accesskey'), superFormula.literal(accesskey));
     //RDFFormula.instances.push("accesskey");
 }
+
+
 /*  Variable
 **
 ** Variables are placeholders used in patterns to be matched.
@@ -297,11 +300,13 @@ RDFFormula.prototype.fromNT = function(str) {
     var ch = str.slice(0,1)
     if (ch == '<') return this.sym(str.slice(1,len-1))
     if (ch == '_') {
-	var x = new RDFBlankNode()
-	x.id = parseInt(str.slice(3))
+	var x = new RDFBlankNode();
+	x.id = parseInt(str.slice(3));
 	RDFNextId--
 	return x
     }
+    throw "Can't convert from NT"+str;
+    
     //alert("Can't yet convert from NT: '"+str+"', "+str[0])
 }
 

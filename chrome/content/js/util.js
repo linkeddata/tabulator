@@ -196,7 +196,25 @@ function label(x, trimSlash) { // x is an object
         return '(' + x.elements.length + ')';
     }
     var hash = x.uri.indexOf("#")
-        if (hash >=0) { return x.uri.slice(hash+1) }
+        if (hash >=0) {
+            var s1 = x.uri.slice(hash+1);
+            var s2 = "";
+            for (var i=0; i<s1.length; i++) {
+                if (s1[i] == '_' || s1[i] == '-') {
+                    s2 += " ";
+                    continue;
+                }
+                s2 += s1[i];
+                if (i+1 < s1.length && 
+                    s1[i].toUpperCase() != s1[i] &&
+                    s1[i+1].toLowerCase() != s1[i+1]) {
+                    s2 += " ";
+                }
+            }
+            if (s2.slice(0,4) == 'has ') s2 = s2.slice(4);
+            return s2;
+        
+        }
     
     if (trimSlash) { // only trim URIs, not rdfs:labels
         var slash = x.uri.lastIndexOf("/");
@@ -223,12 +241,12 @@ function predicateLabelForXML(p, inverse) {
 	if (ip) return labelForXML(ip)
     }
         
-        lab = labelForXML(p)
-            if (inverse) {
-                if (lab =='type') return '...'; // Not "is type of"
-                return "is "+lab+" of";
-            }
-        return lab
+    lab = labelForXML(p)
+        if (inverse) {
+            if (lab =='type') return '...'; // Not "is type of"
+            return "is "+lab+" of";
+        }
+    return lab
 } 
 //=====================================
 ///////////////// Utility

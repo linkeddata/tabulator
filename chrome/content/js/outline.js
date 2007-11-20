@@ -2114,10 +2114,10 @@ function Outline(doc) {
                 case 'collection':
                     var res = myDocument.createElement('table')
                     res.setAttribute('class', 'collectionAsTables')
-                    for (i=0; i<obj.length; i++) {
+                    for (var i=0; i<obj.elements.length; i++) {
                         var tr = myDocument.createElement('tr');
                         res.appendChild(tr);
-                        tr.appendChild(objectTree(obj[i]));
+                        tr.appendChild(objectTree(obj.elements[i]));
                     }
                     return  res;
                 case 'formula':

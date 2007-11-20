@@ -113,7 +113,6 @@ __Serializer.prototype.rootSubjects = function(sts) {
         var x = sts[i].object;
         if (!incoming[x]) incoming[x] = [];
         incoming[x].push(sts[i].subject) // List of things which will cause this to be printed
-//        var ss =  subjects[sts[i].subject.toNT()]; // Statements with this as subject
         var ss =  subjects[sz.toStr(sts[i].subject)]; // Statements with this as subject
         if (!ss) ss = [];
         ss.push(sts[i]);
@@ -164,7 +163,7 @@ __Serializer.prototype._notNameChars =
 __Serializer.prototype.statementsToN3 = function(sts) {
     var indent = 4;
     var width = 80;
-    var subjects = null; // set later
+    // var subjects = null; // set later
     var sz = this;
 
     var namespaceCounts = []; // which have been used
@@ -254,29 +253,32 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         var pair = sz.rootSubjects(statements);
         var roots = pair[0];
         // print('Roots: '+roots)
-        subjects = pair[1]; // not var! - see outer level
+        var subjects = pair[1];
         var results = []
         for (var i=0; i<roots.length; i++) {
             var root = roots[i];
-            results.push(subjectTree(root))
+            results.push(subjectTree(root, subjects))
         }
         return results;
     }
     
     // The tree for a subject
-    function subjectTree(subject) {
+    function subjectTree(subject, subjects) {
         if (subject.termType == 'bnode' && !sz.incoming[subject])
-            return objectTree(subject).concat(["."]); // Anonymous bnode subject
-        return [ termToN3(subject) ].concat([propertyTree(subject)]).concat(["."]);
+            return objectTree(subject, subjects).concat(["."]); // Anonymous bnode subject
+        return [ termToN3(subject, subjects) ].concat([propertyTree(subject, subjects)]).concat(["."]);
     }
     
 
-    // The property tree for a single subject or anonymos node
-    function propertyTree(subject) {
+    // The property tree for a single subject or anonymous node
+    function propertyTree(subject, subjects) {
         // print('Proprty tree for '+subject);
         var results = []
         var lastPred = null;
         var sts = subjects[sz.toStr(subject)]; // relevant statements
+        if (typeof sts == 'undefined') {
+            alert('Cant find statements for '+subject);
+        }
         sts.sort();
         var objects = [];
         for (var i=0; i<sts.length; i++) {
@@ -289,50 +291,52 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                     objects = [];
                 }
                 results.push(predMap[st.predicate.uri] ?
-                            predMap[st.predicate.uri] : termToN3(st.predicate));
+                            predMap[st.predicate.uri] : termToN3(st.predicate, subjects));
             }
             lastPred = st.predicate.uri;
-            objects.push(objectTree(st.object));
+            objects.push(objectTree(st.object, subjects));
         }
         results=results.concat([objects]);
         return results;
     }
 
     // Convert a set of statements into a nested tree of lists and strings
-    function objectTree(obj) {
+    function objectTree(obj, subjects) {
         if (obj.termType == 'bnode') 
-            return  ['['].concat(propertyTree(obj)).concat([']']);
-        return termToN3(obj);
+            return  ['['].concat(propertyTree(obj, subjects)).concat([']']);
+        return termToN3(obj, subjects);
     }
     
     ////////////////////////////////////////////// Atomic Terms
     
     //  Deal with term level things and nesting with no bnode structure
     
-    function termToN3(term) {
-        switch(term.termType) {
+    function termToN3(expr, subjects) {
+        switch(expr.termType) {
             case 'bnode':
-            case 'variable':  return term.toNT();
+            case 'variable':  return expr.toNT();
             case 'literal':
-                var str = stringToN3(term.value);
-                if (term.lang) str+= '@' + term.lang;
-                if (term.dt) str+= '^^' + termToN3(term.dt);
+                var str = stringToN3(expr.value);
+                if (expr.lang) str+= '@' + expr.lang;
+                if (expr.dt) str+= '^^' + termToN3(expr.dt, subjects);
                 return str;
             case 'symbol':
-                return symbolToN3(term.uri);
+                return symbolToN3(expr.uri);
             case 'formula':
                 var res = ['{'];
-                res = res.concat(statementListToTree(term.statements));
+                res = res.concat(statementListToTree(expr.statements));
                 return  res.concat(['}']);
             case 'collection':
                 var res = ['('];
-                for (i=0; i<obj.length; i++) {
-                    res += objectTree(term[i]);
+                for (i=0; i<expr.elements.length; i++) {
+                    res.push(   [ objectTree(expr.elements[i], subjects) ]);
                 }
-                return  res.concat([')']);
+                res.push(')');
+                return res;
+                
            default:
-                throw "Internal: termToN3 cannot handle "+term+" of termType+"+term.termType
-                return ''+term;
+                throw "Internal: termToN3 cannot handle "+expr+" of termType+"+expr.termType
+                return ''+expr;
         }
     }
     
@@ -476,7 +480,7 @@ function backslashUify(str) {
 __Serializer.prototype.statementsToXML = function(sts) {
     var indent = 4;
     var width = 80;
-    var subjects = null; // set later
+    // var subjects = null; // set later
     var sz = this;
 
     var namespaceCounts = []; // which have been used
@@ -541,11 +545,11 @@ __Serializer.prototype.statementsToXML = function(sts) {
         var res = [];
         var pair = sz.rootSubjects(statements);
         var roots = pair[0];
-        subjects = pair[1];
+        var subjects = pair[1];
         results = []
         for (var i=0; i<roots.length; i++) {
             root = roots[i];
-            results.push(subjectXMLTree(root))
+            results.push(subjectXMLTree(root, subjects))
         }
         return results;
     }
@@ -560,7 +564,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     }
 
     // The tree for a subject
-    function subjectXMLTree(subject) {
+    function subjectXMLTree(subject, subjects) {
         var start
         if (subject.termType == 'bnode') {
             if (!sz.incoming[subject]) { // anonymous bnode
@@ -573,18 +577,18 @@ __Serializer.prototype.statementsToXML = function(sts) {
         }
 
         return [ start ].concat(
-                [propertyXMLTree(subject)]).concat(["</rdf:Description>"]);
+                [propertyXMLTree(subject, subjects)]).concat(["</rdf:Description>"]);
     }
-    function collectionXMLTree(subject) {
+    function collectionXMLTree(subject, subjects) {
         res = []
-        for (var i=0; i< subject.length; i++) {
-            res.push(subjectXMLTree(subject[i]));
+        for (var i=0; i< subject.elements.length; i++) {
+            res.push(subjectXMLTree(subject.elements[i], subjects));
          }
          return res;
     }   
 
     // The property tree for a single subject or anonymos node
-    function propertyXMLTree(subject) {
+    function propertyXMLTree(subject, subjects) {
         var results = []
         var sts = subjects[sz.toStr(subject)]; // relevant statements
         sts.sort();
@@ -593,7 +597,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
             switch (st.object.termType) {
                 case 'bnode':
                     results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
-                        propertyXMLTree(st.object),
+                        propertyXMLTree(st.object, subjects),
                         '</'+qname(st.predicate)+'>']);
                     break;
                 case 'symbol':
@@ -609,7 +613,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
                     break;
                 case 'collection':
                     results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Collection">', 
-                        collectionXMLTree(st.object),
+                        collectionXMLTree(st.object, subjects),
                         '</'+qname(st.predicate)+'>']);
                     break;
                 default:

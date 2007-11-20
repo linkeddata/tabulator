@@ -2213,24 +2213,12 @@ function Outline(doc) {
                 row.appendChild(thisOutline.outline_objectTD(elt));
             }
         } else if (obj.termType=='formula'){
-            rep = myDocument.createElement('table');
+            // rep = myDocument.createElement('table');
             // rep.setAttribute('about', obj.toNT());
-            var sz = Serializer();
-            sz.suggestNamespaces(kb.namespaces);
-//            sz.setBase(obj.uri);
-            if(0) { // represent as N3 text
-                rep = myDocument.createElement('table');
-                // rep.setAttribute('about', obj.toNT());
-                var sz = Serializer();
-                sz.suggestNamespaces(kb.namespaces);
-    //            sz.setBase(obj.uri);
-                var str = sz.statementsToN3(obj.statements)            
-                var pre = myDocument.createElement('PRE');
-                pre.appendChild(myDocument.createTextNode(str));
-                rep.appendChild(pre);
-            } else { // represent as nested HTML tables
-                rep = statementsAsTables(obj.statements);
-            }
+            // var sz = Serializer();
+            // sz.suggestNamespaces(kb.namespaces);
+            rep = statementsAsTables(obj.statements);
+            rep.setAttribute('class', 'nestedFormula')
                         
         } else {
             tabulator.log.error("Object "+obj+" has unknown term type: " + obj.termType);

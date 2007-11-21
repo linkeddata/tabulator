@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 6839 2007-11-18 19:00:34Z timbl $
+ * SVN ID: $Id: sources.js 6934 2007-11-21 16:24:52Z timbl $
  *
  ************************************************************/
 
@@ -394,11 +394,12 @@ function SourceFetcher(store, timeout, async) {
 
 /* David sheets put this in. It clutters the data about tabulator 
 **   and the data about the session should be avalable some ofther way .. like a link under 'sources'.
-*/    
+**    
     this.store.add(this.store.sym('http://dig.csail.mit.edu/2005/ajar/ajaw/data#Tabulator'),
 		   tabulator.ns.link("session"),
 		   this.appNode,
 		   this.appNode)
+*/
     this.store.add(this.appNode,
 		   tabulator.ns.rdfs('label'),
 		   this.store.literal('This Session'),
@@ -568,7 +569,7 @@ function SourceFetcher(store, timeout, async) {
 
 	kb.add(this.appNode, tabulator.ns.link("source"), docterm, this.appNode)
 	kb.add(docterm, tabulator.ns.link("request"), req, this.appNode)
-	kb.add(req, tabulator.ns.rdfs("label"), kb.literal('Request for '+docuri),
+	kb.add(req, tabulator.ns.rdfs("label"), kb.literal('Access of '+docuri),
 	       this.appNode)
 
 	// This request will have handlers probably
@@ -599,9 +600,9 @@ function SourceFetcher(store, timeout, async) {
 		    sf.fireCallbacks('recv',args)
 		    
 		    kb.add(req, tabulator.ns.http('status'),kb.literal(xhr.status),
-			   sf.appNode)
+			   req)
 		    kb.add(req, tabulator.ns.http('statusText'),
-			   kb.literal(xhr.statusText), sf.appNode)
+			   kb.literal(xhr.statusText), req)
 		    
 		    if (xhr.status >= 400) {
 			sf.failFetch(xhr,"HTTP error "+xhr.status+ ' '+
@@ -615,7 +616,7 @@ function SourceFetcher(store, timeout, async) {
 			xhr.headers = Util.getHTTPHeaders(xhr)
 			for (var h in xhr.headers) {
 			    kb.add(req, tabulator.ns.httph(h), xhr.headers[h],
-				   sf.appNode)
+				   req)
 			}
 		    }
 
@@ -777,13 +778,13 @@ function SourceFetcher(store, timeout, async) {
 					xhr.status + " to <" + newURI + ">"); //@@
 
 				    kb.add(xhr.req, tabulator.ns.http('status'), kb.literal(xhr.status),
-					   sf.appNode);
+					   xhr.req);
 				    if (xhr.statusText) kb.add(xhr.req, tabulator.ns.http('statusText'),
-					   kb.literal(xhr.statusText), sf.appNode)
+					   kb.literal(xhr.statusText), xhr.req)
 
 				    kb.add(xhr.req,
 					tabulator.ns.http('location'),
-					newURI, sf.appNode);
+					newURI, xhr.req);
 
 				    kb.HTTPRedirects[xhr.uri.uri] = newURI;
 				    if (xhr.status == 302 && rterm) {

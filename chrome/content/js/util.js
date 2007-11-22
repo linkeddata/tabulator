@@ -185,6 +185,24 @@ function label(x, trimSlash) { // x is an object
      if (lab) {return lab};
      */
     
+    function cleanUp(s1) {
+        var s2 = "";
+        for (var i=0; i<s1.length; i++) {
+            if (s1[i] == '_' || s1[i] == '-') {
+                s2 += " ";
+                continue;
+            }
+            s2 += s1[i];
+            if (i+1 < s1.length && 
+                s1[i].toUpperCase() != s1[i] &&
+                s1[i+1].toLowerCase() != s1[i+1]) {
+                s2 += " ";
+            }
+        }
+        if (s2.slice(0,4) == 'has ') s2 = s2.slice(4);
+        return s2;
+    }
+    
     var lab=lb.label(x);
     if (lab) return lab.value;
     //load #foo to Labeler?
@@ -195,30 +213,19 @@ function label(x, trimSlash) { // x is an object
     if (x.termType=='collection'){
         return '(' + x.elements.length + ')';
     }
-    var hash = x.uri.indexOf("#")
-        if (hash >=0) {
-            var s1 = x.uri.slice(hash+1);
-            var s2 = "";
-            for (var i=0; i<s1.length; i++) {
-                if (s1[i] == '_' || s1[i] == '-') {
-                    s2 += " ";
-                    continue;
-                }
-                s2 += s1[i];
-                if (i+1 < s1.length && 
-                    s1[i].toUpperCase() != s1[i] &&
-                    s1[i+1].toLowerCase() != s1[i+1]) {
-                    s2 += " ";
-                }
-            }
-            if (s2.slice(0,4) == 'has ') s2 = s2.slice(4);
-            return s2;
-        
-        }
+    var s = x.uri;
+    if (s.slice(-5) == '#this') s = s.slice(0,-5)
+    else if (s.slice(-3) == '#me') s = s.slice(0,-3);
+    
+    var hash = s.indexOf("#")
+    if (hash >=0) return cleanUp(s.slice(hash+1));
+
+    if (s.slice(-9) == '/foaf.rdf') s = s.slice(0,-9)
+    else if (s.slice(-5) == '/foaf') s = s.slice(0,-5);
     
     if (trimSlash) { // only trim URIs, not rdfs:labels
-        var slash = x.uri.lastIndexOf("/");
-        if ((slash >=0) && (slash < x.uri.length)) return x.uri.slice(slash+1);
+        var slash = s.lastIndexOf("/");
+        if ((slash >=0) && (slash < x.uri.length)) return cleanUp(s.slice(slash+1));
     }
     return decodeURIComponent(x.uri)
 }

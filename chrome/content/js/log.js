@@ -63,10 +63,18 @@ tabulator.log.setLevel = function(x) {
 
 tabulator.log.dumpStore = function(){
     var l = tabulator.log.level
-    tabulator.log.level = TALL;
-    tabulator.log.debug("\nStore:\n" + kb + "__________________\n");
-    tabulator.log.debug("subject index: " + kb.subjectIndex[0] + kb.subjectIndex[1]);
-    tabulator.log.debug("object index: " + kb.objectIndex[0] + kb.objectIndex[1]);
+    if (1) { // For Henry Story
+        var sz = Serializer();
+        sz.suggestNamespaces(kb.namespaces);
+        str = sz.statementsToN3(kb.statements);
+        tabulator.log.level = TALL;
+        tabulator.log.debug('\n'+str);
+    } else {  // crude
+        tabulator.log.level = TALL;
+        tabulator.log.debug("\nStore:\n" + kb + "__________________\n");
+        tabulator.log.debug("subject index: " + kb.subjectIndex[0] + kb.subjectIndex[1]);
+        tabulator.log.debug("object index: " + kb.objectIndex[0] + kb.objectIndex[1]);
+    }
     tabulator.log.level = l;
 }
 

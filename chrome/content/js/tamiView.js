@@ -1,5 +1,7 @@
-/**@class The SampleView class highlights all functions and fields that
+/**@class The TamiView class highlights all functions and fields that
  * are required for a valid tabbed view in the tabulator.
+ * This class provides the functionality to edit the log and the policy files
+ * needed to run the AIR reasoner and give the output as desired.
  * @constructor
  */
 function TamiView(container) {
@@ -100,6 +102,8 @@ function TamiView(container) {
 
     /**Runs the scheme code behind and shows the output in the tabulator*/
     this.chkComplianceBtn.onclick = function () {
+
+        alert("yey");
         
         var xhr = Util.XMLHTTPFactory();
         xhr.onreadystatechange = function() {
@@ -110,6 +114,7 @@ function TamiView(container) {
                     +"&policy=" + escape(thisTAMIView.policyTxt.value);
         xhr.open("GET", url, true);
         xhr.send(null);
+        
 
     }
 

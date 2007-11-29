@@ -45,6 +45,10 @@ contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
 mo = Namespace("http://purl.org/ontology/mo/")
 //logont = Namespace("http://www.w3.org/2000/10/swap/log#");
 
+//Namespaces for AIR (Amord in RDF) use
+tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
+air = air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+
 kb.registerFormula("knowledge base");
 //alert(kb.constructor.SuperClass.instances["knowledge base"]); //this is fine
 //alert(RDFFormula.instances["knowledge base"]); //this returns undefined (strage scope stuff)
@@ -88,6 +92,7 @@ Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad ..
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
 Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
+Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  //@@ Ask Danny for a better icon
 
 // For that one we need a document with grid lines.  Make data-x-generix maybe
 

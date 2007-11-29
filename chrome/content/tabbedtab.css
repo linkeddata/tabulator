@@ -48,6 +48,48 @@ div.instancePane {
         border-top: solid 1px #777; border-bottom: solid 1px #777; 
         margin-top: 0.5em; margin-bottom: 0.5em }
 
+div.nonCompliantPane {
+    border-top: solid 1px red;
+    border-left: solid 1px red;
+    border-bottom: solid 1px red;
+    border-right: solid 1px red;
+    padding: 0.5em;  
+    background-color: #fbf0f7; 
+    margin-top: 0.5em; margin-bottom: 0.5em;
+    -moz-border-radius: 1em;
+}
+
+div.compliantPane {
+    border-top: solid 1px green;
+    border-left: solid 1px green;
+    border-bottom: solid 1px green;
+    border-right: solid 1px green;
+    padding: 0.5em;  
+    background-color: #def8e0; 
+    margin-top: 0.5em; margin-bottom: 0.5em;
+    -moz-border-radius: 1em;
+}
+
+div.justificationElement {
+    border-top: solid 1px yellow;
+    border-left: solid 1px yellow;
+    border-bottom: solid 1px yellow;
+    border-right: solid 1px yellow;
+    padding: 0 5px;
+    width: 1000px; 
+    background-color: #f2f6cd; 
+    margin-top: 0.5em; margin-bottom: 0.5em;
+}
+
+div.dataContentPane.justification {
+    border-top: dashed 0.5px black;
+    border-left: dashed 0.5px black;
+    border-bottom: dashed 0.5px black;
+    border-right: dashed 0.5px black;
+    padding: 0.5em; 
+    margin-top: 0.5em; margin-bottom: 0.5em;
+}
+
 div.dataContentPane {
     border-top: solid 1px black;
     border-left: solid 1px black;

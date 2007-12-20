@@ -35,6 +35,7 @@ function Outline(doc) {
             }
         }
     }
+    
     function saveQuery() {
         var q= new Query()
         var i, n=selection.length, j, m, tr, sel, st;
@@ -791,6 +792,238 @@ function Outline(doc) {
         return div
     }
     panes.register(RDFXMLPane);
+
+
+    /** AIR (Amord in RDF) Pane
+     *
+     * This pane will display the justification trace of a when it encounters 
+     * air reasoner output
+     */
+     
+    airPane = {};
+    airPane.icon = Icon.src.icon_airPane;
+     
+    var compliant = air('compliant-with');
+    var nonCompliant = air('non-compliant-with');
+    var antcExpr = tms('antecedent-expr');
+    var just = tms('justification');
+    var subExpr = tms('sub-expr');
+    var stsCompliant;
+    var stsNonCompliant;
+    var reasoner = '';
+    var airRet = null;
+    var stsAntcExpr;
+    var stsJust;
+     
+    airPane.label = function(subject) {
+    
+        stsAntcExpr = kb.statementsMatching(undefined, antcExpr, undefined, subject); 
+        stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+
+            for (var j=0; j<stsJust.length; j++){
+                if (stsJust[j].subject.termType == 'formula'){
+                var sts = stsJust[j].subject.statements;
+                for (var k=0; k<sts.length; k++){
+                    if (sts[k].predicate.toString() == compliant.toString()){
+                        reasoner = 'python';
+                        airRet = "AIR";
+                        stsCompliant = sts[k];
+                    
+                    } 
+                    if (sts[k].predicate.toString() == nonCompliant.toString()){
+                        reasoner = 'python';
+                        airRet = "AIR";
+                        stsNonCompliant = sts[k];
+                        
+                     }
+                   }
+                }    
+            }
+        
+        if (reasoner == ''){
+        for (var j=0; j<stsAntcExpr.length; j++){
+            //Scheme reasoner
+            if (stsAntcExpr[j].subject.termType == 'formula'){
+            
+                var sts = stsAntcExpr[j].subject.statements;
+                for (var k=0; k<sts.length; k++){
+                    if (sts[k].predicate.toString() == compliant.toString()){
+                        reasoner = 'scheme';
+                        airRet = "AIR";
+                        stsCompliant = sts[k];
+                    }
+                    if (sts[k].predicate.toString() == nonCompliant.toString()){
+                        reasoner = 'scheme';
+                        airRet = "AIR";
+                        stsNonCompliant = sts[k];
+                    }
+                }
+            }    
+        }
+        }
+        
+       return airRet;
+    }
+
+    // View the justification trace in an exploratory manner
+    airPane.render = function(subject) {
+        
+        var stsFound;
+         
+        var divClass;
+        var div = myDocument.createElement("div");
+        div.setAttribute('class', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
+        div.setAttribute('id', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
+
+        var divOutcome = myDocument.createElement("div"); 
+        if (stsNonCompliant != undefined){
+            divClass = 'nonCompliantPane';
+            stsFound =  stsNonCompliant;
+        }
+        if (stsCompliant != undefined){
+            divClass = 'compliantPane';
+            stsFound =  stsCompliant;
+        }
+
+        
+        if (stsFound != undefined){
+
+            divOutcome.setAttribute('class', divClass);
+            divOutcome.setAttribute('id', 'outcome');
+        
+            var table = myDocument.createElement("table");
+            var tr = myDocument.createElement("tr");
+            
+            var td_s = myDocument.createElement("td");
+            var a_s = myDocument.createElement('a')
+            a_s.setAttribute('href', stsFound.subject.uri)
+            a_s.appendChild(myDocument.createTextNode(label(stsFound.subject)));
+            td_s.appendChild(a_s);
+            tr.appendChild(td_s);
+
+            var td_p = myDocument.createElement("td");
+            var a_p = myDocument.createElement('a')
+            a_p.setAttribute('href', stsFound.predicate.uri)
+            a_p.appendChild(myDocument.createTextNode(label(stsFound.predicate)));
+            td_p.appendChild(a_p);
+            tr.appendChild(td_p);
+
+            var td_o = myDocument.createElement("td");
+            var a_o = myDocument.createElement('a')
+            a_o.setAttribute('href', stsFound.object.uri)
+            a_o.appendChild(myDocument.createTextNode(label(stsFound.object)));
+            td_o.appendChild(a_o);
+            tr.appendChild(td_o);
+
+            table.appendChild(tr);
+            divOutcome.appendChild(table);
+            div.appendChild(divOutcome);
+            
+            var hideButton = myDocument.createElement('input');
+            hideButton.setAttribute('type','button');
+            hideButton.setAttribute('id','hide');
+            hideButton.setAttribute('value','Hide');
+        }
+        
+        airPane.render.hide = function(){
+        
+            var d = myDocument.getElementById('dataContentPane');
+            var j = myDocument.getElementById('justification');
+            var b = myDocument.getElementById('hide');
+            if (d != null && j != null && b != null){
+                d.removeChild(j);
+                d.removeChild(b);
+            }
+        }
+
+        airPane.render.because = function(){
+            
+            div.appendChild(myDocument.createTextNode(' '));//To leave some space between the 2 buttons, any better method?
+            div.appendChild(hideButton);
+            hideButton.addEventListener('click',airPane.render.hide,false);
+
+            var divJustification = myDocument.createElement("div");
+            divJustification.setAttribute('class', 'justification');
+            divJustification.setAttribute('id', 'justification');
+
+            var divAntecedent = myDocument.createElement("div");
+            divAntecedent.setAttribute('class', 'justification');
+            divAntecedent.setAttribute('id', 'justification');
+
+            var justificationElement = myDocument.createElement("div");
+            justificationElement.setAttribute('class', 'justificationElement');
+            justificationElement.setAttribute('id', 'justificationElement');
+
+            var antecedentElement = myDocument.createElement("div");
+            antecedentElement.setAttribute('class', 'antecedentElement');
+            antecedentElement.setAttribute('id', 'antecedentElement');
+
+            var justificationSts;
+            
+            airPane.render.because.justify = function(){
+            
+                for (var l=0; l<justificationSts.length; l++){
+                    if (justificationSts[l].subject.termType == 'bnode' && justificationSts[l].object.termType == 'symbol'){
+                        var t3 = kb.statementsMatching(justificationSts[l].object, undefined, undefined);
+                        for (var m=0; m<t3.length; m++){
+                            var t4 = kb.statementsMatching(t3[m].subject, undefined, undefined, subject);
+                            for (var n=0; n<t4.length; n++){
+                                var t5 = kb.statementsMatching(t4[n].object, antcExpr, undefined, subject);
+                                for (var p=0; p<t5.length; p++){
+                                    var t6 = kb.statementsMatching(t5[p].object, subExpr, undefined, subject);
+                                    for (var q=0; q<t6.length; q++){
+                                        if (t6[q].object.termType == 'formula'){
+                                            antecedentElement.appendChild(statementsAsTables(t6[q].object.statements));
+                                            divAntecedent.appendChild(antecedentElement); 
+                                            div.appendChild(divAntecedent);
+                                        } 
+                                    }     
+                                }
+                            }  
+                        }
+                    }                
+                }     
+            }
+            
+             switch(reasoner) {
+
+                case 'scheme':
+                    
+                case 'python':
+                for (var j=0; j<stsJust.length; j++){
+                    if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
+                        var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
+                        for (var k=0; k<t1.length; k++){
+                            var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+                            for (var l=0; l<t2.length; l++){
+                                if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+                                    justificationSts = t2;
+                                    justificationElement.appendChild(statementsAsTables(t2[l].object.statements));
+                                    divJustification.appendChild(justificationElement); 
+                                    
+                                    var justifyButton = myDocument.createElement('input');
+                                    justifyButton.setAttribute('type','button');
+                                    justifyButton.setAttribute('value','Justify');
+                                    divJustification.appendChild(justifyButton);
+                                    justifyButton.addEventListener('click',airPane.render.because.justify,false);
+                                    div.appendChild(divJustification);
+                                }                
+                           }     
+                        }
+                    }
+                }    
+            }
+        }
+        
+        var whyButton = myDocument.createElement('input');
+        whyButton.setAttribute('type','button');
+        whyButton.setAttribute('value','Because');
+        div.appendChild(whyButton);
+        whyButton.addEventListener('click',airPane.render.because,false);
+        
+        return div;
+    }
+    panes.register(airPane);
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2047,11 +2280,11 @@ function Outline(doc) {
 
     var thisOutline=this;
     /** some builtin simple views **/
-    
+
+
     function statementsAsTables(sts) {
         var rep = myDocument.createElement('table');
         var sz = Serializer();
-        // sz.suggestNamespaces(kb.namespaces);
         var pair = sz.rootSubjects(sts);
         var roots = pair[0];
         var subjects = pair[1];
@@ -2138,13 +2371,16 @@ function Outline(doc) {
             var root = roots[i];
             if (root.termType == 'bnode') {
                 td_s.appendChild(myDocument.createTextNode(label(root))); // Don't recurse!
-            } else {
+            } 
+            else {
                 td_s.appendChild(objectTree(root)); // won't have tree
             }
             td_tree.appendChild(propertyTree(root));
         }
         return rep;
     }
+    
+    
     
     function VIEWAS_boring_default(obj) {
         //tabulator.log.debug("entered VIEWAS_boring_default...");

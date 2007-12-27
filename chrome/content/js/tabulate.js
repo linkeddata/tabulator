@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 4020 2007-09-10 03:08:49Z timbl $
+// SVN ID: $Id: tabulate.js 9005 2007-12-27 02:46:07Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -106,6 +106,7 @@ Icon.src.icon_more = iconPrefix + 'icons/tbl-more-trans.png'; // looks just like
 Icon.src.icon_collapse = iconPrefix + 'icons/tbl-collapse.png';
 Icon.src.icon_internals = iconPrefix + 'icons/tango/22-emblem-system.png'
 Icon.src.icon_instances = iconPrefix + 'icons/tango/22-folder-open.png'
+Icon.src.icon_foaf = iconPrefix + 'icons/foaf/foafTiny.gif';
 Icon.src.icon_shrink = iconPrefix + 'icons/tbl-shrink.png';  // shrink list back up
 Icon.src.icon_rows = iconPrefix + 'icons/tbl-rows.png';
 // Icon.src.Icon.src.icon_columns = 'icons/tbl-columns.png';
@@ -160,6 +161,7 @@ Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
 Icon.tooltips[Icon.src.icon_shrink] = 'Shrink list.'
 Icon.tooltips[Icon.src.icon_internals] = 'Under the hood'
 Icon.tooltips[Icon.src.icon_instances] = 'List'
+Icon.tooltips[Icon.src.icon_foaf] = 'Friends'
 Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
 Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
 Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'

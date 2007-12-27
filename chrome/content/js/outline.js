@@ -454,6 +454,13 @@ function Outline(doc) {
         }
     }
     
+    ///////////////////////  Specific panes folow. 
+    //
+    // The default pane sed is the first one registerd for which the label
+    //  method 
+    // Those registered first take priority as a default pane.
+    // That is, those earlier in this file
+    
     /*   Class member Pane
     **
     **  This outline pane contains lists the members of a class
@@ -484,6 +491,67 @@ function Outline(doc) {
         return div;
     }
     panes.register(classInstancePane);
+
+
+    /*   Friend-of-a-Fried Pane
+    **
+    **  This outline pane provides social network functions
+    */
+    socialPane = {};
+    socialPane.icon = Icon.src.icon_foaf;
+    socialPane.label = function(subject) {
+        if (!kb.whether(
+            subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))) return null;
+        return "Friends";
+    }
+
+    socialPane.render = function(s) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'socialPane');
+        var foaf = tabulator.ns.foaf;
+        // Image top right
+        var src = kb.any(s, foaf('img'));
+        if (!src) src = kb.any(s, foaf('depiction'));
+        if (src) {
+            var img = myDocument.createElement("IMG")
+            img.setAttribute('src', src.uri) // w640 h480
+            img.style['max-width'] = '100';
+            img.style['max-height'] = '200';
+            img.style['float'] = 'right';
+            div.appendChild(img)
+        }
+        var name = kb.any(s, foaf('name'));
+        if (!name) name = '???';
+        var h3 = myDocument.createElement("H3");
+        h3.appendChild(myDocument.createTextNode(name));
+
+        var me_uri = getCookie('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+        var div2 = myDocument.createElement("div");
+        tabulator.options.setMe = function(uri) {
+            setCookie('me', uri ? uri : '');
+            alert('Me is now '+uri);
+        }
+        if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
+            div2.innerHTML = "<form name ='meForm'>" +
+                    "<input type='checkbox' name='me' onClick='tabulator.options.setMe("+ '"' +
+                (me_uri == s.uri? "" : s.uri) + '"' + ")' "+ ( me_uri == s.uri ? "CHECKED" : "") + " />This is me<br /></form>\n";            // @@
+
+            // Don't need to check in the filter as the plist is already trimmed
+            // appendPropertyTRs(div, plist, true, function(pred){return (pred.uri.slice(0,123) = '@@');})
+            div.appendChild(div2);
+
+
+        }
+
+        var plist = kb.statementsMatching(subject)
+        appendPropertyTRs(div, plist, false, filter)
+        plist = kb.statementsMatching(undefined, undefined, subject)
+        appendPropertyTRs(div, plist, true, filter)    
+
+        return div;
+    }
+//    panes.register(socialPane); // later
 
 
     /*      Data content Pane
@@ -653,6 +721,7 @@ function Outline(doc) {
         internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
     
     panes.register(internalPane);
+    panes.register(socialPane);
     
     
     /*   Human-readable Pane
@@ -803,6 +872,8 @@ function Outline(doc) {
     airPane = {};
     airPane.icon = Icon.src.icon_airPane;
      
+    var air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+    var tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
     var compliant = air('compliant-with');
     var nonCompliant = air('non-compliant-with');
     var antcExpr = tms('antecedent-expr');

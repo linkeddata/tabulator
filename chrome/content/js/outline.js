@@ -544,11 +544,11 @@ function Outline(doc) {
 
         }
 
-        var plist = kb.statementsMatching(subject)
+/*        var plist = kb.statementsMatching(s)
         appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, filter)    
-
+*/
         return div;
     }
 //    panes.register(socialPane); // later

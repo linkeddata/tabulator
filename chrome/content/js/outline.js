@@ -515,8 +515,11 @@ function Outline(doc) {
         if (src) {
             var img = myDocument.createElement("IMG")
             img.setAttribute('src', src.uri) // w640 h480
-            img.style['max-width'] = '100';
-            img.style['max-height'] = '200';
+            img.setAttribute('width', '80');
+            img.setAttribute('align', 'right');
+            img.class = 'foafPic';
+ //           img.style['max-width'] = '100';
+ //           img.style['max-height'] = '200';
             img.style['float'] = 'right';
             div.appendChild(img)
         }
@@ -530,7 +533,7 @@ function Outline(doc) {
         var div2 = myDocument.createElement("div");
         tabulator.options.setMe = function(uri) {
             setCookie('me', uri ? uri : '');
-            alert('Me is now '+uri);
+            alert('Me is now ' + uri?uri:'unset');
         }
         if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
             div2.innerHTML = "<form name ='meForm'>" +
@@ -541,16 +544,80 @@ function Outline(doc) {
             // appendPropertyTRs(div, plist, true, function(pred){return (pred.uri.slice(0,123) = '@@');})
             div.appendChild(div2);
 
+        }
+        var common = function(x,y) { // Find common members of two lists
+//            var dict = [];
+            var both = [];
+            for(var i=0; i<x.length; i++) {
+//                dict[x[i].uri] = true;
+                for(var j=0; j<y.length; j++) {
+                    if (y[j].sameTerm(x[i])) {
+                        both.push(y[j]);
+                        break;
+                    }
+                }
 
+            }
+            return both;
+        }
+        var plural = function(n, s) {
+            var res = ' ';
+            res+= (n ? n : 'No');
+            res += ' ' + s;
+            if (n != 1) res += 's';
+            return res;
+        }
+        
+        var people = function(n) {
+            var res = ' ';
+            res+= (n ? n : 'No');
+            if (n == 1) return res + ' person';
+            return res + ' people';
+        }
+        var knows = foaf('knows');
+        var familiar = kb.any(s, foaf('firstName')) || kb.any(s, foaf('nick')) ||
+                        kb.any(s, foaf('name'));
+        if (familiar) familiar = familiar.value;
+        var friends = kb.each(s, knows);
+        var incoming = kb.whether(s, knows, me);
+        var outgoing = kb.whether(me, knows, s);
+        div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
+        if (me && me_uri != s.uri && friends) {
+            var myFriends = kb.each(me, foaf('knows'));
+            // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
+            if (myFriends) {
+                var mutualFriends = common(friends, myFriends);
+                var tr = myDocument.createElement('tr');
+                div.appendChild(tr);
+                tr.appendChild(myDocument.createTextNode(
+                            'You'+ (familiar? ' and '+familiar:'') +' know'+
+                            people(mutualFriends.length)+' in common'))
+                if (mutualFriends) {
+                    for (var i=0; i<mutualFriends.length; i++) {
+                        tr.appendChild(myDocument.createTextNode(
+                            ',  '+ label(mutualFriends[i])));
+                    }
+                }
+            }
+            var tr = myDocument.createElement('tr');
+            div.appendChild(tr);
+            tr.appendChild(myDocument.createTextNode(familiar + " knows:"))
+/*            for (var i=0; i<friends.length; i++) {
+                div.appendChild(myDocument.createTextNode(
+                    ',  '+ label(friends[i])));
+            }
+ */           
         }
 
-/*        var plist = kb.statementsMatching(s)
-        appendPropertyTRs(div, plist, false, filter)
-        plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, filter)    
-*/
+        var plist = kb.statementsMatching(s, knows)
+        appendPropertyTRs(div, plist, false, function(pred){return true;})
+
         return div;
     }
+    
+    var me_uri = getCookie('me');   // Load my friend list straight away .. @@kludge
+    if (me_uri) sf.lookUpThing(kb.sym(me_uri));
+    
 //    panes.register(socialPane); // later
 
 

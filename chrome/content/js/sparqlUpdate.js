@@ -130,6 +130,7 @@ sparql.prototype._context_where = function(context) {
 }
 
 sparql.prototype._fire = function(uri, query, callback) {
+    if (!uri) throw "No URI given for remote editing operation: "+query;
     var xhr = Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {

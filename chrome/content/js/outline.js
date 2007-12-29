@@ -278,7 +278,7 @@ function Outline(doc) {
     tabulator.options.submit = function()
     {   
     
-        alert(tabulator.options.references[0].checked);
+        alert('tabulator.options.submit: checked='+tabulator.options.references[0].checked);
         
         for(i=0; i<6; i++)
         {
@@ -533,7 +533,7 @@ function Outline(doc) {
         var div2 = myDocument.createElement("div");
         tabulator.options.setMe = function(uri) {
             setCookie('me', uri ? uri : '');
-            alert('Me is now ' + uri?uri:'unset');
+            alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "this is me".'));
         }
         if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
             div2.innerHTML = "<form name ='meForm'>" +
@@ -571,6 +571,12 @@ function Outline(doc) {
             if (n == 1) return res + ' person';
             return res + ' people';
         }
+        var say = function(str) {
+            var tx = myDocument.createTextNode(str);
+            var p = myDocument.createElement('p');
+            p.appendChild(tx);
+            div.appendChild(p);
+        }
         var knows = foaf('knows');
         var familiar = kb.any(s, foaf('firstName')) || kb.any(s, foaf('nick')) ||
                         kb.any(s, foaf('name'));
@@ -579,6 +585,7 @@ function Outline(doc) {
         
         // Do I have a public profile document?
         var profile = null; // This could be  SPARQL
+        var editable = false;
         if (me) {
             var works = kb.each(undefined, foaf('primaryTopic'), me)
             for (var i=0; i<works.length; i++) {
@@ -588,113 +595,122 @@ function Outline(doc) {
                     break;
                 }
             }
-        }
-        // My relationship with this person
-        if (me && me_uri != s.uri ) {
-            var incoming = kb.whether(s, knows, me);
-            var outgoing = false;
-            var editable = false;
-            var outgoingSt = kb.statementsMatching(me, knows, s);
-            if (outgoingSt.length) {
-                outgoing = true;
-                if (!profile) profile = outgoingSt.why;
-            } // Do I have an EDITABLE profile?
             if (profile) editable = outline.sparql.prototype.editable(profile.uri, kb)
-
-            var msg = 'You and '+familiar
-            if (!incoming) {
-                if (!outgoing) {
-                    msg = msg + ' do not know each other.';
-                } else {
-                    msg = 'You know '+familiar+ ' (unconfirmed)';
+            if (me_uri == s.uri ) { // This is about me
+                if (!profile) {
+                    say("I couldn't find your personal profile document.");
+                } else if (!editable) {
+                    say("Your profile <"+profile.uri+"> is not remotely editable.");
+                } else  {
+                    say("Editing your profile <"+profile.uri+">.");
                 }
-            } else {
-                if (!outgoing) {
-                    msg = familiar + ' knows you (unconfirmed).';
-                } else {
-                    msg = msg + ' know each other.';
-                }
-            }
-            var tr = myDocument.createElement('tr');
-            div.appendChild(tr);
-            tr.appendChild(myDocument.createTextNode(msg))
+            } else { // This is about someone else
+                // My relationship with this person
+                var incoming = kb.whether(s, knows, me);
+                var outgoing = false;
+                var outgoingSt = kb.statementsMatching(me, knows, s);
+                if (outgoingSt.length) {
+                    outgoing = true;
+                    if (!profile) profile = outgoingSt.why;
+                } // Do I have an EDITABLE profile?
+                if (profile) editable = outline.sparql.prototype.editable(profile.uri, kb)
 
-
-            if (editable) {
-                var div2 = myDocument.createElement("div");
-                div.appendChild(div2);
-                var f = myDocument.createElement('form');
-                div2.appendChild(f);
-                var input = myDocument.createElement('input');
-                f.appendChild(input);
-                var input = myDocument.createTextNode("I know " + familiar);
-                f.appendChild(input);
-                input.setAttribute('type', 'checkbox');
-                if (!outgoing) {   // Insert new statement
-                    input.statement = new RDFStatement(me, knows, s, profile);
-                    input.onclick = function(e) {
-                        try {
-                            sparqlService.insert_statement(st, function(uri,success,error_body) {
-                                if (!success){
-                                    alert("Error occurs while inserting "+s+'\n\n'+error_body);
-                                    input.removeAttribute('checked');
-                                    return;
-                                }          
-                                st = input.statement;    
-                                st = kb.add(st.subject, st.predicate, st.object,st.why);                        
-                            })
-                        }catch(e){
-                            alert("Data write fails:" + e);
-                            input.removeAttribute('checked');
-                            return;
-                        }
+                var msg = 'You and '+familiar
+                if (!incoming) {
+                    if (!outgoing) {
+                        msg = msg + ' do not know each other.';
+                    } else {
+                        msg = 'You know '+familiar+ ' (unconfirmed)';
                     }
-                } else {   // Delete old statement
-                    input.statement = outgoingSt;
-                    input.setAttribute('checked', '1');
-                    input.onclick = function(e) {
-                        try {
-                            sparqlService.delete_statement(st, function(uri,success,error_body) {
-                                if (!success){
-                                    alert("Error occurs while deleting "+s+'\n\n'+error_body);
-                                    input.setAttribute('checked', '1'); // Rollback
-                                    return;
-                                }          
-                                st = input.statement;    
-                                st = kb.remove(st);                        
-                            })
-                        }catch(e){
-                            alert("Delete fails:" + e);
-                            input.setAttribute('checked', '1');
-                            return;
-                        }
-                    }
-                }
-            } // editable
-             
-            if (friends) {
-                var myFriends = kb.each(me, foaf('knows'));
-                // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
-                if (myFriends) {
-                    var mutualFriends = common(friends, myFriends);
-                    var tr = myDocument.createElement('tr');
-                    div.appendChild(tr);
-                    tr.appendChild(myDocument.createTextNode(
-                                'You'+ (familiar? ' and '+familiar:'') +' know'+
-                                people(mutualFriends.length)+' in common'))
-                    if (mutualFriends) {
-                        for (var i=0; i<mutualFriends.length; i++) {
-                            tr.appendChild(myDocument.createTextNode(
-                                ',  '+ label(mutualFriends[i])));
-                        }
+                } else {
+                    if (!outgoing) {
+                        msg = familiar + ' knows you (unconfirmed).';
+                    } else {
+                        msg = msg + ' know each other.';
                     }
                 }
                 var tr = myDocument.createElement('tr');
                 div.appendChild(tr);
-            } // friends
+                tr.appendChild(myDocument.createTextNode(msg))
+
+
+                if (editable) {
+                    var div2 = myDocument.createElement("div");
+                    div.appendChild(div2);
+                    var f = myDocument.createElement('form');
+                    div2.appendChild(f);
+                    var input = myDocument.createElement('input');
+                    f.appendChild(input);
+                    var tx = myDocument.createTextNode("You know " + familiar);
+                    tx.className = 'question';
+                    f.appendChild(tx);
+                    input.setAttribute('type', 'checkbox');
+                    if (!outgoing) {   // Insert new statement
+                        input.statement = new RDFStatement(me, knows, s, profile);
+                        input.onclick = function(e) {
+                            try {
+                                thisOutline.UserInput.sparqler.insert_statement(input.statement, function(uri,success,error_body) {
+                                    if (!success){
+                                        alert("Error occurs while inserting "+s+'\n\n'+error_body);
+                                        input.removeAttribute('checked');
+                                        return;
+                                    }          
+                                    var st = input.statement;    
+                                    st = kb.add(st.subject, st.predicate, st.object,st.why);                        
+                                })
+                            }catch(e){
+                                alert("Data write fails:" + e);
+                                input.removeAttribute('checked');
+                                return;
+                            }
+                        }
+                    } else {   // Delete old statement
+                        input.statement = outgoingSt;
+                        input.setAttribute('checked', '1');
+                        input.onclick = function(e) {
+                            try {
+                                thisOutline.UserInput.sparqler.delete_statement(outgoingSt, function(uri,success,error_body) {
+                                    if (!success){
+                                        alert("Error occurs while deleting "+s+'\n\n'+error_body);
+                                        input.setAttribute('checked', '1'); // Rollback
+                                        return;
+                                    }          
+                                    var st = input.statement;    
+                                    st = kb.remove(st);                        
+                                })
+                            }catch(e){
+                                alert("Delete fails:" + e);
+                                input.setAttribute('checked', '1');
+                                return;
+                            }
+                        }
+                    }
+                } // editable
+                 
+                if (friends) {
+                    var myFriends = kb.each(me, foaf('knows'));
+                    // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
+                    if (myFriends) {
+                        var mutualFriends = common(friends, myFriends);
+                        var tr = myDocument.createElement('tr');
+                        div.appendChild(tr);
+                        tr.appendChild(myDocument.createTextNode(
+                                    'You'+ (familiar? ' and '+familiar:'') +' know'+
+                                    people(mutualFriends.length)+' in common'))
+                        if (mutualFriends) {
+                            for (var i=0; i<mutualFriends.length; i++) {
+                                tr.appendChild(myDocument.createTextNode(
+                                    ',  '+ label(mutualFriends[i])));
+                            }
+                        }
+                    }
+                    var tr = myDocument.createElement('tr');
+                    div.appendChild(tr);
+                } // friends
+            } // About someone else
         } // me is defined
         
-        div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
+        // div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
 
         var plist = kb.statementsMatching(s, knows)
         appendPropertyTRs(div, plist, false, function(pred){return true;})
@@ -818,8 +834,8 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, true, defaultPane.filter)
         if (outline.sparql.prototype.editable(subject.uri, outline.kb) && // Is that the only test?
             !HCIoptions["bottom insert highlights"].enabled) {
-            var holdingTr=myDocument.createElement('tr'); //these are to minimize required changes
-            var holdingTd=myDocument.createElement('td'); //in userinput.js
+            var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
+            var holdingTd = myDocument.createElement('td'); //in userinput.js
             holdingTd.setAttribute('colspan','2');
             holdingTd.setAttribute('notSelectable','true');
             var img = myDocument.createElement('img');
@@ -1697,16 +1713,27 @@ function Outline(doc) {
         if (newValue) {
             cla += ' selected'
             if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
-            if (cla.indexOf('pred') >= 0)
-                termWidget.addIcon(node,Icon.termWidgets.addTri);  // was tye line below
-                // HCIoptions["able to edit in Discovery Mode by mouse"][1].setupHere([node,termWidget],"setSelected()#1");
             selection.push(node)
             //tabulator.log.info("Selecting "+node.textContent)
-            var source
+            
+            var st = node.AJAR_statement;
+            if (typeof st == 'undefined') st = node.parentNode.AJAR_statement;
+            var source = st.why;
+            var target = st.why;
+            var editable = outline.sparql.prototype.editable(target.uri, kb);
+            if (!editable)
+                target = node.parentNode.AJAR_inverse ? st.object : st.subject; // left hand side
+                editable = outline.sparql.prototype.editable(target.uri, kb);
+            // alert('Target='+target+', editable='+editable+'\nselected statement:' + st)
+            if (editable && (cla.indexOf('pred') >= 0))
+                termWidget.addIcon(node,Icon.termWidgets.addTri); // Add blue plus
+            
+/*       was:     var source;
             try{node.parentNode.AJAR_statement}catch(e){alert('setSelected: '+node.textContent)}
             if (node.AJAR_statement) source = node.AJAR_statement.why
             else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
-            //tabulator.log.info('Source to highlight: '+source);
+ */
+                       //tabulator.log.info('Source to highlight: '+source);
             if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
         } else {
             tabulator.log.debug("cla=$"+cla+"$")
@@ -1714,8 +1741,7 @@ function Outline(doc) {
             cla = cla.replace(' selected','')
             if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
             if (cla.indexOf('pred') >=0)
-                termWidget.removeIcon(node,Icon.termWidgets.addTri); // was line below
-                // HCIoptions["able to edit in Discovery Mode by mouse"][2].setupHere([node,termWidget],"setSelected()#2");
+                termWidget.removeIcon(node,Icon.termWidgets.addTri);
             RDFArrayRemove(selection, node)
             tabulator.log.info("Deselecting "+node.textContent);
             tabulator.log.debug("cla=$"+cla+"$");

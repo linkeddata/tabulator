@@ -483,8 +483,8 @@ function AJARImage(src, alt, tt, doc) {
         tt = Icon.tooltips[src];
     var image = doc.createElement('img');
     image.setAttribute('src', src);
-    if (typeof alt != 'undefined')
-        image.setAttribute('alt', alt);
+//    if (typeof alt != 'undefined')      // Messes up cut-and-paste of text
+//        image.setAttribute('alt', alt);
     if (typeof tt != 'undefined')
         image.setAttribute('title',tt);
     return image;

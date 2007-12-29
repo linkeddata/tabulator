@@ -272,6 +272,7 @@ function RDFMakeTerm(formula,val) {
     if (typeof formula.redirection == 'undefined') {
 	throw 'Internal: No redirection index for formula: '+ formula+', term: '+val;
     }
+    if (typeof val.hashString == 'undefined') alert('Eh? val='+val);
     var y = formula.redirection[val.hashString()];
     if (typeof y == 'undefined') return val;
 //    tabulator.log.debug(" redirecting "+val+" to "+y)

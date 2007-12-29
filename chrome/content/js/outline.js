@@ -539,9 +539,6 @@ function Outline(doc) {
             div2.innerHTML = "<form name ='meForm'>" +
                     "<input type='checkbox' name='me' onClick='tabulator.options.setMe("+ '"' +
                 (me_uri == s.uri? "" : s.uri) + '"' + ")' "+ ( me_uri == s.uri ? "CHECKED" : "") + " />This is me<br /></form>\n";            // @@
-
-            // Don't need to check in the filter as the plist is already trimmed
-            // appendPropertyTRs(div, plist, true, function(pred){return (pred.uri.slice(0,123) = '@@');})
             div.appendChild(div2);
 
         }
@@ -570,7 +567,7 @@ function Outline(doc) {
         
         var people = function(n) {
             var res = ' ';
-            res+= (n ? n : 'No');
+            res+= (n ? n : 'no');
             if (n == 1) return res + ' person';
             return res + ' people';
         }
@@ -579,35 +576,125 @@ function Outline(doc) {
                         kb.any(s, foaf('name'));
         if (familiar) familiar = familiar.value;
         var friends = kb.each(s, knows);
-        var incoming = kb.whether(s, knows, me);
-        var outgoing = kb.whether(me, knows, s);
-        div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
-        if (me && me_uri != s.uri && friends) {
-            var myFriends = kb.each(me, foaf('knows'));
-            // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
-            if (myFriends) {
-                var mutualFriends = common(friends, myFriends);
-                var tr = myDocument.createElement('tr');
-                div.appendChild(tr);
-                tr.appendChild(myDocument.createTextNode(
-                            'You'+ (familiar? ' and '+familiar:'') +' know'+
-                            people(mutualFriends.length)+' in common'))
-                if (mutualFriends) {
-                    for (var i=0; i<mutualFriends.length; i++) {
-                        tr.appendChild(myDocument.createTextNode(
-                            ',  '+ label(mutualFriends[i])));
-                    }
+        
+        // Do I have a public profile document?
+        var profile = null; // This could be  SPARQL
+        if (me) {
+            var works = kb.each(undefined, foaf('primaryTopic'), me)
+            for (var i=0; i<works.length; i++) {
+                if (kb.whether(works[i], rdf('type'),
+                                            foaf('PersonalProfileDocument'))) {
+                    profile = works[i];
+                    break;
+                }
+            }
+        }
+        // My relationship with this person
+        if (me && me_uri != s.uri ) {
+            var incoming = kb.whether(s, knows, me);
+            var outgoing = false;
+            var editable = false;
+            var outgoingSt = kb.statementsMatching(me, knows, s);
+            if (outgoingSt.length) {
+                outgoing = true;
+                if (!profile) profile = outgoingSt.why;
+            } // Do I have an EDITABLE profile?
+            if (profile) editable = outline.sparql.prototype.editable(profile.uri, kb)
+
+            var msg = 'You and '+familiar
+            if (!incoming) {
+                if (!outgoing) {
+                    msg = msg + ' do not know each other.';
+                } else {
+                    msg = 'You know '+familiar+ ' (unconfirmed)';
+                }
+            } else {
+                if (!outgoing) {
+                    msg = familiar + ' knows you (unconfirmed).';
+                } else {
+                    msg = msg + ' know each other.';
                 }
             }
             var tr = myDocument.createElement('tr');
             div.appendChild(tr);
-            tr.appendChild(myDocument.createTextNode(familiar + " knows:"))
-/*            for (var i=0; i<friends.length; i++) {
-                div.appendChild(myDocument.createTextNode(
-                    ',  '+ label(friends[i])));
-            }
- */           
-        }
+            tr.appendChild(myDocument.createTextNode(msg))
+
+
+            if (editable) {
+                var div2 = myDocument.createElement("div");
+                div.appendChild(div2);
+                var f = myDocument.createElement('form');
+                div2.appendChild(f);
+                var input = myDocument.createElement('input');
+                f.appendChild(input);
+                var input = myDocument.createTextNode("I know " + familiar);
+                f.appendChild(input);
+                input.setAttribute('type', 'checkbox');
+                if (!outgoing) {   // Insert new statement
+                    input.statement = new RDFStatement(me, knows, s, profile);
+                    input.onclick = function(e) {
+                        try {
+                            sparqlService.insert_statement(st, function(uri,success,error_body) {
+                                if (!success){
+                                    alert("Error occurs while inserting "+s+'\n\n'+error_body);
+                                    input.removeAttribute('checked');
+                                    return;
+                                }          
+                                st = input.statement;    
+                                st = kb.add(st.subject, st.predicate, st.object,st.why);                        
+                            })
+                        }catch(e){
+                            alert("Data write fails:" + e);
+                            input.removeAttribute('checked');
+                            return;
+                        }
+                    }
+                } else {   // Delete old statement
+                    input.statement = outgoingSt;
+                    input.setAttribute('checked', '1');
+                    input.onclick = function(e) {
+                        try {
+                            sparqlService.delete_statement(st, function(uri,success,error_body) {
+                                if (!success){
+                                    alert("Error occurs while deleting "+s+'\n\n'+error_body);
+                                    input.setAttribute('checked', '1'); // Rollback
+                                    return;
+                                }          
+                                st = input.statement;    
+                                st = kb.remove(st);                        
+                            })
+                        }catch(e){
+                            alert("Delete fails:" + e);
+                            input.setAttribute('checked', '1');
+                            return;
+                        }
+                    }
+                }
+            } // editable
+             
+            if (friends) {
+                var myFriends = kb.each(me, foaf('knows'));
+                // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
+                if (myFriends) {
+                    var mutualFriends = common(friends, myFriends);
+                    var tr = myDocument.createElement('tr');
+                    div.appendChild(tr);
+                    tr.appendChild(myDocument.createTextNode(
+                                'You'+ (familiar? ' and '+familiar:'') +' know'+
+                                people(mutualFriends.length)+' in common'))
+                    if (mutualFriends) {
+                        for (var i=0; i<mutualFriends.length; i++) {
+                            tr.appendChild(myDocument.createTextNode(
+                                ',  '+ label(mutualFriends[i])));
+                        }
+                    }
+                }
+                var tr = myDocument.createElement('tr');
+                div.appendChild(tr);
+            } // friends
+        } // me is defined
+        
+        div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
 
         var plist = kb.statementsMatching(s, knows)
         appendPropertyTRs(div, plist, false, function(pred){return true;})

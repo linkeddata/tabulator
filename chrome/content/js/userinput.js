@@ -177,7 +177,7 @@ clearInputAndSave: function clearInputAndSave(e){
                 }                    
             })}catch(e){
                 alert("You can not edit statement about this blank node object "+
-                      "becuase it is not identifiable. (Tabulator Bug)");
+                      "becuase it is not identifiable. (Known Tabulator Issue)." + e);
                 return;
             }
             s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);

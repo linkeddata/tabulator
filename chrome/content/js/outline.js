@@ -536,11 +536,28 @@ function Outline(doc) {
             alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "this is me".'));
         }
         if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
-            div2.innerHTML = "<form name ='meForm'>" +
-                    "<input type='checkbox' name='me' onClick='tabulator.options.setMe("+ '"' +
-                (me_uri == s.uri? "" : s.uri) + '"' + ")' "+ ( me_uri == s.uri ? "CHECKED" : "") + " />This is me<br /></form>\n";            // @@
-            div.appendChild(div2);
-
+            var f = myDocument.createElement('form');
+            div.appendChild(f);
+            var input = myDocument.createElement('input');
+            f.appendChild(input);
+            var tx = myDocument.createTextNode("This is you");
+            tx.className = 'question';
+            f.appendChild(tx);
+            input.setAttribute('type', 'checkbox');
+            if (me_uri != s.uri) {   // Not set, set if clicked
+                input.onclick = function(e) {
+                    alert('this.value='+this.value);
+                    setCookie('me', s.uri);
+                    alert('Your own URI is now ' + s.uri);
+                 }
+            } else {   // IS set, can unset
+                input.setAttribute('checked', '1');
+                input.onclick = function(e) {
+                    alert('this.value2='+this.value);
+                    setCookie('me', '');
+                    alert('Your own URI is now reset. To set it again, find yourself and check "this is me".');
+                }
+            }
         }
         var common = function(x,y) { // Find common members of two lists
 //            var dict = [];
@@ -577,9 +594,57 @@ function Outline(doc) {
             p.appendChild(tx);
             div.appendChild(p);
         }
+        
+        var buildCheckboxForm = function(lab, statement, state) {
+            var f = myDocument.createElement('form');
+            var input = myDocument.createElement('input');
+            f.appendChild(input);
+            var tx = myDocument.createTextNode(lab);
+            tx.className = 'question';
+            f.appendChild(tx);
+            input.setAttribute('type', 'checkbox');
+            if (!state) {   // Insert new statement
+                input.onclick = function(e) {
+                    try {
+                        thisOutline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
+                            if (!success){
+                                alert("Error occurs while inserting "+statement+'\n\n'+error_body);
+                                input.removeAttribute('checked');
+                                return;
+                            }
+                            kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
+                        })
+                    }catch(e){
+                        alert("Data write fails:" + e);
+                        input.removeAttribute('checked');
+                    }
+                }
+            } else {   // Delete old statement
+                input.setAttribute('checked', '1');
+                input.onclick = function(e) {
+                    try {
+                        thisOutline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
+                            if (!success){
+                                alert("Error occurs while deleting "+statement+'\n\n'+error_body);
+                                input.setAttribute('checked', '1'); // Rollback
+                                return;
+                            } 
+                            kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);                        
+                        })
+                    }catch(e){
+                        alert("Delete fails:" + e);
+                        input.setAttribute('checked', '1');
+                        return;
+                    }
+                }
+            }
+            return f;
+        }
+        
         var knows = foaf('knows');
-        var familiar = kb.any(s, foaf('firstName')) || kb.any(s, foaf('nick')) ||
-                        kb.any(s, foaf('name'));
+//        var givenName = kb.sym('http://www.w3.org/2000/10/swap/pim/contact#givenName');
+        var familiar = kb.any(s, foaf('givenname')) || kb.any(s, foaf('firstName')) ||
+                    kb.any(s, foaf('nick')) || kb.any(s, foaf('name'));
         if (familiar) familiar = familiar.value;
         var friends = kb.each(s, knows);
         
@@ -635,56 +700,9 @@ function Outline(doc) {
 
 
                 if (editable) {
-                    var div2 = myDocument.createElement("div");
-                    div.appendChild(div2);
-                    var f = myDocument.createElement('form');
-                    div2.appendChild(f);
-                    var input = myDocument.createElement('input');
-                    f.appendChild(input);
-                    var tx = myDocument.createTextNode("You know " + familiar);
-                    tx.className = 'question';
-                    f.appendChild(tx);
-                    input.setAttribute('type', 'checkbox');
-                    if (!outgoing) {   // Insert new statement
-                        input.statement = new RDFStatement(me, knows, s, profile);
-                        input.onclick = function(e) {
-                            try {
-                                thisOutline.UserInput.sparqler.insert_statement(input.statement, function(uri,success,error_body) {
-                                    if (!success){
-                                        alert("Error occurs while inserting "+s+'\n\n'+error_body);
-                                        input.removeAttribute('checked');
-                                        return;
-                                    }          
-                                    var st = input.statement;    
-                                    st = kb.add(st.subject, st.predicate, st.object,st.why);                        
-                                })
-                            }catch(e){
-                                alert("Data write fails:" + e);
-                                input.removeAttribute('checked');
-                                return;
-                            }
-                        }
-                    } else {   // Delete old statement
-                        input.statement = outgoingSt;
-                        input.setAttribute('checked', '1');
-                        input.onclick = function(e) {
-                            try {
-                                thisOutline.UserInput.sparqler.delete_statement(outgoingSt, function(uri,success,error_body) {
-                                    if (!success){
-                                        alert("Error occurs while deleting "+s+'\n\n'+error_body);
-                                        input.setAttribute('checked', '1'); // Rollback
-                                        return;
-                                    }          
-                                    var st = input.statement;    
-                                    st = kb.remove(st);                        
-                                })
-                            }catch(e){
-                                alert("Delete fails:" + e);
-                                input.setAttribute('checked', '1');
-                                return;
-                            }
-                        }
-                    }
+                    var f = buildCheckboxForm("You know " + familiar,
+                            new RDFStatement(me, knows, s, profile), outgoing)
+                    div.appendChild(f);
                 } // editable
                  
                 if (friends) {

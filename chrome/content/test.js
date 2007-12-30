@@ -71,6 +71,7 @@ Icon.src.icon_more = iconPrefix + 'icons/tbl-more-trans.png'; // looks just like
 Icon.src.icon_collapse = iconPrefix + 'icons/tbl-collapse.png';
 Icon.src.icon_internals = iconPrefix + 'icons/tango/22-emblem-system.png'
 Icon.src.icon_instances = iconPrefix + 'icons/tango/22-folder-open.png'
+Icon.src.icon_foaf = iconPrefix + 'icons/foaf/foafTiny.gif';
 Icon.src.icon_shrink = iconPrefix + 'icons/tbl-shrink.png';  // shrink list back up
 Icon.src.icon_rows = iconPrefix + 'icons/tbl-rows.png';
 // Icon.src.Icon.src.icon_columns = 'icons/tbl-columns.png';
@@ -125,6 +126,7 @@ Icon.tooltips[Icon.src.icon_collapse] = 'Hide details.'
 Icon.tooltips[Icon.src.icon_shrink] = 'Shrink list.'
 Icon.tooltips[Icon.src.icon_internals] = 'Under the hood'
 Icon.tooltips[Icon.src.icon_instances] = 'List'
+Icon.tooltips[Icon.src.icon_foaf] = 'Friends'
 Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
 Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
 Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'
@@ -311,7 +313,7 @@ function string_startswith(str, pref) { // missing library routines
 var httpResponseObserver =
 {
     observe: function(subject, topic, data) {
-        if (topic == "http-on-examine-response") {
+        if (topic == "http-on-examine-response" && typeof Components != 'undefined') { // Componenets being undefined -- why?
               var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
               var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
               // httpChannel.setRequestHeader("X-Hello", "World", false)

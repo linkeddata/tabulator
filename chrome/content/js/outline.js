@@ -533,7 +533,7 @@ function Outline(doc) {
         var div2 = myDocument.createElement("div");
         tabulator.options.setMe = function(uri) {
             setCookie('me', uri ? uri : '');
-            alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "this is me".'));
+            alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
         }
         if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
             var f = myDocument.createElement('form');
@@ -543,21 +543,15 @@ function Outline(doc) {
             var tx = myDocument.createTextNode("This is you");
             tx.className = 'question';
             f.appendChild(tx);
-            input.setAttribute('type', 'checkbox');
-            if (me_uri != s.uri) {   // Not set, set if clicked
-                input.onclick = function(e) {
-                    alert('this.value='+this.value);
-                    setCookie('me', s.uri);
-                    alert('Your own URI is now ' + s.uri);
-                 }
-            } else {   // IS set, can unset
-                input.setAttribute('checked', '1');
-                input.onclick = function(e) {
-                    alert('this.value2='+this.value);
-                    setCookie('me', '');
-                    alert('Your own URI is now reset. To set it again, find yourself and check "this is me".');
-                }
+            var myHandler = function(e) {
+                // alert('this.checked='+this.checked);
+                var uri = this.checked? s.uri : '';
+                setCookie('me', uri);
+                alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
             }
+            input.setAttribute('type', 'checkbox');
+            input.checked = (me_uri == s.uri);
+            input.addEventListener('click', myHandler, false);
         }
         var common = function(x,y) { // Find common members of two lists
 //            var dict = [];
@@ -603,41 +597,42 @@ function Outline(doc) {
             tx.className = 'question';
             f.appendChild(tx);
             input.setAttribute('type', 'checkbox');
-            if (!state) {   // Insert new statement
-                input.onclick = function(e) {
+            var boxHandler = function(e) {
+                tx.className = 'question pendingedit';
+                if (this.checked) { // Add link
                     try {
                         thisOutline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
+                            tx.className = 'question';
                             if (!success){
                                 alert("Error occurs while inserting "+statement+'\n\n'+error_body);
-                                input.removeAttribute('checked');
+                                input.checked = false; //rollback UI
                                 return;
                             }
                             kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
                         })
                     }catch(e){
                         alert("Data write fails:" + e);
-                        input.removeAttribute('checked');
+                        input.checked = false; //rollback UI
                     }
-                }
-            } else {   // Delete old statement
-                input.setAttribute('checked', '1');
-                input.onclick = function(e) {
+                } else { // Remove link
                     try {
                         thisOutline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
+                            tx.className = 'question';
                             if (!success){
                                 alert("Error occurs while deleting "+statement+'\n\n'+error_body);
-                                input.setAttribute('checked', '1'); // Rollback
-                                return;
-                            } 
-                            kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);                        
+                                this.checked = true; // Rollback UI
+                            } else {
+                                kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
+                            }
                         })
                     }catch(e){
                         alert("Delete fails:" + e);
-                        input.setAttribute('checked', '1');
+                        this.checked = true; // Rollback UI
                         return;
                     }
                 }
             }
+            input.addEventListener('click', boxHandler, false)
             return f;
         }
         
@@ -1736,6 +1731,7 @@ function Outline(doc) {
             
             var st = node.AJAR_statement;
             if (typeof st == 'undefined') st = node.parentNode.AJAR_statement;
+            if (typeof st == 'undefined') return; // @@ Kludge?  Click in the middle of nowhere
             var source = st.why;
             var target = st.why;
             var editable = outline.sparql.prototype.editable(target.uri, kb);

@@ -515,11 +515,8 @@ function Outline(doc) {
         if (src) {
             var img = myDocument.createElement("IMG")
             img.setAttribute('src', src.uri) // w640 h480
-            img.setAttribute('width', '80');
             img.setAttribute('align', 'right');
             img.class = 'foafPic';
- //           img.style['max-width'] = '100';
- //           img.style['max-height'] = '200';
             img.style['float'] = 'right';
             div.appendChild(img)
         }
@@ -632,6 +629,7 @@ function Outline(doc) {
                     }
                 }
             }
+            input.checked = state;
             input.addEventListener('click', boxHandler, false)
             return f;
         }

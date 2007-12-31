@@ -7,11 +7,10 @@ xmlns:em="http://www.mozilla.org/2004/em-rdf#">
     <em:id>tabulator@csail.mit.edu</em:id>
     <em:name>The Tabulator Extension</em:name>
     <em:type>2</em:type>
-    <em:version>0.8</em:version>
-    <em:description>An RDF Browser in AJAX</em:description>
+    <em:version>0.8.1</em:version>
+    <em:description>A Data Browser, a user interface to the Semantic Web.</em:description>
     <em:creator>The Tabulator Team</em:creator>
     <em:homepageURL>http://www.w3.org/2005/ajar/tab</em:homepageURL>
-
     <em:targetApplication>
       <Description>
         <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>

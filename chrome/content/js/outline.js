@@ -1802,14 +1802,15 @@ function Outline(doc) {
     }
 
     function setCookie(name, value, expires, path, domain, secure) {
-        expires = new Date();
-        expires.setFullYear("2099"); // How does one say never?
+        expires = new Date(); // http://www.w3schools.com/jsref/jsref_obj_date.asp
+        expires.setFullYear("2030"); // How does one say never?
         var curCookie = name + "=" + escape(value) +
             ((expires) ? "; expires=" + expires.toGMTString() : "") +
             ((path) ? "; path=" + path : "") +
             ((domain) ? "; domain=" + domain : "") +
             ((secure) ? "; secure" : "");
         myDocument.cookie = curCookie;
+        alert('Cookie:' curCookie);
     }
     
     /*  getCookie

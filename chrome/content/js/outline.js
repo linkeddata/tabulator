@@ -1810,7 +1810,7 @@ function Outline(doc) {
             ((domain) ? "; domain=" + domain : "") +
             ((secure) ? "; secure" : "");
         myDocument.cookie = curCookie;
-        alert('Cookie:' curCookie);
+        alert('Cookie:' + curCookie);
     }
     
     /*  getCookie

@@ -1784,7 +1784,7 @@ function Outline(doc) {
         }
     }
 
-    this.Tabulato rDoubleClick =function(event) {
+    this.TabulatorDoubleClick =function(event) {
         var target = getTarget(event);
         var tname = target.tagName;
         tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);

@@ -515,9 +515,7 @@ function Outline(doc) {
         if (src) {
             var img = myDocument.createElement("IMG")
             img.setAttribute('src', src.uri) // w640 h480
-            img.setAttribute('align', 'right');
             img.class = 'foafPic';
-            img.style['float'] = 'right';
             div.appendChild(img)
         }
         var name = kb.any(s, foaf('name'));
@@ -529,7 +527,7 @@ function Outline(doc) {
         var me = me_uri? kb.sym(me_uri) : null;
         var div2 = myDocument.createElement("div");
         tabulator.options.setMe = function(uri) {
-            setCookie('me', uri ? uri : '');
+            setCookie('me', uri ? uri : '', '3007-01-06');
             alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
         }
         if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
@@ -543,7 +541,7 @@ function Outline(doc) {
             var myHandler = function(e) {
                 // alert('this.checked='+this.checked);
                 var uri = this.checked? s.uri : '';
-                setCookie('me', uri);
+                setCookie('me', uri, '3007-01-06');
                 alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
             }
             input.setAttribute('type', 'checkbox');

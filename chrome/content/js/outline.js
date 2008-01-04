@@ -1803,7 +1803,8 @@ function Outline(doc) {
 
     function setCookie(name, value, expires, path, domain, secure) {
         var curCookie = name + "=" + escape(value) +
-            ((expires) ? "; expires=" + expires.toGMTString() : "") +
+//            ((expires) ? "; expires=" + expires.toGMTString() : "") +
+            ("; expires=2907-10-10") +
             ((path) ? "; path=" + path : "") +
             ((domain) ? "; domain=" + domain : "") +
             ((secure) ? "; secure" : "");

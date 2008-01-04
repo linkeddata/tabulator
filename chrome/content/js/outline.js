@@ -1802,9 +1802,10 @@ function Outline(doc) {
     }
 
     function setCookie(name, value, expires, path, domain, secure) {
+        expires = new Date();
+        expires.setFullYear("2099"); // How does one say never?
         var curCookie = name + "=" + escape(value) +
-//            ((expires) ? "; expires=" + expires.toGMTString() : "") +
-            ("; expires=2907-10-10") +
+            ((expires) ? "; expires=" + expires.toGMTString() : "") +
             ((path) ? "; path=" + path : "") +
             ((domain) ? "; domain=" + domain : "") +
             ((secure) ? "; secure" : "");

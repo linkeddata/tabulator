@@ -10,6 +10,7 @@
 // Missing: Equating predicates will not propagate these actions if there are >1
 //
 //  2005-10 Written Tim Berners-Lee
+//  2007    Changed so as not to munge statements from documents when smushing
 //
 // 
 

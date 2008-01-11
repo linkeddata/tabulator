@@ -1,7 +1,6 @@
 function Outline(doc) {
     var myDocument=doc;
     this.document=doc;
-    //this.watch('document',function(a,b,c){alert(a+b+c);});
     var outline = this; //Kenny: do we need this?
     var thisOutline = this;
     var selection=[]
@@ -340,7 +339,7 @@ function Outline(doc) {
         }
 
         try{var DDtd = new YAHOO.util.DDExternalProxy(td);}
-        catch(e){tabulator.log.error("drag and drop not supported");}
+        catch(e){tabulator.log.error("YAHOO Drag and drop not supported:\n"+e);}
         //set DOM methods
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
@@ -593,7 +592,8 @@ function Outline(doc) {
             f.appendChild(tx);
             input.setAttribute('type', 'checkbox');
             var boxHandler = function(e) {
-                tx.className = 'question pendingedit';
+                tx.className = 'pendingedit';
+                alert('Should be greyed out')
                 if (this.checked) { // Add link
                     try {
                         thisOutline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
@@ -608,6 +608,7 @@ function Outline(doc) {
                     }catch(e){
                         alert("Data write fails:" + e);
                         input.checked = false; //rollback UI
+                        tx.className = 'question';
                     }
                 } else { // Remove link
                     try {
@@ -882,6 +883,8 @@ function Outline(doc) {
 //        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
+        if (subject.uri) plist.push(new RDFStatement(subject,
+                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri));
         appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, filter)    
@@ -1810,7 +1813,7 @@ function Outline(doc) {
             ((domain) ? "; domain=" + domain : "") +
             ((secure) ? "; secure" : "");
         myDocument.cookie = curCookie;
-        alert('Cookie:' + curCookie);
+//        alert('Cookie:' + curCookie);
     }
     
     /*  getCookie

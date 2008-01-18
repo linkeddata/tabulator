@@ -1974,13 +1974,15 @@ function Outline(doc) {
                         //alert(newTr.firstChild.firstChild.childNodes[1].lastChild);
                         return;
                     }
+                    /*
                     //<Feature about="enterToExpand"> 
-                        var target=selectedTd;
-                        var object=getAbout(kb,target);
-                        if (object){
-                            outline.GotoSubject(object,true);
-                        //return false;
-                        }
+                    var target=selectedTd;
+                    var object=getAbout(kb,target);
+                    if (object){
+                        outline.GotoSubject(object,true);
+                    //return false;
+                    }
+                    */
                     //</Feature>                 
                 }else{
                 //var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;

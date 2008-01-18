@@ -1717,9 +1717,11 @@ function Outline(doc) {
     }
 
     function setSelected(node, newValue) {
-        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));    
+        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));
+        tabulator.log.debug("@outline setSelected, intended to "+(newValue?"select ":"deselect ")+node+node.textContent);   
         //if (newValue == selected(node)) return; //we might not need this anymore...
-        if (node.nodeName != 'TD') throw 'Expected TD in setSelected: '+node.nodeName+node.textContent;
+        if (node.nodeName != 'TD') {tabulator.log.debug('down'+node.nodeName);throw 'Expected TD in setSelected: '+node.nodeName+node.textContent;}
+        tabulator.log.debug('pass');
         var cla = node.getAttribute('class')
         if (!cla) cla = ""
         if (newValue) {
@@ -1727,10 +1729,24 @@ function Outline(doc) {
             if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,1)
             selection.push(node)
             //tabulator.log.info("Selecting "+node.textContent)
-            
+
+            var about=getTerm(node); //show uri for a newly selectedTd
+            if(about && myDocument.getElementById('UserURI')) { 
+                myDocument.getElementById('UserURI').value = 
+                     (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+            } else if(about && isExtension) {
+                var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
+                tabStatusBar.setAttribute('style','display:block');
+                tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+                if(tabStatusBar.label=="") {
+                    tabStatusBar.setAttribute('style','display:none');
+                }
+            }
+                         
             var st = node.AJAR_statement;
             if (typeof st == 'undefined') st = node.parentNode.AJAR_statement;
-            if (typeof st == 'undefined') return; // @@ Kludge?  Click in the middle of nowhere
+            //if (typeof st == 'undefined') return; // @@ Kludge?  Click in the middle of nowhere
+            if (st) { //don't do these for headers or base nodes
             var source = st.why;
             var target = st.why;
             var editable = outline.sparql.prototype.editable(target.uri, kb);
@@ -1740,6 +1756,7 @@ function Outline(doc) {
             // alert('Target='+target+', editable='+editable+'\nselected statement:' + st)
             if (editable && (cla.indexOf('pred') >= 0))
                 termWidget.addIcon(node,Icon.termWidgets.addTri); // Add blue plus
+            }
             
 /*       was:     var source;
             try{node.parentNode.AJAR_statement}catch(e){alert('setSelected: '+node.textContent)}
@@ -2097,6 +2114,7 @@ function Outline(doc) {
         if (thisOutline.UserInput.lastModified&&
             thisOutline.UserInput.lastModified.parentNode.nextSibling) thisOutline.UserInput.backOut();
         if (tname != "IMG") {
+            /*
             if(about && myDocument.getElementById('UserURI')) { 
                 myDocument.getElementById('UserURI').value = 
                      (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
@@ -2108,6 +2126,7 @@ function Outline(doc) {
                     tabStatusBar.setAttribute('style','display:none');
                 }
             }
+            */
             var node;
             for (node = ancestor(target, 'TD');
                  node && node.getAttribute('notSelectable');

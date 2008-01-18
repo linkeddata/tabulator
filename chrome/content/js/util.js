@@ -388,20 +388,24 @@ function getAbout(kb, target) {
         return undefined
 }
 
-function getTerm(target){ //works only for selected <TD>
+function getTerm(target){
     var statementTr=target.parentNode;
     var st=statementTr.AJAR_statement;
-    
-    switch (target.className){
+
+    var className=st?target.className:'';//if no st then it's necessary to use getAbout    
+    switch (className){
+        case 'pred':
         case 'pred selected':
             return st.predicate;
             break;
+        case 'obj':
         case 'obj selected':
             if (!statementTr.AJAR_inverse)
                 return st.object;
             else
                 return st.subject;
             break;
+        case '':    
         case 'selected': //header TD
             return getAbout(kb,target); //kb to be changed
         case 'undetermined selected':

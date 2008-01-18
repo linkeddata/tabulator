@@ -1743,7 +1743,7 @@ function Outline(doc) {
                 }
             }
                          
-            var st = node.AJAR_statement;
+            var st = node.AJAR_statement; //show blue cross when the why of that triple is editable
             if (typeof st == 'undefined') st = node.parentNode.AJAR_statement;
             //if (typeof st == 'undefined') return; // @@ Kludge?  Click in the middle of nowhere
             if (st) { //don't do these for headers or base nodes
@@ -1957,21 +1957,31 @@ function Outline(doc) {
         switch (e.keyCode){
             case 13://enter
                 if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
-                    if (!thisOutline.UserInput.Click(e,selectedTd,true)){//meaning this is an expandable node
+                    var target = selectedTd.parentNode.AJAR_statement.why;
+                    var editable = outline.sparql.prototype.editable(target.uri, kb);
+                    if (editable && !thisOutline.UserInput.Click(e,selectedTd,true)){//meaning this is an expandable node
                         deselectAll();
                         var newTr=myDocument.getElementById('outline').lastChild;                
-                    setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
-                    function setSelectedAfterward(uri){
-                        deselectAll();
                         setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
-                        showURI(getAbout(kb,selection[0]));
-                        return true;                        
+                        function setSelectedAfterward(uri){
+                            deselectAll();
+                            setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
+                            showURI(getAbout(kb,selection[0]));
+                            return true;                        
+                        }
+                        sf.insertCallback('done',setSelectedAfterward);
+                        sf.insertCallback('fail',setSelectedAfterward);                        
+                        //alert(newTr.firstChild.firstChild.childNodes[1].lastChild);
+                        return;
                     }
-                    sf.insertCallback('done',setSelectedAfterward);
-                    sf.insertCallback('fail',setSelectedAfterward);                        
-                    //alert(newTr.firstChild.firstChild.childNodes[1].lastChild);
-                    return;
-                    }
+                    //<Feature about="enterToExpand"> 
+                        var target=selectedTd;
+                        var object=getAbout(kb,target);
+                        if (object){
+                            outline.GotoSubject(object,true);
+                        //return false;
+                        }
+                    //</Feature>                 
                 }else{
                 //var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
                 this.UserInput.Keypress(e);
@@ -2149,9 +2159,12 @@ function Outline(doc) {
                     e.stopPropagation();
                     return;
                 }
-                //if (sel) UserInput.Click(e); = the following
+                //if the node is already selected and the correspoding statement is editable,
+                //go to UserInput
+                var target = node.parentNode.AJAR_statement.why;
+                var editable = outline.sparql.prototype.editable(target.uri, kb);
                 var text="TabulatorMouseDown@Outline()";
-                if (sel) thisOutline.UserInput.Click(e, selection[0]); // was next line
+                if (sel&editable) thisOutline.UserInput.Click(e, selection[0]); // was next line
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
             }
             tabulator.log.debug("Was node selected after: "+selected(node)

@@ -12,7 +12,7 @@ function UserInput(outline){
 
     var myDocument=outline.document; //is this ok?
     this.menuId='predicateMenu1';
-    this.namespaces={};//I hope we can integrate all the namespaces used in Tabulator
+    this.namespaces={};
     for (var name in tabulator.ns) {
         this.namespaces[name] = tabulator.ns[name]();
     }
@@ -489,7 +489,7 @@ function UserInput(outline){
         this.statIsInverse = predicateTd.parentNode.AJAR_inverse;
 
         var insertTr=this.appendToPredicate(predicateTd);
-        var reqTerm=this.generateRequest(" ",insertTr,false);
+        var reqTerm = this.generateRequest(" ",insertTr,false);
         var preStat=insertTr.previousSibling.AJAR_statement;
         
         if (!isInverse) // Kenny's
@@ -669,7 +669,7 @@ function UserInput(outline){
     },
 
     startFillInText: function startFillInText(selectedTd){
-        alert("being called");
+        alert("startFillInText called");
         switch (this.inputInformationAbout(selectedTd)){
             case 'DatatypeProperty-like':
                 this.clearMenu();
@@ -690,11 +690,17 @@ function UserInput(outline){
     },
 
     Refill: function Refill(e,selectedTd){
+        alert('Refill called');
         tabulator.log.info("Refill"+selectedTd.textContent);
-        var isPredicate=selectedTd.nextSibling;    
+        var isPredicate = selectedTd.nextSibling;    
         if (isPredicate){ //predicateTd
             if (selectedTd.nextSibling.className=='undetermined') {
-            /* SELECT ?pred
+            /* Make set of proprties to propose for a predicate.
+            The  naive approach is to take those which have a class
+            of the subject as their domain.  But in fact we must offer anything which
+            is not explicitly excluded, by having a domain disjointWith a
+            class of the subject.
+            SELECT ?pred
                WHERE{
                    ?pred a rdf:Property.
                    ?pred rdfs:domain subjectClass.
@@ -713,51 +719,53 @@ function UserInput(outline){
                    ?pred rdfs:domain ?subjectClass.
                 }
             */
-            var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
-            var subjectClass=kb.any(subject,rdf('type'));
-            var sparqlText=[];
-            var endl='.\n';
-            sparqlText[0]="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
-                          "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
-            sparqlText[1]="SELECT ?pred ?class\nWHERE{\n"+
-                          "?pred "+rdf('type')+rdf('Property')+".\n"+
-                          subjectClass+tabulator.ns.rdfs('subClassOf')+" ?class.\n"+
-                          "?pred "+tabulator.ns.rdfs('domain')+" ?class.\n}";
-            sparqlText[2]="SELECT ?pred WHERE{\n"+
-                              subject+rdf('type')+kb.variable("subjectClass")+endl+
-                              kb.variable("pred")+tabulator.ns.rdfs('domain')+kb.variable("subjectClass")+endl+
-                          "}";              
-            var predicateQuery=sparqlText.map(SPARQLToQuery);  
-                                      
+                var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
+                if (0) {
+                    var subjectClass=kb.any(subject,rdf('type'));
+                    var sparqlText=[];
+                    var endl='.\n';
+                    sparqlText[0]="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+                                  "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
+                    sparqlText[1]="SELECT ?pred ?class\nWHERE{\n"+
+                                  "?pred "+rdf('type')+rdf('Property')+".\n"+
+                                  subjectClass+tabulator.ns.rdfs('subClassOf')+" ?class.\n"+
+                                  "?pred "+tabulator.ns.rdfs('domain')+" ?class.\n}";
+                    sparqlText[2]="SELECT ?pred WHERE{\n"+
+                                      subject+rdf('type')+kb.variable("subjectClass")+endl+
+                                      kb.variable("pred")+tabulator.ns.rdfs('domain')+kb.variable("subjectClass")+endl+
+                                  "}";              
+                    var predicateQuery=sparqlText.map(SPARQLToQuery);  
+                } else {
+                    var badClasses = kb.notType(subject); // what can't it be?
+                }
             }else{
-            //------selector
-            /* SELECT ?pred
-               WHERE{
-                   ?pred a rdf:Property.
-                   ?pred rdfs:domain subjectClass.
-                   ?pred rdfs:range objectClass.
-               }
-            */
-            //Candidate
-            /* SELECT ?pred
-               WHERE{
-                   subject a ?subjectClass.
-                   object a ?objectClass.
-                   ?pred rdfs:domain ?subjectClass.
-                   ?pred rdfs:range ?objectClass.
-            */            
-            var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
-            var subjectClass=kb.any(subject,rdf('type'));
-            var object=selectedTd.parentNode.AJAR_statement.object;
-            var objectClass=(object.termType=='literal')?tabulator.ns.rdfs('Literal'):kb.any(object,rdf('type'));
-            //var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
-            //               "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".\n"+
-            //               "?pred "+tabulator.ns.rdfs('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
-            var sparqlText="SELECT ?pred WHERE{"+subject+rdf('type')+"?subjectClass"+".\n"+
-                           object +rdf('type')+"?objectClass"+".\n"+
-                           "?pred "+tabulator.ns.rdfs('domain')+"?subjectClass"+".\n"+
-                           "?pred "+tabulator.ns.rdfs('range')+"?objectClass"+".\n}"; // \n is required? SPARQL parser bug?
-            var predicateQuery=SPARQLToQuery(sparqlText);
+                //------selector
+                /* SELECT ?pred
+                   WHERE{
+                       ?pred a rdf:Property.
+                       ?pred rdfs:domain subjectClass.
+                       ?pred rdfs:range objectClass.
+                   }
+                */
+                //Candidate
+                /* SELECT ?pred
+                   WHERE{
+                       subject a ?subjectClass.
+                       object a ?objectClass.
+                       ?pred rdfs:domain ?subjectClass.
+                       ?pred rdfs:range ?objectClass.
+                */            
+                var subjectClass=kb.any(subject,rdf('type'));
+                var object=selectedTd.parentNode.AJAR_statement.object;
+                var objectClass=(object.termType=='literal')?tabulator.ns.rdfs('Literal'):kb.any(object,rdf('type'));
+                //var sparqlText="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
+                //               "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".\n"+
+                //               "?pred "+tabulator.ns.rdfs('range')+objectClass+".\n}"; // \n is required? SPARQL parser bug?
+                var sparqlText="SELECT ?pred WHERE{"+subject+rdf('type')+"?subjectClass"+".\n"+
+                               object +rdf('type')+"?objectClass"+".\n"+
+                               "?pred "+tabulator.ns.rdfs('domain')+"?subjectClass"+".\n"+
+                               "?pred "+tabulator.ns.rdfs('range')+"?objectClass"+".\n}"; // \n is required? SPARQL parser bug?
+                var predicateQuery = SPARQLToQuery(sparqlText);
             }
             
 
@@ -789,8 +797,9 @@ function UserInput(outline){
             
             }
     },
-
+/*
     AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
+        alert('AutoComplete called');
         //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
         //                                           but not [wrapped ...]
         //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
@@ -829,9 +838,9 @@ function UserInput(outline){
                         menu.lastHighlight.className='activeItem';
                         return;
                     case 8://backspace
-                        /*if(inputNode.value.length!=0) {
-                            newText=newText.slice(0,-1);
-                            inputNode.value=inputNode.value*/
+                        // if(inputNode.value.length!=0) {
+                         //   newText=newText.slice(0,-1);
+                         //   inputNode.value=inputNode.value
                         break;
                     case 27://esc to enter literal
                         if (!menu){
@@ -853,13 +862,13 @@ function UserInput(outline){
                 outline.UserInput.clearMenu();
                 //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
                 outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
-                /*if (typeof enterEvent=='number'){
+                if (typeof enterEvent=='number'){
                     var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
                     var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
                     var h1th=h1.appendChild(myDocument.createElement('th'));
-                    h1th.appendChild(myDocument.createTextNode("Create new object..."));
+                    h1th.appendChild(myDocument.createTextNode("New..."));
                     h1.setAttribute('about',tabulator.ns.tabont('createNew'));
-                }*/                 
+                }                 
             }else if(mode=='predicate'){
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
@@ -874,6 +883,7 @@ function UserInput(outline){
             return;
         }//end of autoScroll, start of menu generation
     },
+    */
     //ToDo: shrink rows when \n+backspace
     Keypress: function(e){
         if(e.keyCode==13){
@@ -901,14 +911,28 @@ function UserInput(outline){
         }
         */
     },
+    
+    //  Add a new row to a property list ( P and O)
+    //  Called when the blue cross under the whole pane is clicked.
+    //
     borderClick: function borderClick(e){
         if (getTarget(e).className != 'bottom-border-active') return;
         var This=outline.UserInput;
         var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
         
-        //Take the why of the last TR and write to it. There should be a better way    
-        var preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
-        var isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+        //Take the why of the last TR and write to it.
+        if (ancestor(target,'TR').previousSibling &&  // there is a previous predicate/object line
+                ancestor(target,'TR').previousSibling.AJAR_statement) {
+            preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+            isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+        } else { // no previous row: write to the document defining the subject
+            var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
+            var doc=kb.sym(Util.uri.docpart(subject.uri));
+            preStat = new RDFStatement(subject,tabulator.ns.rdf('type'),
+                            tabulator.ns.rdf('type'),doc);
+            isInverse = false;
+        }
+
 
         if (!preStat){
             var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
@@ -939,18 +963,6 @@ function UserInput(outline){
             This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
         else
             This.formUndetStat(insertTr,preStat.object,reqTerm1,reqTerm2,preStat.why,false);
-        /*if (HCIoptions["bottom insert highlights"].enabled){
-                    var holdingTr=myDocument.createElement('tr');
-                    var holdingTd=myDocument.createElement('td');
-                    holdingTd.setAttribute('colspan','2');
-                var bottomDiv=myDocument.createElement('div');
-                bottomDiv.className='bottom-border';
-                holdingTd.setAttribute('notSelectable','true');
-                bottomDiv.addEventListener('mouseover',This.Mouseover,false);
-                bottomDiv.addEventListener('mouseout',This.Mouseout,false);
-                bottomDiv.addEventListener('click',This.borderClick,false);
-                insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
-            }*/
             This.deselectAll();
       This.setSelected(insertTr.firstChild,true);
             var e2={type:'keypress'};
@@ -1083,7 +1095,8 @@ function UserInput(outline){
            }
         */ //this is ideal...but
 
-        var labelChoices=kb.collection();
+        // This is commented out in Kenny's - the old turnk.. is it needed/ what does it do?
+        var labelChoices=kb.collection();  
         var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
         for (var i=0;i<labelProperties.length;i++) {
             labelChoices.append(labelProperties[i]);
@@ -1092,6 +1105,7 @@ function UserInput(outline){
         labelChoices.append(tabulator.ns.rdfs('label'));
         kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
         kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
+        // up to here 
 
         //insertTr.appendChild(outline.outline_objectTD(tempTerm));
         outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);              
@@ -1176,6 +1190,7 @@ function UserInput(outline){
 
     showMenu: function showMenu(e,menuType,inputQuery,extraInformation,order,inputNode){
        //ToDo:order, make a class?
+        alert('showMenu called');
         var This=this;
         var menu=myDocument.createElement('div');
         menu.id=this.menuID;
@@ -1184,7 +1199,7 @@ function UserInput(outline){
         menu.style.top=e.pageY+"px";
         menu.style.left=e.pageX+"px";
         myDocument.body.appendChild(menu);
-        var table=menu.appendChild();
+        var table=menu.appendChild();  /// @@ eh? needs a param -timbl
            
         menu.lastHighlight=null;;
         function highlightTr(e){
@@ -1195,7 +1210,7 @@ function UserInput(outline){
         }
 
         table.addEventListener('mouseover',highlightTr,false);
-              var selectItem
+        var selectItem
         //setting for action after selecting item
         switch (menuType){
             case 'PredicateAutoComplete':
@@ -1204,7 +1219,7 @@ function UserInput(outline){
             case 'TypeChoice':
                 var isPredicate=extraInformation.isPredicate;
                 var selectedTd=extraInformation.selectedTd;
-                selectItem=function (e){
+                selectItem=function (e) {
                     var inputTerm=getAbout(kb,getTarget(e))
                     if (/*isPredicate*/true){
                         //if (outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm))
@@ -1218,32 +1233,33 @@ function UserInput(outline){
                             outline.UserInput.clearMenu();
                     }
                 }
-        }       
+        } // switch menuType
+               
         table.addEventListener('mouseup',selectItem,true);
         
         //Add Items to the list
         function addMenuItem(predicate){
             if (table.firstChild && table.firstChild.className=='no-suggest') table.removeChild(table.firstChild);
-                var Label = predicateLabelForXML(predicate, false);
-                    //Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
+            var Label = predicateLabelForXML(predicate, false);
+            //Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
 
-            var theNamespace="";	    
-                for (var name in NameSpaces){
-                    if (!predicate.uri) break;//bnode
+            var theNamespace="?";   
+            for (var name in NameSpaces){
+                if (!predicate.uri) break;//bnode
                 if (string_startswith(predicate.uri,NameSpaces[name])){
-                        theNamespace=name;
-                        break;
-                    }
+                    theNamespace=name;
+                    break;
                 }
+            }
 
             var tr=table.appendChild(myDocument.createElement('tr'));
             tr.setAttribute('about',predicate);
             var th=tr.appendChild(myDocument.createElement('th'))
             th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
             tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
-        }    
-            function addPredicateChoice(selectedQuery){
-                return function (bindings){
+        }
+        function addPredicateChoice(selectedQuery){
+            return function (bindings){
                 var predicate=bindings[selectedQuery.vars[0]]
                 addMenuItem(predicate);
             }
@@ -1362,6 +1378,9 @@ function UserInput(outline){
                 var newTerm=this.createNew(selectedTd);
                 var newSelected=outline.selection[0];
                 outline.outline_expand(newSelected,newTerm);
+                
+                
+                /*   Supressed:  Offer a set of label attributes to allow the user to name the new thing
                 var trIterator;
                 for (trIterator=newSelected.firstChild.childNodes[1].firstChild;
                          trIterator; trIterator=trIterator.nextSibling) {
@@ -1372,6 +1391,7 @@ function UserInput(outline){
                 var e={type:'click'};
                 this.Click(e,trIterator.lastChild);
                 outline.walk('moveTo',trIterator.lastChild);
+                */
                 return true;
             }        
             var newTd=outline.outline_objectTD(inputTerm);
@@ -1414,37 +1434,7 @@ function UserInput(outline){
         trNode.AJAR_inverse=inverse;
         return trNode.AJAR_statement=new RDFStatement(subject,predicate,object,why);
     },
-    /** ABANDONED APPROACH
-    //determine whether the event happens at around the bottom border of the element
-    aroundBorderBottom: function(event,element){
-        //alert(event.pageY);
-        //alert(findPos(element)[1]);
-        var elementPageY=findPos(element)[1]+38; //I'll figure out what this 38 is...
-        
-        function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
-            var curleft = curtop = 0;
-            if (obj.offsetParent) {
-                    curleft = obj.offsetLeft
-                    curtop = obj.offsetTop
-                    while (obj = obj.offsetParent) {
-                            curleft += obj.offsetLeft
-                            curtop += obj.offsetTop
-                    }
-            }
-            return [curleft,curtop];
-        }
-        
-        //alert(elementPageY+element.offsetHeight-event.pageY);
-        //I'm totally confused by these numbers...
-        if(event.pageY-4==elementPageY+element.offsetHeight||event.pageY-5==elementPageY+element.offsetHeight) 
-            return true;
-        else
-            return false;
-    },
-    **/
-    //#include emptyNode(Node) from util.js
-    //#include getTerm(node) from util.js
-
+ 
     //Not so important (will become obsolete?)
     switchModeByRadio: function(){
         var radio=myDocument.getElementsByName('mode');
@@ -1454,6 +1444,7 @@ function UserInput(outline){
     _tabulatorMode: 0,
     //Default mode: Discovery
 
+    // Jim:
     //====================================================
     //functions that have been defined by jambo are below.
     //====================================================
@@ -1673,7 +1664,7 @@ function UserInput(outline){
                             cb(true);
                         } else {
                             alert("Failed to insert new statement: "+newStatement
-                                  +"\nThe server at "+uri+" sent an error.\n");
+                                  +"\ninto document <"+uri+">:\n\t"+ error_body);
                             cb(false);
                         }
                     });
@@ -1710,7 +1701,8 @@ function UserInput(outline){
         return inputNode;
     },
 
-    newShowMenu: function (e,menuType,extraInformation,inputNode,listener){
+    // Make pop-up menu for autocomplete input
+    newShowMenu: function (e,menuType,extraInformation,inputNode,listener) {
         var This=this;
         var menu=myDocument.createElement('div');
         menu.id=this.menuID;
@@ -1721,6 +1713,7 @@ function UserInput(outline){
         var table=menu.appendChild(myDocument.createElement('table'));
         var selectedTd=extraInformation.selectedTd;
         menu.lastHighlight=null;;
+
         function highlightTr(e){
             if(getTarget(e).nodeName=="TABLE") {
                 return;
@@ -1743,15 +1736,16 @@ function UserInput(outline){
         menu.highlightTr=highlightTr;
 
         table.addEventListener('mouseover',highlightTr,false);
-              var selectItem;
+        
+        var selectItem;
         //setting for action after selecting item
         switch (menuType){
             case 'PredicateAutoComplete':
             case 'GeneralAutoComplete':
             case 'GeneralPredicateChoice':
             case 'TypeChoice':
-                var isPredicate=extraInformation.isPredicate;
-                selectItem=function (e){
+                var isPredicate = extraInformation.isPredicate;
+                selectItem = function (e){
                     if(!e.target || getTarget(e).nodeName=="TABLE") {
                         e.stopPropagation();
                         e.preventDefault();
@@ -1769,9 +1763,9 @@ function UserInput(outline){
                 var Label = predicateLabelForXML(predicate, false);
                     //Label = Label.slice(0,1).toUpperCase() + Label.slice(1);
 
-            var theNamespace="";	    
-                for (var name in NameSpaces){
-                    if (!predicate.uri) break;//bnode
+            var theNamespace = "??";    
+                for (var name in NameSpaces) {
+                    if (!predicate.uri) break; //bnode
                 if (string_startswith(predicate.uri,NameSpaces[name])){
                         theNamespace=name;
                         break;
@@ -1783,17 +1777,29 @@ function UserInput(outline){
             var th=tr.appendChild(myDocument.createElement('th'))
             th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
             tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
-        }    
-            function addPredicateChoice(selectedQuery){
-                return function (bindings){
+        } 
+        function addPredicateChoice(selectedQuery){
+            return function (bindings){
                 var predicate=bindings[selectedQuery.vars[0]]
                 addMenuItem(predicate);
             }
         }
+        function newObjectMenuLine() {
+            var tr=table.appendChild(myDocument.createElement('tr'));
+            tr.setAttribute('about', '*createNew'); // magic flag
+            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode("New..."));                
+            return tr;
+        }
+        function objectByURIMenuLine() {
+            var tr=table.appendChild(myDocument.createElement('tr'));
+            tr.setAttribute('about', '*byURI'); // magic flag
+            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createElement("input"));                
+            return tr;
+        }
         switch (menuType){
             case 'PredicateAutoComplete':
                 var inputText=extraInformation.inputText;
-                var results=lb.searchAdv(inputText,undefined,'predicate');
+                var results=lb.searchAdv(inputText, undefined, 'predicate');
                 var entries=results[0];
                 if (entries.length==0){
                     this.clearMenu();
@@ -1805,12 +1811,15 @@ function UserInput(outline){
             case 'GeneralAutoComplete':
                 var inputText=extraInformation.inputText;
                 var results=lb.search(inputText);
-                var entries=results[0]; //[label, subject,priority]
+                var entries=results[0]; //[label, subject, priority]
                 var types=results[1];
                 if (entries.length==0){
                     this.clearMenu();
                     return;
                 }
+                
+                table.appendChild(newObjectMenuLine()); //timbl
+
                 for (var i=0;i<entries.length && i<10;i++){ //do not show more than 10 items
                     var thisNT=entries[i][1].toNT();
                     var tr=table.appendChild(myDocument.createElement('tr'));
@@ -1820,7 +1829,7 @@ function UserInput(outline){
                     var theTerm=entries[i][1];
                     //var type=theTerm?kb.any(kb.fromNT(thisNT),rdf('type')):undefined;
                     var type=types[i];
-                    var typeLabel=type?label(type):"";
+                    var typeLabel=type?label(type):"-";
                     tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
                 }
                 break;

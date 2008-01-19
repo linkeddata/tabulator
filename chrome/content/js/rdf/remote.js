@@ -1,33 +1,4 @@
 
-/*function RDFRemoteFormula(url) {
-    this.statements = [];    // As in RDFFormula
-    this.propertyAction = []; // What to do when getting statement with {s X o}
-    //maps <uri> to f(F,s,p,o)
-    this.classAction = [];   // What to do when adding { s type X }
-    this.redirection = [];   // redirect to lexically smaller equivalent symbol
-    this.subjectIndex = [];  // Array of statements with this X as subject
-    this.predicateIndex = [];  // Array of statements with this X as subject
-    this.objectIndex = [];  // Array of statements with this X as object
-    
-    this.remote=url;
-    
-	
-	return this;
-} /* end RDFRemoteFormula */
-
-//RDFRemoteFormula.prototype = new RDFIndexedFormula();
-//RDFRemoteFormula.prototype.constructor = RDFIndexedFormula;
-
-   /*for (x in RDFIndexedFormula)
-	{
-		RDFRemoteFormula[x] = RDFIndexedFormula[x];
-	}*/
-	
-//RDFRemoteFormula.prototype = RDFIndexedFormula.prototype;	
-/* @query: a query object
- * @onreadystatechange: a function that takes xhr and returns a new callback function
-*/
-
 
 function onreadystateloaded (subject,callback) {
 	return function (xhr, uri) {

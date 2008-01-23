@@ -285,7 +285,7 @@ function RDFMakeTerm(formula,val, canonicalize) {
 // add a triple to the store
 RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
-    if (why == undefined) why = kb.sym('chrome:thisSession');
+    if (why == undefined) why = this.sym('chrome:thisSession'); //I wonder this URI is a nice one...
     subj = RDFMakeTerm(this, subj);
     pred = RDFMakeTerm(this, pred);
     obj = RDFMakeTerm(this, obj);
@@ -424,8 +424,9 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
 
 /** remove a particular statement from the bank **/
 RDFIndexedFormula.prototype.remove = function (st) {
-    tabulator.log.debug("entering remove w/ st=" + st);
-    var term = [ st.subj, st.pred, st.obj, st.why];
+    tabulator.log.debug("REMOVING    {"+st.subject+" "+st.predicate+" "+st.object+"} "+st.why+
+    				    " caller was "+this.remove.caller.name);
+    var term = [ st.subject, st.predicate, st.object, st.why];
     for (var p=0; p<4; p++) {
         var c = this.canon(term[p]);
         var h = c.hashString();

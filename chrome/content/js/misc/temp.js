@@ -187,4 +187,66 @@
         //I guess it's not making sense...createInputBox and then remove it..
         this.formUndetStat(insertTr,reqTerm,predicateTerm,preStat.subject,preStat.why,true);
         this.lastModified = null;
-    }          
+    }
+    
+//Fragments: related to modes
+    switchMode: function(){ //should be part of global UI
+        switch (this._tabulatorMode){
+            case 0://discovery -> edit
+                this._tabulatorMode=1;
+                    var outliner=document.getElementById('browser');
+                    //outliner.style.cursor="url('icons/pencil_small.png')"; //not working as of now
+                    document.getElementsByName('mode')[1].checked=true;
+                    break;
+                case 1://edit -> discovery
+                    this._tabulatorMode=0;
+                    this.clearInputAndSave();
+                document.getElementsByName('mode')[0].checked=true;
+                break;
+            default:
+                throw "userinput.js: Unknown mode: " + this._tabulatorMode;
+        }
+    },
+
+//Fragments: related to "bottom insert highlights"
+//@ border click
+        if (HCIoptions["bottom insert highlights"].enabled){
+            var holdingTr=myDocument.createElement('tr');
+            var holdingTd=myDocument.createElement('td');
+            holdingTd.setAttribute('colspan','2');
+            var bottomDiv=myDocument.createElement('div');
+            bottomDiv.className='bottom-border';
+            holdingTd.setAttribute('notSelectable','true');
+            bottomDiv.addEventListener('mouseover',This.Mouseover,false);
+            bottomDiv.addEventListener('mouseout',This.Mouseout,false);
+            bottomDiv.addEventListener('click',This.borderClick,false);
+            insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
+        }
+//Fragment: Click@userinput.js
+else if (selectedTd.className=='undetermined selected'){
+            emptyNode(selectedTd);
+            this.lastModified=this.createInputBoxIn(selectedTd,"");
+            this.lastModified.select();
+            this.lastModified.addEventListener('keypress',this.AutoComplete,false);
+        }else if (obj.termType== 'symbol'){
+            /*
+            emptyNode(tdNode);
+            tdNode.appendChild(myDocument.createTextNode("<"));
+            var inputBox=myDocument.createElement('input');
+            inputBox.setAttribute('value',obj.uri);
+            inputBox.setAttribute('class','textinput');
+            inputBox.setAttribute('size',obj.uri.length.toString());
+            tdNode.appendChild(inputBox);
+            tdNode.appendChild(myDocument.createTextNode(">"));
+            
+            inputBox.select();
+            this.lastModified = inputBox;
+            //Kenny: What if the user just want to edit the title?
+            */
+        }
+        /*
+        if (e.type=='keypress'&&selectedTd.className=='undetermined selected') {
+            var completeType=(selectedTd.nextSibling)?'predicate':'all';
+            this.AutoComplete(undefined,selectedTd,completeType);
+        }
+        */              

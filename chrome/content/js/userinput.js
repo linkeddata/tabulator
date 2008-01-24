@@ -39,26 +39,166 @@ function UserInput(outline){
     lastModifiedStat: null, //the last statement being modified
     statIsInverse: false, //whether the statement is an inverse
 
-    switchMode: function(){ //should be part of global UI
-        switch (this._tabulatorMode){
-            case 0://discovery -> edit
-                this._tabulatorMode=1;
-                    var outliner=document.getElementById('browser');
-                    //outliner.style.cursor="url('icons/pencil_small.png')"; //not working as of now
-                    document.getElementsByName('mode')[1].checked=true;
-                    break;
-                case 1://edit -> discovery
-                    this._tabulatorMode=0;
-                    this.clearInputAndSave();
-                document.getElementsByName('mode')[0].checked=true;
-                break;
-            default:
-                throw "userinput.js: Unknown mode: " + this._tabulatorMode;
+/**
+ *  Triggering Events: event entry points, should be called only from outline.js but not anywhere else
+ *                     in userinput.js, should be as short as possible, function names to be discussed
+ */
+ 
+    //  Called when the blue cross under the default pane is clicked.
+    //  Add a new row to a property list ( P and O)    
+    borderClick: function borderClick(e){
+        if (getTarget(e).className != 'bottom-border-active') return;
+        var This=outline.UserInput;
+        var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
+            
+        //alert(ancestor(target,'TABLE').textContent);    
+        var insertTr=myDocument.createElement('tr');
+        ancestor(target,'DIV').insertBefore(insertTr,ancestor(target,'TR'));
+        var tempTr=myDocument.createElement('tr');
+        var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
+        insertTr.appendChild(tempTr.firstChild);
+        var reqTerm2=This.generateRequest("(To be determined. Re-type of drag an object onto this field)",tempTr,false);
+        insertTr.appendChild(tempTr.firstChild);
+        //there should be an elegant way of doing this
+        
+        //Take the why of the last TR and write to it.
+        if (ancestor(target,'TR').previousSibling &&  // there is a previous predicate/object line
+                ancestor(target,'TR').previousSibling.AJAR_statement) {
+            preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+            //This should always(?) input a non-inverse statement
+            This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);    
+        } else { // no previous row: write to the document defining the subject
+            var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
+            var doc=kb.sym(Util.uri.docpart(subject.uri));
+            This.formUndetStat(insertTr,subject,reqTerm1,reqTerm2,doc,false);
         }
+     
+        outline.walk('moveTo',insertTr.firstChild);
+        this.startFillInText(outline.selection[0]);
+        
+    },
+    
+    //  Called when a blue cross on a predicate is clicked
+    //  tr.AJAR_inverse stores whether the clicked predicate is an inverse one
+    //  tr.AJAR_statement (an incomplete statement in TempFormula) stores the destination(why), now
+    //  determined by the preceding one (is this good?)
+    addTriple: function addTriple(e){
+        var predicateTd=getTarget(e).parentNode.parentNode;
+        var predicateTerm=getAbout(kb,predicateTd);
+        var isInverse=predicateTd.parentNode.AJAR_inverse;
+        //var titleTerm=getAbout(kb,ancestor(predicateTd.parentNode,'TD'));
+        //set pseudo lastModifiedStat here
+        this.lastModifiedStat=predicateTd.parentNode.AJAR_statement;
+    
+        var insertTr=this.appendToPredicate(predicateTd);
+        var reqTerm=this.generateRequest(" (Error) ",insertTr,false);
+        var preStat=insertTr.previousSibling.AJAR_statement;
+        if (!isInverse)
+            this.formUndetStat(insertTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
+        else
+            this.formUndetStat(insertTr,reqTerm,preStat.predicate,preStat.object,preStat.why,true);    
+    
+        outline.walk('moveTo',insertTr.lastChild);
+        this.startFillInText(insertTr.lastChild);
+        //this.statIsInverse=false;
     },
 
-    /*Entry point to ouline editing. Enter on a selected node, all blue crossed will go here.*/
-    Click: function Click(e,selectedTd,isEnter){
+    //  Called when delete is pressed
+    Delete: function Delete(selectedTd){
+        this.deleteTriple(selectedTd,false);
+    },    
+    //  Called when enter is pressed
+    Enter: function Enter(selectedTd){
+        this.literalModification(selectedTd);
+    },
+    //  Called when a selected cell is clicked again
+    Click: function Click(e){
+        var target=getTarget(e);
+        if (getTerm(target).termType != 'literal') return;
+        this.literalModification(target);
+        //this prevents the generated inputbox to be clicked again
+        e.preventDefault();
+        e.stopPropagation();
+    },
+    //  Called when paste is called (Ctrl+v)
+    pasteFromClipboard: function pasteFromClipboard(address,selectedTd){  
+        function termFrom(fromCode){
+            function theCollection(from){return kb.the(kb.sym(address),tabulator.ns.link(from));}
+            var term=theCollection(fromCode).shift();
+            if (term==null){
+                 alert("no more element in clipboard!");
+                 return;
+            }
+            switch (fromCode){
+                case 'predicates':
+                case 'objects':
+                    var allArray=theCollection('all').elements;
+                    for(var i=0;true;i++){
+                        if (term.sameTerm(allArray[i])){
+                            allArray.splice(i,1);
+                            break;
+                        }
+                    }
+                    break;
+                case 'all':
+                    var isObject=term.sameTerm(theCollection('objects').elements[0]);
+                    isObject ? theCollection('objects').shift():theCollection('predicates').shift(); //drop the corresponding term
+                    return [term,isObject];
+                    break;
+            }
+            return term;
+        }
+        var term;
+        switch (selectedTd.className){
+            case 'undetermined selected':
+                term=selectedTd.nextSibling?termFrom('predicates'):termFrom('objects');
+                if (!term) return;
+                break;
+            case 'pred selected': //paste objects into this predicate
+                term=termFrom('objects');
+                if (!term) return;            
+                break;            
+            case 'selected': //header <TD>, undetermined generated
+                var returnArray=termFrom('all');
+                if (!returnArray) return;
+                term=returnArray[0];
+                this.insertTermTo(selectedTd,term,returnArray[1]);
+                return;
+        }
+        this.insertTermTo(selectedTd,term);                        
+    },
+    
+/**
+ *  Intermediate Processing: 
+ */
+
+    // a general entry point for any event except Click&Enter(goes to literalModification)
+    // do a little inference to pick the right inputbox 
+    startFillInText: function startFillInText(selectedTd){
+        switch (this.inputInformationAbout(selectedTd)){
+            case 'DatatypeProperty-like':
+                this.clearMenu();
+                selectedTd.className='';
+                emptyNode(selectedTd);
+                this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
+                this.lastModified.isNew=false;
+                   
+                this.lastModified.select();
+                break;            
+            case 'ObjectProperty-like':
+            case 'predicate':
+            case 'no-idea':
+                emptyNode(selectedTd);
+                this.lastModified=this.createInputBoxIn(selectedTd,"");
+                this.lastModified.select();
+                this.lastModified.addEventListener('keypress',this.AutoComplete,false);            
+                //this pops up the autocomplete menu
+                this.AutoComplete(1);
+        }
+    },
+     
+    literalModification: function literalModification(selectedTd){
+        tabulator.log.debug("entering literal Modification with "+selectedTd+selectedTd.textContent);
         //var This=outline.UserInput;
         if(selectedTd.className.indexOf(" pendingedit")!=-1) {
             alert("The node you attempted to edit has a request still pending.\n"+
@@ -66,24 +206,8 @@ function UserInput(outline){
                   "before editing this node again.");
             return true;
         } 
-               
-        //<Feature about="enterToExpand"
-        if (e.type=='keypress'){ //e==undefined : Keyboard Input
-            var target=selectedTd;
-            var object=getAbout(kb,target);
-            if (object && (object.termType=='symbol' || object.termType=='bnode') && isEnter){
-                outline.GotoSubject(object,true);
-                return false;
-            }
-        }
-        //</Feature>
                     
-        else if (selectedTd) //case: add triple, auto-complete
-            var target=selectedTd;
-        else    
-            var target=getTarget(e);
-        if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
-        
+        var target=selectedTd;       
         var about = this.getStatementAbout(target); // timbl - to avoid alert from random clicks
         if (!about) return;
         try{
@@ -93,18 +217,17 @@ function UserInput(outline){
             alert('userinput.js: '+e+getAbout(kb,selectedTd));
             tabulator.log.error(target+" getStatement Error:"+e);
         }
-        
-        //var obj = getTerm(target);
-        this.clearInputAndSave();
-        
+                
         try{var tdNode=trNode.lastChild;}catch(e){tabulator.log.error(e+"@"+target);}
         //seems to be a event handling problem of firefox3
+        /*
         if (e.type!='keypress'&&(selectedTd.className=='undetermined selected'||selectedTd.className=='undetermined')){
             this.Refill(e,selectedTd);
             return;
         }
+        */
         //ignore clicking trNode.firstChild (be careful for <div> or <span>)    
-        if (e.type!='keypress'&&target!=tdNode && ancestor(target,'TD')!=tdNode) return;     
+        //if (e.type!='keypress'&&target!=tdNode && ancestor(target,'TD')!=tdNode) return;     
         
         if (obj.termType== 'literal'){
             tdNode.removeChild(tdNode.firstChild); //remove the text
@@ -132,34 +255,8 @@ function UserInput(outline){
                 //e2.initMouseEvent("click",true,true,window,0,0,0,0,0,false,false,false,false,0,null);
                 //inputBox.dispatchEvent(e2);
             //---------------------------------------------------------------------------
-        }else if (selectedTd.className=='undetermined selected'){
-            emptyNode(selectedTd);
-            this.lastModified=this.createInputBoxIn(selectedTd,"");
-            this.lastModified.select();
-            this.lastModified.addEventListener('keypress',this.AutoComplete,false);
-        }else if (obj.termType== 'symbol'){
-            /*
-            emptyNode(tdNode);
-            tdNode.appendChild(myDocument.createTextNode("<"));
-            var inputBox=myDocument.createElement('input');
-            inputBox.setAttribute('value',obj.uri);
-            inputBox.setAttribute('class','textinput');
-            inputBox.setAttribute('size',obj.uri.length.toString());
-            tdNode.appendChild(inputBox);
-            tdNode.appendChild(myDocument.createTextNode(">"));
-            
-            inputBox.select();
-            this.lastModified = inputBox;
-            //Kenny: What if the user just want to edit the title?
-            */
         }
-        /*
-        if (e.type=='keypress'&&selectedTd.className=='undetermined selected') {
-            var completeType=(selectedTd.nextSibling)?'predicate':'all';
-            this.AutoComplete(undefined,selectedTd,completeType);
-        }
-        */
-        if(e && e.stopPropagation) e.stopPropagation();
+
         return true; //this is not a valid modification
     },
 
@@ -441,27 +538,6 @@ function UserInput(outline){
         if (isBackOut) removefromview();
     },
 
-    addTriple: function addTriple(e){
-        var predicateTd=getTarget(e).parentNode.parentNode;
-        var predicateTerm=getAbout(kb,predicateTd);
-        var isInverse=predicateTd.parentNode.AJAR_inverse;
-        //var titleTerm=getAbout(kb,ancestor(predicateTd.parentNode,'TD'));
-        //set pseudo lastModifiedStat here
-        this.lastModifiedStat=predicateTd.parentNode.AJAR_statement;
-    
-        var insertTr=this.appendToPredicate(predicateTd);
-        var reqTerm=this.generateRequest(" (Error) ",insertTr,false);
-        var preStat=insertTr.previousSibling.AJAR_statement;
-        if (!isInverse)
-            this.formUndetStat(insertTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
-        else
-            this.formUndetStat(insertTr,reqTerm,preStat.predicate,preStat.object,preStat.why,true);    
-    
-        outline.walk('moveTo',insertTr.lastChild);
-        this.startFillInText(insertTr.lastChild);
-        //this.statIsInverse=false;
-    },
-
     /*clipboard principle: copy wildly, paste carefully
       ToDoS:
       1. register Subcollection?
@@ -579,73 +655,6 @@ function UserInput(outline){
                 }
                 break;
         } 
-    },
-
-    pasteFromClipboard: function pasteFromClipboard(address,selectedTd){  
-        function termFrom(fromCode){
-            function theCollection(from){return kb.the(kb.sym(address),tabulator.ns.link(from));}
-            var term=theCollection(fromCode).shift();
-            if (term==null){
-                 alert("no more element in clipboard!");
-                 return;
-            }
-            switch (fromCode){
-                case 'predicates':
-                case 'objects':
-                    var allArray=theCollection('all').elements;
-                    for(var i=0;true;i++){
-                        if (term.sameTerm(allArray[i])){
-                            allArray.splice(i,1);
-                            break;
-                        }
-                    }
-                    break;
-                case 'all':
-                    var isObject=term.sameTerm(theCollection('objects').elements[0]);
-                    isObject ? theCollection('objects').shift():theCollection('predicates').shift(); //drop the corresponding term
-                    return [term,isObject];
-                    break;
-            }
-            return term;
-        }
-        var term;
-        switch (selectedTd.className){
-            case 'undetermined selected':
-                term=selectedTd.nextSibling?termFrom('predicates'):termFrom('objects');
-                if (!term) return;
-                break;
-            case 'pred selected': //paste objects into this predicate
-                term=termFrom('objects');
-                if (!term) return;            
-                break;            
-            case 'selected': //header <TD>, undetermined generated
-                var returnArray=termFrom('all');
-                if (!returnArray) return;
-                term=returnArray[0];
-                this.insertTermTo(selectedTd,term,returnArray[1]);
-                return;
-        }
-        this.insertTermTo(selectedTd,term);                        
-    },
-
-    startFillInText: function startFillInText(selectedTd){
-        switch (this.inputInformationAbout(selectedTd)){
-            case 'DatatypeProperty-like':
-                this.clearMenu();
-                selectedTd.className='';
-                emptyNode(selectedTd);
-                this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
-                this.lastModified.isNew=false;
-                   
-                this.lastModified.select();
-                break;            
-            case 'ObjectProperty-like':
-            case 'predicate':
-            case 'no-idea':
-                var e={type:'keypress'};
-                this.Click(e,selectedTd);
-                this.AutoComplete(1);//1 does not stand for anything but [&= true]
-        }
     },
 
     Refill: function Refill(e,selectedTd){
@@ -865,64 +874,6 @@ function UserInput(outline){
         */
     },
     
-    //  Add a new row to a property list ( P and O)
-    //  Called when the blue cross under the whole pane is clicked.
-    borderClick: function borderClick(e){
-        if (getTarget(e).className != 'bottom-border-active') return;
-        var This=outline.UserInput;
-        var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
-            
-        //alert(ancestor(target,'TABLE').textContent);    
-        var insertTr=myDocument.createElement('tr');
-        ancestor(target,'DIV').insertBefore(insertTr,ancestor(target,'TR'));
-        var tempTr=myDocument.createElement('tr');
-        var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
-        insertTr.appendChild(tempTr.firstChild);
-        var reqTerm2=This.generateRequest("(To be determined. Re-type of drag an object onto this field)",tempTr,false);
-        insertTr.appendChild(tempTr.firstChild);
-        //there should be an elegant way of doing this
-        
-        //Take the why of the last TR and write to it.
-        if (ancestor(target,'TR').previousSibling &&  // there is a previous predicate/object line
-                ancestor(target,'TR').previousSibling.AJAR_statement) {
-            preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
-            //isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
-            //This should always(?) input a non-inverse statement 
-            isInverse = false;    
-        } else { // no previous row: write to the document defining the subject
-            var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
-            var doc=kb.sym(Util.uri.docpart(subject.uri));
-            preStat = new RDFStatement(subject,tabulator.ns.rdf('type'),
-                            tabulator.ns.rdf('type'),doc);
-            isInverse = false;
-        }
-    
-        if (!isInverse)
-            This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);
-        else
-            This.formUndetStat(insertTr,preStat.object,reqTerm1,reqTerm2,preStat.why,false);
-        
-        if (HCIoptions["bottom insert highlights"].enabled){
-            var holdingTr=myDocument.createElement('tr');
-            var holdingTd=myDocument.createElement('td');
-            holdingTd.setAttribute('colspan','2');
-            var bottomDiv=myDocument.createElement('div');
-            bottomDiv.className='bottom-border';
-            holdingTd.setAttribute('notSelectable','true');
-            bottomDiv.addEventListener('mouseover',This.Mouseover,false);
-            bottomDiv.addEventListener('mouseout',This.Mouseout,false);
-            bottomDiv.addEventListener('click',This.borderClick,false);
-            insertTr.parentNode.insertBefore(holdingTr,insertTr.nextSibling).appendChild(holdingTd).appendChild(bottomDiv);
-        }
-        outline.walk('moveTo',insertTr.firstChild);
-        this.startFillInText(outline.selection[0]);
-        /*
-        var e2={type:'keypress'};
-        This.Click(e2,outline.selection[0]);
-        This.AutoComplete(1);//1 does not stand for anything but [&= true]
-        */
-        
-    },
 
     Mouseover: function Mouseover(e){
         if (HCIoptions["bottom insert highlights"].enabled) if (e.layerX-findPos(this)[0]>30) return;

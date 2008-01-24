@@ -1956,10 +1956,14 @@ function Outline(doc) {
         
         switch (e.keyCode){
             case 13://enter
-                if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'
+                if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'                   
+                    var object=getAbout(kb,selectedTd);
                     var target = selectedTd.parentNode.AJAR_statement.why;
-                    var editable = outline.sparql.prototype.editable(target.uri, kb);
-                    if (editable && !thisOutline.UserInput.Click(e,selectedTd,true)){//meaning this is an expandable node
+                    var editable = outline.sparql.prototype.editable(target.uri, kb);                    
+                    if (object){
+                        //<Feature about="enterToExpand"> 
+                        outline.GotoSubject(object,true);
+                        /* //deal with this later 
                         deselectAll();
                         var newTr=myDocument.getElementById('outline').lastChild;                
                         setSelected(newTr.firstChild.firstChild.childNodes[1].lastChild,true);
@@ -1970,20 +1974,13 @@ function Outline(doc) {
                             return true;                        
                         }
                         sf.insertCallback('done',setSelectedAfterward);
-                        sf.insertCallback('fail',setSelectedAfterward);                        
-                        //alert(newTr.firstChild.firstChild.childNodes[1].lastChild);
-                        return;
+                        sf.insertCallback('fail',setSelectedAfterward);
+                        */
+                        //</Feature>                                                   
+                    } else if (editable) {//this is a text node and editable
+                        thisOutline.UserInput.Enter(selectedTd);
                     }
-                    /*
-                    //<Feature about="enterToExpand"> 
-                    var target=selectedTd;
-                    var object=getAbout(kb,target);
-                    if (object){
-                        outline.GotoSubject(object,true);
-                    //return false;
-                    }
-                    */
-                    //</Feature>                 
+                
                 }else{
                 //var newSelTd=thisOutline.UserInput.lastModified.parentNode.parentNode.nextSibling.lastChild;
                 this.UserInput.Keypress(e);
@@ -2011,8 +2008,12 @@ function Outline(doc) {
         switch (e.keyCode){
             case 46://delete
             case 8://backspace
-                e.preventDefault();//prevent from going back
-                this.UserInput.deleteTriple(selectedTd);
+                var target = selectedTd.parentNode.AJAR_statement.why;
+                var editable = outline.sparql.prototype.editable(target.uri, kb);
+                if (editable){                                
+                    e.preventDefault();//prevent from going back
+                    this.UserInput.Delete(selectedTd);
+                }
                 break;
             case 37://left
                 if (this.walk('left')) return;

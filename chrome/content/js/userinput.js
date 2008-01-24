@@ -8,6 +8,8 @@
     request: 'from' 'to' 'message' 'Request'
 */
 var UserInputFormula; //Formula to store references of user's work
+var TempFormula; //Formula to store incomplete tripes (Requests), 
+                 //temporarily disjoint with kb to avoid bugs
 function UserInput(outline){
 
     var myDocument=outline.document; //is this ok?
@@ -24,6 +26,8 @@ function UserInput(outline){
         UserInputFormula.superFormula=kb;
         UserInputFormula.registerFormula("Your Work"); 
     }
+    if (!TempFormula) TempFormula=new RDFIndexedFormula(); 
+                                      //Use RDFIndexedFormula so add returns the statement     
 
     return {
     sparqler: sparqlService,
@@ -75,15 +79,18 @@ function UserInput(outline){
         else    
             var target=getTarget(e);
         if (target.tagName == 'INPUT' || target.tagName=='TEXTAREA') return; //same box clicked
+        
         var about = this.getStatementAbout(target); // timbl - to avoid alert from random clicks
         if (!about) return;
         try{
-            var obj = about.object;
+            var obj = getTerm(target);
             var trNode=ancestor(target,'TR');
         }catch(e){
             alert('userinput.js: '+e+getAbout(kb,selectedTd));
             tabulator.log.error(target+" getStatement Error:"+e);
         }
+        
+        //var obj = getTerm(target);
         this.clearInputAndSave();
         
         try{var tdNode=trNode.lastChild;}catch(e){tabulator.log.error(e+"@"+target);}
@@ -399,7 +406,7 @@ function UserInput(outline){
             tabulator.log.debug("SPARQLUpdate sent");
             
         }else{ //removal of an undetermined statement associated with pending TRs 
-            kb.remove(s);
+            //TempFormula.remove(s);
         }
         tabulator.log.debug("about to remove "+s);
 
@@ -621,19 +628,19 @@ function UserInput(outline){
         switch (this.inputInformationAbout(selectedTd)){
             case 'DatatypeProperty-like':
                 this.clearMenu();
-                    selectedTd.className='';
-                    emptyNode(selectedTd);
-                    this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
-                    this.lastModified.isNew=false;
-                    
-                    this.lastModified.select();
-                    break;            
+                selectedTd.className='';
+                emptyNode(selectedTd);
+                this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
+                this.lastModified.isNew=false;
+                   
+                this.lastModified.select();
+                break;            
             case 'ObjectProperty-like':
             case 'predicate':
             case 'no-idea':
-                    var e={type:'keypress'};
-                    this.Click(e,selectedTd);
-                    this.AutoComplete(1);//1 does not stand for anything but [&= true]
+                var e={type:'keypress'};
+                this.Click(e,selectedTd);
+                this.AutoComplete(1);//1 does not stand for anything but [&= true]
         }
     },
 
@@ -875,7 +882,9 @@ function UserInput(outline){
         if (ancestor(target,'TR').previousSibling &&  // there is a previous predicate/object line
                 ancestor(target,'TR').previousSibling.AJAR_statement) {
             preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
-            isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;    
+            //isInverse=ancestor(target,'TR').previousSibling.AJAR_inverse;
+            //This should always(?) input a non-inverse statement 
+            isInverse = false;    
         } else { // no previous row: write to the document defining the subject
             var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
             var doc=kb.sym(Util.uri.docpart(subject.uri));
@@ -1119,21 +1128,25 @@ function UserInput(outline){
         labelPriority[tabulator.ns.link('message').uri] = 20;
         
         // We must get rid of this clutter in the stroe. "OK, will be stroed in a seperate formula to avoid bugs", Kenny says
-        var reqTerm=kb.bnode();
-        kb.add(reqTerm,rdf('type'),tabulator.ns.link("Request"));
+        var tp=TempFormula;
+        var reqTerm=tp.bnode();
+        tp.add(reqTerm,rdf('type'),tabulator.ns.link("Request"));
         if (tipText.length<10)
-            kb.add(reqTerm,tabulator.ns.link('message'),kb.literal(tipText));
+            tp.add(reqTerm,tabulator.ns.link('message'),tp.literal(tipText));
         else
-            kb.add(reqTerm,tabulator.ns.link('message'),kb.literal(tipText));
-        kb.add(reqTerm,tabulator.ns.link('to'),kb.literal("The User"));
-        kb.add(reqTerm,tabulator.ns.link('from'),kb.literal("The User"));
+            tp.add(reqTerm,tabulator.ns.link('message'),tp.literal(tipText));
+        tp.add(reqTerm,tabulator.ns.link('to'),tp.literal("The User"));
+        tp.add(reqTerm,tabulator.ns.link('from'),tp.literal("The User"));
         
         //append the undetermined td
         if (!notShow){
+            var newNode;
             if(isPredicate)
-                trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
+                newNode=trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
             else
-                trNode.appendChild(outline.outline_objectTD(reqTerm));
+                newNode=trNode.appendChild(outline.outline_objectTD(reqTerm));
+            newNode.className='undetermined';
+            newNode.textContent=tipText;
         }
         
         return reqTerm;
@@ -1383,12 +1396,17 @@ function UserInput(outline){
         }
         
         if (type=='predicate'){
-            var newTd;
+            //ToDo: How to link two things with an inverse relationship
+            var newTd=outline.outline_predicateTD(inputTerm,tr,false,false);
             if (selectedTd.nextSibling.className!='undetermined'){
                 var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
               //<SPARQLUpdate>   
                 try{sparqlService.insert_statement(s, function(uri,success,error_body){
-                    if (!success){
+                    if (success){
+                        newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why);
+                        tr.AJAR_statement=newStat;
+                        newTd.className=newTd.className.replace(/ pendingedit/g,"")
+                    }else{
                         outline.UserInput.deleteTriple(newTd,true);
                         alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                     }
@@ -1399,16 +1417,15 @@ function UserInput(outline){
                     return;
                 }
               //</SPARQLUpdate>
+                newTd.className+=' pendingedit';
                 this.lastModified=null;
             }else{
-                outline.walk('right');
+                this.formUndetStat(tr,stat.subject,inputTerm,stat.object,stat.why,false);                   
+                outline.walk('right');                
                 doNext=true;
             }
-            outline.replaceTD(newTd=outline.outline_predicateTD(inputTerm,tr,false,false),selectedTd);
-            //modify store and update here
-            newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why) //ToDo: why and inverse
-            tr.AJAR_statement=newStat;
-            kb.remove(stat);
+            outline.replaceTD(newTd,selectedTd);
+            TempFormula.remove(stat);
         }else if (type=='object'){
             if (inputTerm.sameTerm(tabulator.ns.tabont('createNew'))){
                 //<Feature about="labelChoice">
@@ -1442,8 +1459,7 @@ function UserInput(outline){
                     s=new RDFStatement(inputTerm,stat.predicate,stat.object,stat.why);
               //<SPARQLUpdate>
                 try{sparqlService.insert_statement(s, function(uri,success,error_body){
-                    if (success){
-                        kb.remove(stat); //removal of the undetermined statement   
+                    if (success){   
                         if (!isInverse)
                             newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
                         else
@@ -1456,6 +1472,7 @@ function UserInput(outline){
                     } 
                 })}catch(e){
                     tabulator.log.error(e);
+                    outline.UserInput.deleteTriple(newTd,true);
                     alert("You can not edit statement about this blank node object "+
                           "becuase it is not identifiable. (Known Tabulator Issue)");
                     return;
@@ -1468,10 +1485,12 @@ function UserInput(outline){
                 doNext=true;
             }          
             outline.replaceTD(newTd,selectedTd);
-
+            //removal of the undetermined statement
+            TempFormula.remove(stat);
 
             if (isNew) outline.outline_expand(outline.selection[0],inputTerm);  
         }
+        //do not throw away user's work even update fails
         UserInputFormula.statements.push(newStat);
         if (eventhandler) eventhandler(stat.subject);
         if (doNext)
@@ -1482,7 +1501,7 @@ function UserInput(outline){
 
     formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){
         trNode.AJAR_inverse=inverse;
-        return trNode.AJAR_statement=kb.add(subject,predicate,object,why);
+        return trNode.AJAR_statement=TempFormula.add(subject,predicate,object,why);
     },
     /** ABANDONED APPROACH
     //determine whether the event happens at around the bottom border of the element

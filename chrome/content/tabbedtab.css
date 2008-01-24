@@ -72,27 +72,17 @@ div.compliantPane {
     -moz-border-radius: 1em;
 }
 
-div.justificationElement {
+div.justification {
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
     padding: 0 5px;
     width: 1000px; 
-    background-color: #f2f6cd; 
+    background-color: #ffffdd; 
     margin-top: 0.5em; margin-bottom: 0.5em;
+    -moz-border-radius: 1em;
 }
-
-div.dataContentPane.justification {
-    border-top: dashed 0.5px black;
-    border-left: dashed 0.5px black;
-    border-bottom: dashed 0.5px black;
-    border-right: dashed 0.5px black;
-    padding: 0.5em; 
-    margin-top: 0.5em; margin-bottom: 0.5em;
-}
-
-
 
 
 div.socialPane {

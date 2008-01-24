@@ -84,6 +84,17 @@ div.justification {
     -moz-border-radius: 1em;
 }
 
+div.premises {
+    border-top: solid 1px #ff33ff;
+    border-left: solid 1px #ff33ff;
+    border-bottom: solid 1px #ff33ff;
+    border-right: solid 1px #ff33ff;
+    padding: 0 5px;
+    width: 1000px; 
+    background-color: #ff66ff; 
+    margin-top: 0.5em; margin-bottom: 0.5em;
+    -moz-border-radius: 1em;
+}
 
 div.socialPane {
         border-top: solid 1px #777; border-bottom: solid 1px #777; 

@@ -1168,7 +1168,6 @@ function Outline(doc) {
         }
 
         airPane.render.because = function(){
-            alert("Hello");
             div.appendChild(myDocument.createTextNode(' '));//To leave some space between the 2 buttons, any better method?
             div.appendChild(hideButton);
             hideButton.addEventListener('click',airPane.render.hide,false);

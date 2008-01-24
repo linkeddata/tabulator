@@ -1046,7 +1046,7 @@ function Outline(doc) {
 
 
  
-    /** AIR (Amord in RDF) Pane
+     /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
      * air reasoner output
@@ -1180,6 +1180,15 @@ function Outline(doc) {
             divJustification.setAttribute('class', 'justification');
             divJustification.setAttribute('id', 'justification');
 
+            var divDescription = myDocument.createElement("div");
+            divDescription.setAttribute('class', 'description');
+            divDescription.setAttribute('id', 'description');
+            
+            var divPremises = myDocument.createElement("div");
+            divPremises.setAttribute('class', 'premises');
+            divPremises.setAttribute('id', 'premises');
+            
+
             var justificationSts;
             
             airPane.render.because.justify = function(){
@@ -1195,21 +1204,23 @@ function Outline(doc) {
                                     var t6 = kb.statementsMatching(t5[p].object, subExpr, undefined, subject);
                                     for (var q=0; q<t6.length; q++){
                                         if (t6[q].object.termType == 'formula'){
-                                            divJustification.appendChild(statementsAsTables(t6[q].object.statements)); 
-                                            div.appendChild(divJustification);
+                                            divPremises.appendChild(statementsAsTables(t6[q].object.statements)); 
                                         } 
                                     }     
                                 }
                             }  
                         }
                     }                
-                }     
+                } 
+                divJustification.appendChild(divPremises);
+            	div.appendChild(divJustification);
+    
             }
 
-            var divTest = myDocument.createElement("div");
-	
 		   //Display the actual English-like description first
         	var stsDesc = kb.statementsMatching(undefined, description, undefined, subject); 
+
+            divJustification.appendChild(myDocument.createElement('br'));
 
             for (var j=0; j<stsDesc.length; j++){
                 if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
@@ -1219,50 +1230,43 @@ function Outline(doc) {
 			                    var anchor = myDocument.createElement('a')
 			                    anchor.setAttribute('href', stsDesc[j].object.elements[i].uri)
 			                    anchor.appendChild(myDocument.createTextNode(label(stsDesc[j].object.elements[i])));
-			                   // divTest.appendChild(anchor);
-			                    divJustification.appendChild(anchor);
+			                    divDescription.appendChild(anchor);
 			                    
 			                case 'literal':
 			                	if (stsDesc[j].object.elements[i].value != undefined)
-			                    	divJustification.appendChild(myDocument.createTextNode(stsDesc[j].object.elements[i].value)); 
-//			                    	divTest.appendChild(myDocument.createTextNode(stsDesc[j].object.elements[i].value)); 
+			                    	divDescription.appendChild(myDocument.createTextNode(stsDesc[j].object.elements[i].value)); 
 			            }       
-						
-				}
-                	div.appendChild(divTest);
+					}
             		
                 }
+                divJustification.appendChild(divDescription);
+                
             }	
 			
+            var justifyButton = myDocument.createElement('input');
+            justifyButton.setAttribute('type','button');
+            justifyButton.setAttribute('value','More Information...');
+            justifyButton.addEventListener('click',airPane.render.because.justify,false);
+            divJustification.appendChild(myDocument.createElement('br'));
+            divJustification.appendChild(justifyButton);
+            div.appendChild(divJustification);
             
-             switch(reasoner) {
-
-                case 'scheme':
-                	//do nothing
-                    
-                case 'python':
-                for (var j=0; j<stsJust.length; j++){
-                    if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-                        var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
-                        for (var k=0; k<t1.length; k++){
-                            var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
-                            for (var l=0; l<t2.length; l++){
-                                if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
-                                    justificationSts = t2;
-                                    divJustification.appendChild(statementsAsTables(t2[l].object.statements)); 
-                                    
-                                    var justifyButton = myDocument.createElement('input');
-                                    justifyButton.setAttribute('type','button');
-                                    justifyButton.setAttribute('value','More...');
-                                    divJustification.appendChild(justifyButton);
-                                    justifyButton.addEventListener('click',airPane.render.because.justify,false);
-                                    div.appendChild(divJustification);
-                                }                
-                           }     
-                        }
+            for (var j=0; j<stsJust.length; j++){
+                if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
+                    var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
+                    for (var k=0; k<t1.length; k++){
+                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+                        for (var l=0; l<t2.length; l++){
+                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+                                justificationSts = t2;
+                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+                                
+                            }                
+                       }     
                     }
-                }    
+                }
             }
+            divJustification.appendChild(divPremises);    
         }
         
         var becauseButton = myDocument.createElement('input');
@@ -1274,7 +1278,6 @@ function Outline(doc) {
         return div;
     }
     panes.register(airPane);
-
 
 //////////////////////////////////////////////////////////////////////////////
 

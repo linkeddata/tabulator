@@ -73,27 +73,34 @@ div.compliantPane {
 }
 
 div.justification {
+    padding: 0 5px;
+    width: 1000px; 
+    background-color: white; 
+    margin-top: 0.5em; margin-bottom: 0.5em;
+}
+
+div.description {
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
-    padding: 0 5px;
+    padding: 1 5px;
     width: 1000px; 
     background-color: #ffffdd; 
     margin-top: 0.5em; margin-bottom: 0.5em;
-    -moz-border-radius: 1em;
+    -moz-border-radius: 0.75em;
 }
 
 div.premises {
-    border-top: solid 1px #ff33ff;
-    border-left: solid 1px #ff33ff;
-    border-bottom: solid 1px #ff33ff;
-    border-right: solid 1px #ff33ff;
+    border-top: solid 1px #3399ff;
+    border-left: solid 1px #3399ff;
+    border-bottom: solid 1px #3399ff;
+    border-right: solid 1px #3399ff;
     padding: 0 5px;
     width: 1000px; 
-    background-color: #ff66ff; 
+    background-color: #ccccff; 
     margin-top: 0.5em; margin-bottom: 0.5em;
-    -moz-border-radius: 1em;
+    -moz-border-radius: 0.75em;
 }
 
 div.socialPane {

@@ -1093,28 +1093,6 @@ function Outline(doc) {
                 }    
             }
         
-        if (reasoner == ''){
-        for (var j=0; j<stsAntcExpr.length; j++){
-            //Scheme reasoner
-            if (stsAntcExpr[j].subject.termType == 'formula'){
-            
-                var sts = stsAntcExpr[j].subject.statements;
-                for (var k=0; k<sts.length; k++){
-                    if (sts[k].predicate.toString() == compliant.toString()){
-                        reasoner = 'scheme';
-                        airRet = "AIR";
-                        stsCompliant = sts[k];
-                    }
-                    if (sts[k].predicate.toString() == nonCompliant.toString()){
-                        reasoner = 'scheme';
-                        airRet = "AIR";
-                        stsNonCompliant = sts[k];
-                    }
-                }
-            }    
-        }
-        }
-        
        return airRet;
     }
 
@@ -1190,7 +1168,7 @@ function Outline(doc) {
         }
 
         airPane.render.because = function(){
-            
+            alert("Hello");
             div.appendChild(myDocument.createTextNode(' '));//To leave some space between the 2 buttons, any better method?
             div.appendChild(hideButton);
             hideButton.addEventListener('click',airPane.render.hide,false);
@@ -1198,18 +1176,6 @@ function Outline(doc) {
             var divJustification = myDocument.createElement("div");
             divJustification.setAttribute('class', 'justification');
             divJustification.setAttribute('id', 'justification');
-
-            var divAntecedent = myDocument.createElement("div");
-            divAntecedent.setAttribute('class', 'justification');
-            divAntecedent.setAttribute('id', 'justification');
-
-            var justificationElement = myDocument.createElement("div");
-            justificationElement.setAttribute('class', 'justificationElement');
-            justificationElement.setAttribute('id', 'justificationElement');
-
-            var antecedentElement = myDocument.createElement("div");
-            antecedentElement.setAttribute('class', 'antecedentElement');
-            antecedentElement.setAttribute('id', 'antecedentElement');
 
             var justificationSts;
             
@@ -1226,9 +1192,8 @@ function Outline(doc) {
                                     var t6 = kb.statementsMatching(t5[p].object, subExpr, undefined, subject);
                                     for (var q=0; q<t6.length; q++){
                                         if (t6[q].object.termType == 'formula'){
-                                            antecedentElement.appendChild(statementsAsTables(t6[q].object.statements));
-                                            divAntecedent.appendChild(antecedentElement); 
-                                            div.appendChild(divAntecedent);
+                                            divJustification.appendChild(statementsAsTables(t6[q].object.statements)); 
+                                            div.appendChild(divJustification);
                                         } 
                                     }     
                                 }
@@ -1251,8 +1216,7 @@ function Outline(doc) {
                             for (var l=0; l<t2.length; l++){
                                 if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
                                     justificationSts = t2;
-                                    justificationElement.appendChild(statementsAsTables(t2[l].object.statements));
-                                    divJustification.appendChild(justificationElement); 
+                                    divJustification.appendChild(statementsAsTables(t2[l].object.statements)); 
                                     
                                     var justifyButton = myDocument.createElement('input');
                                     justifyButton.setAttribute('type','button');

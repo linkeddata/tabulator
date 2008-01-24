@@ -1045,6 +1045,7 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
 
 
+ 
     /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
@@ -1061,16 +1062,15 @@ function Outline(doc) {
     var antcExpr = tms('antecedent-expr');
     var just = tms('justification');
     var subExpr = tms('sub-expr');
+    var description = tms('description');
     var stsCompliant;
     var stsNonCompliant;
     var reasoner = '';
     var airRet = null;
-    var stsAntcExpr;
     var stsJust;
      
     airPane.label = function(subject) {
     
-        stsAntcExpr = kb.statementsMatching(undefined, antcExpr, undefined, subject); 
         stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
 
             for (var j=0; j<stsJust.length; j++){
@@ -1131,6 +1131,10 @@ function Outline(doc) {
             a_s.appendChild(myDocument.createTextNode(label(stsFound.subject)));
             td_s.appendChild(a_s);
             tr.appendChild(td_s);
+
+            var td_is = myDocument.createElement("td");
+            td_is.appendChild(myDocument.createTextNode(' is '));
+            tr.appendChild(td_is);
 
             var td_p = myDocument.createElement("td");
             var a_p = myDocument.createElement('a')
@@ -1201,10 +1205,40 @@ function Outline(doc) {
                     }                
                 }     
             }
+
+            var divTest = myDocument.createElement("div");
+	
+		   //Display the actual English-like description first
+        	var stsDesc = kb.statementsMatching(undefined, description, undefined, subject); 
+
+            for (var j=0; j<stsDesc.length; j++){
+                if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
+					for (var i=0; i<stsDesc[j].object.elements.length; i++) {
+			            switch(stsDesc[j].object.elements[i].termType) {
+			                case 'symbol':
+			                    var anchor = myDocument.createElement('a')
+			                    anchor.setAttribute('href', stsDesc[j].object.elements[i].uri)
+			                    anchor.appendChild(myDocument.createTextNode(label(stsDesc[j].object.elements[i])));
+			                   // divTest.appendChild(anchor);
+			                    divJustification.appendChild(anchor);
+			                    
+			                case 'literal':
+			                	if (stsDesc[j].object.elements[i].value != undefined)
+			                    	divJustification.appendChild(myDocument.createTextNode(stsDesc[j].object.elements[i].value)); 
+//			                    	divTest.appendChild(myDocument.createTextNode(stsDesc[j].object.elements[i].value)); 
+			            }       
+						
+				}
+                	div.appendChild(divTest);
+            		
+                }
+            }	
+			
             
              switch(reasoner) {
 
                 case 'scheme':
+                	//do nothing
                     
                 case 'python':
                 for (var j=0; j<stsJust.length; j++){
@@ -1219,7 +1253,7 @@ function Outline(doc) {
                                     
                                     var justifyButton = myDocument.createElement('input');
                                     justifyButton.setAttribute('type','button');
-                                    justifyButton.setAttribute('value','Justify');
+                                    justifyButton.setAttribute('value','More...');
                                     divJustification.appendChild(justifyButton);
                                     justifyButton.addEventListener('click',airPane.render.because.justify,false);
                                     div.appendChild(divJustification);
@@ -1231,11 +1265,11 @@ function Outline(doc) {
             }
         }
         
-        var whyButton = myDocument.createElement('input');
-        whyButton.setAttribute('type','button');
-        whyButton.setAttribute('value','Because');
-        div.appendChild(whyButton);
-        whyButton.addEventListener('click',airPane.render.because,false);
+        var becauseButton = myDocument.createElement('input');
+        becauseButton.setAttribute('type','button');
+        becauseButton.setAttribute('value','Because');
+        div.appendChild(becauseButton);
+        becauseButton.addEventListener('click',airPane.render.because,false);
         
         return div;
     }

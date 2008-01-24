@@ -11,15 +11,19 @@ var UserInputFormula; //Formula to store references of user's work
 var TempFormula; //Formula to store incomplete tripes (Requests), 
                  //temporarily disjoint with kb to avoid bugs
 function UserInput(outline){
-
+    var This=this;
     var myDocument=outline.document; //is this ok?
     //alert("myDocument when it's set is "+myDocument.location);
     this.menuId='predicateMenu1';
+
+    /* //namespace information, as a subgraph of the knowledge base, is built in showMenu
     this.namespaces={};
+    
     for (var name in tabulator.ns) {
-        this.namespaces[name] = tabulator.ns[name]();
-    }
+        this.namespaces[name] = tabulator.ns[name]('').uri;
+    }   
     var NameSpaces=this.namespaces;
+    */
     var sparqlService=new sparql(kb);
     if (!UserInputFormula){
         UserInputFormula=new RDFFormula();
@@ -62,7 +66,7 @@ function UserInput(outline){
                   "before editing this node again.");
             return true;
         } 
-        /*       
+               
         //<Feature about="enterToExpand"
         if (e.type=='keypress'){ //e==undefined : Keyboard Input
             var target=selectedTd;
@@ -73,7 +77,7 @@ function UserInput(outline){
             }
         }
         //</Feature>
-        */            
+                    
         else if (selectedTd) //case: add triple, auto-complete
             var target=selectedTd;
         else    
@@ -1230,6 +1234,21 @@ function UserInput(outline){
         table.addEventListener('click',selectItem,false);
         
         //Add Items to the list
+        //build NameSpaces here from knowledge base
+        var NameSpaces={};
+        //for each (ontology in ontologies)
+        kb.each(undefined,tabulator.ns.rdf('type'),tabulator.ns.owl('Ontology')).map(
+            function(ontology){
+                var label=lb.label(ontology);
+                if (!label) return;
+                //this is like extracting metadata from URI. Maybe it's better not to take the abbrevs.
+                var match=label.value.match(/\((.+?)\)/);
+                if (match)
+                	NameSpaces[match[1]] = ontology.uri;
+                else
+                	NameSpaces[label.value] = ontology.uri;
+            }
+        );        
         function addMenuItem(predicate){
             if (table.firstChild && table.firstChild.className=='no-suggest') table.removeChild(table.firstChild);
             var Label = predicateLabelForXML(predicate, false);
@@ -1238,6 +1257,7 @@ function UserInput(outline){
             if (!predicate.uri) return; //bnode 
             var theNamespace="??";
             for (var name in NameSpaces){
+                tabulator.log.debug(NameSpaces[name]);
                 if (string_startswith(predicate.uri,NameSpaces[name])){
                     theNamespace=name;
                     break;

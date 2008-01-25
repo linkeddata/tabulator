@@ -184,6 +184,7 @@ var tabExtension = {
         for(var i=0;i<divs.length;i++) {
           if(divs[i].className.search("TabulatorOutline")!=-1) {
             //Inject an outline here!!
+            //I believe this approach is buggy when loading a HTML with this className...
             var uri = divs[i].getAttribute('id');
             var table = doc.createElement('table');
             table.setAttribute('id','outline');
@@ -192,7 +193,21 @@ var tabExtension = {
             outline.init();
             //table.outline = outline;
             //alert(table.outline);
-            outline.GotoSubject(kb.sym(uri),true);
+
+            //Approach: cache the intermediate uri for an instace
+            //          have to use this kind of inverseredirect becuase only rdf content-types
+            //          triggers tabulator
+            //Bug cases(maybe): 1. when two tabs simultaneously load a URI that returns 303
+            //                  2. press stop at the mean time of the redirection and you load the
+            //                     redirected document
+            //ToDo: modify the URI bar (after that, there is cache problem...)
+            //      perhaps store inverseredirect URI on tabs?
+            if (tabExtension.inverseRedirectDirectory[uri]){
+                outline.GotoSubject(kb.sym(tabExtension.inverseRedirectDirectory[uri]),true);
+                tabExtension.inverseRedirectDirectory[uri]=undefined;                               
+            }else{
+                outline.GotoSubject(kb.sym(uri),true);
+            }
             var queryButton = doc.createElement('input');
             queryButton.setAttribute('type','button');
             queryButton.setAttribute('value','Find All');
@@ -215,7 +230,8 @@ var tabExtension = {
   
   externalQueryRequestListener: function(e) {
 
-  }
+  },
+  inverseRedirectDirectory: {}
 }
 
 document.addEventListener("TabulatorQueryRequest", function(e) {tabExtension.externalQueryRequestListener(e);},false,true);
@@ -321,8 +337,10 @@ var httpResponseObserver =
                   tabulator.log.warn('httpResponseObserver: status='+httpChannel.responseStatus+
                     ' '+httpChannel.responseStatusText+ ' for ' + httpChannel.originalURI.spec);
                   var newURI = httpChannel.getResponseHeader('location');
-                  tabulator.log.warn('httpResponseObserver: now URI = ' + httpChannel.URI.spec);
-                  tabulator.log.warn('httpResponseObserver: Location: ' + newURI);
+                  tabulator.log.warn('httpResponseObserver: now URI = ' + httpChannel.URI.spec + ' a ' +
+                                                                          typeof httpChannel.URI.spec);
+                  tabulator.log.warn('httpResponseObserver: Location: ' + newURI + ' a ' + typeof newURI);
+                  tabExtension.inverseRedirectDirectory[newURI] = httpChannel.URI.spec;
               }
         }
     },

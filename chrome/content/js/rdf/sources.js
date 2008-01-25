@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 6934 2007-11-21 16:24:52Z timbl $
+ * SVN ID: $Id: sources.js 10965 2008-01-25 07:44:43Z kennyluck $
  *
  ************************************************************/
 
@@ -785,6 +785,13 @@ function SourceFetcher(store, timeout, async) {
 				    kb.add(xhr.req,
 					tabulator.ns.http('location'),
 					newURI, xhr.req);
+					
+                    //delete the entry caused by the Tabulator. See test.js. tabExtension not defined, why?
+                    /*		    
+		            if (isExtension && xhr.status == 303){
+		                 tabulator.log.warn('deleted entry:' +newURI+typeof tabExtension+typeof getTerm);
+		                 //tabExtension.inverseRedirectDirectory[newURI]=undefined;
+		            }*/
 
 				    kb.HTTPRedirects[xhr.uri.uri] = newURI;
 				    if (xhr.status == 302 && rterm) {

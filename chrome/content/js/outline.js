@@ -1063,6 +1063,7 @@ function Outline(doc) {
     var just = tms('justification');
     var subExpr = tms('sub-expr');
     var description = tms('description');
+    var ruleName = tms('rule-name');
     var stsCompliant;
     var stsNonCompliant;
     var reasoner = '';
@@ -1188,30 +1189,48 @@ function Outline(doc) {
             divPremises.setAttribute('class', 'premises');
             divPremises.setAttribute('id', 'premises');
             
-
+			
             var justificationSts;
+            var ruleNameFound;
+            
+            airPane.render.because.displayDesc = function(obj){
+            	for (var i=0; i<obj.elements.length; i++) {
+			            switch(obj.elements[i].termType) {
+			                case 'symbol':
+			                    var anchor = myDocument.createElement('a')
+			                    anchor.setAttribute('href', obj.elements[i].uri)
+			                    anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
+			                    divDescription.appendChild(anchor);
+			                    
+			                case 'literal':
+			                	if (obj.elements[i].value != undefined)
+			                    	divDescription.appendChild(myDocument.createTextNode(obj.elements[i].value)); 
+			            }       
+					}
+            }
+            
+            airPane.render.because.moreInfo = function(ruleToFollow){
+
+            	//Update the description div with the description at the next level
+                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined, subject);
+            	divDescription.appendChild(myDocument.createElement('br')); 
+			   	divDescription.appendChild(myDocument.createElement('br'));
+                airPane.render.because.displayDesc(currentRule[0].object);
+			   	
+			   	//Update the premises div also with the corresponding premises
+			   divPremises.appendChild(myDocument.createElement('br')); 
+			   divPremises.appendChild(myDocument.createElement('br'));
+			   divPremises.appendChild(myDocument.createTextNode(ruleToFollow)); 
+            	
+			   	
+            }
             
             airPane.render.because.justify = function(){
             
-                for (var l=0; l<justificationSts.length; l++){
-                    if (justificationSts[l].subject.termType == 'bnode' && justificationSts[l].object.termType == 'symbol'){
-                        var t3 = kb.statementsMatching(justificationSts[l].object, undefined, undefined);
-                        for (var m=0; m<t3.length; m++){
-                            var t4 = kb.statementsMatching(t3[m].subject, undefined, undefined, subject);
-                            for (var n=0; n<t4.length; n++){
-                                var t5 = kb.statementsMatching(t4[n].object, antcExpr, undefined, subject);
-                                for (var p=0; p<t5.length; p++){
-                                    var t6 = kb.statementsMatching(t5[p].object, subExpr, undefined, subject);
-                                    for (var q=0; q<t6.length; q++){
-                                        if (t6[q].object.termType == 'formula'){
-                                            divPremises.appendChild(statementsAsTables(t6[q].object.statements)); 
-                                        } 
-                                    }     
-                                }
-                            }  
-                        }
-                    }                
-                } 
+            	//Clear the contents of the div
+            	myDocument.getElementById('premises').innerHTML='';
+				airPane.render.because.moreInfo(ruleNameFound);            	
+
                 divJustification.appendChild(divPremises);
             	div.appendChild(divJustification);
     
@@ -1224,20 +1243,7 @@ function Outline(doc) {
 
             for (var j=0; j<stsDesc.length; j++){
                 if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
-					for (var i=0; i<stsDesc[j].object.elements.length; i++) {
-			            switch(stsDesc[j].object.elements[i].termType) {
-			                case 'symbol':
-			                    var anchor = myDocument.createElement('a')
-			                    anchor.setAttribute('href', stsDesc[j].object.elements[i].uri)
-			                    anchor.appendChild(myDocument.createTextNode(label(stsDesc[j].object.elements[i])));
-			                    divDescription.appendChild(anchor);
-			                    
-			                case 'literal':
-			                	if (stsDesc[j].object.elements[i].value != undefined)
-			                    	divDescription.appendChild(myDocument.createTextNode(stsDesc[j].object.elements[i].value)); 
-			            }       
-					}
-            		
+			   		airPane.render.because.displayDesc(stsDesc[j].object);
                 }
                 divJustification.appendChild(divDescription);
                 
@@ -1249,10 +1255,16 @@ function Outline(doc) {
             justifyButton.addEventListener('click',airPane.render.because.justify,false);
             divJustification.appendChild(myDocument.createElement('br'));
             divJustification.appendChild(justifyButton);
+            divJustification.appendChild(myDocument.createElement('br'));
             div.appendChild(divJustification);
             
             for (var j=0; j<stsJust.length; j++){
                 if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
+                
+                	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ruleName, undefined);
+                	ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
+                										   // statement containing the formula		
+           		   	
                     var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
                     for (var k=0; k<t1.length; k++){
                         var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
@@ -1271,7 +1283,7 @@ function Outline(doc) {
         
         var becauseButton = myDocument.createElement('input');
         becauseButton.setAttribute('type','button');
-        becauseButton.setAttribute('value','Because');
+        becauseButton.setAttribute('value','Why?');
         div.appendChild(becauseButton);
         becauseButton.addEventListener('click',airPane.render.because,false);
         

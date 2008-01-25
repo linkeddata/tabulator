@@ -1045,7 +1045,7 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
 
 
- 
+  
      /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
@@ -1064,12 +1064,14 @@ function Outline(doc) {
     var subExpr = tms('sub-expr');
     var description = tms('description');
     var ruleName = tms('rule-name');
+    var prem = tms('premise');
     var stsCompliant;
     var stsNonCompliant;
     var reasoner = '';
     var airRet = null;
     var stsJust;
-     
+    var ruleNameFound;
+             
     airPane.label = function(subject) {
     
         stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
@@ -1158,7 +1160,7 @@ function Outline(doc) {
             var hideButton = myDocument.createElement('input');
             hideButton.setAttribute('type','button');
             hideButton.setAttribute('id','hide');
-            hideButton.setAttribute('value','Hide');
+            hideButton.setAttribute('value','Start Over');
         }
         
         airPane.render.hide = function(){
@@ -1166,14 +1168,103 @@ function Outline(doc) {
             var d = myDocument.getElementById('dataContentPane');
             var j = myDocument.getElementById('justification');
             var b = myDocument.getElementById('hide');
+            var m = myDocument.getElementById('more');
+            if (d != null && m != null){
+                d.removeChild(m);
+            }
             if (d != null && j != null && b != null){
                 d.removeChild(j);
                 d.removeChild(b);
             }
+            
+            //Add back the Why? button
+	        var becauseButton = myDocument.createElement('input');
+	        becauseButton.setAttribute('type','button');
+	        becauseButton.setAttribute('id','whyButton');
+	        becauseButton.setAttribute('value','Why?');
+	        div.appendChild(becauseButton);
+	        becauseButton.addEventListener('click',airPane.render.because,false);
+	    
         }
 
         airPane.render.because = function(){
-            div.appendChild(myDocument.createTextNode(' '));//To leave some space between the 2 buttons, any better method?
+        	
+        	//Disable the 'why' button... If not, it creates a mess if accidentally pressed
+        	//myDocument.getElementbyId('whyButton').disabled = 'true';
+            var whyButton = myDocument.getElementById('whyButton');
+            var d = myDocument.getElementById('dataContentPane');
+    		if (d != null && whyButton != null)
+            	d.removeChild(whyButton);
+
+            airPane.render.because.moreInfo = function(ruleToFollow){
+
+				//Terminating condition: 
+				// if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
+				// there are no more information to follow
+				var terminatingCondition = kb.statementsMatching(ruleToFollow, just, prem, subject);
+				if (terminatingCondition[0] != undefined){
+
+				   divPremises.appendChild(myDocument.createElement('br'));
+				   divPremises.appendChild(myDocument.createElement('br'));
+					divPremises.appendChild(myDocument.createTextNode("No more information is available from the reasoner!"));
+				   divPremises.appendChild(myDocument.createElement('br'));
+				   divPremises.appendChild(myDocument.createElement('br'));
+			   
+				}
+				else{
+					
+					//Update the description div with the description at the next level
+	                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined, subject);
+	                airPane.render.because.displayDesc(currentRule[0].object);
+	            	divDescription.appendChild(myDocument.createElement('br')); 
+				   	divDescription.appendChild(myDocument.createElement('br'));
+				   	
+	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined, subject);
+				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
+				   	ruleNameFound = nextRuleSts[0].object;
+
+				   	
+				   	//Update the premises div also with the corresponding premises
+				   divPremises.appendChild(myDocument.createElement('br')); 
+				   divPremises.appendChild(myDocument.createElement('br')); 
+				   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined);
+	                    for (var k=0; k<t1.length; k++){
+	                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+	                        for (var l=0; l<t2.length; l++){
+	                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+	                                justificationSts = t2;
+	                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+	                                
+	                            }                
+	                       }     
+	                }
+				   divPremises.appendChild(myDocument.createElement('br'));
+				   divPremises.appendChild(myDocument.createElement('br'));
+						
+				}
+            				   	
+            }
+            
+            airPane.render.because.justify = function(){
+            
+            	//Clear the contents of the div
+            	myDocument.getElementById('premises').innerHTML='';
+				airPane.render.because.moreInfo(ruleNameFound);            	
+
+                divJustification.appendChild(divPremises);
+            	div.appendChild(divJustification);
+    
+            }
+
+			//Add the More Information Button here
+			var justifyButton = myDocument.createElement('input');
+   			justifyButton.setAttribute('type','button');
+            justifyButton.setAttribute('id','more');
+            justifyButton.setAttribute('value','More Information');
+            justifyButton.addEventListener('click',airPane.render.because.justify,false);
+            div.appendChild(justifyButton);
+			        		
+            div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
             div.appendChild(hideButton);
             hideButton.addEventListener('click',airPane.render.hide,false);
 
@@ -1191,7 +1282,6 @@ function Outline(doc) {
             
 			
             var justificationSts;
-            var ruleNameFound;
             
             airPane.render.because.displayDesc = function(obj){
             	for (var i=0; i<obj.elements.length; i++) {
@@ -1209,54 +1299,31 @@ function Outline(doc) {
 					}
             }
             
-            airPane.render.because.moreInfo = function(ruleToFollow){
-
-            	//Update the description div with the description at the next level
-                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined, subject);
-            	divDescription.appendChild(myDocument.createElement('br')); 
-			   	divDescription.appendChild(myDocument.createElement('br'));
-                airPane.render.because.displayDesc(currentRule[0].object);
-			   	
-			   	//Update the premises div also with the corresponding premises
-			   divPremises.appendChild(myDocument.createElement('br')); 
-			   divPremises.appendChild(myDocument.createElement('br'));
-			   divPremises.appendChild(myDocument.createTextNode(ruleToFollow)); 
-            	
-			   	
-            }
-            
-            airPane.render.because.justify = function(){
-            
-            	//Clear the contents of the div
-            	myDocument.getElementById('premises').innerHTML='';
-				airPane.render.because.moreInfo(ruleNameFound);            	
-
-                divJustification.appendChild(divPremises);
-            	div.appendChild(divJustification);
-    
-            }
 
 		   //Display the actual English-like description first
         	var stsDesc = kb.statementsMatching(undefined, description, undefined, subject); 
 
-            divJustification.appendChild(myDocument.createElement('br'));
+	        divJustification.appendChild(myDocument.createElement('br'));
 
             for (var j=0; j<stsDesc.length; j++){
                 if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
-			   		airPane.render.because.displayDesc(stsDesc[j].object);
+					divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Because:')));
+				    divDescription.appendChild(myDocument.createElement('br'));
+					airPane.render.because.displayDesc(stsDesc[j].object);
+				    divDescription.appendChild(myDocument.createElement('br'));
+			        divDescription.appendChild(myDocument.createElement('br'));
                 }
                 divJustification.appendChild(divDescription);
                 
             }	
 			
-            var justifyButton = myDocument.createElement('input');
-            justifyButton.setAttribute('type','button');
-            justifyButton.setAttribute('value','More Information...');
-            justifyButton.addEventListener('click',airPane.render.because.justify,false);
-            divJustification.appendChild(myDocument.createElement('br'));
-            divJustification.appendChild(justifyButton);
-            divJustification.appendChild(myDocument.createElement('br'));
             div.appendChild(divJustification);
+
+		    divJustification.appendChild(myDocument.createElement('br'));
+	        divJustification.appendChild(myDocument.createElement('br'));
+			divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
+		    divJustification.appendChild(myDocument.createElement('br'));
+	        divJustification.appendChild(myDocument.createElement('br'));
             
             for (var j=0; j<stsJust.length; j++){
                 if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
@@ -1283,6 +1350,7 @@ function Outline(doc) {
         
         var becauseButton = myDocument.createElement('input');
         becauseButton.setAttribute('type','button');
+        becauseButton.setAttribute('id','whyButton');
         becauseButton.setAttribute('value','Why?');
         div.appendChild(becauseButton);
         becauseButton.addEventListener('click',airPane.render.because,false);

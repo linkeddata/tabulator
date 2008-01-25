@@ -73,6 +73,7 @@ div.compliantPane {
 }
 
 div.justification {
+	font-size: 100%;
     padding: 0 5px;
     width: 1000px; 
     background-color: white; 
@@ -80,6 +81,7 @@ div.justification {
 }
 
 div.description {
+	font-size: 120%;
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;

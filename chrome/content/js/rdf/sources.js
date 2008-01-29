@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 10965 2008-01-25 07:44:43Z kennyluck $
+ * SVN ID: $Id: sources.js 11442 2008-01-29 16:18:50Z timbl $
  *
  ************************************************************/
 
@@ -317,9 +317,12 @@ function SourceFetcher(store, timeout, async) {
 						    +".N3Handler")
     SourceFetcher.N3Handler.toString = function () { return "N3Handler" }
     SourceFetcher.N3Handler.register = function (sf) {
-	sf.mediatypes['text/rdf+n3'] = {'q': 0.2} // low whiile parser untested
+	sf.mediatypes['text/n3'] = {} // as per 2008 spec
+	sf.mediatypes['text/rdf+n3'] = {'q': 0.5} // pre 2008 spec
+	sf.mediatypes['application/x-turtle'] = {'q': 0.2} // pre 2008
+	sf.mediatypes['text/turtle'] = {'q': 1.0} // pre 2008
     }
-    SourceFetcher.N3Handler.pattern = new RegExp("text/rdf\\+n3")
+    SourceFetcher.N3Handler.pattern = new RegExp("(application|text)/(rdf\\+)?(n3|turtle)")
 
 
     /***********************************************/

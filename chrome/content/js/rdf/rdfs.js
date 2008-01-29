@@ -123,10 +123,11 @@ RDFIndexedFormula.prototype.clash = function(list1, list2) {
  * This method is used to remove any redundant super classes associated with a subject
  * @author oshani@csail.mit.edu
  */
-RDFIndexedFormula.prototype.removeRedundantSuperClasses = function(seeds) {
+RDFIndexedFormula.prototype.redundantSuperClasses = function(seeds) {
 	
 	var all = this.allClasses(seeds);
 	
+	var redundant = [];
 	var classes = [];
 
 	//Make an associative array of classes with the respective superclasses
@@ -146,7 +147,7 @@ RDFIndexedFormula.prototype.removeRedundantSuperClasses = function(seeds) {
 				var classesToCompare = classes[j];
 				for (var k=0; k<classesToCompare.length; k++){
 					if (classesToCompare[k].toNT() == classToRemove.toNT()){
-						this.removeMany(seeds,undefined,classToRemove);
+						redundant.push(classToRemove);
 						break;
 					}
 				}
@@ -155,6 +156,7 @@ RDFIndexedFormula.prototype.removeRedundantSuperClasses = function(seeds) {
 		}
 	}
 	
+	return redundant;
 }
 
 

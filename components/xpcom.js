@@ -43,6 +43,7 @@ function Tabulator() {
     loader.loadSubScript("chrome://tabulator/content/js/rdf/serialize.js"/*,rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/rdf/n3parser.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/rdf/identity.js"/*, rootObj*/);
+    loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfs.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/rdf/sources.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/uri.js"/*, rootObj*/);

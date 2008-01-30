@@ -11,6 +11,7 @@
   <script type="application/x-javascript" src="js/rdf/term.js"/>
   <script type="application/x-javascript" src="js/rdf/match.js"/>
   <script type="application/x-javascript" src="js/rdf/identity.js"/>
+  <script type="application/x-javascript" src="js/rdf/rdfs.js"/>
   <script type="application/x-javascript" src="js/rdf/query.js"/>
   <script type="application/x-javascript" src="js/rdf/sources.js"/>
   <script type="application/x-javascript" src="js/rdf/serialize.js"/>

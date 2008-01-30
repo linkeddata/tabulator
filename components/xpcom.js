@@ -54,6 +54,7 @@ function Tabulator() {
     loader.loadSubScript("chrome://tabulator/content/js/calView/timeline/api/timelineView.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/sparqlUpdate.js"/*, rootObj*/);
     loader.loadSubScript("chrome://tabulator/content/js/labeler.js");
+    loader.loadSubScript("chrome://tabulator/content/request.js");
 
     this.kb = new RDFIndexedFormula();
 
@@ -78,6 +79,7 @@ function Tabulator() {
     this.qs = new QuerySource();
     this.sourceWidget = new SourceWidget();
     this.sparql = new sparql(this.kb);
+    this.rc = new RequestConnector();
     //var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     //var updater = tabulator.sparql.prepareUpdate(newStatement);
     //updater.setObject(kb.sym('http://web.mit.edu/jambo/www/foaf.rdf#jambo'));

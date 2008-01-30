@@ -194,20 +194,12 @@ var tabExtension = {
             //table.outline = outline;
             //alert(table.outline);
 
-            //Approach: cache the intermediate uri for an instace
-            //          have to use this kind of inverseredirect becuase only rdf content-types
-            //          triggers tabulator
-            //Bug cases(maybe): 1. when two tabs simultaneously load a URI that returns 303
-            //                  2. press stop at the mean time of the redirection and you load the
-            //                     redirected document
-            //ToDo: modify the URI bar (after that, there is cache problem...)
-            //      perhaps store inverseredirect URI on tabs?
-            if (tabExtension.inverseRedirectDirectory[uri]){
-                outline.GotoSubject(kb.sym(tabExtension.inverseRedirectDirectory[uri]),true);
-                tabExtension.inverseRedirectDirectory[uri]=undefined;                               
-            }else{
-                outline.GotoSubject(kb.sym(uri),true);
-            }
+            var nsIURI = Components.classes["@mozilla.org/network/io-service;1"]
+                                   .getService(Components.interfaces.nsIIOService)
+                                   .newURI(uri, null, null); //ToDo: make sure the encoding is correct
+            gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
+            outline.GotoSubject(kb.sym(uri),true);
+
             var queryButton = doc.createElement('input');
             queryButton.setAttribute('type','button');
             queryButton.setAttribute('value','Find All');
@@ -332,15 +324,30 @@ var httpResponseObserver =
         if (topic == "http-on-examine-response" && typeof Components != 'undefined') { // Componenets being undefined -- why?
               var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
               var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-              // httpChannel.setRequestHeader("X-Hello", "World", false)
-              if (httpChannel.responseStatus == '303') {
-                  tabulator.log.warn('httpResponseObserver: status='+httpChannel.responseStatus+
+              // httpChannel.setRequestHeader("X-Hello", "World", false)				
+              if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) {
+              
+                  tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);
+                  if (!httpChannel.notificationCallbacks || ''+httpChannel.notificationCallbacks != "[object XMLHttpRequest]"){
+                      httpChannel.notificationCallbacks = {
+                          getInterface: function (iid) {
+                              if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
+                                  return {onChannelRedirect: function (oldC,newC,flags) {                        
+                                      oldC.QueryInterface(Components.interfaces.nsIHttpChannel);
+                                      newC.QueryInterface(Components.interfaces.nsIHttpChannel)                        
+                                      tabulator.rc.setPreviousRequest(newC,oldC);}}
+                              }
+                              return Components.results.NS_NOINTERFACE;}
+                      }
+                      tabulator.log.warn(httpChannel.responseStatus+"after setting,  notificationCallbacks has "+httpChannel.notificationCallbacks);
+                  }
+                  /*tabulator.log.warn('httpResponseObserver: status='+httpChannel.responseStatus+
                     ' '+httpChannel.responseStatusText+ ' for ' + httpChannel.originalURI.spec);
                   var newURI = httpChannel.getResponseHeader('location');
                   tabulator.log.warn('httpResponseObserver: now URI = ' + httpChannel.URI.spec + ' a ' +
                                                                           typeof httpChannel.URI.spec);
                   tabulator.log.warn('httpResponseObserver: Location: ' + newURI + ' a ' + typeof newURI);
-                  tabExtension.inverseRedirectDirectory[newURI] = httpChannel.URI.spec;
+                  */                  
               }
         }
     },

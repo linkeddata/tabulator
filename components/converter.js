@@ -37,7 +37,7 @@ RDFConverter.prototype = {
     //TODO:Parse this before pageload, or let Tabulator kb do it on its own?
     //var nodeTree = parser.parseFromString(this.data, "text/xml");
     var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-    var displayURI = tabulator.rc.getDisplayURI(request);
+    var displayURI = tabulator.rc.getDisplayURI(request); //seeAlso request.js
     var outlineHTML = 
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
         "<html id='docHTML'>"+

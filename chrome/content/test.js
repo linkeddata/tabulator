@@ -197,7 +197,11 @@ var tabExtension = {
             var nsIURI = Components.classes["@mozilla.org/network/io-service;1"]
                                    .getService(Components.interfaces.nsIIOService)
                                    .newURI(uri, null, null); //ToDo: make sure the encoding is correct
+            //this is the best I can do for now. The history entry is not altered so there will be
+            //bugs when reloading sessions or goBack/goForth.
             gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
+            //It's not straightforward to get the browser from the inner document, there should
+            //be a better way
             outline.GotoSubject(kb.sym(uri),true);
 
             var queryButton = doc.createElement('input');
@@ -325,16 +329,18 @@ var httpResponseObserver =
               var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
               var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
               // httpChannel.setRequestHeader("X-Hello", "World", false)				
-              if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) {
+              if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) { //only record 30X redirects
               
                   tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);
-                  if (!httpChannel.notificationCallbacks || ''+httpChannel.notificationCallbacks != "[object XMLHttpRequest]"){
-                      httpChannel.notificationCallbacks = {
+                  if (!httpChannel.notificationCallbacks || ''+httpChannel.notificationCallbacks != "[object XMLHttpRequest]"){ 
+                                                                                                   //a hack not to override notificationCallbakcs set from source.js
+                      httpChannel.notificationCallbacks = { //.notificationCallbacks is overridden for every 30X
                           getInterface: function (iid) {
                               if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
                                   return {onChannelRedirect: function (oldC,newC,flags) {                        
                                       oldC.QueryInterface(Components.interfaces.nsIHttpChannel);
-                                      newC.QueryInterface(Components.interfaces.nsIHttpChannel)                        
+                                      newC.QueryInterface(Components.interfaces.nsIHttpChannel);
+                                      //just like newC.previuosRequest = oldC;                      
                                       tabulator.rc.setPreviousRequest(newC,oldC);}}
                               }
                               return Components.results.NS_NOINTERFACE;}

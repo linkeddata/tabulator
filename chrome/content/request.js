@@ -6,11 +6,14 @@
    WrappedNative"]. My approach is to store the memory in tabulator.rc._requestMap instead of
    channel.previousRequest (store in kb might be a way, I don't know).
    The side effect of this approach may be some memory issue.
+   
                                                                              2008.01.31 kennyluck
 */
 //ToDo: release some memory in _requestMap once in a while or maybe a queue. By the way, I think memory control is 
 //      always an important issue in the tabulator
-//ToDo2: investigate into other appraches...say gBrowser.addProgressListener?
+//ToDo2: make sure that overriding notificationCallbacks would not cause conflicts with other features
+//       seeAlso test.js
+//ToDo3: investigate into other appraches...say gBrowser.addProgressListener?
 
 function RequestConnector(){
     this._requestMap = []; //private

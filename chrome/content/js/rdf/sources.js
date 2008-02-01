@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 11442 2008-01-29 16:18:50Z timbl $
+ * SVN ID: $Id: sources.js 11856 2008-02-01 21:47:56Z timbl $
  *
  ************************************************************/
 
@@ -797,7 +797,7 @@ function SourceFetcher(store, timeout, async) {
 		            }*/
 
 				    kb.HTTPRedirects[xhr.uri.uri] = newURI;
-				    if (xhr.status == 302 && rterm) {
+				    if (xhr.status == 301 && rterm) { // 301 Moved
                                         var badDoc = Util.uri.docpart(rterm.uri);
 					var msg ='Warning: '+xhr.uri +
 					    ' has moved to <'+newURI + '>.';

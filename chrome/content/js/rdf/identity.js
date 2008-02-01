@@ -7,7 +7,6 @@
 // according to owl:sameAs or an owl:InverseFunctionalProperty
 // or an owl:FunctionalProperty
 //
-// Missing: Equating predicates will not propagate these actions if there are >1
 //
 //  2005-10 Written Tim Berners-Lee
 //  2007    Changed so as not to munge statements from documents when smushing
@@ -285,7 +284,7 @@ function RDFMakeTerm(formula,val, canonicalize) {
 // add a triple to the store
 RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
-    if (why == undefined) why = this.sym('chrome:thisSession'); //I wonder this URI is a nice one...
+    if (why == undefined) why = this.sym('chrome:thisSession');
     subj = RDFMakeTerm(this, subj);
     pred = RDFMakeTerm(this, pred);
     obj = RDFMakeTerm(this, obj);
@@ -300,10 +299,13 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     // but is we want to be able to edit documents, we must maintain the original
     // triples from each one.  We might occasionally want to mutiple provences too
     // for a full Truth Management System.  Maybe this should be run-time option.
-    st = this.anyStatementMatching(subj,pred,obj) // @@@@@@@ temp fix <====WATCH OUT! OR
-    st = this.anyStatementMatching(subj,pred,obj,why) // @@@@@@@ temp fix <====WATCH OUT!
+    st = this.anyStatementMatching(subj,pred,obj) // @@@@@@@ temp fix <====WATCH OUT!
+    It is general necessary to know when data has come from >1 place.
+    Maybe this should be a mode?
+*/
+    st = this.anyStatementMatching(subj,pred,obj,why) // Avoid duplicates
     if (st != undefined) return; // already in store
-*/ 
+ 
     
        
     //    tabulator.log.debug("\nActions for "+s+" "+p+" "+o+". size="+this.statements.length)
@@ -424,8 +426,7 @@ RDFIndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,just
 
 /** remove a particular statement from the bank **/
 RDFIndexedFormula.prototype.remove = function (st) {
-    tabulator.log.debug("REMOVING    {"+st.subject+" "+st.predicate+" "+st.object+"} "+st.why+
-    				    " caller was "+this.remove.caller.name);
+    tabulator.log.debug("entering remove w/ st=" + st);
     var term = [ st.subject, st.predicate, st.object, st.why];
     for (var p=0; p<4; p++) {
         var c = this.canon(term[p]);

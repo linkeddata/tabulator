@@ -2143,9 +2143,13 @@ function Outline(doc) {
                         }
                     default:
                     if (getTarget(e).tagName=='HTML'){
+                    /*
+                    //<Feature about="typeOnSelectedToInput">
                     thisOutline.UserInput.Click(e,selectedTd);
                     thisOutline.UserInput.lastModified.value=String.fromCharCode(e.charCode);
                     if (selectedTd.className=='undetermined selected') thisOutline.UserInput.AutoComplete(e.charCode)
+                    //</Feature>
+                    */
                     //Events are not reliable...
                     //var e2=document.createEvent("KeyboardEvent");
                     //e2.initKeyEvent("keypress",true,true,null,false,false,false,false,e.keyCode,0);

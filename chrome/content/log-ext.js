@@ -24,7 +24,7 @@ function TabulatorLogger () {
         addendum.setAttribute('class', typestr);
         var now = new Date();
         addendum.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds()
-                + " [" + typestr + "] "+ escapeForXML(str) + "<br/>";
+                + " [" + typestr + "] "+ escapeForXML(str.toString()) + "<br/>";
         if (tabulator.log.ascending)
             this.container.appendChild(addendum);
         else

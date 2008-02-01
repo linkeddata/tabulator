@@ -93,8 +93,8 @@ Labeler.prototype={
                     }
                 }
             }
-            tabulator.log.warn('Label: "'+object+'" for '+(''+subject).slice(-20)+
-                                ', via:'+(''+predicate).slice(-20)) // @@
+            //tabulator.log.warn('Label: "'+object+'" for '+(''+subject).slice(-20)+
+            //                    ', via:'+(''+predicate).slice(-20)) // @@
             lb.optimize([object,subject,priority]);
         });
     },

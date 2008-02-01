@@ -319,8 +319,8 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
             done = done || actions[i](this, subj, pred, obj, why);
         }
     }
-    if (done) return; // Don't put it in the store
-    
+    if (done) return new RDFStatement(subj, pred, obj, why); // Don't put it in the store
+                                                             // still return this statement for owl:sameAs input
     var st = new RDFStatement(subj, pred, obj, why);
     for (var i=0; i<4; i++) {
         var ix = this.index[i];

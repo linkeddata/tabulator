@@ -177,23 +177,35 @@ function UserInput(outline){
     startFillInText: function startFillInText(selectedTd){
         switch (this.inputInformationAbout(selectedTd)){
             case 'DatatypeProperty-like':
-                this.clearMenu();
-                selectedTd.className='';
+                //this.clearMenu();
+                //selectedTd.className='';
                 emptyNode(selectedTd);
                 this.lastModified = this.createInputBoxIn(selectedTd," (Please Input) ");
                 this.lastModified.isNew=false;
                    
                 this.lastModified.select();
-                break;            
-            case 'ObjectProperty-like':
+                break;
             case 'predicate':
+                //the goal is to bring back all the menus (with autocomplete functionality
+                //this.performAutoCompleteEdit(selectedTd,['PredicateAutoComplete',
+                //                        this.choiceQuery('SuggestPredicateByDomain')]);
+                this.performAutoCompleteEdit(selectedTd,'PredicateAutoComplete');
+                break;                        
+            case 'ObjectProperty-like':
             case 'no-idea':
+                //menu should be either function that
+                this.performAutoCompleteEdit(selectedTd,'GeneralAutoComplete');
+                
+                /*
+                //<code time="original">
                 emptyNode(selectedTd);
                 this.lastModified=this.createInputBoxIn(selectedTd,"");
                 this.lastModified.select();
                 this.lastModified.addEventListener('keypress',this.AutoComplete,false);            
                 //this pops up the autocomplete menu
                 this.AutoComplete(1);
+                //</code>
+                */
         }
     },
      
@@ -259,7 +271,22 @@ function UserInput(outline){
 
         return true; //this is not a valid modification
     },
-
+    
+/**
+ *  UIs: input event handlers, menu generation 
+ */    
+    performAutoCompleteEdit: function performAutoCompleteEdit(selectedTd,menu){
+        emptyNode(selectedTd);
+        this.lastModified=this.createInputBoxIn(selectedTd,"");
+        this.lastModified.select();
+        this.lastModified.addEventListener('keypress',this.getAutoCompleteHandler(menu),false);
+        /* keypress!?
+           This is what I hate about UI programming.
+           I shall write something about this but not now.        
+        */            
+        //this pops up the autocomplete menu
+        this.getAutoCompleteHandler(menu)(1);
+    },
     backOut: function backOut(){
         this.deleteTriple(this.lastModified.parentNode,true);
         this.lastModified=null;
@@ -764,13 +791,18 @@ function UserInput(outline){
         }
     },
 
-    AutoComplete: function AutoComplete(enterEvent,tdNode,mode){
+    getAutoCompleteHandler: function getAutoCompleteHandler(mode){
+        if (mode=='PredicateAutoComplete')
+            mode = 'predicate';
+        else
+            mode = 'all'; 
+        var InputBox=this.lastModified||outline.selection[0].firstChild;
+        return function (enterEvent) {
         //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
         //                                           but not [wrapped ...]
         //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
-        var InputBox=this.lastModified||outline.selection[0].firstChild;
         var e={};
-        if (!tdNode) tdNode=InputBox.parentNode //argument tdNode seems to be not neccessary
+        var tdNode=InputBox.parentNode;
         if (!mode) mode=tdNode.nextSibling?'predicate':'all';
         e.pageX=findPos(tdNode)[0];
         e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
@@ -789,8 +821,10 @@ function UserInput(outline){
                         }
                         var inputTerm=getAbout(kb,menu.lastHighlight)
                         var fillInType=(mode=='predicate')?'predicate':'object';
-                        if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
-                            outline.UserInput.clearMenu();
+                        outline.UserInput.clearMenu();
+                        outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
+                        //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
+                        //    outline.UserInput.clearMenu();
                         return;
                     case 38://up
                         menu.lastHighlight.className='';
@@ -816,6 +850,7 @@ function UserInput(outline){
                         return;
                         break;
                     default:
+                        //we need this because it is keypress, seeAlso performAutoCompleteEdit
                         newText+=String.fromCharCode(enterEvent.charCode)
                 }
             }
@@ -844,7 +879,8 @@ function UserInput(outline){
             menu.lastHighlight=menu.firstChild.firstChild;
             menu.lastHighlight.className='activeItem';   
             return;
-        }//end of autoScroll, start of menu generation
+        }
+        };
     },
     //ToDo: shrink rows when \n+backspace
     Keypress: function(e){
@@ -935,6 +971,7 @@ function UserInput(outline){
      */
 
     inputInformationAbout: function inputInformationAbout(selectedTd){
+        if (selectedTd.nextSibling) return 'predicate';
         var predicateTerm=this.getStatementAbout(selectedTd).predicate;
         //var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate; 
         if(kb.whether(predicateTerm,tabulator.ns.rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
@@ -953,8 +990,8 @@ function UserInput(outline){
         try{
             var statement=trNode.AJAR_statement;
         }catch(e){
-            //alert(something.textContent+" has ancestor "+trNode);
-            //throw "TR not a statement TR";
+            /*alert(something+something.textContent+" has ancestor "+trNode);
+            throw "TR not a statement TR";*/
             return;
         }
         //Set last modified here, I am not sure this will be ok.
@@ -1273,7 +1310,7 @@ function UserInput(outline){
                     this.clearMenu();
                     return;
                 }
-                for (var i=0;i<entries.length&&i<30;i++) //do not show more than 30 items
+                for (var i=0;i<entries.length&&i<10;i++) //do not show more than 30 items
                     addMenuItem(entries[i][1]);
                 break;
             case 'GeneralAutoComplete':
@@ -1286,7 +1323,7 @@ function UserInput(outline){
                     this.clearMenu();
                     return;
                 }
-                for (var i=0;i<entries.length&&i<30;i++){ //do not show more than 30 items
+                for (var i=0;i<entries.length&&i<10;i++){ //do not show more than 30 items
                     var thisNT=entries[i][1].toNT();
                     var tr=table.appendChild(myDocument.createElement('tr'));
                     tr.setAttribute('about',thisNT);
@@ -1422,6 +1459,7 @@ function UserInput(outline){
                 isNew=true;
             }        
             var newTd=outline.outline_objectTD(inputTerm);
+            outline.replaceTD(newTd,selectedTd);
             if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
                 var s;
                 if (!isInverse)
@@ -1452,10 +1490,10 @@ function UserInput(outline){
                 this.lastModified=null;
                 newTd.className+=' pendingedit';
             }else{
+                //?this.formUndetStat(tr...)
                 outline.walk('left');
                 doNext=true;
-            }          
-            outline.replaceTD(newTd,selectedTd);
+            }                      
             //removal of the undetermined statement
             TempFormula.remove(stat);
 
@@ -1472,7 +1510,8 @@ function UserInput(outline){
 
     formUndetStat: function formUndetStat(trNode,subject,predicate,object,why,inverse){
         trNode.AJAR_inverse=inverse;
-        return trNode.AJAR_statement=TempFormula.add(subject,predicate,object,why);
+        trNode.AJAR_statement=TempFormula.add(subject,predicate,object,why);
+        return trNode.AJAR_statement;
     },
     /** ABANDONED APPROACH
     //determine whether the event happens at around the bottom border of the element

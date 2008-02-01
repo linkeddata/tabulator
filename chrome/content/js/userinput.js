@@ -1065,7 +1065,8 @@ function UserInput(outline){
         var trIterator;
         try{
             for(trIterator=predicateTd.parentNode.nextSibling;
-            trIterator.childNodes.length==1; //number of nodes as condition
+            trIterator.childNodes.length==1 && trIterator.AJAR_statement; 
+            //number of nodes as condition, also beware of toggle Trs that don't have AJAR_statement
             trIterator=trIterator.nextSibling){}
         }catch(e){isEnd=true;}
         if(!isEnd && HCIoptions["bottom insert highlights"].enabled) trIterator=trIterator.previousSibling;

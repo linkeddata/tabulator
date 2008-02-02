@@ -482,7 +482,8 @@ td.undetermined table{
 .outlineMenu table{cursor:default;width:100%;text-align:left;padding:5px 5px;}
 .outlineMenu div{/*width:6em;*/ overflow:auto; white-space:nowrap;}
 .outlineMenu td{color:#654d6c;}
-tr.activeItem{background: #D1C6DA;}  /* @@ Jim's: #f4e8fc; */
+.outlineMenu .activeItem{background: #D1C6DA;}  /* @@ Jim's: #f4e8fc; */
+.outlineMenu input{margin: 0.2em;}
 
 div.bottom-border{
     border: .2em solid transparent;

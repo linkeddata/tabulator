@@ -1,4 +1,11 @@
 isExtension = true;
+function isFirefox3(){ //from http://developer.mozilla.org/en/docs/Using_nsIXULAppInfo
+  var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
+                          .getService(Components.interfaces.nsIXULAppInfo);
+  var versionChecker = Components.classes["@mozilla.org/xpcom/version-comparator;1"]
+                                 .getService(Components.interfaces.nsIVersionComparator);
+  return (versionChecker.compare(appInfo.version, "3.0a") >= 0)?true:false;
+}
 
 function openTool(url, type, width, height)
 {
@@ -32,7 +39,8 @@ internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#session'] = 1;
 internals['http://www.w3.org/2006/link#uri'] = 1;
 internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
 
-// Special knowledge of properties
+// Special knowledge of properties //Don't use these anymore, dangerous
+/*
 tabont = Namespace("http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
 foaf = Namespace("http://xmlns.com/foaf/0.1/")
 rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
@@ -44,6 +52,7 @@ xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
 contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
 mo = Namespace("http://purl.org/ontology/mo/")
 //logont = Namespace("http://www.w3.org/2000/10/swap/log#");
+*/
 
 //Namespaces for AIR (Amord in RDF) use
 tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
@@ -159,6 +168,7 @@ Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add
 
 
 LanguagePreference = "en"
+/* //dealt with labeler
 labelPriority = []
 labelPriority[foaf('name').uri] = 10
 labelPriority[dc('title').uri] = 8
@@ -167,6 +177,7 @@ labelPriority[contact('fullName').uri] = 4
 labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
 labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
+*/
 
 //Heavily modified from http://developer.mozilla.org/en/docs/Code_snippets:On_page_load
 var tabExtension = {
@@ -215,8 +226,9 @@ var tabExtension = {
       //deal with local .n3 files, I don't know what the last two arguments do...
       //also a hack on sources.js
       catman.addCategoryEntry('ext-to-type-mapping','n3','text/rdf+n3',true,true);
-      var ThisSession=kb.the(undefined,RDFS('label'),kb.literal("This Session"));
-      sf.requestURI("chrome://tabulator/content/internalKnowledge.n3",ThisSession);
+      var ThisSession=kb.the(undefined,tabulator.ns.rdfs('label'),kb.literal("This Session"));
+      //deal with this later
+      if (!isFirefox3())  sf.requestURI("chrome://tabulator/content/internalKnowledge.n3",ThisSession);
       //gBrowser.setAttribute('ondraggesture', 'nsDragAndDrop.startDrag(event, TabulatorOutlinerObserver)');
       gBrowser.setAttribute('ondragdrop' ,'nsDragAndDrop.drop(event,TabulatorOutlinerObserver)');
       gBrowser.setAttribute('ondragenter','nsDragAndDrop.dragEnter(event,TabulatorOutlinerObserver)');

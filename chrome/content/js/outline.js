@@ -9,6 +9,18 @@ function Outline(doc) {
     this.sparql = sparql;
     this.kb = kb;
     
+    //people like shortcuts for sure
+    var tabont = tabulator.ns.tabont;
+    var foaf = tabulator.ns.foaf;
+    var rdf = tabulator.ns.rdf;
+    var RDFS = tabulator.ns.rdfs;
+    var OWL = tabulator.ns.owl;
+    var dc = tabulator.ns.dc;
+    var rss = tabulator.ns.rss;
+    var xsd = tabulator.ns.xsd;
+    var contact = tabulator.ns.contact;
+    var mo = tabulator.ns.mo;
+    
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
     this.UserInput=new UserInput(this);
@@ -1055,8 +1067,8 @@ function Outline(doc) {
     airPane = {};
     airPane.icon = Icon.src.icon_airPane;
      
-    var air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
-    var tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
+    var air = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+    var tms = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
     var compliant = air('compliant-with');
     var nonCompliant = air('non-compliant-with');
     var antcExpr = tms('antecedent-expr');
@@ -1536,7 +1548,7 @@ function Outline(doc) {
                         td_p.setAttribute('rowspan',2)  
                     }
                     for(l=1;l<k;l++){
-                        if (!sel(plist[j+l]).sameTerm(sel(plist[j+l-1]))){
+                        if (!kb.canon(sel(plist[j+l])).sameTerm(kb.canon(sel(plist[j+l-1])))){
                             s=plist[j+l];
                             defaultpropview = views.defaults[s.predicate.uri];
                             var trObj=myDocument.createElement('tr');
@@ -1594,9 +1606,9 @@ function Outline(doc) {
     
             tr.showAllobj = function(){tr.showNobj(k-dups);};
             //tr.showAllobj();
-            DisplayOptions["display:block on"].setupHere(
+            /*DisplayOptions["display:block on"].setupHere(
                     [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
-                    "appendPropertyTRs()"); 
+                    "appendPropertyTRs()");*/ 
             tr.showNobj(10);
             
             if (HCIoptions["bottom insert highlights"].enabled){
@@ -1795,7 +1807,20 @@ function Outline(doc) {
             }
         }
     }
-
+    this.showURI = function showURI(about){
+        if(about && myDocument.getElementById('UserURI')) { 
+             myDocument.getElementById('UserURI').value = 
+                  (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+         } else if(about && isExtension) {
+             var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
+             tabStatusBar.setAttribute('style','display:block');
+             tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+             if(tabStatusBar.label=="") {
+                 tabStatusBar.setAttribute('style','display:none');
+             }
+         }    
+    };
+    
     function setSelected(node, newValue) {
         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));
         tabulator.log.debug("@outline setSelected, intended to "+(newValue?"select ":"deselect ")+node+node.textContent);   
@@ -1811,17 +1836,9 @@ function Outline(doc) {
             //tabulator.log.info("Selecting "+node.textContent)
 
             var about=getTerm(node); //show uri for a newly selectedTd
-            if(about && myDocument.getElementById('UserURI')) { 
-                myDocument.getElementById('UserURI').value = 
-                     (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-            } else if(about && isExtension) {
-                var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
-                tabStatusBar.setAttribute('style','display:block');
-                tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-                if(tabStatusBar.label=="") {
-                    tabStatusBar.setAttribute('style','display:none');
-                }
-            }
+            thisOutline.showURI(about);
+            if(isExtension && about && about.termType=='symbol') gURLBar.value = about.uri;
+                           //about==null when node is a TBD
                          
             var st = node.AJAR_statement; //show blue cross when the why of that triple is editable
             if (typeof st == 'undefined') st = node.parentNode.AJAR_statement;

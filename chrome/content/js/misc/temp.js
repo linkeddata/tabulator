@@ -249,4 +249,66 @@ else if (selectedTd.className=='undetermined selected'){
             var completeType=(selectedTd.nextSibling)?'predicate':'all';
             this.AutoComplete(undefined,selectedTd,completeType);
         }
-        */              
+        */
+//Fragment: <Feature about="labelChoice">
+//@ fillInRequest
+            if (inputTerm.sameTerm(tabulator.ns.tabont('createNew'))){
+                //<Feature about="labelChoice">
+                //var newTerm=this.createNew(selectedTd);
+                //var newSelected=outline.selection[0];
+                //outline.outline_expand(newSelected,newTerm);
+                /*<lable-choice>
+                var trIterator;
+                for (trIterator=newSelected.firstChild.childNodes[1].firstChild;
+                         trIterator; trIterator=trIterator.nextSibling) {
+                    var st=trIterator.AJAR_statement;
+                    if (!st) continue;
+                    if (st.predicate.termType=='collection') break;
+                }
+                var e={type:'click'};
+                this.Click(e,trIterator.lastChild);
+                outline.walk('moveTo',trIterator.lastChild);
+                */
+                //return true;
+                //</Feature>
+                inputTerm=kb.nextSymbol(stat.why);
+                //this.bnode2symbol(newTerm,inputTerm);
+                isNew=true;
+            } 
+//@ createNew
+        var insertTr=selectedTd.parentNode;
+        //var preStat=insertTr.previousSibling.AJAR_statement;
+        var preStat=insertTr.AJAR_statement;
+        var predicateTerm=preStat.predicate;
+            
+        var tempTerm=kb.bnode();
+        var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
+        if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
+        var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
+        kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
+        /* SELECT ?labelProperty
+           WHERE{
+               ?labelProperty rdfs:subPropertyOf rdfs:label.
+               ?labelProperty rdfs:domain tempType.
+           }
+        */ //this is ideal...but
+    
+        /*<lable-choice>
+        var labelChoices=kb.collection();
+        var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
+        for (var i=0;i<labelProperties.length;i++) {
+            labelChoices.append(labelProperties[i]);
+            kb.add(labelChoices,tabulator.ns.link('element'),labelProperties[i]);
+        }
+        labelChoices.append(tabulator.ns.rdfs('label'));
+        kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
+        kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
+        */
+    
+        //insertTr.appendChild(outline.outline_objectTD(tempTerm));
+        //outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);              
+        if (!isInverse)
+            this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
+        else
+            this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
+        return tempTerm;              

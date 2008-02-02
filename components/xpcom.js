@@ -60,19 +60,19 @@ function Tabulator() {
 
     // Namespaces for general use
     this.ns = {};
-    this.ns.link = this.ns.tab = this.ns.tabont = Namespace("http://www.w3.org/2007/ont/link#")
-    this.ns.http = Namespace("http://www.w3.org/2007/ont/http#");
-    this.ns.httph = Namespace("http://www.w3.org/2007/ont/httph#");
-    this.ns.ical = Namespace("http://www.w3.org/2002/12/cal/icaltzd#");
-    this.ns.foaf = Namespace("http://xmlns.com/foaf/0.1/");
-    this.ns.rdf = rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    this.ns.rdfs = rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#");
-    this.ns.owl = owl = Namespace("http://www.w3.org/2002/07/owl#");
-    this.ns.dc = dc = Namespace("http://purl.org/dc/elements/1.1/");
-    this.ns.rss = rss = Namespace("http://purl.org/rss/1.0/");
-    this.ns.xsd = xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
-    this.ns.contact = contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#");
-    this.ns.mo = mo = Namespace("http://purl.org/ontology/mo/");
+    this.ns.link = this.ns.tab = this.ns.tabont = RDFNamespace("http://www.w3.org/2007/ont/link#")
+    this.ns.http = RDFNamespace("http://www.w3.org/2007/ont/http#");
+    this.ns.httph = RDFNamespace("http://www.w3.org/2007/ont/httph#");
+    this.ns.ical = RDFNamespace("http://www.w3.org/2002/12/cal/icaltzd#");
+    this.ns.foaf = RDFNamespace("http://xmlns.com/foaf/0.1/");
+    this.ns.rdf = rdf = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    this.ns.rdfs = rdfs = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
+    this.ns.owl = owl = RDFNamespace("http://www.w3.org/2002/07/owl#");
+    this.ns.dc = dc = RDFNamespace("http://purl.org/dc/elements/1.1/");
+    this.ns.rss = rss = RDFNamespace("http://purl.org/rss/1.0/");
+    this.ns.xsd = xsd = RDFNamespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
+    this.ns.contact = contact = RDFNamespace("http://www.w3.org/2000/10/swap/pim/contact#");
+    this.ns.mo = mo = RDFNamespace("http://purl.org/ontology/mo/");
 
 
     this.sf = new SourceFetcher(this.kb);
@@ -105,16 +105,16 @@ function Tabulator() {
     internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
 
     // Special knowledge of properties
-    tabont = Namespace("http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
-    foaf = Namespace("http://xmlns.com/foaf/0.1/")
-    rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-    RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
-    OWL = Namespace("http://www.w3.org/2002/07/owl#")
-    dc = Namespace("http://purl.org/dc/elements/1.1/")
-    rss = Namespace("http://purl.org/rss/1.0/")
-    xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
-    contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
-    mo = Namespace("http://purl.org/ontology/mo/")
+    tabont = RDFNamespace("http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
+    foaf = RDFNamespace("http://xmlns.com/foaf/0.1/")
+    rdf = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+    RDFS = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#")
+    OWL = RDFNamespace("http://www.w3.org/2002/07/owl#")
+    dc = RDFNamespace("http://purl.org/dc/elements/1.1/")
+    rss = RDFNamespace("http://purl.org/rss/1.0/")
+    xsd = RDFNamespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
+    contact = RDFNamespace("http://www.w3.org/2000/10/swap/pim/contact#")
+    mo = RDFNamespace("http://purl.org/ontology/mo/")
 
     Icon = {}
     Icon.src= []

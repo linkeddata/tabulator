@@ -24,6 +24,20 @@ function UserInput(outline){
     }   
     var NameSpaces=this.namespaces;
     */
+    
+    //people like shortcuts for sure
+    var tabont = tabulator.ns.tabont;
+    var foaf = tabulator.ns.foaf;
+    var rdf = tabulator.ns.rdf;
+    var RDFS = tabulator.ns.rdfs;
+    var OWL = tabulator.ns.owl;
+    var dc = tabulator.ns.dc;
+    var rss = tabulator.ns.rss;
+    var xsd = tabulator.ns.xsd;
+    var contact = tabulator.ns.contact;
+    var mo = tabulator.ns.mo;
+    
+        
     var sparqlService=new sparql(kb);
     if (!UserInputFormula){
         UserInputFormula=new RDFFormula();
@@ -806,12 +820,21 @@ function UserInput(outline){
         if (!mode) mode=tdNode.nextSibling?'predicate':'all';
         e.pageX=findPos(tdNode)[0];
         e.pageY=findPos(tdNode)[1]+tdNode.clientHeight;
-       
+        
+        var menu=myDocument.getElementById(outline.UserInput.menuID);
+        function setHighlightItem(item){
+            if (!item) return; //do not make changes
+            if (menu.lastHighlight) menu.lastHighlight.className = '';
+            menu.lastHighlight = item;
+            menu.lastHighlight.className = 'activeItem';
+        }
         if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
             var newText=InputBox.value;
-            var menu=myDocument.getElementById(outline.UserInput.menuID);
+
             if (typeof enterEvent=='object'){
-                enterEvent.stopPropagation();  
+                enterEvent.stopPropagation();
+                if (menu && !menu.lastHighlight) //this ensures the following operation valid 
+                    setHighlightItem(menu.firstChild.firstChild);
                 switch (enterEvent.keyCode){
                     case 13://enter
                     case 9://tab
@@ -819,23 +842,48 @@ function UserInput(outline){
                             outline.UserInput.clearInputAndSave();
                             return;
                         }
-                        var inputTerm=getAbout(kb,menu.lastHighlight)
-                        var fillInType=(mode=='predicate')?'predicate':'object';
-                        outline.UserInput.clearMenu();
-                        outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
-                        //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
-                        //    outline.UserInput.clearMenu();
+                        if (!menu.lastHighlight) return; //warning?
+   
+                        if (menu.lastHighlight.tagName == 'INPUT'){
+                            switch (menu.lastHighlight.value){
+                                case 'New...':
+                                    outline.UserInput.createNew();
+                                    break;
+                                case 'GiveURI':
+                                    outline.UserInput.inputURI();
+                                    break;
+                            }
+                        }else{
+                            var inputTerm=getAbout(kb,menu.lastHighlight)
+                            var fillInType=(mode=='predicate')?'predicate':'object';
+                            outline.UserInput.clearMenu();
+                            outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
+                            //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
+                            //    outline.UserInput.clearMenu();
+                        }
                         return;
                     case 38://up
-                        menu.lastHighlight.className='';
-                        menu.lastHighlight=menu.lastHighlight.previousSibling;
-                        menu.lastHighlight.className='activeItem';
+                        if (newText == '' && menu.lastHighlight.tagName == 'TR'
+                                          && !menu.lastHighlight.previousSibling)
+                            setHighlightItem(menu.firstChild.firstChild);
+                        else
+                            setHighlightItem(menu.lastHighlight.previousSibling);
                         return;
                     case 40://down
-                        menu.lastHighlight.className='';
-                        menu.lastHighlight=menu.lastHighlight.nextSibling;
-                        menu.lastHighlight.className='activeItem';
+                        if (menu.lastHighlight.tagName == 'INPUT')
+                            setHighlightItem(menu.childNodes[1].firstChild);
+                        else
+                            setHighlightItem(menu.lastHighlight.nextSibling);
                         return;
+                    case 37://left
+                    case 39://right                        
+                        if (menu.lastHighlight.tagName == 'INPUT'){
+                            if (enterEvent.keyCode == 37)
+                                setHighlightItem(menu.lastHighlight.previousSibling);
+                            else
+                                setHighlightItem(menu.lastHighlight.nextSibling);
+                        }
+                        return
                     case 8://backspace
                         newText=newText.slice(0,-1);
                         break;
@@ -860,27 +908,49 @@ function UserInput(outline){
                 outline.UserInput.clearMenu();
                 //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
                 outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
-                if (typeof enterEvent=='number'){
-                    var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
-                    var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
-                    var h1th=h1.appendChild(myDocument.createElement('th'));
-                    h1th.appendChild(myDocument.createTextNode("New..."));
-                    h1.setAttribute('about',tabulator.ns.tabont('createNew'));
-                }                 
+                if (newText.length==0) outline.UserInput.WildCardButtons();
+                               
             }else if(mode=='predicate'){
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
             }
             var menu=myDocument.getElementById(outline.UserInput.menuID); 
-            //menu.scrollTop=i*menu.firstChild.firstChild.offsetHeight+5;//5 is the padding
-            //adjustment for firefox3 required
             if (!menu) return; //no matches
+
             if (menu.lastHighlight) menu.lastHighlight.className='';
             menu.lastHighlight=menu.firstChild.firstChild;
-            menu.lastHighlight.className='activeItem';   
+            menu.lastHighlight.className='activeItem';
+            outline.showURI(getAbout(kb,menu.lastHighlight));
             return;
         }
-        };
+        };//end of return function
+    },
+    WildCardButtons: function WildCardButtons(){
+        var menuDiv=myDocument.getElementById(outline.UserInput.menuID);
+        var div=menuDiv.insertBefore(myDocument.createElement('div'),menuDiv.firstChild);
+        var input1 = div.appendChild(myDocument.createElement('input'));
+        var input2 = div.appendChild(myDocument.createElement('input'));
+        //var input3 = div.appendChild(myDocument.createElement('input'));
+        input1.type = 'button';input1.value = "New...";
+        input2.type = 'button';input2.value = "GiveURI";
+        
+        function highlightInput(e){ //same as the one in newMenu()
+            var menu=myDocument.getElementById(outline.UserInput.menuID);
+            if (menu.lastHighlight) menu.lastHighlight.className='';
+            menu.lastHighlight=ancestor(getTarget(e),'INPUT');
+            if (!menu.lastHighlight) return; //mouseover <TABLE>
+            menu.lastHighlight.className='activeItem';
+        }
+        div.addEventListener('mouseover',highlightInput,false);
+        input1.addEventListener('click',this.createNew,false);
+        input2.addEventListener('click',this.inputURI,false);        
+        /*
+        var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
+        var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
+        var h1th=h1.appendChild(myDocument.createElement('th'));
+        h1th.appendChild(myDocument.createTextNode("New..."));
+        h1.setAttribute('about',tabulator.ns.tabont('createNew'));
+        */
     },
     //ToDo: shrink rows when \n+backspace
     Keypress: function(e){
@@ -1021,43 +1091,34 @@ function UserInput(outline){
         return inputBox;
     },
 
-    createNew: function createNew(selectedTd,isInverse){
-        var insertTr=selectedTd.parentNode;
-        //var preStat=insertTr.previousSibling.AJAR_statement;
-        var preStat=insertTr.AJAR_statement;
-        var predicateTerm=preStat.predicate;
-            
-        var tempTerm=kb.bnode();
-        var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
-        if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
-        var tempRequest=this.generateRequest("(Type URI into this if you have one)",undefined,false,true);
-        kb.add(tempTerm,kb.sym('http://www.w3.org/2006/link#uri'),tempRequest,preStat.why);
-        /* SELECT ?labelProperty
-           WHERE{
-               ?labelProperty rdfs:subPropertyOf rdfs:label.
-               ?labelProperty rdfs:domain tempType.
-           }
-        */ //this is ideal...but
+    //called when 'New...' is clicked(eventlistener) or enter is pressed while 'New...' is highlighted
+    createNew: function createNew(e){
+        outline.UserInput.clearMenu();
+        var selectedTd=outline.selection[0];
+        var targetdoc=selectedTd.parentNode.AJAR_statement.why;
+        var newTerm=kb.nextSymbol(targetdoc);
+        outline.UserInput.fillInRequest('object',selectedTd,newTerm);
+        //selection is changed
+        outline.outline_expand(outline.selection[0],newTerm);
+    },
     
-        /*<lable-choice>
-        var labelChoices=kb.collection();
-        var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
-        for (var i=0;i<labelProperties.length;i++) {
-            labelChoices.append(labelProperties[i]);
-            kb.add(labelChoices,tabulator.ns.link('element'),labelProperties[i]);
+    inputURI: function inputURI(e){
+        
+        //outline.UserInput.clearMenu();
+        if (false &&isExtension){
+            var selectedTd = outline.selection[0];
+            emptyNode(selectedTd);
+            var textbox = myDocument.createElementNS(kXULNS,'textbox');
+            textbox.setAttribute('type','autocomplete');
+            textbox.setAttribute('autocompletesearch','history');
+            selectedTd.appendChild(textbox);
+            /*
+            urlbar = gURLBar.cloneNode(false);
+            selectedTd.appendChild(urlbar);
+            urlbar.mController = gURLBar.mController;
+            */
         }
-        labelChoices.append(tabulator.ns.rdfs('label'));
-        kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
-        kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
-        */
-    
-        //insertTr.appendChild(outline.outline_objectTD(tempTerm));
-        //outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);              
-        if (!isInverse)
-            this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
-        else
-            this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
-        return tempTerm;
+ 
     },
 
     appendToPredicate: function appendToPredicate(predicateTd){   
@@ -1118,12 +1179,12 @@ function UserInput(outline){
         //this is troblesome since RDFIndexedFormula does not allow me to add <x> <y> "TBD". twice
         //Choice 2: Use a variable.
         //Agreed. Kenny wonders whether there is RDF/XML representation of a variable.
-        labelPriority[tabulator.ns.link('message').uri] = 20;
+        //labelPriority[tabulator.ns.link('message').uri] = 20;
         
         // We must get rid of this clutter in the stroe. "OK, will be stroed in a seperate formula to avoid bugs", Kenny says
         var tp=TempFormula;
         var reqTerm=tp.bnode();
-        tp.add(reqTerm,rdf('type'),tabulator.ns.link("Request"));
+        tp.add(reqTerm,tabulator.ns.rdf('type'),tabulator.ns.link("Request"));
         if (tipText.length<10)
             tp.add(reqTerm,tabulator.ns.link('message'),tp.literal(tipText));
         else
@@ -1395,7 +1456,7 @@ function UserInput(outline){
         stat=tr.AJAR_statement;isInverse=tr.AJAR_inverse;
         
         var reqTerm = (type=='object')?stat.object:stat.predicate;
-        var newStat;var isNew;
+        var newStat;
         var doNext=false;
         
         //RDF Event
@@ -1435,30 +1496,7 @@ function UserInput(outline){
             }
             outline.replaceTD(newTd,selectedTd);
             TempFormula.remove(stat);
-        }else if (type=='object'){
-            if (inputTerm.sameTerm(tabulator.ns.tabont('createNew'))){
-                //<Feature about="labelChoice">
-                //var newTerm=this.createNew(selectedTd);
-                //var newSelected=outline.selection[0];
-                //outline.outline_expand(newSelected,newTerm);
-                /*<lable-choice>
-                var trIterator;
-                for (trIterator=newSelected.firstChild.childNodes[1].firstChild;
-                         trIterator; trIterator=trIterator.nextSibling) {
-                    var st=trIterator.AJAR_statement;
-                    if (!st) continue;
-                    if (st.predicate.termType=='collection') break;
-                }
-                var e={type:'click'};
-                this.Click(e,trIterator.lastChild);
-                outline.walk('moveTo',trIterator.lastChild);
-                */
-                //return true;
-                //</Feature>
-                inputTerm=kb.nextSymbol(stat.why);
-                //this.bnode2symbol(newTerm,inputTerm);
-                isNew=true;
-            }        
+        }else if (type=='object'){   
             var newTd=outline.outline_objectTD(inputTerm);
             outline.replaceTD(newTd,selectedTd);
             if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
@@ -1497,8 +1535,7 @@ function UserInput(outline){
             }                      
             //removal of the undetermined statement
             TempFormula.remove(stat);
-
-            if (isNew) outline.outline_expand(outline.selection[0],inputTerm);  
+ 
         }
         //do not throw away user's work even update fails
         UserInputFormula.statements.push(newStat);

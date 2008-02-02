@@ -146,9 +146,11 @@ diag_progress = function(str) { tabulator.log.debug(str); }
 RDF_type_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 DAML_sameAs_URI = "http://www.w3.org/2002/07/owl#sameAs";
 
+/*
 function SyntaxError(details) {
     return new __SyntaxError(details);
 }
+*/
 
 function __SyntaxError(details) {
     this.details = details
@@ -156,7 +158,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 3524 2007-07-21 22:30:36Z timbl $
+$Id: n3parser.js 11924 2008-02-02 22:08:06Z kennyluck $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 

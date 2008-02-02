@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 9005 2007-12-27 02:46:07Z timbl $
+// SVN ID: $Id: tabulate.js 11924 2008-02-02 22:08:06Z kennyluck $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -15,20 +15,20 @@ LanguagePreference = "en"    // @@ How to set this from the browser? From cookie
 
 // Namespaces for general use
 tabulator.ns = {};
-tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = Namespace("http://www.w3.org/2007/ont/link#")
-tabulator.ns.http = Namespace("http://www.w3.org/2007/ont/http#");
-tabulator.ns.httph = Namespace("http://www.w3.org/2007/ont/httph#");
-tabulator.ns.ical = Namespace("http://www.w3.org/2002/12/cal/icaltzd#");
-tabulator.ns.foaf = Namespace("http://xmlns.com/foaf/0.1/");
-tabulator.ns.rdf = rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-tabulator.ns.rdfs = rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#");
-tabulator.ns.owl = owl = Namespace("http://www.w3.org/2002/07/owl#");
-tabulator.ns.dc = dc = Namespace("http://purl.org/dc/elements/1.1/");
-tabulator.ns.rss = rss = Namespace("http://purl.org/rss/1.0/");
-tabulator.ns.xsd = xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
-tabulator.ns.contact = contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#");
-tabulator.ns.mo = mo = Namespace("http://purl.org/ontology/mo/");
-tabulator.ns.doap = doap = Namespace("http://usefulinc.com/ns/doap#");
+tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = RDFNamespace("http://www.w3.org/2007/ont/link#")
+tabulator.ns.http = RDFNamespace("http://www.w3.org/2007/ont/http#");
+tabulator.ns.httph = RDFNamespace("http://www.w3.org/2007/ont/httph#");
+tabulator.ns.ical = RDFNamespace("http://www.w3.org/2002/12/cal/icaltzd#");
+tabulator.ns.foaf = RDFNamespace("http://xmlns.com/foaf/0.1/");
+tabulator.ns.rdf = rdf = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+tabulator.ns.rdfs = rdfs = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
+tabulator.ns.owl = owl = RDFNamespace("http://www.w3.org/2002/07/owl#");
+tabulator.ns.dc = dc = RDFNamespace("http://purl.org/dc/elements/1.1/");
+tabulator.ns.rss = rss = RDFNamespace("http://purl.org/rss/1.0/");
+tabulator.ns.xsd = xsd = RDFNamespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
+tabulator.ns.contact = contact = RDFNamespace("http://www.w3.org/2000/10/swap/pim/contact#");
+tabulator.ns.mo = mo = RDFNamespace("http://purl.org/ontology/mo/");
+tabulator.ns.doap = doap = RDFNamespace("http://usefulinc.com/ns/doap#");
 
 var ns = tabulator.ns
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing

@@ -239,7 +239,7 @@ RDFFormula.prototype.registerFormula = function(accesskey){
     var superFormula = this.superFormula || this;
     RDFFormula.instances[accesskey] = this;
     var formulaTerm = superFormula.bnode();
-    superFormula.add(formulaTerm,rdf('type'),superFormula.sym("http://www.w3.org/2000/10/swap/log#Formula"));
+    superFormula.add(formulaTerm, tabulator.ns.rdf('type'),superFormula.sym("http://www.w3.org/2000/10/swap/log#Formula"));
     superFormula.add(formulaTerm, tabulator.ns.foaf('name'), superFormula.literal(accesskey));
     superFormula.add(formulaTerm, tabulator.ns.link('accesskey'), superFormula.literal(accesskey));
     //RDFFormula.instances.push("accesskey");
@@ -280,7 +280,7 @@ RDFVariable.prototype.hashString = RDFVariable.prototype.toNT;
 
 // The namespace function generator 
 
-function Namespace(nsuri) {
+function RDFNamespace(nsuri) {
     return function(ln) { return new RDFSymbol(nsuri+(ln===undefined?'':ln)) }
 }
 

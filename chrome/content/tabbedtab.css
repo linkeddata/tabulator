@@ -443,6 +443,7 @@ span.openQuerySpan {
 }
 
 input.textinput{
+	width: 100%;
     border: none;
     font-size:95%;
     padding: 0em;

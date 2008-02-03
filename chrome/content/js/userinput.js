@@ -1077,6 +1077,7 @@ function UserInput(outline){
         var inputBox=myDocument.createElement('input');
         inputBox.setAttribute('value',defaultText);
         inputBox.setAttribute('class','textinput');
+        //inputBox.setAttribute('size','100');//should be the size of <TD>
         if (tdNode.className!='undetermined selected') {
             inputBox.setAttribute('size','100');//should be the size of <TD>
             function UpAndDown(e){
@@ -1102,9 +1103,44 @@ function UserInput(outline){
         outline.outline_expand(outline.selection[0],newTerm);
     },
     
+    
     inputURI: function inputURI(e){
-        
-        //outline.UserInput.clearMenu();
+        var This = outline.UserInput;        
+        This.clearMenu();
+        var selectedTd = outline.selection[0];
+        emptyNode(selectedTd);
+        var tiptext=" (Type a URI) ";
+        This.lastModified = This.createInputBoxIn(selectedTd,tiptext);
+        This.lastModified.select();
+        function typeURIhandler(e){
+            e.stopPropagation();
+            switch (e.keyCode){
+                case 13://enter
+                case 9://tab
+                    //this is input box
+                    if (this.value!=tiptext){
+                        var newuri = this.value;
+                        if(isExtension){
+                            if (!gURIFixup)
+                                gURIFixup = Components.classes["@mozilla.org/docshell/urifixup;1"]
+                                            .getService(Components.interfaces.nsIURIFixup);
+                            //this might have unexpected behavior as I don't know what the
+                            //algorithm is.
+                            newuri=gURIFixup.createFixupURI(this.value,0).spec;                            
+                        }else{
+                            if (!Util.uri.protocol(this.value))
+                                newuri = 'http://'+uri+'/';
+                        }
+                        // even though selectedTd == this.parentNode
+                        //         [XPCNativeWrapper[HTMLCellElement]] [HTMLCellElement]
+                        // only selectedTd.parentNode.AJAR_statement exists.
+                        // this is also why you don't see AJAR_statement from firebug
+                        This.fillInRequest('object',selectedTd,kb.sym(newuri));
+                    }
+            }
+        }
+        This.lastModified.addEventListener('keypress',typeURIhandler,false);
+        /*
         if (false &&isExtension){
             var selectedTd = outline.selection[0];
             emptyNode(selectedTd);
@@ -1112,12 +1148,13 @@ function UserInput(outline){
             textbox.setAttribute('type','autocomplete');
             textbox.setAttribute('autocompletesearch','history');
             selectedTd.appendChild(textbox);
-            /*
+            
             urlbar = gURLBar.cloneNode(false);
             selectedTd.appendChild(urlbar);
             urlbar.mController = gURLBar.mController;
-            */
+            
         }
+        */
  
     },
 

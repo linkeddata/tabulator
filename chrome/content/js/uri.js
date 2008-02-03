@@ -114,8 +114,13 @@ Util.uri.docpart = function (uri) {
 } 
 
 /** return the protocol of a uri **/
+/** return null if there isn't one **/
 Util.uri.protocol = function (uri) {
-    return uri.slice(0, uri.indexOf(':'))
+    var index = uri.indexOf(':');
+    if (index >= 0)
+        return uri.slice(0, index);
+    else
+        return null;
 } //protocol
 
 URIjoin = Util.uri.join

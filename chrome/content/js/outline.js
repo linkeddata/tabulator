@@ -1079,7 +1079,6 @@ function Outline(doc) {
     var prem = tms('premise');
     var stsCompliant;
     var stsNonCompliant;
-    var reasoner = '';
     var airRet = null;
     var stsJust;
     var ruleNameFound;
@@ -1093,13 +1092,11 @@ function Outline(doc) {
                 var sts = stsJust[j].subject.statements;
                 for (var k=0; k<sts.length; k++){
                     if (sts[k].predicate.toString() == compliant.toString()){
-                        reasoner = 'python';
                         airRet = "AIR";
                         stsCompliant = sts[k];
                     
                     } 
                     if (sts[k].predicate.toString() == nonCompliant.toString()){
-                        reasoner = 'python';
                         airRet = "AIR";
                         stsNonCompliant = sts[k];
                         
@@ -1140,6 +1137,10 @@ function Outline(doc) {
             var table = myDocument.createElement("table");
             var tr = myDocument.createElement("tr");
             
+            var td_intro = myDocument.createElement("td");
+            td_intro.appendChild(myDocument.createTextNode('The reason '));
+            tr.appendChild(td_intro);
+
             var td_s = myDocument.createElement("td");
             var a_s = myDocument.createElement('a')
             a_s.setAttribute('href', stsFound.subject.uri)
@@ -1165,6 +1166,10 @@ function Outline(doc) {
             td_o.appendChild(a_o);
             tr.appendChild(td_o);
 
+           	var td_end = myDocument.createElement("td");
+            td_end.appendChild(myDocument.createTextNode(' is because: '));
+            tr.appendChild(td_end);
+
             table.appendChild(tr);
             divOutcome.appendChild(table);
             div.appendChild(divOutcome);
@@ -1174,9 +1179,32 @@ function Outline(doc) {
             hideButton.setAttribute('id','hide');
             hideButton.setAttribute('value','Start Over');
         }
+
+        airPane.render.addInitialButtons = function(){
+ 
+	 		//Create and append the 'Why?' button        
+	        var becauseButton = myDocument.createElement('input');
+	        becauseButton.setAttribute('type','button');
+	        becauseButton.setAttribute('id','whyButton');
+	        becauseButton.setAttribute('value','Why?');
+	        div.appendChild(becauseButton);
+	        becauseButton.addEventListener('click',airPane.render.because,false);
+				        		
+	        div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
+	        
+	        //Create and append the 'Lawyer's View' button
+	        var lawyerButton = myDocument.createElement('input');
+	        lawyerButton.setAttribute('type','button');
+	        lawyerButton.setAttribute('id','lawyerButton');
+	        lawyerButton.setAttribute('value','Lawyer\'s View');
+	        div.appendChild(lawyerButton);
+	        lawyerButton.addEventListener('click',airPane.render.lawyer,false);
+        	
+        }
         
         airPane.render.hide = function(){
         
+        	//Remove the justification div from the pane
             var d = myDocument.getElementById('dataContentPane');
             var j = myDocument.getElementById('justification');
             var b = myDocument.getElementById('hide');
@@ -1188,25 +1216,25 @@ function Outline(doc) {
                 d.removeChild(j);
                 d.removeChild(b);
             }
-            
-            //Add back the Why? button
-	        var becauseButton = myDocument.createElement('input');
-	        becauseButton.setAttribute('type','button');
-	        becauseButton.setAttribute('id','whyButton');
-	        becauseButton.setAttribute('value','Why?');
-	        div.appendChild(becauseButton);
-	        becauseButton.addEventListener('click',airPane.render.because,false);
-	    
+
+			airPane.render.addInitialButtons();
+			            
+        }
+
+        airPane.render.lawyer = function(){
+        	alert('Inside lawyer');
         }
 
         airPane.render.because = function(){
         	
-        	//Disable the 'why' button... If not, it creates a mess if accidentally pressed
-        	//myDocument.getElementbyId('whyButton').disabled = 'true';
-            var whyButton = myDocument.getElementById('whyButton');
+        	//Disable the 'why' and 'lawyer's view' buttons... If not, it creates a mess if accidentally pressed
+           var whyButton = myDocument.getElementById('whyButton');
+           var lawyerButton = myDocument.getElementById('lawyerButton');
             var d = myDocument.getElementById('dataContentPane');
     		if (d != null && whyButton != null)
             	d.removeChild(whyButton);
+    		if (d != null && lawyerButton != null)
+            	d.removeChild(lawyerButton);
 
             airPane.render.because.moreInfo = function(ruleToFollow){
 
@@ -1240,13 +1268,12 @@ function Outline(doc) {
 				   divPremises.appendChild(myDocument.createElement('br')); 
 				   divPremises.appendChild(myDocument.createElement('br')); 
 				   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined);
-	                    for (var k=0; k<t1.length; k++){
+                    for (var k=0; k<t1.length; k++){
 	                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
 	                        for (var l=0; l<t2.length; l++){
 	                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
 	                                justificationSts = t2;
 	                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
-	                                
 	                            }                
 	                       }     
 	                }
@@ -1268,7 +1295,7 @@ function Outline(doc) {
     
             }
 
-			//Add the More Information Button here
+			//Add the More Information Button
 			var justifyButton = myDocument.createElement('input');
    			justifyButton.setAttribute('type','button');
             justifyButton.setAttribute('id','more');
@@ -1277,6 +1304,8 @@ function Outline(doc) {
             div.appendChild(justifyButton);
 			        		
             div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
+            div.appendChild(myDocument.createTextNode('   '));
+
             div.appendChild(hideButton);
             hideButton.addEventListener('click',airPane.render.hide,false);
 
@@ -1351,7 +1380,10 @@ function Outline(doc) {
                             if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
                                 justificationSts = t2;
                                 divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
-                                
+                            }
+                            else{
+                            	var cwa = air('closed-world-assumption');
+                        		var t3 = kb.statementsMatching(undefined, cwa, undefined);
                             }                
                        }     
                     }
@@ -1359,14 +1391,15 @@ function Outline(doc) {
             }
             divJustification.appendChild(divPremises);    
         }
-        
-        var becauseButton = myDocument.createElement('input');
-        becauseButton.setAttribute('type','button');
-        becauseButton.setAttribute('id','whyButton');
-        becauseButton.setAttribute('value','Why?');
-        div.appendChild(becauseButton);
-        becauseButton.addEventListener('click',airPane.render.because,false);
-        
+
+		//Create a table and append the 2 buttons into that
+		var table = myDocument.createElement('table');
+		var tr_b = myDocument.createElement('tr');
+		var td_w = myDocument.createElement('td');
+		var td_l = myDocument.createElement('td');
+
+		airPane.render.addInitialButtons();
+
         return div;
     }
     panes.register(airPane);

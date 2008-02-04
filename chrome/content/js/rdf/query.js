@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 11924 2008-02-02 22:08:06Z kennyluck $
+// SVN ID: $Id: query.js 12090 2008-02-04 21:51:47Z kennyluck $
 
 //  Variable
 //
@@ -392,9 +392,7 @@ RDFIndexedFormula.prototype.query = function(foodog, callback, fetcher) {
 		return this;
 	}
 	//alert("INIT OPT: "+foodog.pat.optional);
-    //setTimeout(function() { match(f, foodog.pat, foodog.pat.initBindings, '', fetcher, optionalCallback, new branchCount()); }, 0);
-    //setTimout seems to cause conflicts...(Firefox 2.0.0.4)
-    match(f, foodog.pat, foodog.pat.initBindings, '', fetcher, optionalCallback, new branchCount());
+    setTimeout(function() { match(f, foodog.pat, foodog.pat.initBindings, '', fetcher, optionalCallback, new branchCount()); }, 0);
     //match(this, foodog, [], '', fetcher, callback);
     //    tabulator.log.debug("Returning from query length="+res.length+" bindings: "+bindingsDebug(res))
     /*var r, nr=res.length, b, v;

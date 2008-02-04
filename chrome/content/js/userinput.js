@@ -1128,8 +1128,10 @@ function UserInput(outline){
                             //algorithm is.
                             newuri=gURIFixup.createFixupURI(this.value,0).spec;                            
                         }else{
-                            if (!Util.uri.protocol(this.value))
-                                newuri = 'http://'+newuri+'/';
+                            if (!Util.uri.protocol(this.value)){
+                                if (newuri.indexOf('/') < 0) newuri+= '/';
+                                newuri = 'http://'+newuri;
+                            }
                         }
                         // even though selectedTd == this.parentNode
                         //         [XPCNativeWrapper[HTMLCellElement]] [HTMLCellElement]

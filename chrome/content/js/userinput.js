@@ -1129,7 +1129,7 @@ function UserInput(outline){
                             newuri=gURIFixup.createFixupURI(this.value,0).spec;                            
                         }else{
                             if (!Util.uri.protocol(this.value))
-                                newuri = 'http://'+uri+'/';
+                                newuri = 'http://'+newuri+'/';
                         }
                         // even though selectedTd == this.parentNode
                         //         [XPCNativeWrapper[HTMLCellElement]] [HTMLCellElement]

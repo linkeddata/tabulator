@@ -1057,7 +1057,6 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
 
 
-  
      /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
@@ -1191,15 +1190,6 @@ function Outline(doc) {
 	        becauseButton.addEventListener('click',airPane.render.because,false);
 				        		
 	        div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
-	        
-	        //Create and append the 'Lawyer's View' button
-	        var lawyerButton = myDocument.createElement('input');
-	        lawyerButton.setAttribute('type','button');
-	        lawyerButton.setAttribute('id','lawyerButton');
-	        lawyerButton.setAttribute('value','Lawyer\'s View');
-	        div.appendChild(lawyerButton);
-	        lawyerButton.addEventListener('click',airPane.render.lawyer,false);
-        	
         }
         
         airPane.render.hide = function(){
@@ -1229,12 +1219,9 @@ function Outline(doc) {
         	
         	//Disable the 'why' and 'lawyer's view' buttons... If not, it creates a mess if accidentally pressed
            var whyButton = myDocument.getElementById('whyButton');
-           var lawyerButton = myDocument.getElementById('lawyerButton');
             var d = myDocument.getElementById('dataContentPane');
     		if (d != null && whyButton != null)
             	d.removeChild(whyButton);
-    		if (d != null && lawyerButton != null)
-            	d.removeChild(lawyerButton);
 
             airPane.render.because.moreInfo = function(ruleToFollow){
 
@@ -1403,6 +1390,53 @@ function Outline(doc) {
         return div;
     }
     panes.register(airPane);
+
+
+   /*  Lawyer Pane
+    *
+    *  This pane shows the Lawyer's view of reasoning
+    * 
+    */
+    LawPane = {};
+    LawPane.icon = Icon.src.icon_LawPane;
+    LawPane.label = function(subject) {
+    
+        stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+
+            for (var j=0; j<stsJust.length; j++){
+                if (stsJust[j].subject.termType == 'formula'){
+                var sts = stsJust[j].subject.statements;
+                for (var k=0; k<sts.length; k++){
+                    if (sts[k].predicate.toString() == compliant.toString()){
+                        stsCompliant = sts[k];
+                    	return "Lawyer's View";
+                        
+                    } 
+                    if (sts[k].predicate.toString() == nonCompliant.toString()){
+                        stsNonCompliant = sts[k];
+                        return "Lawyer's View";
+                   	}
+                   }
+                }    
+            }
+        
+       return null;
+
+
+    }
+
+   	LawPane.render = function(subject) {
+
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'RDFXMLPane');
+        div.appendChild(myDocument.createTextNode('IRFAC Reasoning - To be implemented!'));
+        return div
+
+   	}
+ 	panes.register(LawPane);
+ 	
+    
+
 
 //////////////////////////////////////////////////////////////////////////////
 

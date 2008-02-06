@@ -1057,7 +1057,7 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
 
 
-    /** AIR (Amord in RDF) Pane
+     /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
      * air reasoner output
@@ -1211,12 +1211,16 @@ function Outline(doc) {
 			            
         }
 
-        airPane.render.lawyer = function(){
-        	alert('Inside lawyer');
-        }
-
         airPane.render.because = function(){
-        	
+        
+	    	var cwa = air('closed-world-assumption');
+			var cwaStatements = kb.statementsMatching(undefined, cwa, undefined);
+			var noPremises = false;
+			if (cwaStatements.length > 0){
+				noPremises = true;
+			}
+			
+			
         	//Disable the 'why' and 'lawyer's view' buttons... If not, it creates a mess if accidentally pressed
            var whyButton = myDocument.getElementById('whyButton');
             var d = myDocument.getElementById('dataContentPane');
@@ -1253,21 +1257,31 @@ function Outline(doc) {
 	                
 				   	
 				   	//Update the premises div also with the corresponding premises
-				   divPremises.appendChild(myDocument.createElement('br')); 
-				   divPremises.appendChild(myDocument.createElement('br')); 
-				   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined);
-                    for (var k=0; k<t1.length; k++){
-	                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
-	                        for (var l=0; l<t2.length; l++){
-	                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
-	                                justificationSts = t2;
-	                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
-	                            }                
-	                       }     
-	                }
-				   divPremises.appendChild(myDocument.createElement('br'));
-				   divPremises.appendChild(myDocument.createElement('br'));
-						
+				   	if (!noPremises){
+					   divPremises.appendChild(myDocument.createElement('br')); 
+					   divPremises.appendChild(myDocument.createElement('br')); 
+					   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined);
+	                    for (var k=0; k<t1.length; k++){
+		                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+		                        for (var l=0; l<t2.length; l++){
+		                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+		                                justificationSts = t2;
+		                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+		                            }                
+		                       }     
+		                }
+					   divPremises.appendChild(myDocument.createElement('br'));
+					   divPremises.appendChild(myDocument.createElement('br'));
+							
+				   	}
+				   	else{
+				   		divPremises.appendChild(myDocument.createElement('br'));
+					   	divPremises.appendChild(myDocument.createElement('br'));
+					   	divPremises.appendChild(myDocument.createTextNode("No interesting premises to show, that would make any sense"));
+					   	divPremises.appendChild(myDocument.createElement('br'));
+					   	divPremises.appendChild(myDocument.createElement('br'));
+			   		}
+				   		
 				}
             				   	
             }
@@ -1336,7 +1350,6 @@ function Outline(doc) {
 
             for (var j=0; j<stsDesc.length; j++){
                 if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
-	//				divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Because:')));
 				    divDescription.appendChild(myDocument.createElement('br'));
 					airPane.render.because.displayDesc(stsDesc[j].object);
 				    divDescription.appendChild(myDocument.createElement('br'));
@@ -1347,13 +1360,24 @@ function Outline(doc) {
             }	
 			
             div.appendChild(divJustification);
-
-		    divJustification.appendChild(myDocument.createElement('br'));
-	        divJustification.appendChild(myDocument.createElement('br'));
-			divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
-		    divJustification.appendChild(myDocument.createElement('br'));
-	        divJustification.appendChild(myDocument.createElement('br'));
             
+    		if (!noPremises){
+	
+			    divJustification.appendChild(myDocument.createElement('br'));
+		        divJustification.appendChild(myDocument.createElement('br'));
+				divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
+			    divJustification.appendChild(myDocument.createElement('br'));
+		        divJustification.appendChild(myDocument.createElement('br'));
+    		} 
+    		else{
+				divPremises.appendChild(myDocument.createElement('br'));
+			   	divPremises.appendChild(myDocument.createElement('br'));
+			   	divPremises.appendChild(myDocument.createTextNode("No interesting premises to show, that would make any sense"));
+			   	divPremises.appendChild(myDocument.createElement('br'));
+			   	divPremises.appendChild(myDocument.createElement('br'));
+    			
+    		}
+	            
             for (var j=0; j<stsJust.length; j++){
                 if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
                 
@@ -1361,23 +1385,26 @@ function Outline(doc) {
                 	ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
                 										   // statement containing the formula		
            		   	
-                    var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
-                    for (var k=0; k<t1.length; k++){
-                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
-                        for (var l=0; l<t2.length; l++){
-                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
-                                justificationSts = t2;
-                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
-                            }
-                            else{
-                            	var cwa = air('closed-world-assumption');
-                        		var t3 = kb.statementsMatching(undefined, cwa, undefined);
-                            }                
-                       }     
-                    }
+           		   	if (!noPremises){
+	           		   	var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
+	                    for (var k=0; k<t1.length; k++){
+	                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+	                        for (var l=0; l<t2.length; l++){
+	                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+	                                justificationSts = t2;
+	                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+	                            }
+	                            else{
+	                            }                
+	                       }     
+	                    }
+           		   	}
                 }
             }
-            divJustification.appendChild(divPremises);    
+            
+//			if (!noPremises)
+	            divJustification.appendChild(divPremises);    
+	          
         }
 
 		//Create a table and append the 2 buttons into that

@@ -1057,7 +1057,7 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
 
 
-     /** AIR (Amord in RDF) Pane
+    /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
      * air reasoner output
@@ -1224,7 +1224,6 @@ function Outline(doc) {
             	d.removeChild(whyButton);
 
             airPane.render.because.moreInfo = function(ruleToFollow){
-
 				//Terminating condition: 
 				// if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
 				// there are no more information to follow
@@ -1233,7 +1232,7 @@ function Outline(doc) {
 
 				   divPremises.appendChild(myDocument.createElement('br'));
 				   divPremises.appendChild(myDocument.createElement('br'));
-					divPremises.appendChild(myDocument.createTextNode("No more information is available from the reasoner!"));
+				   divPremises.appendChild(myDocument.createTextNode("No more information is available from the reasoner!"));
 				   divPremises.appendChild(myDocument.createElement('br'));
 				   divPremises.appendChild(myDocument.createElement('br'));
 			   
@@ -1241,15 +1240,17 @@ function Outline(doc) {
 				else{
 					
 					//Update the description div with the description at the next level
-	                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined, subject);
-	                airPane.render.because.displayDesc(currentRule[0].object);
-	            	divDescription.appendChild(myDocument.createElement('br')); 
-				   	divDescription.appendChild(myDocument.createElement('br'));
+	                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined);
+	                if (currentRule[0].object.termType == 'collection'){
+	                    airPane.render.because.displayDesc(currentRule[0].object);
+			            divDescription.appendChild(myDocument.createElement('br')); 
+					   	divDescription.appendChild(myDocument.createElement('br'));
+	                }
 				   	
-	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined, subject);
+	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined);
 				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
 				   	ruleNameFound = nextRuleSts[0].object;
-
+	                
 				   	
 				   	//Update the premises div also with the corresponding premises
 				   divPremises.appendChild(myDocument.createElement('br')); 
@@ -1335,7 +1336,7 @@ function Outline(doc) {
 
             for (var j=0; j<stsDesc.length; j++){
                 if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
-					divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Because:')));
+	//				divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Because:')));
 				    divDescription.appendChild(myDocument.createElement('br'));
 					airPane.render.because.displayDesc(stsDesc[j].object);
 				    divDescription.appendChild(myDocument.createElement('br'));

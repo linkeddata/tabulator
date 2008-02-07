@@ -22,6 +22,10 @@
   <script type="application/x-javascript" src="js/outline.js"/>
   <script type="application/x-javascript" src="sources-ext.js"/>
   <script type="application/x-javascript" src="test.js"/>
+  
+  <!-- panes -->
+  <script type="application/x-javascript" src="js/panes/airPane.js"/>
+  
   <!--<script type="application/x-javascript" src="searchbarOverlay.js"/>-->
   <menupopup id="viewSidebarMenu">
   <menuitem key="key_openTabulatorSidebar" observes="viewTabulatorSidebar"  />

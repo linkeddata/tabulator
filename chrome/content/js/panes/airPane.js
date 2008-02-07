@@ -275,7 +275,7 @@
 					}
             }
             
-
+            var statementsAsTable = myDocument.outline.statementsAsTable;  
 		   //Display the actual English-like description first
         	var stsDesc = kb.statementsMatching(undefined, description, undefined, subject); 
 

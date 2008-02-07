@@ -2893,6 +2893,7 @@ function Outline(doc) {
         return rep;
     }
     
+    this.statementsAsTables = function statementsAsTables;   //So that this function to be used outside this class
     
     
     function VIEWAS_boring_default(obj) {

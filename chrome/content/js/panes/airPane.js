@@ -171,7 +171,7 @@
             	d.removeChild(lawyerButton);
 
             airPane.render.because.moreInfo = function(ruleToFollow){
-
+                var statementsAsTable = myDocument.outline.statementsAsTable;  
 				//Terminating condition: 
 				// if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
 				// there are no more information to follow
@@ -259,6 +259,7 @@
             var justificationSts;
             
             airPane.render.because.displayDesc = function(obj){
+            
             	for (var i=0; i<obj.elements.length; i++) {
 			            switch(obj.elements[i].termType) {
 			                case 'symbol':

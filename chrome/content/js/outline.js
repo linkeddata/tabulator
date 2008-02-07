@@ -1057,6 +1057,7 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
 
 
+
      /** AIR (Amord in RDF) Pane
      *
      * This pane will display the justification trace of a when it encounters 
@@ -1109,7 +1110,15 @@ function Outline(doc) {
 
     // View the justification trace in an exploratory manner
     airPane.render = function(subject) {
-        
+  
+  		airPane.render.extractLogURI = function(fullURI){
+  			var logPos = fullURI.search(/logFile=/);
+  			var rulPos = fullURI.search(/&rulesFile=/);
+ 			return fullURI.substring(logPos+8, rulPos); 			
+  		}
+  		
+  		var logFileURI = airPane.render.extractLogURI(myDocument.location.toString());
+  		      
         var stsFound;
          
         var divClass;
@@ -1275,9 +1284,13 @@ function Outline(doc) {
 							
 				   	}
 				   	else{
-				   		divPremises.appendChild(myDocument.createElement('br'));
+						divPremises.appendChild(myDocument.createElement('br'));
 					   	divPremises.appendChild(myDocument.createElement('br'));
-					   	divPremises.appendChild(myDocument.createTextNode("No interesting premises to show, that would make any sense"));
+					   	divPremises.appendChild(myDocument.createTextNode("Not found in "));
+					   	var a = myDocument.createElement('a')
+		            	a.setAttribute('href', logFileURI);
+		            	a.appendChild(myDocument.createTextNode(logFileURI));
+		    			divPremises.appendChild(a);
 					   	divPremises.appendChild(myDocument.createElement('br'));
 					   	divPremises.appendChild(myDocument.createElement('br'));
 			   		}
@@ -1361,18 +1374,20 @@ function Outline(doc) {
 			
             div.appendChild(divJustification);
             
-    		if (!noPremises){
-	
 			    divJustification.appendChild(myDocument.createElement('br'));
 		        divJustification.appendChild(myDocument.createElement('br'));
 				divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
 			    divJustification.appendChild(myDocument.createElement('br'));
 		        divJustification.appendChild(myDocument.createElement('br'));
-    		} 
-    		else{
+
+			if (noPremises){	
 				divPremises.appendChild(myDocument.createElement('br'));
 			   	divPremises.appendChild(myDocument.createElement('br'));
-			   	divPremises.appendChild(myDocument.createTextNode("No interesting premises to show, that would make any sense"));
+			   	divPremises.appendChild(myDocument.createTextNode("Not found in "));
+			   	var a = myDocument.createElement('a')
+            	a.setAttribute('href', logFileURI);
+            	a.appendChild(myDocument.createTextNode(logFileURI));
+    			divPremises.appendChild(a);
 			   	divPremises.appendChild(myDocument.createElement('br'));
 			   	divPremises.appendChild(myDocument.createElement('br'));
     			

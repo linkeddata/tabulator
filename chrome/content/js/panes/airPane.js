@@ -50,9 +50,8 @@
 
     // View the justification trace in an exploratory manner
     airPane.render = function(subject, myDocument) {
-    	
+
     	var statementsAsTables = myDocument.outline.statementsAsTables;        
-    	
   
   		airPane.render.extractLogURI = function(fullURI){
   			var logPos = fullURI.search(/logFile=/);

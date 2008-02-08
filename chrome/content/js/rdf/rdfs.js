@@ -7,12 +7,6 @@
 
 /*jsl:option explicit*/ // Turn on JavaScriptLint variable declaration checking
 
-//Added for testing purposes. To be removed ...
-tabulator.ns = {};
-tabulator.ns.rdf = rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-tabulator.ns.rdfs = rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#");
-tabulator.ns.owl = owl = Namespace("http://www.w3.org/2002/07/owl#");
-
 /* Follow each seed node through one given type of arc
 */
 RDFIndexedFormula.prototype.follow = function(seeds, pred) {

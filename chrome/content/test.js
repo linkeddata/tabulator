@@ -40,27 +40,9 @@ internals['http://www.w3.org/2006/link#uri'] = 1;
 internals['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
 
 // Special knowledge of properties //Don't use these anymore, dangerous
-/*
-tabont = Namespace("http://dig.csail.mit.edu/2005/ajar/ajaw/ont#")
-foaf = Namespace("http://xmlns.com/foaf/0.1/")
-rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
-OWL = Namespace("http://www.w3.org/2002/07/owl#")
-dc = Namespace("http://purl.org/dc/elements/1.1/")
-rss = Namespace("http://purl.org/rss/1.0/")
-xsd = Namespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-")
-contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
-mo = Namespace("http://purl.org/ontology/mo/")
-//logont = Namespace("http://www.w3.org/2000/10/swap/log#");
-*/
-
-//Namespaces for AIR (Amord in RDF) use
-tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
-air = air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
-
-//Namespaces for AIR (Amord in RDF) use
-tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
-air = air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+/* From now on, Namespaces are defined in xpcom.js(extension) and tabulate.js(online)
+   localized at the beginning of outline.js (that is, you can still use these shortcuts,
+   as long as you declare them in the appropriate scope)*/
 
 kb.registerFormula("knowledge base");
 //alert(kb.constructor.SuperClass.instances["knowledge base"]); //this is fine

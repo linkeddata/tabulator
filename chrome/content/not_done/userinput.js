@@ -11,6 +11,7 @@ var UserInputFormula; //Formula to store references of user's work
 var TempFormula; //Formula to store incomplete tripes (Requests), 
                  //temporarily disjoint with kb to avoid bugs
 function UserInput(outline){
+    var HTML_NS = 'http://www.w3.org/1999/xhtml';
     var This=this;
     var myDocument=outline.document; //is this ok?
     //alert("myDocument when it's set is "+myDocument.location);
@@ -66,9 +67,9 @@ function UserInput(outline){
         var target=getTarget(e);//Remark: have to use getTarget instead of 'this'
             
         //alert(ancestor(target,'TABLE').textContent);    
-        var insertTr=myDocument.createElement('tr');
-        ancestor(target,'DIV').insertBefore(insertTr,ancestor(target,'TR'));
-        var tempTr=myDocument.createElement('tr');
+        var insertTr=myDocument.createElementNS(HTML_NS,'tr');
+        ancestor(target,'div').insertBefore(insertTr,ancestor(target,'tr'));
+        var tempTr=myDocument.createElementNS(HTML_NS,'tr');
         var reqTerm1=This.generateRequest("(TBD)",tempTr,true);
         insertTr.appendChild(tempTr.firstChild);
         var reqTerm2=This.generateRequest("(To be determined. Re-type of drag an object onto this field)",tempTr,false);
@@ -76,13 +77,13 @@ function UserInput(outline){
         //there should be an elegant way of doing this
         
         //Take the why of the last TR and write to it.
-        if (ancestor(target,'TR').previousSibling &&  // there is a previous predicate/object line
-                ancestor(target,'TR').previousSibling.AJAR_statement) {
-            preStat=ancestor(target,'TR').previousSibling.AJAR_statement;
+        if (ancestor(target,'tr').previousSibling &&  // there is a previous predicate/object line
+                ancestor(target,'tr').previousSibling.AJAR_statement) {
+            preStat=ancestor(target,'tr').previousSibling.AJAR_statement;
             //This should always(?) input a non-inverse statement
             This.formUndetStat(insertTr,preStat.subject,reqTerm1,reqTerm2,preStat.why,false);    
         } else { // no previous row: write to the document defining the subject
-            var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'TD'));
+            var subject=getAbout(kb,ancestor(target.parentNode.parentNode,'td'));
             var doc=kb.sym(Util.uri.docpart(subject.uri));
             This.formUndetStat(insertTr,subject,reqTerm1,reqTerm2,doc,false);
         }
@@ -238,7 +239,7 @@ function UserInput(outline){
         if (!about) return;
         try{
             var obj = getTerm(target);
-            var trNode=ancestor(target,'TR');
+            var trNode=ancestor(target,'tr');
         }catch(e){
             alert('userinput.js: '+e+getAbout(kb,selectedTd));
             tabulator.log.error(target+" getStatement Error:"+e);
@@ -259,7 +260,7 @@ function UserInput(outline){
             tdNode.removeChild(tdNode.firstChild); //remove the text
             
             if (obj.value.match('\n')){//match a line feed and require <TEXTAREA>
-                 var textBox=myDocument.createElement('textarea');
+                 var textBox=myDocument.createElementNS(HTML_NS,'textarea');
                  textBox.appendChild(myDocument.createTextNode(obj.value));
                  textBox.setAttribute('rows',(obj.value.match(/\n/g).length+1).toString());
                                                                 //g is for global(??)
@@ -332,7 +333,7 @@ function UserInput(outline){
             }else if (this.lastModified.isNew){
                 s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
                 // TODO: DEFINE ERROR CALLBACK
-                var trCache=ancestor(this.lastModified,'TR');
+                var trCache=ancestor(this.lastModified,'tr');
                 try{sparqlService.insert_statement(s, function(uri,success,error_body){
                     if (!success){
                         alert("Error occurs while inserting "+s+'\n\n'+error_body);
@@ -356,7 +357,7 @@ function UserInput(outline){
                         sparqlUpdate = sparqlService.update_statement(s);
                         // TODO: DEFINE ERROR CALLBACK
                         var valueCache=this.lastModified.value;
-                        var trCache=ancestor(this.lastModified,'TR');
+                        var trCache=ancestor(this.lastModified,'tr');
                         var oldValue=this.lastModified.defaultValue;
                         
                         try{sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){
@@ -392,13 +393,13 @@ function UserInput(outline){
                                 }
                                 this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
                             }else{
-                                var s1=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
+                                var s1=ancestor(ancestor(this.lastModified,'tr').parentNode,'tr').AJAR_statement;
                                 var s2=kb.add(s.subject,selectedPredicate,textTerm,s.why);
                                 var type=kb.the(s.subject,rdf('type'));
                                 var s3=kb.anyStatementMatching(s.subject,rdf('type'),type,s.why);
                                 // TODO: DEFINE ERROR CALLBACK
                                 //because the table is reapinted, so...
-                                var trCache=ancestor(ancestor(this.lastModified,'TR'),'TD').parentNode;
+                                var trCache=ancestor(ancestor(this.lastModified,'tr'),'td').parentNode;
                                 try{sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){
                                     if (!success){
                                         kb.remove(s2);kb.remove(s3);
@@ -415,7 +416,7 @@ function UserInput(outline){
                                 //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
                                 //this add will cause a repainting
                             }
-                            var enclosingTd=ancestor(this.lastModified.parentNode.parentNode,'TD');
+                            var enclosingTd=ancestor(this.lastModified.parentNode.parentNode,'td');
                             outline.outline_expand(enclosingTd,s.subject,defaultPane,true);
                             outline.walk('right',outline.focusTd);
                         //</Feature>                         
@@ -445,7 +446,7 @@ function UserInput(outline){
                 }
             }
         }else if(this.lastModified.isNew){//generate 'Request', there is no way you can input ' (Please Input) '
-            var trNode=ancestor(this.lastModified,'TR');
+            var trNode=ancestor(this.lastModified,'tr');
             var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
             var preStat=trNode.previousSibling.AJAR_statement; //the statement of the same predicate
             this.formUndetStat(trNode,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
@@ -456,7 +457,7 @@ function UserInput(outline){
             return;        
         }else if(s.predicate.termType=='collection'){
             kb.removeMany(s.subject);
-            var upperTr=ancestor(ancestor(this.lastModified,'TR').parentNode,'TR');
+            var upperTr=ancestor(ancestor(this.lastModified,'tr').parentNode,'tr');
             var preStat=upperTr.AJAR_statement;
             var reqTerm=this.generateRequest("(To be determined. Re-type of drag an object onto this field)");
             this.formUndetStat(upperTr,preStat.subject,preStat.predicate,reqTerm,preStat.why,false);
@@ -469,7 +470,7 @@ function UserInput(outline){
             return;
         }
         //case modified - literal modification only(for now).
-        var trNode=ancestor(this.lastModified,'TR');
+        var trNode=ancestor(this.lastModified,'tr');
             
         var defaultpropview = this.views.defaults[s.predicate.uri];
         if (!this.statIsInverse){
@@ -670,8 +671,8 @@ function UserInput(outline){
                 UserInputFormula.statements.push(insertTr.AJAR_statement);
                 break;            
             case 'selected': //header <TD>, undetermined generated
-                var paneDiv=ancestor(selectedTd,'TABLE').lastChild;
-                var newTr=paneDiv.insertBefore(myDocument.createElement('tr'),paneDiv.lastChild);
+                var paneDiv=ancestor(selectedTd,'table').lastChild;
+                var newTr=paneDiv.insertBefore(myDocument.createElementNS(HTML_NS,'tr'),paneDiv.lastChild);
                 //var titleTerm=getAbout(kb,ancestor(newTr,'TD'));
                 if (HCIoptions["bottom insert highlights"].enabled)
                     var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
@@ -728,7 +729,7 @@ function UserInput(outline){
                    ?pred rdfs:domain ?subjectClass.
                 }
             */
-            var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
+            var subject=getAbout(kb,ancestor(selectedTd,'table').parentNode);
             var subjectClass=kb.any(subject,rdf('type'));
             var sparqlText=[];
             var endl='.\n';
@@ -761,7 +762,7 @@ function UserInput(outline){
                    ?pred rdfs:domain ?subjectClass.
                    ?pred rdfs:range ?objectClass.
             */            
-            var subject=getAbout(kb,ancestor(selectedTd,'TABLE').parentNode);
+            var subject=getAbout(kb,ancestor(selectedTd,'table').parentNode);
             var subjectClass=kb.any(subject,rdf('type'));
             var object=selectedTd.parentNode.AJAR_statement.object;
             var objectClass=(object.termType=='literal')?tabulator.ns.rdfs('Literal'):kb.any(object,rdf('type'));
@@ -827,7 +828,7 @@ function UserInput(outline){
             if (menu.lastHighlight) menu.lastHighlight.className = '';
             menu.lastHighlight = item;
             menu.lastHighlight.className = 'activeItem';
-            outline.showURI(getAbout(kb,menu.lastHighlight));            
+            outline.showURI(getAbout(kb,menu.lastHighlight));
         }
         if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
             var newText=InputBox.value;
@@ -917,26 +918,25 @@ function UserInput(outline){
             }
             var menu=myDocument.getElementById(outline.UserInput.menuID); 
             if (!menu) return; //no matches
-
             setHighlightItem(menu.firstChild.firstChild);
-            outline.showURI(getAbout(kb,menu.lastHighlight));
+            
             return;
         }
         };//end of return function
     },
     WildCardButtons: function WildCardButtons(){
         var menuDiv=myDocument.getElementById(outline.UserInput.menuID);
-        var div=menuDiv.insertBefore(myDocument.createElement('div'),menuDiv.firstChild);
-        var input1 = div.appendChild(myDocument.createElement('input'));
-        var input2 = div.appendChild(myDocument.createElement('input'));
-        //var input3 = div.appendChild(myDocument.createElement('input'));
+        var div=menuDiv.insertBefore(myDocument.createElementNS(HTML_NS,'div'),menuDiv.firstChild);
+        var input1 = div.appendChild(myDocument.createElementNS(HTML_NS,'input'));
+        var input2 = div.appendChild(myDocument.createElementNS(HTML_NS,'input'));
+        //var input3 = div.appendChild(myDocument.createElementNS(HTML_NS,'input'));
         input1.type = 'button';input1.value = "New...";
         input2.type = 'button';input2.value = "GiveURI";
         
         function highlightInput(e){ //same as the one in newMenu()
             var menu=myDocument.getElementById(outline.UserInput.menuID);
             if (menu.lastHighlight) menu.lastHighlight.className='';
-            menu.lastHighlight=ancestor(getTarget(e),'INPUT');
+            menu.lastHighlight=ancestor(getTarget(e),'input');
             if (!menu.lastHighlight) return; //mouseover <TABLE>
             menu.lastHighlight.className='activeItem';
         }
@@ -945,8 +945,8 @@ function UserInput(outline){
         input2.addEventListener('click',this.inputURI,false);        
         /*
         var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
-        var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
-        var h1th=h1.appendChild(myDocument.createElement('th'));
+        var h1=table.insertBefore(myDocument.createElementNS(HTML_NS,'tr'),table.firstChild);
+        var h1th=h1.appendChild(myDocument.createElementNS(HTML_NS,'th'));
         h1th.appendChild(myDocument.createTextNode("New..."));
         h1.setAttribute('about',tabulator.ns.tabont('createNew'));
         */
@@ -954,7 +954,7 @@ function UserInput(outline){
     //ToDo: shrink rows when \n+backspace
     Keypress: function(e){
         if(e.keyCode==13){
-            if(outline.targetOf(e).tagName!='TEXTAREA') 
+            if(outline.targetOf(e).tagName!='textarea') 
                 this.clearInputAndSave();
             else {//<TEXTAREA>
                 var preRows=parseInt(this.lastModified.getAttribute('rows'))
@@ -985,7 +985,7 @@ function UserInput(outline){
         this.className='bottom-border-active';
     /*
     if (getTarget(e).tagName=='SPAN'){
-        var proxyDiv = document.createElement('DIV');
+        var proxyDiv = document.createElementNS(HTML_NS,'DIV');
         proxyDiv.id="proxyDiv";
         proxyDiv.setAttribute('style',"position:absolute; visibility:hidden; top:630px; left:525px;height:50px;width:50px;background-color:#7E5B60;");
         getTarget(e).appendChild(proxyDiv);
@@ -1055,7 +1055,7 @@ function UserInput(outline){
      
     getStatementAbout: function getStatementAbout(something){
         //var trNode=something.parentNode;
-        var trNode=ancestor(something,'TR');
+        var trNode=ancestor(something,'tr');
         try{
             var statement=trNode.AJAR_statement;
         }catch(e){
@@ -1073,7 +1073,7 @@ function UserInput(outline){
     createInputBoxIn: function createInputBoxIn(tdNode,defaultText){
         tabulator.log.info("myDocument in createInputBoxIn is now " + myDocument.location);
         tabulator.log.info("outline.document is now " + outline.document.location);
-        var inputBox=myDocument.createElement('input');
+        var inputBox=myDocument.createElementNS(HTML_NS,'input');
         inputBox.setAttribute('value',defaultText);
         inputBox.setAttribute('class','textinput');
         //inputBox.setAttribute('size','100');//should be the size of <TD>
@@ -1104,6 +1104,7 @@ function UserInput(outline){
     
     
     inputURI: function inputURI(e){
+        /*
         var This = outline.UserInput;        
         This.clearMenu();
         var selectedTd = outline.selection[0];
@@ -1141,21 +1142,26 @@ function UserInput(outline){
             }
         }
         This.lastModified.addEventListener('keypress',typeURIhandler,false);
-        /*
-        if (false &&isExtension){
+        */
+        
+        if (isExtension){
             var selectedTd = outline.selection[0];
             emptyNode(selectedTd);
-            var textbox = myDocument.createElementNS(kXULNS,'textbox');
+            var textbox = myDocument.createElementNS(kXULNS,'xul:textbox');
+            textbox.setAttribute('class','urlbar');
             textbox.setAttribute('type','autocomplete');
             textbox.setAttribute('autocompletesearch','history');
+            textbox.setAttribute('showcommentcolumn',"true");
             selectedTd.appendChild(textbox);
             
+            /*
             urlbar = gURLBar.cloneNode(false);
             selectedTd.appendChild(urlbar);
             urlbar.mController = gURLBar.mController;
+            */
             
         }
-        */
+        
  
     },
 
@@ -1170,7 +1176,7 @@ function UserInput(outline){
         }catch(e){isEnd=true;}
         if(!isEnd && HCIoptions["bottom insert highlights"].enabled) trIterator=trIterator.previousSibling;
        
-        var insertTr=myDocument.createElement('tr');
+        var insertTr=myDocument.createElementNS(HTML_NS,'tr');
         //style stuff, I'll have to investigate appendPropertyTRs() somehow
         insertTr.style.colspan='1';
         insertTr.style.display='block';
@@ -1207,7 +1213,7 @@ function UserInput(outline){
             if (trNew)
                 trNode=trNew;
             else
-                trNode=ancestor(this.lastModified,'TR');
+                trNode=ancestor(this.lastModified,'tr');
             emptyNode(trNode);
         }
         
@@ -1249,19 +1255,21 @@ function UserInput(outline){
         tabulator.log.info("myDocument is now " + myDocument.location);
         tabulator.log.info("outline.doucment is now " + outline.document.location);
         var This=this;
-        var menu=myDocument.createElement('div');
+        var menu=myDocument.createElementNS(HTML_NS,'div');
         menu.id=this.menuID;
         menu.className='outlineMenu';
         //menu.addEventListener('click',false);
-        menu.style.top=e.pageY+"px";
-        menu.style.left=e.pageX+"px";
-        myDocument.body.appendChild(menu);
-        var table=menu.appendChild(myDocument.createElement('table'));
+        //menu.style.top=e.pageY+"px";
+        //menu.style.left=e.pageX+"px";
+        var popupStore = myDocument.getElementById('xul-outline-popup' /*'outline-body'*/) || myDocument.body;
+        popupStore.appendChild(menu);
+        //popupStore.showPopup(extraInformation.selectedTd, -1, -1, "popup", 'bottomleft', 'topleft');
+        var table=menu.appendChild(myDocument.createElementNS(HTML_NS,'table'));
            
         menu.lastHighlight=null;;
         function highlightTr(e){
             if (menu.lastHighlight) menu.lastHighlight.className='';
-            menu.lastHighlight=ancestor(getTarget(e),'TR');
+            menu.lastHighlight=ancestor(getTarget(e),'tr');
             if (!menu.lastHighlight) return; //mouseover <TABLE>
             menu.lastHighlight.className='activeItem';
         }
@@ -1272,7 +1280,7 @@ function UserInput(outline){
         switch (menuType){
             case 'DidYouMeanDialog':            
                 var selectItem=function selectItem(e){
-                    var target=ancestor(getTarget(e),'TR')
+                    var target=ancestor(getTarget(e),'tr')
                     if (target.childNodes.length==2 && target.nextSibling){ //Yes
                         kb.add(bnodeTerm,IDpredicate,IDterm); //used to connect the two
                         outline.UserInput.clearMenu();
@@ -1352,11 +1360,11 @@ function UserInput(outline){
                 }
             }
 
-            var tr=table.appendChild(myDocument.createElement('tr'));
+            var tr=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
             tr.setAttribute('about',predicate);
-            var th=tr.appendChild(myDocument.createElement('th'))
-            th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(Label));
-            tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
+            var th=tr.appendChild(myDocument.createElementNS(HTML_NS,'th'))
+            th.appendChild(myDocument.createElementNS(HTML_NS,'div')).appendChild(myDocument.createTextNode(Label));
+            tr.appendChild(myDocument.createElementNS(HTML_NS,'td')).appendChild(myDocument.createTextNode(theNamespace.toUpperCase()));
         }    
         function addPredicateChoice(selectedQuery){
             return function (bindings){
@@ -1371,8 +1379,8 @@ function UserInput(outline){
                 //have to do style instruction passing
                 menu.style.width='auto';
                 
-                var h1=table.appendChild(myDocument.createElement('tr'));
-                var h1th=h1.appendChild(myDocument.createElement('th'))
+                var h1=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
+                var h1th=h1.appendChild(myDocument.createElementNS(HTML_NS,'th'))
                 h1th.appendChild(myDocument.createTextNode("Did you mean..."));
                 var plist=kb.statementsMatching(dialogTerm);
                 var i;
@@ -1380,16 +1388,16 @@ function UserInput(outline){
                 var IDpredicate=plist[i].predicate;
                 var IDterm=kb.any(dialogTerm,plist[i].predicate);
                 var text=label(dialogTerm)+" who has "+label(IDpredicate)+" "+IDterm+"?";
-                var h2=table.appendChild(myDocument.createElement('tr'));
-                var h2th=h2.appendChild(myDocument.createElement('th'))
+                var h2=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
+                var h2th=h2.appendChild(myDocument.createElementNS(HTML_NS,'th'))
                 h2th.appendChild(myDocument.createTextNode(text));
                 h1th.setAttribute('colspan','2');h2th.setAttribute('colspan','2');
-                var ans1=table.appendChild(myDocument.createElement('tr'));
-                ans1.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('Yes'));
-                ans1.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
-                var ans2=table.appendChild(myDocument.createElement('tr'));
-                ans2.appendChild(myDocument.createElement('th')).appendChild(myDocument.createTextNode('No'));
-                ans2.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('BOOLEAN'));
+                var ans1=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
+                ans1.appendChild(myDocument.createElementNS(HTML_NS,'th')).appendChild(myDocument.createTextNode('Yes'));
+                ans1.appendChild(myDocument.createElementNS(HTML_NS,'td')).appendChild(myDocument.createTextNode('BOOLEAN'));
+                var ans2=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
+                ans2.appendChild(myDocument.createElementNS(HTML_NS,'th')).appendChild(myDocument.createTextNode('No'));
+                ans2.appendChild(myDocument.createElementNS(HTML_NS,'td')).appendChild(myDocument.createTextNode('BOOLEAN'));
                 break;
             case 'PredicateAutoComplete':
                 var inputText=extraInformation.inputText;
@@ -1415,7 +1423,7 @@ function UserInput(outline){
                 break;
             case 'GeneralAutoComplete':
                 var inputText=extraInformation.inputText;
-                try{var results=lb.search(inputText);}
+                try{var results=lb.search(inputText,30);}
                 catch(e){alert("stop to see what happens "+extraInformation.selectedTd.textContent);}
                 var entries=results[0]; //[label, subject,priority]
                 var types=results[1];
@@ -1423,17 +1431,17 @@ function UserInput(outline){
                     this.clearMenu();
                     return;
                 }
-                for (var i=0;i<entries.length&&i<10;i++){ //do not show more than 30 items
+                for (var i=0;i<entries.length&&i<30;i++){ //do not show more than 30 items
                     var thisNT=entries[i][1].toNT();
-                    var tr=table.appendChild(myDocument.createElement('tr'));
+                    var tr=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
                     tr.setAttribute('about',thisNT);
-                    var th=tr.appendChild(myDocument.createElement('th'))
-                    th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(entries[i][0]));
+                    var th=tr.appendChild(myDocument.createElementNS(HTML_NS,'th'))
+                    th.appendChild(myDocument.createElementNS(HTML_NS,'div')).appendChild(myDocument.createTextNode(entries[i][0]));
                     var theTerm=entries[i][1];
                     //var type=theTerm?kb.any(kb.fromNT(thisNT),rdf('type')):undefined;
                     var type=types[i];
                     var typeLabel=type?label(type):"";
-                    tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
+                    tr.appendChild(myDocument.createElementNS(HTML_NS,'td')).appendChild(myDocument.createTextNode(typeLabel));                
                 }
                 /*var choices=extraInformation.choices;
                 var index=extraInformation.index;
@@ -1441,14 +1449,14 @@ function UserInput(outline){
                     if (i<0) i=0;
                     if (i==choices.length) break;
                     var thisNT=choices[i].NT;
-                    var tr=table.appendChild(myDocument.createElement('tr'));
+                    var tr=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
                     tr.setAttribute('about',thisNT);
-                    var th=tr.appendChild(myDocument.createElement('th'))
-                    th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(choices[i].label));
+                    var th=tr.appendChild(myDocument.createElementNS(HTML_NS,'th'))
+                    th.appendChild(myDocument.createElementNS(HTML_NS,'div')).appendChild(myDocument.createTextNode(choices[i].label));
                     var theTerm=kb.fromNT(thisNT);
                     var type=theTerm?kb.any(kb.fromNT(thisNT),rdf('type')):undefined;
                     var typeLabel=type?label(type):"";
-                    tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(typeLabel));                
+                    tr.appendChild(myDocument.createElementNS(HTML_NS,'td')).appendChild(myDocument.createTextNode(typeLabel));                
                 }
                 //alert(extraInformation.choices.length);
                 */
@@ -1463,12 +1471,12 @@ function UserInput(outline){
                     addMenuItem(choices[i]);
                 break;
             default:
-                var tr=table.appendChild(myDocument.createElement('tr'));
+                var tr=table.appendChild(myDocument.createElementNS(HTML_NS,'tr'));
                 tr.className='no-suggest';
-                var th=tr.appendChild(myDocument.createElement('th'))
-                th.appendChild(myDocument.createElement('div'))
+                var th=tr.appendChild(myDocument.createElementNS(HTML_NS,'th'))
+                th.appendChild(myDocument.createElementNS(HTML_NS,'div'))
                   .appendChild(myDocument.createTextNode("No suggested choices. Try to type instead."));
-                tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode("OK"));
+                tr.appendChild(myDocument.createElementNS(HTML_NS,'td')).appendChild(myDocument.createTextNode("OK"));
                 var This=this;
                 function clearMenu(e){This.clearMenu();e.stopPropagation;};
                 tr.addEventListener('click',clearMenu,'false');
@@ -1485,6 +1493,7 @@ function UserInput(outline){
                     kb.query(inputQuery,addPredicateChoice(inputQuery),nullFetcher);
                 }                
         }
+        popupStore.showPopup(extraInformation.selectedTd, -1, -1, "popup", 'bottomleft', 'topleft');       
     },//funciton showMenu
 
     /*When a blank is filled. This happens even for blue-cross editing.*/    

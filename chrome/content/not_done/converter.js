@@ -26,7 +26,8 @@ RDFConverter.prototype = {
   onStartRequest: function(request,context) {
     this.data="";
     this.channel=request.QueryInterface(Components.interfaces.nsIChannel);
-    //this.channel.contentType = /*"text/html"*/ "application/vnd.mozilla.xul+xml";
+    //comment out this would break things.
+    this.channel.contentType = /*"text/html"*/ "application/vnd.mozilla.xul+xml";
     this.listener.onStartRequest (this.channel, context);
     return;
   },
@@ -62,7 +63,8 @@ RDFConverter.prototype = {
         "      xmlns:xul=\"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul\">"+
         "    <xul:textbox type=\"autocomplete\" autocompletesearch=\"history\">"+
         "</xul:window>";*/
-   /*
+    
+    /*
     var sis =
         Components.classes["@mozilla.org/io/string-input-stream;1"]
         .createInstance(Components.interfaces.nsIStringInputStream);
@@ -71,14 +73,19 @@ RDFConverter.prototype = {
     this.listener.onStopRequest (this.channel, context, statusCode);
     return;
     */
+    
+    
+    
     var ios = 
           Components.classes["@mozilla.org/network/io-service;1"].
           getService(Components.interfaces.nsIIOService);
-    var outlinerXUL = ios.newURI(/*"chrome://tabulator/content/textboxautocomplete.xul"*/
-                                  "http://www.w3.org/",null,null);
+    var outlinerXUL = ios.newURI("chrome://tabulator/content/textboxautocomplete.xul?uri="+displayURI
+                                  /*"http://www.w3.org/"*/,null,null);
     var channel = ios.newChannelFromURI(outlinerXUL, null);
-    channel.asyncOpen(this._listener, null);
+    channel.asyncOpen(this.listener, null);
     this.listener.onStopRequest (this.channel,context, statusCode);
+    
+    
   },
 
   onDataAvailable: function(request,context,inputStream,offset,count) {

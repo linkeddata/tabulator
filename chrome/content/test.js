@@ -58,6 +58,10 @@ mo = Namespace("http://purl.org/ontology/mo/")
 tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
 air = air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
 
+//Namespaces for AIR (Amord in RDF) use
+tms = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
+air = air = Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+
 kb.registerFormula("knowledge base");
 //alert(kb.constructor.SuperClass.instances["knowledge base"]); //this is fine
 //alert(RDFFormula.instances["knowledge base"]); //this returns undefined (strage scope stuff)
@@ -210,7 +214,7 @@ var tabExtension = {
                                    .getService(Components.interfaces.nsIIOService)
                                    .newURI(uri, null, null); //ToDo: make sure the encoding is correct
             //this is the best I can do for now. The history entry is not altered so there will be
-            //bugs when reloading sessions or goBack/goForth.
+            //bugs when reloading sessions or goBack/goForth. --kenny
             gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
             //It's not straightforward to get the browser from the inner document, there should
             //be a better way

@@ -856,7 +856,7 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, false, defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
-        if (outline.sparql.prototype.editable(subject.uri, outline.kb) && // Is that the only test?
+        if (outline.UserInput.updateService.editMethod(Util.uri.docpart(subject.uri), outline.kb) && // Is that the only test?
             !HCIoptions["bottom insert highlights"].enabled) {
             var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
             var holdingTd = myDocument.createElement('td'); //in userinput.js
@@ -1547,10 +1547,10 @@ function Outline(doc) {
             if (st) { //don't do these for headers or base nodes
             var source = st.why;
             var target = st.why;
-            var editable = outline.sparql.prototype.editable(target.uri, kb);
+            var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
             if (!editable)
                 target = node.parentNode.AJAR_inverse ? st.object : st.subject; // left hand side
-                editable = outline.sparql.prototype.editable(target.uri, kb);
+                editable = outline.UserInput.updateService.editMethod(Util.uri.docpart(target.uri), kb);
             // alert('Target='+target+', editable='+editable+'\nselected statement:' + st)
             if (editable && (cla.indexOf('pred') >= 0))
                 termWidget.addIcon(node,Icon.termWidgets.addTri); // Add blue plus
@@ -1757,7 +1757,7 @@ function Outline(doc) {
                 if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'                   
                     var object=getAbout(kb,selectedTd);
                     var target = selectedTd.parentNode.AJAR_statement.why;
-                    var editable = outline.sparql.prototype.editable(target.uri, kb);                    
+                    var editable = this.UserInput.updateService.editMethod(target.uri, kb);                    
                     if (object){
                         //<Feature about="enterToExpand"> 
                         outline.GotoSubject(object,true);
@@ -1807,7 +1807,7 @@ function Outline(doc) {
             case 46://delete
             case 8://backspace
                 var target = selectedTd.parentNode.AJAR_statement.why;
-                var editable = outline.sparql.prototype.editable(target.uri, kb);
+                var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
                 if (editable){                                
                     e.preventDefault();//prevent from going back
                     this.UserInput.Delete(selectedTd);
@@ -1967,7 +1967,7 @@ function Outline(doc) {
                 //if the node is already selected and the correspoding statement is editable,
                 //go to UserInput
                 var target = node.parentNode.AJAR_statement.why;
-                var editable = outline.sparql.prototype.editable(target.uri, kb);
+                var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
                 var text="TabulatorMouseDown@Outline()";
                 if (sel&editable) thisOutline.UserInput.Click(e, selection[0]); // was next line
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 

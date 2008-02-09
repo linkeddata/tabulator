@@ -36,19 +36,20 @@ function UserInput(outline){
     var xsd = tabulator.ns.xsd;
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
-    
         
-    var sparqlService=new sparql(kb);
+    var updateService=new updateCenter(kb);
     if (!UserInputFormula){
         UserInputFormula=new RDFFormula();
         UserInputFormula.superFormula=kb;
         UserInputFormula.registerFormula("Your Work"); 
     }
     if (!TempFormula) TempFormula=new RDFIndexedFormula(); 
-                                      //Use RDFIndexedFormula so add returns the statement     
+                                      //Use RDFIndexedFormula so add returns the statement
+    TempFormula.name = "TempFormula";                                       
 
     return {
-    sparqler: sparqlService,
+    updateService: updateService,
+    sparqler: new sparql(kb),
     lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
     lastModifiedStat: null, //the last statement being modified
     statIsInverse: false, //whether the statement is an inverse
@@ -333,14 +334,15 @@ function UserInput(outline){
                 s=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
                 // TODO: DEFINE ERROR CALLBACK
                 var trCache=ancestor(this.lastModified,'TR');
-                try{sparqlService.insert_statement(s, function(uri,success,error_body){
+                try{updateService.insert_statement(s, function(uri,success,error_body){
                     if (!success){
                         alert("Error occurs while inserting "+s+'\n\n'+error_body);
                         outline.UserInput.deleteTriple(trCache.lastChild,true);
                     }                    
                 })}catch(e){
                     alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)");
+                          "becuase it is not identifiable. (Known Tabulator Issue)\n"+
+                          "Error Message: "+e);
                     return;
                 }
                 s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
@@ -353,13 +355,13 @@ function UserInput(outline){
                 switch (obj.termType){
                     case 'literal':
                         // generate path and nailing from current values
-                        sparqlUpdate = sparqlService.update_statement(s);
+                        //sparqlUpdate = updateService.update_statement(s);
                         // TODO: DEFINE ERROR CALLBACK
                         var valueCache=this.lastModified.value;
                         var trCache=ancestor(this.lastModified,'TR');
                         var oldValue=this.lastModified.defaultValue;
                         
-                        try{sparqlUpdate.set_object(makeTerm(this.lastModified.value), function(uri,success,error_body){
+                        try{updateService.update_statement(s, function(uri,success,error_body){
                             if (success){
                                 obj.value=valueCache;                                
                             }else{
@@ -368,10 +370,11 @@ function UserInput(outline){
                                 trCache.lastChild.textContent=oldValue;
                             }
                             trCache.lastChild.className=trCache.lastChild.className.replace(/ pendingedit/g,"");                                   
-                            });                            
+                            },kb.literal(this.lastModified.value));                            
                         }catch(e){
                              alert("You can not edit statement about this blank node object "+
-                                   "becuase it is not identifiable. (Known Tabulator Issue)");
+                                   "becuase it is not identifiable. (Known Tabulator Issue)\n"+
+                                   "Error Message: "+e);
                              return;
                         }
                         //obj.value=this.lastModified.value;
@@ -399,7 +402,7 @@ function UserInput(outline){
                                 // TODO: DEFINE ERROR CALLBACK
                                 //because the table is reapinted, so...
                                 var trCache=ancestor(ancestor(this.lastModified,'TR'),'TD').parentNode;
-                                try{sparqlService.insert_statement([s1,s2,s3], function(uri,success,error_body){
+                                try{updateService.insert_statement([s1,s2,s3], function(uri,success,error_body){
                                     if (!success){
                                         kb.remove(s2);kb.remove(s3);
                                         alert("Error occurs while editing "+s1+'\n\n'+error_body);
@@ -407,7 +410,8 @@ function UserInput(outline){
                                     }
                                 })}catch(e){
                                     alert("You can not edit statement about this blank node object "+
-                                    "becuase it is not identifiable. (Known Tabulator Issue)");
+                                    "becuase it is not identifiable. (Known Tabulator Issue)\n"+
+                                    "Error Message: "+e);
                                     return;
                                 }
                                 kb.remove(s);
@@ -425,7 +429,7 @@ function UserInput(outline){
                             var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
                             // TODO: DEFINE ERROR CALLBACK
                             var trCache=ancestor(this.lastModified,'TR');
-                            try{sparqlService.insert_statement(st, function(uri,success,error_body){
+                            try{updateService.insert_statement(st, function(uri,success,error_body){
                                 if (!success){           
                                     alert("Error occurs while inserting "+st+'\n\n'+error_body);
                                     outline.UserInput.deleteTriple(trCache.lastChild,true);
@@ -509,8 +513,8 @@ function UserInput(outline){
             !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
             tabulator.log.debug("about to send SPARQLUpdate");
           //<SPARQLUpdate>
-            //sparqlService.delete_statement(s, function(uri,success,error_body){});
-            try{sparqlService.delete_statement(s, function(uri,success,error_body){
+            //updateService.delete_statement(s, function(uri,success,error_body){});
+            try{updateService.delete_statement(s, function(uri,success,error_body){
                 if (success){
                     kb.remove(s);
                     removefromview();
@@ -540,7 +544,8 @@ function UserInput(outline){
             }catch(e){
                 tabulator.log.error(e);
                 alert("You can not edit statement about this blank node object "+
-                      "becuase it is not identifiable. (Known Tabulator Issue)");
+                      "becuase it is not identifiable. (Known Tabulator Issue)\n"+
+                      "Error Message: "+e);
                 return;
             }
             
@@ -654,7 +659,7 @@ function UserInput(outline){
                 else
                     insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
                     
-                try{sparqlService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
+                try{updateService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
                     if (!success){
                         alert("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
                         outline.UserInput.deleteTriple(insertTr.lastChild,true);
@@ -662,7 +667,8 @@ function UserInput(outline){
                 })}catch(e){
                     tabulator.log.error(e);
                     alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)");
+                          "becuase it is not identifiable. (Known Tabulator Issue)"+
+                          "Error Message: "+e);
                     outline.UserInput.deleteTriple(insertTr.lastChild,true);
                     return;
                 }            
@@ -1509,7 +1515,7 @@ function UserInput(outline){
             if (selectedTd.nextSibling.className!='undetermined'){
                 var s= new RDFStatement(stat.subject,inputTerm,stat.object,stat.why);
               //<SPARQLUpdate>   
-                try{sparqlService.insert_statement(s, function(uri,success,error_body){
+                try{updateService.insert_statement(s, function(uri,success,error_body){
                     if (success){
                         newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why);
                         tr.AJAR_statement=newStat;
@@ -1521,7 +1527,8 @@ function UserInput(outline){
                 })}catch(e){
                     tabulator.log.error(e);
                     alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)");
+                          "becuase it is not identifiable. (Known Tabulator Issue)"+
+                          "Error Message: "+e);
                     return;
                 }
               //</SPARQLUpdate>
@@ -1544,7 +1551,7 @@ function UserInput(outline){
                 else
                     s=new RDFStatement(inputTerm,stat.predicate,stat.object,stat.why);
               //<SPARQLUpdate>
-                try{sparqlService.insert_statement(s, function(uri,success,error_body){
+                try{updateService.insert_statement(s, function(uri,success,error_body){
                     if (success){   
                         if (!isInverse)
                             newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
@@ -1560,7 +1567,8 @@ function UserInput(outline){
                     tabulator.log.error(e);
                     outline.UserInput.deleteTriple(newTd,true);
                     alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)");
+                          "becuase it is not identifiable. (Known Tabulator Issue)"+
+                          "Error Message: "+e);
                     return;
                 }
               //</SPARQLUpdate>

@@ -484,6 +484,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     var sz = this;
 
     var namespaceCounts = []; // which have been used
+    namespaceCounts['http://www.w3.org/1999/02/22-rdf-syntax-ns#'] = true;
 
     ////////////////////////// Arrange the bits of XML text 
 

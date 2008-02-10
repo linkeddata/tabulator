@@ -856,8 +856,12 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, false, defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
-        if (outline.UserInput.updateService.editMethod(Util.uri.docpart(subject.uri), outline.kb) && // Is that the only test?
-            !HCIoptions["bottom insert highlights"].enabled) {
+        if ((subject.termType == 'symbol' && 
+             outline.UserInput.updateService.editMethod(Util.uri.docpart(subject.uri), kb))
+             || (subject.termType == 'bnode' &&
+             outline.UserInput.updateService.editMethod(kb.subjectIndex[subject.hashString()][0].why.uri)
+                //check the document containing the definition of the bnode
+            /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
             var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
             var holdingTd = myDocument.createElement('td'); //in userinput.js
             holdingTd.setAttribute('colspan','2');
@@ -1550,7 +1554,8 @@ function Outline(doc) {
             var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
             if (!editable)
                 target = node.parentNode.AJAR_inverse ? st.object : st.subject; // left hand side
-                editable = outline.UserInput.updateService.editMethod(Util.uri.docpart(target.uri), kb);
+                //think about this later. Because we update to the why for now.
+                //editable = outline.UserInput.updateService.editMethod(Util.uri.docpart(target.uri), kb);
             // alert('Target='+target+', editable='+editable+'\nselected statement:' + st)
             if (editable && (cla.indexOf('pred') >= 0))
                 termWidget.addIcon(node,Icon.termWidgets.addTri); // Add blue plus

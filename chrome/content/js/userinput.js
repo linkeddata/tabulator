@@ -340,9 +340,7 @@ function UserInput(outline){
                         outline.UserInput.deleteTriple(trCache.lastChild,true);
                     }                    
                 })}catch(e){
-                    alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)\n"+
-                          "Error Message: "+e);
+                    alert("Error inserting fact "+s+':\n\t'+e);
                     return;
                 }
                 s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
@@ -372,9 +370,7 @@ function UserInput(outline){
                             trCache.lastChild.className=trCache.lastChild.className.replace(/ pendingedit/g,"");                                   
                             },kb.literal(this.lastModified.value));                            
                         }catch(e){
-                             alert("You can not edit statement about this blank node object "+
-                                   "becuase it is not identifiable. (Known Tabulator Issue)\n"+
-                                   "Error Message: "+e);
+                             alert("Error occurs while editing "+s+':\n\t' + e);
                              return;
                         }
                         //obj.value=this.lastModified.value;
@@ -409,9 +405,7 @@ function UserInput(outline){
                                         outline.UserInput.deleteTriple(trCache.lastChild,true);
                                     }
                                 })}catch(e){
-                                    alert("You can not edit statement about this blank node object "+
-                                    "becuase it is not identifiable. (Known Tabulator Issue)\n"+
-                                    "Error Message: "+e);
+                                    alert("Error occurs while editing "+s1+':\n\t'+e);
                                     return;
                                 }
                                 kb.remove(s);
@@ -543,9 +537,7 @@ function UserInput(outline){
                 selectedTd.className+=' pendingedit';
             }catch(e){
                 tabulator.log.error(e);
-                alert("You can not edit statement about this blank node object "+
-                      "becuase it is not identifiable. (Known Tabulator Issue)\n"+
-                      "Error Message: "+e);
+                alert("Error deleting statement "+s+":\n\t"+e);
                 return;
             }
             
@@ -1526,9 +1518,7 @@ function UserInput(outline){
                     }
                 })}catch(e){
                     tabulator.log.error(e);
-                    alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)"+
-                          "Error Message: "+e);
+                    alert("Errorwhen insert (#2) of statement "+s+':\n\t'+e);
                     return;
                 }
               //</SPARQLUpdate>

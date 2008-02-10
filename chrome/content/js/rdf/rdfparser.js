@@ -278,6 +278,11 @@ function RDFParser(store) {
 	}
 	
 	this['why'] = why
+        
+        if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
+//            alert('Warning: Badly formed XML');
+            throw new Error("Badly formed XML in "+base); //@@ Add details
+        }
 
 	// our topmost frame
 
@@ -292,6 +297,10 @@ function RDFParser(store) {
     this['parseDOM'] = function (frame) {
 	// a DOM utility function used in parsing
 	var elementURI = function (el) {
+            if (el['namespaceURI'] == null) {
+                throw new Error("RDF/XML syntax error: No namespace for "
+                            +el['localName']+" in "+this.base)
+            }
 	    return el['namespaceURI'] + el['localName']
 	}
 	var dig = true // if we'll dig down in the tree on the next iter

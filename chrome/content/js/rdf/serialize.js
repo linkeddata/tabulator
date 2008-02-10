@@ -574,7 +574,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
                 var start = '<rdf:Description rdf:ID="'+subject.toNT.slice(2)+'">';
             }
         } else {
-            var start = '<rdf:Description about="'+ relURI(subject)+'">';
+            var start = '<rdf:Description rdf:about="'+ relURI(subject)+'">';
         }
 
         return [ start ].concat(
@@ -637,7 +637,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
         var canSplit = true;
         for (var k=j+1; k<uri.length; k++) {
             if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
-                throw ('Invalid character "'+uri[k] +'" cannot be in XML qname'); 
+                throw ('Invalid character "'+uri[k] +'" cannot be in XML qname for URI: '+uri); 
             }
         }
         var localid = uri.slice(j+1);

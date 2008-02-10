@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 12090 2008-02-04 21:51:47Z kennyluck $
+// SVN ID: $Id: query.js 12863 2008-02-10 04:12:23Z timbl $
 
 //  Variable
 //
@@ -294,8 +294,8 @@ function RDFUnifyTerm(self, other, bindings, formula) {
         actual = self;
     }
     if (!actual.complexType) {
-        if (formula.redirection[actual]) actual = formula.redirection[actual];
-        if (formula.redirection[other])  other  = formula.redirection[other];
+        if (formula.redirections[actual]) actual = formula.redirections[actual];
+        if (formula.redirections[other])  other  = formula.redirections[other];
         if (actual.sameTerm(other)) return [[ [], null]];
         return [];
     }
@@ -432,7 +432,7 @@ function prepare(f, item, bindings) {
     	} else {
         	var t = RDFBind(terms[i], bindings); //returns the RDF binding if bound, otherwise itself
         	//if (terms[i]!=RDFBind(terms[i],bindings) alert("Term: "+terms[i]+"Binding: "+RDFBind(terms[i], bindings));
-        	if (f.redirection[t.hashString()]) t = f.redirection[t.hashString()]; //redirect
+        	if (f.redirections[t.hashString()]) t = f.redirections[t.hashString()]; //redirect
         	termIndex=ind[i]
         	item.index = termIndex[t.hashString()];
         	if (typeof item.index == 'undefined') {

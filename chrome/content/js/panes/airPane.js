@@ -196,16 +196,20 @@
 					
 					//Update the description div with the description at the next level
 	                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined);
+	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined);
+				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
+				   	ruleNameFound = nextRuleSts[0].object;
+
 	                if (currentRule[0].object.termType == 'collection'){
 	                    airPane.render.because.displayDesc(currentRule[0].object);
 			            divDescription.appendChild(myDocument.createElement('br')); 
 					   	divDescription.appendChild(myDocument.createElement('br'));
 	                }
+	                else{
+	                	airPane.render.because.moreInfo(ruleNameFound);
+	                }
 				   	
-	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined);
-				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
-				   	ruleNameFound = nextRuleSts[0].object;
-	                
+				   	
 				   	
 				   	//Update the premises div also with the corresponding premises
 					   divPremises.appendChild(myDocument.createElement('br')); 
@@ -366,7 +370,7 @@
                 }
             }
             
-	            divJustification.appendChild(divPremises);    
+	        divJustification.appendChild(divPremises);    
 	          
         }
 

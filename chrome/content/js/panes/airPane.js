@@ -208,7 +208,6 @@
 	                
 				   	
 				   	//Update the premises div also with the corresponding premises
-				   	if (!noPremises){
 					   divPremises.appendChild(myDocument.createElement('br')); 
 					   divPremises.appendChild(myDocument.createElement('br')); 
 					   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined);
@@ -217,26 +216,23 @@
 		                        for (var l=0; l<t2.length; l++){
 		                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
 		                                justificationSts = t2;
-		                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+		                                if (t2[l].object.statements.length == 0){
+										   	divPremises.appendChild(myDocument.createElement('br'));
+										   	divPremises.appendChild(myDocument.createTextNode("Not found in "));
+										   	var a = myDocument.createElement('a')
+							            	a.setAttribute('href', logFileURI);
+							            	a.appendChild(myDocument.createTextNode(logFileURI));
+							    			divPremises.appendChild(a);
+										   	divPremises.appendChild(myDocument.createElement('br'));
+		                                }
+		                                else{
+			                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+		                                }
 		                            }                
 		                       }     
 		                }
 					   divPremises.appendChild(myDocument.createElement('br'));
 					   divPremises.appendChild(myDocument.createElement('br'));
-							
-				   	}
-				   	else{
-						divPremises.appendChild(myDocument.createElement('br'));
-					   	divPremises.appendChild(myDocument.createElement('br'));
-					   	divPremises.appendChild(myDocument.createTextNode("Not found in "));
-					   	var a = myDocument.createElement('a')
-		            	a.setAttribute('href', logFileURI);
-		            	a.appendChild(myDocument.createTextNode(logFileURI));
-		    			divPremises.appendChild(a);
-					   	divPremises.appendChild(myDocument.createElement('br'));
-					   	divPremises.appendChild(myDocument.createElement('br'));
-			   		}
-				   		
 				}
             				   	
             }
@@ -349,26 +345,31 @@
 	                        for (var l=0; l<t2.length; l++){
 	                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
 	                                justificationSts = t2;
-	                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+								   	divPremises.appendChild(myDocument.createElement('br'));
+								   	divPremises.appendChild(myDocument.createElement('br'));
+	                                if (t2[l].object.statements.length == 0){
+									   	divPremises.appendChild(myDocument.createTextNode("Not found in "));
+									   	var a = myDocument.createElement('a')
+						            	a.setAttribute('href', logFileURI);
+						            	a.appendChild(myDocument.createTextNode(logFileURI));
+						    			divPremises.appendChild(a);
+	                                }
+	                                else{
+		                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+	                                }
+								   	divPremises.appendChild(myDocument.createElement('br'));
+								   	divPremises.appendChild(myDocument.createElement('br'));
 	                            }
-	                            else{
-	                            }                
 	                       }     
 	                    }
            		   	}
                 }
             }
             
-//			if (!noPremises)
 	            divJustification.appendChild(divPremises);    
 	          
         }
 
-		//Create a table and append the 2 buttons into that
-		var table = myDocument.createElement('table');
-		var tr_b = myDocument.createElement('tr');
-		var td_w = myDocument.createElement('td');
-		var td_l = myDocument.createElement('td');
 
 		airPane.render.addInitialButtons();
 

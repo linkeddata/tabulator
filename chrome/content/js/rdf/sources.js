@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 11856 2008-02-01 21:47:56Z timbl $
+ * SVN ID: $Id: sources.js 13191 2008-02-12 23:40:24Z kennyluck $
  *
  ************************************************************/
 
@@ -23,6 +23,7 @@ function SourceFetcher(store, timeout, async) {
     this.timeout = timeout?timeout:30000
     this.async = async!=null?async:true
     this.appNode = this.store.bnode(); // Denoting this session
+    this.store.fetcher = this; //Bi-linked
     this.requested = {}
     this.lookedUp = {}
     this.handlers = []

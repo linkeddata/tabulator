@@ -284,7 +284,8 @@ function RDFMakeTerm(formula,val, canonicalize) {
 // add a triple to the store
 RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
-    if (why == undefined) why = this.sym('chrome:thisSession');
+    if (why == undefined) why = this.fetcher.appNode; //system generated
+                               //defined in source.js, is this OK with identity.js only user?
     subj = RDFMakeTerm(this, subj);
     pred = RDFMakeTerm(this, pred);
     obj = RDFMakeTerm(this, obj);

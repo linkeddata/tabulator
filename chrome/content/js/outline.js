@@ -857,9 +857,9 @@ function Outline(doc) {
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, defaultPane.filter)
         if ((subject.termType == 'symbol' && 
-             outline.UserInput.updateService.editMethod(Util.uri.docpart(subject.uri), kb))
+             outline.UserInput.updateService.editMethod(kb.sym(Util.uri.docpart(subject.uri)), kb))
              || (subject.termType == 'bnode' &&
-             outline.UserInput.updateService.editMethod(kb.subjectIndex[subject.hashString()][0].why.uri)
+             outline.UserInput.updateService.editMethod(kb.subjectIndex[subject.hashString()][0].why)
                 //check the document containing the definition of the bnode
             /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
             var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
@@ -1551,7 +1551,7 @@ function Outline(doc) {
             if (st) { //don't do these for headers or base nodes
             var source = st.why;
             var target = st.why;
-            var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
+            var editable = outline.UserInput.updateService.editMethod(source, kb);
             if (!editable)
                 target = node.parentNode.AJAR_inverse ? st.object : st.subject; // left hand side
                 //think about this later. Because we update to the why for now.
@@ -1762,7 +1762,7 @@ function Outline(doc) {
                 if (getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'                   
                     var object=getAbout(kb,selectedTd);
                     var target = selectedTd.parentNode.AJAR_statement.why;
-                    var editable = this.UserInput.updateService.editMethod(target.uri, kb);                    
+                    var editable = this.UserInput.updateService.editMethod(target, kb);                    
                     if (object){
                         //<Feature about="enterToExpand"> 
                         outline.GotoSubject(object,true);
@@ -1812,7 +1812,7 @@ function Outline(doc) {
             case 46://delete
             case 8://backspace
                 var target = selectedTd.parentNode.AJAR_statement.why;
-                var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
+                var editable = outline.UserInput.updateService.editMethod(target, kb);
                 if (editable){                                
                     e.preventDefault();//prevent from going back
                     this.UserInput.Delete(selectedTd);
@@ -1972,7 +1972,7 @@ function Outline(doc) {
                 //if the node is already selected and the correspoding statement is editable,
                 //go to UserInput
                 var target = node.parentNode.AJAR_statement.why;
-                var editable = outline.UserInput.updateService.editMethod(target.uri, kb);
+                var editable = outline.UserInput.updateService.editMethod(target, kb);
                 var text="TabulatorMouseDown@Outline()";
                 if (sel&editable) thisOutline.UserInput.Click(e, selection[0]); // was next line
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 

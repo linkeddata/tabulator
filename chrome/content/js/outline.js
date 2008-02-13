@@ -1971,10 +1971,12 @@ function Outline(doc) {
                 }
                 //if the node is already selected and the correspoding statement is editable,
                 //go to UserInput
-                var target = node.parentNode.AJAR_statement.why;
+                var st = node.parentNode.AJAR_statement;
+                if (!st) return; // For example in the title TD of an expanded pane
+                var target = st.why;
                 var editable = outline.UserInput.updateService.editMethod(target, kb);
-                var text="TabulatorMouseDown@Outline()";
-                if (sel&editable) thisOutline.UserInput.Click(e, selection[0]); // was next line
+                if (sel&editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
+                // var text="TabulatorMouseDown@Outline()";
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
             }
             tabulator.log.debug("Was node selected after: "+selected(node)

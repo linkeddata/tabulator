@@ -103,7 +103,7 @@ function SourceWidget(container) {
         var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                    .getService(Components.interfaces.nsIWindowMediator);
         var myxulwin = wm.getMostRecentWindow("tabulatorsources");
-        if(myxulwin) {
+        if(on && myxulwin) {
             var doc = myxulwin.document;
             var innerWin = doc.getElementById("sourceshtml").contentWindow;
             var innerDoc = doc.getElementById("sourceshtml").contentDocument;

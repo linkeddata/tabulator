@@ -214,6 +214,13 @@ var tabExtension = {
       //also a hack on sources.js
       catman.addCategoryEntry('ext-to-type-mapping','n3','text/rdf+n3',true,true);
       var ThisSession=kb.the(undefined,tabulator.ns.rdfs('label'),kb.literal("This Session"));
+      
+      //everything ought to have a URI, but chrome may not be suitable because it maps to file:
+      //so resource: or about: may be a good URI for the source of tabulator generated triples
+      //ex. resource://gre/res/html.css is the html default css
+      tabulator.sourceWidget.addSource(tabulator.sourceURI);
+      var sourceRow = tabulator.sourceWidget.sources[tabulator.sourceURI];
+      sourceRow.childNodes[1].textContent = "Because Tabulator says so...";
       //deal with this later
       if (!isFirefox3())  sf.requestURI("chrome://tabulator/content/internalKnowledge.n3",ThisSession);
       //gBrowser.setAttribute('ondraggesture', 'nsDragAndDrop.startDrag(event, TabulatorOutlinerObserver)');
@@ -327,7 +334,8 @@ var httpResponseObserver =
         if (topic == "http-on-examine-response" && typeof Components != 'undefined') { // Componenets being undefined -- why?
               var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
               var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-              // httpChannel.setRequestHeader("X-Hello", "World", false)				
+              // httpChannel.setRequestHeader("X-Hello", "World", false)
+              //if (httpChannel.URI.spec == 'http://www.w3.org/') httpChannel.contentType = 'application/rdf+xml';				
               if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) { //only record 30X redirects
               
                   tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);

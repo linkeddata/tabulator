@@ -1525,6 +1525,23 @@ function Outline(doc) {
              }
          }    
     };
+
+    //show sources based on selection    
+    this.showSource = function showSource(){
+        //deselect all before going on, this is necessary because you would switch tab,
+        //close tab or so on...
+        for each (var sourceRow in sourceWidget.sources)
+            sourceRow.setAttribute('class', ''); //.class doesn't work. Be careful!
+        for (var i=0;i<selection.length;i++){
+            var st = selection[i].parentNode.AJAR_statement;
+            if (!st) continue; //for root TD
+            var source = st.why;
+            if (source.uri) 
+                sourceWidget.highlight(source, true);
+            else if (isExtension && source.termType == 'bnode')
+                sourceWidget.highlight(kb.sym(tabulator.sourceURI), true);
+        }
+    };
     
     function setSelected(node, newValue) {
         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));
@@ -1566,8 +1583,7 @@ function Outline(doc) {
             if (node.AJAR_statement) source = node.AJAR_statement.why
             else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
  */
-                       //tabulator.log.info('Source to highlight: '+source);
-            if (source && source.uri && sourceWidget) sourceWidget.highlight(source, true);
+            if (sourceWidget) thisOutline.showSource();
         } else {
             tabulator.log.debug("cla=$"+cla+"$")
             if (cla=='selected') cla=''; // for header <TD>
@@ -1580,7 +1596,8 @@ function Outline(doc) {
             tabulator.log.debug("cla=$"+cla+"$");
             if (node.AJAR_statement) source=node.AJAR_statement.why;
             else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why;
-            if (source && source.uri && sourceWidget) sourceWidget.highlight(source, false);
+            
+            if (sourceWidget) thisOutline.showSource();
         }
         tabulator.log.info("selection becomes " +selection.map(function(item){return item.textContent;}).join(", "));
         //tabulator.log.info("Setting className " + cla);

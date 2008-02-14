@@ -78,6 +78,7 @@ function Tabulator() {
     this.sf = new SourceFetcher(this.kb);
     this.qs = new QuerySource();
     this.sourceWidget = new SourceWidget();
+    this.sourceURI = "resource://tabulator/";
     this.sparql = new sparql(this.kb);
     this.rc = new RequestConnector();
     //var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;

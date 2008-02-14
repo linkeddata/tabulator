@@ -165,7 +165,7 @@
         airPane.render.because = function(){
         
 	    	var cwa = air('closed-world-assumption');
-			var cwaStatements = kb.statementsMatching(undefined, cwa, undefined);
+			var cwaStatements = kb.statementsMatching(undefined, cwa, undefined, subject);
 			var noPremises = false;
 			if (cwaStatements.length > 0){
 				noPremises = true;
@@ -195,8 +195,8 @@
 				else{
 					
 					//Update the description div with the description at the next level
-	                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined);
-	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined);
+	                var currentRule = kb.statementsMatching(ruleToFollow, undefined, undefined, subject);
+	                var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined, subject);
 				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
 				   	ruleNameFound = nextRuleSts[0].object;
 
@@ -214,9 +214,9 @@
 				   	//Update the premises div also with the corresponding premises
 					   divPremises.appendChild(myDocument.createElement('br')); 
 					   divPremises.appendChild(myDocument.createElement('br')); 
-					   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined);
+					   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined, subject);
 	                    for (var k=0; k<t1.length; k++){
-		                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+		                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined, subject);
 		                        for (var l=0; l<t2.length; l++){
 		                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
 		                                justificationSts = t2;
@@ -338,14 +338,14 @@
             for (var j=0; j<stsJust.length; j++){
                 if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
                 
-                	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ruleName, undefined);
+                	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ruleName, undefined, subject);
                 	ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
                 										   // statement containing the formula		
            		   	
            		   	if (!noPremises){
-	           		   	var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined);
+	           		   	var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined, subject);
 	                    for (var k=0; k<t1.length; k++){
-	                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined);
+	                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined, subject);
 	                        for (var l=0; l<t2.length; l++){
 	                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
 	                                justificationSts = t2;

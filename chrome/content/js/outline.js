@@ -427,6 +427,8 @@ function Outline(doc) {
         }
         
         if (!relevantPanes) relevantPanes.push(internalPane);
+        //Let's not do this for TextDocuments
+        //if (kb.whether(subject,rdf('type'),tabont('TextDocument'))) return null;
         tr.firstPane = relevantPanes[0];
         if (relevantPanes.length != 1) { // if only one, simplify interface
             for (var i=0; i<relevantPanes.length; i++) {
@@ -766,7 +768,7 @@ function Outline(doc) {
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
         //Let's not do this for TextDocuments
-        if (kb.whether(subject,rdf('type'),tabont('TextDocument'))) return null;
+        //if (kb.whether(subject,rdf('type'),tabont('TextDocument'))) return null;
         return "Data ("+n+")";
     }
 

@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
+<?xml-stylesheet href="chrome://tabulator/content/tabulator.css" type="text/css"?>
 <!DOCTYPE overlay SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
+
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <script type="application/x-javascript" src="log-ext.js"/><!-- should be absolute path -->
@@ -62,6 +64,10 @@
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
   </menupopup>
 
+  <hbox id="urlbar-icons">
+    <image id="tabulator-view-metadata" insertbefore="feed-button" onclick="tabulatorShowMetadata(event)"/>
+  </hbox>
+  
   <popupset id="mainPopupSet">
     <menupopup id="tabulatorcopyuri">
       <menuitem label="Copy URI" oncommand="tabulatorCopyURI()" />
@@ -74,7 +80,7 @@
     <statusbarpanel id="tabulator-source-count" insertbefore="statusbar-progresspanel" style="display:none"/>
   </statusbar>
 
-  <script type="application/x-javascript">
+  <script type="application/x-javascript"><![CDATA[
     var myCheckbox;
     tabulator_init = function() {
       myCheckbox = document.getElementById("tabulator_setaccept");
@@ -97,6 +103,36 @@
 
       new StatusWidget();
     }
+    
+    function tabulatorDetectMetadata(){
+        var kb = tabulator.kb;
+        var semanticIcon = document.getElementById('tabulator-view-metadata');
+        var divs = content.document.getElementsByTagName('div');
+        if (divs.length && divs[0].className.search("TabulatorOutline")!=-1){
+            //already viewing metadata, so disable the icon       
+            semanticIcon.removeAttribute('metadata');
+            return;
+        }
+        //also do this for HTML with hash uri...maybe don't do that
+        var doc = kb.sym(content.document.location.href);
+        var subjectIndex = kb.subjectIndex[doc.hashString()];
+        var objectIndex = kb.objectIndex[doc.hashString()];
+        //predicateIndex?? hmm...
+        var semantics = (subjectIndex? subjectIndex.length:0) + (objectIndex?objectIndex.length:0);        
+        //In the future, when there are many "semantics" of a page, we can show the icon based
+        //on the amount of semantics
+        if (semantics)
+            semanticIcon.setAttribute('metadata', ''+semantics);
+        else
+            semanticIcon.removeAttribute('metadata');
+    }        
+    getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);    
+    function tabulatorShowMetadata(e){
+        canonizeUrl(e,{});
+        tabulator.metadataURI = gURLBar.value;
+        handleURLBarCommand(e);
+    }
+    
     function tabulatorCopyURI() {
         gClipboardHelper = Components.classes["@mozilla.org/widget/clipboardhelper;1"].
                                     getService(Components.interfaces.nsIClipboardHelper);
@@ -126,6 +162,6 @@
 
     window.addEventListener("load",tabulator_init, false);
 
-  </script>
+  ]]></script>
   <script type="application/x-javascript" src="statuswidget.js" ></script>
 </overlay>

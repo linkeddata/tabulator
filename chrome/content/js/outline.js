@@ -765,6 +765,8 @@ function Outline(doc) {
         var n = kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
+        //Let's not do this for TextDocuments
+        if (kb.whether(subject,rdf('type'),tabont('TextDocument'))) return null;
         return "Data ("+n+")";
     }
 

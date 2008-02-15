@@ -177,6 +177,7 @@ var tabExtension = {
       var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
       httpResponseObserver.register(); // timbl
       gBrowser.addEventListener('load',function(e) {
+        tabulatorDetectMetadata();//defined in tabulator.xul
         var doc = e.originalTarget;
         var divs = doc.getElementsByTagName('div');
         for(var i=0;i<divs.length;i++) {
@@ -335,7 +336,11 @@ var httpResponseObserver =
               var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
               var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
               // httpChannel.setRequestHeader("X-Hello", "World", false)
-              //if (httpChannel.URI.spec == 'http://www.w3.org/') httpChannel.contentType = 'application/rdf+xml';				
+              if (httpChannel.URI.spec == tabulator.metadataURI) {
+                  //this forces the page to be displayed as RDF/XML seeAlso tabulator.xul
+                  tabulator.metadataURI = '';
+                  httpChannel.contentType = 'application/rdf+xml';
+              }				
               if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) { //only record 30X redirects
               
                   tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);

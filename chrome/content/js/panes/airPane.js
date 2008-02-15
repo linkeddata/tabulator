@@ -17,40 +17,55 @@
     var description = tms('description');
     var ruleName = tms('rule-name');
     var prem = tms('premise');
-    var stsCompliant;
-    var stsNonCompliant;
-    var airRet = null;
-    var stsJust;
-    var ruleNameFound;
              
     airPane.label = function(subject) {
     
-        stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+    	var stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
 
-            for (var j=0; j<stsJust.length; j++){
-                if (stsJust[j].subject.termType == 'formula'){
+        for (var j=0; j<stsJust.length; j++){
+            if (stsJust[j].subject.termType == 'formula'){
                 var sts = stsJust[j].subject.statements;
                 for (var k=0; k<sts.length; k++){
                     if (sts[k].predicate.toString() == compliant.toString()){
-                        airRet = "AIR";
                         stsCompliant = sts[k];
-                    
+                    	return "AIR";
+                        
                     } 
                     if (sts[k].predicate.toString() == nonCompliant.toString()){
-                        airRet = "AIR";
                         stsNonCompliant = sts[k];
-                        
-                     }
-                   }
-                }    
-            }
-        
-       return airRet;
+                        return "AIR";
+                   	}
+                }
+           	}    
+        }
+    
+       return null;
     }
 
     // View the justification trace in an exploratory manner
     airPane.render = function(subject, myDocument) {
 
+	    var stsCompliant;
+	    var stsNonCompliant;
+
+	    var ruleNameFound;
+
+	   	var stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+	
+	        for (var j=0; j<stsJust.length; j++){
+	            if (stsJust[j].subject.termType == 'formula'){
+	                var sts = stsJust[j].subject.statements;
+	                for (var k=0; k<sts.length; k++){
+	                    if (sts[k].predicate.toString() == compliant.toString()){
+	                        stsCompliant = sts[k];
+	                    } 
+	                    if (sts[k].predicate.toString() == nonCompliant.toString()){
+	                        stsNonCompliant = sts[k];
+	                   	}
+	                }
+	           	}    
+	        }
+    
     	var statementsAsTables = myDocument.outline.statementsAsTables;        
   
   		airPane.render.extractLogURI = function(fullURI){

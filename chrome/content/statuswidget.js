@@ -2,7 +2,8 @@ function StatusWidget() {
     this.ele = document.getElementById('tabulator-source-count')
     this.pend = []
     this.errors = {}
-    var sw = this
+    var sw = this;
+    tabulator.statusWidget = sw;
 
     this.recv = function (uri) {
 	sw.pend.push(uri);

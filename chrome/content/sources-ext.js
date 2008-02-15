@@ -1,4 +1,8 @@
 function SourceWidget(container) {
+    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Components.interfaces.nsIWindowMediator);                   
+    var gBrowser = wm.getMostRecentWindow("navigator:browser").getBrowser();
+    //Because this is in the scope of a component, gBrowser has to be declared
     this.document = Components.classes["@mozilla.org/xul/xul-document;1"].createInstance()
     this.container = this.document.createElementNS('http://www.w3.org/1999/xhtml','html:div');
     this.container.setAttribute('id','tabulatorsourcescontainer');

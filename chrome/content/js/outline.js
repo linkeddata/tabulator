@@ -15,7 +15,7 @@ function Outline(doc) {
     var tabont = tabulator.ns.tabont;
     var foaf = tabulator.ns.foaf;
     var rdf = tabulator.ns.rdf;
-    var RDFS = tabulator.ns.rdfs;
+    var rdfs = RDFS = tabulator.ns.rdfs;
     var OWL = tabulator.ns.owl;
     var dc = tabulator.ns.dc;
     var rss = tabulator.ns.rss;
@@ -2185,8 +2185,13 @@ function Outline(doc) {
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
             tabulator.log.debug("expand: Node for " + subject + " expanded")
             //fetch seeAlso when render()
-            var seeAlsoStats = sf.store.statementsMatching(subject, tabulator.ns.rdfs('seeAlso'))
-            seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
+            //var seeAlsoStats = sf.store.statementsMatching(subject, tabulator.ns.rdfs('seeAlso'))
+            //seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
+            var seeAlsoWhat = kb.each(subject, rdfs('seeAlso'));
+            for (var i=0;i<seeAlsoWhat.length;i++){
+                if (i>10) break; //think about this later
+                sf.lookUpThing(seeAlsoWhat[i],subject,false);
+            }
         } 
     
         function expand(uri)  {

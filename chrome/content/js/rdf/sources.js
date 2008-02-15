@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 13191 2008-02-12 23:40:24Z kennyluck $
+ * SVN ID: $Id: sources.js 13517 2008-02-15 20:50:40Z kennyluck $
  *
  ************************************************************/
 
@@ -426,14 +426,17 @@ function SourceFetcher(store, timeout, async) {
 	     var term = kb.sym(uri)
 	     var udoc=term.uri?kb.sym(Util.uri.docpart(uri)):uri
 
+         /*
 	     var seeAlso = tabulator.ns.rdfs('seeAlso')
 	     var refs = sf.store.statementsMatching(term,seeAlso) //this fetches seeAlso of docs indefinitely
+	                                                          //partially Kenny's bad, I noticed that but didn't
+	                                                          //comment this out.
 	     refs.map(function (x) {
 			  if (!sf.requested[Util.uri.docpart(x.object.uri)]) {
 			      sf.requestURI(x.object.uri, term)
 			  }
 		      })
-
+         */
 
 	     var sameAs = tabulator.ns.owl('sameAs') // @@ neaten up
 
@@ -523,7 +526,8 @@ function SourceFetcher(store, timeout, async) {
         if (uri.indexOf('#') >= 0) { // hash
 	    return alert("requestURI should notbe called with fragid: "+uri)
 	}
-        
+
+ 
         var pcol = Util.uri.protocol(uri);
         if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn')
             return null; // No look-up operaion on these, but they are not errors
@@ -545,6 +549,13 @@ function SourceFetcher(store, timeout, async) {
 	    //this.fireCallbacks('done',newArgs) //comment out here
 	    return null
 	}
+	
+	/* //debug code, we might need this later
+    if (tabulator.statusWidget && tabulator.statusWidget.pend.length > 10){
+        tabulator.log.error("too many requests to "+uri+" from: "+this.requestURI.caller);
+        return
+    }
+    */   
         this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
 
 	this.requested[docuri] = true

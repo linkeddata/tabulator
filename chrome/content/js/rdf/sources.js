@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 13517 2008-02-15 20:50:40Z kennyluck $
+ * SVN ID: $Id: sources.js 13685 2008-02-17 08:34:03Z kennyluck $
  *
  ************************************************************/
 
@@ -50,7 +50,7 @@ function SourceFetcher(store, timeout, async) {
 		}
 		var parser = new RDFParser(kb)
 		parser.parse(this.dom, xhr.uri.uri, xhr.uri)
-		
+		kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'),sf.appNode);
 		cb()
 	    }
 	}
@@ -116,7 +116,7 @@ function SourceFetcher(store, timeout, async) {
 			tabulator.log.info("GRDDL: No GRDDL profile in "+xhr.uri)
 		    }
 		}
-
+        kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('WebPage'),sf.appNode);	
 		cb()
 	    }
 	}
@@ -236,6 +236,18 @@ function SourceFetcher(store, timeout, async) {
 		    return
 		}
 
+
+		// dc:title	                       //no need to escape '/' here
+		var titleMatch = (new RegExp("<title>([\\s\\S]+?)</title>",'im')).exec(rt);
+		if (titleMatch){
+		    var kb = sf.store;
+		    kb.add(xhr.uri, tabulator.ns.dc('title'),
+			   kb.literal(titleMatch[1]),xhr.uri); //think about xml:lang later
+            kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('WebPage'),sf.appNode);			   
+			cb(); //doneFetch, not failed
+		    return;
+		}
+
 		sf.failFetch(xhr, "can't parse non-XML HTML")
 	    }
 	}
@@ -305,10 +317,12 @@ function SourceFetcher(store, timeout, async) {
 			+ ' as Notation3:\n' + e)
 		    tabulator.log.warn(msg)
 		    sf.failFetch(xhr, msg)
+		    return;
 		}
 
 		sf.addStatus(xhr,'N3 parsed: '+p.statementCount 
 					    + ' statements in '+p.lines+' lines.')
+        sf.store.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'),sf.appNode);	    
 		args = [ xhr.uri.uri ]; // Other args needed ever?
 		sf.doneFetch(xhr, args)
 	    }
@@ -550,12 +564,12 @@ function SourceFetcher(store, timeout, async) {
 	    return null
 	}
 	
-	/* //debug code, we might need this later
+	 //debug code, we might need this later
     if (tabulator.statusWidget && tabulator.statusWidget.pend.length > 10){
         tabulator.log.error("too many requests to "+uri+" from: "+this.requestURI.caller);
         return
     }
-    */   
+       
         this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
 
 	this.requested[docuri] = true
@@ -654,14 +668,14 @@ function SourceFetcher(store, timeout, async) {
                         }
                     }
                     if (xhr.status-0 == 200) {
-                        addType(tabulator.ns.link('Document'));
+                        //addType(tabulator.ns.link('Document'));
                         var ct = xhr.headers['content-type'];
                         if (!ct) alert('No content-type on 200 response for '+xhr.uri)
                         else {
                             if (ct.indexOf('image/') == 0)
                                 addType(kb.sym('http://purl.org/dc/terms/Image'));
-                            if (ct.indexOf('text/') == 0)
-                                addType(tabulator.ns.link('TextDocument'));
+                            //if (ct.indexOf('text/') == 0)
+                            //    addType(tabulator.ns.link('TextDocument'));
                         }
                     }
 
@@ -733,10 +747,10 @@ function SourceFetcher(store, timeout, async) {
 	    case 4:
 		// Now handle
 		if (xhr.handle) {
+		    sf.fireCallbacks('load',args)
 		    xhr.handle(function () {
 				   sf.doneFetch(xhr,args)
 			       })
-		    sf.fireCallbacks('load',args)
 		}
 		break
 	    }

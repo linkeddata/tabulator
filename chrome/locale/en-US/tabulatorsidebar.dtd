@@ -6,6 +6,8 @@
 <!ENTITY tabsources.label "Data Sources">
 <!ENTITY tabsources.accesskey "a">
 
+<!ENTITY tabulatorPageMetadata.label "Page Metadata (RDF)">
+
 <!ENTITY tablog.title "Tabulator Log">
 <!ENTITY tablog.label "Data Browser Log">
 <!ENTITY tablog.accesskey "l">

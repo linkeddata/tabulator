@@ -62,6 +62,7 @@
   </menupopup>
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
+        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorShowMetadata(event)"/>
   </menupopup>
 
   <hbox id="urlbar-icons">

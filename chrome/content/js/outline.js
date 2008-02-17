@@ -22,6 +22,7 @@ function Outline(doc) {
     var xsd = tabulator.ns.xsd;
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
+    var link = tabulator.ns.link;
     
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
@@ -416,6 +417,7 @@ function Outline(doc) {
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
         tr.firstPane = null;
+        var paneNumber = 0;
         var relevantPanes = [];
         var labels = []
         for (var i=0; i< panes.list.length; i++) {
@@ -423,19 +425,23 @@ function Outline(doc) {
             var lab = pane.label(subject);
             if (!lab) continue;
             relevantPanes.push(pane);
-            labels.push(lab)
+            labels.push(lab);
+            //steal the focus
+            if (!tr.firstPane && pane.shouldGetFocus && pane.shouldGetFocus(subject)){
+                tr.firstPane = pane;
+                paneNumber = relevantPanes.length-1;
+                tabulator.log.info('the '+i+'th pane steals the focus');
+            }
         }
         
         if (!relevantPanes) relevantPanes.push(internalPane);
-        //Let's not do this for TextDocuments
-        //if (kb.whether(subject,rdf('type'),tabont('TextDocument'))) return null;
-        tr.firstPane = relevantPanes[0];
+        tr.firstPane = tr.firstPane || relevantPanes[0];
         if (relevantPanes.length != 1) { // if only one, simplify interface
             for (var i=0; i<relevantPanes.length; i++) {
                 var pane = relevantPanes[i];
                 var ico = AJARImage(pane.icon, labels[i], labels[i]);
                 // ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
-                ico.setAttribute('class',  i ? 'paneHidden':'paneShown')
+                ico.setAttribute('class',  (i!=paneNumber) ? 'paneHidden':'paneShown')
                 tr.firstChild.childNodes[1].appendChild(ico);
             }
         }
@@ -505,7 +511,7 @@ function Outline(doc) {
         appendPropertyTRs(div, plist, true, function(pred){return true;})
         return div;
     }
-    panes.register(classInstancePane);
+    //panes.register(classInstancePane);
 
 
     /*   Friend-of-a-Fried Pane
@@ -767,9 +773,10 @@ function Outline(doc) {
         var n = kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
-        //Let's not do this for TextDocuments
-        //if (kb.whether(subject,rdf('type'),tabont('TextDocument'))) return null;
         return "Data ("+n+")";
+    }
+    dataContentPane.shouldGetFocus = function(subject) {
+        return kb.whether(subject, rdf('type'), link('RDFDocument'));
     }
 
     // View the data in a file in user-friendly way
@@ -809,7 +816,7 @@ function Outline(doc) {
         }
         return div
     }
-    panes.register(dataContentPane);
+    //panes.register(dataContentPane);
 
 
 
@@ -878,7 +885,7 @@ function Outline(doc) {
         }        
         return div    
     }
-    panes.register(defaultPane);
+    //panes.register(defaultPane);
     
     /*   Internal Pane
     **
@@ -924,24 +931,34 @@ function Outline(doc) {
     if (!SourceOptions["seeAlso not internal"].enabled)
         internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
     
-    panes.register(internalPane);
-    panes.register(socialPane);
+    //panes.register(internalPane);
+    //panes.register(socialPane);
     
     
     /*   Human-readable Pane
     **
     **  This outline pane contains the document contents for an HTML document
+    **  This is for peeking a page, because the user might not want to leave the tabulator.
     */
     humanReadablePane = {};
     humanReadablePane.icon = Icon.src.icon_visit;
     humanReadablePane.label = function(subject) {
-        if (!kb.anyStatementMatching(
-            subject, tabulator.ns.rdf( 'type'), tabulator.ns.link( 'TextDocument')))
-            return null;
-        var s = dataContentPane.label(subject);
+        //recursive iframe is not allowed
+        if (isExtension && myDocument.location == subject.uri) return null;
+        var request = kb.any(subject, tabulator.ns.link("request"));
+        if (!request) return null;
+        var content_type = kb.the(request, tabulator.ns.httph("content-type"));
+        if (!content_type) return null;//this hapeens when request is generated but response not ready        
+        var allowed = ['text/plain','application/x-javascript',
+                       ,'text/html','application/xhtml+xml','text/css'];
+        if (allowed.filter(function(s){return content_type.value.search(s)!=-1}).length) return "view";
+        //if (!kb.anyStatementMatching(
+        //    subject, tabulator.ns.rdf( 'type'), tabulator.ns.link( 'TextDocument')))
+        //    return null;
+        //var s = dataContentPane.label(subject);
         // Done to stop Tab'r trying to show nestd RDF and N3 files in Firefox
-        if (s) return null; // If a data document, don't try human readable view.  (?)
-        return "view";
+        //if (s) return null; // If a data document, don't try human readable view.  (?)
+        return null;
     }
     humanReadablePane.render = function(subject) {
         var div = myDocument.createElement("div")
@@ -957,7 +974,7 @@ function Outline(doc) {
         div.appendChild(tr)
         return div
     }
-    panes.register(humanReadablePane);
+    //panes.register(humanReadablePane);
 
 
 /*   Image Pane
@@ -985,7 +1002,7 @@ function Outline(doc) {
         div.appendChild(tr)
         return div
     }
-    panes.register(imagePane);
+    //panes.register(imagePane);
 
 
     /*      Notation3 content Pane
@@ -1025,7 +1042,7 @@ function Outline(doc) {
         div.appendChild(pre);
         return div
     }
-    panes.register(n3Pane);
+    //panes.register(n3Pane);
 
     /*      RDF/XML content Pane
     **
@@ -1064,11 +1081,11 @@ function Outline(doc) {
         div.appendChild(pre);
         return div
     }
-    panes.register(RDFXMLPane);
+    //panes.register(RDFXMLPane);
 
 
 	/**
-	 * Third party panes
+	 * Pane registration
 	 */
 	
 	//airPane @see panes/airPane.js
@@ -1077,9 +1094,23 @@ function Outline(doc) {
 	//LawPane @see panes/lawPane.js
 	panes.register(LawPane);
  	
+    panes.register(classInstancePane);
+
+    panes.register(defaultPane);
+        
+    panes.register(internalPane);
+
+    panes.register(imagePane);
     
-
-
+    panes.register(socialPane);
+    
+    panes.register(dataContentPane);
+    
+    panes.register(n3Pane);
+    
+    panes.register(RDFXMLPane);
+    
+    panes.register(humanReadablePane);
 //////////////////////////////////////////////////////////////////////////////
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK

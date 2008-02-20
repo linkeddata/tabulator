@@ -25,9 +25,12 @@ RDFConverter.prototype = {
 
   onStartRequest: function(request,context) {
     this.data="";
+
     this.channel=request.QueryInterface(Components.interfaces.nsIChannel);
-    this.channel.contentType = "text/html";
-    this.listener.onStartRequest (this.channel, context);
+    this._request = request;
+    //comment out this would break things.
+    this.channel.contentType = "text/html" /*"application/vnd.mozilla.xul+xml"*/;
+    //this.listener.onStartRequest (this.channel, context);
     return;
   },
 
@@ -38,27 +41,25 @@ RDFConverter.prototype = {
     //var nodeTree = parser.parseFromString(this.data, "text/xml");
     var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     var displayURI = tabulator.rc.getDisplayURI(request); //seeAlso request.js
-    var outlineHTML = 
-        "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
-        "<html id='docHTML'>"+
-        "    <head>"+
-        "        <title>Tabulator: Async Javascript And Semantic Web</title>"+
-        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
-        "    </head>"+
-        "    <body>"+
-        "        <div class=\"TabulatorOutline\" id=\""+displayURI+"\">"+
-        "            <table id=\"outline\"></table>"+
-        "        </div>"+
-        "    </body>"+
-        "</html>";
+    
+    request.QueryInterface(Components.interfaces.nsIChannel);
+    
+    var ios = 
+          Components.classes["@mozilla.org/network/io-service;1"].
+          getService(Components.interfaces.nsIIOService);
+    var outlinerXUL = ios.newURI("chrome://tabulator/content/outliner.html"/*?uri="+displayURI*/
+                                  /*"http://www.w3.org/"*/,null,null);
+    var channel = ios.newChannelFromURI(outlinerXUL, null);
 
-    var sis =
-        Components.classes["@mozilla.org/io/string-input-stream;1"]
-        .createInstance(Components.interfaces.nsIStringInputStream);
-    sis.setData (outlineHTML, outlineHTML.length);
-    this.listener.onDataAvailable (this.channel, context, sis, 0, outlineHTML.length);
-    this.listener.onStopRequest (this.channel, context, statusCode);
-    return;
+    channel.originalURI = ios.newURI(displayURI,null,null);
+    channel.loadGroup = this._request.loadGroup;    
+    channel.asyncOpen(this.listener, null);
+    tabulator.displayURI.push(displayURI);
+
+    //the point is not to stop the request so the chrome HTML is loaded with the original URI
+    //this.listener.onStopRequest (this.channel,context, statusCode);
+    
+    
   },
 
   onDataAvailable: function(request,context,inputStream,offset,count) {

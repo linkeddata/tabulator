@@ -24,10 +24,21 @@
             <button id="tablog-clear"  accesskey="C" oncommand="tabulatorLog.clear()" label="Clear"/>
             <button id="nav-events" accesskey="D" oncommand="tabulatorLog.dumpStore()" label="Dump Store" />
         </hbox>
-        <iframe flex="1" id="loghtml" src="chrome://tabulator/content/log.html"/>
+        <iframe type="content-primary" flex="1" id="loghtml" src="chrome://tabulator/content/log.html"/>
         <script type="application/x-javascript">
               var tabulatorLog = Components.classes["@dig.csail.mit.edu/tabulator;1"]
                                 .getService(Components.interfaces.nsISupports)
                                 .wrappedJSObject.log
+              function setupLog()
+              {
+                  var doc=content.document;
+                  var div = doc.createElement('div');
+                  div.setAttribute('id','logdiv');
+                  doc.body.appendChild(div);
+                  tabulatorLog.setContainer(div);
+              }
+              window.addEventListener('load',setupLog,true);
+              //this does not work either
+              //document.getElementById('loghtml').addEventListener('load',function(){alert("test")},null);
         </script>
 </window>

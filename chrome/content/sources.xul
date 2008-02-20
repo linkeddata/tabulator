@@ -9,8 +9,8 @@
 	  title="&tabsources.title;"
         windowtype="tabulatorsources">
         <checkbox id="tabsourcesontop" checked="false" oncommand="toggleOnTop()" label="Always on Top" /> 
-        <iframe flex="1" id="sourceshtml" src="chrome://tabulator/content/sources.html"/>
-        <script type="application/x-javascript">
+        <iframe type="content-primary" flex="1" id="sourceshtml" src="chrome://tabulator/content/sources.html"/>
+        <script type="application/x-javascript">        
         //  To go in above:?
             function toggleOnTop() {
               window.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
@@ -25,5 +25,19 @@
                 xulwin.zLevel = xulwin.raisedZ;
               }
             }
+            var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
+                                .getService(Components.interfaces.nsISupports)
+                                .wrappedJSObject;
+            function setup()
+            {
+                //load is triggered twice, might be because type="content-primary"
+                //tabulator.log.warn("'this' is %s",this.location); 
+                var doc=content.document;
+                var div = doc.createElement('div');
+                div.setAttribute('id','sourcesdiv');
+                doc.body.appendChild(div);
+                tabulator.sourceWidget.setContainer(div);
+            }
+            window.addEventListener('load',setup,true);            
         </script>
 </window>

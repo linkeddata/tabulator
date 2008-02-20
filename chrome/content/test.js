@@ -174,6 +174,8 @@ var tabExtension = {
       var catman = Components.classes["@mozilla.org/categorymanager;1"]
                            .getService(Components.interfaces.nsICategoryManager);
       catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
+      var pluginDocFac = '@mozilla.org/content/plugin/document-loader-factory;1';
+      //catman.addCategoryEntry('Gecko-Content-Viewers', 'application/rdf+xml', pluginDocFac, true, true);
       var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
       httpResponseObserver.register(); // timbl
       gBrowser.addEventListener('load',function(e) {
@@ -184,7 +186,8 @@ var tabExtension = {
           if(divs[i].className.search("TabulatorOutline")!=-1) {
             //Inject an outline here!!
             //I believe this approach is buggy when loading a HTML with this className...
-            var uri = divs[i].getAttribute('id');
+            //var uri = divs[i].getAttribute('id');
+            var uri = tabulator.displayURI.shift();
             var table = doc.createElement('table');
             table.setAttribute('id','outline');
             divs[i].appendChild(table);
@@ -210,6 +213,7 @@ var tabExtension = {
             queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
           }
         }
+      
       },true);
       //deal with local .n3 files, I don't know what the last two arguments do...
       //also a hack on sources.js

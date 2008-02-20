@@ -12,4 +12,6 @@ function onPageLoad(aEvent) {
 }
 
 //Load up the source widget when stuff happens.
-document.addEventListener("DOMContentLoaded", onPageLoad, null);
+
+//commented out, explained in <logloader.js>
+//document.addEventListener("DOMContentLoaded", onPageLoad, null);

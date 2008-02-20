@@ -81,6 +81,7 @@ function Tabulator() {
     this.sourceURI = "resource://tabulator/";
     this.sparql = new sparql(this.kb);
     this.rc = new RequestConnector();
+    this.displayURI = [];
     //var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     //var updater = tabulator.sparql.prepareUpdate(newStatement);
     //updater.setObject(kb.sym('http://web.mit.edu/jambo/www/foaf.rdf#jambo'));

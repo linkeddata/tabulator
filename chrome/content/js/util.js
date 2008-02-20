@@ -150,6 +150,18 @@ Util = {
     'enablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.enablePrivilege) || function() { return; },
     'disablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.disablePrivilege) || function() { return; }
 }
+
+//////////////////////String Utility
+Util.string = {
+    //C++, python style %s -> subs
+    'template': function(base, subs){
+        var baseA = base.split("%s");
+        var result = "";
+        for (var i=0;i<subs.length;i++)
+            result += baseA[i] + subs[i].toString();
+        return result + baseA.slice(subs.length).join(); 
+    }
+};
 //================================================
 function findLabelSubProperties() {
     var i,n

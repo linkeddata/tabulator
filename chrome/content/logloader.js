@@ -1,4 +1,5 @@
 function onPageLoad(aEvent) {
+  //alert("DOMContentLoaded");
   var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
                     .getService(Components.interfaces.nsISupports)
                     .wrappedJSObject;
@@ -7,5 +8,10 @@ function onPageLoad(aEvent) {
   div.setAttribute('id','logdiv');
   doc.body.appendChild(div);
   tabulator.log.setContainer(div);
+
 }
-document.addEventListener("DOMContentLoaded", onPageLoad, null);
+/* //All these don't work in firefox 3, so setContainer is called in log.xul
+window.addEventListener("DOMContentLoaded", onPageLoad, null);
+window.addEventListener('load', onPageLoad, null);
+alert("test");
+*/

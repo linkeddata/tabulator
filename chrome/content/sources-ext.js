@@ -11,7 +11,13 @@ function SourceWidget(container) {
     var sw = this
 
     this.setContainer = function(newContainer) {
-        this.ele = newContainer;
+        var doc = newContainer.ownerDocument;
+        this.ele = newContainer; //this.ele is not used anywhere in this code, used elsewhere?
+        this.document = doc;                
+        try{
+            //this is necessary in Firefox3, but throws a NOT_IMPLEMENTED error in firefox 2
+            doc.adoptNode(this.container);
+        }catch(e){tabulator.log.warn('Error catched by Tabulator:'+e);}
         this.ele.appendChild(this.container);
     }
 
@@ -41,8 +47,17 @@ function SourceWidget(container) {
             }
         }
 
+        var cb2 = function (uri, r){
+            var udoc = tabulator.kb.sym(Util.uri.docpart(uri))
+            if (udoc.sameTerm(term)) {
+                node.textContent = 'parsing...';
+                return false;
+            } else {
+                return true;
+            }            
+        };
         tabulator.sf.addCallback('recv',cb)
-        tabulator.sf.addCallback('load',cb)
+        tabulator.sf.addCallback('load',cb2)
         tabulator.sf.addCallback('fail',cb)
         tabulator.sf.addCallback('done',cb)	
     }

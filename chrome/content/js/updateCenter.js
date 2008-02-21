@@ -15,6 +15,8 @@ function updateCenter(kb){
             try{var protocol = Util.uri.protocol(doc.uri);}catch(e){return false;/*alert(e+doc+kb.bnode(0))*/};
             if (protocol == 'http' || protocol == 'https') //statements via HTTP but not chrome: or others
                 throw "there is no 'request' for this HTTP document: "+doc.uri+this.editMethod.caller;
+            if (protocol == 'file')
+                return kb.literal('LOCALFILE');
         }
         return false;        
     },
@@ -31,7 +33,8 @@ function updateCenter(kb){
     _mutate_statement: function mutate_statement(st, callback, mode, newObject){
         var doc = st.why;
         var targetURI = doc.uri;
-        switch (this.editMethod(doc).value){
+        var protocol = this.editMethod(doc).value;
+        switch (protocol){
             case 'SPARQL': //cool!
                 try{
                     if (mode == 'INSERT'){
@@ -45,6 +48,7 @@ function updateCenter(kb){
                 }catch(e){throw e;}
                 break;
             case 'DAV': //I don't like this at all, updating the whole document doesn't make any sense.
+            case 'LOCALFILE':
                 try{
                     var documentString;
                     var request = kb.any(doc, tabulator.ns.link("request"));
@@ -89,6 +93,7 @@ function updateCenter(kb){
                     }
                     
                     //sending...
+                    if (protocol == 'DAV'){
                     var candidateTarget = kb.the(request, tabulator.ns.httph("content-location"));
                     if (candidateTarget) targetURI = Util.uri.join(candidateTarget.value, targetURI);
                     //webdav.client.prototype.PUT(docURI, documentString, callback);
@@ -106,7 +111,10 @@ function updateCenter(kb){
                     //assume the server does PUT content-negotiation.
                     xhr.setRequestHeader('Content-type', content_type);//OK?
                     xhr.send(documentString);
-                    tabulator.log.info("sending "+sts+"["+documentString+"] to +"+targetURI);                 
+                    tabulator.log.info("sending "+sts+"["+documentString+"] to +"+targetURI);
+                    }else{
+                        
+                    }                 
                 }catch(e){throw e;}
                 break;
             case 'N3': //?? where is it?

@@ -542,3 +542,22 @@ function parse_headers(headers) {
     }
     return headers;
 }
+
+///////////docuemnt utility
+Util.document={
+    'split': function(doc, number){
+        var result = [doc];
+        var docRoot = doc.documentElement;
+        var nodeNumber = docRoot.childNodes.length;
+        var dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                    .getService(Components.interfaces.nsIDOMParser);
+        var division = (nodeNumber - nodeNumber%number)/number;
+        for (var i=0;i< number-1;i++){
+            var newDoc = dparser.parseFromString('<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF>','application/xml');                        
+            for (var j=0;j<division;j++)
+                newDoc.documentElement.appendChild(newDoc.adoptNode(docRoot.firstChild));
+            result.push(newDoc);
+        }
+        return result;    
+    }
+}

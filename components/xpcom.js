@@ -190,7 +190,8 @@ function Tabulator() {
         if (p.uri.indexOf('#') < 0) { // No hash
 
             // @@ major hack for dbpedia Categories, which spred indefinitely
-            if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
+            //I think cygri said we don't need this anymore
+            //if (string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
 
     /*
             if (string_startswith(p.uri, 'http://xmlns.com/foaf/0.1/')) {
@@ -198,11 +199,13 @@ function Tabulator() {
                 // should give HTTP 303 to ontology -- now is :-)
             } else
     */
-            if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
-                       || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
-                fixuri = "http://dublincore.org/2005/06/13/dcq";
+            //Don't do this to DC or I can't get the label of dc:title
+            //if (string_startswith(p.uri, 'http://purl.org/dc/elements/1.1/')
+            //           || string_startswith(p.uri, 'http://purl.org/dc/terms/')) {
+            //    fixuri = "http://dublincore.org/2005/06/13/dcq";
                 //dc fetched multiple times
-            } else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
+            //} else if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
+            if (string_startswith(p.uri, 'http://xmlns.com/wot/0.1/')) {
                 fixuri = "http://xmlns.com/wot/0.1/index.rdf";
             } else if (string_startswith(p.uri, 'http://web.resource.org/cc/')) {
     //            tabulator.log.warn("creative commons links to html instead of rdf. doesn't seem to content-negotiate.");
@@ -212,7 +215,9 @@ function Tabulator() {
         if (fixuri) {
             docuri = fixuri
         }
-        if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
+        //Too slow..come on, this is lagging.
+        //if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
+        if (typeof sf.requested[docuri] != 'undefined') return;
         
         if (fixuri) {   // only give warning once: else happens too often
             tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +

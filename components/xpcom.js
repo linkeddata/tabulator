@@ -76,6 +76,7 @@ function Tabulator() {
 
 
     this.sf = new SourceFetcher(this.kb);
+    this.kb.sf = this.sf;
     this.qs = new QuerySource();
     this.sourceWidget = new SourceWidget();
     this.sourceURI = "resource://tabulator/";

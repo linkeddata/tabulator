@@ -16,7 +16,7 @@ function Outline(doc) {
     var foaf = tabulator.ns.foaf;
     var rdf = tabulator.ns.rdf;
     var rdfs = RDFS = tabulator.ns.rdfs;
-    var OWL = tabulator.ns.owl;
+    var owl = OWL = tabulator.ns.owl;
     var dc = tabulator.ns.dc;
     var rss = tabulator.ns.rss;
     var xsd = tabulator.ns.xsd;
@@ -858,6 +858,7 @@ function Outline(doc) {
         return true;
     }
     defaultPane.render = function(subject) {
+        subject = kb.canon(subject);
         var div = myDocument.createElement('div')
         
         div.setAttribute('class', 'defaultPane')
@@ -904,7 +905,9 @@ function Outline(doc) {
         return null
     }
     internalPane.render = function(subject) {
+        subject = kb.canon(subject);
         function filter(pred, inverse) {
+            if (pred.sameTerm(owl('sameAs'))) return false; //our principle is not to show sameAs
             return  !!(typeof internalPane.predicates[pred.uri] != 'undefined');
         }
         var div = myDocument.createElement('div')
@@ -913,7 +916,7 @@ function Outline(doc) {
                   
         var plist = kb.statementsMatching(subject)
         if (subject.uri) plist.push(new RDFStatement(subject,
-                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri));
+                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, sf.appNode));
         appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         appendPropertyTRs(div, plist, true, filter)    
@@ -930,7 +933,7 @@ function Outline(doc) {
     internalPane.predicates[tabulator.ns.link('all').uri] = 1;  // From userinput.js
     if (!SourceOptions["seeAlso not internal"].enabled)
         internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
-    
+    internalPane.predicates[owl('sameAs').uri] = 1;
     //panes.register(internalPane);
     //panes.register(socialPane);
     
@@ -1287,8 +1290,10 @@ function Outline(doc) {
                     if ((show<predDups)&&(show==1)){ //what case is this...
                         td_p.setAttribute('rowspan',2)  
                     }
+                    var displayed = 0;
                     for(l=1;l<k;l++){
                         if (!kb.canon(sel(plist[j+l])).sameTerm(kb.canon(sel(plist[j+l-1])))){
+                            displayed++;
                             s=plist[j+l];
                             defaultpropview = views.defaults[s.predicate.uri];
                             var trObj=myDocument.createElement('tr');
@@ -1298,10 +1303,13 @@ function Outline(doc) {
                             trObj.AJAR_statement=s;
                             trObj.AJAR_inverse=inverse;
                             parent.appendChild(trObj);
-                            if (l>=show){
+                            if (displayed>=show){
                                 trObj.style.display='none';
                                 showLaterArray.push(trObj);
                             }
+                        } else {
+                            //ToDo: show all the data sources of this statement
+                            tabulator.log.info("there are duplicates here: %s", plist[j+l-1]);
                         }
                     }
                 } // if

@@ -157,8 +157,10 @@ Util.string = {
     'template': function(base, subs){
         var baseA = base.split("%s");
         var result = "";
-        for (var i=0;i<subs.length;i++)
-            result += baseA[i] + subs[i].toString();
+        for (var i=0;i<subs.length;i++){
+            subs[i] += '';
+            result += baseA[i] + subs[i];
+        }
         return result + baseA.slice(subs.length).join(); 
     }
 };

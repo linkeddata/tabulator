@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 14343 2008-02-21 07:48:29Z kennyluck $
+ * SVN ID: $Id: sources.js 14366 2008-02-21 11:26:11Z kennyluck $
  *
  ************************************************************/
 
@@ -505,12 +505,14 @@ function SourceFetcher(store, timeout, async) {
     ** will make sure all the URIs are dereferenced
     */
     this.nowKnownAs = function(was, now) {
+    //tabulator.log.warn("entering nowKnowAs, %s lookedup: %s, %s lookedup: %s", 
+    //                    was.uri, this.lookedUp[was.uri], now.uri, this.lookedUp[now.uri]);
 	if (this.lookedUp[was.uri]) {
 	    if (!this.lookedUp[now.uri])
 		this.lookUpThing(now, was)
-	} else {
-	    if (this.lookedUp[now.uri])
-		this.lookUpThing(now, was)
+	} else if (this.lookedUp[now.uri]){
+	    if (!this.lookedUp[was.uri])
+		this.lookUpThing(was, now)
 	}
     }
 

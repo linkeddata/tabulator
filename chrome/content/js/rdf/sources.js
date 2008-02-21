@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 13685 2008-02-17 08:34:03Z kennyluck $
+ * SVN ID: $Id: sources.js 14343 2008-02-21 07:48:29Z kennyluck $
  *
  ************************************************************/
 
@@ -37,8 +37,9 @@ function SourceFetcher(store, timeout, async) {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
 		var kb = sf.store
-		if (!this.dom) {
+		if (!this.dom) {		
         var dparser;
+        sf.addStatus(xhr, 'parsing...');
         if(isExtension) {
             dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
                         .getService(Components.interfaces.nsIDOMParser);
@@ -379,6 +380,10 @@ function SourceFetcher(store, timeout, async) {
     }
 
     this.addStatus = function (xhr, status) {
+    //<Debug about="parsePerformance">
+    var now = new Date();
+    status = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] " + status;
+    //</Debug>
 	var kb = this.store
 	kb.the(xhr.req, tabulator.ns.link('status')).append(kb.literal(status))
     }
@@ -407,6 +412,7 @@ function SourceFetcher(store, timeout, async) {
     this.doneFetch = function (xhr, args) {
 	this.addStatus(xhr,'done')
 	tabulator.log.info("Done with parse, firing 'done' callbacks for "+xhr.uri)
+	this.requested[xhr.uri.uri] = 'done'; //Kenny
 	this.fireCallbacks('done',args)
     }
 
@@ -565,11 +571,12 @@ function SourceFetcher(store, timeout, async) {
 	}
 	
 	 //debug code, we might need this later
+	 /*
     if (tabulator.statusWidget && tabulator.statusWidget.pend.length > 10){
         tabulator.log.error("too many requests to "+uri+" from: "+this.requestURI.caller);
         return
     }
-       
+     */  
         this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
 
 	this.requested[docuri] = true
@@ -841,6 +848,7 @@ function SourceFetcher(store, timeout, async) {
 
 				    sf.addStatus(xhr,'done') // why
 				    sf.fireCallbacks('done',args)
+				    sf.requested[xhr.uri.uri] = 'redirected';
                                     
                                     var hash = newURI.indexOf('#');
                                     if (hash >= 0) {
@@ -951,7 +959,12 @@ function SourceFetcher(store, timeout, async) {
 	}
     }
 
-    this.isPending = function (uri) { // sources_pending
+    //doing anyStatementMatching is wasting time
+    this.isPending = function (term) { // sources_pending
+        //if it's not pending: false -> flailed 'done' -> done 'redirected' -> redirected
+        //please don't do statementsMatchings it is wasting time
+        return this.requested[Util.uri.docpart(term.uri)] == true;
+    /*
 	var req = this.store.anyStatementMatching(
 	    this.store.sym(Util.uri.docpart(uri.uri)),
 	    tabulator.ns.link('request'))
@@ -961,9 +974,11 @@ function SourceFetcher(store, timeout, async) {
 	if (!status) { return true }
 	return (this.requested[Util.uri.docpart(uri.uri)]
 		&& !status.object.elements.filter(function (x) {
-						      return (x.toString()
+						       return (x.toString()
 							      == 'done')
+							  //x.toString().match('done');
 						  }).length)
+	*/						  
     }
 }
 

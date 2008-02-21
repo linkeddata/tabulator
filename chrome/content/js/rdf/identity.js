@@ -304,8 +304,9 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
     It is general necessary to know when data has come from >1 place.
     Maybe this should be a mode?
 */
-    st = this.anyStatementMatching(subj,pred,obj,why) // Avoid duplicates
-    if (st != undefined) return; // already in store
+    // This is wasting time and shouldn't happen at all
+    //st = this.anyStatementMatching(subj,pred,obj,why) // Avoid duplicates
+    //if (st != undefined) return; // already in store
  
     
        
@@ -322,7 +323,9 @@ RDFIndexedFormula.prototype.add = function(subj, pred, obj, why) {
             done = done || actions[i](this, subj, pred, obj, why);
         }
     }
-    if (done) return new RDFStatement(subj, pred, obj, why); // Don't put it in the store
+    
+    //If we are tracking provenanance, every thing should be loaded into the store
+    //if (done) return new RDFStatement(subj, pred, obj, why); // Don't put it in the store
                                                              // still return this statement for owl:sameAs input
     var st = new RDFStatement(subj, pred, obj, why);
     for (var i=0; i<4; i++) {
@@ -444,7 +447,13 @@ RDFIndexedFormula.prototype.remove = function (st) {
 /** remove all statements matching args (within limit) **/
 RDFIndexedFormula.prototype.removeMany = function (subj, pred, obj, why, limit) {
     tabulator.log.debug("entering removeMany w/ subj,pred,obj,why,limit = " + subj +", "+ pred+", " + obj+", " + why+", " + limit);
-    var statements = this.statementsMatching (subj, pred, obj, why, false);
+    var sts = this.statementsMatching (subj, pred, obj, why, false);
+    //This is a subtle bug that occcured in updateCenter.js too.
+    //The fact is, this.statementsMatching returns this.whyIndex instead of a copy of it
+    //but for perfromance consideration, it's better to just do that
+    //so make a copy here.
+    var statements = [];
+    for (var i=0;i<sts.length;i++) statements.push(sts[i]);
     if (limit) statements = statements.slice(0, limit);
     for (var st in statements) this.remove(statements[st]);
 }; //removeMany

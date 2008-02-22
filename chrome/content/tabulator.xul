@@ -104,7 +104,9 @@
 
       new StatusWidget();
     }
-    
+    var tGRDDL_NS = 'http://www.w3.org/2003/g/data-view#';
+    var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
+                             'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
     function tabulatorDetectMetadata(){
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
@@ -122,10 +124,41 @@
         var semantics = (subjectIndex? subjectIndex.length:0) + (objectIndex?objectIndex.length:0);        
         //In the future, when there are many "semantics" of a page, we can show the icon based
         //on the amount of semantics
-        if (semantics)
+        if (semantics) {
             semanticIcon.setAttribute('metadata', ''+semantics);
-        else
-            semanticIcon.removeAttribute('metadata');
+            semanticIcon.setAttribute('tooltiptext', semantics+" triples");
+            return;
+        }
+        
+        //GRDDL
+        doc = content.document;   //XML GRDDL
+        if (doc.documentElement.hasAttributeNS(tGRDDL_NS, 'transformation') ||
+            doc.getElementsByTagName('head')[0].hasAttribute('profile')){ //think about <html:head> later
+            semanticIcon.setAttribute('metadata', 'GRDDL');
+            semanticIcon.setAttribute('tooltiptext', 'GRDDL');          
+            return;
+        }
+        
+        //XHTML+RDFa without profile
+        try{
+            if (doc.doctype.publicId.search('RDF') > 0 || doc.doctype.systemId.search('rdf') >0){ //don't be too strict
+                semanticIcon.setAttribute('metadata', 'RDFa');
+                semanticIcon.setAttribute('tooltiptext', 'RDFa');           
+                return;            
+            }
+        }catch(e){/*no doctype, or missing publicId */}
+        
+        //This I consider non-standard
+		var links = doc.getElementsByTagName('link');
+		for (var x=0;x < links.length; x++) {
+            if (links[x].getAttribute('type') in tRDF_CONTENT_TYPE){
+                semanticIcon.setAttribute('metadata', 'WildCard');
+                semanticIcon.setAttribute('tooltiptext', 'link element');
+                return;
+            }
+		}        
+        //finally there's no semantics
+        semanticIcon.removeAttribute('metadata');
     }        
     getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);    
     function tabulatorShowMetadata(e){

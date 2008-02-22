@@ -68,6 +68,17 @@ Util.uri.join = function (given, base) {
     return base.slice(0, baseSingle) + path
 }
 
+var tIOService;
+if (isExtension) {
+    tIOService = Components.classes['@mozilla.org/network/io-service;1']
+                        .getService(Components.interfaces.nsIIOService);
+    Util.uri.join2 = function (given, base){
+       var baseURI = tIOService.newURI(base, null, null);
+       return tIOService.newURI(baseURI.resolve(given), null, null).spec;
+    }
+} else
+    Util.uri.join2 = Util.uri.join;
+    
 //  refTo:    Make a URI relative to a given base
 //
 // based on code in http://www.w3.org/2000/10/swap/uripath.py

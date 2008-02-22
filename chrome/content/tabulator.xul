@@ -131,6 +131,8 @@
         }
         
         //GRDDL
+        try{
+        
         doc = content.document;   //XML GRDDL
         if (doc.documentElement.hasAttributeNS(tGRDDL_NS, 'transformation') ||
             doc.getElementsByTagName('head')[0].hasAttribute('profile')){ //think about <html:head> later
@@ -140,13 +142,13 @@
         }
         
         //XHTML+RDFa without profile
-        try{
-            if (doc.doctype.publicId.search('RDF') > 0 || doc.doctype.systemId.search('rdf') >0){ //don't be too strict
-                semanticIcon.setAttribute('metadata', 'RDFa');
-                semanticIcon.setAttribute('tooltiptext', 'RDFa');           
-                return;            
-            }
-        }catch(e){/*no doctype, or missing publicId */}
+        
+        if (doc.doctype.publicId.search('RDF') > 0 || doc.doctype.systemId.search('rdf') >0){ //don't be too strict
+            semanticIcon.setAttribute('metadata', 'RDFa');
+            semanticIcon.setAttribute('tooltiptext', 'RDFa');           
+            return;            
+        }
+
         
         //This I consider non-standard
 		var links = doc.getElementsByTagName('link');
@@ -156,7 +158,10 @@
                 semanticIcon.setAttribute('tooltiptext', 'link element');
                 return;
             }
-		}        
+		}
+		
+        }catch(e){/*no doctype, or missing some elements, these are trivial */}
+        		        
         //finally there's no semantics
         semanticIcon.removeAttribute('metadata');
     }        

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 14366 2008-02-21 11:26:11Z kennyluck $
+ * SVN ID: $Id: sources.js 14456 2008-02-22 07:21:49Z kennyluck $
  *
  ************************************************************/
 
@@ -38,18 +38,27 @@ function SourceFetcher(store, timeout, async) {
 	    xhr.handle = function (cb) {
 		var kb = sf.store
 		if (!this.dom) {		
-        var dparser;
-        sf.addStatus(xhr, 'parsing...');
-        if(isExtension) {
-            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
-                        .getService(Components.interfaces.nsIDOMParser);
-        } else {
+            var dparser;
+            if(isExtension) {
+                dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                          .getService(Components.interfaces.nsIDOMParser);
+            } else {
 		        dparser = new DOMParser()
-        }
+            }
+            //strange things hapeen when responseText is empty
 		    this.dom = dparser.parseFromString(xhr.responseText,
 						       'application/xml')
 		}
+		
+		var root = this.dom.documentElement;
+		//some simple syntax issue should be dealt here, I think
+        if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
+//            alert('Warning: Badly formed XML');
+            sf.failFetch(xhr, "Badly formed XML in "+xhr.uri.uri); //have to fail the request
+            throw new Error("Badly formed XML in "+base); //@@ Add details
+        }		
 		var parser = new RDFParser(kb)
+        sf.addStatus(xhr, 'parsing...');		
 		parser.parse(this.dom, xhr.uri.uri, xhr.uri)
 		kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'),sf.appNode);
 		cb()
@@ -400,7 +409,7 @@ function SourceFetcher(store, timeout, async) {
         var x = xhr.uri;
         if (!uri) return;
         if (rel == 'alternate'|| rel == 'seeAlso' || rel == 'meta') {
-            var join = Util.uri.join
+            var join = Util.uri.join2;
             var obj = kb.sym(join(uri, xhr.uri.uri))
             kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'), obj,
                    xhr.uri)

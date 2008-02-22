@@ -259,6 +259,8 @@ function RDFParser(store) {
 	this['cleanParser']()
 
 	// figure out the root element
+	var root = document.documentElement; //this is faster, I think, cross-browser issue? well, DOM 2
+	/*
 	if (document['nodeType'] == RDFParser['nodeType']['DOCUMENT']) {
 	    for (var c=0; c<children['length']; c++) {
 		if (children[c]['nodeType']
@@ -276,13 +278,10 @@ function RDFParser(store) {
 			    + ". Halting. ")
 	    return false
 	}
+	*/
 	
 	this['why'] = why
         
-        if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
-//            alert('Warning: Badly formed XML');
-            throw new Error("Badly formed XML in "+base); //@@ Add details
-        }
 
 	// our topmost frame
 

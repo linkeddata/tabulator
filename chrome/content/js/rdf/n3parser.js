@@ -126,7 +126,8 @@ String.prototype.encode = function(encoding) {
 }
 String.prototype.decode = function(encoding) {
     if (encoding != 'utf-8') throw "UTF8_converter: can only do utf-8"
-    return Utf8.decode(this);
+    //return Utf8.decode(this);
+    return this;
 }
 
 
@@ -158,7 +159,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: n3parser.js 11924 2008-02-02 22:08:06Z kennyluck $
+$Id: n3parser.js 14561 2008-02-23 06:37:26Z kennyluck $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 

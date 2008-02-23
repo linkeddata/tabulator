@@ -110,12 +110,12 @@ Labeler.prototype={
             this.labelDirectory[subjectID]=entry;
         }
     },
-    search: function(searchString,context,filterType){
+    search: function(searchString,limited){
         var label=searchString.toLowerCase(); //case insensitive
         var match=false;
         var results=[];
         var types=[];
-        for (var i=0;i<this.entry.length;i++){
+        for (var i=0;i<(limited||this.entry.length);i++){
             var matchingString=this.entry[i][0].value.toLowerCase();
             if (!match && string_startswith(matchingString,label)) 
                 match=true;
@@ -132,7 +132,10 @@ Labeler.prototype={
     searchAdv: function(searchString,context,filterType){ //extends search
         var filter = (filterType=='predicate')?function(item)
         {return this.kb.predicateIndex[item.hashString()]||
-                this.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.rdf('Property'));}:undefined;
+                //should use transitive closure, but this takes too long
+                this.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.rdf('Property'))||
+                this.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
+                this.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.owl('ObjectProperty'));}:undefined;
         var label=searchString.toLowerCase(); //case insensitive
         var match=false;
         var results=[];

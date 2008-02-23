@@ -62,23 +62,11 @@ N3Converter.prototype = {
   },
 
   onDataAvailable: function(request,context,inputStream,offset,count) {
-    var characterSet = this.channel.QueryInterface(Components.interfaces.nsIChannel).contentCharset;
-    // First, get and initialize the converter
-    var converter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
-                          .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
-    if(!characterSet || characterSet=="")
-      converter.charset = /* The character encoding you want, using UTF-8 here */ "UTF-8";
-    else
-      converter.charset=characterSet;
-
-    // Now, read from the stream
     var scriptableStream = Components.classes["@mozilla.org/scriptableinputstream;1"]
                                  .createInstance(Components.interfaces.nsIScriptableInputStream);
     scriptableStream.init(inputStream);
     var chunk = scriptableStream.read(count);
-    var text = converter.ConvertToUnicode(chunk);
-
-    this.data += text;
+    this.data += chunk;
     return;
   },
 

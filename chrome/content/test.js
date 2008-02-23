@@ -186,8 +186,7 @@ var tabExtension = {
           if(divs[i].className.search("TabulatorOutline")!=-1) {
             //Inject an outline here!!
             //I believe this approach is buggy when loading a HTML with this className...
-            //var uri = divs[i].getAttribute('id');
-            var uri = tabulator.displayURI.shift();
+            var uri = divs[i].getAttribute('id');
             var table = doc.createElement('table');
             table.setAttribute('id','outline');
             divs[i].appendChild(table);
@@ -347,7 +346,7 @@ var httpResponseObserver =
               }				
               if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) { //only record 30X redirects
               
-                  tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);
+                  //tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);
                   if (!httpChannel.notificationCallbacks || ''+httpChannel.notificationCallbacks != "[object XMLHttpRequest]"){ 
                                                                                                    //a hack not to override notificationCallbakcs set from source.js
                       httpChannel.notificationCallbacks = { //.notificationCallbacks is overridden for every 30X
@@ -361,7 +360,7 @@ var httpResponseObserver =
                               }
                               return Components.results.NS_NOINTERFACE;}
                       }
-                      tabulator.log.warn(httpChannel.responseStatus+"after setting,  notificationCallbacks has "+httpChannel.notificationCallbacks);
+                      //tabulator.log.warn(httpChannel.responseStatus+"after setting,  notificationCallbacks has "+httpChannel.notificationCallbacks);
                   }
                   /*tabulator.log.warn('httpResponseObserver: status='+httpChannel.responseStatus+
                     ' '+httpChannel.responseStatusText+ ' for ' + httpChannel.originalURI.spec);

@@ -385,7 +385,7 @@ function Outline(doc) {
         labelTD.appendChild(myDocument.createTextNode(lab))
         td_p.appendChild(labelTD);
         labelTD.style.width='100%'
-        td_p.appendChild(termWidget.construct()); //termWidget is global???
+        td_p.appendChild(termWidget.construct(myDocument)); //termWidget is global???
         for (var w in Icon.termWidgets) {
             if(!newTr||!newTr.AJAR_statement) break; //case for TBD as predicate
                     //alert(Icon.termWidgets[w]+"   "+Icon.termWidgets[w].filter)
@@ -461,7 +461,7 @@ function Outline(doc) {
     ** subject panes are currently stacked vertically.
     */
     
-    panes = {}
+    var panes = {}
     panes.list = [];
     panes.paneForIcon = []
     panes.paneForPredicate = []
@@ -486,7 +486,7 @@ function Outline(doc) {
     **
     **  This outline pane contains lists the members of a class
     */
-    classInstancePane = {};
+    var classInstancePane = {};
     classInstancePane.icon = Icon.src.icon_instances;
     classInstancePane.label = function(subject) {
         var n = kb.statementsMatching(
@@ -518,7 +518,7 @@ function Outline(doc) {
     **
     **  This outline pane provides social network functions
     */
-    socialPane = {};
+    var socialPane = {};
     socialPane.icon = Icon.src.icon_foaf;
     socialPane.label = function(subject) {
         if (!kb.whether(
@@ -767,7 +767,7 @@ function Outline(doc) {
     //         - Expand automatically all the way down
     //         - original source view?  Use ffox view source
 
-    dataContentPane = {};
+    var dataContentPane = {};
     dataContentPane.icon = Icon.src.icon_dataContents;
     dataContentPane.label = function(subject) {
         var n = kb.statementsMatching(
@@ -824,7 +824,7 @@ function Outline(doc) {
     **
     **  This outline pane contains docuemnts from a specific source document only.
     */
-    withinDocumentPane = {};
+    var withinDocumentPane = {};
     withinDocumentPane.icon = Icon.src.icon_withinDocumentPane; // should not show
     withinDocumentPane.label = function(subject) { return 'doc contents';};
     withinDocumentPane.filter = function(pred, inverse) {
@@ -858,6 +858,7 @@ function Outline(doc) {
         return true;
     }
     defaultPane.render = function(subject) {
+        tabulator.log.info("@defaultPane.render, myDocument is now " + myDocument.location);    
         subject = kb.canon(subject);
         var div = myDocument.createElement('div')
         
@@ -893,7 +894,7 @@ function Outline(doc) {
     **  This outline pane contains the properties which are
     ** internal to the user's interaction with the web, and are not normaly displayed
     */
-    internalPane = {};
+    var internalPane = {};
     internalPane.icon = Icon.src.icon_internals;
     internalPane.label = function(subject) {
         var sts = kb.statementsMatching(subject);
@@ -943,7 +944,7 @@ function Outline(doc) {
     **  This outline pane contains the document contents for an HTML document
     **  This is for peeking a page, because the user might not want to leave the tabulator.
     */
-    humanReadablePane = {};
+    var humanReadablePane = {};
     humanReadablePane.icon = Icon.src.icon_visit;
     humanReadablePane.label = function(subject) {
         //recursive iframe is not allowed
@@ -984,7 +985,7 @@ function Outline(doc) {
     **
     **  This outline pane contains the document contents for an HTML document
     */
-    imagePane = {};
+    var imagePane = {};
     imagePane.icon = Icon.src.icon_imageContents;
     imagePane.label = function(subject) {
         if (!kb.anyStatementMatching(
@@ -1014,7 +1015,7 @@ function Outline(doc) {
     ** or at least the RDF semantics we attribute to that resource,
     ** in generated N3 syntax.
     */
-    n3Pane = {};
+    var n3Pane = {};
     n3Pane.icon = Icon.src.icon_n3Pane;
     n3Pane.label = function(subject) {
         var s = dataContentPane.label(subject);
@@ -1053,7 +1054,7 @@ function Outline(doc) {
     ** or at least the RDF semantics we attribute to that resource,
     ** in generated N3 syntax.
     */
-    RDFXMLPane = {};
+    var RDFXMLPane = {};
     RDFXMLPane.icon = Icon.src.icon_RDFXMLPane;
     RDFXMLPane.label = function(subject) {
         var s = dataContentPane.label(subject);
@@ -1118,7 +1119,7 @@ function Outline(doc) {
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK
     // Just deleting it cause whitespace to accumulate.
-    removeAndRefresh = function(d) {
+    function removeAndRefresh(d) {
         var table = d.parentNode
         var par = table.parentNode
         var placeholder = myDocument.createElement('table')
@@ -1205,8 +1206,10 @@ function Outline(doc) {
     
     ///////////// Property list 
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
-        tabulator.log.info("@appendPropertyTRs, myDocument is now " + this.document.location);
-        tabulator.log.info("@appendPropertyTRs, myDocument is now " + thisOutline.document.location);            
+        tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+
+                           "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
+        //tabulator.log.info("@appendPropertyTRs, myDocument is now " + this.document.location);
+        //tabulator.log.info("@appendPropertyTRs, myDocument is now " + thisOutline.document.location);            
         tabulator.log.debug("Property list length = " + plist.length)
         if (plist.length == 0) return "";
         var sel
@@ -1245,7 +1248,7 @@ function Outline(doc) {
                 }
             }
     
-            
+
             var tr = myDocument.createElement("TR")
             parent.appendChild(tr)
             tr.AJAR_statement = s
@@ -1254,9 +1257,9 @@ function Outline(doc) {
             tr.setAttribute('predTR','true')
             var td_p = thisOutline.outline_predicateTD(s.predicate, tr, inverse);
             tr.appendChild(td_p) // @@ add "internal" to td_p's class for style? mno
-
             var defaultpropview = views.defaults[s.predicate.uri];
             
+                           
             /* Display only the one in the preferred language 
               ONLY in the case (currently) when all the values are tagged.
               Then we treat them as alternatives.*/
@@ -1358,7 +1361,7 @@ function Outline(doc) {
                     [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
                     "appendPropertyTRs()");*/ 
             tr.showNobj(10);
-            
+
             if (HCIoptions["bottom insert highlights"].enabled){
                 var holdingTr=myDocument.createElement('tr');
                 var holdingTd=myDocument.createElement('td');
@@ -1381,7 +1384,8 @@ function Outline(doc) {
 **
 */  
     termWidget={}
-    termWidget.construct = function () {
+    termWidget.construct = function (myDocument) {
+        myDocument = myDocument||document;                              
         td = myDocument.createElement('TD')
         td.setAttribute('class','iconTD')
         td.setAttribute('notSelectable','true')
@@ -2154,8 +2158,8 @@ function Outline(doc) {
                 var state = 'paneShown';
                 for (var d = t.firstChild; d; d = d.nextSibling) {
                     if (typeof d.pane != 'undefined') {
-                        if (d.pane == pane) {
-                            removeAndRefresh(d)
+                        if (d.pane == pane) {                      
+                            removeAndRefresh(d)                           
                             // If we just delete the node d, ffox doesn't refresh the display properly.
                             state = 'paneHidden';
                             break;

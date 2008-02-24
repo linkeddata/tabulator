@@ -110,12 +110,16 @@
     function tabulatorDetectMetadata(){
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
-        var divs = content.document.getElementsByTagName('div');
-        if (divs.length && divs[0].className.search("TabulatorOutline")!=-1){
-            //already viewing metadata, so disable the icon       
-            semanticIcon.removeAttribute('metadata');
-            return;
-        }
+
+        try{
+            var divs = content.document.getElementsByTagName('div');
+            if (divs.length && divs[0].className.search("TabulatorOutline")!=-1){
+                //already viewing metadata, so disable the icon       
+                semanticIcon.removeAttribute('metadata');
+                return;
+           }
+        }catch(e){/*no className, etc.*/}
+        
         //also do this for HTML with hash uri...maybe don't do that
         var doc = kb.sym(content.document.location.href);
         var subjectIndex = kb.subjectIndex[doc.hashString()];
@@ -130,36 +134,37 @@
             return;
         }
         
+        
         //GRDDL
-        try{
-        
-        doc = content.document;   //XML GRDDL
-        if (doc.documentElement.hasAttributeNS(tGRDDL_NS, 'transformation') ||
-            doc.getElementsByTagName('head')[0].hasAttribute('profile')){ //think about <html:head> later
-            semanticIcon.setAttribute('metadata', 'GRDDL');
-            semanticIcon.setAttribute('tooltiptext', 'GRDDL');          
-            return;
-        }
-        
-        //XHTML+RDFa without profile
-        
-        if (doc.doctype.publicId.search('RDF') > 0 || doc.doctype.systemId.search('rdf') >0){ //don't be too strict
-            semanticIcon.setAttribute('metadata', 'RDFa');
-            semanticIcon.setAttribute('tooltiptext', 'RDFa');           
-            return;            
-        }
-
-        
-        //This I consider non-standard
-		var links = doc.getElementsByTagName('link');
-		for (var x=0;x < links.length; x++) {
-            if (links[x].getAttribute('type') in tRDF_CONTENT_TYPE){
-                semanticIcon.setAttribute('metadata', 'WildCard');
-                semanticIcon.setAttribute('tooltiptext', 'link element');
+        try{        
+            doc = content.document;   //XML GRDDL
+            if (doc.documentElement.hasAttributeNS(tGRDDL_NS, 'transformation') ||
+                doc.getElementsByTagName('head')[0].hasAttribute('profile')){ //think about <html:head> later
+                semanticIcon.setAttribute('metadata', 'GRDDL');
+                semanticIcon.setAttribute('tooltiptext', 'GRDDL');          
                 return;
             }
-		}
-		
+        }catch(e){/*no doctype, or missing some elements, these are trivial */}
+                
+        //XHTML+RDFa without profile
+        try{
+            if (doc.doctype.publicId.search('RDF') > 0 || doc.doctype.systemId.search('rdf') >0){ //don't be too strict
+                semanticIcon.setAttribute('metadata', 'RDFa');
+                semanticIcon.setAttribute('tooltiptext', 'RDFa');           
+                return;            
+            }
+        }catch(e){/*no doctype, or missing some elements, these are trivial */}
+        
+        //This I consider non-standard
+        try{
+		    var links = doc.getElementsByTagName('link');
+		    for (var x=0;x < links.length; x++) {
+                if (links[x].getAttribute('type') in tRDF_CONTENT_TYPE){
+                    semanticIcon.setAttribute('metadata', 'WildCard');
+                    semanticIcon.setAttribute('tooltiptext', 'link element');
+                    return;
+                }
+		    }		
         }catch(e){/*no doctype, or missing some elements, these are trivial */}
         		        
         //finally there's no semantics
@@ -169,6 +174,11 @@
     function tabulatorShowMetadata(e){
         canonizeUrl(e,{});
         tabulator.metadataURI = gURLBar.value;
+        /*
+        //before I know more about how cache works in Firefox, cache the DOM        
+        tabulator.cacheDOM = content.document;
+		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM);
+		*/        
         handleURLBarCommand(e);
     }
     
@@ -190,7 +200,7 @@
         var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                             .getService(Components.interfaces.nsIPrefBranch);
         try {
-          if(checked)
+          if(checked=='true')
             prefManager.setBoolPref("extensions.tabulator.setheader",true);
           else
             prefManager.setBoolPref("extensions.tabulator.setheader",false);

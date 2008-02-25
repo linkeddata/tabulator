@@ -72,7 +72,7 @@ function RDFIndexedFormula(features) {
         var x = formula.classActions[obj.hashString()];
         var done = false;
         if (x) {
-            for (var i=0; i<x.lenth; i++) {
+            for (var i=0; i<x.length; i++) {                
                 done = done || x[i](formula, subj, pred, obj, why);
             }
         }
@@ -110,13 +110,13 @@ function RDFIndexedFormula(features) {
     if (features.indexOf("InverseFunctionalProperty") >= 0)
         this.classActions["<"+owl_ns+"InverseFunctionalProperty>"] = [
             function(formula, subj, pred, obj, addFn) {
-                return this.newPropertyAction(subj, handle_IFP); // yes subj not pred!
+                return formula.newPropertyAction(subj, handle_IFP); // yes subj not pred!
             }]; //IFP -> handle_IFP, do add to index
 
     if (features.indexOf("FunctionalProperty") >= 0)
         this.classActions["<"+owl_ns+"FunctionalProperty>"] = [
             function(formula, subj, proj, obj, addFn) {
-                return this.newPropertyAction(subj, handle_FP);
+                return formula.newPropertyAction(subj, handle_FP);
             }]; //FP => handleFP, do add to index
 
     function handle_IFP(formula, subj, pred, obj)  {

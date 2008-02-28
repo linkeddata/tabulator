@@ -166,6 +166,7 @@ labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
 */
 
+
 //Heavily modified from http://developer.mozilla.org/en/docs/Code_snippets:On_page_load
 var tabExtension = {
   init: function() {
@@ -332,6 +333,8 @@ function string_startswith(str, pref) { // missing library routines
 // and http://developer.mozilla.org/en/docs/Observer_Notifications#HTTP_requests
 // http://www.xulplanet.com/references/xpcomref/ifaces/nsIHttpChannel.html
 // and http://www.xulplanet.com/references/xpcomref/ifaces/nsIChannel.html
+var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
+                         'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
 var httpResponseObserver =
 {
     observe: function(subject, topic, data) {
@@ -343,7 +346,11 @@ var httpResponseObserver =
                   //this forces the page to be displayed as RDF/XML seeAlso tabulator.xul
                   tabulator.metadataURI = '';
                   httpChannel.contentType = 'application/rdf+xml';
-              }				
+              }
+              tabulator.requestCache.push(httpChannel);
+              //release cached nsIHttpChannel for 200 with content-type that isn't a RDF one.
+              if (httpChannel.responseStatus == 200	&& !(httpChannel.contentType in tRDF_CONTENT_TYPE))
+                  tabulator.rc.releaseRequest(httpChannel);			
               if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) { //only record 30X redirects
               
                   //tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);

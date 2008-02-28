@@ -29,6 +29,7 @@ LawPane.label = function(subject) {
    return null;
 }
 
+//TODO handle more than one log file and policy file
 //This is a very clumsy method and should be changed
 //this returns the log and the policy file URIs from the full URI
 //Fails when there are multiple logs and policy files
@@ -47,16 +48,39 @@ LawPane.render = function(subject, myDocument) {
     div.setAttribute('class', 'RDFXMLPane');
     
     var uris = extractFileURIs(myDocument.location.toString()); 
-    var log = uris.pop();
     var policy = uris.pop();
+    var log = uris.pop();
     
     //Create the Issue div
     var div_issue = myDocument.createElement("div");
     div_issue.setAttribute('id', 'div_issue');
     div_issue.setAttribute('class', 'RDFXMLPane');
-    div_issue.appendChild(myDocument.createTextNode('Issue:'));
-    div_issue.appendChild(myDocument.createTextNode('Whether the transactions in ' +
-    		log + ' {about [VariableName] [VariableValue]} comply with ' + policy));
+    var table = myDocument.createElement("table");
+    var tr_issue = myDocument.createElement("tr");
+    var td_img = myDocument.createElement("td");
+    var td_issue = myDocument.createElement("td");
+    td_issue.appendChild(myDocument.createTextNode('Issue:'));
+    tr_issue.appendChild(td_img);
+    tr_issue.appendChild(td_issue);
+    table.appendChild(tr_issue);
+    var tr_issue_data = myDocument.createElement('tr');
+    var td_issue_dummy = myDocument.createElement('td');
+    td_issue_dummy.appendChild(myDocument.createTextNode(' '));
+    tr_issue_data.appendChild(td_issue_dummy);
+	var td_issue_data = myDocument.createElement('td');
+    td_issue_data.appendChild(myDocument.createTextNode('Whether the transactions in '));
+    var a_log = myDocument.createElement('a')
+    a_log.setAttribute('href', log)
+    a_log.appendChild(myDocument.createTextNode(log));
+    td_issue_data.appendChild(a_log);
+    td_issue_data.appendChild(myDocument.createTextNode(' comply with '));
+    var a_policy = myDocument.createElement('a')
+    a_policy.setAttribute('href', policy)
+    a_policy.appendChild(myDocument.createTextNode(policy));
+    td_issue_data.appendChild(a_policy);
+    tr_issue_data.appendChild(td_issue_data);
+	table.appendChild(tr_issue_data);
+    div_issue.appendChild(table);
     div.appendChild(div_issue);
     
     //Create the Rules div

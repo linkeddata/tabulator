@@ -1092,11 +1092,6 @@ function Outline(doc) {
 	 * Pane registration
 	 */
 	
-	//airPane @see panes/airPane.js
-    panes.register(airPane);
-
-	//LawPane @see panes/lawPane.js
-	panes.register(LawPane);
  	
     panes.register(classInstancePane);
 
@@ -1115,6 +1110,11 @@ function Outline(doc) {
     panes.register(RDFXMLPane);
     
     panes.register(humanReadablePane);
+	//airPane @see panes/airPane.js
+    panes.register(airPane);
+
+	//LawPane @see panes/lawPane.js
+	panes.register(LawPane);
 //////////////////////////////////////////////////////////////////////////////
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK

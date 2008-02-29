@@ -45,7 +45,7 @@
     // View the justification trace in an exploratory manner
     airPane.render = function(subject, myDocument) {
 
-	    var stsCompliant;
+		var stsCompliant;
 	    var stsNonCompliant;
 
 	    var ruleNameFound;
@@ -187,7 +187,7 @@
 			}
 			
 			
-        	//Disable the 'why' and 'lawyer's view' buttons... If not, it creates a mess if accidentally pressed
+           //Disable the 'why' and 'lawyer's view' buttons... If not, it creates a mess if accidentally pressed
            var whyButton = myDocument.getElementById('whyButton');
             var d = myDocument.getElementById('dataContentPane');
     		if (d != null && whyButton != null)
@@ -219,14 +219,8 @@
 	                    airPane.render.because.displayDesc(currentRule[0].object);
 			            divDescription.appendChild(myDocument.createElement('br')); 
 					   	divDescription.appendChild(myDocument.createElement('br'));
-	                }
-	                else{
-	                	airPane.render.because.moreInfo(ruleNameFound);
-	                }
-				   	
-				   	
-				   	
-				   	//Update the premises div also with the corresponding premises
+					   	
+					   	//Update the premises div also with the corresponding premises
 					   divPremises.appendChild(myDocument.createElement('br')); 
 					   divPremises.appendChild(myDocument.createElement('br')); 
 					   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined, subject);
@@ -252,8 +246,11 @@
 		                }
 					   divPremises.appendChild(myDocument.createElement('br'));
 					   divPremises.appendChild(myDocument.createElement('br'));
+	                }
+	                else{
+	                	airPane.render.because.moreInfo(ruleNameFound);
+	                }
 				}
-            				   	
             }
             
             airPane.render.because.justify = function(){

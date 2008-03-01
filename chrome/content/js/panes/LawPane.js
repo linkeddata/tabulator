@@ -83,7 +83,7 @@ LawPane.render = function(subject, myDocument) {
 	}
 	
     var div = myDocument.createElement("div");
-   div.setAttribute('class', 'dataContentPane');
+   div.setAttribute('class', 'instancePane');
     
     //Extract the log and policy files
     var uris = extractFileURIs(myDocument.location.toString()); 
@@ -138,14 +138,14 @@ LawPane.render = function(subject, myDocument) {
     //Create the Issue div
     
     var div_issue = myDocument.createElement("div");
-    div_issue.setAttribute('id', 'div_issue');
+    div_issue.setAttribute('class', 'title');
     var table_issue = myDocument.createElement("table");
     var tr_issue = myDocument.createElement("tr");
     var td_img_issue = myDocument.createElement("td");
     var img_issue = myDocument.createElement("img");
-    img_issue.setAttribute("src", expand_icon);
+    img_issue.setAttribute("src", collapse_icon);
     img_issue.id = "img_1";
-    img_issue.addEventListener('click',LawPane.render.show, false);
+    img_issue.addEventListener('click',LawPane.render.hide, false);
     td_img_issue.appendChild(img_issue);
     tr_issue.appendChild(td_img_issue);
     var td_issue = myDocument.createElement("td");
@@ -155,8 +155,9 @@ LawPane.render = function(subject, myDocument) {
     div_issue.appendChild(table_issue);
     
     var div_issue_data = myDocument.createElement("div");
+    div_issue_data.setAttribute('class', 'irfac');
     div_issue_data.id = "td_1";
-    div_issue_data.setAttribute('style','display:none');
+ //   div_issue_data.setAttribute('style','display:none');
     var table_issue_data = myDocument.createElement("table");
     var tr_issue_data = myDocument.createElement('tr');
     var td_issue_dummy = myDocument.createElement('td');
@@ -166,12 +167,12 @@ LawPane.render = function(subject, myDocument) {
     td_issue_data.appendChild(myDocument.createTextNode('Whether the transactions in '));
     var a_log = myDocument.createElement('a')
     a_log.setAttribute('href', log)
-    a_log.appendChild(myDocument.createTextNode(log));
+    a_log.appendChild(myDocument.createTextNode("log"));
     td_issue_data.appendChild(a_log);
     td_issue_data.appendChild(myDocument.createTextNode(' comply with '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
-    a_policy.appendChild(myDocument.createTextNode(policy));
+    a_policy.appendChild(myDocument.createTextNode(label(stsFound[0].object)));
     td_issue_data.appendChild(a_policy);
     tr_issue_data.appendChild(td_issue_data);
     table_issue_data.appendChild(tr_issue_data);
@@ -186,14 +187,15 @@ LawPane.render = function(subject, myDocument) {
 
     var div_rule = myDocument.createElement("div");
     div_rule.setAttribute('id', 'div_rule');
+    div_rule.setAttribute('class', 'title');
 
     var table_rule = myDocument.createElement("table");
     var tr_rule = myDocument.createElement("tr");
     var td_img_rule = myDocument.createElement("td");
     var img_rule = myDocument.createElement("img");
-    img_rule.setAttribute("src", expand_icon);
+    img_rule.setAttribute("src", collapse_icon);
     img_rule.id = "img_2";
-    img_rule.addEventListener('click',LawPane.render.show, false);
+    img_rule.addEventListener('click',LawPane.render.hide, false);
     td_img_rule.appendChild(img_rule);
     tr_rule.appendChild(td_img_rule);
     var td_rule = myDocument.createElement("td");
@@ -204,7 +206,8 @@ LawPane.render = function(subject, myDocument) {
     div.appendChild(div_rule);
     
 	var div_rule_data = myDocument.createElement("div");
-    div_rule_data.setAttribute('style','display:none');
+//    div_rule_data.setAttribute('style','display:none');
+    div_rule_data.setAttribute('class', 'irfac');
     div_rule_data.id = "td_2";
     var table_rule_data = myDocument.createElement("table");
     var tr_rule_data = myDocument.createElement('tr');
@@ -229,13 +232,14 @@ LawPane.render = function(subject, myDocument) {
 
     var div_facts = myDocument.createElement("div");
     div_facts.setAttribute('id', 'div_facts');
+    div_facts.setAttribute('class', 'title');
     var table_facts = myDocument.createElement("table");
     var tr_facts = myDocument.createElement("tr");
     var td_img_facts = myDocument.createElement("td");
     var img_facts = myDocument.createElement("img");
-    img_facts.setAttribute("src", expand_icon);
+    img_facts.setAttribute("src", collapse_icon);
     img_facts.id = "img_3";
-    img_facts.addEventListener('click',LawPane.render.show, false);
+    img_facts.addEventListener('click',LawPane.render.hide, false);
     td_img_facts.appendChild(img_facts);
     tr_facts.appendChild(td_img_facts);
     var td_facts = myDocument.createElement("td");
@@ -247,7 +251,8 @@ LawPane.render = function(subject, myDocument) {
 	
 	var div_facts_data = myDocument.createElement("div");
     div_facts_data.id = 'td_3';
-    div_facts_data.setAttribute('style','display:none');
+    div_facts_data.setAttribute('class', 'irfac');
+//   div_facts_data.setAttribute('style','display:none');
     var table_facts_data = myDocument.createElement("table");
 	var tr_facts_data = myDocument.createElement('tr');
     var td_facts_dummy = myDocument.createElement('td');
@@ -257,9 +262,13 @@ LawPane.render = function(subject, myDocument) {
 	var table_inner = myDocument.createElement("table");
     var tr = myDocument.createElement("tr");
     var td = myDocument.createElement("td");
+	var list = myDocument.createElement("ul");
     for (var i=stsDescAll.length-1; i>=0; i--){
-    	td.appendChild(stsDescAll[i]);
+    	var li = myDocument.createElement("li");
+    	li.appendChild(stsDescAll[i]);
+    	list.appendChild(li);
     }
+    td.appendChild(list);
     tr.appendChild(td);       
 	table_inner.appendChild(tr);
 	td_facts_data.appendChild(table_inner);
@@ -274,13 +283,14 @@ LawPane.render = function(subject, myDocument) {
 
     var div_analysis = myDocument.createElement("div");
     div_analysis.setAttribute('id', 'div_analysis');
+    div_analysis.setAttribute('class', 'title');
     var table_analysis = myDocument.createElement("table");
     var tr_analysis = myDocument.createElement("tr");
     var td_img_analysis = myDocument.createElement("td");
     var img_analysis = myDocument.createElement("img");
-    img_analysis.setAttribute("src", expand_icon);
+    img_analysis.setAttribute("src", collapse_icon);
     img_analysis.id = "img_4";
-    img_analysis.addEventListener('click',LawPane.render.show, false);
+    img_analysis.addEventListener('click',LawPane.render.hide, false);
     td_img_analysis.appendChild(img_analysis);
     tr_analysis.appendChild(td_img_analysis);
     var td_analysis = myDocument.createElement("td");
@@ -292,7 +302,8 @@ LawPane.render = function(subject, myDocument) {
 	
 	var div_analysis_data = myDocument.createElement("div");
     div_analysis_data.id = 'td_4';
-    div_analysis_data.setAttribute('style','display:none');
+   	div_analysis_data.setAttribute('class', 'irfac');
+//    div_analysis_data.setAttribute('style','display:none');
     var table_analysis_data = myDocument.createElement("table");
 	var tr_analysis_data = myDocument.createElement('tr');
     var td_analysis_dummy = myDocument.createElement('td');
@@ -319,13 +330,14 @@ LawPane.render = function(subject, myDocument) {
     
     var div_conclusion = myDocument.createElement("div");
     div_conclusion.setAttribute('id', 'div_conclusion');
+    div_conclusion.setAttribute('class', 'title');
     var table_conclusion = myDocument.createElement("table");
     var tr_conclusion = myDocument.createElement("tr");
     var td_img_conclusion = myDocument.createElement("td");
     var img_conclusion = myDocument.createElement("img");
-    img_conclusion.setAttribute("src", expand_icon);
+    img_conclusion.setAttribute("src", collapse_icon);
     img_conclusion.id = "img_5";
-    img_conclusion.addEventListener('click',LawPane.render.show, false);
+    img_conclusion.addEventListener('click',LawPane.render.hide, false);
     td_img_conclusion.appendChild(img_conclusion);
     tr_conclusion.appendChild(td_img_conclusion);
     var td_conclusion = myDocument.createElement("td");
@@ -337,7 +349,8 @@ LawPane.render = function(subject, myDocument) {
 	
 	var div_conclusion_data = myDocument.createElement("div");
     div_conclusion_data.id = 'td_5';
-    div_conclusion_data.setAttribute('style','display:none');
+    div_conclusion_data.setAttribute('class', 'irfac');
+//    div_conclusion_data.setAttribute('style','display:none');
     var table_conclusion_data = myDocument.createElement("table");
 	var tr_conclusion_data = myDocument.createElement('tr');
     var td_conclusion_dummy = myDocument.createElement('td');
@@ -373,7 +386,6 @@ LawPane.render = function(subject, myDocument) {
             td_o.appendChild(a_o);
             tr.appendChild(td_o);
             table_inner.appendChild(tr);
-
 	}
 	td_conclusion_data.appendChild(table_inner);
 	tr_conclusion_data.appendChild(td_conclusion_data);
@@ -382,6 +394,7 @@ LawPane.render = function(subject, myDocument) {
     div.appendChild(div_conclusion_data);
     
     //End of Conclusion
+    
     
     return div;
 

@@ -28,12 +28,12 @@
                 for (var k=0; k<sts.length; k++){
                     if (sts[k].predicate.toString() == compliant.toString()){
                         stsCompliant = sts[k];
-                    	return "AIR";
+                    	return "Justify";
                         
                     } 
                     if (sts[k].predicate.toString() == nonCompliant.toString()){
                         stsNonCompliant = sts[k];
-                        return "AIR";
+                        return "Justify";
                    	}
                 }
            	}    

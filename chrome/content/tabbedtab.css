@@ -72,8 +72,23 @@ div.compliantPane {
     -moz-border-radius: 1em;
 }
 
+div.title {
+	
+	font-size: 110%;
+	background-color: grey;
+    foreground-color: white; 
+    padding: 0.5em;  
+    margin-top: 0.5em; 
+    margin-bottom: 0.5em;
+}
+
+div.irfac {
+    margin-left: 2.5em;
+    line-height: 150% 
+}
+
 div.justification {
-	font-size: 100%;
+	font-size: 110%;
     padding: 0 5px;
     width: 1000px; 
     background-color: white; 
@@ -81,7 +96,7 @@ div.justification {
 }
 
 div.description {
-	font-size: 120%;
+	font-size: 105%;
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;

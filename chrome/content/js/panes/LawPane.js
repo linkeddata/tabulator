@@ -90,6 +90,26 @@ LawPane.render = function(subject, myDocument) {
     var policy = uris.pop();
     var log = uris.pop();
     
+    //Retrieve policy file to get the description of the policy
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.onreadystatechange=state_Change;
+	xmlhttp.open("GET",policy,true);
+	xmlhttp.send(null);
+	function state_Change(){
+		if (xmlhttp.readyState==4 && xmlhttp.status==200){
+			var policy_text = xmlhttp.responseText.toString();
+			var start_index = policy_text.search("rdfs:comment");
+			var end_index = 0;
+			if (start_index > -1){
+				var newStr = policy_text;
+				end_index = newStr.slice(start_index).search(/";/);
+			}
+			var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
+			myDocument.getElementById('td_2').innerHTML = rule_statement;
+		  }
+	}
+
+		
     var stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
  	
  	// TODO: & FIXME: There could be a bug here, but that all depends on the format of the proof tree

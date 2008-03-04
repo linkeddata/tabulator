@@ -21,7 +21,7 @@ function TabulatorLogger () {
         if (!(tabulator.log.level & type)) return; //bitmask //do we have to use this fancy method?
         
         str = str.toString(); //type casting (require (= (type str) 'string))
-        if (arg.length > 1) {
+        if (arg && arg.length > 1) {
             var subs = Array.prototype.slice.call(arg); // a magic for arguments -> Array
             subs.shift();
             str = Util.string.template(str, subs)

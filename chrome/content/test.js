@@ -166,20 +166,7 @@ labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
 */
 
-
-//Heavily modified from http://developer.mozilla.org/en/docs/Code_snippets:On_page_load
-var tabExtension = {
-  init: function() {
-    var appcontent = document.getElementById("appcontent");   // browser
-    if(appcontent) {
-      var catman = Components.classes["@mozilla.org/categorymanager;1"]
-                           .getService(Components.interfaces.nsICategoryManager);
-      catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
-      var pluginDocFac = '@mozilla.org/content/plugin/document-loader-factory;1';
-      //catman.addCategoryEntry('Gecko-Content-Viewers', 'application/rdf+xml', pluginDocFac, true, true);
-      var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-      httpResponseObserver.register(); // timbl
-      gBrowser.addEventListener('load',function(e) {
+var tOpenOutliner = function(e) {
         tabulatorDetectMetadata();//defined in tabulator.xul
         var doc = e.originalTarget;
         var divs = doc.getElementsByTagName('div');
@@ -214,10 +201,19 @@ var tabExtension = {
           }
         }
       
-      },true);
-      //deal with local .n3 files, I don't know what the last two arguments do...
-      //also a hack on sources.js
-      catman.addCategoryEntry('ext-to-type-mapping','n3','text/rdf+n3',true,true);
+      };
+//Heavily modified from http://developer.mozilla.org/en/docs/Code_snippets:On_page_load
+var tabExtension = {
+  init: function() {
+    var appcontent = document.getElementById("appcontent");   // browser
+    if(appcontent) {
+      var catman = Components.classes["@mozilla.org/categorymanager;1"]
+                           .getService(Components.interfaces.nsICategoryManager);
+      catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
+      //var pluginDocFac = '@mozilla.org/content/plugin/document-loader-factory;1';
+      //catman.addCategoryEntry('Gecko-Content-Viewers', 'application/rdf+xml', pluginDocFac, true, true);
+      var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+      gBrowser.addEventListener('load',tOpenOutliner,true);
       var ThisSession=kb.the(undefined,tabulator.ns.rdfs('label'),kb.literal("This Session"));
       
       //everything ought to have a URI, but chrome may not be suitable because it maps to file:
@@ -326,77 +322,6 @@ function emptyNode(node) {
 function string_startswith(str, pref) { // missing library routines
     return (str.slice(0, pref.length) == pref);
 }
-
-//////////////////////// HTTP Request observer
-// Based on code in
-// http://developer.mozilla.org/en/docs/Setting_HTTP_request_headers
-// and http://developer.mozilla.org/en/docs/Observer_Notifications#HTTP_requests
-// http://www.xulplanet.com/references/xpcomref/ifaces/nsIHttpChannel.html
-// and http://www.xulplanet.com/references/xpcomref/ifaces/nsIChannel.html
-var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
-                         'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
-var httpResponseObserver =
-{
-    observe: function(subject, topic, data) {
-        if (topic == "http-on-examine-response" && typeof Components != 'undefined') { // Componenets being undefined -- why?
-              var httpChannel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
-              var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-              // httpChannel.setRequestHeader("X-Hello", "World", false)
-              if (httpChannel.URI.spec == tabulator.metadataURI) {
-                  //this forces the page to be displayed as RDF/XML seeAlso tabulator.xul
-                  tabulator.metadataURI = '';
-                  httpChannel.contentType = 'application/rdf+xml';
-              }
-              tabulator.requestCache.push(httpChannel);
-              //release cached nsIHttpChannel for 200 with content-type that isn't a RDF one.
-              if (httpChannel.responseStatus == 200	&& !(httpChannel.contentType in tRDF_CONTENT_TYPE))
-                  tabulator.rc.releaseRequest(httpChannel);			
-              if (httpChannel.responseStatus >= 300 && httpChannel.responseStatus < 400) { //only record 30X redirects
-              
-                  //tabulator.log.warn(httpChannel.responseStatus+" of "+httpChannel.URI.spec+" notificationCallbacks has "+httpChannel.notificationCallbacks);
-                  if (!httpChannel.notificationCallbacks || ''+httpChannel.notificationCallbacks != "[object XMLHttpRequest]"){ 
-                                                                                                   //a hack not to override notificationCallbakcs set from source.js
-                      httpChannel.notificationCallbacks = { //.notificationCallbacks is overridden for every 30X
-                          getInterface: function (iid) {
-                              if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
-                                  return {onChannelRedirect: function (oldC,newC,flags) {                        
-                                      oldC.QueryInterface(Components.interfaces.nsIHttpChannel);
-                                      newC.QueryInterface(Components.interfaces.nsIHttpChannel);
-                                      //just like newC.previuosRequest = oldC;                      
-                                      tabulator.rc.setPreviousRequest(newC,oldC);}}
-                              }
-                              return Components.results.NS_NOINTERFACE;}
-                      }
-                      //tabulator.log.warn(httpChannel.responseStatus+"after setting,  notificationCallbacks has "+httpChannel.notificationCallbacks);
-                  }
-                  /*tabulator.log.warn('httpResponseObserver: status='+httpChannel.responseStatus+
-                    ' '+httpChannel.responseStatusText+ ' for ' + httpChannel.originalURI.spec);
-                  var newURI = httpChannel.getResponseHeader('location');
-                  tabulator.log.warn('httpResponseObserver: now URI = ' + httpChannel.URI.spec + ' a ' +
-                                                                          typeof httpChannel.URI.spec);
-                  tabulator.log.warn('httpResponseObserver: Location: ' + newURI + ' a ' + typeof newURI);
-                  */                  
-              }
-        }
-    },
-
-    get observerService() {
-    return Components.classes["@mozilla.org/observer-service;1"]
-                     .getService(Components.interfaces.nsIObserverService);
-    },
-
-    register: function()
-    {
-    tabulator.log.warn('test.js: registering observer');
-    //alert('test.js: registering observer')
-    this.observerService.addObserver(this, "http-on-examine-response", false);
-    },
-
-    unregister: function()
-    {
-    this.observerService.removeObserver(this, "http-on-examine-response");
-    }
-};
 
 
 

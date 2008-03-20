@@ -82,6 +82,24 @@ function Tabulator() {
     this.sourceURI = "resource://tabulator/";
     this.sparql = new sparql(this.kb);
     this.rc = new RequestConnector();
+    this.requestCache = [];
+    this.cacheEntry = {};
+    this.getOutlinerHTML = function (displayURI, partial) {
+        var result = 
+        //"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
+        //"<html id='docHTML'>"+
+        "    <head>"+
+        "        <title>Tabulator: Async Javascript And Semantic Web</title>"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
+        "    </head>"+
+        "    <body>"+
+        "        <div class=\"TabulatorOutline\" id=\""+displayURI+"\">"+
+        "            <table id=\"outline\"></table>"+
+        "        </div>"+
+        "    </body>"
+        //"</html>";
+        return result;    
+    }
     //var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     //var updater = tabulator.sparql.prepareUpdate(newStatement);
     //updater.setObject(kb.sym('http://web.mit.edu/jambo/www/foaf.rdf#jambo'));
@@ -298,8 +316,8 @@ function Tabulator() {
         getValidDocument: function(q) {
             return "chrome://tabulator/content/table.html?query="+q.id;
         }
-    } 
-
+    }
+ 
 }//Tabulator
 
 // This is the implementation of your component.

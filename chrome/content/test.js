@@ -214,6 +214,7 @@ var tabExtension = {
       //catman.addCategoryEntry('Gecko-Content-Viewers', 'application/rdf+xml', pluginDocFac, true, true);
       var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
       gBrowser.addEventListener('load',tOpenOutliner,true);
+      gBrowser.addProgressListener(tLoadURIObserver, Components.interfaces.nsIWebProgress.NOTIFY_LOCATION);
       var ThisSession=kb.the(undefined,tabulator.ns.rdfs('label'),kb.literal("This Session"));
       
       //everything ought to have a URI, but chrome may not be suitable because it maps to file:
@@ -233,8 +234,67 @@ var tabExtension = {
   
   externalQueryRequestListener: function(e) {
 
+  }
+}
+
+/*
+  Opening a URI of the same document will not send a new HttpRequest or even fire
+  a DOM 'load' event. This observer handles onLocationChange, an event that triggers
+  the RSS icon and the security icon. Of course, this is a hack.
+*/
+var tLoadURIObserver = {
+  QueryInterface : function(aIID)
+  {
+    if (aIID.equals(Components.interfaces.nsIWebProgressListener) ||
+        aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
+        aIID.equals(Components.interfaces.nsIXULBrowserWindow) ||
+        aIID.equals(Components.interfaces.nsISupports))
+      return this;
+    throw Components.results.NS_NOINTERFACE;
   },
-  inverseRedirectDirectory: {}
+  //this fires after the page is scrolled before a newpage is loaded.
+  onLocationChange:function(aWebProgress, aRequest, aLocation){
+    if (aLocation){
+    //tabulator.log.warn("onLocationChange: currentURI is %s, aLocation is %s"
+    //                    , gBrowser.currentURI.spec, aLocation.spec);
+    }    
+       //this filters out 'open in new window' , this filters out switching tabs
+    if (aWebProgress.DOMWindow == content && gBrowser.selectedBrowser == this._lastBrowser && aLocation){
+      //neglect non-outlner pages...
+      if (tabulator.hasOutliner(content.document)){;
+      //Not uri of the same document -> return.
+      if (Util.uri.docpart(this._lastURI.spec) == Util.uri.docpart(aLocation.spec) /*&&
+          aLocation.spec.indexOf('#') > -1*/){
+            
+      //throw new Error(aLocation.spec);
+      if (this._lastURI.spec != aLocation.spec){
+        tabulator.log.warn("Reloading because this is a hashed URI");
+        BrowserReload();
+      }
+      //fixup the docuemnt. This is also triggered when goBack/goForth, which might be undesirable.      
+      //content.document.documentElement.innerHTML = tabulator.getOutlinerHTML(aLocation.spec);
+      //tOpenOutliner({'originalTarget':content.document}); //dangerous, content.document not wrapped
+      }
+      }              
+    }
+    //always do this to record lastBrowser and lastURI
+    this._lastBrowser = gBrowser.selectedBrowser;    
+    this._lastURI = gBrowser.currentURI;
+  },
+  _lastBrowser:null,
+  _lastURI:null,  
+  onSecurityChange:function(){
+    return;
+  },
+  onStateChange:function(){
+    return;
+  },
+  onStatusChange:function(){
+    return;
+  },
+  onProgressChange:function(){
+    return;
+  }
 }
 
 document.addEventListener("TabulatorQueryRequest", function(e) {tabExtension.externalQueryRequestListener(e);},false,true);

@@ -194,10 +194,17 @@ function calView(container) {
 
 /**
  * @param {string} pred : string representation of an RDF statement's predicate
- * @return a string representing the relevant calendar datatype that the object of the RDF statement that pred belongs to. If the object is not a relevant calendar datatype, null is returned;
+ * @return a string representing the relevant calendar datatype that the object
+  of the RDF statement that pred belongs to.
+   If the object is not a relevant calendar datatype, null is returned;
  */
 function findCalType (pred) {
-    var types = {'http://www.w3.org/2002/12/cal/icaltzd#dtend':'end', 'http://www.w3.org/2002/12/cal/icaltzd#dtstart':'start', 'http://www.w3.org/2002/12/cal/icaltzd#summary':'summary', 'http://www.w3.org/2002/12/cal/icaltzd#Vevent':'event', 'http://www.w3.org/2002/12/cal/icaltzd#component':'component', 'date':'dateThing'};
+    var types = {'http://www.w3.org/2002/12/cal/icaltzd#dtend':'end',
+        'http://www.w3.org/2002/12/cal/icaltzd#dtstart':'start',
+        'http://www.w3.org/2002/12/cal/icaltzd#summary':'summary',
+        'http://www.w3.org/2002/12/cal/icaltzd#Vevent':'event',
+        'http://www.w3.org/2002/12/cal/icaltzd#component':'component',
+        'date':'dateThing'};   // Kludge @@
     for (var key in types){
 	// match: finds substrings
 	if(pred.toLowerCase().match(key.toLowerCase())!=null){

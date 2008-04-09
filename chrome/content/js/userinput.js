@@ -658,9 +658,7 @@ function UserInput(outline){
                     }                    
                 })}catch(e){
                     tabulator.log.error(e);
-                    alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)"+
-                          "Error Message: "+e);
+                    alert("Error trying to insert statement "+insertTr.AJAR_statement+": "+e);
                     outline.UserInput.deleteTriple(insertTr.lastChild,true);
                     return;
                 }            
@@ -1556,9 +1554,7 @@ function UserInput(outline){
                 })}catch(e){
                     tabulator.log.error(e);
                     outline.UserInput.deleteTriple(newTd,true);
-                    alert("You can not edit statement about this blank node object "+
-                          "becuase it is not identifiable. (Known Tabulator Issue)"+
-                          "Error Message: "+e);
+                    alert("Error trying to insert statement "+s+":\n"+e);
                     return;
                 }
               //</SPARQLUpdate>

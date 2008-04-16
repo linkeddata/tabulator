@@ -465,7 +465,8 @@ function Outline(doc) {
     panes.list = [];
     panes.paneForIcon = []
     panes.paneForPredicate = []
-    panes.register = function(p) {
+    panes.register = function(p, whether) {
+        p.requireQueryButton = whether;
         panes.list.push(p);
         if (p.icon) panes.paneForIcon[p.icon] = p;
         if (p.predicates) {
@@ -1092,29 +1093,30 @@ function Outline(doc) {
 	 * Pane registration
 	 */
 	
- 	
-    panes.register(classInstancePane);
+ 	//the second argument indicates whether the query button is required
+    panes.register(classInstancePane, true);
 
-    panes.register(defaultPane);
+    panes.register(defaultPane, true);
         
-    panes.register(internalPane);
+    panes.register(internalPane, true);
 
-    panes.register(imagePane);
+    panes.register(imagePane, false);
     
-    panes.register(socialPane);
+    panes.register(socialPane, true);
     
-    panes.register(dataContentPane);
+    panes.register(dataContentPane, false);
     
-    panes.register(n3Pane);
+    panes.register(n3Pane, false);
     
-    panes.register(RDFXMLPane);
+    panes.register(RDFXMLPane, false);
     
-    panes.register(humanReadablePane);
+    panes.register(humanReadablePane, false);
 	//airPane @see panes/airPane.js
-    panes.register(airPane);
+    panes.register(airPane, false);
 
 	//LawPane @see panes/lawPane.js
-	panes.register(LawPane);
+	panes.register(LawPane, false);
+	
 //////////////////////////////////////////////////////////////////////////////
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK
@@ -1157,6 +1159,7 @@ function Outline(doc) {
 //            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
                 var paneDiv = tr1.firstPane.render(subject, myDocument);
+                if (tr1.firstPane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');
                 table.appendChild(paneDiv);
                 paneDiv.pane = tr1.firstPane;
             }
@@ -2156,12 +2159,19 @@ function Outline(doc) {
 
                 // If the view already exists, remove it
                 var state = 'paneShown';
+                var numberOfPanesRequiringQueryButton = 0;
+                for (var d = t.firstChild; d; d = d.nextSibling) {
+                    if (d.pane && d.pane.requireQueryButton) numberOfPanesRequiringQueryButton++;
+                }
                 for (var d = t.firstChild; d; d = d.nextSibling) {
                     if (typeof d.pane != 'undefined') {
                         if (d.pane == pane) {                      
                             removeAndRefresh(d)                           
                             // If we just delete the node d, ffox doesn't refresh the display properly.
                             state = 'paneHidden';
+                            if (d.pane.requireQueryButton && t.parentNode.className /*outer table*/
+                                && numberOfPanesRequiringQueryButton == 1)
+                                myDocument.getElementById('queryButton').setAttribute('style','display:none;');
                             break;
                         }
                     }
@@ -2169,6 +2179,7 @@ function Outline(doc) {
                 // If the view does not exist, create it
                 if (state == 'paneShown') {
                     var paneDiv = pane.render(subject, myDocument);
+                    if (pane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');                    
                     var second = t.firstChild.nextSibling;
                     if (second) t.insertBefore(paneDiv, second);
                     else t.appendChild(paneDiv);

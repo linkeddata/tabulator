@@ -191,13 +191,18 @@ var tOpenOutliner = function(e) {
             gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
             //It's not straightforward to get the browser from the inner document, there should
             //be a better way
-            outline.GotoSubject(kb.sym(uri),true);
+
 
             var queryButton = doc.createElement('input');
+            queryButton.setAttribute('id','queryButton');
+            queryButton.setAttribute('style','display:none;');
             queryButton.setAttribute('type','button');
             queryButton.setAttribute('value','Find All');
-            divs[i].appendChild(queryButton);
+            //divs[i].appendChild(queryButton);
+            doc.body.appendChild(queryButton);
             queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
+            
+            outline.GotoSubject(kb.sym(uri),true);
           }
         }
       

@@ -102,10 +102,10 @@
             var table = myDocument.createElement("table");
             var tr = myDocument.createElement("tr");
             
-            var td_intro = myDocument.createElement("td");
+         /*   var td_intro = myDocument.createElement("td");
             td_intro.appendChild(myDocument.createTextNode('The reason '));
             tr.appendChild(td_intro);
-
+		*/
             var td_s = myDocument.createElement("td");
             var a_s = myDocument.createElement('a')
             a_s.setAttribute('href', stsFound.subject.uri)
@@ -131,10 +131,11 @@
             td_o.appendChild(a_o);
             tr.appendChild(td_o);
 
-           	var td_end = myDocument.createElement("td");
+          /* 	var td_end = myDocument.createElement("td");
             td_end.appendChild(myDocument.createTextNode(' is because: '));
             tr.appendChild(td_end);
-
+		  */
+			
             table.appendChild(tr);
             divOutcome.appendChild(table);
             div.appendChild(divOutcome);

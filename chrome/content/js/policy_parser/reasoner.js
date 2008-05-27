@@ -65,8 +65,8 @@ function updateResult()
   if (request2.readyState == 4) {
     if (request2.status == 200) {
 		var response = request2.responseText;
-		content.document.write("<pre>"+response+"</pre>");
-    } 
+		content.window.content.document.write("<pre>"+response+"</pre>");
+   } 
 	else 
       alert(request2.status);
   } 

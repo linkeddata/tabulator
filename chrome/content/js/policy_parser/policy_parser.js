@@ -26,7 +26,9 @@ function predefined()
 function createProgressBar(){
 	const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 	var item = document.createElementNS(XUL_NS, "progressmeter"); 
+	item.setAttribute("id", "pm");
 	item.setAttribute("mode", "undetermined");
+	item.setAttribute("value", "0");
     return item;  
 }
 
@@ -40,6 +42,21 @@ function removeProgressBar()
 
 }
 
+/*function moveProgressBar()
+{
+	var mpm = document.getElementById("pm");
+	var inp = document.getElementById("inp");
+	var desc = document.getElementById("desc");
+	
+	function setProgress()
+	{
+		var x = parseInt(inp.value) ;
+		if(x > 70) x = 70;
+		mpm.value = x;
+		desc.value = x + "%";
+	}
+}
+*/
 /////////////////////////////
 
 
@@ -57,7 +74,8 @@ function sendRequest(request, url)
 		var progressBox = document.getElementById("progressBox"); 
         var progressBar = createProgressBar(); 
         progressBox.appendChild(progressBar);
-
+		//moveProgressBar();
+		
 		request.open("GET", url, true);
 		request.onreadystatechange = update;
 		request.send(null);
@@ -104,7 +122,8 @@ function update()
   if (request1.readyState == 4) {
     if (request1.status == 200) {
 		var response = request1.responseText;
-		removeProgressBar();                    
+		//wait for a while!!
+		window.setTimeout(removeProgressBar,4000);
     } 
 	else
 	{

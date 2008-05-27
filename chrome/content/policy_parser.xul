@@ -6,8 +6,8 @@
 <page id="sbPolicy Parser" title="&policysidebar.title;"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<script src="http://dig.csail.mit.edu/2005/ajar/ajaw/js/util.js" type="text/javascript"></script>
-<script src="http://dig.csail.mit.edu/2005/ajar/ajaw/js/webdav.js" type="text/javascript"></script>
+<script src="js/util.js" type="text/javascript"></script>
+<script src="js/webdav.js" type="text/javascript"></script>
 <script src="js/policy_parser/webdav.js" type="text/javascript"></script>
 <script src="js/policy_parser/reasoner.js" type="text/javascript"></script>
 <script src="js/policy_parser/policy_parser.js" type="text/javascript"></script>

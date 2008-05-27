@@ -213,4 +213,31 @@
 
   ]]></script>
   <script type="application/x-javascript" src="statuswidget.js" ></script>
+
+	<!-- New Addition -->
+
+  <menupopup id="viewSidebarMenu">
+    <menuitem key="key_openPOLICYSidebar" observes="viewPOLICYSidebar"  />
+  </menupopup>
+  
+  <keyset id="mainKeyset">
+    <key id="key_openPOLICYSidebar" command="viewPOLICYSidebar"
+         key="&openPOLICYSidebar.commandkey;" 
+         modifiers="&openPOLICYSidebar.modifierskey;" />
+  </keyset>
+  
+  <broadcasterset id="mainBroadcasterSet"> 
+    <broadcaster id="viewPOLICYSidebar" 
+                 label="&policysidebar.title;"
+                 autoCheck="false"
+                 type="checkbox"
+                 group="sidebar"
+                 sidebarurl="chrome://tabulator/content/policy_parser.xul"
+                 sidebartitle="&policysidebar.title;"
+                 oncommand="toggleSidebar('viewPOLICYSidebar');" />
+  </broadcasterset>
+
+
 </overlay>
+
+

@@ -59,6 +59,7 @@
       </menupopup>
     </menu>
     <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" insertafter="javascriptConsole" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
+    <menuitem label="&tamiconfig.label;" accesskey="&tamiconfig.accesskey;" insertafter="javascriptConsole" oncommand="openTool('chrome://tabulator/content/tami_config.xul','tamiconfig')"/>
   </menupopup>
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>

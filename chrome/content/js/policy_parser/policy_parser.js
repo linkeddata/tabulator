@@ -128,7 +128,7 @@ function update()
 	else
 	{
 	  removeProgressBar();
-      alert("Error! Cannot parse sentence.");
+      alert("Error! Cannot parse sentence because some of the words are not found in the lexicon.");
 	  content.window.location.replace("about:blank",true);
 	}
   } 

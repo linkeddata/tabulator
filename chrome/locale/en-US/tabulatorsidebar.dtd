@@ -12,9 +12,12 @@
 <!ENTITY tablog.label "Data Browser Log">
 <!ENTITY tablog.accesskey "l">
 
+<!ENTITY tamiconfig.title "TAMI Configurations">
+<!ENTITY tamiconfig.label "TAMI Configurations">
+<!ENTITY tamiconfig.accesskey "c">
+
 <!ENTITY toolsTabulatorMenu.label "Data Browser">
 <!ENTITY toolsTabulatorMenu.accesskey "t">
-
 
 <!ENTITY tabulatorToggleHeader.label "Make Firefox request RDF">
 <!ENTITY tabulatorToggleHeader.accesskey "m">

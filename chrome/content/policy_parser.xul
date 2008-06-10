@@ -6,8 +6,16 @@
 <page id="sbPolicy Parser" title="&policysidebar.title;"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<script src="js/util.js" type="text/javascript"></script>
-<script src="js/webdav.js" type="text/javascript"></script>
+<script type="application/x-javascript" src="js/util.js"/>
+<script type="application/x-javascript" src="js/uri.js"/>
+<script type="application/x-javascript" src="js/rdf/rdfparser.js"/>
+<script type="application/x-javascript" src="js/rdf/term.js"/>
+<script type="application/x-javascript" src="js/rdf/identity.js"/>
+<script type="application/x-javascript" src="js/webdav.js"/>
+<script type="application/x-javascript" src="test.js"/>
+<script type="application/x-javascript" src="js/rdf/match.js"/>
+
+<script src="js/policy_parser/acl_editor.js" type="text/javascript"></script>
 <script src="js/policy_parser/webdav.js" type="text/javascript"></script>
 <script src="js/policy_parser/reasoner.js" type="text/javascript"></script>
 <script src="js/policy_parser/policy_parser.js" type="text/javascript"></script>
@@ -21,13 +29,33 @@
 	 <tabpanel id="aclTab">
 		<vbox flex="1">
 		<description>
-     		Set Access Control for [...]
+     		Sharing and Permissions
      	</description>
 			
 			<groupbox orient="vertical">
-			
-				<spacer flex="1"/>
-			
+	
+				<grid class="grid_outline">
+  					<columns>
+  						<column flex="4">
+      						<label value="Resource"/>
+  						</column>
+  						<column flex="2">
+      						<label value="Person"/>
+  						</column>
+  						<column flex="1">
+  							<label value="Privilege"/>
+  						</column>
+  						<column flex="1"/>
+  					</columns>
+  					<rows id="add_rows">
+    					<row align="center">
+							<spacer flex="1"/>
+    					</row>
+  					</rows>
+				</grid>
+				<spacer/>
+				
+				<button label="test" onclick="test()"/>
 			</groupbox>
 		</vbox>
      </tabpanel>

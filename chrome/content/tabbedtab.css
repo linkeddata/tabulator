@@ -564,3 +564,15 @@ td{
  {
  display: none;
  }
+ 
+/**
+The following style elements are for the ACL settings for the Policy Editor
+*/ 
+<code>
+
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+
+grid.grid_outline {
+  border: thin solid;
+}
+</code>

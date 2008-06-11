@@ -1,8 +1,10 @@
 function test(){
 	acl = new ACLEditor("http://presbrey.xvm.mit.edu/.metadata.rdf")
-//	addRow("resource-1","oshani", 3, "more ACL info what should be here? the specific HTTP methods which are allowed?")
 	acl.readMetaData();
 	acl.convertHTTPMethodsToPermissions();
+	for (r in acl.resourceList){
+		acl.addRow(resourceList[r],peopleList[r], permissionsList[r], "TODO - Fine-grained editing: What should be here? The specific HTTP methods which are allowed? Ability to save the metadata?")
+	}
 }
 
 
@@ -106,14 +108,19 @@ function ACLEditor(metadatafileURI){
 						new RDFSymbol('http://www.w3.org/2001/02/acls/ns#methods'),
 						undefined);
 			resourceList[rule] = resource[0].object;
-			peopleList[rule] = people[0].object;
+			if (people[0].object == "*") 
+				peopleList[rule] = "Everyone";
+			else 
+				peopleList[rule] = people[0].object;
 			httpMethodsList[rule] = httpMethod[0].object;
 		}
 		
 	}
 
 	this.addRow = function(resource_val, person_val,privilege, more_val){
-
+	/**
+		This method adds a row in the access control settings for each rule in the metadatafile
+	*/
 		var new_rows = document.getElementById("add_rows");
 		
 		var new_row = document.createElement("row");
@@ -122,9 +129,17 @@ function ACLEditor(metadatafileURI){
 		resource.setAttribute("value",resource_val);
 		new_row.appendChild(resource);
 		
-		var person = document.createElement("label");
-		person.setAttribute("value",person_val);
-		new_row.appendChild(person);
+		var people = document.createElement("menulist");
+		var people_types = document.createElement("menupopup");
+		for (r in this.peopleList){
+			var type = document.createElement("menuitem");
+			type.setAttribute("label", peopleList[r]);
+			type.setAttribute("value", peopleList[r]);
+			if (person_val == peopleList[r]) type.setAttribute("selected","true");
+			people_types.appendChild(type);
+		}
+		people.appendChild(people_types);
+		new_row.appendChild(people);
 		
 		var priv = document.createElement("menulist");
 		var priv_types = document.createElement("menupopup");

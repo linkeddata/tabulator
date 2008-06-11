@@ -4,7 +4,7 @@
 <!DOCTYPE page SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
 
 <page id="sbPolicy Parser" title="&policysidebar.title;"
-         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"  onload="test()">
 
 <script type="application/x-javascript" src="js/util.js"/>
 <script type="application/x-javascript" src="js/uri.js"/>
@@ -33,7 +33,7 @@
      	</description>
 			
 			<groupbox orient="vertical">
-	
+				<spacer flex="1"/>
 				<grid class="grid_outline">
   					<columns>
   						<column flex="4">
@@ -49,13 +49,20 @@
   					</columns>
   					<rows id="add_rows">
     					<row align="center">
-							<spacer flex="1"/>
+							<spacer flex="2"/>
     					</row>
   					</rows>
 				</grid>
-				<spacer/>
+				<spacer flex="2"/>
 				
-				<button label="test" onclick="test()"/>
+				<box orient="horizontal">
+					<spacer flex="1"/>
+					<button flex="1" label="Change ACL" onclick="set()"/>
+					<spacer flex="1"/>
+					<button flex="1" label="Reset" onclick="reset()"/>
+					<spacer flex="1"/>
+				</box>
+	
 			</groupbox>
 		</vbox>
      </tabpanel>

@@ -66,9 +66,10 @@
 			</groupbox>
 		</vbox>
      </tabpanel>
-	 
+
     	<tabpanel id="NLTab">
-		<vbox flex="1">
+	    <vbox flex="1">
+
 		
 			<groupbox orient="vertical">
 		    <spacer style="height: 10px"/>

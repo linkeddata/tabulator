@@ -57,7 +57,6 @@ Icon = {}
 Icon.src= []
 Icon.tooltips= []
 var iconPrefix = 'chrome://tabulator/content/';
-//var iconPrefix = 'http://dig.csail.mit.edu/2007/tab/ext/chrome/content/';
 
 ////////////////////////// Common icons with extension version
 

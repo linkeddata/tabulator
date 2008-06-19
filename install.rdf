@@ -7,7 +7,7 @@ xmlns:em="http://www.mozilla.org/2004/em-rdf#">
     <em:id>tabulator@csail.mit.edu</em:id>
     <em:name>The Tabulator Extension</em:name>
     <em:type>2</em:type>
-    <em:version>0.8.3</em:version>
+    <em:version>0.8.4</em:version>
     <em:description>A Data Browser, a user interface to the Semantic Web.
     Upgrades Firefox to be able to handle data as well as documents.
     Integrates data from many sources within the browser.

@@ -27,7 +27,7 @@ sparql.prototype.editable = function(uri, kb) {
         var author_via = kb.each(request, tabulator.ns.httph("ms-author-via"));
         if (author_via.length)
             for (var i = 0; i < author_via.length; i++) {
-                if (author_via[i] == "SPARQL")
+                if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
                     return true;
             }
         var status = kb.each(request, tabulator.ns.http("status"));

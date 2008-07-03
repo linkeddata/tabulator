@@ -671,16 +671,20 @@ function Outline(doc) {
             for (var i=0; i<works.length; i++) {
                 if (kb.whether(works[i], rdf('type'),
                                             foaf('PersonalProfileDocument'))) {
-                    profile = works[i];
-                    break;
+
+                    editable = outline.sparql.prototype.editable(works[i].uri, kb);
+                    if (!editable) { 
+                        say("Your profile <"+works[i].uri+"> is not remotely editable.");
+                    } else {
+                        profile = works[i];
+                        break;
+                    }
                 }
             }
-            if (profile) editable = outline.sparql.prototype.editable(profile.uri, kb)
+
             if (me_uri == s.uri ) { // This is about me
                 if (!profile) {
-                    say("I couldn't find your personal profile document.");
-                } else if (!editable) {
-                    say("Your profile <"+profile.uri+"> is not remotely editable.");
+                    say("I couldn't find an editable personal profile document.");
                 } else  {
                     say("Editing your profile <"+profile.uri+">.");
                 }

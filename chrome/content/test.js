@@ -1,4 +1,5 @@
 isExtension = true;
+ 
 function isFirefox3(){ //from http://developer.mozilla.org/en/docs/Using_nsIXULAppInfo
   var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
                           .getService(Components.interfaces.nsIXULAppInfo);

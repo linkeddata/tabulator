@@ -71,16 +71,17 @@
 	    <vbox flex="1">
 
 		
-			<groupbox orient="vertical">
-		    <spacer style="height: 10px"/>
+			<spacer style="height: 10px"/>
 		    <groupbox orient="vertical">
 		    	<vbox flex="1">
-		    		<label value="Name of the policy:"/>
+		    		<box>
+		    		<label value="Policy Name:"/>
 		        	<textbox id="name" type="autocomplete" autocompletesearch="history"/>
-		        	<spacer style="height: 10px"/>
-		            <label value="Domain:"/>
-		            <hbox>
-		        		<menulist id="domain">
+		        	</box>
+		    		<spacer style="height: 10px"/>
+		    		<box>
+		            	<label value="Domain:"/>
+		            	<menulist id="domain">
 		    				<menupopup>
 		      					<menuitem label="University (MIT)" value="http://people.csail.mit.edu/oshani/ontologies/university.n3"/>
 		      					<menuitem label="State (MA)" value="http://people.csail.mit.edu/oshani/ontologies/state.n3"/>
@@ -88,61 +89,56 @@
 		    				</menupopup>
 		  				</menulist>
 		            	<button label="View" oncommand="viewOnt()"/>
-		   	    	</hbox>
+		   	    	</box>
+		            
 				</vbox>
-			</groupbox> 
-		
+			
 		    <spacer style="height: 10px"/>
 		 	
-		    <groupbox orient="vertical">
 		        <vbox flex="1">
 		        
 		            <label value="Sentence:"/>
-				
-				    <spacer style="height: 10px"/>
-		     				
 		     		<hbox>
-		               <radiogroup id="sentence_pref" onclick="predefined()">
-		            		<radio id="select" value="0" label="Select from pre-defined" accesskey="S" selected="true"/>
+		               <radiogroup id="sentence_pref" onclick="predefined()" >
+					        <hbox>
+		    	        		<radio id="select" value="0" label="Select from pre-defined" accesskey="S" selected="true"/>
+								<menulist id="sentence_menu" onmousedown="show()">
+					    			<menupopup>
+					      				<menuitem label="University Example 1" value="MIT can use prox card data for criminal investigation"/>
+					      				<menuitem label="University Example 2" value="MIT may use prox card data for criminal investigation"/>
+					      				<menuitem label="University Example 3" value="MIT can give records to FBI to investigate crimes"/>
+					      				<menuitem label="University Example 4" value="MIT can give FBI records for criminal investigations"/>
+					      				<menuitem label="University Example 5" value="MIT students can not transfer prox cards to another student"/>
+					      				<menuitem label="University Example 6" value="A person may access data on the private mit domain if the person has permission for that data"/>
+					      				<menuitem label="Federal Example 1" value="Police may search people's homes if police have people's permission"/>
+					      				<menuitem label="Federal Example 2" value="TSA can transfer data to the fbi if the data is associated with terrorism"/>
+					      				<menuitem label="Federal Example 3" value="A service provider may not use phone records to deny service to a customer"/>
+					      				<menuitem label="State Example 1" value="Anyone can access data in the possession of the state of Massachusetts"/>
+					    			</menupopup>
+					  			</menulist>
+							</hbox>
 							<radio id="write" value="1" label="Write your own"  accesskey="W" />
 				        </radiogroup>
 		    		</hbox>
-		
-		            <spacer style="height: 10px"/>
 		            
-		            <menulist id="sentence_menu">
-		    			<menupopup>
-		      				<menuitem label="MIT can use prox card data for criminal investigation [Domain: University]" value="MIT can use prox card data for criminal investigation"/>
-		      				<menuitem label="MIT may use prox card data for criminal investigation [Domain: University]" value="MIT may use prox card data for criminal investigation"/>
-		      				<menuitem label="MIT can give records to FBI to investigate crimes [Domain: University]" value="MIT can give records to FBI to investigate crimes"/>
-		      				<menuitem label="MIT can give FBI records for criminal investigations [Domain: University]" value="MIT can give FBI records for criminal investigations"/>
-		      				<menuitem label="MIT students can not transfer prox cards to another student [Domain: University]" value="MIT students can not transfer prox cards to another student"/>
-		      				<menuitem label="Police may search people's homes if police have people's permission [Domain: Federal]" value="Police may search people's homes if police have people's permission"/>
-		      				<menuitem label="A person may access data on the private MIT domain if the person has permission for that data [Domain: University]" value="A person may access data on the private mit domain if the person has permission for that data"/>
-		      				<menuitem label="A service provider may not use phone records to deny service to a customer [Domain: State]" value="A service provider may not use phone records to deny service to a customer"/>
-		      				<menuitem label="TSA can transfer data to the FBI if the data is associated with terrorism [Domain: Federal]" value="TSA can transfer data to the fbi if the data is associated with terrorism"/>
-		      				<menuitem label="Anyone can access data in the possession of the state of Massachusetts [Domain: State]" value="Anyone can access data in the possession of the state of Massachusetts"/>
-		    			</menupopup>
-		  			</menulist>
-		
 		            <textbox multiline="true" id="sentence_text" disabled="true"/>
 		
 		        </vbox>
 		
-		    </groupbox> 
-		    
-		      <spacer style="height: 10px"/>
+		    <spacer style="height: 10px"/>
 		
 		  	<hbox>
 		        <spacer flex="1"/>
 		        <button label="Parse" oncommand="run()"/>
 		        <spacer flex="1"/>
 		  	</hbox>        
+		
+		</groupbox> 
 		    
+		        
 		    <vbox id="progressBox"></vbox>
 		    
-		    </groupbox> 
-		
+		    
 		  	<groupbox orient="vertical">
 		      
 		    	<label value="Store the generated policy here:"/>

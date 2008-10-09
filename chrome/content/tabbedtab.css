@@ -565,6 +565,80 @@ td{
  display: none;
  }
  
+ 
+ 
+ /*
+Start of styles for the photoPane, by albert08@csail.mit.edu
+*/
+div.PhotoContentPane {
+    float: left;
+    padding: 0px;
+    width: 950px;
+    border: 1px solid #AAAAAA;
+    padding: 10px;
+}
+div.PhotoListPanel {
+    float: left;
+    padding: 5px ;
+    border: 1px solid #AAAAAA;
+    width: 760px;
+}
+div.TagMenu {
+    float: left;
+    padding: 10px;
+    border: 1px solid #AAAAAA;
+    width: 140px;
+    margin: 0px 0px 0px 10px;
+}
+img.PThumbnail {
+    border: 1px solid #CCCCCC;
+    margin: 5px;
+    float: left;
+}
+.TagMenu_tag {
+	background: transparent url(icons/tag_tiny.png) 0px 1px no-repeat;
+	padding: 1px 0px 1px 18px;
+	margin-left: 5px;
+}
+div.photoImportContentPane {
+    float: left;
+    padding: 0px;
+    width: 930px;
+    border: 1px solid #AAAAAA;
+    padding: 10px;
+}
+.photoImportTitle {
+    font-size: 16px;
+    font-weight: bold;
+}
+.photoItemPanel {
+    width: 260px;
+    height: 300px;
+    float: left;
+    padding: 10px;
+    border: 1px solid #AAAAAA;
+    margin: 0px 10px 10px 0px; 
+}
+.tagItem {
+    float: left;
+    padding: 5px;
+    margin: 5px;
+    border: 1px solid #DDBB99;
+    background-color: #FFEEDD;
+}
+.controls {
+    clear: both;
+    text-align: right;
+    margin: 15px 15px 0px 0px;
+}
+.controlButton {
+    margin: 0px 0px 0px 10px;
+}
+/*
+End of styles for the photoPane
+*/
+ 
+ 
 /**
 The following style elements are for the ACL settings for the Policy Editor
 */ 

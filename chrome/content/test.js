@@ -92,6 +92,13 @@ Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
 Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  //@@ Ask Danny for a better icon
 Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  //@@ Ask Danny for a better icon
 
+// For photo albums (By albert08@csail.mit.edu)
+Icon.src.icon_photoPane = iconPrefix + 'icons/photo_small.png';
+Icon.src.icon_TinyTag = iconPrefix + 'icons/tag_tiny.png';
+//Icon.src.icon_photoImportPane = iconPrefix + 'icons/import_small.png';
+//Icon.src.icon_CloseButton = iconPrefix + 'icons/close_tiny.png';
+//Icon.src.icon_AddButton = iconPrefix + 'icons/addphoto_tiny.png';
+
 // For that one we need a document with grid lines.  Make data-x-generix maybe
 
 // actions for sources;

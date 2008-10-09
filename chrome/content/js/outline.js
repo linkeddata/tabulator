@@ -1121,6 +1121,11 @@ function Outline(doc) {
 	//LawPane @see panes/lawPane.js
 	panes.register(LawPane, false);
 	
+	//photoPane @see panes/photoPane.js (By albert08@csail.mit.edu)
+	panes.register(photoPane, false);
+	//photoImportPane @ @see panes/photoImportPane.js
+	//panes.register(photoImportPane, false);
+	
 //////////////////////////////////////////////////////////////////////////////
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK

@@ -90,7 +90,6 @@
   </statusbar>
 
   <script type="application/x-javascript"><![CDATA[
-    alert("alert from the xul");
     var myCheckbox;
     tabulator_init = function() {
       myCheckbox = document.getElementById("tabulator_setaccept");

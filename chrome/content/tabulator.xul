@@ -30,6 +30,9 @@
   <script type="application/x-javascript" src="js/panes/airPane.js"/>
   <script type="application/x-javascript" src="js/panes/LawPane.js"/>
   
+  <!-- browser reload hack -->
+  <script type="application/x-javascript" src="refresh_hack.js"/>
+  
   <!-- panes for Photo access control project (By albert08@csail.mit.edu) -->
   <script type="application/x-javascript" src="js/panes/photoPane.js"/>
   <!--<script type="application/x-javascript" src="js/panes/photoImportPane.js"/>-->
@@ -87,6 +90,7 @@
   </statusbar>
 
   <script type="application/x-javascript"><![CDATA[
+    alert("alert from the xul");
     var myCheckbox;
     tabulator_init = function() {
       myCheckbox = document.getElementById("tabulator_setaccept");

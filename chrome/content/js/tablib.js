@@ -20,4 +20,5 @@ loadScript('rdf/sparql.js');
 loadScript('sparqlView.js');
 loadScript('calView.js');
 loadScript('tableView.js');
+loadScript('visView.js');
 loadScript('calView/calView.js');

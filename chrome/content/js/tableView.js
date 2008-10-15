@@ -53,13 +53,13 @@ function tableView(container,doc)
                 // generate the subj and pred for each tdNode 
                 for (j = 0; j<numStats; j++) {
                     var stat = q.pat.statements[j];
-                    // statClone = <#s> <#p> ?* .
+                    // statClone = <s> <p> ?* .
                     var statClone = new RDFStatement(stat.subject, stat.predicate, stat.object);
                     if (statClone.object == v) {
                         statClone.object = bindings[v];
                         var sSubj = statClone.subject.toString();
                         if (sSubj[0] == '?') { 
-                            // statClone = ?* <#p> <#o> .
+                            // statClone = ?* <p> <o> .
                             statClone.subject = bindings[statClone.subject];
                         }
                         break;

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 14456 2008-02-22 07:21:49Z kennyluck $
+ * SVN ID: $Id: sources.js 25008 2008-10-15 22:54:10Z timbl $
  *
  ************************************************************/
 
@@ -73,6 +73,15 @@ function SourceFetcher(store, timeout, async) {
     }
     SourceFetcher.RDFXMLHandler.pattern = new RegExp("application/rdf\\+xml")
 
+    // This would much better use on-board XSLT engine.
+    SourceFetcher.doGRDDL = function(kb, doc, xslturi, xmluri) {
+        sf.requestURI('http://www.w3.org/2005/08/'
+                          + 'online_xslt/xslt?'
+                          + 'xslfile=' + escape(xslturi)
+                          + '&xmlfile=' + escape(xmluri),
+                   doc)    
+    }
+    
     SourceFetcher.XHTMLHandler = function (args) {
 	if (args) {
 	    this.dom = args[0]
@@ -90,7 +99,7 @@ function SourceFetcher(store, timeout, async) {
                     this.dom = dparser.parseFromString(xhr.responseText,
 						       'application/xml')
 		}
-		var kb = sf.store
+		var kb = sf.store;
 		
 		// dc:title
 		var title = this.dom.getElementsByTagName('title')
@@ -114,7 +123,8 @@ function SourceFetcher(store, timeout, async) {
 		    if (profile && Util.uri.protocol(profile)=='http') {
 			tabulator.log.info("GRDDL: Using generic "
 				 + "2003/11/rdf-in-xhtml-processor.");
-			sf.requestURI('http://www.w3.org/2005/08/'
+                        sf.doGRDDL(kb, xhr.uri, "http://www.w3.org/2003/11/rdf-in-xhtml-processor", xhr.uri.uri)
+/*			sf.requestURI('http://www.w3.org/2005/08/'
 					  + 'online_xslt/xslt?'
 					  + 'xslfile=http://www.w3.org'
 					  + '/2003/11/'
@@ -122,6 +132,7 @@ function SourceFetcher(store, timeout, async) {
 					  + '&xmlfile='
 					  + escape(xhr.uri.uri),
 				   xhr.uri)
+*/
 		    } else {
 			tabulator.log.info("GRDDL: No GRDDL profile in "+xhr.uri)
 		    }
@@ -138,7 +149,10 @@ function SourceFetcher(store, timeout, async) {
 	sf.mediatypes['application/xhtml+xml'] = {'q': 0.3}
     }
     SourceFetcher.XHTMLHandler.pattern = new RegExp("application/xhtml")
-    
+
+
+    /******************************************************/
+
     SourceFetcher.XMLHandler = function () {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
@@ -153,14 +167,16 @@ function SourceFetcher(store, timeout, async) {
 		var dom = dparser.parseFromString(xhr.responseText,
 							    'application/xml')
 
-		// It could be RDF/XML
+		// XML Semantics defined by root element namespace
 		// figure out the root element
 		for (var c=0; c<dom.childNodes.length; c++) {
 		    // is this node an element?
 		    if (dom.childNodes[c].nodeType == 1) {
 			// We've found the first element, it's the root
-			if (dom.childNodes[c].namespaceURI
-			    == kb.namespaces['rdf']) {
+                        var ns = dom.childNodes[c].namespaceURI;
+
+                        // Is it RDF/XML?
+			if (ns == tabulator.ns['rdf']) {
 			    tabulator.log.info(xhr.uri + " seems to have a root element"
 				     + " in the RDF namespace. We'll assume "
 				     + "it's RDF/XML.")
@@ -169,6 +185,17 @@ function SourceFetcher(store, timeout, async) {
 			    return
 			}
 			// it isn't RDF/XML or we can't tell
+                        
+                        // Are there any GRDDL transforms for this namespace?
+                        // @@ assumes ns documents have already been loaded
+                        var xforms = kb.each(kb.sym(ns),
+                            kb.sym("http://www.w3.org/2003/g/data-view#namespaceTransformation"));
+                        for (var i=0; i<xforms.length; i++) {
+                            var xform = xforms[i];
+			    tabulator.log.info(xhr.uri.uri + " namespace "+ns
+                                    +" has GRDDL ns transform" + xform.uri);
+                            sf.doGRDDL(kb, xhr.uri, xform.uri, xhr.uri.uri);
+                        }
 			break
 		    }
                 }
@@ -200,6 +227,12 @@ function SourceFetcher(store, timeout, async) {
 			return
 		    }
 		}
+                
+                // At this point we should check the namespace document (cache it!) and
+                // look for a GRDDL transform
+                
+                // @@  Get namespace document <n>, parse it, look for  <n> grddl:namespaceTransform ?y
+                // Apply ?y to   dom
 
 		// We give up. What dialect is this?
 		sf.failFetch(xhr, "unsupportedDialect")

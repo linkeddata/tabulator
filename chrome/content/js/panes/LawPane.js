@@ -102,7 +102,7 @@ LawPane.render = function(subject, myDocument) {
 			var end_index = 0;
 			if (start_index > -1){
 				var newStr = policy_text;
-				end_index = newStr.slice(start_index).search(/";/);
+				end_index = newStr.slice(start_index).search(/";/); //"
 			}
 			var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
 			myDocument.getElementById('td_2').innerHTML = rule_statement;
@@ -419,3 +419,10 @@ LawPane.render = function(subject, myDocument) {
     return div;
 
 }
+
+	//LawPane @see panes/lawPane.js
+tabulator.panes.register(LawPane, false);
+
+//ends
+
+

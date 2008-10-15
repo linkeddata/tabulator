@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 11924 2008-02-02 22:08:06Z kennyluck $
+// SVN ID: $Id: tabulate.js 25008 2008-10-15 22:54:10Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -11,7 +11,7 @@ isExtension=false;
 
 LanguagePreference = "en"    // @@ How to set this from the browser? From cookie?
 
-//var tabulator = {}; //This should eventually wrap all global vars.
+//var tabulator = {}; //This should eventually wrap all global vars. See log.js now
 
 // Namespaces for general use
 tabulator.ns = {};
@@ -127,8 +127,9 @@ Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
 Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
 Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
-
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
+Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  //@@ Ask Danny for a better icon
+Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  //@@ Ask Danny for a better icon
 
 // For that one we need a document with grid lines.  Make data-x-generix maybe
 

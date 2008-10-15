@@ -168,4 +168,7 @@
         return main_div;
     }
 
+    tabulator.panes.register(photoPane, false);
+
+// ends
 

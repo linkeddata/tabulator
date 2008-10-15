@@ -1,5 +1,32 @@
+/*   Outline Mode
+*/
+
+tabulator.panes = {};
+
+/*  PANES
+**
+**     Panes are regions of the outline view in which a particular subject is
+** displayed in a particular way.  They are like views but views are for query results.
+** subject panes are currently stacked vertically.
+*/
+var panes = tabulator.panes;
+panes.list = [];
+panes.paneForIcon = []
+panes.paneForPredicate = []
+panes.register = function(p, whether) {
+    p.requireQueryButton = whether;
+    panes.list.push(p);
+    if (p.icon) panes.paneForIcon[p.icon] = p;
+    if (p.predicates) {
+        for (x in p.predicates) {
+            panes.paneForPredicate[x] = {pred: x, code: p.predicates[x]};
+        }
+    }
+}
+
 function Outline(doc) {
     var myDocument=doc;
+    tabulator.outline = this; // Allow panes to access outline.register()
     this.document=doc;
     var outline = this; //Kenny: do we need this?
     var thisOutline = this;
@@ -420,8 +447,8 @@ function Outline(doc) {
         var paneNumber = 0;
         var relevantPanes = [];
         var labels = []
-        for (var i=0; i< panes.list.length; i++) {
-            var pane = panes.list[i];
+        for (var i=0; i< tabulator.panes.list.length; i++) {
+            var pane = tabulator.panes.list[i];
             var lab = pane.label(subject);
             if (!lab) continue;
             relevantPanes.push(pane);
@@ -460,21 +487,8 @@ function Outline(doc) {
     ** displayed in a particular way.  They are like views but views are for query results.
     ** subject panes are currently stacked vertically.
     */
-    
-    var panes = {}
-    panes.list = [];
-    panes.paneForIcon = []
-    panes.paneForPredicate = []
-    panes.register = function(p, whether) {
-        p.requireQueryButton = whether;
-        panes.list.push(p);
-        if (p.icon) panes.paneForIcon[p.icon] = p;
-        if (p.predicates) {
-            for (x in p.predicates) {
-                panes.paneForPredicate[x] = {pred: x, code: p.predicates[x]};
-            }
-        }
-    }
+
+
     
     ///////////////////////  Specific panes folow. 
     //
@@ -751,6 +765,15 @@ function Outline(doc) {
 
         var plist = kb.statementsMatching(s, knows)
         appendPropertyTRs(div, plist, false, function(pred){return true;})
+
+        var f = kb.formula();
+        var mboxes = kb.each(s, foaf('mbox'));
+        for (var i=0; i<mboxes.length; i++) {
+            var email = mboxes[i];
+            var reverse = 'http://foaf.qdos.com/reverse?ifp=' + email.uri; // @@ encode?? ask Steve
+            f.addStatement(s, rdfs('seeAlso2'), sym(reverse)); //@@@ better pred?
+        }
+        appendPropertyTRs(div, f, false, function(pred){return true;})
 
         return div;
     }
@@ -1098,6 +1121,8 @@ function Outline(doc) {
 	 */
 	
  	//the second argument indicates whether the query button is required
+    var panes = tabulator.panes
+    
     panes.register(classInstancePane, true);
 
     panes.register(defaultPane, true);
@@ -1115,11 +1140,8 @@ function Outline(doc) {
     panes.register(RDFXMLPane, false);
     
     panes.register(humanReadablePane, false);
-	//airPane @see panes/airPane.js
-    panes.register(airPane, false);
-
 	//LawPane @see panes/lawPane.js
-	panes.register(LawPane, false);
+//	panes.register(LawPane, false);
 	
 	//photoPane @see panes/photoPane.js (By albert08@csail.mit.edu)
 	panes.register(photoPane, false);
@@ -1700,6 +1722,8 @@ function Outline(doc) {
         this.GotoSubject(aa,true);
     }
 
+// #####################################  Cookie handling - could well migrate later #######
+
     function setCookie(name, value, expires, path, domain, secure) {
         expires = new Date(); // http://www.w3schools.com/jsref/jsref_obj_date.asp
         expires.setFullYear("2030"); // How does one say never?
@@ -1740,6 +1764,114 @@ function Outline(doc) {
                 "; expires=Thu, 01-Jan-70 00:00:01 GMT";
         }
     }
+
+
+    // See http://www.xulplanet.com/references/xpcomref/ifaces/nsIPrefBranch.html
+    // 
+   if(isExtension) {
+
+        const PREFID = '@mozilla.org/preferences;1';
+        const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
+        const PREF = Components.classes[PREFID].getService(nsIPrefBranch);
+
+        function getPref(prefstring) {
+            var type = PREF.getPrefType(prefstring);
+            const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
+            switch (type) {
+                case nsIPrefBranch.PREF_STRING:
+                    return PREF.getCharPref(prefstring);
+                    break;
+                case nsIPrefBranch.PREF_INT:
+                    return PREF.getIntPref(prefstring);
+                    break;
+                case nsIPrefBranch.PREF_BOOL:
+                default:
+                    return PREF.getBoolPref(prefstring);
+                    break;
+            }
+        }
+        
+        function setPrefString(key, val) {
+            PREF.setCharPref('tabulator.'+key, val);
+        }
+
+        // ############ File read-write stuff in case we need it ..
+        var savefile = "c:\\mozdata.txt";
+        function savePrefs() { // after http://www.captain.at/programming/xul/
+            try {
+                    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+            } catch (e) {
+                    alert("Permission to save file was denied.");
+            }
+            var file = Components.classes["@mozilla.org/file/local;1"]
+                    .createInstance(Components.interfaces.nsILocalFile);
+            file.initWithPath( savefile );
+            if ( file.exists() == false ) {
+                    alert( "Creating file... " );
+                    file.create( Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 420 );
+            }
+            var outputStream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                    .createInstance( Components.interfaces.nsIFileOutputStream );
+            /* Open flags 
+            #define PR_RDONLY       0x01
+            #define PR_WRONLY       0x02
+            #define PR_RDWR         0x04
+            #define PR_CREATE_FILE  0x08
+            #define PR_APPEND      0x10
+            #define PR_TRUNCATE     0x20
+            #define PR_SYNC         0x40
+            #define PR_EXCL         0x80
+            */
+            /*
+            ** File modes ....
+            **
+            ** CAVEAT: 'mode' is currently only applicable on UNIX platforms.
+            ** The 'mode' argument may be ignored by PR_Open on other platforms.
+            **
+            **   00400   Read by owner.
+            **   00200   Write by owner.
+            **   00100   Execute (search if a directory) by owner.
+            **   00040   Read by group.
+            **   00020   Write by group.
+            **   00010   Execute by group.
+            **   00004   Read by others.
+            **   00002   Write by others
+            **   00001   Execute by others.
+            **
+            */
+            outputStream.init( file, 0x04 | 0x08 | 0x20, 420, 0 );
+            var output = document.getElementById('blog').value;
+            var result = outputStream.write( output, output.length );
+            outputStream.close();
+        }
+        
+        function readPrefs() {
+            try {
+                    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+            } catch (e) {
+                    alert("Permission to read file was denied.");
+            }
+            var file = Components.classes["@mozilla.org/file/local;1"]
+                    .createInstance(Components.interfaces.nsILocalFile);
+            file.initWithPath( savefile );
+            if ( file.exists() == false ) {
+                    alert("File does not exist:" + savefile);
+            }
+            var is = Components.classes["@mozilla.org/network/file-input-stream;1"]
+                    .createInstance( Components.interfaces.nsIFileInputStream );
+            is.init( file,0x01, 00004, null);
+            var sis = Components.classes["@mozilla.org/scriptableinputstream;1"]
+                    .createInstance( Components.interfaces.nsIScriptableInputStream );
+            sis.init( is );
+            var text = sis.read( sis.available() );
+            document.getElementById('blog').value = output;
+        }
+
+    } // end if(isExtension)
+
+
+
+// ################################ End cookie
 
     /** get the target of an event **/  
     this.targetOf=function(e) {
@@ -2157,7 +2289,7 @@ function Outline(doc) {
                 break;
                 
             default:  // Look up any icons for panes
-                var pane = panes.paneForIcon[tsrc];
+                var pane = tabulator.panes.paneForIcon[tsrc];
                 if (!pane) break;
                 
                 // Find the containing table for this subject 
@@ -2807,7 +2939,9 @@ function Outline(doc) {
                tabStatusBar.setAttribute('style','display:none');           
       },true);
     }
-
+    
+    // this.panes = panes; // Allow external panes to register
+    
     return this;
 }//END OF OUTLINE
 

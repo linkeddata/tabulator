@@ -392,3 +392,14 @@
 
         return div;
     }
+    
+    
+    //airPane @see panes/airPane.js and outline.js
+    tabulator.panes.register(airPane, false);
+
+// ends
+
+
+
+    
+    

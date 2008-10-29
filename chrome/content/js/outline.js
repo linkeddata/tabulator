@@ -771,7 +771,7 @@ function Outline(doc) {
         for (var i=0; i<mboxes.length; i++) {
             var email = mboxes[i];
             var reverse = 'http://foaf.qdos.com/reverse?ifp=' + email.uri; // @@ encode?? ask Steve
-            f.addStatement(s, rdfs('seeAlso2'), sym(reverse)); //@@@ better pred?
+            f.addStatement(s, rdfs('seeAlso2'), kb.sym(reverse)); //@@@ better pred? @@Hack
         }
         appendPropertyTRs(div, f, false, function(pred){return true;})
 

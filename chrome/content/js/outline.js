@@ -510,7 +510,7 @@ function Outline(doc) {
         return "List "+n;
     }
 
-    classInstancePane.render = function(subject) {
+    classInstancePane.render = function(subject, myDocument) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
         var sts = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
@@ -522,266 +522,12 @@ function Outline(doc) {
         }
 
         // Don't need to check in the filter as the plist is already trimmed
-        var plist = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
+        var plist = tabulator.kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
         appendPropertyTRs(div, plist, true, function(pred){return true;})
         return div;
     }
     //panes.register(classInstancePane);
 
-
-    /*   Friend-of-a-Fried Pane
-    **
-    **  This outline pane provides social network functions
-    */
-    var socialPane = {};
-    socialPane.icon = Icon.src.icon_foaf;
-    socialPane.label = function(subject) {
-        if (!kb.whether(
-            subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))) return null;
-        return "Friends";
-    }
-
-    socialPane.render = function(s) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'socialPane');
-        var foaf = tabulator.ns.foaf;
-        // Image top right
-        var src = kb.any(s, foaf('img'));
-        if (!src) src = kb.any(s, foaf('depiction'));
-        if (src) {
-            var img = myDocument.createElement("IMG")
-            img.setAttribute('src', src.uri) // w640 h480
-            img.class = 'foafPic';
-            div.appendChild(img)
-        }
-        var name = kb.any(s, foaf('name'));
-        if (!name) name = '???';
-        var h3 = myDocument.createElement("H3");
-        h3.appendChild(myDocument.createTextNode(name));
-
-        var me_uri = getCookie('me');
-        var me = me_uri? kb.sym(me_uri) : null;
-        var div2 = myDocument.createElement("div");
-        tabulator.options.setMe = function(uri) {
-            setCookie('me', uri ? uri : '', '3007-01-06');
-            alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
-        }
-        if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
-            var f = myDocument.createElement('form');
-            div.appendChild(f);
-            var input = myDocument.createElement('input');
-            f.appendChild(input);
-            var tx = myDocument.createTextNode("This is you");
-            tx.className = 'question';
-            f.appendChild(tx);
-            var myHandler = function(e) {
-                // alert('this.checked='+this.checked);
-                var uri = this.checked? s.uri : '';
-                setCookie('me', uri, '3007-01-06');
-                alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
-            }
-            input.setAttribute('type', 'checkbox');
-            input.checked = (me_uri == s.uri);
-            input.addEventListener('click', myHandler, false);
-        }
-        var common = function(x,y) { // Find common members of two lists
-//            var dict = [];
-            var both = [];
-            for(var i=0; i<x.length; i++) {
-//                dict[x[i].uri] = true;
-                for(var j=0; j<y.length; j++) {
-                    if (y[j].sameTerm(x[i])) {
-                        both.push(y[j]);
-                        break;
-                    }
-                }
-
-            }
-            return both;
-        }
-        var plural = function(n, s) {
-            var res = ' ';
-            res+= (n ? n : 'No');
-            res += ' ' + s;
-            if (n != 1) res += 's';
-            return res;
-        }
-        
-        var people = function(n) {
-            var res = ' ';
-            res+= (n ? n : 'no');
-            if (n == 1) return res + ' person';
-            return res + ' people';
-        }
-        var say = function(str) {
-            var tx = myDocument.createTextNode(str);
-            var p = myDocument.createElement('p');
-            p.appendChild(tx);
-            div.appendChild(p);
-        }
-        
-        var buildCheckboxForm = function(lab, statement, state) {
-            var f = myDocument.createElement('form');
-            var input = myDocument.createElement('input');
-            f.appendChild(input);
-            var tx = myDocument.createTextNode(lab);
-            tx.className = 'question';
-            f.appendChild(tx);
-            input.setAttribute('type', 'checkbox');
-            var boxHandler = function(e) {
-                tx.className = 'pendingedit';
-                alert('Should be greyed out')
-                if (this.checked) { // Add link
-                    try {
-                        thisOutline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
-                            tx.className = 'question';
-                            if (!success){
-                                alert("Error occurs while inserting "+statement+'\n\n'+error_body);
-                                input.checked = false; //rollback UI
-                                return;
-                            }
-                            kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
-                        })
-                    }catch(e){
-                        alert("Data write fails:" + e);
-                        input.checked = false; //rollback UI
-                        tx.className = 'question';
-                    }
-                } else { // Remove link
-                    try {
-                        thisOutline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
-                            tx.className = 'question';
-                            if (!success){
-                                alert("Error occurs while deleting "+statement+'\n\n'+error_body);
-                                this.checked = true; // Rollback UI
-                            } else {
-                                kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
-                            }
-                        })
-                    }catch(e){
-                        alert("Delete fails:" + e);
-                        this.checked = true; // Rollback UI
-                        return;
-                    }
-                }
-            }
-            input.checked = state;
-            input.addEventListener('click', boxHandler, false)
-            return f;
-        }
-        
-        var knows = foaf('knows');
-//        var givenName = kb.sym('http://www.w3.org/2000/10/swap/pim/contact#givenName');
-        var familiar = kb.any(s, foaf('givenname')) || kb.any(s, foaf('firstName')) ||
-                    kb.any(s, foaf('nick')) || kb.any(s, foaf('name'));
-        if (familiar) familiar = familiar.value;
-        var friends = kb.each(s, knows);
-        
-        // Do I have a public profile document?
-        var profile = null; // This could be  SPARQL
-        var editable = false;
-        if (me) {
-            var works = kb.each(undefined, foaf('primaryTopic'), me)
-            for (var i=0; i<works.length; i++) {
-                if (kb.whether(works[i], rdf('type'),
-                                            foaf('PersonalProfileDocument'))) {
-
-                    editable = outline.sparql.prototype.editable(works[i].uri, kb);
-                    if (!editable) { 
-                        say("Your profile <"+works[i].uri+"> is not remotely editable.");
-                    } else {
-                        profile = works[i];
-                        break;
-                    }
-                }
-            }
-
-            if (me_uri == s.uri ) { // This is about me
-                if (!profile) {
-                    say("I couldn't find an editable personal profile document.");
-                } else  {
-                    say("Editing your profile <"+profile.uri+">.");
-                }
-            } else { // This is about someone else
-                // My relationship with this person
-                var incoming = kb.whether(s, knows, me);
-                var outgoing = false;
-                var outgoingSt = kb.statementsMatching(me, knows, s);
-                if (outgoingSt.length) {
-                    outgoing = true;
-                    if (!profile) profile = outgoingSt.why;
-                } // Do I have an EDITABLE profile?
-                if (profile) editable = outline.sparql.prototype.editable(profile.uri, kb)
-
-                var msg = 'You and '+familiar
-                if (!incoming) {
-                    if (!outgoing) {
-                        msg = msg + ' do not know each other.';
-                    } else {
-                        msg = 'You know '+familiar+ ' (unconfirmed)';
-                    }
-                } else {
-                    if (!outgoing) {
-                        msg = familiar + ' knows you (unconfirmed).';
-                    } else {
-                        msg = msg + ' know each other.';
-                    }
-                }
-                var tr = myDocument.createElement('tr');
-                div.appendChild(tr);
-                tr.appendChild(myDocument.createTextNode(msg))
-
-
-                if (editable) {
-                    var f = buildCheckboxForm("You know " + familiar,
-                            new RDFStatement(me, knows, s, profile), outgoing)
-                    div.appendChild(f);
-                } // editable
-                 
-                if (friends) {
-                    var myFriends = kb.each(me, foaf('knows'));
-                    // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
-                    if (myFriends) {
-                        var mutualFriends = common(friends, myFriends);
-                        var tr = myDocument.createElement('tr');
-                        div.appendChild(tr);
-                        tr.appendChild(myDocument.createTextNode(
-                                    'You'+ (familiar? ' and '+familiar:'') +' know'+
-                                    people(mutualFriends.length)+' in common'))
-                        if (mutualFriends) {
-                            for (var i=0; i<mutualFriends.length; i++) {
-                                tr.appendChild(myDocument.createTextNode(
-                                    ',  '+ label(mutualFriends[i])));
-                            }
-                        }
-                    }
-                    var tr = myDocument.createElement('tr');
-                    div.appendChild(tr);
-                } // friends
-            } // About someone else
-        } // me is defined
-        
-        // div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
-
-        var plist = kb.statementsMatching(s, knows)
-        appendPropertyTRs(div, plist, false, function(pred){return true;})
-
-        var f = kb.formula();
-        var mboxes = kb.each(s, foaf('mbox'));
-        for (var i=0; i<mboxes.length; i++) {
-            var email = mboxes[i];
-            var reverse = 'http://foaf.qdos.com/reverse?ifp=' + email.uri; // @@ encode?? ask Steve
-            f.addStatement(s, rdfs('seeAlso2'), kb.sym(reverse)); //@@@ better pred? @@Hack
-        }
-        appendPropertyTRs(div, f, false, function(pred){return true;})
-
-        return div;
-    }
-    
-    var me_uri = getCookie('me');   // Load my friend list straight away .. @@kludge
-    if (me_uri) sf.lookUpThing(kb.sym(me_uri));
-    
-//    panes.register(socialPane); // later
 
 
     /*      Data content Pane
@@ -964,7 +710,6 @@ function Outline(doc) {
         internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
     internalPane.predicates[owl('sameAs').uri] = 1;
     //panes.register(internalPane);
-    //panes.register(socialPane);
     
     
     /*   Human-readable Pane
@@ -1130,8 +875,6 @@ function Outline(doc) {
     panes.register(internalPane, true);
 
     panes.register(imagePane, false);
-    
-    panes.register(socialPane, true);
     
     panes.register(dataContentPane, false);
     
@@ -1413,6 +1156,7 @@ function Outline(doc) {
         }
     } //  appendPropertyTRs
 
+    this.appendPropertyTRs = appendPropertyTRs;
 
 /*   termWidget
 **
@@ -1721,157 +1465,6 @@ function Outline(doc) {
         if (!aa) return;
         this.GotoSubject(aa,true);
     }
-
-// #####################################  Cookie handling - could well migrate later #######
-
-    function setCookie(name, value, expires, path, domain, secure) {
-        expires = new Date(); // http://www.w3schools.com/jsref/jsref_obj_date.asp
-        expires.setFullYear("2030"); // How does one say never?
-        var curCookie = name + "=" + escape(value) +
-            ((expires) ? "; expires=" + expires.toGMTString() : "") +
-            ((path) ? "; path=" + path : "") +
-            ((domain) ? "; domain=" + domain : "") +
-            ((secure) ? "; secure" : "");
-        myDocument.cookie = curCookie;
-//        alert('Cookie:' + curCookie);
-    }
-    
-    /*  getCookie
-    **
-    **  name - name of the desired cookie
-    **  return string containing value of specified cookie or null
-    **  if cookie does not exist
-    */
-    function getCookie(name) {
-        var dc = myDocument.cookie;
-        var prefix = name + "=";
-        var begin = dc.indexOf("; " + prefix);
-        if (begin == -1) {
-            begin = dc.indexOf(prefix);
-            if (begin != 0) return null;
-        } else
-            begin += 2;
-        var end = myDocument.cookie.indexOf(";", begin);
-        if (end == -1)
-            end = dc.length;
-        return decodeURIComponent(dc.substring(begin + prefix.length, end));
-    }
-    function deleteCookie(name, path, domain) {
-        if (getCookie(name)) {
-            myDocument.cookie = name + "=" +
-                ((path) ? "; path=" + path : "") +
-                ((domain) ? "; domain=" + domain : "") +
-                "; expires=Thu, 01-Jan-70 00:00:01 GMT";
-        }
-    }
-
-
-    // See http://www.xulplanet.com/references/xpcomref/ifaces/nsIPrefBranch.html
-    // 
-   if(isExtension) {
-
-        const PREFID = '@mozilla.org/preferences;1';
-        const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
-        const PREF = Components.classes[PREFID].getService(nsIPrefBranch);
-
-        function getPref(prefstring) {
-            var type = PREF.getPrefType(prefstring);
-            const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
-            switch (type) {
-                case nsIPrefBranch.PREF_STRING:
-                    return PREF.getCharPref(prefstring);
-                    break;
-                case nsIPrefBranch.PREF_INT:
-                    return PREF.getIntPref(prefstring);
-                    break;
-                case nsIPrefBranch.PREF_BOOL:
-                default:
-                    return PREF.getBoolPref(prefstring);
-                    break;
-            }
-        }
-        
-        function setPrefString(key, val) {
-            PREF.setCharPref('tabulator.'+key, val);
-        }
-
-        // ############ File read-write stuff in case we need it ..
-        var savefile = "c:\\mozdata.txt";
-        function savePrefs() { // after http://www.captain.at/programming/xul/
-            try {
-                    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
-            } catch (e) {
-                    alert("Permission to save file was denied.");
-            }
-            var file = Components.classes["@mozilla.org/file/local;1"]
-                    .createInstance(Components.interfaces.nsILocalFile);
-            file.initWithPath( savefile );
-            if ( file.exists() == false ) {
-                    alert( "Creating file... " );
-                    file.create( Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 420 );
-            }
-            var outputStream = Components.classes["@mozilla.org/network/file-output-stream;1"]
-                    .createInstance( Components.interfaces.nsIFileOutputStream );
-            /* Open flags 
-            #define PR_RDONLY       0x01
-            #define PR_WRONLY       0x02
-            #define PR_RDWR         0x04
-            #define PR_CREATE_FILE  0x08
-            #define PR_APPEND      0x10
-            #define PR_TRUNCATE     0x20
-            #define PR_SYNC         0x40
-            #define PR_EXCL         0x80
-            */
-            /*
-            ** File modes ....
-            **
-            ** CAVEAT: 'mode' is currently only applicable on UNIX platforms.
-            ** The 'mode' argument may be ignored by PR_Open on other platforms.
-            **
-            **   00400   Read by owner.
-            **   00200   Write by owner.
-            **   00100   Execute (search if a directory) by owner.
-            **   00040   Read by group.
-            **   00020   Write by group.
-            **   00010   Execute by group.
-            **   00004   Read by others.
-            **   00002   Write by others
-            **   00001   Execute by others.
-            **
-            */
-            outputStream.init( file, 0x04 | 0x08 | 0x20, 420, 0 );
-            var output = document.getElementById('blog').value;
-            var result = outputStream.write( output, output.length );
-            outputStream.close();
-        }
-        
-        function readPrefs() {
-            try {
-                    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
-            } catch (e) {
-                    alert("Permission to read file was denied.");
-            }
-            var file = Components.classes["@mozilla.org/file/local;1"]
-                    .createInstance(Components.interfaces.nsILocalFile);
-            file.initWithPath( savefile );
-            if ( file.exists() == false ) {
-                    alert("File does not exist:" + savefile);
-            }
-            var is = Components.classes["@mozilla.org/network/file-input-stream;1"]
-                    .createInstance( Components.interfaces.nsIFileInputStream );
-            is.init( file,0x01, 00004, null);
-            var sis = Components.classes["@mozilla.org/scriptableinputstream;1"]
-                    .createInstance( Components.interfaces.nsIScriptableInputStream );
-            sis.init( is );
-            var text = sis.read( sis.available() );
-            document.getElementById('blog').value = output;
-        }
-
-    } // end if(isExtension)
-
-
-
-// ################################ End cookie
 
     /** get the target of an event **/  
     this.targetOf=function(e) {

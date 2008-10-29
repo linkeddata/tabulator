@@ -76,7 +76,7 @@ div.title {
 	
 	font-size: 110%;
 	background-color: grey;
-    foreground-color: white; 
+    color: white; 
     padding: 0.5em;  
     margin-top: 0.5em; 
     margin-bottom: 0.5em;
@@ -101,7 +101,7 @@ div.description {
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
-    padding: 1 5px;
+    padding: 1px 5px;
     width: 1000px; 
     background-color: #ffffdd; 
     margin-top: 0.5em; margin-bottom: 0.5em;

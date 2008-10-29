@@ -267,6 +267,7 @@ var tLoadURIObserver = {
   },
   //this fires after the page is scrolled before a newpage is loaded.
   onLocationChange:function(aWebProgress, aRequest, aLocation){
+/* Comment out until kenny checks in hasOutliner  @@ TBL
     if (aLocation){
     //tabulator.log.warn("onLocationChange: currentURI is %s, aLocation is %s"
     //                    , gBrowser.currentURI.spec, aLocation.spec);
@@ -274,10 +275,12 @@ var tLoadURIObserver = {
        //this filters out 'open in new window' , this filters out switching tabs
     if (aWebProgress.DOMWindow == content && gBrowser.selectedBrowser == this._lastBrowser && aLocation){
       //neglect non-outlner pages...
+
       if (tabulator.hasOutliner(content.document)){;
       //Not uri of the same document -> return.
-      if (Util.uri.docpart(this._lastURI.spec) == Util.uri.docpart(aLocation.spec) /*&&
-          aLocation.spec.indexOf('#') > -1*/){
+      if (Util.uri.docpart(this._lastURI.spec) == Util.uri.docpart(aLocation.spec) 
+	// && aLocation.spec.indexOf('#') > -1
+	){
             
       //throw new Error(aLocation.spec);
       if (this._lastURI.spec != aLocation.spec){
@@ -293,7 +296,9 @@ var tLoadURIObserver = {
     //always do this to record lastBrowser and lastURI
     this._lastBrowser = gBrowser.selectedBrowser;    
     this._lastURI = gBrowser.currentURI;
+*/
   },
+
   _lastBrowser:null,
   _lastURI:null,  
   onSecurityChange:function(){

@@ -1,3 +1,9 @@
+/*  Preferences Handling for Tabulator extension.
+**
+** Contains a listenr for changes in prefernces,
+** as well as set and get of user prefereces specifically for tabulator.
+** See also the preferences.js file in the online version.
+*/
 var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                    .getService(Components.interfaces.nsIPrefBranch);
 try {
@@ -52,3 +58,52 @@ var tabulatorPrefObserver =
   }
 }
 tabulatorPrefObserver.register();
+
+//////////////////////////////////////////////////////////////////////////
+
+//   Cookie-like user preference handling
+//  See preferences.js in the online version
+
+
+
+tabulator.preferences = {};
+
+
+// See http://www.xulplanet.com/references/xpcomref/ifaces/nsIPrefBranch.html
+// 
+tabulator.preferences.PREFID = '@mozilla.org/preferences;1';
+tabulator.preferences.nsIPrefBranch = Components.interfaces.nsIPrefBranch;
+tabulator.preferences.PREF = Components.classes[tabulator.preferences.PREFID].getService(Components.interfaces.nsIPrefBranch);
+
+tabulator.preferences.get = function(key) {
+    var prefstring = 'tabulator.' + key;
+    var type = tabulator.preferences.PREF.getPrefType(prefstring);
+    var nsIPrefBranch = Components.interfaces.nsIPrefBranch;
+    switch (type) {
+        case nsIPrefBranch.PREF_STRING:
+            return tabulator.preferences.PREF.getCharPref(prefstring);
+            break;
+        case nsIPrefBranch.PREF_INT:
+            return tabulator.preferences.PREF.getIntPref(prefstring);
+            break;
+        default:
+            alert('Unexpected type of preference:'+type+' for '+prefstring)
+            return null
+        case nsIPrefBranch.PREF_INVALID:
+            return null;
+            break;
+        case nsIPrefBranch.PREF_BOOL:
+            return tabulator.preferences.PREF.getBoolPref(prefstring);
+            break;
+    }
+}
+
+tabulator.preferences.set = function(key, val) {
+    tabulator.preferences.PREF.setCharPref('tabulator.'+key, val);
+}
+
+
+// ends
+
+
+ 

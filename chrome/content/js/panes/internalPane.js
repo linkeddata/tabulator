@@ -33,9 +33,9 @@ tabulator.panes.internalPane = {
         var plist = kb.statementsMatching(subject)
         if (subject.uri) plist.push(new RDFStatement(subject,
                     kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, sf.appNode));
-        appendPropertyTRs(div, plist, false, filter)
+        tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, filter)    
+        tabulator.outline.appendPropertyTRs(div, plist, true, filter)    
         return div
     },
     

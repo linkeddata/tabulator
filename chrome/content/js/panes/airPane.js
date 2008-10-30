@@ -67,7 +67,7 @@
 	           	}    
 	        }
     
-    	var statementsAsTables = myDocument.outline.statementsAsTables;        
+    	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
   
   		airPane.render.extractLogURI = function(fullURI){
   			var logPos = fullURI.search(/logFile=/);

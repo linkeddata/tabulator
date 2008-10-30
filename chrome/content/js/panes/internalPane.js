@@ -23,7 +23,7 @@ tabulator.panes.internalPane = {
         var kb = tabulator.kb;
         subject = kb.canon(subject);
         function filter(pred, inverse) {
-            if (pred.sameTerm(owl('sameAs'))) return false; //our principle is not to show sameAs
+            if (pred.sameTerm(tabulator.ns.owl('sameAs'))) return false; //our principle is not to show sameAs
             return  !!(typeof tabulator.panes.internalPane.predicates[pred.uri] != 'undefined');
         }
         var div = myDocument.createElement('div')

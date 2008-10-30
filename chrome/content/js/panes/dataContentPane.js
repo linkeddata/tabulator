@@ -23,7 +23,7 @@ tabulator.panes.dataContentPane = {
     },
     
     shouldGetFocus: function(subject) {
-        return tabulator.kb.whether(subject, rdf('type'), link('RDFDocument'));
+        return tabulator.kb.whether(subject, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'));
     },
 
     statementsAsTables: function statementsAsTables(sts, myDocument) {
@@ -136,7 +136,7 @@ tabulator.panes.dataContentPane = {
         // or we could keep all the pre-smushed triples.
         var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
         if (1) {
-            div.appendChild(tabulator.panes.statementsAsTables(sts, myDocument));
+            div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(sts, myDocument));
             
         } else {  // An outline mode openable rendering .. might be better
             var sz = Serializer();

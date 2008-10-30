@@ -18,7 +18,7 @@ tabulator.panes.register ({
         return "Data ("+n+") as N3";
     },
 
-    render: function(subject) {
+    render: function(subject, myDocument) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'n3Pane');
         // Because of smushing etc, this will not be a copy of the original source

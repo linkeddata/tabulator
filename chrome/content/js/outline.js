@@ -15,7 +15,8 @@ panes.paneForIcon = []
 panes.paneForPredicate = []
 panes.register = function(p, whether) {
     p.requireQueryButton = whether;
-    panes.list.push(p);
+    tabulator.panes.list.push(p);
+    // alert("Registering pane "+p.name); //@@
     if (p.icon) panes.paneForIcon[p.icon] = p;
     if (p.predicates) {
         for (x in p.predicates) {
@@ -449,7 +450,7 @@ function Outline(doc) {
         var labels = []
         for (var i=0; i< tabulator.panes.list.length; i++) {
             var pane = tabulator.panes.list[i];
-            var lab = pane.label(subject);
+            var lab = pane.label(subject, myDocument);
             if (!lab) continue;
             relevantPanes.push(pane);
             labels.push(lab);
@@ -490,375 +491,13 @@ function Outline(doc) {
 
 
     
-    ///////////////////////  Specific panes folow. 
+    ///////////////////////  Specific panes are in panes/*.js 
     //
-    // The default pane sed is the first one registerd for which the label
+    // The defaultPaneis the first one registerd for which the label
     //  method 
     // Those registered first take priority as a default pane.
     // That is, those earlier in this file
     
-    /*   Class member Pane
-    **
-    **  This outline pane contains lists the members of a class
-    */
-    var classInstancePane = {};
-    classInstancePane.icon = Icon.src.icon_instances;
-    classInstancePane.label = function(subject) {
-        var n = kb.statementsMatching(
-            undefined, tabulator.ns.rdf( 'type'), subject).length;
-        if (n == 0) return null;
-        return "List "+n;
-    }
-
-    classInstancePane.render = function(subject, myDocument) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'instancePane');
-        var sts = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
-        if (sts.length > 10) {
-            var tr = myDocument.createElement('TR');
-            tr.appendChild(myDocument.createTextNode(''+sts.length));
-            tr.AJAR_statement=sts[i];
-            div.appendChild(tr);
-        }
-
-        // Don't need to check in the filter as the plist is already trimmed
-        var plist = tabulator.kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
-        appendPropertyTRs(div, plist, true, function(pred){return true;})
-        return div;
-    }
-    //panes.register(classInstancePane);
-
-
-
-    /*      Data content Pane
-    **
-    **  This pane shows the content of a particular RDF resource
-    ** or at least the RDF semantics we attribute to that resource.
-    */
-
-    // To do:  - Only take data from one graph
-    //         - Only do forwards not backward?
-    //         - Expand automatically all the way down
-    //         - original source view?  Use ffox view source
-
-    var dataContentPane = {};
-    dataContentPane.icon = Icon.src.icon_dataContents;
-    dataContentPane.label = function(subject) {
-        var n = kb.statementsMatching(
-            undefined, undefined, undefined, subject).length;
-        if (n == 0) return null;
-        return "Data ("+n+")";
-    }
-    dataContentPane.shouldGetFocus = function(subject) {
-        return kb.whether(subject, rdf('type'), link('RDFDocument'));
-    }
-
-    // View the data in a file in user-friendly way
-    dataContentPane.render = function(subject) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'dataContentPane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        if (1) {
-            div.appendChild(statementsAsTables(sts));
-            
-        } else {  // An outline mode openable rendering .. might be better
-            var sz = Serializer();
-            var res = sz.rootSubjects(sts);
-            var roots = res[0]
-            var p  = {};
-            // p.icon = dataContentPane.icon
-            p.render = function(s2) {
-                var div = myDocument.createElement('div')
-                
-                div.setAttribute('class', 'withinDocumentPane')
-                var plist = kb.statementsMatching(s2, undefined, undefined, subject)
-                appendPropertyTRs(div, plist, false, withinDocumentPane.filter)
-                return div    
-            }
-            for (var i=0; i<roots.length; i++) {
-                var tr = myDocument.createElement("TR");
-                root = roots[i];
-                tr.style.verticalAlign="top";
-                var td = thisOutline.outline_objectTD(root, undefined, tr)
-                tr.appendChild(td)
-                div.appendChild(tr);
-                outline_expand(td, root,  p);
-            }
-        }
-        return div
-    }
-    //panes.register(dataContentPane);
-
-
-
-    /*   Pane within Document data content view
-    **
-    **  This outline pane contains docuemnts from a specific source document only.
-    */
-    var withinDocumentPane = {};
-    withinDocumentPane.icon = Icon.src.icon_withinDocumentPane; // should not show
-    withinDocumentPane.label = function(subject) { return 'doc contents';};
-    withinDocumentPane.filter = function(pred, inverse) {
-        return true; // show all
-    }
-    withinDocumentPane.render = function(subject, source) {
-        var div = myDocument.createElement('div')
-        
-        div.setAttribute('class', 'withinDocumentPane')
-//        appendRemoveIcon(div, subject, div);
-                  
-        var plist = kb.statementsMatching(subject, undefined, undefined, source)
-        appendPropertyTRs(div, plist, false, withinDocumentPane.filter)
-        return div    
-    }
-    // panes.register(withinDocumentPane);
-    
-    /*   Default Pane
-    **
-    **  This outline pane contains the properties which are
-    **  normaly displayed to the user. See also: innternalPane
-    */
-    var defaultPane = {};
-    defaultPane.icon = Icon.src.icon_defaultPane;
-    defaultPane.label = function(subject) { return 'about ';};
-    defaultPane.filter = function(pred, inverse) {
-        if (typeof internalPane.predicates[pred.uri] != 'undefined')
-            return false;
-        if (inverse && (pred.uri == 
-                "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) return false;
-        return true;
-    }
-    defaultPane.render = function(subject) {
-        tabulator.log.info("@defaultPane.render, myDocument is now " + myDocument.location);    
-        subject = kb.canon(subject);
-        var div = myDocument.createElement('div')
-        
-        div.setAttribute('class', 'defaultPane')
-//        appendRemoveIcon(div, subject, div);
-                  
-        var plist = kb.statementsMatching(subject)
-        appendPropertyTRs(div, plist, false, defaultPane.filter)
-        plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, defaultPane.filter)
-        if ((subject.termType == 'symbol' && 
-             outline.UserInput.updateService.editMethod(kb.sym(Util.uri.docpart(subject.uri)), kb))
-             || (subject.termType == 'bnode' &&
-             outline.UserInput.updateService.editMethod(kb.subjectIndex[subject.hashString()][0].why)
-                //check the document containing the definition of the bnode
-            /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
-            var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
-            var holdingTd = myDocument.createElement('td'); //in userinput.js
-            holdingTd.setAttribute('colspan','2');
-            holdingTd.setAttribute('notSelectable','true');
-            var img = myDocument.createElement('img');
-            img.src = Icon.src.icon_add_new_triple;
-            img.className='bottom-border-active'
-            //img.addEventListener('click',thisOutline.UserInput.borderClick,false);
-            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
-        }        
-        return div    
-    }
-    //panes.register(defaultPane);
-    
-    /*   Internal Pane
-    **
-    **  This outline pane contains the properties which are
-    ** internal to the user's interaction with the web, and are not normaly displayed
-    */
-    var internalPane = {};
-    internalPane.icon = Icon.src.icon_internals;
-    internalPane.label = function(subject) {
-        var sts = kb.statementsMatching(subject);
-        sts = sts.concat(kb.statementsMatching(undefined, undefined, subject));
-        for (var i=0; i<sts.length; i++) {
-            if (internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
-                return "under the hood";
-        }
-        return null
-    }
-    internalPane.render = function(subject) {
-        subject = kb.canon(subject);
-        function filter(pred, inverse) {
-            if (pred.sameTerm(owl('sameAs'))) return false; //our principle is not to show sameAs
-            return  !!(typeof internalPane.predicates[pred.uri] != 'undefined');
-        }
-        var div = myDocument.createElement('div')
-        div.setAttribute('class', 'internalPane')
-//        appendRemoveIcon(div, subject, div);
-                  
-        var plist = kb.statementsMatching(subject)
-        if (subject.uri) plist.push(new RDFStatement(subject,
-                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, sf.appNode));
-        appendPropertyTRs(div, plist, false, filter)
-        plist = kb.statementsMatching(undefined, undefined, subject)
-        appendPropertyTRs(div, plist, true, filter)    
-        return div
-    }
-    internalPane.predicates = {// Predicates used for inner workings. Under the hood
-        'http://www.w3.org/2007/ont/link#request': 1,
-        'http://www.w3.org/2007/ont/link#requestedBy': 1,
-        'http://www.w3.org/2007/ont/link#source': 1,
-        'http://www.w3.org/2007/ont/link#session': 2, // 2=  test neg but display
-        'http://www.w3.org/2006/link#uri': 1,
-        'http://www.w3.org/2006/link#Document': 1,
-    }
-    internalPane.predicates[tabulator.ns.link('all').uri] = 1;  // From userinput.js
-    if (!SourceOptions["seeAlso not internal"].enabled)
-        internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
-    internalPane.predicates[owl('sameAs').uri] = 1;
-    //panes.register(internalPane);
-    
-    
-    /*   Human-readable Pane
-    **
-    **  This outline pane contains the document contents for an HTML document
-    **  This is for peeking a page, because the user might not want to leave the tabulator.
-    */
-    var humanReadablePane = {};
-    humanReadablePane.icon = Icon.src.icon_visit;
-    humanReadablePane.label = function(subject) {
-        //recursive iframe is not allowed
-        if (isExtension && myDocument.location == subject.uri) return null;
-        var request = kb.any(subject, tabulator.ns.link("request"));
-        if (!request) return null;
-        var content_type = kb.the(request, tabulator.ns.httph("content-type"));
-        if (!content_type) return null;//this hapeens when request is generated but response not ready        
-        var allowed = ['text/plain','application/x-javascript',
-                       ,'text/html','application/xhtml+xml','text/css'];
-        if (allowed.filter(function(s){return content_type.value.search(s)!=-1}).length) return "view";
-        //if (!kb.anyStatementMatching(
-        //    subject, tabulator.ns.rdf( 'type'), tabulator.ns.link( 'TextDocument')))
-        //    return null;
-        //var s = dataContentPane.label(subject);
-        // Done to stop Tab'r trying to show nestd RDF and N3 files in Firefox
-        //if (s) return null; // If a data document, don't try human readable view.  (?)
-        return null;
-    }
-    humanReadablePane.render = function(subject) {
-        var div = myDocument.createElement("div")
-    
-        div.setAttribute('class', 'docView')    
-        var iframe = myDocument.createElement("IFRAME")
-        iframe.setAttribute('src', subject.uri)
-        iframe.setAttribute('class', 'doc')
-        iframe.setAttribute('height', '480')
-        iframe.setAttribute('width', '640')
-        var tr = myDocument.createElement('TR')
-        tr.appendChild(iframe)
-        div.appendChild(tr)
-        return div
-    }
-    //panes.register(humanReadablePane);
-
-
-/*   Image Pane
-    **
-    **  This outline pane contains the document contents for an HTML document
-    */
-    var imagePane = {};
-    imagePane.icon = Icon.src.icon_imageContents;
-    imagePane.label = function(subject) {
-        if (!kb.anyStatementMatching(
-            subject, tabulator.ns.rdf( 'type'),
-            kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
-            return null;
-        return "view";
-    }
-    imagePane.render = function(subject) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'imageView')
-        var img = myDocument.createElement("IMG")
-        img.setAttribute('src', subject.uri) // w640 h480
-        div.style['max-width'] = '640';
-        div.style['max-height'] = '480';
-        var tr = myDocument.createElement('TR')  // why need tr?
-        tr.appendChild(img)
-        div.appendChild(tr)
-        return div
-    }
-    //panes.register(imagePane);
-
-
-    /*      Notation3 content Pane
-    **
-    **  This pane shows the content of a particular RDF resource
-    ** or at least the RDF semantics we attribute to that resource,
-    ** in generated N3 syntax.
-    */
-    var n3Pane = {};
-    n3Pane.icon = Icon.src.icon_n3Pane;
-    n3Pane.label = function(subject) {
-        var s = dataContentPane.label(subject);
-        if (!s) return null;
-        return s + ' as N3';
-    }
-
-    n3Pane.render = function(subject) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'n3Pane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        /*
-        var kludge = kb.formula([]); // No features
-        for (var i=0; i< sts.length; i++) {
-            s = sts[i];
-            kludge.add(s.subject, s.predicate, s.object);
-        }
-        */
-        var sz = Serializer();
-        sz.suggestNamespaces(kb.namespaces);
-        sz.setBase(subject.uri);
-        var str = sz.statementsToN3(sts)
-        var pre = myDocument.createElement('PRE');
-        pre.appendChild(myDocument.createTextNode(str));
-        div.appendChild(pre);
-        return div
-    }
-    //panes.register(n3Pane);
-
-    /*      RDF/XML content Pane
-    **
-    **  This pane shows the content of a particular RDF resource
-    ** or at least the RDF semantics we attribute to that resource,
-    ** in generated N3 syntax.
-    */
-    var RDFXMLPane = {};
-    RDFXMLPane.icon = Icon.src.icon_RDFXMLPane;
-    RDFXMLPane.label = function(subject) {
-        var s = dataContentPane.label(subject);
-        if (!s) return null;
-        return s + ' as RDF/XML';
-    }
-
-    RDFXMLPane.render = function(subject) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'RDFXMLPane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        /*
-        var kludge = kb.formula([]); // No features
-        for (var i=0; i< sts.length; i++) {
-            s = sts[i];
-            kludge.add(s.subject, s.predicate, s.object);
-        }
-        */
-        var sz = Serializer();
-        sz.suggestNamespaces(kb.namespaces);
-        sz.setBase(subject.uri);
-        var str = sz.statementsToXML(sts)
-        var pre = myDocument.createElement('PRE');
-        pre.appendChild(myDocument.createTextNode(str));
-        div.appendChild(pre);
-        return div
-    }
-    //panes.register(RDFXMLPane);
 
 
 	/**
@@ -866,6 +505,7 @@ function Outline(doc) {
 	 */
 	
  	//the second argument indicates whether the query button is required
+        /*
     var panes = tabulator.panes
     
     panes.register(classInstancePane, true);
@@ -885,9 +525,9 @@ function Outline(doc) {
     panes.register(humanReadablePane, false);
 	//LawPane @see panes/lawPane.js
 //	panes.register(LawPane, false);
-	
+*/	
 	//photoPane @see panes/photoPane.js (By albert08@csail.mit.edu)
-	panes.register(photoPane, false);
+	// panes.register(photoPane, false);
 	//photoImportPane @ @see panes/photoImportPane.js
 	//panes.register(photoImportPane, false);
 	
@@ -907,7 +547,7 @@ function Outline(doc) {
     function propertyTable(subject, table, pane) {
         tabulator.log.debug("Property table for: "+ subject)
         subject = kb.canon(subject)
-        if (!pane) pane = defaultPane;
+        if (!pane) pane = tabulator.panes.defaultPane;
         
         if (!table) { // Create a new property table
             var table = myDocument.createElement('table')
@@ -1641,7 +1281,7 @@ function Outline(doc) {
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
                         sf.addCallback('done',setSelectedAfterward);
                         sf.addCallback('fail',setSelectedAfterward);
-                        outline_expand(selectedTd, obj, defaultPane);
+                        outline_expand(selectedTd, obj, tabulator.panes.defaultPane);
                     }
                     setSelectedAfterward();                   
                 }
@@ -1806,7 +1446,7 @@ function Outline(doc) {
             switch (tsrc) {
             case Icon.src.icon_expand:
             case Icon.src.icon_collapse:
-                var pane = e.altKey? internalPane : defaultPane;
+                var pane = e.altKey? tabulator.panes.internalPane : tabulator.panes.defaultPane;
                 var mode = e.shiftKey ? outline_refocus :
                     (tsrc == Icon.src.icon_expand ? outline_expand : outline_collapse);
                 mode(p, subject, pane);
@@ -2206,108 +1846,6 @@ function Outline(doc) {
     var thisOutline=this;
     /** some builtin simple views **/
 
-
-    function statementsAsTables(sts) {
-        var rep = myDocument.createElement('table');
-        var sz = Serializer();
-        var pair = sz.rootSubjects(sts);
-        var roots = pair[0];
-        var subjects = pair[1];
-
-        // The property tree for a single subject or anonymos node
-        function propertyTree(subject) {
-            // print('Proprty tree for '+subject);
-            var rep = myDocument.createElement('table')
-            var lastPred = null;
-            var sts = subjects[sz.toStr(subject)]; // relevant statements
-            sts.sort();
-            var same =0;
-            var td_p; // The cell which holds the predicate
-            for (var i=0; i<sts.length; i++) {
-                var st = sts[i];
-                var tr = myDocument.createElement('tr');
-                if (st.predicate.uri != lastPred) {
-                    if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
-                    td_p = myDocument.createElement('td');
-                    td_p.setAttribute('class', 'pred');
-                    var anchor = myDocument.createElement('a')
-                    anchor.setAttribute('href', st.predicate.uri)
-                    anchor.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)));
-                    td_p.appendChild(anchor);
-                    tr.appendChild(td_p);
-                    lastPred = st.predicate.uri;
-                    same = 0;
-                }
-                same++;
-                var td_o = myDocument.createElement('td');
-                td_o.appendChild(objectTree(st.object));
-                tr.appendChild(td_o);
-                rep.appendChild(tr);
-            }
-            if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
-            return rep;
-        }
-
-        // Convert a set of statements into a nested tree of tables
-        function objectTree(obj) {
-            switch(obj.termType) {
-                case 'symbol':
-                    var anchor = myDocument.createElement('a')
-                    anchor.setAttribute('href', obj.uri)
-                    anchor.appendChild(myDocument.createTextNode(label(obj)));
-                    return anchor;
-                    
-                case 'literal':
-                    return myDocument.createTextNode(obj.value); // placeholder
-                    
-                case 'bnode':
-                    var newTable =  propertyTree(obj);
-                    if (ancestor(newTable, 'TABLE') && ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
-                        newTable.style.backgroundColor='#eee'
-                    } else {
-                        newTable.style.backgroundColor='white'
-                    }
-                    return newTable;
-                    
-                case 'collection':
-                    var res = myDocument.createElement('table')
-                    res.setAttribute('class', 'collectionAsTables')
-                    for (var i=0; i<obj.elements.length; i++) {
-                        var tr = myDocument.createElement('tr');
-                        res.appendChild(tr);
-                        tr.appendChild(objectTree(obj.elements[i]));
-                    }
-                    return  res;
-                case 'formula':
-                    var res = statementsAsTables(obj.statements);
-                    res.setAttribute('class', 'nestedFormula')
-                    return res;
-            }
-            throw "Unhandled node type: "+obj.termType
-        }
-
-        for (var i=0; i<roots.length; i++) {
-            var tr = myDocument.createElement('tr')
-            rep.appendChild(tr);
-            var td_s = myDocument.createElement('td')
-            tr.appendChild(td_s);
-            var td_tree = myDocument.createElement('td')
-            tr.appendChild(td_tree);
-            var root = roots[i];
-            if (root.termType == 'bnode') {
-                td_s.appendChild(myDocument.createTextNode(label(root))); // Don't recurse!
-            } 
-            else {
-                td_s.appendChild(objectTree(root)); // won't have tree
-            }
-            td_tree.appendChild(propertyTree(root));
-        }
-        return rep;
-    }
-    
-    this.statementsAsTables = statementsAsTables;   //So that this function to be used outside this class
-    
-    
     function VIEWAS_boring_default(obj) {
         //tabulator.log.debug("entered VIEWAS_boring_default...");
         var rep; //representation in html
@@ -2379,7 +1917,7 @@ function Outline(doc) {
             // rep.setAttribute('about', obj.toNT());
             // var sz = Serializer();
             // sz.suggestNamespaces(kb.namespaces);
-            rep = statementsAsTables(obj.statements);
+            rep = tabulator.panes.dataContentPane.statementsAsTables(obj.statements);
             rep.setAttribute('class', 'nestedFormula')
                         
         } else {

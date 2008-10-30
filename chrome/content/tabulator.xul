@@ -29,7 +29,16 @@
   <script type="application/x-javascript" src="sources-ext.js"/>
   
   <!-- panes must be after outline.js and test.js -->
+  <!-- The panes declared first have precedence when there is a choice -->
 
+  <script type="application/x-javascript" src="js/panes/classInstancePane.js"/>
+  <script type="application/x-javascript" src="js/panes/defaultPane.js"/>
+  <script type="application/x-javascript" src="js/panes/internalPane.js"/>
+  <script type="application/x-javascript" src="js/panes/imagePane.js"/>
+  <script type="application/x-javascript" src="js/panes/dataContentPane.js"/>
+  <script type="application/x-javascript" src="js/panes/n3Pane.js"/>
+  <script type="application/x-javascript" src="js/panes/RDFXMLPane.js"/>
+  <script type="application/x-javascript" src="js/panes/humanReadablePane.js"/>
   <script type="application/x-javascript" src="js/panes/socialPane.js"/>
   <script type="application/x-javascript" src="js/panes/airPane.js"/>
   <script type="application/x-javascript" src="js/panes/LawPane.js"/>

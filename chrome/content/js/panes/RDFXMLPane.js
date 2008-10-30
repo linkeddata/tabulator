@@ -10,12 +10,14 @@ tabulator.panes.register ({
 
     icon: Icon.src.icon_RDFXMLPane,
     
+    name: 'RDFXML',
+    
     label: function(subject) {
         var n = tabulator.kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
-        return s + ' as RDF/XML';
-    }
+        return 'As RDF/XML ('+n+')';
+    },
 
     render: function(subject, myDocument) {
         var kb = tabulator.kb;

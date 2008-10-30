@@ -6,6 +6,8 @@ tabulator.panes.register( {
 
     icon: Icon.src.icon_instances,
     
+    name: 'classInstance',
+    
     label: function(subject) {
         var n = tabulator.kb.statementsMatching(
             undefined, tabulator.ns.rdf( 'type'), subject).length;
@@ -13,7 +15,7 @@ tabulator.panes.register( {
         return "List "+n;     // Show how many in hover text
     },
 
-    render = function(subject, myDocument) {
+    render: function(subject, myDocument) {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
         var sts = tabulator.kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
@@ -31,6 +33,6 @@ tabulator.panes.register( {
     }
 }, true);
 
-#ends
+//ends
 
 

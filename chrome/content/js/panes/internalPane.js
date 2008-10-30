@@ -6,12 +6,14 @@
 tabulator.panes.internalPane = {
 
     icon: Icon.src.icon_internals,
+    
+    name: 'internal',
 
     label: function(subject) {
         var sts = kb.statementsMatching(subject);
         sts = sts.concat(kb.statementsMatching(undefined, undefined, subject));
         for (var i=0; i<sts.length; i++) {
-            if (internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
+            if (tabulator.panes.internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
                 return "under the hood";
         }
         return null
@@ -22,7 +24,7 @@ tabulator.panes.internalPane = {
         subject = kb.canon(subject);
         function filter(pred, inverse) {
             if (pred.sameTerm(owl('sameAs'))) return false; //our principle is not to show sameAs
-            return  !!(typeof internalPane.predicates[pred.uri] != 'undefined');
+            return  !!(typeof tabulator.panes.internalPane.predicates[pred.uri] != 'undefined');
         }
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
@@ -51,7 +53,7 @@ tabulator.panes.internalPane = {
 
 //    if (!SourceOptions["seeAlso not internal"].enabled)
 tabulator.panes.internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
-tabulator.panes.internalPane.predicates[owl('sameAs').uri] = 1;
+tabulator.panes.internalPane.predicates[tabulator.ns.owl('sameAs').uri] = 1;
 tabulator.panes.register(tabulator.panes.internalPane, true);
 
 //ends

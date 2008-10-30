@@ -5,6 +5,7 @@
 */
 LawPane = {};
 LawPane.icon = Icon.src.icon_LawPane;
+LawPane.name = 'Law';
 LawPane.label = function(subject) {
 
     stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
@@ -27,7 +28,7 @@ LawPane.label = function(subject) {
         }
     
    return null;
-}
+};
 
 //TODO handle more than one log file and policy file
 //This is a very clumsy method and should be changed

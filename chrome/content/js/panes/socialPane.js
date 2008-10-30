@@ -9,6 +9,8 @@
 tabulator.panes.register( {
 
     icon: Icon.src.icon_foaf,
+    
+    name: 'social',
 
     label: function(subject) {
         if (!tabulator.kb.whether(

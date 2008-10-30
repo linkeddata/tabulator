@@ -7,6 +7,8 @@ tabulator.panes.register({
     
     icon: Icon.src.icon_visit,
     
+    name: 'humaReadable',
+    
     label: function(subject, myDocument) {
         //recursive iframe is not allowed
         if (isExtension && myDocument.location == subject.uri) return null;

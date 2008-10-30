@@ -9,10 +9,13 @@ tabulator.panes.register ({
 
     icon: Icon.src.icon_n3Pane,
     
+    name: 'n3',
+    
     label: function(subject) {
-        var s = dataContentPane.label(subject);
-        if (!s) return null;
-        return s + ' as N3';
+        var n = tabulator.kb.statementsMatching(
+            undefined, undefined, undefined, subject).length;
+        if (n == 0) return null;
+        return "Data ("+n+") as N3";
     },
 
     render: function(subject) {

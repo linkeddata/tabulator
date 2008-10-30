@@ -3,8 +3,10 @@
 **  This outline pane contains the properties which are
 **  normaly displayed to the user. See also: innternalPane
 */
-tabulator.panes.register({
+tabulator.panes.defaultPane = {
     icon: Icon.src.icon_defaultPane,
+    
+    name: 'default',
     
     label: function(subject) { return 'about ';},
     
@@ -27,9 +29,9 @@ tabulator.panes.register({
 //        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
-        tabulator.outline.appendPropertyTRs(div, plist, false, defaultPane.filter)
+        tabulator.outline.appendPropertyTRs(div, plist, false, tabulator.panes.defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
-        tabulator.outline.appendPropertyTRs(div, plist, true, defaultPane.filter)
+        tabulator.outline.appendPropertyTRs(div, plist, true, tabulator.panes.defaultPane.filter)
         if ((subject.termType == 'symbol' && 
              outline.UserInput.updateService.editMethod(kb.sym(Util.uri.docpart(subject.uri)), kb))
              || (subject.termType == 'bnode' &&
@@ -47,8 +49,10 @@ tabulator.panes.register({
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    
-    },
-}, true);
+    }
+};
+
+tabulator.panes.register(tabulator.panes.defaultPane, true);
 
 // ends
     

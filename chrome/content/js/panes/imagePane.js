@@ -5,6 +5,8 @@
 tabulator.panes.register( {
     icon: Icon.src.icon_imageContents,
     
+    name: 'image',
+    
     label: function(subject) {
         var kb = tabulator.kb;
         if (!kb.anyStatementMatching(

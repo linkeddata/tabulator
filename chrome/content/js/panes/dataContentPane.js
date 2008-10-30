@@ -9,11 +9,13 @@
 //         - Expand automatically all the way down
 //         - original source view?  Use ffox view source
 
-tabulator.panes.register({
+tabulator.panes.dataContentPane = {
     
     icon:  Icon.src.icon_dataContents,
     
-    label: = function(subject) {
+    name: 'dataContents',
+    
+    label: function(subject) {
         var n = tabulator.kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
@@ -24,116 +26,108 @@ tabulator.panes.register({
         return tabulator.kb.whether(subject, rdf('type'), link('RDFDocument'));
     },
 
-    // View the data in a file in user-friendly way
-    render: function(subject, myDocument) {
-    
-    
-    
-    
+    statementsAsTables: function statementsAsTables(sts, myDocument) {
+        var rep = myDocument.createElement('table');
+        var sz = Serializer();
+        var pair = sz.rootSubjects(sts);
+        var roots = pair[0];
+        var subjects = pair[1];
 
-
-        function statementsAsTables(sts) {
-            var rep = myDocument.createElement('table');
-            var sz = Serializer();
-            var pair = sz.rootSubjects(sts);
-            var roots = pair[0];
-            var subjects = pair[1];
-
-            // The property tree for a single subject or anonymos node
-            function propertyTree(subject) {
-                // print('Proprty tree for '+subject);
-                var rep = myDocument.createElement('table')
-                var lastPred = null;
-                var sts = subjects[sz.toStr(subject)]; // relevant statements
-                sts.sort();
-                var same =0;
-                var td_p; // The cell which holds the predicate
-                for (var i=0; i<sts.length; i++) {
-                    var st = sts[i];
-                    var tr = myDocument.createElement('tr');
-                    if (st.predicate.uri != lastPred) {
-                        if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
-                        td_p = myDocument.createElement('td');
-                        td_p.setAttribute('class', 'pred');
-                        var anchor = myDocument.createElement('a')
-                        anchor.setAttribute('href', st.predicate.uri)
-                        anchor.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)));
-                        td_p.appendChild(anchor);
-                        tr.appendChild(td_p);
-                        lastPred = st.predicate.uri;
-                        same = 0;
-                    }
-                    same++;
-                    var td_o = myDocument.createElement('td');
-                    td_o.appendChild(objectTree(st.object));
-                    tr.appendChild(td_o);
-                    rep.appendChild(tr);
+        // The property tree for a single subject or anonymos node
+        function propertyTree(subject) {
+            // print('Proprty tree for '+subject);
+            var rep = myDocument.createElement('table')
+            var lastPred = null;
+            var sts = subjects[sz.toStr(subject)]; // relevant statements
+            sts.sort();
+            var same =0;
+            var td_p; // The cell which holds the predicate
+            for (var i=0; i<sts.length; i++) {
+                var st = sts[i];
+                var tr = myDocument.createElement('tr');
+                if (st.predicate.uri != lastPred) {
+                    if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
+                    td_p = myDocument.createElement('td');
+                    td_p.setAttribute('class', 'pred');
+                    var anchor = myDocument.createElement('a')
+                    anchor.setAttribute('href', st.predicate.uri)
+                    anchor.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)));
+                    td_p.appendChild(anchor);
+                    tr.appendChild(td_p);
+                    lastPred = st.predicate.uri;
+                    same = 0;
                 }
-                if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
-                return rep;
-            }
-
-            // Convert a set of statements into a nested tree of tables
-            function objectTree(obj) {
-                switch(obj.termType) {
-                    case 'symbol':
-                        var anchor = myDocument.createElement('a')
-                        anchor.setAttribute('href', obj.uri)
-                        anchor.appendChild(myDocument.createTextNode(label(obj)));
-                        return anchor;
-                        
-                    case 'literal':
-                        return myDocument.createTextNode(obj.value); // placeholder
-                        
-                    case 'bnode':
-                        var newTable =  propertyTree(obj);
-                        if (ancestor(newTable, 'TABLE') && ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
-                            newTable.style.backgroundColor='#eee'
-                        } else {
-                            newTable.style.backgroundColor='white'
-                        }
-                        return newTable;
-                        
-                    case 'collection':
-                        var res = myDocument.createElement('table')
-                        res.setAttribute('class', 'collectionAsTables')
-                        for (var i=0; i<obj.elements.length; i++) {
-                            var tr = myDocument.createElement('tr');
-                            res.appendChild(tr);
-                            tr.appendChild(objectTree(obj.elements[i]));
-                        }
-                        return  res;
-                    case 'formula':
-                        var res = statementsAsTables(obj.statements);
-                        res.setAttribute('class', 'nestedFormula')
-                        return res;
-                }
-                throw "Unhandled node type: "+obj.termType
-            }
-
-            for (var i=0; i<roots.length; i++) {
-                var tr = myDocument.createElement('tr')
+                same++;
+                var td_o = myDocument.createElement('td');
+                td_o.appendChild(objectTree(st.object));
+                tr.appendChild(td_o);
                 rep.appendChild(tr);
-                var td_s = myDocument.createElement('td')
-                tr.appendChild(td_s);
-                var td_tree = myDocument.createElement('td')
-                tr.appendChild(td_tree);
-                var root = roots[i];
-                if (root.termType == 'bnode') {
-                    td_s.appendChild(myDocument.createTextNode(label(root))); // Don't recurse!
-                } 
-                else {
-                    td_s.appendChild(objectTree(root)); // won't have tree
-                }
-                td_tree.appendChild(propertyTree(root));
             }
+            if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
             return rep;
         }
-    
-    
-    
-    
-    
+
+        // Convert a set of statements into a nested tree of tables
+        function objectTree(obj) {
+            switch(obj.termType) {
+                case 'symbol':
+                    var anchor = myDocument.createElement('a')
+                    anchor.setAttribute('href', obj.uri)
+                    anchor.appendChild(myDocument.createTextNode(label(obj)));
+                    return anchor;
+                    
+                case 'literal':
+                    return myDocument.createTextNode(obj.value); // placeholder
+                    
+                case 'bnode':
+                    var newTable =  propertyTree(obj);
+                    if (ancestor(newTable, 'TABLE') && ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
+                        newTable.style.backgroundColor='#eee'
+                    } else {
+                        newTable.style.backgroundColor='white'
+                    }
+                    return newTable;
+                    
+                case 'collection':
+                    var res = myDocument.createElement('table')
+                    res.setAttribute('class', 'collectionAsTables')
+                    for (var i=0; i<obj.elements.length; i++) {
+                        var tr = myDocument.createElement('tr');
+                        res.appendChild(tr);
+                        tr.appendChild(objectTree(obj.elements[i]));
+                    }
+                    return  res;
+                case 'formula':
+                    var res = tabulator.panes.dataContentPane.statementsAsTables(obj.statements, myDocument);
+                    res.setAttribute('class', 'nestedFormula')
+                    return res;
+            }
+            throw "Unhandled node type: "+obj.termType
+        }
+
+        for (var i=0; i<roots.length; i++) {
+            var tr = myDocument.createElement('tr')
+            rep.appendChild(tr);
+            var td_s = myDocument.createElement('td')
+            tr.appendChild(td_s);
+            var td_tree = myDocument.createElement('td')
+            tr.appendChild(td_tree);
+            var root = roots[i];
+            if (root.termType == 'bnode') {
+                td_s.appendChild(myDocument.createTextNode(label(root))); // Don't recurse!
+            } 
+            else {
+                td_s.appendChild(objectTree(root)); // won't have tree
+            }
+            td_tree.appendChild(propertyTree(root));
+        }
+        return rep;
+    }, // statementsAsTables
+
+
+    // View the data in a file in user-friendly way
+    render: function(subject, myDocument) {
+
         var kb = tabulator.kb;
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'dataContentPane');
@@ -142,7 +136,7 @@ tabulator.panes.register({
         // or we could keep all the pre-smushed triples.
         var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
         if (1) {
-            div.appendChild(statementsAsTables(sts));
+            div.appendChild(tabulator.panes.statementsAsTables(sts, myDocument));
             
         } else {  // An outline mode openable rendering .. might be better
             var sz = Serializer();
@@ -170,7 +164,9 @@ tabulator.panes.register({
         }
         return div
     }
-}, true);
+};
+
+tabulator.panes.register(tabulator.panes.dataContentPane, true);
 
 
 /*   Pane within Document data content view

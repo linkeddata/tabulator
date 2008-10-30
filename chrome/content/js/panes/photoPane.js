@@ -1,6 +1,7 @@
      
     photoPane = {};
     photoPane.icon = Icon.src.icon_photoPane;
+    photoPane.name = 'Photo';
     
     // The bullet for the tags in the Tag Menu on the right
     var tag_bullet = Icon.src.icon_TinyTag;

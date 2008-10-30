@@ -5,6 +5,7 @@
      */
      
     airPane = {};
+    airPane.name = 'air';
     airPane.icon = Icon.src.icon_airPane;
      
     var air = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");

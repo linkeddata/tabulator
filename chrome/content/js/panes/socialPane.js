@@ -234,9 +234,10 @@ tabulator.panes.register( {
             input.addEventListener('click', myHandler, false);
         }
 
-        if (me_uri == s_uri) {
+        if (me_uri == s.uri) {  // This is you
             var h = myDocument.createElement('h2');
-            h.appendChild(myDocument.textNode('Your public profile'))
+            h.appendChild(myDocument.textNode('Your public profile'));
+            div.appendChild(h);
         }
 
         var knows = foaf('knows');

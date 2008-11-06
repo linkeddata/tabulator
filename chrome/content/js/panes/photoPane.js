@@ -24,12 +24,7 @@
     // namespace and shorthand for concepts in the tag ontology
     var RDF = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     var TAGS = RDFNamespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
-    var T_Tagging = TAGS('Tagging');
-    var T_associatedTag = TAGS('associatedTag');
-    var T_taggedItem = TAGS('taggedItem');
-    var T_taggingActivity = TAGS('taggingActivity');
     var PAC = RDFNamespace("http://people.csail.mit.edu/albert08/project/ont/pac.rdf#");
-    var P_PhotoAlbum = PAC('PhotoAlbum');
     
     var checkedTags = new Array();
     var allPhotos = new Array();
@@ -55,16 +50,17 @@
     
     photoPane.label = function(subject) {
         
-        if (!kb.whether(subject, RDF('type'), P_PhotoAlbum)) {
+        if (!kb.whether(subject, RDF('type'), PAC("PhotoAlbum"))) {
             return null;
         }
         return "Photo Album";
     }
 
-    // View the justification trace in an exploratory manner
+    
     photoPane.render = function(subject, myDocument) {
         
         checkedTags = new Array();
+        allTags = new Array();
         allPhotos = new Array();
 
         // Create the main panel
@@ -89,36 +85,45 @@
         
         photoPane.render.LoadPhotoData = function() {
             
-            // Identify tagging activities in the album
-            var stsTaggings = kb.statementsMatching(subject, T_taggingActivity, undefined);
-            for (var i = 0; i < stsTaggings.length; i++) {
+            // Retrieve the photos in the album (using the "Contains" property)
+            var stsPhotos = kb.statementsMatching(subject, PAC("Contains"), undefined);
             
-                // Extract the photos and tags
-                var stsPhotos = kb.statementsMatching(stsTaggings[i].object, T_taggedItem, undefined);
+            for (var i = 0; i < stsPhotos.length; i++) {
                 var photo = new Object();
-                photo.photo = FormatImageURLMedium(stsPhotos[0].object.toString());
+                photo.URI = stsPhotos[i].object.toString();
                 
-                var stsTags = kb.statementsMatching(stsTaggings[i].object, T_associatedTag, undefined);
-                photo.tags = new Array();
-                for (var j = 0; j < stsTags.length; j++) {
-                    var tag = FormatTags(stsTags[j].object.toString());
-                    photo.tags.push(tag);
-                    if (tags.indexOf(tag) == -1) {
+                // For each tagging, retrieve all the associated tags
+                var stsTaggings = kb.statementsMatching(stsPhotos[i].object, PAC("hasTagging"), undefined);
+                for (var j = 0; j < stsTaggings.length; j++) {
+                    tags = new Array();
+                                        
+                    var stsTags = kb.statementsMatching(stsTaggings[j].object, TAGS("associatedTag"), undefined);
+                    for (var k = 0; k < stsTags.length; k++) {
+                        
+                        var tag = kb.the(stsTags[k].object, RDFS("label"), undefined);
                         tags.push(tag);
+                        if (allTags.indexOf(tag) == -1) {
+                            allTags.push(tag);
+                        }
                     }
+                    
+                    photo.tags = tags;
                 }
+                
                 allPhotos.push(photo);
             }
             
-            // Populate the Tag Menu on the right        
-            for (var i = 0; i < tags.length; i++) {
-                var tag = tags[i];
+            
+            // Populate the Tag Menu on the right   
+            allTags.sort();     
+            for (var i = 0; i < allTags.length; i++) {
+                var tag = allTags[i];
                 
                 // Each Tag is contained in a div
                 var tagItem = myDocument.createElement("div");
                 tagItem.setAttribute('class','TagMenu_tag');
                 
-                // Create and append the checkbox (default is checked), updated the list of checked tags
+                // Create and append the checkbox, updated the list of checked tags
                 var checkbox = myDocument.createElement("input");
                 checkbox.setAttribute("type","checkbox");
                 checkbox.setAttribute("id",tag);
@@ -131,7 +136,9 @@
                 tagItem.appendChild(myDocument.createElement('br'));
                 tag_menu_div.appendChild(tagItem);
             }
+            
         }
+        
         
         // Populate the Photo List panel on the left
         // Check which tags are selected and display the corresponding photos accordingly
@@ -140,12 +147,13 @@
             for (var i = 0; i < allPhotos.length; i++) {
                 if (CompareTags(allPhotos[i].tags,checkedTags)) {
                     var img = myDocument.createElement("img");
-                    img.setAttribute("src",allPhotos[i].photo);
+                    img.setAttribute("src",FormatImageURLMedium(allPhotos[i].URI));
                     img.setAttribute("class","PThumbnail");
                     photo_list_div.appendChild(img);
                 }
             }
         }
+        
         
         photoPane.render.UpdateCheckedTags = function(e) {
             tag = e.target.id;
@@ -163,8 +171,8 @@
             photoPane.render.PopulatePhotoList();
         }
         
-        photoPane.render.LoadPhotoData()
-        photoPane.render.PopulatePhotoList()
+        photoPane.render.LoadPhotoData();
+        photoPane.render.PopulatePhotoList();
         
         return main_div;
     }

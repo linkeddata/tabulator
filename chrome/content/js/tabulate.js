@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25008 2008-10-15 22:54:10Z timbl $
+// SVN ID: $Id: tabulate.js 25100 2008-11-06 20:14:38Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -37,12 +37,6 @@ var outline;
 
 kb.sf = sf // Make knowledge base aware of source fetcher to allow sameAs to propagate a fetch
 
-/* Don't use these use tabulator.ns.*
-kb.setPrefixForURI('dc', "http://purl.org/dc/elements/1.1/")
-kb.setPrefixForURI('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-kb.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
-kb.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
-*/
 
 function AJAR_handleNewTerm(kb, p, requestedBy) {
     //tabulator.log.debug("entering AJAR_handleNewTerm w/ kb, p=" + p + ", requestedBy=" + requestedBy);

@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 25008 2008-10-15 22:54:10Z timbl $
+ * SVN ID: $Id: sources.js 25100 2008-11-06 20:14:38Z timbl $
  *
  ************************************************************/
 
@@ -55,7 +55,7 @@ function SourceFetcher(store, timeout, async) {
         if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
 //            alert('Warning: Badly formed XML');
             sf.failFetch(xhr, "Badly formed XML in "+xhr.uri.uri); //have to fail the request
-            throw new Error("Badly formed XML in "+base); //@@ Add details
+            throw new Error("Badly formed XML in "+xhr.uri.uri); //@@ Add details
         }		
 		var parser = new RDFParser(kb)
         sf.addStatus(xhr, 'parsing...');		

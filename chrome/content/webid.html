@@ -29,11 +29,11 @@ tryFoaf = function() {
         "    xmlns:foaf='http://xmlns.com/foaf/0.1/'>";
     if (nick.length > 0) {
         webid = targetURI + "#" + nick;
-        contents += "<Person rdf:about=#'"+nick+"'>";
+        contents += "<Person rdf:about='#"+nick+"'>";
         contents += "<nick>"+nick+"</nick>\n";
     } else {
         webid = targetURI + "#" + initials;
-        contents += "<Person rdf:about=#'"+initials+"'>";
+        contents += "<Person rdf:about='#"+initials+"'>";
         contents += "<name>"+foafname+"</name>\n";
     }
     contents += "    </Person>\n</rdf:RDF>\n";

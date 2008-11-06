@@ -94,7 +94,12 @@ Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  //@@ Ask Danny for a bett
 
 // For photo albums (By albert08@csail.mit.edu)
 Icon.src.icon_photoPane = iconPrefix + 'icons/photo_small.png';
+Icon.src.icon_tagPane = iconPrefix + 'icons/tag_small.png';
 Icon.src.icon_TinyTag = iconPrefix + 'icons/tag_tiny.png';
+Icon.src.icon_photoBegin = iconPrefix + 'icons/photo_begin.png';
+Icon.src.icon_photoNext = iconPrefix + 'icons/photo_next.png';
+Icon.src.icon_photoBack = iconPrefix + 'icons/photo_back.png';
+Icon.src.icon_photoEnd = iconPrefix + 'icons/photo_end.png';
 //Icon.src.icon_photoImportPane = iconPrefix + 'icons/import_small.png';
 //Icon.src.icon_CloseButton = iconPrefix + 'icons/close_tiny.png';
 //Icon.src.icon_AddButton = iconPrefix + 'icons/addphoto_tiny.png';

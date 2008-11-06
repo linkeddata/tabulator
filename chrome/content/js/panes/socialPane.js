@@ -30,7 +30,7 @@ tabulator.panes.register( {
         if (src) {
             var img = myDocument.createElement("IMG")
             img.setAttribute('src', src.uri) // w640 h480
-            img.class = 'foafPic';
+            img.className = 'foafPic';
             div.appendChild(img)
         }
         var name = kb.any(s, foaf('name'));
@@ -42,24 +42,6 @@ tabulator.panes.register( {
         var me = me_uri? kb.sym(me_uri) : null;
         var div2 = myDocument.createElement("div");
 
-        if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
-            var f = myDocument.createElement('form');
-            div.appendChild(f);
-            var input = myDocument.createElement('input');
-            f.appendChild(input);
-            var tx = myDocument.createTextNode("This is you");
-            tx.className = 'question';
-            f.appendChild(tx);
-            var myHandler = function(e) {
-                // alert('this.checked='+this.checked);
-                var uri = this.checked? s.uri : '';
-                tabulator.preferences.set('me', uri);
-                alert('Your own URI is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
-            }
-            input.setAttribute('type', 'checkbox');
-            input.checked = (me_uri == s.uri);
-            input.addEventListener('click', myHandler, false);
-        }
         var common = function(x,y) { // Find common members of two lists
     //            var dict = [];
             var both = [];
@@ -146,6 +128,117 @@ tabulator.panes.register( {
             return f;
         }
         
+        var span = function(html) {
+            var s = myDocument.createElement('span');
+            s.innerHTML = html;
+            return s
+        }
+        //////////// Body of render():
+        
+
+        // If the user has no WebID that we know of
+        if (!me) {
+            var box = myDocument.createElement('div');
+            var p = myDocument.createElement('p');
+            div.appendChild(box);
+            box.appendChild(p);
+            box.className="mildNotice";
+            p.innerHTML = ("Tip:  Do you have <a target='explain' href='http://esw.w3.org/topic/WebID'>" +
+                "web ID</a>?<br/><i>  ");
+            var but = myDocument.createElement('input');
+            box.appendChild(but);
+            but.setAttribute('type', 'button');
+            but.setAttribute('value', 'Make A Web ID');
+            var makeOne = function() {
+                // document.location = "chrome://tabulator/content/webid.html";
+                var w = window.open("chrome://tabulator/content/webid.html",
+                'webid', "resizable=yes,scrollbars=yes");
+            }
+            but.addEventListener('click', makeOne, false);
+ /*               
+            var yes = span(" <i><u>Yes</u></i> ");
+            box.appendChild(yes);
+            var onYes = function(event) {  // User says they do have a WebID
+                yes.removeEventListener('click', onYes, false)
+                var form = myDocument.createElement('form');
+                form.innerHTML="Your Web ID: <input type ='text' size='80' id='webid' value='http://'/>" +
+                    "<input type='submit' value='set' />";
+                box.appendChild(form);
+                var onSubmit = function(event) {
+                    alert('foo');
+                    var ele = myDocument.getElementById('webid');
+                    me = ele.value
+                    alert('Changing your WebID to: ' + me);
+                    tabulator.preferences.set('me', me)
+                    box.appendChild(span("<br>This is now your WebID."))
+                    // p.innerHTML = "";
+                }
+                form.addEventListener('submit', onSubmit, false);
+            }
+            yes.addEventListener('click', onYes, false) 
+            
+            var no = span(" <i><u>No, Let's make one.</u></i> ");
+            box.appendChild(no);
+            var onNo = function(event) { // The user no Web ID yet
+                var form = myDocument.createElement('form');
+                form.innerHTML="You can make your own WebID if you have a space on the Web in which you can publish files." +
+                    "(To be able to edit it here, the server must ideally support the <i>WebDAV</i> protocol, or <i>SPARQL/Update</i>.)" +
+                "<br/>Your public profile page: <input type ='text' size='80' id='webid' value='http://your.isp.com/whatever/foaf.rdf#me'/>" +
+                    " <input type='submit' value='set' />";
+                box.appendChild(form);
+                var onSubmit = function(event) {
+                    var ele = myDocument.getElementById('webid');
+                    me_uri = ele.value;
+                    me = me_uri? kb.sym(me_uri) : null;
+                    alert('Changing your WebID to: ' + me_uri);
+                    tabulator.preferences.set('me', me_uri)
+                    box.appendChild(span("<br>This is now your WebID."))
+                    // p.innerHTML = "";
+                }
+                form.addEventListener('submit', onSubmit, false);
+            }
+            no.addEventListener('click', onNo, false) 
+*/
+        } else {  // We do have a webid
+            var but = myDocument.createElement('input');
+            div.appendChild(but);
+            but.className = 'WebIDCancelButton';
+            but.setAttribute('type', 'button');
+            but.setAttribute('value', 'Forget my Web ID');
+            var zapIt = function() {
+                tabulator.preferences.set('me','');
+                Alert('Your Web ID was '+me_uri+'. It has been forgotten.')
+            }
+            but.addEventListener('click', zapIt, false);
+        }
+
+
+
+        if (!me || me_uri == s.uri) {  // If we know who me is, don't ask for other people
+        
+            var f = myDocument.createElement('form');
+            div.appendChild(f);
+            var input = myDocument.createElement('input');
+            f.appendChild(input);
+            var tx = myDocument.createTextNode("This is you");
+            tx.className = 'question';
+            f.appendChild(tx);
+            var myHandler = function(e) {
+                // alert('this.checked='+this.checked);
+                var uri = this.checked? s.uri : '';
+                tabulator.preferences.set('me', uri);
+                alert('Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
+            }
+            input.setAttribute('type', 'checkbox');
+            input.checked = (me_uri == s.uri);
+            input.addEventListener('click', myHandler, false);
+        }
+
+        if (me_uri == s_uri) {
+            var h = myDocument.createElement('h2');
+            h.appendChild(myDocument.textNode('Your public profile'))
+        }
+
         var knows = foaf('knows');
     //        var givenName = kb.sym('http://www.w3.org/2000/10/swap/pim/contact#givenName');
         var familiar = kb.any(s, foaf('givenname')) || kb.any(s, foaf('firstName')) ||
@@ -154,7 +247,7 @@ tabulator.panes.register( {
         var friends = kb.each(s, knows);
         
         // Do I have a public profile document?
-        var profile = null; // This could be  SPARQL
+        var profile = null; // This could be  SPARQL { ?me foaf:primaryTopic [ a foaf:PersonalProfileDocument ] }
         var editable = false;
         if (me) {
             var works = kb.each(undefined, foaf('primaryTopic'), me)
@@ -189,12 +282,12 @@ tabulator.panes.register( {
                 } // Do I have an EDITABLE profile?
                 if (profile) editable = thisOutline.sparql.prototype.editable(profile.uri, kb)
 
-                var msg = 'You and '+familiar
+                var msg = "<a href='"+me_uri+"'>You</a> and "+familiar
                 if (!incoming) {
                     if (!outgoing) {
                         msg = msg + ' do not know each other.';
                     } else {
-                        msg = 'You know '+familiar+ ' (unconfirmed)';
+                        msg = 'You know '+familiar+ ' (unconfirmed)'; // beware encoding attacks @@
                     }
                 } else {
                     if (!outgoing) {
@@ -205,7 +298,7 @@ tabulator.panes.register( {
                 }
                 var tr = myDocument.createElement('tr');
                 div.appendChild(tr);
-                tr.appendChild(myDocument.createTextNode(msg))
+                tr.innerHTML = msg;
 
 
                 if (editable) {
@@ -257,7 +350,7 @@ tabulator.panes.register( {
         return div;
     }  // render()
 
-}, true);  // tabulator.panes.register({})
+}, false);  // tabulator.panes.register({})
 
 if (tabulator.preferences.get('me')) {
     tabulator.sf.lookUpThing(tabulator.kb.sym(tabulator.preferences.get('me')));

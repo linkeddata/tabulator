@@ -207,7 +207,8 @@ tabulator.panes.register( {
             but.setAttribute('value', 'Forget my Web ID');
             var zapIt = function() {
                 tabulator.preferences.set('me','');
-                Alert('Your Web ID was '+me_uri+'. It has been forgotten.')
+                Alert('Your Web ID was '+me_uri+'. It has been forgotten.');
+                div.parent.replaceChild(this.render(s, myDocument), div);
             }
             but.addEventListener('click', zapIt, false);
         }
@@ -236,7 +237,7 @@ tabulator.panes.register( {
 
         if (me_uri == s.uri) {  // This is you
             var h = myDocument.createElement('h2');
-            h.appendChild(myDocument.textNode('Your public profile'));
+            h.appendChild(myDocument.createTextNode('Your public profile'));
             div.appendChild(h);
         }
 

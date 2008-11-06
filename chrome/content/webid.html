@@ -1,0 +1,166 @@
+<html>
+<head>
+<title>Your Web ID</title>
+<link rel="stylesheet" href="http://dig.csail.mit.edu/2005/ajar/ajaw/general.css"/>
+<style type="text/css">
+  .answer  { font-style: italic; color: #004; }
+  .tip  { font-style: normal; color: #333; margin: 1em;}
+  .success {background-color: #efe }
+  .failure {background-color: #fee ; border: 0.1em red}
+  div.unknown { display:none } 
+  div.yes > div.negative { display: none } 
+  div.no > div.affirmative { display: none } 
+</style>
+<script type="text/javascript">
+tryFoaf = function() {
+
+    document.getElementById("saveStatus").className = "unknown";
+    var form = document.getElementById("socialBootForm");
+    //alert("Saving to: "+form.fileuri.value);
+
+    // Construct the initial FOAF file when the form bellow is submitted
+    var targetURI = form.fileuri.value;
+    var foafname = form.foafname.value;
+    var nick = form.nick.value;
+    var initials = form.initials.value;
+    var webid;
+    var contents = "<rdf:RDF  xmlns='http://xmlns.com/foaf/0.1/'\n"+
+        "    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'\n" +
+        "    xmlns:foaf='http://xmlns.com/foaf/0.1/'>";
+    if (nick.length > 0) {
+        webid = targetURI + "#" + nick;
+        contents += "<Person rdf:about=#'"+nick+"'>";
+        contents += "<nick>"+nick+"</nick>\n";
+    } else {
+        webid = targetURI + "#" + initials;
+        contents += "<Person rdf:about=#'"+initials+"'>";
+        contents += "<name>"+foafname+"</name>\n";
+    }
+    contents += "    </Person>\n</rdf:RDF>\n";
+
+    // The following only works when this is in chrome://tabultor/content/
+    var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    var content_type = "application/rdf+xml";
+    var xhr = tabulator.util.XMLHTTPFactory();
+    var doc = document;
+    xhr.onreadystatechange = function (){
+        if (xhr.readyState == 4){
+            //alert('Result: '+xhr.status);
+            var result = xhr.status
+            var ele = doc.getElementById("saveStatus");
+            if (result == '201' || result == '204') {
+               ele.className = "success";
+               ele.innerHTML="<p>Success! A new, empty, profile has been created."+
+               "<br/>Your Web ID is now <br/><b><a target='me' href='"+webid+"'>"+webid+"</a></b>."+
+               "<br/>You can add more information to your public profile any time.</p>";
+               tabulator.preferences.set("me", webid);
+            } else {
+               ele.className = "failure";
+               ele.innerHTML="<p>There was a problem saving your public profile." +
+               "It has not been created." +
+               "<table>" +
+               "<tr><td>Status:</td><td>"+result+"</td></tr>" +
+               "<tr><td>Status text:</td><td>"+xhr.statusText+"</td></tr>" +
+               "</table>" +
+               "If you can work out what was wrong with the URI, " +
+               "you can change it and try again.</p>";            
+            }
+        }
+    };
+    xhr.open('PUT', targetURI, true);
+    //assume the server does PUT content-negotiation.
+    xhr.setRequestHeader('Content-type', content_type);//OK?
+    xhr.send(contents);
+    tabulator.log.info("sending "+"["+contents+"] to +"+targetURI);
+
+
+}
+</script>
+</head>
+<body>
+<p>Do you have <a target="explain" href="http://esw.w3.org/topic/WebID" >
+web ID</a>?<br/>
+</p>
+<ul>
+<li class="answer"  onclick="document.getElementById('WebIdHelp').className='tip'">
+What is A Web ID?
+<div id="WebIdHelp" class="unknown">
+<p>    A Web ID is a URL for you. 
+It allows you to set up a public profile, with friends, pictures and all kinds of things.
+</p><p>
+It works like having an account on a social networking site,
+but it isn't restricted to just that site.
+It is very open because the information can connect to other people,
+organizations and projects and so on, without everyon having to join the same
+social networking site.
+All you need is some place on the web where you can save a file to.
+(<a  target='explain' href="http://esw.w3.org/topic/WebID">More on the wiki</a>)  
+</p>
+</div>
+</li>
+<li class="answer" onclick="document.getElementById('WhetherWebId').className='yes'">
+Yes, I have a web ID
+</li>
+<li class="answer" onclick="document.getElementById('WhetherWebId').className='no'">
+No, I would like to make one
+</li>
+</ul>
+
+<div id="WhetherWebId" class="unknown">
+    <div class="affirmative">
+        <p>What is your Web ID?  
+        <br/> <form action="none:">
+            <input name="webid" type="text" size="80" value="http:"/>
+        </form>
+        </p>
+    </div>
+    <div class="negative">
+        <p>Ok, Let's make one.  Would you like to use your real name, or make it anonymous?</p>
+        <ul>
+        <li class="answer" onclick="document.getElementById('WhetherAnon').className='no'">
+        I would like to use my real name. (Recommended, for example, for professionals who have
+        and want public visibility).
+        </li>
+        <li class="answer" onclick="document.getElementById('WhetherAnon').className='yes'">
+        I would like to be anonymous. (If you are a child, use this.) 
+        </li>
+        </ul>
+
+        <form id="socialBootForm" action="none:">
+            <div id="WhetherAnon" class="unknown">
+                <div class="affirmative">
+                    <p>Think of a handle, or screen name by which you would like to be known.
+                    Or one by which you are already known online.
+                        <br/>
+                        <input name="nick" type="text" size="40"/>
+                    </p>
+                </div>
+                <div class="negative">
+                    <p>What is your name?  (A full name in the normal order in which you prefer it,
+                    such as Bill Gates, or Marie-Claire Forgue. Normally people omit 
+                    prefixes, like Dr., and suffixes, like PhD, but it is up to you.)
+                    <br/><input name="foafname" type="text" size="40"/>
+                    </p>
+                    <p>Your initials? (These will be used as part of your web ID)
+                    <br/><input name="initials" type="text" size="10"/>
+                    </p>
+                </div>
+                <p>You need the URI of a file which you can write to on the web.
+                (The general public should be able to read it but not change it.
+                The server should support the <em>WebDAV</em> protocol.)
+                <!-- http://www.example.com/users/gates/foaf.rdf -->
+                     <input name="fileuri" type="text" size="80"
+                         value="http://dig.csail.mit.edu/2008/webdav/timbl/test.rdf"
+                         />
+                <br/>
+                <input type="button" value="Create my new profile" onclick="tryFoaf()"/>
+                </p>
+            </div>
+        </form>
+
+    </div>
+    <div id="saveStatus" class="unknown">
+    </div>
+</div>
+</body>
+</html>

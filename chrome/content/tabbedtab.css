@@ -581,13 +581,13 @@ div.PhotoListPanel {
     float: left;
     padding: 5px ;
     border: 1px solid #AAAAAA;
-    width: 760px;
+    width: 740px;
 }
 div.TagMenu {
     float: left;
     padding: 10px;
     border: 1px solid #AAAAAA;
-    width: 140px;
+    width: 160px;
     margin: 0px 0px 0px 10px;
 }
 img.PThumbnail {

@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25100 2008-11-06 20:14:38Z timbl $
+// SVN ID: $Id: tabulate.js 25105 2008-11-11 16:51:30Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -23,7 +23,8 @@ tabulator.ns.foaf = RDFNamespace("http://xmlns.com/foaf/0.1/");
 tabulator.ns.rdf = rdf = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 tabulator.ns.rdfs = rdfs = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
 tabulator.ns.owl = owl = RDFNamespace("http://www.w3.org/2002/07/owl#");
-tabulator.ns.dc = dc = RDFNamespace("http://purl.org/dc/elements/1.1/");
+tabulator.ns.dc = dc = RDFNamespace("http://purl.org/dc/elements/1.1/"); // Original dc
+tabulator.ns.dct = dct = RDFNamespace("http://purl.org/dc/terms/");  // New dc
 tabulator.ns.rss = rss = RDFNamespace("http://purl.org/rss/1.0/");
 tabulator.ns.xsd = xsd = RDFNamespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
 tabulator.ns.contact = contact = RDFNamespace("http://www.w3.org/2000/10/swap/pim/contact#");
@@ -219,6 +220,7 @@ var lb = new Labeler(kb);
 labelPriority = []
 labelPriority[tabulator.ns.foaf('name').uri] = 10
 labelPriority[tabulator.ns.dc('title').uri] = 8
+labelPriority[tabulator.ns.dct('title').uri] = 8
 labelPriority[tabulator.ns.rss('title').uri] = 6   // = dc:title?
 labelPriority[tabulator.ns.contact('fullName').uri] = 4
 labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4

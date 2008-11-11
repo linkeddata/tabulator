@@ -31,6 +31,7 @@ var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(
   lb = tabulator.lb;
   sourceWidget=tabulator.sourceWidget;
   
+tabulator.util = Util;  // Hooks from tabulator for submodules
 
 internals = []
 internals['http://dig.csail.mit.edu/2005/ajar/ajaw/ont#request'] = 1;

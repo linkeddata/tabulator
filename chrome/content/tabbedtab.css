@@ -61,6 +61,7 @@ div.nonCompliantPane {
     margin-top: 0.5em; margin-bottom: 0.5em;
     -moz-border-radius: 1em;
 }
+
 div.compliantPane {
     border-top: solid 1px green;
     border-left: solid 1px green;
@@ -72,23 +73,8 @@ div.compliantPane {
     -moz-border-radius: 1em;
 }
 
-div.title {
-	
-	font-size: 110%;
-	background-color: grey;
-    color: white; 
-    padding: 0.5em;  
-    margin-top: 0.5em; 
-    margin-bottom: 0.5em;
-}
-
-div.irfac {
-    margin-left: 2.5em;
-    line-height: 150% 
-}
-
 div.justification {
-	font-size: 110%;
+	font-size: 100%;
     padding: 0 5px;
     width: 1000px; 
     background-color: white; 
@@ -96,12 +82,12 @@ div.justification {
 }
 
 div.description {
-	font-size: 105%;
+	font-size: 120%;
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
-    padding: 1px 5px;
+    padding: 15px;
     width: 1000px; 
     background-color: #ffffdd; 
     margin-top: 0.5em; margin-bottom: 0.5em;
@@ -120,10 +106,22 @@ div.premises {
     -moz-border-radius: 0.75em;
 }
 
+/* ***************** Social Pane **********/
+
 div.socialPane {
         border-top: solid 1px #777; border-bottom: solid 1px #777; 
-        margin-top: 0.5em; margin-bottom: 0.5em }
-img.foafPic { width: 8em }
+        margin-top: 0.5em; margin-bottom: 0.5em;
+        padding: 1em }
+
+img.foafPic { width: 8em ; border: #777 1px; margin: 1em; padding: 0.5em;
+        float:right}
+
+div.mildNotice {
+        border: dashed 0.1em #777;  margin: 1em; padding: 1em;
+        width: 80%;        /* float: right; */
+        background-color: #ffe; }
+
+/******************* Data Conteny Pane *****************/
 
 div.dataContentPane {
     border-top: solid 1px black;
@@ -336,17 +334,6 @@ td.queryTableData {
     height:100%;
     width:20%;
     border-style:none;
-}
-
-td.titleText {
-    padding: 0em;
-    margin: 1em;
-    border-width: 0.5em;
-    height:100%;
-    background-color: #CCCCFF;
-    border-style:none;
-    font-weight: bold;
-    font-size: 120%;
 }
 
 table.viewTable tr {
@@ -682,4 +669,3 @@ div.photoImportContentPane {
 /*
 End of styles for the photoPane
 */
- 

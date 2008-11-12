@@ -207,7 +207,7 @@ tabulator.panes.register( {
             but.setAttribute('value', 'Forget my Web ID');
             var zapIt = function() {
                 tabulator.preferences.set('me','');
-                Alert('Your Web ID was '+me_uri+'. It has been forgotten.');
+                alert('Your Web ID was '+me_uri+'. It has been forgotten.');
                 div.parent.replaceChild(this.render(s, myDocument), div);
             }
             but.addEventListener('click', zapIt, false);

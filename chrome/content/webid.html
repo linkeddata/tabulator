@@ -3,7 +3,7 @@
 <title>Your Web ID</title>
 <link rel="stylesheet" href="http://dig.csail.mit.edu/2005/ajar/ajaw/general.css"/>
 <style type="text/css">
-  .answer  { font-style: italic; color: #004; }
+  .answer  { font-style: italic; color: #00c; text-decoration: underline; }
   .tip  { font-style: normal; color: #333; margin: 1em;}
   .success {background-color: #efe }
   .failure {background-color: #fee ; border: 0.1em red}
@@ -78,12 +78,14 @@ tryFoaf = function() {
 </script>
 </head>
 <body>
+<p>Please click on the appropriate answer.</p>
 <p>Do you have <a target="explain" href="http://esw.w3.org/topic/WebID" >
 web ID</a>?<br/>
 </p>
 <ul>
-<li class="answer"  onclick="document.getElementById('WebIdHelp').className='tip'">
-What is A Web ID?
+<li>
+<p class="answer"  onclick="document.getElementById('WebIdHelp').className='tip'">
+What is A Web ID?</p>
 <div id="WebIdHelp" class="unknown">
 <p>    A Web ID is a URL for you. 
 It allows you to set up a public profile, with friends, pictures and all kinds of things.
@@ -147,7 +149,7 @@ No, I would like to make one
                 </div>
                 <p>You need the URI of a file which you can write to on the web.
                 (The general public should be able to read it but not change it.
-                The server should support the <em>WebDAV</em> protocol.)
+                The server should support the <em>WebDAV</em> protocol.)<br/>
                 <!-- http://www.example.com/users/gates/foaf.rdf -->
                      <input name="fileuri" type="text" size="80"
                          value="http://dig.csail.mit.edu/2008/webdav/timbl/test.rdf"

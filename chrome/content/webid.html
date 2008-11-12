@@ -12,6 +12,15 @@
   div.no > div.affirmative { display: none } 
 </style>
 <script type="text/javascript">
+
+gotOne = function() {
+    var form = document.getElementById("gotWebID");
+    var webid = form.webid.value;
+    var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    tabulator.preferences.set('me', webid);
+    alert("You ID has been set to "+webid);
+}
+
 tryFoaf = function() {
 
     document.getElementById("saveStatus").className = "unknown";
@@ -110,9 +119,13 @@ No, I would like to make one
 
 <div id="WhetherWebId" class="unknown">
     <div class="affirmative">
-        <p>What is your Web ID?  
-        <br/> <form action="none:">
+        <p>What is your Web ID?</p>
+        <form id="gotWebID" action="none:">
+            <p>
             <input name="webid" type="text" size="80" value="http:"/>
+            <br/>
+            <input type="button" value="Use this ID" onclick="gotOne()"/>
+            </p>
         </form>
         </p>
     </div>

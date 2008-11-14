@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25105 2008-11-11 16:51:30Z timbl $
+// SVN ID: $Id: tabulate.js 25112 2008-11-14 19:33:44Z ilaria $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -122,6 +122,8 @@ Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
 Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
 Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
+Icon.src.icon_tableView = iconPrefix + 'icons/table-view.png';
+
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
 Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  //@@ Ask Danny for a better icon
 Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  //@@ Ask Danny for a better icon

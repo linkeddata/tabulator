@@ -25,6 +25,7 @@
   <script type="application/x-javascript" src="js/sparqlUpdate.js"/>
   <script type="application/x-javascript" src="js/updateCenter.js"/>
   <script type="application/x-javascript" src="js/webdav.js"/>
+  <script type="application/x-javascript" src="js/tableViewPane.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
   <script type="application/x-javascript" src="sources-ext.js"/>
   
@@ -39,6 +40,7 @@
   <script type="application/x-javascript" src="js/panes/n3Pane.js"/>
   <script type="application/x-javascript" src="js/panes/RDFXMLPane.js"/>
   <script type="application/x-javascript" src="js/panes/humanReadablePane.js"/>
+  <script type="application/x-javascript" src="js/panes/tableViewPane.js"/>
   <script type="application/x-javascript" src="js/panes/socialPane.js"/>
   <script type="application/x-javascript" src="js/panes/airPane.js"/>
   <script type="application/x-javascript" src="js/panes/LawPane.js"/>

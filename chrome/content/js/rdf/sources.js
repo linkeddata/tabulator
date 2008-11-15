@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 25100 2008-11-06 20:14:38Z timbl $
+ * SVN ID: $Id: sources.js 25116 2008-11-15 16:13:48Z timbl $
  *
  ************************************************************/
 
@@ -955,7 +955,7 @@ function SourceFetcher(store, timeout, async) {
         }
 
 	setTimeout(function() { 
-		       if (xhr.readyState != 4 && sf.isPending(xhr.uri)) {
+		       if (xhr.readyState != 4 && sf.isPending(xhr.uri.uri)) {
 			   sf.failFetch(xhr,"requestTimeout")
 		       }
 		   }, this.timeout)
@@ -986,11 +986,10 @@ function SourceFetcher(store, timeout, async) {
 	this.fireCallbacks('retract',arguments)
     }
 
-    this.getState = function (term) { // docState
-	var doc = Util.uri.docpart(term.uri)
-	if (typeof this.requested[doc] != "undefined") {
-	    if (this.requested[doc]) {
-		if (this.isPending(term)) {
+    this.getState = function (docuri) { // docState
+	if (typeof this.requested[docuri] != "undefined") {
+	    if (this.requested[docuri]) {
+		if (this.isPending(docuri)) {
 		    return "requested"
 		} else {
 		    return "fetched"
@@ -1004,25 +1003,9 @@ function SourceFetcher(store, timeout, async) {
     }
 
     //doing anyStatementMatching is wasting time
-    this.isPending = function (term) { // sources_pending
+    this.isPending = function (docuri) { // sources_pending
         //if it's not pending: false -> flailed 'done' -> done 'redirected' -> redirected
-        //please don't do statementsMatchings it is wasting time
-        return this.requested[Util.uri.docpart(term.uri)] == true;
-    /*
-	var req = this.store.anyStatementMatching(
-	    this.store.sym(Util.uri.docpart(uri.uri)),
-	    tabulator.ns.link('request'))
-	if (!req) { return false }
-	var status = this.store.anyStatementMatching(req.object,
-						     tabulator.ns.link('status'))
-	if (!status) { return true }
-	return (this.requested[Util.uri.docpart(uri.uri)]
-		&& !status.object.elements.filter(function (x) {
-						       return (x.toString()
-							      == 'done')
-							  //x.toString().match('done');
-						  }).length)
-	*/						  
+        return this.requested[docuri] == true;
     }
 }
 

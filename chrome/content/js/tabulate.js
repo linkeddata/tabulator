@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25112 2008-11-14 19:33:44Z ilaria $
+// SVN ID: $Id: tabulate.js 25116 2008-11-15 16:13:48Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the web version of the Tabulator.
@@ -66,7 +66,7 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
     if (fixuri) {
 	docuri = fixuri
     }
-    if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
+    if (sf.getState(docuri) != 'unrequested') return;
     
     if (fixuri) {   // only give warning once: else happens too often
         tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
@@ -161,10 +161,12 @@ Icon.tooltips[Icon.src.icon_internals] = 'Under the hood'
 Icon.tooltips[Icon.src.icon_instances] = 'List'
 Icon.tooltips[Icon.src.icon_foaf] = 'Friends'
 Icon.tooltips[Icon.src.icon_rows] = 'Make a table of data like this'
+
+// Note the string '[Tt]his resource' can be replaced with an actual URI by the code
 Icon.tooltips[Icon.src.icon_unrequested] = 'Fetch this resource.'
-Icon.tooltips[Icon.src.icon_fetched] = 'This was fetched successfully.'
-Icon.tooltips[Icon.src.icon_failed] = 'Failed to load. Click to retry.'
-Icon.tooltips[Icon.src.icon_requested] = 'Being fetched. Please wait...'
+Icon.tooltips[Icon.src.icon_fetched] = 'This resource was fetched successfully.'
+Icon.tooltips[Icon.src.icon_failed] = 'This resource failed to load. Click to retry.'
+Icon.tooltips[Icon.src.icon_requested] = 'This resource being fetched. Please wait...'
 Icon.tooltips[Icon.src.icon_visit] = 'View document'
 Icon.tooltips[Icon.src.icon_retract] = 'Remove this source and all its data from tabulator.'
 Icon.tooltips[Icon.src.icon_refresh] = 'Refresh this source and reload its triples.'
@@ -308,7 +310,7 @@ function SourceWidget() {
 	    var src = document.createElement('td')
 	    var status = document.createElement('td')
 	
-	    var rbtn = outline.appendAccessIcon(iconCell, udoc)
+	    var rbtn = outline.appendAccessIcon(iconCell, Util.uri.docpart(uri))
 	    var xbtn = AJARImage(Icon.src.icon_remove_node, 'remove');
             if (rbtn) {
                 rbtn.style.marginRight = "0.8em"

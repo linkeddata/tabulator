@@ -147,13 +147,11 @@ function Outline(doc) {
         return image
     }
     
-    this.appendAccessIcon = function(node, term) {
-        if (typeof term.termType == 'undefined') tabulator.log.error("??"+ term);
-        if (term.termType != 'symbol') return '';
-        if (term.uri.slice(0,5) != 'http:') return '';
-        var state = sf.getState(term);
-        var icon, alt, info;
-        //    tabulator.log.debug("State of " + doc + ": " + state)
+    this.appendAccessIcon = function(node, uri) {
+        var docuri = Util.uri.docpart(uri);
+        if (docuri.slice(0,5) != 'http:') return '';
+        var state = sf.getState(docuri);
+        var icon, alt;
         switch (state) {
             case 'unrequested': 
                 icon = Icon.src.icon_unrequested;
@@ -185,8 +183,9 @@ function Outline(doc) {
         } //switch
         var img = AJARImage(icon, alt, 
                             Icon.tooltips[icon].replace(/[Tt]his resource/,
-                                                        term.uri))
-        addButtonCallbacks(img,term)
+                                                        docuri))
+        img.setAttribute('uri', uri);
+        addButtonCallbacks(img, docuri) 
         node.appendChild(img)
         return img
     } //appendAccessIcon
@@ -505,32 +504,8 @@ function Outline(doc) {
 	 */
 	
  	//the second argument indicates whether the query button is required
-        /*
-    var panes = tabulator.panes
     
-    panes.register(classInstancePane, true);
-
-    panes.register(defaultPane, true);
-        
-    panes.register(internalPane, true);
-
-    panes.register(imagePane, false);
     
-    panes.register(dataContentPane, false);
-    
-    panes.register(n3Pane, false);
-    
-    panes.register(RDFXMLPane, false);
-    
-    panes.register(humanReadablePane, false);
-	//LawPane @see panes/lawPane.js
-//	panes.register(LawPane, false);
-*/	
-	//photoPane @see panes/photoPane.js (By albert08@csail.mit.edu)
-	// panes.register(photoPane, false);
-	//photoImportPane @ @see panes/photoImportPane.js
-	//panes.register(photoImportPane, false);
-	
 //////////////////////////////////////////////////////////////////////////////
 
     // Remove a node from the DOM so that Firefox refreshes the screen OK
@@ -620,6 +595,18 @@ function Outline(doc) {
             return table
         }
     } /* propertyTable */
+
+    function propertyTR(doc, st, inverse) {
+            var tr = doc.createElement("TR");
+            tr.AJAR_statement = st;
+            tr.AJAR_inverse = inverse;
+            // tr.AJAR_variable = null; // @@ ??  was just "tr.AJAR_variable"
+            tr.setAttribute('predTR','true');
+            var td_p = thisOutline.outline_predicateTD(st.predicate, tr, inverse);
+            tr.appendChild(td_p) // @@ add "internal" to td_p's class for style? mno
+            return tr;
+    }
+    this.propertyTR = propertyTR;
     
     ///////////// Property list 
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
@@ -666,14 +653,10 @@ function Outline(doc) {
             }
     
 
-            var tr = myDocument.createElement("TR")
-            parent.appendChild(tr)
-            tr.AJAR_statement = s
-            tr.AJAR_inverse = inverse
-            tr.AJAR_variable  // @@ ??
-            tr.setAttribute('predTR','true')
-            var td_p = thisOutline.outline_predicateTD(s.predicate, tr, inverse);
-            tr.appendChild(td_p) // @@ add "internal" to td_p's class for style? mno
+            var tr = propertyTR(myDocument, s, inverse);
+            parent.appendChild(tr);
+            var td_p = tr.firstChild; // we need to kludge the rowspan later
+
             var defaultpropview = views.defaults[s.predicate.uri];
             
                            
@@ -918,8 +901,7 @@ function Outline(doc) {
         return false;
     } //AJAR_ClearTable
     
-    function addButtonCallbacks(target, term) {
-        var fireOn = Util.uri.docpart(term.uri)
+    function addButtonCallbacks(target, fireOn) {
         tabulator.log.debug("Button callbacks for " + fireOn + " added")
         var makeIconCallback = function (icon) {
             return function IconCallback(req) {
@@ -928,7 +910,7 @@ function Outline(doc) {
                     return false
                 }          
                 if (!outline.ancestor(target,'DIV')) return false;
-                if (term.termType != "symbol") { return true }
+                // if (term.termType != "symbol") { return true } // should always ve
                 if (req == fireOn) {
                     target.src = icon
                     target.title = Icon.tooltips[icon]
@@ -1459,10 +1441,15 @@ function Outline(doc) {
                 //break;
             case Icon.src.icon_failed:
             case Icon.src.icon_fetched:
-                sf.objectRefresh(subject);
+                var uri = target.getAttribute('uri'); // Put on access buttons
+                sf.refresh(kb.sym(Util.uri.docpart(uri))); // just one
+                // sf.objectRefresh(subject);
                 break;
             case Icon.src.icon_unrequested:
-                if (subject.uri) sf.lookUpThing(subject);
+                var uri = target.getAttribute('uri'); // Put on access buttons
+                if (!uri) alert('Interal error: No URI on unrequested icon! @@');
+                sf.requestURI(Util.uri.docpart(uri))
+                // if (subject.uri) sf.lookUpThing(subject);
                 break;
             case Icon.src.icon_opton:
             case Icon.src.icon_optoff:
@@ -1856,7 +1843,13 @@ function Outline(doc) {
         } else if (obj.termType == 'symbol' || obj.termType == 'bnode') {
             rep = myDocument.createElement('span');
             rep.setAttribute('about', obj.toNT());
-            thisOutline.appendAccessIcon(rep, obj);
+            if (obj.termType == 'symbol') { 
+                var uris = kb.uris(obj);
+                for(var i=0; i<uris.length; i++) {
+                    thisOutline.appendAccessIcon(rep, uris[i]);
+                }
+            }
+            
             if (obj.termType == 'symbol') { 
                 if (obj.uri.slice(0,4) == 'tel:') {
                     var num = obj.uri.slice(4);

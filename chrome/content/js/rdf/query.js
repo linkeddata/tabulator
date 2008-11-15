@@ -7,7 +7,7 @@
 // to allow a query of a formula.
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: query.js 12863 2008-02-10 04:12:23Z timbl $
+// SVN ID: $Id: query.js 25116 2008-11-15 16:13:48Z timbl $
 
 //  Variable
 //
@@ -504,13 +504,13 @@ function match(f, g, bindingsSoFar, level, fetcher, callback, branchCount) {
             item = pattern[i];  //for each of the triples in the query
             if (item.subject in bindingsSoFar
 		&& bindingsSoFar[item.subject].uri
-		&& sf.getState(kb.sym(Util.uri.docpart(bindingsSoFar[item.subject].uri))) == "unrequested") {
+		&& sf.getState(Util.uri.docpart(bindingsSoFar[item.subject].uri)) == "unrequested") {
 		//fetch the subject info and return to id
 		fetchResource(bindingsSoFar[item.subject],id)
 		return; //@@tbl
             } else if (item.object in bindingsSoFar
 		       && bindingsSoFar[item.object].uri
-		       && sf.getState(kb.sym(Util.uri.docpart(bindingsSoFar[item.object].uri))) == "unrequested") {
+		       && sf.getState(Util.uri.docpart(bindingsSoFar[item.object].uri)) == "unrequested") {
                 fetchResource(bindingsSoFar[item.object], id)
 		return; //@@tbl
 //            } else {

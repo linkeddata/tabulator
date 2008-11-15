@@ -337,7 +337,7 @@ function AJAR_handleNewTerm(kb, p, requestedBy) {
     if (fixuri) {
         docuri = fixuri
     }
-    if (sf.getState(kb.sym(docuri)) != 'unrequested') return;
+    if (sf.getState(docuri) != 'unrequested') return;
     
     if (fixuri) {   // only give warning once: else happens too often
         tabulator.log.warn("Assuming server still broken, faking redirect of <" + p.uri +

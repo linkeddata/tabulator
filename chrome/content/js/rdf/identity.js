@@ -246,6 +246,11 @@ RDFIndexedFormula.prototype.canon = function(term) {
     return y;
 }
 
+// Compare by canonical URI as smushed
+RDFIndexedFormula.prototype.sameThings = function(x, y) {
+    return this.canon(x).sameTerm(this.canon(y));
+}
+
 // A list of all the URIs by which this thing is known
 RDFIndexedFormula.prototype.uris = function(term) {
     var cterm = this.canon(term)

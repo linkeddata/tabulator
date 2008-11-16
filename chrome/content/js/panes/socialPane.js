@@ -53,7 +53,7 @@ tabulator.panes.register( {
             var tx = myDocument.createTextNode(str);
             var p = myDocument.createElement('p');
             p.appendChild(tx);
-            div.appendChild(p);
+            tips.appendChild(p);
         }
         
         var buildCheckboxForm = function(lab, statement, state) {
@@ -124,12 +124,16 @@ tabulator.panes.register( {
                 box.appendChild(img)
             }
 
-            var a = myDocument.createElement('a');
-            if (friend.uri) a.setAttribute('href', friend.uri);
             var t = myDocument.createTextNode(label(friend));
             if (confirmed) t.className = 'confirmed';
-            a.appendChild(t);
-            box.appendChild(a);
+            if (friend.uri) {
+                var a = myDocument.createElement('a');
+                a.setAttribute('href', friend.uri);
+                a.appendChild(t);
+                box.appendChild(a);
+            } else {
+                box.appendChild(t);
+            }
             
             var uris = kb.uris(friend);
             for(var i=0; i<uris.length; i++) {
@@ -187,7 +191,7 @@ tabulator.panes.register( {
             var but = myDocument.createElement('input');
             box.appendChild(but);
             but.setAttribute('type', 'button');
-            but.setAttribute('value', 'Make A Web ID');
+            but.setAttribute('value', 'Make or set A Web ID');
             var makeOne = function() {
                 // document.location = "chrome://tabulator/content/webid.html";
                 var w = window.open("chrome://tabulator/content/webid.html",
@@ -231,13 +235,13 @@ tabulator.panes.register( {
             input.checked = (thisIsYou);
             input.addEventListener('click', myHandler, false);
         }
-
+/*
         if (thisIsYou) {  // This is you
             var h = myDocument.createElement('h2');
             h.appendChild(myDocument.createTextNode('Your public profile'));
             tools.appendChild(h);
         }
-
+*/
         var knows = foaf('knows');
     //        var givenName = kb.sym('http://www.w3.org/2000/10/swap/pim/contact#givenName');
         var familiar = kb.any(s, foaf('givenname')) || kb.any(s, foaf('firstName')) ||
@@ -257,7 +261,7 @@ tabulator.panes.register( {
 
                     editable = outline.sparql.prototype.editable(works[i].uri, kb);
                     if (!editable) { 
-                        message += ("Your profile <"+works[i].uri+"> is not remotely editable.");
+                        message += ("Your profile <"+escapeForXML(works[i].uri)+"> is not remotely editable.");
                     } else {
                         profile = works[i];
                         break;
@@ -269,7 +273,7 @@ tabulator.panes.register( {
                 if (!profile) {
                     say(message + "\nI couldn't find an editable personal profile document.");
                 } else  {
-                    say("Editing your profile <"+profile.uri+">.");
+                    say("Editing your profile <"+escapeForXML(profile.uri)+">.");
                      // Do I have an EDITABLE profile?
                     editable = outline.sparql.prototype.editable(profile.uri, kb);
                 }
@@ -280,25 +284,26 @@ tabulator.panes.register( {
                 h3.appendChild(myDocument.createTextNode('You and '+familiar));
                 tools.appendChild(h3);
 
-
-                var incoming = kb.whether(s, knows, me);
+                cme = kb.canon(me);
+                var incoming = kb.whether(s, knows, cme);
                 var outgoing = false;
-                var outgoingSt = kb.statementsMatching(me, knows, s);
+                var outgoingSt = kb.statementsMatching(cme, knows, s);
                 if (outgoingSt.length) {
                     outgoing = true;
                     if (!profile) profile = outgoingSt.why;
                 }
 
-                var msg = "<a href='"+me_uri+"'>You</a> and "+familiar
+                var msg = "<a href='"+me_uri+"'>You</a> and <a href='"+
+                        escapeForXML(s.uri)+"'>"+escapeForXML(familiar)+"</a>"
                 if (!incoming) {
                     if (!outgoing) {
                         msg = msg + ' do not know each other.';
                     } else {
-                        msg = 'You know '+familiar+ ' (unconfirmed)'; // beware encoding attacks @@
+                        msg = 'You know '+escapeForXML(familiar)+ ' (unconfirmed)'; // beware encoding attacks @@
                     }
                 } else {
                     if (!outgoing) {
-                        msg = familiar + ' knows you (unconfirmed).';
+                        msg = escapeForXML(familiar) + ' knows you (unconfirmed).';
                     } else {
                         msg = msg + ' know each other.';
                     }
@@ -401,11 +406,11 @@ tabulator.panes.register( {
         var lookup = 'http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri);
         f.add(s, tabulator.ns.rdfs('seeAlso'), kb.sym(lookup)); //@@@ better pred? @@Hack
         
-        outline.appendPropertyTRs(div, f.statements, false, function(pred){return true;})
+        outline.appendPropertyTRs(tips, f.statements, false, function(pred){return true;})
 
         var h3 = myDocument.createElement('h3');
         h3.appendChild(myDocument.createTextNode('Basic Information'));
-        div.appendChild(h3);
+        tips.appendChild(h3);
 
         var preds = [ tabulator.ns.foaf('homepage') , tabulator.ns.foaf('openid'),
                 tabulator.ns.foaf('weblog'),  tabulator.ns.foaf('nick'),
@@ -416,7 +421,7 @@ tabulator.panes.register( {
             if (sts.length == 0) {
                 // if (editable) say("No home page set. Use the blue + icon at the bottom of the main view to add information.")
             } else {
-                outline.appendPropertyTRs(div, sts, false, function(pred){return true;});
+                outline.appendPropertyTRs(tips, sts, false, function(pred){return true;});
             }
         }
 

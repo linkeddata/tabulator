@@ -250,10 +250,12 @@ RDFIndexedFormula.prototype.canon = function(term) {
 RDFIndexedFormula.prototype.sameThings = function(x, y) {
     if (x.sameTerm(y)) return true;
     var x1 = this.canon(x);
+//    alert('x1='+x1);
     if (x1 == undefined) return false;
     var y1 = this.canon(y);
+//    alert('y1='+y1); //@@
     if (y1 == undefined) return false;
-    return (x1 == y1);
+    return (x1.uri == y1.uri);
 }
 
 // A list of all the URIs by which this thing is known

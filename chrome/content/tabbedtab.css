@@ -585,3 +585,129 @@ td{
  {
  display: none;
  }
+
+
+
+/*
+Start of styles for the photoPane, by albert08@csail.mit.edu
+*/
+div.PhotoContentPane {
+    float: left;
+    padding: 0px;
+    width: 900px;
+    border: 1px solid #AAAAAA;
+    padding: 10px;
+}
+div.PhotoListPanel {
+    float: left;
+    padding: 5px ;
+    border: 1px solid #AAAAAA;
+    width: 540px;
+    min-height: 300px;;
+}
+div.PhotoInfoPanel {
+    float: left;
+    padding: 10px;
+    border: 1px solid #AAAAAA;
+    width: 300px;
+    text-align: center;
+    margin: 0px 0px 10px 10px;
+}
+div.TagMenu {
+    float: left;
+    padding: 10px;
+    border: 1px solid #AAAAAA;
+    width: 300px;
+    margin: 0px 0px 0px 10px;
+    text-align: justify;
+}
+.tagItem {
+    float: left;
+    padding: 2px;
+    margin: 2px;
+    cursor:pointer;
+}
+.tagItem_h {
+    float: left;
+    padding: 2px;
+    margin: 1px;
+    border: 1px solid #DDBB99;
+    background-color: #DDEEFF;
+    cursor:pointer;
+}
+div.photoItem {
+    float: left;
+    width: 100%;
+}
+div.photoFrame {
+    border-right: 1px solid #AAAAAA;
+    width: 260px;
+    padding: 10px;
+    margin: 10px 10px 10px 10px;
+    text-align: center;
+    float: left;
+}
+img.photoThumbnail {
+    border: 1px solid #CCCCCC;
+    margin: auto auto auto auto;
+}
+.photoListTags {
+    width:200px;
+    margin-top: 10px;
+    padding-top: 10px;
+    float: left;
+}
+.photoList_tag {
+	background: transparent url(icons/tag_tiny.png) 0px 1px no-repeat;
+	padding: 1px 0px 1px 18px;
+	margin-left: 5px;
+}
+.TagMenu_tag {
+	background: transparent url(icons/tag_tiny.png) 0px 1px no-repeat;
+	padding: 1px 0px 1px 18px;
+	margin-left: 5px;
+}
+div.photoImportContentPane {
+    float: left;
+    padding: 0px;
+    width: 930px;
+    border: 1px solid #AAAAAA;
+    padding: 10px;
+}
+.photoImportTitle {
+    font-size: 16px;
+    font-weight: bold;
+}
+.photoItemPanel {
+    width: 260px;
+    height: 300px;
+    float: left;
+    padding: 10px;
+    border: 1px solid #AAAAAA;
+    margin: 0px 10px 10px 0px; 
+}
+.photoControlImg {
+    border: 0px;
+    cursor: pointer;
+}
+.photoControlImgInactive {
+    opacity: .5;
+	filter: alpha(opacity=50);
+	border: 0px;
+}
+#photoPageInfo {
+    font-family: Arial;
+    font-size: 14px;
+    font-weight: bold;
+}
+.controls {
+    clear: both;
+    text-align: right;
+    margin: 15px 15px 0px 0px;
+}
+.controlButton {
+    margin: 0px 0px 0px 10px;
+}
+/*
+End of styles for the photoPane
+*/

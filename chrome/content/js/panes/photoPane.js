@@ -91,6 +91,9 @@
         // Function for setting the control buttons and show page info
         photoPane.render.ShowControlButtons = function() {
             page_info_div.innerHTML = "";
+            if (total_pages == 0) {
+                current_page = 0;
+            }
             page_info_div.appendChild(myDocument.createTextNode("Page " + current_page + " of " + total_pages));
             photo_begin_img.setAttribute("class","photoControlImg");
             photo_begin_img.addEventListener("click",photoPane.render.FirstPage,false);
@@ -107,6 +110,16 @@
                 photo_back_img.removeEventListener("click",photoPane.render.PreviousPage,false);
             }
             if (current_page == total_pages) {
+                photo_end_img.setAttribute("class","photoControlImgInactive");
+                photo_end_img.removeEventListener("click",photoPane.render.LastPage,false);
+                photo_next_img.setAttribute("class","photoControlImgInactive");
+                photo_next_img.removeEventListener("click",photoPane.render.NextPage,false);
+            }
+            if (total_pages == 0) {
+                photo_begin_img.setAttribute("class","photoControlImgInactive");
+                photo_begin_img.removeEventListener("click",photoPane.render.FirstPage,false);
+                photo_back_img.setAttribute("class","photoControlImgInactive");
+                photo_back_img.removeEventListener("click",photoPane.render.PreviousPage,false);
                 photo_end_img.setAttribute("class","photoControlImgInactive");
                 photo_end_img.removeEventListener("click",photoPane.render.LastPage,false);
                 photo_next_img.setAttribute("class","photoControlImgInactive");
@@ -148,20 +161,11 @@
                 var tag = allTags[i];
                 
                 // Each Tag is contained in a div
-                var tagItem = myDocument.createElement("div");
-                tagItem.setAttribute('class','TagMenu_tag');
-                
-                // Create and append the checkbox, updated the list of checked tags
-                var checkbox = myDocument.createElement("input");
-                checkbox.setAttribute("type","checkbox");
-                checkbox.setAttribute("id",tag);
-                checkbox.setAttribute("name",tag);
-                checkbox.addEventListener("click",photoPane.render.UpdateCheckedTags,false);
-                tagItem.appendChild(checkbox);
-                
-                // Append the tag to the div
+                var tagItem = myDocument.createElement("span");
+                tagItem.setAttribute('class','tagItem');
+                tagItem.setAttribute('id',tag);
                 tagItem.appendChild(myDocument.createTextNode(tag));
-                tagItem.appendChild(myDocument.createElement('br'));
+                tagItem.addEventListener("click",photoPane.render.UpdateCheckedTags,false);
                 tag_menu_div.appendChild(tagItem);
             }
         }
@@ -218,9 +222,7 @@
         // This function is invoked when any checkbox is clicked
         photoPane.render.UpdateCheckedTags = function(e) {
             tag = e.target.id;
-            if (e.target.checked) {
-                checkedTags.push(tag);
-            } else {
+            if (checkedTags.indexOf(tag) > -1) {
                 var temp = new Array();
                 for (var i = 0; i < checkedTags.length; i++) {
                     if (checkedTags[i] != tag) {
@@ -228,6 +230,12 @@
                     }
                 }
                 checkedTags = temp;
+                e.target.removeAttribute('class');
+                e.target.setAttribute('class','tagItem');
+            } else {
+                checkedTags.push(tag);
+                e.target.removeAttribute('class');
+                e.target.setAttribute('class','tagItem_h');
             }
             photoPane.render.UpdateCurrentPhotos();
             photoPane.render.ShowControlButtons();

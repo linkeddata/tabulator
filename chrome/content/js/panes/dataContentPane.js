@@ -39,6 +39,10 @@ tabulator.panes.dataContentPane = {
             var rep = myDocument.createElement('table')
             var lastPred = null;
             var sts = subjects[sz.toStr(subject)]; // relevant statements
+            if (!sts) { // No statements in tree
+                rep.appendChild(myDocument.createTextNode('@@: '+subject));
+                return rep;
+            }
             sts.sort();
             var same =0;
             var td_p; // The cell which holds the predicate

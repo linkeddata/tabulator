@@ -321,7 +321,6 @@ tabulator.panes.register( {
                  
                 if (friends) {
                     var myFriends = kb.each(me, foaf('knows'));
-                    // div.appendChild(myDocument.createTextNode( '(You have '+myFriends.length+' acqaintances.) '))
                     if (myFriends) {
                         var mutualFriends = common(friends, myFriends);
                         var tr = myDocument.createElement('tr');
@@ -382,7 +381,7 @@ tabulator.panes.register( {
         } // incoming
 
 //        cases = [['Confirmed friends', confirmed],['Unconfirmed friends', unconfirmed],['Friend Requests', requests]];
-        cases = [['friends', outgoing],['Friend Requests', requests]];
+        cases = [['Acquaintances', outgoing],['Mentioned as acquaintances by: ', requests]];
         for (var i=0; i<cases.length; i++) {
             var thisCase = cases[i];
             var friends = thisCase[1];
@@ -410,10 +409,10 @@ tabulator.panes.register( {
 
         var h3 = myDocument.createElement('h3');
         h3.appendChild(myDocument.createTextNode('Basic Information'));
-        tips.appendChild(h3);
+        tools.appendChild(h3);
 
-        var preds = [ tabulator.ns.foaf('homepage') , tabulator.ns.foaf('openid'),
-                tabulator.ns.foaf('weblog'),  tabulator.ns.foaf('nick'),
+        var preds = [ tabulator.ns.foaf('homepage') , 
+                tabulator.ns.foaf('weblog'), 
                 tabulator.ns.foaf('workplaceHomepage'),  tabulator.ns.foaf('schoolHomepage')];
         for (var i=0; i<preds.length; i++) {
             var pred = preds[i];
@@ -421,7 +420,32 @@ tabulator.panes.register( {
             if (sts.length == 0) {
                 // if (editable) say("No home page set. Use the blue + icon at the bottom of the main view to add information.")
             } else {
-                outline.appendPropertyTRs(tips, sts, false, function(pred){return true;});
+                for (var j=0; j<sts.length; j++) {
+                    st = sts[j];
+                    if (!st.object.uri) continue; // Ignore if not symbol
+                    var t = myDocument.createTextNode(label(pred));
+                    var a = myDocument.createElement('a');
+                    a.appendChild(t);
+                    a.setAttribute('href', st.object.uri);
+                    var d = myDocument.createElement('div');
+                    d.className = 'social_linkButton';
+                    d.appendChild(a);
+                    tools.appendChild(d);
+                
+                }
+            }
+        }
+
+        var preds = [  tabulator.ns.foaf('openid'),
+                tabulator.ns.foaf('nick')
+                ];
+        for (var i=0; i<preds.length; i++) {
+            var pred = preds[i];
+            var sts = kb.statementsMatching(s, pred);
+            if (sts.length == 0) {
+                // if (editable) say("No home page set. Use the blue + icon at the bottom of the main view to add information.")
+            } else {
+                outline.appendPropertyTRs(tools, sts, false, function(pred){return true;});
             }
         }
 

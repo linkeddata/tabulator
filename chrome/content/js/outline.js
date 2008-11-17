@@ -183,7 +183,7 @@ function Outline(doc) {
         } //switch
         var img = AJARImage(icon, alt, 
                             Icon.tooltips[icon].replace(/[Tt]his resource/,
-                                                        docuri))
+                                                        uri))
         img.setAttribute('uri', uri);
         addButtonCallbacks(img, docuri) 
         node.appendChild(img)

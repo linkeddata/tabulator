@@ -302,7 +302,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 
     // Convert a set of statements into a nested tree of lists and strings
     function objectTree(obj, subjects) {
-        if (obj.termType == 'bnode') 
+        if (obj.termType == 'bnode' && subjects[sz.toStr(obj)]) // and there are statements
             return  ['['].concat(propertyTree(obj, subjects)).concat([']']);
         return termToN3(obj, subjects);
     }

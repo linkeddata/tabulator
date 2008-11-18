@@ -1,4 +1,10 @@
-/*      Serialization
+/*      Serialization of RDF Graphs
+**
+** Tim Berners-Lee 2006
+** This is or was http://dig.csail.mit.edu/2005/ajar/ajaw/js/rdf/serialize.js
+**
+** Bug: can't serialize  http://data.semanticweb.org/person/abraham-bernstein/rdf 
+** in XML (from mhausenblas)
 */
 
 __Serializer = function(){
@@ -25,7 +31,7 @@ __Serializer.prototype.setFlags = function(flags)
 __Serializer.prototype.toStr = function(x) {
         var s = x.toNT();
         if (x.termType == 'formula') {
-            this.formulas[s] = x; // remember as reverse doesnot work
+            this.formulas[s] = x; // remember as reverse does not work
         }
         return s;
 };

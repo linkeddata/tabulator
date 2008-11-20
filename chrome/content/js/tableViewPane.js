@@ -21,7 +21,11 @@ function renderTableViewPane(doc, statements) {
 
     var mostCommonType = getMostCommonType(types);
 
-    buildFilteredTable(mostCommonType);
+    if (mostCommonType != null) {
+        buildFilteredTable(mostCommonType);
+    } else {
+        buildFilteredTable(allType);
+    }
 
     return resultDiv;
 

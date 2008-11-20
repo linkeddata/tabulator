@@ -7,22 +7,43 @@ tabulator.panes.register({
     name: "table",
 
     label: function(subject) {
-        return "Table view";
+
+        // Returns true if the specified list of statements contains
+        // information on a single subject.
+ 
+        function singleSubject(statements) {
+            var subj = null;
+
+            for (var i=0; i<statements.length; ++i) {
+                if (subj == null) {
+                    subj = statements[i].subject;
+                } else if (statements[i].subject != subj) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        var sts = kb.statementsMatching(undefined, undefined, undefined,
+                                        subject); 
+
+        // If all the statements are on a single subject, a table view 
+        // is futile, so hide the table view icon.
+
+        if (!singleSubject(sts)) {
+            return "Table view";
+        } else {
+            return null;
+        }
     },
 
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); 
 
         div.appendChild(renderTableViewPane(myDocument, sts));
-        /*
-        div.appendChild(myDocument.createTextNode("predicates:" + sts.length));
-
-        for (i=0; i<sts.length; ++i) {
-            var text = sts[i].predicate.uri;
-            div.appendChild(myDocument.createTextNode(text));
-        }*/
         return div;
     }
 })

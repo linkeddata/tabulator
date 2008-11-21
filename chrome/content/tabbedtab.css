@@ -683,11 +683,6 @@ img.photoThumbnail {
 	padding: 1px 0px 1px 18px;
 	margin-left: 5px;
 }
-.TagMenu_tag {
-	background: transparent url(icons/tag_tiny.png) 0px 1px no-repeat;
-	padding: 1px 0px 1px 18px;
-	margin-left: 5px;
-}
 div.photoImportContentPane {
     float: left;
     padding: 0px;
@@ -698,14 +693,6 @@ div.photoImportContentPane {
 .photoImportTitle {
     font-size: 16px;
     font-weight: bold;
-}
-.photoItemPanel {
-    width: 260px;
-    height: 300px;
-    float: left;
-    padding: 10px;
-    border: 1px solid #AAAAAA;
-    margin: 0px 10px 10px 0px; 
 }
 .photoControlImg {
     border: 0px;
@@ -722,12 +709,15 @@ div.photoImportContentPane {
     font-weight: bold;
 }
 .controls {
-    clear: both;
-    text-align: right;
-    margin: 15px 15px 0px 0px;
+    float: left;
+    margin-top: 10px;
+    padding-top: 10px;
 }
 .controlButton {
-    margin: 0px 0px 0px 10px;
+    margin: 5px;
+    font-family: Arial;
+    font-size: 12px;
+    font-weight: bold;
 }
 /*
 End of styles for the photoPane

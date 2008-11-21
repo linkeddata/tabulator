@@ -101,7 +101,7 @@ Icon.src.icon_photoBegin = iconPrefix + 'icons/photo_begin.png';
 Icon.src.icon_photoNext = iconPrefix + 'icons/photo_next.png';
 Icon.src.icon_photoBack = iconPrefix + 'icons/photo_back.png';
 Icon.src.icon_photoEnd = iconPrefix + 'icons/photo_end.png';
-//Icon.src.icon_photoImportPane = iconPrefix + 'icons/import_small.png';
+Icon.src.icon_photoImportPane = iconPrefix + 'icons/flickr_small.png';
 //Icon.src.icon_CloseButton = iconPrefix + 'icons/close_tiny.png';
 //Icon.src.icon_AddButton = iconPrefix + 'icons/addphoto_tiny.png';
 

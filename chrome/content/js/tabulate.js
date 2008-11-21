@@ -2,12 +2,12 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25116 2008-11-15 16:13:48Z timbl $
+// SVN ID: $Id: tabulate.js 25246 2008-11-21 13:06:57Z timbl $
 //
 // See Help.html, About.html, tb.html
-//tabulate.js is now the main driving class behind the web version of the Tabulator.
+//tabulate.js is now the main driving class behind the Web Apps version of the Tabulator.
 
-isExtension=false;
+isExtension = false;
 
 LanguagePreference = "en"    // @@ How to set this from the browser? From cookie?
 
@@ -33,8 +33,11 @@ tabulator.ns.doap = doap = RDFNamespace("http://usefulinc.com/ns/doap#");
 
 var ns = tabulator.ns
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing
+tabulator.kb = kb; 
 var sf = new SourceFetcher(kb) // This handles resource retrieval
-var outline;
+tabulator.sf = sf; 
+
+var outline; // one per document
 
 kb.sf = sf // Make knowledge base aware of source fetcher to allow sameAs to propagate a fetch
 

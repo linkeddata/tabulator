@@ -821,7 +821,7 @@ function renderTableViewPane(doc, statements) {
 /* Table view pane */
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table-view.png",
+    icon: iconPrefix + "icons/table.png",
 
     name: "table",
 

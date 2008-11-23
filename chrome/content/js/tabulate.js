@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25246 2008-11-21 13:06:57Z timbl $
+// SVN ID: $Id: tabulate.js 25273 2008-11-23 18:50:54Z ilaria $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the Web Apps version of the Tabulator.
@@ -120,7 +120,7 @@ Icon.src.icon_requested = iconPrefix + 'icons/16dot-yellow.gif';
 
 // Panes:
 
-Icon.src.icon_defaultPane = iconPrefix + 'icons/table.png';
+Icon.src.icon_defaultPane = iconPrefix + 'icons/about.png';
 Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
 Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better

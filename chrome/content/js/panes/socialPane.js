@@ -420,13 +420,34 @@ tabulator.panes.register( {
             if (sts.length == 0) {
                 // if (editable) say("No home page set. Use the blue + icon at the bottom of the main view to add information.")
             } else {
+                var uris = [];
                 for (var j=0; j<sts.length; j++) {
                     st = sts[j];
                     if (!st.object.uri) continue; // Ignore if not symbol
-                    var t = myDocument.createTextNode(label(pred));
+                    uris.push(st.object.uri);
+                }
+                uris.sort();
+                var last = "";
+                for (var j=0; j<uris.length; j++) {
+                    uri = uris[j];
+                    if (uri == last) continue; // uniques only
+                    last = uri;
+                    var hostlabel = ""
+                    var lab = label(pred);
+                    if (uris.length > 1) {
+                        var l = uri.indexOf('//');
+                        if (l>0) {
+                            var r = uri.indexOf('/', l+2)
+                            var s = uri.lastIndexOf('.', r)
+                            if (s>0) r = s;
+                            hostlabel = uri.slice(l+2,r);
+                        }
+                    }
+                    if (hostlabel) lab = hostlabel + ' ' + lab; // disambiguate
+                    var t = myDocument.createTextNode(lab);
                     var a = myDocument.createElement('a');
                     a.appendChild(t);
-                    a.setAttribute('href', st.object.uri);
+                    a.setAttribute('href', uri);
                     var d = myDocument.createElement('div');
                     d.className = 'social_linkButton';
                     d.appendChild(a);

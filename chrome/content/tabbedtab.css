@@ -122,7 +122,7 @@ div.mildNotice {
         width: 80%;        /* float: right; */
         background-color: #ffe; }
 
-.friendBox { height: 4em; border-top: solid 0.01em #ccc; margin: 0; padding: 0.3em;
+.friendBox { /* height: 4em; */ border-top: solid 0.01em #ccc; margin: 0; padding: 0.3em;
             /* float: left; */}
 .friendBoxBig { height: 20em; border-top: solid 0.01em #202; /* float: left; */}
 
@@ -133,6 +133,7 @@ div.mildNotice {
 .socialPane a:active { color: #888; text-decoration: none; }
 
 img.foafThumb { height: 3em ; border: 0px; margin: 0.1em; padding: 0.1em;
+    vertical-align: middle;
         } /* Thumbnail of a fiend etc */
 
 .friendBox .confirmed { font-weight: bold; }

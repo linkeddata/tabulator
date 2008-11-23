@@ -96,7 +96,7 @@ Icon.src.icon_requested = iconPrefix + 'icons/16dot-yellow.gif';
 
 // Panes:
 
-Icon.src.icon_defaultPane = iconPrefix + 'icons/table.png';
+Icon.src.icon_defaultPane = iconPrefix + 'icons/about.png';
 Icon.src.icon_visit = iconPrefix + 'icons/tango/22-text-x-generic.png';
 Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad .. find better
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better

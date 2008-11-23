@@ -391,8 +391,17 @@ tabulator.panes.register( {
             h3.appendChild(myDocument.createTextNode(thisCase[0]));
             main.appendChild(h3);
 
+            var items = [];
             for (var j=0; j<friends.length; j++) {
-                main.appendChild(oneFriend(friends[j]));
+                items.push([label(friends[j]), friends[j]]);
+            }
+            items.sort();
+            var last = null;
+            for (var j=0; j<items.length; j++) {
+                var friend = items[j][1];
+                if (friend.sameTerm(last)) continue; // unique
+                last = friend;                
+                main.appendChild(oneFriend(friend));
             }
                 
         }
@@ -423,8 +432,7 @@ tabulator.panes.register( {
                 var uris = [];
                 for (var j=0; j<sts.length; j++) {
                     st = sts[j];
-                    if (!st.object.uri) continue; // Ignore if not symbol
-                    uris.push(st.object.uri);
+                    if (st.object.uri) uris.push(st.object.uri); // Ignore if not symbol
                 }
                 uris.sort();
                 var last = "";
@@ -438,8 +446,8 @@ tabulator.panes.register( {
                         var l = uri.indexOf('//');
                         if (l>0) {
                             var r = uri.indexOf('/', l+2)
-                            var s = uri.lastIndexOf('.', r)
-                            if (s>0) r = s;
+                            var r2 = uri.lastIndexOf('.', r)
+                            if (r2>0) r = r2;
                             hostlabel = uri.slice(l+2,r);
                         }
                     }

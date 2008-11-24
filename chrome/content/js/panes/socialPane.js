@@ -56,6 +56,18 @@ tabulator.panes.register( {
             tips.appendChild(p);
         }
         
+        var link = function(contents, uri) {
+            if (!uri) return contents;
+            var a =  myDocument.createElement('a');
+            a.setAttribute('href', uri);
+            a.appendChild(contents);
+            return a;
+        }
+        
+        var text = function(str) {
+            return myDocument.createTextNode(str);
+        }
+        
         var buildCheckboxForm = function(lab, statement, state) {
             var f = myDocument.createElement('form');
             var input = myDocument.createElement('input');
@@ -293,24 +305,36 @@ tabulator.panes.register( {
                     if (!profile) profile = outgoingSt.why;
                 }
 
-                var msg = "<a href='"+me_uri+"'>You</a> and <a href='"+
-                        escapeForXML(s.uri)+"'>"+escapeForXML(familiar)+"</a>"
+                var tr = myDocument.createElement('tr');
+                tools.appendChild(tr);
+                
+                var youAndThem = function() {
+                    tr.appendChild(link(text('You'), me_uri));
+                    tr.appendChild(text(' and '));
+                    tr.appendChild(link(text(familiar), s.uri));
+                }
+
                 if (!incoming) {
                     if (!outgoing) {
-                        msg = msg + ' do not know each other.';
+                        youAndThem();
+                        tr.appendChild(text(' have not said you know each other.'));
                     } else {
-                        msg = 'You know '+escapeForXML(familiar)+ ' (unconfirmed)'; // beware encoding attacks @@
+                        tr.appendChild(link(text('You'), me_uri));
+                        tr.appendChild(text(' know '));
+                        tr.appendChild(link(text(familiar), s.uri));
+                        tr.appendChild(text(' (unconfirmed)'));
                     }
                 } else {
                     if (!outgoing) {
-                        msg = escapeForXML(familiar) + ' knows you (unconfirmed).';
+                        tr.appendChild(link(text(familiar), s.uri));
+                        tr.appendChild(text(' knows '));
+                        tr.appendChild(link(text('you'), me_uri));
+                        tr.appendChild(text(familiar+' (unconfirmed).')); //@@
                     } else {
-                        msg = msg + ' know each other.';
+                        youAndThem();
+                        tr.appendChild(text(' say you know each other.'));
                     }
                 }
-                var tr = myDocument.createElement('tr');
-                tools.appendChild(tr);
-                tr.innerHTML = msg;
 
 
                 if (editable) {
@@ -327,7 +351,7 @@ tabulator.panes.register( {
                         tools.appendChild(tr);
                         tr.appendChild(myDocument.createTextNode(
                                     'You'+ (familiar? ' and '+familiar:'') +' know'+
-                                    people(mutualFriends.length)+' in common'))
+                                    people(mutualFriends.length)+' found in common'))
                         if (mutualFriends) {
                             for (var i=0; i<mutualFriends.length; i++) {
                                 tr.appendChild(myDocument.createTextNode(

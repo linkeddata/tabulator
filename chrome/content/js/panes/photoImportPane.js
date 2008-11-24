@@ -18,6 +18,9 @@
     
     photoImportPane.label = function(subject) {
         
+        if (subject.uri == undefined) {
+            return null;
+        }
         var docURI = subject.uri.substring(0,subject.uri.lastIndexOf("#"));
         var outline = tabulator.outline;
         var editable = outline.sparql.prototype.editable(docURI, kb);

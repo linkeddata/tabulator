@@ -20,7 +20,7 @@ tabulator.panes.register( {
 
     render: function(s, myDocument) {
 
-        var common = function(x,y) { // Find common members of two lists
+	    var common = function(x,y) { // Find common members of two lists
     //            var dict = [];
             var both = [];
             for(var i=0; i<x.length; i++) {
@@ -129,6 +129,8 @@ tabulator.panes.register( {
             box.className = 'friendBox';
 
             var src = kb.any(friend, foaf('img')) || kb.any(friend, foaf('depiction'));
+			//Should we try to add an empty image box here? If the image is not fetched we use this default image
+			//The names would be aligned and the layout would look nice - Oshani
             if (src) {
                 var img = myDocument.createElement("IMG")
                 img.setAttribute('src', src.uri)
@@ -136,17 +138,19 @@ tabulator.panes.register( {
                 box.appendChild(img)
             }
 
+			
             var t = myDocument.createTextNode(label(friend));
-            if (confirmed) t.className = 'confirmed';
-            if (friend.uri) {
-                var a = myDocument.createElement('a');
-                a.setAttribute('href', friend.uri);
-                a.appendChild(t);
-                box.appendChild(a);
-            } else {
-                box.appendChild(t);
-            }
-            
+			if (confirmed) t.className = 'confirmed';
+			if (friend.uri) {
+				var a = myDocument.createElement('a');
+				a.setAttribute('href', friend.uri);
+				a.appendChild(t);
+				box.appendChild(a);
+			} 
+			else {
+				box.appendChild(t);
+			}
+			
             var uris = kb.uris(friend);
             for(var i=0; i<uris.length; i++) {
                 outline.appendAccessIcon(box, uris[i]);
@@ -409,7 +413,7 @@ tabulator.panes.register( {
         for (var i=0; i<cases.length; i++) {
             var thisCase = cases[i];
             var friends = thisCase[1];
-            if (friends.length == 0) continue; // Skip empty sections (sure?)
+			if (friends.length == 0) continue; // Skip empty sections (sure?)
             
             var h3 = myDocument.createElement('h3');
             h3.appendChild(myDocument.createTextNode(thisCase[0]));
@@ -423,9 +427,12 @@ tabulator.panes.register( {
             var last = null;
             for (var j=0; j<items.length; j++) {
                 var friend = items[j][1];
-                if (friend.sameTerm(last)) continue; // unique
-                last = friend;                
-                main.appendChild(oneFriend(friend));
+				if (friend.sameTerm(last)) continue; // unique
+                last = friend; 
+				if (label(friend) != "..."){	//This check is to avoid bnodes with no labels attached 
+												//appearing in the friends list with "..." - Oshani
+					main.appendChild(oneFriend(friend));
+				}
             }
                 
         }

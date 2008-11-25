@@ -333,7 +333,7 @@ tabulator.panes.register( {
                         tr.appendChild(link(text(familiar), s.uri));
                         tr.appendChild(text(' knows '));
                         tr.appendChild(link(text('you'), me_uri));
-                        tr.appendChild(text(familiar+' (unconfirmed).')); //@@
+                        tr.appendChild(text(' (unconfirmed).')); //@@
                     } else {
                         youAndThem();
                         tr.appendChild(text(' say you know each other.'));

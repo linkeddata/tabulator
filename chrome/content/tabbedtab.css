@@ -615,7 +615,6 @@ Start of styles for the photoPane, by albert08@csail.mit.edu
 */
 div.PhotoContentPane {
     float: left;
-    padding: 0px;
     width: 900px;
     border: 1px solid #AAAAAA;
     padding: 10px;
@@ -701,7 +700,6 @@ div.photoImportContentPane {
 }
 .photoControlImgInactive {
     opacity: .5;
-	filter: alpha(opacity=50);
 	border: 0px;
 }
 #photoPageInfo {
@@ -719,6 +717,36 @@ div.photoImportContentPane {
     font-family: Arial;
     font-size: 12px;
     font-weight: bold;
+}
+div.TagPane {
+    min-width: 500px;
+    border: 1px solid #AAAAAA;
+    padding: 10px;
+}
+div.TagSemanticsPanel {
+    margin: 5px 0px 20px 0px;
+}
+div.TagSemanticsTable {
+    width: 100%;
+    font-family: Arial;
+    font-size: 12px;    
+}
+div.AddTagSemantics {
+    margin: 50px 0px 10px 0px;
+}
+.controlSelect {
+    margin: 5px;
+    font-family: Arial;
+    font-size: 12px;
+}
+.tagURIInput {
+    margin: 5px;
+    font-family: Arial;
+    font-size: 12px;
+    width: 300px;
+}
+div.TagPane hr{
+    border: 1px solid #AAAAAA;
 }
 /*
 End of styles for the photoPane

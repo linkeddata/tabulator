@@ -25,7 +25,6 @@
         var stWhy = new RDFSymbol(docURI);
         var outline = tabulator.outline;
         var editable = outline.sparql.prototype.editable(docURI, kb);
-        alert(editable);
         var tag = kb.the(subject, RDFS("label"), undefined, stWhy);
         
         // Create the main panel

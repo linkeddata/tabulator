@@ -16,7 +16,8 @@
 gotOne = function() {
     var form = document.getElementById("gotWebID");
     var webid = form.webid.value;
-    var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    var tabulator = document.tabulator;
+    // var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     tabulator.preferences.set('me', webid);
     alert("You ID has been set to "+webid);
 }
@@ -168,7 +169,7 @@ No, I would like to make one
                          value="http://dig.csail.mit.edu/2008/webdav/timbl/test.rdf"
                          />
                 <br/>
-                <input type="button" value="Create my new profile" onclick="tryFoaf()"/>
+                <input id="tryFoafButton" type="button" value="Create my new profile" onclick="tryFoaf()"/>
                 </p>
             </div>
         </form>

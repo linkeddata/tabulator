@@ -47,6 +47,7 @@
   <!-- browser reload hack -->
   <script type="application/x-javascript" src="refresh_hack.js"/>
   
+
   <!-- panes for Photo access control project (By albert08@csail.mit.edu) -->
   <script type="application/x-javascript" src="js/panes/photoPane.js"/>
   <script type="application/x-javascript" src="js/panes/tagPane.js"/>

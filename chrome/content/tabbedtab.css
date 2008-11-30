@@ -177,6 +177,20 @@ div.social_linkButton {
     text-align: center;
 }
 
+/*  For question-and-answer stuff for new web id but quite reusable.
+*/
+  .answer  { font-style: italic; color: #00c; text-decoration: underline; }
+  .tip  { font-style: normal; color: #333; margin: 1em;}
+  .task  { font-style: normal; color: #333; margin: 1em;
+        background-color: #ffe; padding: 1em;
+ -moz-border-radius: 1em; /* CSS3: border-radius: 1em; */
+  }
+  .success {background-color: #efe }
+  .failure {background-color: #fee ; border: 0.1em red}
+  div.unknown { display:none } 
+  div.yes > div.negative { display: none } 
+  div.no > div.affirmative { display: none } 
+
 /******************* Data Content Pane *****************/
 
 div.dataContentPane {
@@ -683,6 +697,11 @@ img.photoThumbnail {
 	padding: 1px 0px 1px 18px;
 	margin-left: 5px;
 }
+.TagMenu_tag {
+	background: transparent url(icons/tag_tiny.png) 0px 1px no-repeat;
+	padding: 1px 0px 1px 18px;
+	margin-left: 5px;
+}
 div.photoImportContentPane {
     float: left;
     padding: 0px;
@@ -693,6 +712,14 @@ div.photoImportContentPane {
 .photoImportTitle {
     font-size: 16px;
     font-weight: bold;
+}
+.photoItemPanel {
+    width: 260px;
+    height: 300px;
+    float: left;
+    padding: 10px;
+    border: 1px solid #AAAAAA;
+    margin: 0px 10px 10px 0px; 
 }
 .photoControlImg {
     border: 0px;
@@ -708,15 +735,12 @@ div.photoImportContentPane {
     font-weight: bold;
 }
 .controls {
-    float: left;
-    margin-top: 10px;
-    padding-top: 10px;
+    clear: both;
+    text-align: right;
+    margin: 15px 15px 0px 0px;
 }
 .controlButton {
-    margin: 5px;
-    font-family: Arial;
-    font-size: 12px;
-    font-weight: bold;
+    margin: 0px 0px 0px 10px;
 }
 div.TagPane {
     min-width: 500px;

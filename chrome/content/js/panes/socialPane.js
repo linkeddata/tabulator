@@ -17,6 +17,8 @@ tabulator.panes.register( {
             subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))) return null;
         return "Friends";
     },
+    
+    tb: tabulator,
 
     render: function(s, myDocument) {
 
@@ -157,8 +159,77 @@ tabulator.panes.register( {
             }
             return box;
         }
+        //////////////////////////////// EVent handler fr new FOAF file
+
+        tryFoaf = function(w) {
+
+            alert('tryFoaf! '+ w)
+            myDocument.getElementById("saveStatus").className = "unknown";
+            var form = myDocument.getElementById("socialBootForm");
+
+            // Construct the initial FOAF file when the form bellow is submitted
+            var inputField = myDocument.getElementById("fileuri_input");
+            alert('inputField='+inputField);
+            var targetURI = inputField.value;
+            var foafname = myDocument.getElementById("foafname_input").value;
+            var nick = myDocument.getElementById("nick_input").value;
+            var initials = myDocument.getElementById("initials_input").value;
+            var webid;
+            var contents = "<rdf:RDF  xmlns='http://xmlns.com/foaf/0.1/'\n"+
+                "    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'\n" +
+                "    xmlns:foaf='http://xmlns.com/foaf/0.1/'>";
+            if (nick.length > 0) {
+                webid = targetURI + "#" + nick;
+                contents += "<Person rdf:about='#"+nick+"'>";
+                contents += "<nick>"+nick+"</nick>\n";
+            } else {
+                webid = targetURI + "#" + initials;
+                contents += "<Person rdf:about='#"+initials+"'>";
+                contents += "<name>"+foafname+"</name>\n";
+            }
+            contents += "    </Person>\n</rdf:RDF>\n";
+
+            // The following only works when this is in chrome://tabultor/content/
+            // var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+            var content_type = "application/rdf+xml";
+            var xhr = tabulator.util.XMLHTTPFactory();
+            var doc = myDocument;
+            xhr.onreadystatechange = function (){
+                if (xhr.readyState == 4){
+                    //alert('Result: '+xhr.status);
+                    var result = xhr.status
+                    var ele = doc.getElementById("saveStatus");
+                    if (result == '201' || result == '204') {
+                       ele.className = "success";
+                       ele.innerHTML="<p>Success! A new, empty, profile has been created."+
+                       "<br/>Your Web ID is now <br/><b><a target='me' href='"+webid+"'>"+webid+"</a></b>."+
+                       "<br/>You can add more information to your public profile any time.</p>";
+                       tabulator.preferences.set("me", webid);
+                    } else {
+                       ele.className = "failure";
+                       ele.innerHTML="<p>There was a problem saving your public profile." +
+                       "It has not been created." +
+                       "<table>" +
+                       "<tr><td>Status:</td><td>"+result+"</td></tr>" +
+                       "<tr><td>Status text:</td><td>"+xhr.statusText+"</td></tr>" +
+                       "</table>" +
+                       "If you can work out what was wrong with the URI, " +
+                       "you can change it and try again.</p>";            
+                    }
+                }
+            };
+            xhr.open('PUT', targetURI, true);
+            //assume the server does PUT content-negotiation.
+            xhr.setRequestHeader('Content-type', content_type);//OK?
+            xhr.send(contents);
+            tabulator.log.info("sending "+"["+contents+"] to +"+targetURI);
+
+
+        }
+        
         //////////// Body of render():
         
+        if (typeof tabulator == 'undefined') tabulator = this.tb;
         var outline = tabulator.outline;
         //alert('render this='+this);
         var thisPane = this; // For re-render
@@ -209,9 +280,125 @@ tabulator.panes.register( {
             but.setAttribute('type', 'button');
             but.setAttribute('value', 'Make or set A Web ID');
             var makeOne = function() {
+                // The next line doesn't work - a normal page can't link to chrome
                 // document.location = "chrome://tabulator/content/webid.html";
-                var w = window.open("chrome://tabulator/content/webid.html",
+                
+                // the next 2 lines don't work because the global vailable tabulator
+                // for some reason gets deleted
+                /* var w = window.open("chrome://tabulator/content/webid.html",
+                'webid', "resizable=yes,scrollbars=yes"); */
+
+                // Try this - no has same problem of losing the global variables from this process
+                /*
+                var w = window.open("http://dig.csail.mit.edu/2007/tab/ext/chrome/content/webid.html",
                 'webid', "resizable=yes,scrollbars=yes");
+                alert('document is '+w.document);
+                // w.document.tabulator = tabulator; // give it tabulator access
+                w.document.addEventListener('load', function(){
+                    var button = w.document.getElementById('tryFoafButton');
+                    alert('Got button'+button);
+                    button.addEventListener('click', function(){ return tryFoaf(w)}, false);
+                }, false);
+                var button = w.document.getElementById('tryFoafButton');
+                // alert('Got button as '+button);
+                button.addEventListener('click', function(){ return tryFoaf(w)}, false);
+                */
+
+                // Try doing it in this window, then:
+                var foo = myDocument.createElement('div');
+                main.insertBefore(foo, main.firstChild);
+                // This is an encoded verion of webid.html
+                foo.innerHTML = "\
+<div class='task'>\
+<p>Do you have <a target=\"explain\" href=\"http://esw.w3.org/topic/WebID\" >\
+web ID</a>?<br/>\
+</p>\
+<ul>\
+    <li>\
+        <p class=\"answer\"  onclick=\"document.getElementById('WebIdHelp').className='tip'\">\
+        What is A Web ID?</p>\
+        <div id=\"WebIdHelp\" class=\"unknown\">\
+            <p>    A Web ID is a URL for you. \
+            It allows you to set up a public profile, with friends, pictures and all kinds of things.\
+            </p><p>\
+            It works like having an account on a social networking site,\
+            but it isn't restricted to just that site.\
+            It is very open because the information can connect to other people,\
+            organizations and projects and so on, without everyon having to join the same\
+            social networking site.\
+            All you need is some place on the web where you can save a file to.\
+            (<a  target='explain' href=\"http://esw.w3.org/topic/WebID\">More on the wiki</a>) \
+            <span onclick=\"document.getElementById('WebIdHelp').className='unknown'\">(close)</span>\
+            </p>\
+        </div>\
+    </li>\
+    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='yes'\">\
+    Yes, I have a web ID\
+    </li>\
+    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='no'\">\
+    No, I would like to make one\
+    </li>\
+</ul>\
+<div id=\"WhetherWebId\" class=\"unknown\">\
+    <div class=\"affirmative\">\
+        (test) <p>@@@ What is your Web ID?</p>\
+            <p>\
+                <input name=\"webid\" type=\"text\" size=\"80\" value=\"http:\"/>\
+                <br/>\
+                <input type=\"button\" value=\"Use this ID\" onclick=\"gotOne()\"/>\
+            </p>\
+    </div>\
+    <div class=\"negative\">\
+        <p>Ok, Let's make one.  Would you like to use your real name, or make it anonymous?</p>\
+        <ul>\
+            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='no'\">\
+            I would like to use my real name. (Recommended, for example, for professionals who have\
+            and want public visibility).\
+            </li>\
+            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='yes'\">\
+            I would like to be anonymous. (If you are a child, use this.) \
+            </li>\
+        </ul>\
+\
+        <div id=\"WhetherAnon\" class=\"unknown\">\
+            <div class=\"affirmative\">\
+                <p>Think of a handle, or screen name by which you would like to be known.\
+                Or one by which you are already known online.\
+                    <br/>\
+                    <input name=\"nick\" type=\"text\" size=\"40\" id=\"nick_input\"/>\
+                </p>\
+            </div>\
+            <div class=\"negative\">\
+                <p>What is your name?  (A full name in the normal order in which you prefer it,\
+                such as Bill Gates, or Marie-Claire Forgue. Normally people omit \
+                prefixes, like Dr., and suffixes, like PhD, but it is up to you.)\
+                <br/><input name=\"foafname\" type=\"text\" size=\"40\" id=\"foafname_input\"/>\
+                </p>\
+                <p>Your initials? (These will be used as part of your web ID)\
+                <br/><input name=\"initials\" type=\"text\" size=\"10\" id=\"initials_input\"/>\
+                </p>\
+            </div>\
+            <p>You need the URI of a file which you can write to on the web.\
+            (The general public should be able to read it but not change it.\
+            The server should support the <em>WebDAV</em> protocol.)<br/>\
+            <!-- http://www.example.com/users/gates/foaf.rdf -->\
+                 <input name=\"fileuri\" type=\"text\" size=\"80\" id=\"fileuri_input\"\
+                     value=\"http://dig.csail.mit.edu/2008/webdav/timbl/test.rdf\"\
+                     />\
+            <br/>\
+            <input id=\"tryFoafButton\" type=\"button\" value=\"Create my new profile\" onclickOFF =\"tryFoaf()\"/>\
+            </p>\
+        </div>\
+\
+    </div>\
+    <div id=\"saveStatus\" class=\"unknown\">\
+    </div>\
+</div>\
+</div>\
+";
+                var button = myDocument.getElementById('tryFoafButton');
+                // alert('Got button'+button);
+                button.addEventListener('click', function(){ return tryFoaf(window)}, false);
             }
             but.addEventListener('click', makeOne, false);
             tips.appendChild(box); 

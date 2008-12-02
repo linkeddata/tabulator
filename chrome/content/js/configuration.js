@@ -216,14 +216,6 @@ SourceOptions.addOption("seeAlso not internal");
   **/
 var DisplayOptions=new OptionCollection();
 
-//outliner rotate left
-function temp_ORL(table,subject){
-    var lastTr=table.lastChild;
-    if (lastTr)
-        return lastTr.appendChild(outline.outline_objectTD(subject,undefined,true));
-}
-DisplayOptions.addOption("outliner rotate left",temp_ORL);
-delete temp_ORL;
 
 //display:block on
 function temp_DO(tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline){

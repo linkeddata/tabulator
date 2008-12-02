@@ -6,7 +6,7 @@
 **  - Similarly easy user interface, but data storage distributed
 **  - Read and write both user-private (address book) and public data clearly
 */
-tabulator.panes.register( {
+tabulator.panes.register( tabulator.panes.socialPane = {
 
     icon: Icon.src.icon_foaf,
     
@@ -133,19 +133,26 @@ tabulator.panes.register( {
             var src = kb.any(friend, foaf('img')) || kb.any(friend, foaf('depiction'));
 			//Should we try to add an empty image box here? If the image is not fetched we use this default image
 			//The names would be aligned and the layout would look nice - Oshani
+            var img;
             if (src) {
-                var img = myDocument.createElement("IMG")
-                img.setAttribute('src', src.uri)
-                img.className = 'foafThumb';
-                box.appendChild(img)
+                img = myDocument.createElement("IMG")
+                img.setAttribute('src', src.uri);
+            } else {
+                img = myDocument.createElement("div") // Spacer
             }
+            img.className = 'foafThumb';
+            box.appendChild(img)
 
 			
             var t = myDocument.createTextNode(label(friend));
 			if (confirmed) t.className = 'confirmed';
 			if (friend.uri) {
 				var a = myDocument.createElement('a');
-				a.setAttribute('href', friend.uri);
+				// a.setAttribute('href', friend.uri);
+				a.addEventListener('click', function(){ // @@ No history left :-(
+                                        return outline.GotoSubject(
+                                            friend, true, tabulator.panes.socialPane, true)},
+                                    false);
 				a.appendChild(t);
 				box.appendChild(a);
 			} 
@@ -153,23 +160,26 @@ tabulator.panes.register( {
 				box.appendChild(t);
 			}
 			
-            var uris = kb.uris(friend);
-            for(var i=0; i<uris.length; i++) {
-                outline.appendAccessIcon(box, uris[i]);
-            }
+            outline.appendAccessIcons(kb, box, friend);
             return box;
         }
-        //////////////////////////////// EVent handler fr new FOAF file
+        
+        //////////////////////////////// Event handler for existing file
+        gotOne = function(ele) {
+            var webid = myDocument.getElementById("webidField").value;
+            tabulator.preferences.set('me', webid);
+            alert("You ID has been set to "+webid);
+            ele.parentNode.removeChild(ele);
+        }
 
-        tryFoaf = function(w) {
+        //////////////////////////////// EVent handler for new FOAF file
+        tryFoaf = function() {
 
-            alert('tryFoaf! '+ w)
             myDocument.getElementById("saveStatus").className = "unknown";
             var form = myDocument.getElementById("socialBootForm");
 
             // Construct the initial FOAF file when the form bellow is submitted
             var inputField = myDocument.getElementById("fileuri_input");
-            alert('inputField='+inputField);
             var targetURI = inputField.value;
             var foafname = myDocument.getElementById("foafname_input").value;
             var nick = myDocument.getElementById("nick_input").value;
@@ -196,7 +206,6 @@ tabulator.panes.register( {
             var doc = myDocument;
             xhr.onreadystatechange = function (){
                 if (xhr.readyState == 4){
-                    //alert('Result: '+xhr.status);
                     var result = xhr.status
                     var ele = doc.getElementById("saveStatus");
                     if (result == '201' || result == '204') {
@@ -214,7 +223,7 @@ tabulator.panes.register( {
                        "<tr><td>Status text:</td><td>"+xhr.statusText+"</td></tr>" +
                        "</table>" +
                        "If you can work out what was wrong with the URI, " +
-                       "you can change it and try again.</p>";            
+                       "you can change it above and try again.</p>";            
                     }
                 }
             };
@@ -231,7 +240,6 @@ tabulator.panes.register( {
         
         if (typeof tabulator == 'undefined') tabulator = this.tb;
         var outline = tabulator.outline;
-        //alert('render this='+this);
         var thisPane = this; // For re-render
         var kb = tabulator.kb
         var div = myDocument.createElement("div")
@@ -280,31 +288,7 @@ tabulator.panes.register( {
             but.setAttribute('type', 'button');
             but.setAttribute('value', 'Make or set A Web ID');
             var makeOne = function() {
-                // The next line doesn't work - a normal page can't link to chrome
-                // document.location = "chrome://tabulator/content/webid.html";
-                
-                // the next 2 lines don't work because the global vailable tabulator
-                // for some reason gets deleted
-                /* var w = window.open("chrome://tabulator/content/webid.html",
-                'webid', "resizable=yes,scrollbars=yes"); */
-
-                // Try this - no has same problem of losing the global variables from this process
-                /*
-                var w = window.open("http://dig.csail.mit.edu/2007/tab/ext/chrome/content/webid.html",
-                'webid', "resizable=yes,scrollbars=yes");
-                alert('document is '+w.document);
-                // w.document.tabulator = tabulator; // give it tabulator access
-                w.document.addEventListener('load', function(){
-                    var button = w.document.getElementById('tryFoafButton');
-                    alert('Got button'+button);
-                    button.addEventListener('click', function(){ return tryFoaf(w)}, false);
-                }, false);
-                var button = w.document.getElementById('tryFoafButton');
-                // alert('Got button as '+button);
-                button.addEventListener('click', function(){ return tryFoaf(w)}, false);
-                */
-
-                // Try doing it in this window, then:
+                box.parentNode.removeChild(box); // Tip has been taken up!
                 var foo = myDocument.createElement('div');
                 main.insertBefore(foo, main.firstChild);
                 // This is an encoded verion of webid.html
@@ -341,12 +325,12 @@ web ID</a>?<br/>\
 </ul>\
 <div id=\"WhetherWebId\" class=\"unknown\">\
     <div class=\"affirmative\">\
-        (test) <p>@@@ What is your Web ID?</p>\
-            <p>\
-                <input name=\"webid\" type=\"text\" size=\"80\" value=\"http:\"/>\
-                <br/>\
-                <input type=\"button\" value=\"Use this ID\" onclick=\"gotOne()\"/>\
-            </p>\
+        <p>What is your Web ID?</p>\
+        <p>\
+            <input id='webidField' name=\"webid\" type=\"text\" style='width:100%' value=\"http:\"/>\
+            <br/>\
+            <input id='gotOneButton' type=\"button\" value=\"Use this ID\"/>\
+        </p>\
     </div>\
     <div class=\"negative\">\
         <p>Ok, Let's make one.  Would you like to use your real name, or make it anonymous?</p>\
@@ -362,7 +346,7 @@ web ID</a>?<br/>\
 \
         <div id=\"WhetherAnon\" class=\"unknown\">\
             <div class=\"affirmative\">\
-                <p>Think of a handle, or screen name by which you would like to be known.\
+                <p>Think of a nick name, handle, or screen name by which you would like to be known.\
                 Or one by which you are already known online.\
                     <br/>\
                     <input name=\"nick\" type=\"text\" size=\"40\" id=\"nick_input\"/>\
@@ -381,9 +365,10 @@ web ID</a>?<br/>\
             <p>You need the URI of a file which you can write to on the web.\
             (The general public should be able to read it but not change it.\
             The server should support the <em>WebDAV</em> protocol.)<br/>\
-            <!-- http://www.example.com/users/gates/foaf.rdf -->\
+            It will typcially look something like:<br/>\
+            http://www.example.com/users/gates/foaf.rdf<br/><br/>\
                  <input name=\"fileuri\" type=\"text\" size=\"80\" id=\"fileuri_input\"\
-                     value=\"http://dig.csail.mit.edu/2008/webdav/timbl/test.rdf\"\
+                     value=\"http://your.isp.com/...something.../foaf.rdf\"\
                      />\
             <br/>\
             <input id=\"tryFoafButton\" type=\"button\" value=\"Create my new profile\" onclickOFF =\"tryFoaf()\"/>\
@@ -397,8 +382,9 @@ web ID</a>?<br/>\
 </div>\
 ";
                 var button = myDocument.getElementById('tryFoafButton');
-                // alert('Got button'+button);
-                button.addEventListener('click', function(){ return tryFoaf(window)}, false);
+                button.addEventListener('click', function(){ return tryFoaf()}, false);
+                button = myDocument.getElementById('gotOneButton');
+                button.addEventListener('click', function(){ return gotOne(foo)}, false);
             }
             but.addEventListener('click', makeOne, false);
             tips.appendChild(box); 
@@ -428,7 +414,6 @@ web ID</a>?<br/>\
             tx.className = 'question';
             f.appendChild(tx);
             var myHandler = function(e) {
-                // alert('this.checked='+this.checked);
                 var uri = this.checked? s.uri : '';
                 tabulator.preferences.set('me', uri);
                 alert('Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
@@ -627,13 +612,6 @@ web ID</a>?<br/>\
         // var plist = kb.statementsMatching(s, knows)
         // outline.appendPropertyTRs(div, plist, false, function(pred){return true;})
 
-        // Experimental: Use QDOS's reverse index to get incoming links
-        var f = kb.formula();
-        var lookup = 'http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri);
-        f.add(s, tabulator.ns.rdfs('seeAlso'), kb.sym(lookup)); //@@@ better pred? @@Hack
-        
-        outline.appendPropertyTRs(tips, f.statements, false, function(pred){return true;})
-
         var h3 = myDocument.createElement('h3');
         h3.appendChild(myDocument.createTextNode('Basic Information'));
         tools.appendChild(h3);
@@ -695,6 +673,26 @@ web ID</a>?<br/>\
                 outline.appendPropertyTRs(tools, sts, false, function(pred){return true;});
             }
         }
+
+
+        var h3 = myDocument.createElement('h3');
+        h3.appendChild(myDocument.createTextNode('Look up'));
+        tools.appendChild(h3);
+
+        // Experimental: Use QDOS's reverse index to get incoming links
+        var uri = 'http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri);
+        var t = myDocument.createTextNode('Qdos reverse links');
+        //var a = myDocument.createElement('a');
+        //a.appendChild(t);
+        //a.setAttribute('href', uri);
+        var d = myDocument.createElement('div');
+        d.className = 'social_linkButton';
+        d.appendChild(t);
+        outline.appendAccessIcon(d, uri);
+        tools.appendChild(d);
+        
+
+
 
         return div;
     }  // render()

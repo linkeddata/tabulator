@@ -52,7 +52,7 @@ function updateCenter(kb){
                 try{
                     var documentString;
                     var request = kb.any(doc, tabulator.ns.link("request"));
-                    if (!request) "there is no 'request' for this HTTP document: "+doc; //should not happen
+                    if (!request) throw "there is no 'request' for this HTTP document: "+doc; //should not happen
 
                     //prepare contents
                     var sts = kb.statementsMatching(undefined, undefined, undefined, doc);

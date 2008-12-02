@@ -147,6 +147,20 @@ function Outline(doc) {
         return image
     }
     
+    this.appendAccessIcons = function(kb, node, obj) {
+        if (obj.termType != 'symbol') return;
+        var uris = kb.uris(obj);
+        uris.sort();
+        var last = null;
+        for(var i=0; i<uris.length; i++) {
+            if (uris[i] == last) continue;
+            last = uris[i];
+            thisOutline.appendAccessIcon(node, last);
+        }
+    
+    }
+
+
     this.appendAccessIcon = function(node, uri) {
         var docuri = Util.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
@@ -439,7 +453,7 @@ function Outline(doc) {
     expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
     expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
     
-    function expandedHeaderTR(subject) {
+    function expandedHeaderTR(subject, requiredPane) {
         var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(label(subject)));
@@ -447,11 +461,18 @@ function Outline(doc) {
         var paneNumber = 0;
         var relevantPanes = [];
         var labels = []
+        if (requiredPane) {
+            tr.firstPane = requiredPane;
+        }
         for (var i=0; i< tabulator.panes.list.length; i++) {
             var pane = tabulator.panes.list[i];
             var lab = pane.label(subject, myDocument);
             if (!lab) continue;
+
             relevantPanes.push(pane);
+            if (pane == requiredPane) {
+                paneNumber = relevantPanes.length-1; // point to this one
+            }
             labels.push(lab);
             //steal the focus
             if (!tr.firstPane && pane.shouldGetFocus && pane.shouldGetFocus(subject)){
@@ -460,7 +481,6 @@ function Outline(doc) {
                 tabulator.log.info('the '+i+'th pane steals the focus');
             }
         }
-        
         if (!relevantPanes) relevantPanes.push(internalPane);
         tr.firstPane = tr.firstPane || relevantPanes[0];
         if (relevantPanes.length != 1) { // if only one, simplify interface
@@ -526,7 +546,7 @@ function Outline(doc) {
         
         if (!table) { // Create a new property table
             var table = myDocument.createElement('table')
-            var tr1 = expandedHeaderTR(subject)
+            var tr1 = expandedHeaderTR(subject, pane)
             table.appendChild(tr1)
             
             /*   This should be a beautiful system not a quick kludge - timbl 
@@ -547,6 +567,7 @@ function Outline(doc) {
             
 //            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
+                if (typeof tabulator == 'undefined') alert('tabulator undefined')
                 var paneDiv = tr1.firstPane.render(subject, myDocument);
                 if (tr1.firstPane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');
                 table.appendChild(paneDiv);
@@ -1730,7 +1751,7 @@ function Outline(doc) {
     }
     
     function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
-        if(isExtension && subject.termType != "bnode") {
+        if(isExtension && subject.termType == "symbol" && subject.uri.indexOf('#')<0) {
             gBrowser.selectedBrowser.loadURI(subject.uri);
             return;   
         }
@@ -1743,6 +1764,8 @@ function Outline(doc) {
         myDocument.title = label("Tabulator: "+subject);
         outer.setAttribute('about', subject.toNT());
     } //outline_refocus
+    
+    outline.outline_refocus = outline_refocus;
     
     // Inversion is turning the outline view inside-out
     function outline_inversion(p, subject) { // re-root at subject
@@ -1767,9 +1790,17 @@ function Outline(doc) {
             var subject = kb.sym(uri)
             this.GotoSubject(subject)
     }
-    this.GotoSubject = function(subject, expand) {
+    
+    // Display the subject in an outline view
+    //
+    // subject -- RDF term for teh thing to be presented
+    // expand  -- flag -- open the subject rather tahn keep folded closed
+    // pane    -- optional -- pane to be used for exanded display
+    // solo    -- optional -- the window will be cleared out and only the subject displayed
+    
+    this.GotoSubject = function(subject, expand, pane, solo) {
         var table = myDocument.getElementById('outline');
-
+        if (solo) emptyNode(table);
         function GotoSubject_default(){
             var tr = myDocument.createElement("TR");
             tr.style.verticalAlign="top";
@@ -1779,12 +1810,17 @@ function Outline(doc) {
             tr.appendChild(td)
             return td
         }
-        var text="GotoSubject()@outline.js";
-        var td=DisplayOptions["outliner rotate left"].setupHere([table,subject],text,GotoSubject_default);
-        if (!td) td=GotoSubject_default(); //the first tr is required       
+        function GotoSubject_option(){
+            var lastTr=table.lastChild;
+            if (lastTr)
+                return lastTr.appendChild(outline.outline_objectTD(subject,undefined,true));
+        }
+        var td = GotoSubject_default();
+        // Was: DisplayOptions["outliner rotate left"].setupHere([table,subject],text,GotoSubject_default);
+        if (!td) td = GotoSubject_default(); //the first tr is required       
         if (expand) {
-            outline_expand(td, subject)
-            myDocument.title = label(subject)  // "Tabulator: "+  No need to advertize
+            outline_expand(td, subject, pane);
+            myDocument.title = label(subject);  // "Tabulator: "+  No need to advertize
             tr=td.parentNode;
             getEyeFocus(tr,false);//instantly: false
         }
@@ -1843,12 +1879,7 @@ function Outline(doc) {
         } else if (obj.termType == 'symbol' || obj.termType == 'bnode') {
             rep = myDocument.createElement('span');
             rep.setAttribute('about', obj.toNT());
-            if (obj.termType == 'symbol') { 
-                var uris = kb.uris(obj);
-                for(var i=0; i<uris.length; i++) {
-                    thisOutline.appendAccessIcon(rep, uris[i]);
-                }
-            }
+            thisOutline.appendAccessIcons(kb, rep, obj);
             
             if (obj.termType == 'symbol') { 
                 if (obj.uri.slice(0,4) == 'tel:') {

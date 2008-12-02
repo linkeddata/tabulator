@@ -186,7 +186,7 @@ div.social_linkButton {
  -moz-border-radius: 1em; /* CSS3: border-radius: 1em; */
   }
   .success {background-color: #efe }
-  .failure {background-color: #fee ; border: 0.1em red}
+  .failure {background-color: white ; border: 0.5em red}
   div.unknown { display:none } 
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 

@@ -1798,9 +1798,10 @@ function Outline(doc) {
     // pane    -- optional -- pane to be used for exanded display
     // solo    -- optional -- the window will be cleared out and only the subject displayed
     
-    this.GotoSubject = function(subject, expand, pane, solo) {
+    this.GotoSubject = function(subject, expand, pane, solo, referrer) {
         var table = myDocument.getElementById('outline');
         if (solo) emptyNode(table);
+        
         function GotoSubject_default(){
             var tr = myDocument.createElement("TR");
             tr.style.verticalAlign="top";
@@ -1815,6 +1816,14 @@ function Outline(doc) {
             if (lastTr)
                 return lastTr.appendChild(outline.outline_objectTD(subject,undefined,true));
         }
+        newURI = function(spec) // e.g. see http://www.nexgenmedia.net/docs/protocol/
+       {
+            const kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
+            const nsIURI = Components.interfaces.nsIURI;
+            var uri = Components.classes[kSIMPLEURI_CONTRACTID].createInstance(nsIURI);
+            uri.spec = spec;
+            return uri;
+        }
         var td = GotoSubject_default();
         // Was: DisplayOptions["outliner rotate left"].setupHere([table,subject],text,GotoSubject_default);
         if (!td) td = GotoSubject_default(); //the first tr is required       
@@ -1824,8 +1833,30 @@ function Outline(doc) {
             tr=td.parentNode;
             getEyeFocus(tr,false);//instantly: false
         }
+        if (solo) {
+            // See https://developer.mozilla.org/en/NsIGlobalHistory2
+            // See <http://mxr.mozilla.org/mozilla-central/source/toolkit/
+            //     components/places/tests/mochitest/bug_411966/redirect.js#157>
+            var ghist2 = Components.classes["@mozilla.org/browser/global-history;2"].
+                                    getService(Components.interfaces.nsIGlobalHistory2);
+            ghist2.addURI(newURI(subject.uri), false, true, referrer);
+/*
+            var historyService = Components.classes["@mozilla.org/browser/nav-history-service;1"]
+                .getService(Components.interfaces.nsINavHistoryService);
+            // See http://people.mozilla.com/~dietrich/places/interfacens_i_nav_history_service.html
+            // and https://developer.mozilla.org/en/NSPR_API_Reference/Date_and_Time and
+            // https://developer.mozilla.org/en/Using_the_Places_history_service
+            historyService.addVisit(newURI(subject.uri),
+                    undefined, @@
+                    undefined, // in nsIURI aReferringUR
+                    historyService.TRANSITION_LINK, // = 1
+                    false, // True if the given visit redirects to somewhere else. (hides it)
+                    0) // @@ Should be the session ID
+*/
+        }
         return subject;
     }
+    
     this.GotoURIAndOpen = function(uri) {
        var sbj = GotoURI(uri);
     }

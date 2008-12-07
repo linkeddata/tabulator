@@ -577,7 +577,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
             if (!sz.incoming[subject]) { // anonymous bnode
                 var start = '<rdf:Description>';
             } else {
-                var start = '<rdf:Description rdf:ID="'+subject.toNT.slice(2)+'">';
+                var start = '<rdf:Description rdf:ID="'+subject.toNT().slice(2)+'">';
             }
         } else {
             var start = '<rdf:Description rdf:about="'+ relURI(subject)+'">';

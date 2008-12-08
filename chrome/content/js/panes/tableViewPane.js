@@ -179,11 +179,55 @@ function renderTableViewPane(doc, statements) {
         }
     }
 
+    function getRangeForPredicate(predicate) {
+        var result = kb.statementsMatching(predicate, 
+                                           tabulator.ns.rdfs("range"),
+                                           undefined,
+                                           undefined);
+
+        if (result.length > 0) {
+//                alert("found range for " + this.predicate.uri + ": " + result.length + ".." + result);
+            return result[0].object;
+        } else {
+            return null;
+        }
+    }
+
     // Class representing a column in the table.
 
     function Column(predicate) {
         this.predicate = predicate;
         this.useCount = 0;
+        this.range = getRangeForPredicate(predicate);
+
+        // If the range is unknown, it may be a literal.
+
+        this.possiblyLiteral = this.range == null;
+
+        // If the range is unknown, or it is just a literal,
+        // it may actually be a number.
+
+        this.possiblyNumber = (this.range == null ||
+                               this.range.uri == RDFS_LITERAL);
+
+        // Check values as they are read.  If we don't know what the
+        // range is, we might be able to infer that it is a literal
+        // if all of the values are literals.  Similarly, we might
+        // be able to determine if the literal values are actually
+        // numbers (using regexps).
+
+        this.checkValue = function(value) {
+            if (this.possiblyLiteral && value.termType != "literal") {
+                this.possiblyNumber = false;
+                this.possiblyLiteral = false;
+            } else if (this.possiblyNumber) {
+                var literalValue = value.value;
+
+                if (!literalValue.match(/^\-?\d+(\.\d*)?$/)) {
+                    this.possiblyNumber = false;
+                }
+            }
+        }
 
         this.addUse = function() {
             this.useCount += 1;
@@ -194,17 +238,7 @@ function renderTableViewPane(doc, statements) {
         }
 
         this.getRange = function() {
-            var result = kb.statementsMatching(this.predicate, 
-                                               tabulator.ns.rdfs("range"),
-                                               undefined,
-                                               undefined);
-
-            if (result.length > 0) {
-//                alert("found range for " + this.predicate.uri + ": " + result.length + ".." + result);
-                return result[0].object;
-            } else {
-                return null;
-            }
+            return this.range;
         }
 
         this.filterFunction = function() {
@@ -449,7 +483,10 @@ function renderTableViewPane(doc, statements) {
                     column.addUse();
                 }
 
-                row[predicate.uri].push(statements[i].object);
+                var value = statements[i].object;
+
+                column.checkValue(value);
+                row[predicate.uri].push(value);
             }
         }
 
@@ -657,18 +694,29 @@ function renderTableViewPane(doc, statements) {
         }, false)
         result.appendChild(sort2);
 
-        var substring = "";
+        var substring = null;
 
         // Filter the table to show only rows that have a particular 
         // substring in the specified column.
 
         column.filterFunction = function(colValue) {
-            return substring == "" ||
-                 (colValue != null && colValue.value.indexOf(substring) >= 0);
+            if (substring == null) {
+                return true;
+            } else if (colValue == null) {
+                return false;
+            } else {
+                var literalValue = colValue.value.toLowerCase();
+
+                return literalValue.indexOf(substring) >= 0;
+            }
         }
 
         textBox.addEventListener("change", function() {
-            substring = textBox.value;
+            if (textBox.value != "") {
+                substring = textBox.value;
+            } else {
+                substring = null;
+            }
             applyColumnFilters(type);
         }, false);
 
@@ -785,6 +833,25 @@ function renderTableViewPane(doc, statements) {
         return result;
     }
 
+    // Fallback attempts at generating a selector if other attempts fail.
+
+    function fallbackRenderTableSelector(type, column) {
+
+        // Have all values matched as numbers?
+
+        if (column.possiblyNumber) {
+            return renderNumberSelector(type, column);
+        }
+
+        // Have all values been literals?
+
+        if (column.possiblyLiteral) {
+            return renderLiteralSelector(type, column);
+        }
+
+        return null;
+    }
+
     // Render a selector for a given row.
 
     function renderTableSelector(type, column) {
@@ -795,19 +862,21 @@ function renderTableViewPane(doc, statements) {
         var range = column.getRange();
 
         if (range == null) {
-            return null;
+            return fallbackRenderTableSelector(type, column);
+        }
+
+        // Is this a number type?
+        // Alternatively, is this an rdf:Literal type where all of 
+        // the values match as numbers?
+
+        if (column.possiblyNumber || range.uri in XSD_NUMBER_TYPES) {
+            return renderNumberSelector(type, column);
         }
 
         // rdf:Literal?
 
         if (range.uri == RDFS_LITERAL) {
             return renderLiteralSelector(type, column);
-        }
-
-        // Is this a number type?
-
-        if (range.uri in XSD_NUMBER_TYPES) {
-            return renderNumberSelector(type, column);
         }
 
         // Is this an enumeration type?
@@ -822,10 +891,7 @@ function renderTableViewPane(doc, statements) {
             return renderEnumSelector(type, column, matches);
         }
 
-        // Something else that we don't recognise.
-
-        //return doc.createTextNode(range.uri);
-        return null;
+        return fallbackRenderTableSelector(type, column);
     }
 
     // Generate the search selectors for the table columns.

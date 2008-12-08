@@ -1,7 +1,31 @@
+
 // Format an array of RDF statements as an HTML table.
 
 function renderTableViewPane(doc, statements) {
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+    var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
+
+    // Number types defined in the XML schema:
+
+    var XSD_NUMBER_TYPES = {
+        "http://www.w3.org/2001/XMLSchema#decimal": true,
+        "http://www.w3.org/2001/XMLSchema#float": true,
+        "http://www.w3.org/2001/XMLSchema#double": true,
+        "http://www.w3.org/2001/XMLSchema#integer": true,
+        "http://www.w3.org/2001/XMLSchema#nonNegativeInteger": true,
+        "http://www.w3.org/2001/XMLSchema#positiveInteger": true,
+        "http://www.w3.org/2001/XMLSchema#nonPositiveInteger": true,
+        "http://www.w3.org/2001/XMLSchema#negativeInteger": true,
+        "http://www.w3.org/2001/XMLSchema#long": true,
+        "http://www.w3.org/2001/XMLSchema#int": true,
+        "http://www.w3.org/2001/XMLSchema#short": true,
+        "http://www.w3.org/2001/XMLSchema#byte": true,
+        "http://www.w3.org/2001/XMLSchema#unsignedLong": true,
+        "http://www.w3.org/2001/XMLSchema#unsignedInt": true,
+        "http://www.w3.org/2001/XMLSchema#unsignedShort": true,
+        "http://www.w3.org/2001/XMLSchema#unsignedByte": true
+    };
+
     var subjectIdCounter = 0;
     var globalColumns, allType, types;
     var typeSelectorDiv, addColumnDiv;
@@ -9,6 +33,7 @@ function renderTableViewPane(doc, statements) {
     [globalColumns, allType, types] = calculateTable(statements);
 
     var resultDiv = doc.createElement("div");
+    resultDiv.className = "tableViewPane";
 
     resultDiv.appendChild(generateControlBar());
     typeSelectorDiv.appendChild(generateTypeSelector(allType, types));
@@ -159,15 +184,9 @@ function renderTableViewPane(doc, statements) {
     function Column(predicate) {
         this.predicate = predicate;
         this.useCount = 0;
-        this.valid = true;
 
         this.addUse = function() {
             this.useCount += 1;
-        }
-
-        this.invalidate = function() {
-            //alert("invalid: " + this.predicate.uri);
-            this.valid = false;
         }
 
         this.getLabel = function() {
@@ -186,6 +205,10 @@ function renderTableViewPane(doc, statements) {
             } else {
                 return null;
             }
+        }
+
+        this.filterFunction = function() {
+            return true;
         }
     }
 
@@ -208,12 +231,7 @@ function renderTableViewPane(doc, statements) {
     // Get the list of valid columns from the columns object.
 
     function getColumnsList(columns) {
-
-        function filterFunction(columnId, column) {
-            return column.valid;
-        }
-
-        return objectToArray(columns, filterFunction);
+        return objectToArray(columns);
     }
 
     // Generate an <option> in a drop-down list.
@@ -418,20 +436,20 @@ function renderTableViewPane(doc, statements) {
             } else {
 
                 // Add this triple.
-                //
-                // If there is already a value for this predicate, it is 
-                // describing something that cannot be displayed meaningfully
-                // in a table (eg. FOAF's "knows"), so invalidate it.
+                // We have to take into account cases like foaf:knows,
+                // where a property can have multiple values, so we
+                // store a list of values.  The first time adding a
+                // value, initialise from an empty list.
 
-                if (predicate.uri in row) {
-                    column.invalidate();
-                } else {
-                    row[predicate.uri] = statements[i].object;
+                if (!(predicate.uri in row)) {
+                    row[predicate.uri] = [];
+
+                    // Update use count for this column.
+
+                    column.addUse();
                 }
 
-                // Update use count for this column.
-
-                column.addUse();
+                row[predicate.uri].push(statements[i].object);
             }
         }
 
@@ -458,8 +476,6 @@ function renderTableViewPane(doc, statements) {
         var button = doc.createElement("a");
 
         button.appendChild(doc.createTextNode("[x]"));
-
-        button.style.color = "#dddddd";
 
         button.addEventListener("click", function() {
             type.removeColumn(column);
@@ -512,10 +528,10 @@ function renderTableViewPane(doc, statements) {
             var row1Value = null, row2Value = null;
 
             if (columnUri in row1) {
-                row1Value = row1[columnUri];
+                row1Value = row1[columnUri][0];
             }
             if (columnUri in row2) {
-                row2Value = row2[columnUri];
+                row2Value = row2[columnUri][0];
             }
 
             var result = sortFunction(row1Value, row2Value);
@@ -542,23 +558,38 @@ function renderTableViewPane(doc, statements) {
         }
     }
 
-    // Apply a filter to the rendered table, by data from a specific
-    // column.
+    // Filter the list of rows based on the selectors for the 
+    // columns.
 
-    function applyColumnFilter(type, column, filterFunction) {
+    function applyColumnFilters(type) {
 
         var rows = type.rows;
-        var columnUri = column.predicate.uri;
+        var columns = type.getColumns();
 
         // Apply filterFunction to each row.
 
-        for (var i=0; i<rows.length; ++i) {
+        for (var r=0; r<rows.length; ++r) {
+            var row = rows[r];
+            var rowDisplayed = true;
 
-            var row = rows[i];
-            var columnValue = null;
+            // Check the filter functions for every column.  
+            // The row should only be displayed if the filter functions
+            // for all of the columns return true.
 
-            if (columnUri in row) {
-                columnValue = row[columnUri];
+            for (var c=0; c<columns.length; ++c) {
+                var column = columns[c];
+                var columnUri = column.predicate.uri;
+
+                var columnValue = null;
+
+                if (columnUri in row) {
+                    columnValue = row[columnUri][0];
+                }
+
+                if (!column.filterFunction(columnValue)) {
+                    rowDisplayed = false;
+                    break;
+                }
             }
 
             // Show or hide the HTML row according to the result
@@ -566,22 +597,12 @@ function renderTableViewPane(doc, statements) {
 
             var htmlRow = row._htmlRow;
 
-            if (filterFunction(columnValue)) {
+            if (rowDisplayed) {
                 htmlRow.style.display = "";
             } else {
                 htmlRow.style.display = "none";
             }
         }
-    }
-
-    // Filter the table to show only rows that have a particular 
-    // substring in the specified column.
-
-    function literalSubstringSearch(type, column, substring) {
-        applyColumnFilter(type, column, function(colValue) {
-            return substring == "" ||
-                 (colValue != null && colValue.value.indexOf(substring) >= 0);
-        })
     }
 
     // Sort by literal value
@@ -618,10 +639,7 @@ function renderTableViewPane(doc, statements) {
 
         var textBox = doc.createElement("input");
         textBox.setAttribute("type", "text");
-
-        textBox.addEventListener("change", function() {
-            literalSubstringSearch(type, column, textBox.value);
-        }, false);
+        //textBox.style.width = "70px";
 
         result.appendChild(textBox);
 
@@ -639,6 +657,131 @@ function renderTableViewPane(doc, statements) {
         }, false)
         result.appendChild(sort2);
 
+        var substring = "";
+
+        // Filter the table to show only rows that have a particular 
+        // substring in the specified column.
+
+        column.filterFunction = function(colValue) {
+            return substring == "" ||
+                 (colValue != null && colValue.value.indexOf(substring) >= 0);
+        }
+
+        textBox.addEventListener("change", function() {
+            substring = textBox.value;
+            applyColumnFilters(type);
+        }, false);
+
+        return result;
+    }
+
+    // Generates a dropdown selector for enumeration types.
+
+    function renderEnumSelector(type, column, statements) {
+        var result = doc.createElement("div");
+
+        var dropdown = doc.createElement("select");
+
+        dropdown.appendChild(optionElement("(All)", "-1"));
+
+        // "statements" is a list of matching statements for:
+        //
+        // range owl:oneOf <collection>
+        //
+        // The collection then gives a list of valid values for this
+        // enumeration.
+        //
+        // Just assume that the first matching statement is the list.
+
+        var list = statements[0].object.elements;
+
+        for (var i=0; i<list.length; ++i) {
+            var value = list[i];
+
+            dropdown.appendChild(optionElement(label(value), i));
+        }
+
+        result.appendChild(dropdown);
+
+        // Select based on an enum value.
+
+        var searchValue = null;
+
+        column.filterFunction = function(colValue) {
+            return searchValue == null ||
+                   (colValue != null && searchValue.uri == colValue.uri);
+        }
+
+        dropdown.addEventListener("click", function() {
+            var index = new Number(dropdown.value);
+            if (index < 0) {
+                searchValue = null;
+            } else {
+                searchValue = list[index];
+            }
+            applyColumnFilters(type);
+        }, false);
+
+        return result;
+    }
+
+    // Selector for XSD number types.
+
+    function renderNumberSelector(type, column) {
+        var result = doc.createElement("div");
+
+        var minSelector = doc.createElement("input");
+        minSelector.setAttribute("type", "text");
+        minSelector.style.width = "40px";
+        result.appendChild(minSelector);
+
+        var maxSelector = doc.createElement("input");
+        maxSelector.setAttribute("type", "text");
+        maxSelector.style.width = "40px";
+        result.appendChild(maxSelector);
+
+        // Select based on minimum/maximum limits.
+
+        var min = null;
+        var max = null;
+
+        column.filterFunction = function(colValue) {
+            if (colValue != null) {
+                colValue = new Number(colValue);
+            }
+
+            if (min != null && (colValue == null || colValue < min)) {
+                return false;
+            }
+            if (max != null && (colValue == null || colValue > max)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        // When the values in the boxes are changed, update the 
+        // displayed columns.
+
+        function eventListener() {
+            if (minSelector.value == "") {
+                min = null;
+            } else {
+                min = new Number(minSelector.value);
+            }
+
+            if (maxSelector.value == "") {
+                max = null;
+            } else {
+                max = new Number(maxSelector.value);
+            }
+
+            applyColumnFilters(type);
+        }
+
+        minSelector.addEventListener("change", eventListener, false);
+        maxSelector.addEventListener("change", eventListener, false);
+
         return result;
     }
 
@@ -655,25 +798,41 @@ function renderTableViewPane(doc, statements) {
             return null;
         }
 
-        // Different selectors for different types:
+        // rdf:Literal?
 
-        var selectorFunctions = {
-            "http://www.w3.org/2000/01/rdf-schema#Literal": renderLiteralSelector
+        if (range.uri == RDFS_LITERAL) {
+            return renderLiteralSelector(type, column);
         }
 
-        if (range.uri in selectorFunctions) {
-            var renderFunction = selectorFunctions[range.uri];
-            return renderFunction(type, column);
-        } else {
-            return doc.createTextNode(range.uri);
-            return null;
+        // Is this a number type?
+
+        if (range.uri in XSD_NUMBER_TYPES) {
+            return renderNumberSelector(type, column);
         }
+
+        // Is this an enumeration type?
+
+        var matches = kb.statementsMatching(range,
+                                            tabulator.ns.owl("oneOf"),
+                                            undefined,
+                                            undefined);
+
+        if (matches.length > 0) {
+ //           alert(range.uri + " owl:oneOf ? " + " -> " + matches.length);
+            return renderEnumSelector(type, column, matches);
+        }
+
+        // Something else that we don't recognise.
+
+        //return doc.createTextNode(range.uri);
+        return null;
     }
 
     // Generate the search selectors for the table columns.
 
     function renderTableSelectors(type) {
         var tr = doc.createElement("tr");
+        tr.className = "selectors";
         var columns = type.getColumns();
 
         // Empty link column
@@ -702,6 +861,19 @@ function renderTableViewPane(doc, statements) {
         result.setAttribute("href", uri);
         result.appendChild(doc.createTextNode(linkText));
         return result;
+    }
+
+    // Render an individual RDF object to an HTML object displayed
+    // in a table cell.
+
+    function renderValue(obj) {
+        if (obj.termType == "literal") {
+            return doc.createTextNode(obj.value);
+        } else if (obj.termType == "symbol" || obj.termType == "bnode") {
+            return linkTo(obj.uri, label(obj));
+        } else {
+            return doc.createTextNode("unknown termtype!");
+        }
     }
 
     // Render a row of the HTML table, from the given row structure.
@@ -733,14 +905,16 @@ function renderTableViewPane(doc, statements) {
             var td = doc.createElement("td");
 
             if (column.predicate.uri in row) {
-                var obj = row[column.predicate.uri];
+                var objects = row[column.predicate.uri];
 
-                if (obj.termType == "literal") {
-                    td.appendChild(doc.createTextNode(obj.value));
-                } else if (obj.termType == "symbol" || obj.termType == "bnode") {
-                    td.appendChild(linkTo(obj.uri, label(obj)));
-                } else {
-                    td.appendChild(doc.createTextNode("unknown termtype!"));
+                for (var j=0; j<objects.length; ++j) {
+                    var obj = objects[j];
+
+                    td.appendChild(renderValue(obj));
+
+                    if (j != objects.length - 1) {
+                        td.appendChild(doc.createTextNode(",\n"));
+                    }
                 }
             }
 
@@ -866,5 +1040,4 @@ tabulator.panes.register({
         return div;
     }
 })
-
 

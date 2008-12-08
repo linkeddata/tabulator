@@ -713,7 +713,7 @@ function renderTableViewPane(doc, statements) {
 
         textBox.addEventListener("change", function() {
             if (textBox.value != "") {
-                substring = textBox.value;
+                substring = textBox.value.toLowerCase();
             } else {
                 substring = null;
             }

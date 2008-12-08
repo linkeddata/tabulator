@@ -775,3 +775,30 @@ div.TagPane hr{
 /*
 End of styles for the photoPane
 */
+
+/*
+Styles for tableViewPane
+*/
+
+.tableViewPane table th {
+    background-color: black;
+    color: white;
+}
+
+.tableViewPane table th a {
+    color: #555;
+}
+
+.tableViewPane table .selectors td {
+    background-color: #ccc;
+}
+
+.tableViewPane table td {
+    border-bottom: 1px solid black;
+    border-right: 1px solid black;
+}
+
+/*
+End of styles for tableViewPane 
+*/
+

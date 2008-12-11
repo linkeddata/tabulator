@@ -934,7 +934,7 @@ function Outline(doc) {
                 // if (term.termType != "symbol") { return true } // should always ve
                 if (req == fireOn) {
                     target.src = icon
-                    target.title = Icon.tooltips[icon]
+                    target.title = tabulator.icon.tooltips[icon]
                 }
                 return true
             }

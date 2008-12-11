@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25273 2008-11-23 18:50:54Z ilaria $
+// SVN ID: $Id: tabulate.js 25416 2008-12-11 21:45:18Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the Web Apps version of the Tabulator.
@@ -92,6 +92,7 @@ SiteMap[ "http://www.w3.org/" ] = "http://localhost/www.w3.org/"  // Salt to tas
 
 
 Icon = {}
+tabulator.icon = Icon; // Transition to using this
 Icon.src= []
 Icon.tooltips = [];
 var iconPrefix = '';

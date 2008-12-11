@@ -7,7 +7,7 @@
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
  * 
- * SVN ID: $Id: sources.js 25116 2008-11-15 16:13:48Z timbl $
+ * SVN ID: $Id: sources.js 25416 2008-12-11 21:45:18Z timbl $
  *
  ************************************************************/
 
@@ -441,7 +441,8 @@ function SourceFetcher(store, timeout, async) {
     this.linkData = function(xhr, rel, uri) {
         var x = xhr.uri;
         if (!uri) return;
-        if (rel == 'alternate'|| rel == 'seeAlso' || rel == 'meta') {
+        // See http://www.w3.org/TR/powder-dr/#httplink for describedby 2008-12-10
+        if (rel == 'alternate'|| rel == 'seeAlso' || rel == 'meta'|| rel == 'describedby') {
             var join = Util.uri.join2;
             var obj = kb.sym(join(uri, xhr.uri.uri))
             kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'), obj,

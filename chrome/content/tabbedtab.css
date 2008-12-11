@@ -138,6 +138,8 @@ img.foafThumb { height: 3em ; border: 0px; margin: 0.1em; padding: 0.1em;
 
 .friendBox .confirmed { font-weight: bold; }
 
+table.inputForm { font-size: 100% }
+
 .mainBlock {
    background: #fff;
    color: #000;

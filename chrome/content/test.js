@@ -56,6 +56,7 @@ var views = {
 }; //views
 
 Icon = {}
+tabulator.icon = Icon;
 Icon.src= []
 Icon.tooltips= []
 var iconPrefix = 'chrome://tabulator/content/';

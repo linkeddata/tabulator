@@ -26,6 +26,12 @@ function renderTableViewPane(doc, statements) {
         "http://www.w3.org/2001/XMLSchema#unsignedByte": true
     };
 
+    // Predicates that indicate an image:
+
+    var IMAGE_TYPES = {
+        "http://xmlns.com/foaf/0.1/Image": true,
+    };
+
     var subjectIdCounter = 0;
     var globalColumns, allType, types;
     var typeSelectorDiv, addColumnDiv;
@@ -85,7 +91,7 @@ function renderTableViewPane(doc, statements) {
         clearElement(tableDiv);
 
         // Render the HTML table
-    
+
         var htmlTable = renderTableForType(type);
 
         tableDiv.appendChild(htmlTable);
@@ -180,17 +186,7 @@ function renderTableViewPane(doc, statements) {
     }
 
     function getRangeForPredicate(predicate) {
-        var result = kb.statementsMatching(predicate, 
-                                           tabulator.ns.rdfs("range"),
-                                           undefined,
-                                           undefined);
-
-        if (result.length > 0) {
-//                alert("found range for " + this.predicate.uri + ": " + result.length + ".." + result);
-            return result[0].object;
-        } else {
-            return null;
-        }
+        return kb.any(predicate, tabulator.ns.rdfs("range"));
     }
 
     // Class representing a column in the table.
@@ -200,15 +196,16 @@ function renderTableViewPane(doc, statements) {
         this.useCount = 0;
         this.range = getRangeForPredicate(predicate);
 
-        // If the range is unknown, it may be a literal.
+        // If the range is unknown, but we just get literals in this
+        // column, then we can generate a literal selector.
 
-        this.possiblyLiteral = this.range == null;
+        this.possiblyLiteral = true;
 
-        // If the range is unknown, or it is just a literal,
-        // it may actually be a number.
+        // If the range is unknown, but we just get literals and they
+        // match the regular expression for numbers, we can generate
+        // a number selector.
 
-        this.possiblyNumber = (this.range == null ||
-                               this.range.uri == RDFS_LITERAL);
+        this.possiblyNumber = true;
 
         // Check values as they are read.  If we don't know what the
         // range is, we might be able to infer that it is a literal
@@ -217,14 +214,19 @@ function renderTableViewPane(doc, statements) {
         // numbers (using regexps).
 
         this.checkValue = function(value) {
-            if (this.possiblyLiteral && value.termType != "literal") {
+            var termType = value.termType
+            if (this.possiblyLiteral && termType != "literal" && termType != "symbol") {
                 this.possiblyNumber = false;
                 this.possiblyLiteral = false;
             } else if (this.possiblyNumber) {
-                var literalValue = value.value;
-
-                if (!literalValue.match(/^\-?\d+(\.\d*)?$/)) {
+                if (termType != "literal") {
                     this.possiblyNumber = false;
+                } else {
+                    var literalValue = value.value;
+
+                    if (!literalValue.match(/^\-?\d+(\.\d*)?$/)) {
+                        this.possiblyNumber = false;
+                    }
                 }
             }
         }
@@ -243,6 +245,14 @@ function renderTableViewPane(doc, statements) {
 
         this.filterFunction = function() {
             return true;
+        }
+
+        this.sortKey = function() {
+            return label(this.predicate).toLowerCase();
+        }
+
+        this.isImageColumn = function() {
+            return this.range != null && this.range.uri in IMAGE_TYPES;
         }
     }
 
@@ -323,6 +333,12 @@ function renderTableViewPane(doc, statements) {
         var resultDiv = doc.createElement("div");
 
         var unusedColumns = type.getUnusedColumns();
+
+        unusedColumns.sort(function(a, b) {
+            var aLabel = a.sortKey();
+            var bLabel = b.sortKey();
+            return (aLabel > bLabel) - (aLabel < bLabel);
+        });
 
         // If there are no unused columns, the div is empty.
 
@@ -497,11 +513,7 @@ function renderTableViewPane(doc, statements) {
 
     function sortColumns(columns) {
         function sortFunction(a, b) {
-            if (a.useCount < b.useCount) {
-                return 1;
-            } else {
-                return -1;
-            }
+            return (a.useCount < b.useCount) - (a.useCount > b.useCount);
         }
 
         columns.sort(sortFunction);
@@ -676,7 +688,7 @@ function renderTableViewPane(doc, statements) {
 
         var textBox = doc.createElement("input");
         textBox.setAttribute("type", "text");
-        //textBox.style.width = "70px";
+        textBox.style.width = "70%";
 
         result.appendChild(textBox);
 
@@ -711,7 +723,7 @@ function renderTableViewPane(doc, statements) {
             }
         }
 
-        textBox.addEventListener("change", function() {
+        textBox.addEventListener("keyup", function() {
             if (textBox.value != "") {
                 substring = textBox.value.toLowerCase();
             } else {
@@ -827,8 +839,8 @@ function renderTableViewPane(doc, statements) {
             applyColumnFilters(type);
         }
 
-        minSelector.addEventListener("change", eventListener, false);
-        maxSelector.addEventListener("change", eventListener, false);
+        minSelector.addEventListener("keyup", eventListener, false);
+        maxSelector.addEventListener("keyup", eventListener, false);
 
         return result;
     }
@@ -849,6 +861,12 @@ function renderTableViewPane(doc, statements) {
             return renderLiteralSelector(type, column);
         }
 
+        // Show the range, for debugging.
+        if (false) {
+            var range = column.getRange();
+            if (range != null)
+                return doc.createTextNode(range.uri);
+        }
         return null;
     }
 
@@ -929,14 +947,41 @@ function renderTableViewPane(doc, statements) {
         return result;
     }
 
+    function linkToObject(obj) {
+        var match = false;
+
+        if (obj.uri != null) {
+            match = obj.uri.match(/^mailto:(.*)/);
+        }
+
+        if (match) {
+            return linkTo(obj.uri, match[1]);
+        } else {
+            return linkTo(obj.uri, label(obj));
+        }
+    }
+
+    // Render an image
+
+    function renderImage(obj) {
+        var result = doc.createElement("img");
+        result.setAttribute("src", obj.uri);
+
+        // Set the height, so it appears as a thumbnail.
+        result.style.height = "40px";
+        return result;
+    }
+
     // Render an individual RDF object to an HTML object displayed
     // in a table cell.
 
-    function renderValue(obj) {
+    function renderValue(obj, column) {
         if (obj.termType == "literal") {
             return doc.createTextNode(obj.value);
+        } else if (obj.termType == "symbol" && column.isImageColumn()) {
+            return renderImage(obj);
         } else if (obj.termType == "symbol" || obj.termType == "bnode") {
-            return linkTo(obj.uri, label(obj));
+            return linkToObject(obj);
         } else {
             return doc.createTextNode("unknown termtype!");
         }
@@ -976,7 +1021,7 @@ function renderTableViewPane(doc, statements) {
                 for (var j=0; j<objects.length; ++j) {
                     var obj = objects[j];
 
-                    td.appendChild(renderValue(obj));
+                    td.appendChild(renderValue(obj, column));
 
                     if (j != objects.length - 1) {
                         td.appendChild(doc.createTextNode(",\n"));

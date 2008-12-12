@@ -188,19 +188,24 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             var contents = "<rdf:RDF  xmlns='http://xmlns.com/foaf/0.1/'\n"+
                 "    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'\n" +
                 "    xmlns:foaf='http://xmlns.com/foaf/0.1/'>";
+            var localid;
             if (nick.length > 0) {
-                webid = targetURI + "#" + nick;
+                localid = nick;
                 contents += "<Person rdf:about='#"+nick+"'>";
                 contents += "<nick>"+nick+"</nick>\n";
             } else {
-                webid = targetURI + "#" + initials;
+                localid = initials;
                 contents += "<Person rdf:about='#"+initials+"'>";
                 contents += "<name>"+foafname+"</name>\n";
             }
-            contents += "    </Person>\n</rdf:RDF>\n";
+            contents += "</Person>\n";
+            contents += "<foaf:PersonalProfileDocument rdf:about=''> \
+    <foaf:primaryTopic rdf:resource='#"+ localid +"'/> \
+</foaf:PersonalProfileDocument>\n";
 
-            // The following only works when this is in chrome://tabultor/content/
-            // var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+            contents += "</rdf:RDF>\n";
+            webid = targetURI + "#" + localid;
+
             var content_type = "application/rdf+xml";
             var xhr = tabulator.util.XMLHTTPFactory();
             var doc = myDocument;

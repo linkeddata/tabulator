@@ -717,9 +717,17 @@ function renderTableViewPane(doc, statements) {
             } else if (colValue == null) {
                 return false;
             } else {
-                var literalValue = colValue.value.toLowerCase();
+                var literalValue;
 
-                return literalValue.indexOf(substring) >= 0;
+                if (colValue.termType == "literal") {
+                    literalValue = colValue.value;
+                } else if (colValue.termType == "symbol") {
+                    literalValue = colValue.uri;
+                } else {
+                    literalValue = "";
+                }
+
+                return literalValue.toLowerCase().indexOf(substring) >= 0;
             }
         }
 

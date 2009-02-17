@@ -241,7 +241,7 @@
 										   	divPremises.appendChild(myDocument.createElement('br'));
 		                                }
 		                                else{
-			                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+			                                divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
 		                                }
 		                            }                
 		                       }     
@@ -373,7 +373,7 @@
 						    			divPremises.appendChild(a);
 	                                }
 	                                else{
-		                                divPremises.appendChild(statementsAsTables(t2[l].object.statements)); 
+		                                divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
 	                                }
 								   	divPremises.appendChild(myDocument.createElement('br'));
 								   	divPremises.appendChild(myDocument.createElement('br'));

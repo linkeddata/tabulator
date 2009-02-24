@@ -42,7 +42,8 @@
   <script type="application/x-javascript" src="js/panes/tableViewPane.js"/>
   <script type="application/x-javascript" src="js/panes/socialPane.js"/>
   <script type="application/x-javascript" src="js/panes/airPane.js"/>
-  <script type="application/x-javascript" src="js/panes/LawPane.js"/>
+  <script type="application/x-javascript" src="js/panes/lawPane.js"/>
+  <script type="application/x-javascript" src="js/panes/paneUtils.js"/>
   
   <!-- browser reload hack -->
   <script type="application/x-javascript" src="refresh_hack.js"/>

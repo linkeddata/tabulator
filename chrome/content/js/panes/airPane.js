@@ -47,6 +47,9 @@ airPane.label = function(subject) {
 			stringToDisplay = "Justify" //Even with one relevant statement this method should return something 
 		}   
 	}
+	//Make the subject list we will be exploring in the render function unique
+	compliantSubjects = unique(compliantSubjects);
+	nonCompliantSubjects = unique(nonCompliantSubjects); 
    return stringToDisplay;
 }
 

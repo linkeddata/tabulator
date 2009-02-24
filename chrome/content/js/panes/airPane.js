@@ -8,24 +8,26 @@
 airPane = {};
 airPane.name = 'air';
 airPane.icon = Icon.src.icon_airPane;
- 
-var air = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
-var tms = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
-var compliant = air('compliant-with');
-var nonCompliant = air('non-compliant-with');
-var antcExpr = tms('antecedent-expr');
-var just = tms('justification');
-var subExpr = tms('sub-expr');
-var description = tms('description');
-var ruleName = tms('rule-name');
-var prem = tms('premise');
+
+//These are horrible global vars. To minimize the chance of an unintended name collision
+//these are prefixed with 'ap_' (short for air pane) 
+var ap_air = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+var ap_tms = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
+var ap_compliant = ap_air('compliant-with');
+var ap_nonCompliant = ap_air('non-compliant-with');
+var ap_antcExpr = ap_tms('antecedent-expr');
+var ap_just = ap_tms('justification');
+//var ap_subExpr = ap_tms('sub-expr');
+var ap_description = ap_tms('description');
+var ap_ruleName = ap_tms('rule-name');
+var ap_prem = ap_tms('premise');
 var compliantSubjects = [];
 var nonCompliantSubjects = [];
 		 
 airPane.label = function(subject) {
 
 	//Find all the statements with air:justification in it
-	var stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+	var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
 	//This will hold the string to display if the pane appears
 	var stringToDisplay = null
 	//Then make a registry of the compliant and non-compliant subjects
@@ -35,21 +37,21 @@ airPane.label = function(subject) {
 		//The subject of the statements should be a quouted formula and
 		//the object should not be tms:premise (this corresponds to the final chunk of the output 
 		//which has {some triples} tms:justification tms:premise)
-		if (stsJust[j].subject.termType == 'formula' && stsJust[j].object != prem.toString()){
+		if (stsJust[j].subject.termType == 'formula' && stsJust[j].object != ap_prem.toString()){
 			var sts = stsJust[j].subject.statements;
 			if (sts.length != 1) throw new Error("There should be only ONE statement indicating some event is (non-)compliant with some policy!")
 			//Keep track of the subjects of the statements in the global variables above and return "Justify"
 			//which will be the tool-tip text of the label icon
-			if (sts[0].predicate.toString() == compliant.toString())
+			if (sts[0].predicate.toString() == ap_compliant.toString())
 				compliantSubjects.push(sts[0].subject);
-			if (sts[0].predicate.toString() == nonCompliant.toString())
+			if (sts[0].predicate.toString() == ap_nonCompliant.toString())
 				nonCompliantSubjects.push(sts[0].subject);
 			stringToDisplay = "Justify" //Even with one relevant statement this method should return something 
 		}   
 	}
 	//Make the subject list we will be exploring in the render function unique
-	compliantSubjects = unique(compliantSubjects);
-	nonCompliantSubjects = unique(nonCompliantSubjects); 
+	compliantSubjects = paneUtils.unique(compliantSubjects);
+	nonCompliantSubjects = paneUtils.unique(nonCompliantSubjects); 
    return stringToDisplay;
 }
 
@@ -60,31 +62,25 @@ airPane.render = function(subject, myDocument) {
 	var stsCompliant;
 	var stsNonCompliant;
 	
-	var stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+	var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
 	
-		for (var j=0; j<stsJust.length; j++){
-			if (stsJust[j].subject.termType == 'formula'){
-				var sts = stsJust[j].subject.statements;
-				for (var k=0; k<sts.length; k++){
-					if (sts[k].predicate.toString() == compliant.toString()){
-						stsCompliant = sts[k];
-					} 
-					if (sts[k].predicate.toString() == nonCompliant.toString()){
-						stsNonCompliant = sts[k];
-					}
+	for (var j=0; j<stsJust.length; j++){
+		if (stsJust[j].subject.termType == 'formula'){
+			var sts = stsJust[j].subject.statements;
+			for (var k=0; k<sts.length; k++){
+				if (sts[k].predicate.toString() == ap_compliant.toString()){
+					stsCompliant = sts[k];
+				} 
+				if (sts[k].predicate.toString() == ap_nonCompliant.toString()){
+					stsNonCompliant = sts[k];
 				}
-			}    
-		}
+			}
+		}    
+	}
 
 	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
 
-	airPane.render.extractLogURI = function(fullURI){
-		var logPos = fullURI.search(/logFile=/);
-		var rulPos = fullURI.search(/&rulesFile=/);
-		return fullURI.substring(logPos+8, rulPos); 			
-	}
-	
-	var logFileURI = airPane.render.extractLogURI(myDocument.location.toString());
+	var logFileURI = paneUtils.extractLogURI(myDocument.location.toString());
 		  
 	var stsFound;
 	 
@@ -190,7 +186,7 @@ airPane.render = function(subject, myDocument) {
 
 	airPane.render.because = function(){
 	
-		var cwa = air('closed-world-assumption');
+		var cwa = ap_air('closed-world-assumption');
 		var cwaStatements = kb.statementsMatching(undefined, cwa, undefined, subject);
 		var noPremises = false;
 		if (cwaStatements.length > 0){
@@ -208,7 +204,7 @@ airPane.render = function(subject, myDocument) {
 			//Terminating condition: 
 			// if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
 			// there are no more information to follow
-			var terminatingCondition = kb.statementsMatching(ruleToFollow, just, prem, subject);
+			var terminatingCondition = kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
 			if (terminatingCondition[0] != undefined){
 
 			   divPremises.appendChild(myDocument.createElement('br'));
@@ -222,8 +218,8 @@ airPane.render = function(subject, myDocument) {
 				
 				//Update the description div with the description at the next level
 				var currentRule = kb.statementsMatching(undefined, undefined, ruleToFollow, subject);
-				var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined, subject);
-				var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
+				var currentRuleSts = kb.statementsMatching(currentRule[0].subject, ap_just, undefined, subject);
+				var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
 				ruleNameFound = nextRuleSts[0].object;
 
 				
@@ -235,7 +231,7 @@ airPane.render = function(subject, myDocument) {
 					//Update the premises div also with the corresponding premises
 				   divPremises.appendChild(myDocument.createElement('br')); 
 				   divPremises.appendChild(myDocument.createElement('br')); 
-				   var t1 = kb.statementsMatching(currentRuleSts[0].object, antcExpr, undefined, subject);
+				   var t1 = kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
 					for (var k=0; k<t1.length; k++){
 							var t2 = kb.statementsMatching(t1[k].object, undefined, undefined, subject);
 							for (var l=0; l<t2.length; l++){
@@ -323,7 +319,7 @@ airPane.render = function(subject, myDocument) {
 		
 
 	   //Display the actual English-like description first
-		var stsDesc = kb.statementsMatching(undefined, description, undefined, subject); 
+		var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject); 
 
 		divJustification.appendChild(myDocument.createElement('br'));
 
@@ -362,11 +358,11 @@ airPane.render = function(subject, myDocument) {
 		for (var j=0; j<stsJust.length; j++){
 			if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
 			
-				var ruleNameSts = kb.statementsMatching(stsJust[j].object, ruleName, undefined, subject);
+				var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
 				ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
 													   // statement containing the formula		
 				if (!noPremises){
-					var t1 = kb.statementsMatching(stsJust[j].object, antcExpr, undefined, subject);
+					var t1 = kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
 					for (var k=0; k<t1.length; k++){
 						var t2 = kb.statementsMatching(t1[k].object, undefined, undefined, subject);
 						for (var l=0; l<t2.length; l++){

@@ -1,10 +1,12 @@
 /**
-* Few General purpose utlity functions which has been used in the panes
+* Few General purpose utlity functions used in the panes
 * oshani@csail.mit.edu 
 */
 
+paneUtils = {};
+
 // This is used to canonicalize an array
-function unique(a){
+paneUtils.unique = function(a){
    var r = new Array();
    o:for(var i = 0, n = a.length; i < n; i++){
       for(var x = 0, y = r.length; x < y; x++){
@@ -14,3 +16,12 @@ function unique(a){
    }
    return r;
 }
+
+//To figure out the log URI from the full URI used to invoke the reasoner
+paneUtils.extractLogURI = function(fullURI){
+	var logPos = fullURI.search(/logFile=/);
+	var rulPos = fullURI.search(/&rulesFile=/);
+	return fullURI.substring(logPos+8, rulPos); 			
+}
+	
+	

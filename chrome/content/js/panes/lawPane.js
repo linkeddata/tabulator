@@ -8,18 +8,18 @@ LawPane.icon = Icon.src.icon_LawPane;
 LawPane.name = 'Law';
 LawPane.label = function(subject) {
 
-    stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+    stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
 
         for (var j=0; j<stsJust.length; j++){
             if (stsJust[j].subject.termType == 'formula'){
             var sts = stsJust[j].subject.statements;
             for (var k=0; k<sts.length; k++){
-                if (sts[k].predicate.toString() == compliant.toString()){
+                if (sts[k].predicate.toString() == ap_compliant.toString()){
                     stsCompliant = sts[k];
                 	return "Lawyer's View";
                     
                 } 
-                if (sts[k].predicate.toString() == nonCompliant.toString()){
+                if (sts[k].predicate.toString() == ap_nonCompliant.toString()){
                     stsNonCompliant = sts[k];
                     return "Lawyer's View";
                	}
@@ -111,7 +111,7 @@ LawPane.render = function(subject, myDocument) {
 	}
 
 		
-    var stsJust = kb.statementsMatching(undefined, just, undefined, subject); 
+    var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
  	
  	// TODO: & FIXME: There could be a bug here, but that all depends on the format of the proof tree
  	// {non-compliant/compliant} air:description (the description) stuff could appear more than once
@@ -120,7 +120,7 @@ LawPane.render = function(subject, myDocument) {
  	// that are obtained by following the rule names
  	var stsDescAll = [];
  	var stsAnalysisAll = [];
- 	var stsDesc = kb.statementsMatching(undefined, description, undefined, subject); 
+ 	var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject); 
     for (var j=0; j<stsDesc.length; j++){
 	    if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
 	    	    stsAnalysisAll.push(LawPane.display(myDocument, stsDesc[j].object));
@@ -131,8 +131,8 @@ LawPane.render = function(subject, myDocument) {
 	    if (stsJust[j].subject.termType == 'formula'){
 	        var sts = stsJust[j].subject.statements;
 	        for (var k=0; k<sts.length; k++){
-	            if (sts[k].predicate.toString() == compliant.toString() ||
-	            	sts[k].predicate.toString() == nonCompliant.toString()){
+	            if (sts[k].predicate.toString() == ap_compliant.toString() ||
+	            	sts[k].predicate.toString() == ap_nonCompliant.toString()){
 	                stsFound.push(sts[k]);
 	            } 
 	        }
@@ -229,14 +229,14 @@ LawPane.render = function(subject, myDocument) {
 	var div_rule_data = myDocument.createElement("div");
 //    div_rule_data.setAttribute('style','display:none');
     div_rule_data.setAttribute('class', 'irfac');
-    div_rule_data.id = "td_2";
+    div_rule_data.id = 'td_2';
     var table_rule_data = myDocument.createElement("table");
     var tr_rule_data = myDocument.createElement('tr');
     var td_rule_dummy = myDocument.createElement('td');
     td_rule_dummy.appendChild(myDocument.createTextNode(' '));
     tr_rule_data.appendChild(td_rule_dummy);
 	var td_rule_data = myDocument.createElement('td');
-    td_rule_data.id = "td_2";
+    td_rule_data.id = 'td_2';
     td_rule_data.appendChild(myDocument.createTextNode('Rule(s) is/are specified in '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)

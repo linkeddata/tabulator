@@ -123,7 +123,6 @@ LawPane.render = function(subject, myDocument) {
  	var stsDescAll = [];
  	var stsAnalysisAll = [];
  	var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject); 
-	alert(stsDesc)
     for (var j=0; j<stsDesc.length; j++){
 	    if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
 	    	    stsAnalysisAll.push(LawPane.display(myDocument, stsDesc[j].object));
@@ -146,7 +145,6 @@ LawPane.render = function(subject, myDocument) {
             	var terminatingCondition = kb.statementsMatching(ruleNameFound, ap_just, ap_prem, subject);
 				while (terminatingCondition[0] == undefined){
 	            	var currentRule = kb.statementsMatching( undefined, undefined, ruleNameFound, subject);
-			alert(currentRule)	            	
 	            	if (currentRule[0].object.termType == 'collection'){
 			    	    stsDescAll.push(LawPane.display(myDocument, currentRule[0].object));
 	                }

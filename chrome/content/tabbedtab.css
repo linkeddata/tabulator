@@ -51,6 +51,18 @@ div.instancePane {
         border-top: solid 1px #777; border-bottom: solid 1px #777; 
         margin-top: 0.5em; margin-bottom: 0.5em }
 
+/* ***************** For the Justification UI Panes **********/
+
+div.container {
+    border-top: solid 5px black;
+    border-left: solid 5px black;
+    border-bottom: solid 5px black;
+    border-right: solid 5px black;
+    margin-top: 0.5em; 
+    margin-bottom: 0.5em;
+    -moz-border-radius: 0.75em;
+}
+
 div.nonCompliantPane {
     border-top: solid 1px red;
     border-left: solid 1px red;
@@ -74,36 +86,48 @@ div.compliantPane {
 }
 
 div.justification {
-	font-size: 100%;
+    font-size: 100%;
     padding: 0 5px;
-    width: 1000px; /* @@ Don't use pixels -- use em */
+    width: 80%; /* @@ Don't use pixels -- use em */
     background-color: white; 
     margin-top: 0.5em; margin-bottom: 0.5em;
 }
 
+
 div.description {
-	font-size: 120%;
+    font-size: 120%;
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
     padding: 15px;
-    width: 1000px; 
+    width: 100%; 
     background-color: #ffffdd; 
-    margin-top: 0.5em; margin-bottom: 0.5em;
+    margin-top: 0.5em; 
+    margin-bottom: 0.5em;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
     -moz-border-radius: 0.75em;
+    position:relative;
+    left:0%
 }
 
 div.premises {
+    font: 100%
     border-top: solid 1px #3399ff;
     border-left: solid 1px #3399ff;
     border-bottom: solid 1px #3399ff;
     border-right: solid 1px #3399ff;
-    padding: 0 5px;
-    width: 1000px; 
+    padding: 0.5px;
+    width: 50%; 
     background-color: #ccccff; 
-    margin-top: 0.5em; margin-bottom: 0.5em;
+    margin-top: 0.5em; 
+    margin-bottom: 0.5em;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
     -moz-border-radius: 0.75em;
+    position:relative;
+    left:0% /*May be we could shift the left margin a bit?*/
 }
 
 /* ***************** Social Pane **********/
@@ -218,9 +242,15 @@ div.dataContentPane td {
                 padding-top: 0.1em;
                 padding-right: 0.2em;
                 padding-bottom: 0.05em;
+	        /*vertical-align: middle; */
                 /* background-color: white; */
                  }
-div.dataContentPane>table>tr { margin-bottom: 0.6em;}
+
+div.dataContentPane tr { 
+	margin-bottom: 0.6em;
+        padding-top: 1em;
+        padding-bottom: 1em;
+}
 
 div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
 div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */ 

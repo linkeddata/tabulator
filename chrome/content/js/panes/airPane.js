@@ -320,6 +320,7 @@ airPane.render = function(subject, myDocument) {
 				var currentRule = kb.statementsMatching(undefined, undefined, ruleToFollow);
 				
 				//Find the corresponding description matching the currenrRule
+
 				var currentRuleDescSts = kb.statementsMatching(undefined, undefined, currentRule[0].object);
 				
 				for (var i=0; i<currentRuleDescSts.length; i++){
@@ -422,7 +423,7 @@ airPane.render = function(subject, myDocument) {
 			divJustification.appendChild(myDocument.createElement('br'));
 			divJustification.appendChild(myDocument.createElement('br'));
 
-		if (noPremises){	
+		if (noPremises){
 			divPremises.appendChild(myDocument.createElement('br'));
 			divPremises.appendChild(myDocument.createElement('br'));
 			divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in the "));

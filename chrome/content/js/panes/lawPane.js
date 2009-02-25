@@ -6,6 +6,7 @@
 LawPane = {};
 LawPane.icon = Icon.src.icon_LawPane;
 LawPane.name = 'Law';
+
 LawPane.label = function(subject) {
 
     stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
@@ -92,7 +93,7 @@ LawPane.render = function(subject, myDocument) {
     var log = uris.pop();
     
     //Retrieve policy file to get the description of the policy
-	var xmlhttp = new XMLHttpRequest();
+	var xmlhttp = Util.XMLHTTPFactory();
 	xmlhttp.onreadystatechange=state_Change;
 	xmlhttp.open("GET",policy,true);
 	xmlhttp.send(null);
@@ -106,7 +107,8 @@ LawPane.render = function(subject, myDocument) {
 				end_index = newStr.slice(start_index).search(/";/); //"
 			}
 			var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
-			myDocument.getElementById('td_2').innerHTML = rule_statement;
+			if (myDocument.getElementById('td_2') != null)
+				myDocument.getElementById('td_2').innerHTML = rule_statement;
 		  }
 	}
 
@@ -121,6 +123,7 @@ LawPane.render = function(subject, myDocument) {
  	var stsDescAll = [];
  	var stsAnalysisAll = [];
  	var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject); 
+	alert(stsDesc)
     for (var j=0; j<stsDesc.length; j++){
 	    if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
 	    	    stsAnalysisAll.push(LawPane.display(myDocument, stsDesc[j].object));
@@ -137,20 +140,20 @@ LawPane.render = function(subject, myDocument) {
 	            } 
 	        }
 	        if (stsJust[j].object.termType == 'bnode'){
-            	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ruleName, undefined, subject);
+            	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
             	var ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name
             	
-            	var terminatingCondition = kb.statementsMatching(ruleNameFound, just, prem, subject);
+            	var terminatingCondition = kb.statementsMatching(ruleNameFound, ap_just, ap_prem, subject);
 				while (terminatingCondition[0] == undefined){
-	            	var currentRule = kb.statementsMatching(ruleNameFound, undefined, undefined, subject);
-	            	
+	            	var currentRule = kb.statementsMatching( undefined, undefined, ruleNameFound, subject);
+			alert(currentRule)	            	
 	            	if (currentRule[0].object.termType == 'collection'){
 			    	    stsDescAll.push(LawPane.display(myDocument, currentRule[0].object));
 	                }
-	        		var currentRuleSts = kb.statementsMatching(currentRule[0].subject, just, undefined, subject);
-				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ruleName, undefined, subject);
+	        		var currentRuleSts = kb.statementsMatching(currentRule[0].subject, ap_just, undefined, subject);
+				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
 				   	ruleNameFound = nextRuleSts[0].object;
-			   		terminatingCondition = kb.statementsMatching(ruleNameFound, just, prem, subject);
+			   		terminatingCondition = kb.statementsMatching(ruleNameFound, ap_just, ap_prem, subject);
 				}
 	        }
 	   	}    
@@ -421,7 +424,6 @@ LawPane.render = function(subject, myDocument) {
 
 }
 
-	//LawPane @see panes/lawPane.js
 tabulator.panes.register(LawPane, false);
 
 //ends

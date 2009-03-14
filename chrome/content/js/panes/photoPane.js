@@ -28,7 +28,7 @@
     // namespace and shorthand for concepts in the tag ontology
     var RDF = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     var TAGS = RDFNamespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
-    var PAC = RDFNamespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac");
+    var PAC = RDFNamespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
     
     function CompareTags(photo,checked) {
         if (checked.length == 0) {

@@ -14,7 +14,7 @@
     var RDF = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     var RDFS = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
     var TAGS = RDFNamespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
-    var PAC = RDFNamespace("http://people.csail.mit.edu/albert08/project/ont/pac.rdf#");
+    var PAC = RDFNamespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
     
     photoImportPane.label = function(subject) {
         

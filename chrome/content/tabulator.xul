@@ -26,7 +26,8 @@
   <script type="application/x-javascript" src="js/updateCenter.js"/>
   <script type="application/x-javascript" src="js/webdav.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
-  <script type="application/x-javascript" src="js/semclip.js"/> <!-- For the Semantic Clipboar -->
+  <script type="application/x-javascript" src="js/sqlite.js"/> <!-- Functions to create an SQLite database-->
+  <script type="application/x-javascript" src="js/semclip.js"/> <!-- For the Semantic Clipboard -->
   <script type="application/x-javascript" src="sources-ext.js"/>
   
   <!-- panes must be after outline.js and test.js -->
@@ -37,7 +38,7 @@
   <script type="application/x-javascript" src="js/panes/internalPane.js"/>
   <script type="application/x-javascript" src="js/panes/imagePane.js"/>
   <script type="application/x-javascript" src="js/panes/dataContentPane.js"/>
-  <script type="application/x-javascript" src="js/panes/n3Pane.js"/>
+  <script type="application/x-javascript" src="js/panes/n3Pane.js"/> 
   <script type="application/x-javascript" src="js/panes/RDFXMLPane.js"/>
   <script type="application/x-javascript" src="js/panes/humanReadablePane.js"/>
   <script type="application/x-javascript" src="js/panes/tableViewPane.js"/>

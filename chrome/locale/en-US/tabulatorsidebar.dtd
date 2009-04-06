@@ -22,6 +22,9 @@
 <!ENTITY tabulatorToggleHeader.label "Make Firefox request RDF">
 <!ENTITY tabulatorToggleHeader.accesskey "m">
 
+<!ENTITY semclipToggleHeader.label "Enable Semantic Clipboard">
+<!ENTITY semclipToggleHeader.accesskey "s">
+
 <!ENTITY policysidebar.title "Policy Parser">
 <!ENTITY openPOLICYSidebar.commandkey "E">
 <!ENTITY openPOLICYSidebar.modifierskey "shift accel">

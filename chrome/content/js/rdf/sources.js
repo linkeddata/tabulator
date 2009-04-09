@@ -6,8 +6,9 @@
  * 
  * Description: contains functions for requesting/fetching/retracting
  *  'sources' -- meaning any document we are trying to get data out of
+ *  This implementsquite a lot of the web architecture
  * 
- * SVN ID: $Id: sources.js 25416 2008-12-11 21:45:18Z timbl $
+ * SVN ID: $Id: sources.js 25776 2009-04-09 18:50:29Z timbl $
  *
  ************************************************************/
 
@@ -37,26 +38,26 @@ function SourceFetcher(store, timeout, async) {
 	this.recv = function (xhr) {
 	    xhr.handle = function (cb) {
 		var kb = sf.store
-		if (!this.dom) {		
-            var dparser;
-            if(isExtension) {
-                dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
-                          .getService(Components.interfaces.nsIDOMParser);
-            } else {
-		        dparser = new DOMParser()
-            }
-            //strange things hapeen when responseText is empty
-		    this.dom = dparser.parseFromString(xhr.responseText,
-						       'application/xml')
-		}
-		
-		var root = this.dom.documentElement;
-		//some simple syntax issue should be dealt here, I think
-        if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
-//            alert('Warning: Badly formed XML');
-            sf.failFetch(xhr, "Badly formed XML in "+xhr.uri.uri); //have to fail the request
-            throw new Error("Badly formed XML in "+xhr.uri.uri); //@@ Add details
-        }		
+		if (!this.dom) {
+                    var dparser;
+                    if(isExtension) {
+                        dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
+                                  .getService(Components.interfaces.nsIDOMParser);
+                    } else {
+                                dparser = new DOMParser()
+                    }
+                    //strange things hapeen when responseText is empty
+                            this.dom = dparser.parseFromString(xhr.responseText,
+                                                               'application/xml')
+                        }
+                        
+                        var root = this.dom.documentElement;
+                        //some simple syntax issue should be dealt here, I think
+                if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
+        //            alert('Warning: Badly formed XML');
+                    sf.failFetch(xhr, "Badly formed XML in "+xhr.uri.uri); //have to fail the request
+                    throw new Error("Badly formed XML in "+xhr.uri.uri); //@@ Add details
+                }		
 		var parser = new RDFParser(kb)
         sf.addStatus(xhr, 'parsing...');		
 		parser.parse(this.dom, xhr.uri.uri, xhr.uri)
@@ -375,7 +376,7 @@ function SourceFetcher(store, timeout, async) {
 						    +".N3Handler")
     SourceFetcher.N3Handler.toString = function () { return "N3Handler" }
     SourceFetcher.N3Handler.register = function (sf) {
-	sf.mediatypes['text/n3'] = {} // as per 2008 spec
+	sf.mediatypes['text/n3'] = {'q': '1.0'} // as per 2008 spec
 	sf.mediatypes['text/rdf+n3'] = {'q': 0.5} // pre 2008 spec
 	sf.mediatypes['application/x-turtle'] = {'q': 0.2} // pre 2008
 	sf.mediatypes['text/turtle'] = {'q': 1.0} // pre 2008
@@ -648,7 +649,8 @@ function SourceFetcher(store, timeout, async) {
 	var handlers = kb.collection()
 	var sf = this
 
-	kb.add(this.appNode, tabulator.ns.link("source"), docterm, this.appNode)
+        // The list of sources is kept in the source widget
+	// kb.add(this.appNode, tabulator.ns.link("source"), docterm, this.appNode)
 	kb.add(docterm, tabulator.ns.link("request"), req, this.appNode)
 	kb.add(req, tabulator.ns.rdfs("label"), kb.literal('Access of '+docuri),
 	       this.appNode)
@@ -742,7 +744,7 @@ function SourceFetcher(store, timeout, async) {
 			        xhr.headers['content-type'] = 'application/rdf+xml';
 			        break;
 			    case 'n3': case 'nt': case 'ttl':
-			        xhr.headers['content-type'] = 'text/rdf+n3';
+			        xhr.headers['content-type'] = 'text/n3';
 			        break;
 			    default:
                                 xhr.headers['content-type'] = 'text/xml';			        
@@ -866,6 +868,10 @@ function SourceFetcher(store, timeout, async) {
 				    kb.add(xhr.req,
 					tabulator.ns.http('location'),
 					newURI, xhr.req);
+					
+				    kb.add(xhr.req,
+					tabulator.ns.http('redirectedTo'),
+					kb.sym(newURI), xhr.req);
 					
                     //delete the entry caused by the Tabulator. See test.js. tabExtension not defined, why?
                     /*		    

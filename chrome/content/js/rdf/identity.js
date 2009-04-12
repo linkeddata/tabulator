@@ -47,6 +47,7 @@ RDFArrayRemove = function(a, x) {  //removes all elements equal to x from a
 //Stores an associative array that maps URIs to functions
 function RDFIndexedFormula(features) {
     this.statements = [];    // As in RDFFormula
+    this.optional = [];
     this.propertyActions = []; // Array of functions to call when getting statement with {s X o}
     //maps <uri> to [f(F,s,p,o),...]
     this.classActions = [];   // Array of functions to call when adding { s type X }

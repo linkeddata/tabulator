@@ -5,6 +5,12 @@ function renderTableViewPane(doc, statements) {
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
 
+    // Predicates that are never made into columns:
+
+    var FORBIDDEN_COLUMNS = {
+        "http://www.w3.org/2002/07/owl#sameAs": true,
+    };
+
     // Number types defined in the XML schema:
 
     var XSD_NUMBER_TYPES = {
@@ -31,6 +37,10 @@ function renderTableViewPane(doc, statements) {
     var IMAGE_TYPES = {
         "http://xmlns.com/foaf/0.1/Image": true,
     };
+
+    // Use queries to render the table, currently experimental:
+ 
+    var USE_QUERIES = false;
 
     var subjectIdCounter = 0;
     var globalColumns, allType, types;
@@ -76,6 +86,70 @@ function renderTableViewPane(doc, statements) {
         return result;
     }
 
+    // Add the SELECT details to the query being built.
+
+    function addSelectToQuery(query, rowVar, type) {
+        var selectedColumns = type.getColumns();
+        query.vars.push(rowVar);
+
+        for (var i=0; i<selectedColumns.length; ++i) {
+            // TODO: autogenerate nicer names for variables
+            // variables have to be unambiguous
+
+            var variable = kb.variable("_col" + i);
+
+            query.vars.push(variable);
+            selectedColumns[i].setVariable(variable);
+        }
+    }
+
+    // Add WHERE details to the query being built.
+
+    function addWhereToQuery(query, rowVar, type) {
+        var queryType = type.type;
+
+        if (queryType == null) {
+            queryType = kb.variable("_any");
+        }
+
+        // _row a type
+        query.pat.add(rowVar,
+                      tabulator.ns.rdf("type"),
+                      queryType);
+    }
+
+    // Generate OPTIONAL column selectors.
+
+    function addColumnsToQuery(query, rowVar, type) {
+        var selectedColumns = type.getColumns();
+
+        for (var i=0; i<selectedColumns.length; ++i) {
+            var column = selectedColumns[i];
+
+            var formula = kb.formula();
+
+            formula.add(rowVar,
+                        column.predicate,
+                        column.getVariable());
+
+            query.pat.optional.push(formula);
+        }
+    }
+
+    // Generate a query object from the currently-selected type
+    // object.
+
+    function generateQuery(type) {
+        var query = new Query();
+        var rowVar = kb.variable("_row");
+
+        addSelectToQuery(query, rowVar, type);
+        addWhereToQuery(query, rowVar, type);
+        addColumnsToQuery(query, rowVar, type);
+
+        return query;
+    }
+
     // Build the contents of the tableDiv element, filtered according
     // to the specified type.
 
@@ -90,9 +164,17 @@ function renderTableViewPane(doc, statements) {
 
         clearElement(tableDiv);
 
-        // Render the HTML table
+        var query = generateQuery(type);
 
-        var htmlTable = renderTableForType(type);
+        // Render the HTML table.
+
+        var htmlTable;
+
+        if (USE_QUERIES) {
+            htmlTable = renderTableForQuery(query, type);
+        } else {
+            htmlTable = renderTableForType(type);
+        }
 
         tableDiv.appendChild(htmlTable);
     }
@@ -229,6 +311,14 @@ function renderTableViewPane(doc, statements) {
                     }
                 }
             }
+        }
+
+        this.getVariable = function() {
+            return this.variable;
+        }
+
+        this.setVariable = function(variable) {
+            this.variable = variable;
         }
 
         this.addUse = function() {
@@ -469,6 +559,12 @@ function renderTableViewPane(doc, statements) {
 
             var predicate = statements[i].predicate;
 
+            // Ignore certain columns:
+
+            if (FORBIDDEN_COLUMNS[predicate.uri]) {
+                continue;
+            }
+
             // Find the row for the subject of this statement.
 
             var row = getRowForSubject(allType, subjects, statements[i].subject);
@@ -568,8 +664,7 @@ function renderTableViewPane(doc, statements) {
     // Sort the rows in the rendered table by data from a specific
     // column, using the provided sort function to compare values.
 
-    function applyColumnSort(type, column, sortFunction, reverse) {
-        var rows = type.rows;
+    function applyColumnSort(rows, column, sortFunction, reverse) {
         var columnUri = column.predicate.uri;
 
         // Sort the rows array.
@@ -610,10 +705,7 @@ function renderTableViewPane(doc, statements) {
     // Filter the list of rows based on the selectors for the 
     // columns.
 
-    function applyColumnFilters(type) {
-
-        var rows = type.rows;
-        var columns = type.getColumns();
+    function applyColumnFilters(rows, columns) {
 
         // Apply filterFunction to each row.
 
@@ -621,7 +713,7 @@ function renderTableViewPane(doc, statements) {
             var row = rows[r];
             var rowDisplayed = true;
 
-            // Check the filter functions for every column.  
+            // Check the filter functions for every column.
             // The row should only be displayed if the filter functions
             // for all of the columns return true.
 
@@ -656,7 +748,7 @@ function renderTableViewPane(doc, statements) {
 
     // Sort by literal value
 
-    function literalSort(type, column, reverse) {
+    function literalSort(rows, column, reverse) {
         function literalToString(colValue) {
             if (colValue != null) {
                 return colValue.value;
@@ -678,12 +770,12 @@ function renderTableViewPane(doc, statements) {
             }
         }
 
-        applyColumnSort(type, column, literalCompare, reverse);
+        applyColumnSort(rows, column, literalCompare, reverse);
     }
 
     // Generates a selector for an RDF literal column.
 
-    function renderLiteralSelector(type, column) {
+    function renderLiteralSelector(rows, columns, column) {
         var result = doc.createElement("div");
 
         var textBox = doc.createElement("input");
@@ -695,14 +787,14 @@ function renderTableViewPane(doc, statements) {
         var sort1 = doc.createElement("span");
         sort1.appendChild(doc.createTextNode("\u25BC"));
         sort1.addEventListener("click", function() {
-            literalSort(type, column, false);
+            literalSort(rows, column, false);
         }, false)
         result.appendChild(sort1);
 
         var sort2 = doc.createElement("span");
         sort2.appendChild(doc.createTextNode("\u25B2"));
         sort2.addEventListener("click", function() {
-            literalSort(type, column, true);
+            literalSort(rows, column, true);
         }, false)
         result.appendChild(sort2);
 
@@ -737,7 +829,8 @@ function renderTableViewPane(doc, statements) {
             } else {
                 substring = null;
             }
-            applyColumnFilters(type);
+
+            applyColumnFilters(rows, columns);
         }, false);
 
         return result;
@@ -745,7 +838,7 @@ function renderTableViewPane(doc, statements) {
 
     // Generates a dropdown selector for enumeration types.
 
-    function renderEnumSelector(type, column, statements) {
+    function renderEnumSelector(rows, columns, column, statements) {
         var result = doc.createElement("div");
 
         var dropdown = doc.createElement("select");
@@ -787,7 +880,7 @@ function renderTableViewPane(doc, statements) {
             } else {
                 searchValue = list[index];
             }
-            applyColumnFilters(type);
+            applyColumnFilters(rows, columns);
         }, false);
 
         return result;
@@ -795,7 +888,7 @@ function renderTableViewPane(doc, statements) {
 
     // Selector for XSD number types.
 
-    function renderNumberSelector(type, column) {
+    function renderNumberSelector(rows, columns, column) {
         var result = doc.createElement("div");
 
         var minSelector = doc.createElement("input");
@@ -844,7 +937,7 @@ function renderTableViewPane(doc, statements) {
                 max = new Number(maxSelector.value);
             }
 
-            applyColumnFilters(type);
+            applyColumnFilters(rows, columns);
         }
 
         minSelector.addEventListener("keyup", eventListener, false);
@@ -855,18 +948,18 @@ function renderTableViewPane(doc, statements) {
 
     // Fallback attempts at generating a selector if other attempts fail.
 
-    function fallbackRenderTableSelector(type, column) {
+    function fallbackRenderTableSelector(rows, columns, column) {
 
         // Have all values matched as numbers?
 
         if (column.possiblyNumber) {
-            return renderNumberSelector(type, column);
+            return renderNumberSelector(rows, columns, column);
         }
 
         // Have all values been literals?
 
         if (column.possiblyLiteral) {
-            return renderLiteralSelector(type, column);
+            return renderLiteralSelector(rows, columns, column);
         }
 
         // Show the range, for debugging.
@@ -880,7 +973,7 @@ function renderTableViewPane(doc, statements) {
 
     // Render a selector for a given row.
 
-    function renderTableSelector(type, column) {
+    function renderTableSelector(rows, columns, column) {
 
         // What type of data is in this column?  Check the range for 
         // this predicate.
@@ -888,7 +981,7 @@ function renderTableViewPane(doc, statements) {
         var range = column.getRange();
 
         if (range == null) {
-            return fallbackRenderTableSelector(type, column);
+            return fallbackRenderTableSelector(rows, columns, column);
         }
 
         // Is this a number type?
@@ -896,13 +989,13 @@ function renderTableViewPane(doc, statements) {
         // the values match as numbers?
 
         if (column.possiblyNumber || range.uri in XSD_NUMBER_TYPES) {
-            return renderNumberSelector(type, column);
+            return renderNumberSelector(rows, columns, column);
         }
 
         // rdf:Literal?
 
         if (range.uri == RDFS_LITERAL) {
-            return renderLiteralSelector(type, column);
+            return renderLiteralSelector(rows, columns, column);
         }
 
         // Is this an enumeration type?
@@ -914,18 +1007,17 @@ function renderTableViewPane(doc, statements) {
 
         if (matches.length > 0) {
  //           alert(range.uri + " owl:oneOf ? " + " -> " + matches.length);
-            return renderEnumSelector(type, column, matches);
+            return renderEnumSelector(rows, columns, column, matches);
         }
 
-        return fallbackRenderTableSelector(type, column);
+        return fallbackRenderTableSelector(rows, columns, column);
     }
 
     // Generate the search selectors for the table columns.
 
-    function renderTableSelectors(type) {
+    function renderTableSelectors(rows, columns) {
         var tr = doc.createElement("tr");
         tr.className = "selectors";
-        var columns = type.getColumns();
 
         // Empty link column
 
@@ -936,7 +1028,7 @@ function renderTableViewPane(doc, statements) {
         for (var i=0; i<columns.length; ++i) {
             var td = doc.createElement("td");
 
-            var selector = renderTableSelector(type, columns[i]);
+            var selector = renderTableSelector(rows, columns, columns[i]);
 
             if (selector != null) {
                 td.appendChild(selector);
@@ -996,9 +1088,10 @@ function renderTableViewPane(doc, statements) {
     }
 
     // Render a row of the HTML table, from the given row structure.
+    // Note that unlike other functions, this renders into a provided
+    // row (<tr>) element.
 
-    function renderTableRow(row, columns) {
-        var tr = doc.createElement("tr");
+    function renderTableRowInto(tr, row, columns) {
 
         /* Link column, for linking to this subject. */
 
@@ -1056,15 +1149,182 @@ function renderTableViewPane(doc, statements) {
         var table = doc.createElement("table");
 
         table.appendChild(renderTableHeader(type));
-        table.appendChild(renderTableSelectors(type));
+        table.appendChild(renderTableSelectors(rows, columns));
 
         for (var i=0; i<rows.length; ++i) {
             var row = rows[i];
 
-            var tr = renderTableRow(row, columns);
+            var tr = doc.createElement("tr");
+            renderTableRowInto(tr, row, columns);
 
             table.appendChild(tr);
         }
+
+        return table;
+    }
+
+    // ========= Start of new query-based table rendering code =========
+
+    // Check if a value is already stored in the list of values for
+    // a cell (the query can sometimes find it multiple times)
+
+    function valueInList(value, list) {
+        var key = null;
+
+        if (value.termType == "literal") {
+            key = "value";
+        } else if (value.termType == "symbol") {
+            key = "uri";
+        } else {
+            return list.indexOf(value) >= 0;
+        }
+
+        // Check the list and compare keys:
+
+        var i;
+
+        for (i=0; i<list.length; ++i) {
+            if (list[i].termType == value.termType
+             && list[i][key] == value[key]) {
+                return true;
+            }
+        }
+
+        // Not found?
+
+        return false;
+    }
+
+    // Update a row, add new values, and regenerate the HTML element
+    // containing the values.
+
+    function updateRow(row, columns, values, columnLookup) {
+
+        var key;
+        var needUpdate = false;
+
+        for (key in values) {
+            var value = values[key];
+
+            // Which column is this for?
+
+            var column = columnLookup[key];
+            if (column == null) {
+                // ?
+                continue;
+            }
+
+            var columnUri = column.predicate.uri;
+
+            // If this key is not already in the row, create a new entry
+            // for it:
+
+            if (!(columnUri in row)) {
+                row[columnUri] = [];
+            }
+
+            // Possibly add this new value to the list, but don't
+            // add it if we have already added it:
+
+            if (!valueInList(value, row[columnUri])) {
+                row[columnUri].push(value);
+                needUpdate = true;
+            }
+        }
+
+        // Regenerate the HTML row?
+
+        if (needUpdate) {
+            clearElement(row._htmlRow);
+            renderTableRowInto(row._htmlRow, row, columns);
+        }
+    }
+
+    // Generate lookup table mapping query variable names to
+    // column objects.
+
+    function generateColumnLookup(columns) {
+        var result = {};
+        var i;
+
+        for (i=0; i<columns.length; ++i) {
+            var column = columns[i];
+            result[column.getVariable()] = column;
+        }
+
+        return result;
+    }
+
+    // Run a query and generate the table.
+    // Returns an array of rows.  This will be empty when the function
+    // first returns (as the query is performed in the background)
+
+    function runQuery(query, rows, columns, table) {
+
+        var columnLookup = generateColumnLookup(columns);
+
+        // All rows found so far, indexed by _row value.
+        // TODO: remove dependency on _row, as it cannot be relied on
+        // for generic queries.
+
+        var rowsLookup = {};
+
+        kb.query(query, function(values) {
+
+            var rowKey = values["?_row"];
+
+            if (rowKey == null) alert("rowKey is null!");
+
+            var rowKeyUri = rowKey.uri;
+
+            // Do we have a row for this already?  If not, create a new row.
+            var row;
+
+            if (rowKeyUri in rowsLookup) {
+                row = rowsLookup[rowKeyUri];
+            } else {
+                var tr = doc.createElement("tr");
+                table.appendChild(tr);
+                row = { _htmlRow: tr,
+                        _subject: rowKey };
+                rows.push(row);
+                rowsLookup[rowKeyUri] = row;
+            }
+
+            // Add the new values to this row.
+
+            updateRow(row, columns, values, columnLookup);
+        })
+    }
+
+    // Generate a table from a query.
+    // TODO: for the time being, this is still tied to rendering based on
+    // a fixed type (rather than general queries).  This needs to be 
+    // reworked to work based on generic queries, and infer the predicates
+    // for columns by examining the query.
+
+    function renderTableForQuery(query, type) {
+
+        // TODO: infer columns from query, to allow generic queries
+
+        var columns = type.getColumns();
+
+        // Start with an empty list of rows; this will be populated
+        // by the query.
+
+        var rows = [];
+
+        // Create table element and header.
+
+        var table = doc.createElement("table");
+
+        table.appendChild(renderTableHeader(type));
+        table.appendChild(renderTableSelectors(rows, columns));
+
+        // Run query.  Note that this is perform asynchronously; the
+        // query runs in the background and this call does not block.
+
+        runQuery(query, rows, columns, table);
 
         return table;
     }

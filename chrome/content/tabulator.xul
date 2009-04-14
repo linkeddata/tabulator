@@ -26,6 +26,13 @@
   <script type="application/x-javascript" src="js/updateCenter.js"/>
   <script type="application/x-javascript" src="js/webdav.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
+  <script type="application/x-javascript" src="jquery/jquery-1.3.2.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.uri.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.xmlns.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.curie.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.datatype.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.rdf.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.rdfa.js"/>
   <script type="application/x-javascript" src="sqlite.js"/> <!-- Functions to create an SQLite database-->
   <script type="application/x-javascript" src="semclip.js"/> <!-- For the Semantic Clipboard -->
   <script type="application/x-javascript" src="sources-ext.js"/>

@@ -10,14 +10,18 @@
 function toggleSemClip(){
     var checked = semclipCheckbox.getAttribute('checked');
     try {
-        if(checked=='true')
+        if(checked=='true'){
             alert('Checked');
-        else
-            alert('Unchecked');
-        } 
-        catch(e) {
-          alert(e);
+            alert();
         }
+        else{
+        
+            alert('Unchecked');
+        }
+    }
+    catch(e) {
+          alert(e);
+    }
 }
 
 /**

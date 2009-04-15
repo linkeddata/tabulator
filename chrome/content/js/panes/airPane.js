@@ -114,6 +114,7 @@ airPane.render = function(subject, myDocument) {
             var b = myDocument.getElementById('hide');
             var m = myDocument.getElementById('more');
             var o = myDocument.getElementById('outcome');
+            var w = myDocument.getElementById('whyButton');
             if (d != null && m != null){
                 d.removeChild(m);
             }
@@ -124,17 +125,20 @@ airPane.render = function(subject, myDocument) {
             if (d != null && o != null){
                 d.removeChild(o);
             }
+            if (d != null && w != null){
+                d.removeChild(w);
+            }
 
-
-            //airPane.render.showSelected.addInitialButtons();
-                        
         }
         //End of airPane.render.showSelected.hide
 
         //Clear the contents of the justification div
         airPane.render.showSelected.hide();
         
-        selected = justificationsArr[this.selectedIndex];
+        if (this.selectedIndex == 0)
+            return;
+            
+        selected = justificationsArr[this.selectedIndex - 1];
         var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
         
 
@@ -236,22 +240,25 @@ airPane.render = function(subject, myDocument) {
                     //Function to display the natural language description
                     airPane.render.showSelected.because.displayDesc = function(obj){
                         for (var i=0; i<obj.elements.length; i++) {
-                                switch(obj.elements[i].termType) {
-
+                                dump(obj.elements[i]);
+                                dump("\n");
+                                
+                                if (obj.elements[i].termType == 'symbol') {
+                                    var anchor = myDocument.createElement('a');
+                                    anchor.setAttribute('href', obj.elements[i].uri);
+                                    anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
+                                    //anchor.appendChild(myDocument.createTextNode(obj.elements[i]));
+                                    divDescription.appendChild(anchor);
+                                }
+                                else if (obj.elements[i].termType == 'literal') {
+                                    if (obj.elements[i].value != undefined)
+                                        divDescription.appendChild(myDocument.createTextNode(obj.elements[i].value));
+                                }
+                                else if (obj.elements[i].termType == 'formula') {
                                     //@@ As per Lalana's request to handle formulas within the description
-                                    case 'formula':
-                                        divDescription.appendChild(statementsAsTables(obj.elements[i],myDocument));
-
-                                    case 'symbol':
-                                        var anchor = myDocument.createElement('a')
-                                        anchor.setAttribute('href', obj.elements[i].uri)
-                                        anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
-                                        divDescription.appendChild(anchor);
-                                        
-                                    case 'literal':
-                                        if (obj.elements[i].value != undefined)
-                                            divDescription.appendChild(myDocument.createTextNode(obj.elements[i].value)); 
-
+                                    divDescription.appendChild(myDocument.createTextNode(obj.elements[i]));
+                                    //@@@ Using statementsAsTables to render the result gives a very ugly result -- urgh!
+                                    //divDescription.appendChild(statementsAsTables(obj.elements[i].statements,myDocument));
                                 }       
                             }
                     }
@@ -275,7 +282,7 @@ airPane.render = function(subject, myDocument) {
                         else{
                             
                             //Update the description div with the description at the next level
-                            var currentRule = kb.statementsMatching(undefined, undefined, ruleToFollow);
+                            var currentRule = kb.statementsMatching(undefined, undefined, ruleToFollow, subject);
                             
                             //Find the corresponding description matching the currenrRule
 
@@ -298,14 +305,14 @@ airPane.render = function(subject, myDocument) {
                             }
 
                             
-                            var currentRuleSts = kb.statementsMatching(currentRule[0].subject, ap_just, undefined);
+                            var currentRuleSts = kb.statementsMatching(currentRule[0].subject, ap_just, undefined, subject);
                             
-                            var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined);
+                            var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
                             ruleNameFound = nextRuleSts[0].object;
 
-                            var currentRuleAntc = kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined);
+                            var currentRuleAntc = kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
                             
-                            var currentRuleSubExpr = kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined);
+                            var currentRuleSubExpr = kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined, subject);
 
                             for (var i=0; i<currentRuleSubExpr.length; i++){
                                 if(currentRuleSubExpr[i].object.termType == 'formula')
@@ -462,7 +469,13 @@ airPane.render = function(subject, myDocument) {
         }
     }
     
-    
+
+    //First add a bogus element
+    var optionElBogus = myDocument.createElement("option");
+    var optionTextBogus = myDocument.createTextNode(" ");
+    optionElBogus.appendChild(optionTextBogus);
+    selectEl.appendChild(optionElBogus);
+
     //Adds the option of which justification to choose in a drop down list box
     for (var i=0; i<justificationsArr.length; i++){
         var optionEl = myDocument.createElement("option");
@@ -476,6 +489,9 @@ airPane.render = function(subject, myDocument) {
     div.appendChild(myDocument.createElement('br'));
     div.appendChild(myDocument.createElement('br'));
         
+    //////////////////////////////////////////////////////////
+    //The following is the old version of the Justification UI
+    //which didn't have the drop-down box to select from
     //////////////////////////////////////////////////////////
     
     /*        

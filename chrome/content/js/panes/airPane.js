@@ -223,14 +223,15 @@ airPane.render = function(subject, myDocument) {
                 //The following function is triggered, when the why button is clicked
                 airPane.render.showSelected.because = function(){ //Function Call 2
                 
+                
                     //If the reasoner used closed-world-assumption, there are no interesting premises 
                     var cwa = ap_air('closed-world-assumption');
                     var cwaStatements = kb.statementsMatching(undefined, cwa, undefined, subject);
                     var noPremises = false;
-                    if (cwaStatements.length > 0){
+                /*    if (cwaStatements.length > 0){
                         noPremises = true;
                     }
-                    
+                 */   
                     //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
                     var whyButton = myDocument.getElementById('whyButton');
                     var d = myDocument.getElementById('dataContentPane');
@@ -438,8 +439,17 @@ airPane.render = function(subject, myDocument) {
                                         if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
                                             justificationSts = t2;
                                             divPremises.appendChild(myDocument.createElement('br'));
-                                            divPremises.appendChild(myDocument.createElement('br'));
-                                            if (t2[l].object.statements.length == 0){
+                                            //divPremises.appendChild(myDocument.createElement('br'));
+                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                           
+                                            //@@@@ The following piece of code corresponds to going one level of the justification proof to figure out
+                                            // whether there are any premises
+                                            //it is commented out, because, the user need not know that at each level there are no premises associated
+                                            //that particular step
+                                            
+                                            /*if (t2[l].object.statements.length == 0){
+                                                alert("here");
+                        
                                                 divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
                                                 var a = myDocument.createElement('a')
                                                 a.setAttribute('href', unescape(logFileURI));
@@ -447,9 +457,10 @@ airPane.render = function(subject, myDocument) {
                                                 divPremises.appendChild(a);
                                             }
                                             else{
-                                                divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
                                             }
-                                            divPremises.appendChild(myDocument.createElement('br'));
+                                           */
+                                            //divPremises.appendChild(myDocument.createElement('br'));
                                             divPremises.appendChild(myDocument.createElement('br'));
                                         }
                                    }     

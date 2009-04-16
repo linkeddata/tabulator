@@ -31,6 +31,13 @@ function toggleSemClip(){
 }
 
 /**
+*
+**/
+function copyImageWithLicense(){
+
+}
+
+/**
 * The insertMetadata function will put the all the extracted RDF data into 
 * a database
 */

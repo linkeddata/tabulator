@@ -25,6 +25,9 @@
 <!ENTITY semclipToggleHeader.label "Enable Semantic Clipboard">
 <!ENTITY semclipToggleHeader.accesskey "s">
 
+<!ENTITY copyImageLicenseCmd.label "Copy Image with License">
+<!ENTITY copyImageLicenseCmd.accesskey "l">
+
 <!ENTITY policysidebar.title "Policy Parser">
 <!ENTITY openPOLICYSidebar.commandkey "E">
 <!ENTITY openPOLICYSidebar.modifierskey "shift accel">

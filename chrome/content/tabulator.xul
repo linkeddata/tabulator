@@ -85,6 +85,14 @@
                  oncommand="toggleSidebar('viewTabulatorSidebar');" />
   </broadcasterset>
 
+  <popup id="contentAreaContextMenu">
+    <menuitem id="context-copyimage-License"
+                label="&copyImageLicenseCmd.label;"
+                accesskey="&copyImageLicenseCmd.accesskey;"
+		insertafter="context-copyimage"
+                oncommand="alert('it works!')"/>
+  </popup>
+
   <menupopup id="menu_ToolsPopup">
     <menu id="menu_ToolsTabulatorMenu" label="&toolsTabulatorMenu.label;" accesskey="&toolsTabulatorMenu.accesskey;" insertafter="javascriptConsole">
       <menupopup id="menu_ToolsTabulatorPopup">

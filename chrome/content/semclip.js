@@ -7,16 +7,22 @@
 *
 */
 
+
+$jq = jQuery.noConflict();
+
+/**
+* Enable/Disable semantic clipboard
+*/
 function toggleSemClip(){
     var checked = semclipCheckbox.getAttribute('checked');
     try {
         if(checked=='true'){
-            alert('Checked');
-            alert();
+            //Show all the images which has a CC license attached with a red border 
+            $jq("a[rel='license']", window.content.document).parent().children("img").css({border: 'dotted 2px red'});
         }
         else{
-        
-            alert('Unchecked');
+            //Remove the attached CSS class
+            $jq("a[rel='license']", window.content.document).parent().children("img").css({border: 'dotted 0px red'});
         }
     }
     catch(e) {

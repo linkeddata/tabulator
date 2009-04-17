@@ -10,11 +10,30 @@
 //we are using jquery within a Firefox extension
 $jq = jQuery.noConflict();
 
+//$jq(window.content.document).ready(findImagesThatCanBeCopied());
+
+//When the user hovers over an image show which images can be copied by displaying a tool tip
+function findImagesThatCanBeCopied(){
+    var imgs = $jq("img",window.content.document);
+    for (var i=0; i<imgs.length; i++){
+        var licenseLinks = $jq("img[src='"+imgs[i].src+"']",window.content.document).parent().children("a");
+        for (var j=0; j<licenseLinks.length; j++){
+            var currentNode = licenseLinks[j];
+            if (currentNode.getAttribute('rel') == "license"){
+                //Set the tool tip texto to specify that this image can be copied with metadata
+                $jq("img[src='"+imgs[i].src+"']",window.content.document).attr("title","This image can be copied with a License");
+            }    
+        }
+    }
+}
+
 /**
 * Determine what the URI of the image is, construct the attribution XHTML
 * and pass it off to the system Clipboard
 */
 function copyImageWithLicense(){
+
+    //findImagesThatCanBeCopied();
 
     //This is the image element we are using
     var element = document.popupNode;

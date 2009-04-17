@@ -169,7 +169,11 @@
         var doc = kb.sym(content.document.location.href);
         var subjectIndex = kb.subjectIndex[doc.hashString()];
         var objectIndex = kb.objectIndex[doc.hashString()];
-        //predicateIndex?? hmm...
+	
+	//Added for the Semantic Clipboard (see semclip.js) - show all the images that can be copied with a license
+	findImagesThatCanBeCopied();
+        
+	//predicateIndex?? hmm...
         var semantics = (subjectIndex? subjectIndex.length:0) + (objectIndex?objectIndex.length:0);        
         //In the future, when there are many "semantics" of a page, we can show the icon based
         //on the amount of semantics

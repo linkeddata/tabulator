@@ -21,7 +21,7 @@ function openTool(url, type, width, height)
      toolWindow.focus();
 }
 
-window.addEventListener("load", function() { tabExtension.init(); }, false);
+window.addEventListener("load", function() { tabExtension.init(); findImagesThatCanBeCopied(); }, false);
 var kb,sf,qs,sourceWidget; //TODO:  In future, ditch these for tabulator.kb, etc
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
   //Horrible global vars :(

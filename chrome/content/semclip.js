@@ -7,9 +7,128 @@
 *
 */
 
-
+//we are using jquery within a Firefox extension
 $jq = jQuery.noConflict();
 
+/**
+* Determine what the URI of the image is, construct the attribution XHTML
+* and pass it off to the system Clipboard
+*/
+function copyImageWithLicense(){
+
+    //This is the image element we are using
+    var element = document.popupNode;
+    //This is the image src
+    var imageURI = element.src;
+    
+    //Then, using JQuery, find the license information
+    //@@@@ could be buggy - I am using the heuristic algorithm where the image and the embedded license is within the same parent node in the DOM
+    
+    //Create the XHTML to embed the license
+    //This should look like the following snippet
+    //<div xmlns:cc="http://creativecommons.org/ns#" 
+    //     about="<image URI>">
+    //     <a rel="cc:attributionURL" 
+    //        property="cc:attributionName" 
+    //        href="<document source URI>">
+    //        Name of the Person </a> / 
+    //       <a rel="license" href="<the license URI>">License</a>
+    //</div>
+    var attributionName;
+    var attributionURI;
+    var licenseURI;
+    var license;
+    var nodes = $jq("img[src='"+imageURI+"']",window.content.document).parent().children("a");
+    for (var i=0; i< nodes.length; i++){
+        var currentNode = nodes[i];
+        if (currentNode.getAttribute('rel') == "license"){
+            licenseURI = currentNode;
+        }
+        //@@@ todo do the namespacing stuff - re: 'cc'
+        else if (currentNode.getAttribute('rel') == "cc:attributionURL") {
+            attributionURI = currentNode;
+            attributionName = $jq(currentNode, window.content.document).text();
+            //license = Do a table look up based on the URI? 
+        }
+    }
+    
+    //Do a license selection using a table lookup
+    //Assume everybody is following the newer CC 3.0 version
+    switch(licenseURI.toString()){
+        case "http://creativecommons.org/licenses/by/3.0/":
+            license = "Creative Commons Attribution 3.0 Unported";
+            break;
+        case "http://creativecommons.org/licenses/by-sa/3.0/":
+            license = "Creative Commons Attribution-Share Alike 3.0 Unported";
+            break;
+        case "http://creativecommons.org/licenses/by-nd/3.0/":
+            license = "Creative Commons Attribution-No Derivative Works 3.0 Unported";
+            break;
+        case "http://creativecommons.org/licenses/by-nc/3.0/":
+            license = "Creative Commons Attribution-Noncommercial 3.0 Unported";
+            break;
+        case "http://creativecommons.org/licenses/by-nc-sa/3.0/":
+            license = "Creative Commons Attribution-Noncommercial-Share Alike 3.0 Unported";
+            break;
+        case "http://creativecommons.org/licenses/by-nc-nd/3.0/":
+            license = "Creative Commons Attribution-Noncommercial-No Derivative Works 3.0 Unported";
+            break;
+        default: //@@@ What should we do, if the license displayed is not one of the known versions
+            license = "Creative Commons";
+    }
+    var attributionXHTML = '<div xmlns:cc="http://creativecommons.org/ns#" about="'+imageURI+'" <a rel="cc:attributionURL" property="cc:attributionName" href="'+attributionURI+'" >'+attributionName+'</a> / <a rel="license" href="'+licenseURI+'">'+license+'</a>';
+    
+}
+
+/**
+* The following code is copied from nsContextMenu.js
+* The only change done to the original function was 
+* "this.showItem("context-copyimage-License", this.onImage);"
+* This is because the context menu item 'Copy Image with Licnese'
+* appears in every right click, unless we specify that we only want
+* it to display with images
+*/
+nsContextMenu.prototype.initClipboardItems = function() {
+    // Copy depends on whether there is selected text.
+    // Enabling this context menu item is now done through the global
+    // command updating system
+    // this.setItemAttr( "context-copy", "disabled", !this.isTextSelected() );
+    goUpdateGlobalEditMenuItems();
+
+    this.showItem("context-undo", this.onTextInput);
+    this.showItem("context-sep-undo", this.onTextInput);
+    this.showItem("context-cut", this.onTextInput);
+    this.showItem("context-copy",
+                  this.isContentSelected || this.onTextInput);
+    this.showItem("context-paste", this.onTextInput);
+    this.showItem("context-delete", this.onTextInput);
+    this.showItem("context-sep-paste", this.onTextInput);
+    this.showItem("context-selectall",
+                  !(this.onLink || this.onImage) || this.isDesignMode);
+    this.showItem("context-sep-selectall", this.isContentSelected );
+
+    // XXX dr
+    // ------
+    // nsDocumentViewer.cpp has code to determine whether we're
+    // on a link or an image. we really ought to be using that...
+
+    // Copy email link depends on whether we're on an email link.
+    this.showItem("context-copyemail", this.onMailtoLink);
+
+    // Copy link location depends on whether we're on a non-mailto link.
+    this.showItem("context-copylink", this.onLink && !this.onMailtoLink);
+    this.showItem("context-sep-copylink", this.onLink && this.onImage);
+
+    //@line 350 "/builds/tinderbox/Fx-Mozilla1.9-Release/Darwin_8.8.4_Depend/mozilla/browser/base/content/nsContextMenu.js"
+    // Copy image contents depends on whether we're on an image.
+    this.showItem("context-copyimage-contents", this.onImage);
+    this.showItem("context-copyimage-License", this.onImage);
+    //@line 353 "/builds/tinderbox/Fx-Mozilla1.9-Release/Darwin_8.8.4_Depend/mozilla/browser/base/content/nsContextMenu.js"
+    // Copy image location depends on whether we're on an image.
+    this.showItem("context-copyimage", this.onImage);
+    this.showItem("context-sep-copyimage", this.onImage);
+}
+    
 /**
 * Enable/Disable semantic clipboard
 */
@@ -28,13 +147,6 @@ function toggleSemClip(){
     catch(e) {
           alert(e);
     }
-}
-
-/**
-*
-**/
-function copyImageWithLicense(){
-
 }
 
 /**

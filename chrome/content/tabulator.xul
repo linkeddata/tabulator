@@ -90,7 +90,7 @@
                 label="&copyImageLicenseCmd.label;"
                 accesskey="&copyImageLicenseCmd.accesskey;"
 		insertafter="context-copyimage"
-                oncommand="alert('it works!')"/>
+                oncommand="copyImageWithLicense();"/>
   </popup>
 
   <menupopup id="menu_ToolsPopup">

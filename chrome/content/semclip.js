@@ -76,9 +76,45 @@ function copyImageWithLicense(){
         default: //@@@ What should we do, if the license displayed is not one of the known versions
             license = "Creative Commons";
     }
-    var attributionXHTML = '<div xmlns:cc="http://creativecommons.org/ns#" about="'+imageURI+'" <a rel="cc:attributionURL" property="cc:attributionName" href="'+attributionURI+'" >'+attributionName+'</a> / <a rel="license" href="'+licenseURI+'">'+license+'</a>';
+    var attributionXHTML = '<div xmlns:cc="http://creativecommons.org/ns#" about="'+imageURI+'" <a rel="cc:attributionURL" property="cc:attributionName" href="'+attributionURI+'" >'+attributionName+'</a> / <a rel="license" href="'+licenseURI+'">'+license+'</a></div>';
+    
+    // generate the Unicode and HTML versions
+    var imageWithAttributionXHTML = '<div><img src="'+imageURI+'"/>'+attributionXHTML+'</div>';
+    var unicodeRepresentation = imageURI+' by '+attributionName+ ' from '+ attributionURI +' is licensed under '+license+' ( '+licenseURI+' ).';
+    
+    var success = copyToClipboard(imageWithAttributionXHTML, unicodeRepresentation);
+    alert(success);
     
 }
+
+function copyToClipboard(html,unicode){
+
+    // make a copy of the Unicode
+    var str = Components.classes["@mozilla.org/supports-string;1"].createInstance(Components.interfaces.nsISupportsString);
+    if (!str) return false; // couldn't get string obj 
+    
+        
+    // make a copy of the HTML
+    var htmlstring = Components.classes["@mozilla.org/supports-string;1"].createInstance(Components.interfaces.nsISupportsString);  
+    if (!htmlstring) return false; // couldn't get string obj  
+    htmlstring.data = html;
+    
+    // add Unicode & HTML flavors to the transferable widget
+    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
+    if (!trans) return false; //no transferable widget found  
+    trans.addDataFlavor("text/unicode");
+    trans.setTransferData("text/unicode", str, unicode.length * 2); // *2 because it's unicode
+    
+    trans.addDataFlavor("text/html");
+    trans.setTransferData("text/html", htmlstring, html.length * 2); // *2 because it's unicode
+    
+    // copy the transferable widget! 
+    var clipboard = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard);
+    if (!clipboard) return false; // couldn't get the clipboard 
+    clipboard.setData(trans, null, Components.interfaces.nsIClipboard.kGlobalClipboard); 
+    return true;  
+    
+} 
 
 /**
 * The following code is copied from nsContextMenu.js

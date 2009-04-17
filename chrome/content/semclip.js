@@ -76,45 +76,150 @@ function copyImageWithLicense(){
         default: //@@@ What should we do, if the license displayed is not one of the known versions
             license = "Creative Commons";
     }
-    var attributionXHTML = '<div xmlns:cc="http://creativecommons.org/ns#" about="'+imageURI+'" <a rel="cc:attributionURL" property="cc:attributionName" href="'+attributionURI+'" >'+attributionName+'</a> / <a rel="license" href="'+licenseURI+'">'+license+'</a></div>';
+    var attributionXHTML = '<div xmlns:cc="http://creativecommons.org/ns#" about="'+imageURI+'">By <a rel="cc:attributionURL" property="cc:attributionName" href="'+attributionURI+'" > '+attributionName+'</a> / <a rel="license" href="'+licenseURI+'">'+license+'</a></div>';
     
     // generate the Unicode and HTML versions
     var imageWithAttributionXHTML = '<div><img src="'+imageURI+'"/>'+attributionXHTML+'</div>';
     var unicodeRepresentation = imageURI+' by '+attributionName+ ' from '+ attributionURI +' is licensed under '+license+' ( '+licenseURI+' ).';
     
-    var success = copyToClipboard(imageWithAttributionXHTML, unicodeRepresentation);
-    alert(success);
-    
+  copyToClipboard(imageWithAttributionXHTML, unicodeRepresentation);  
+  //alert(pasteFromClipboard());
+}
+
+function getClipboard()
+{
+    const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
+    const kClipboardIID = Components.interfaces.nsIClipboard;
+    return Components.classes[kClipboardContractID].getService(kClipboardIID);
+}
+
+var Transferable = Components.Constructor("@mozilla.org/widget/transferable;1", Components.interfaces.nsITransferable);
+
+var SupportsArray = Components.Constructor("@mozilla.org/supports-array;1", Components.interfaces.nsISupportsArray);
+
+var SupportsCString = (("nsISupportsCString" in Components.interfaces)
+                       ? Components.Constructor("@mozilla.org/supports-cstring;1", Components.interfaces.nsISupportsCString)
+                       : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
+                      );
+
+var SupportsString = (("nsISupportsWString" in Components.interfaces)
+                      ? Components.Constructor("@mozilla.org/supports-wstring;1", Components.interfaces.nsISupportsWString)
+                      : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
+                     );
+
+function canPaste()
+{
+    const kClipboardIID = Components.interfaces.nsIClipboard;
+
+    var clipboard = getClipboard();
+    var flavourArray = new SupportsArray;
+    var flavours = ["text/html", "text/unicode"];
+   
+    for (var i = 0; i < flavours.length; ++i){
+        var kSuppString = new SupportsCString;
+        kSuppString.data = flavours[i];
+        flavourArray.AppendElement(kSuppString);
+    }
+   
+    return clipboard.hasDataMatchingFlavors(flavourArray, kClipboardIID.kGlobalClipboard);
 }
 
 function copyToClipboard(html,unicode){
 
-    // make a copy of the Unicode
-    var str = Components.classes["@mozilla.org/supports-string;1"].createInstance(Components.interfaces.nsISupportsString);
-    if (!str) return false; // couldn't get string obj 
-    
-        
-    // make a copy of the HTML
-    var htmlstring = Components.classes["@mozilla.org/supports-string;1"].createInstance(Components.interfaces.nsISupportsString);  
-    if (!htmlstring) return false; // couldn't get string obj  
-    htmlstring.data = html;
-    
-    // add Unicode & HTML flavors to the transferable widget
-    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-    if (!trans) return false; //no transferable widget found  
-    trans.addDataFlavor("text/unicode");
-    trans.setTransferData("text/unicode", str, unicode.length * 2); // *2 because it's unicode
-    
-    trans.addDataFlavor("text/html");
-    trans.setTransferData("text/html", htmlstring, html.length * 2); // *2 because it's unicode
-    
-    // copy the transferable widget! 
-    var clipboard = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard);
-    if (!clipboard) return false; // couldn't get the clipboard 
-    clipboard.setData(trans, null, Components.interfaces.nsIClipboard.kGlobalClipboard); 
-    return true;  
-    
+    // 1. get the clipboard service
+    var clipboard = getClipboard();
+
+    // 2. create the transferable
+    var trans = new Transferable;
+
+    if ( trans && clipboard) {
+        // 3. register the data flavors
+        trans.addDataFlavor("text/html");
+        //trans.addDataFlavor("text/unicode");
+
+        // 4. create the data objects
+        var unicodeStr = new SupportsString;
+        var htmlStr = new SupportsString;
+
+        // get the data
+        htmlStr.data = html;
+        unicodeStr.data = html;
+
+        // 5. add data objects to transferable
+        trans.setTransferData("text/unicode", unicodeStr,
+                              unicodeStr.data.length*2 ); // double byte data
+        trans.setTransferData("text/html", htmlStr, 
+                              unicodeStr.data.length*2 );
+
+        clipboard.setData(trans, null,
+                          Components.interfaces.nsIClipboard.kGlobalClipboard );
+
+        return true;         
+    }
+    return true;
 } 
+
+function pasteFromClipboard(){
+    
+    if (!canPaste()) {
+        dump("Attempting to paste with no useful data on the clipboard");
+        return;
+    }
+    // 1. get the clipboard service
+    var clipboard = getClipboard();
+
+    // 2. create the transferable
+    var trans = new Transferable;
+
+    if (!trans || !clipboard) {
+        dump("Failed to get either a transferable or a clipboard");
+        return;
+    }
+    // 3. register the data flavors you want, highest fidelity first!
+    //trans.addDataFlavor("text/html");
+    trans.addDataFlavor("text/unicode");
+
+    // 4. get transferable from clipboard
+    clipboard.getData ( trans, Components.interfaces.nsIClipboard.kGlobalClipboard);
+
+    // 5. ask transferable for the best flavor. Need to create new JS
+    //    objects for the out params.
+    var flavour = { };
+    var data = { };
+
+    var str       = new Object();  
+    var strLength = new Object();  
+
+    trans.getTransferData("text/unicode", str, strLength);
+    var data = str.value.QueryInterface(Components.interfaces.nsISupportsString).data;
+    dump(data);
+    //var items = new Array();
+    /*switch (flavour.value) {
+        case "text/html":
+        case "text/unicode":
+            alert("unicode");
+            break;
+        default: 
+            dump("Unknown clipboard type: " + flavour.value);
+    }*/
+
+}
+
+function copyFromClipboard(){
+    var clip = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard); 
+    if (!clip) return false;
+    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);  
+    if (!trans) return false;  
+    trans.addDataFlavor("text/unicode");  
+    clip.getData(trans, clip.kGlobalClipboard);
+    var str       = new Object();  
+    var strLength = new Object();  
+  
+    trans.getTransferData("text/unicode", str, strLength);  
+    if (str) str       = str.value.QueryInterface(Components.interfaces.nsISupportsString);
+    if (str) pastetext = str.data.substring(0, strLength.value / 2);  
+    return pastetext;
+}
 
 /**
 * The following code is copied from nsContextMenu.js

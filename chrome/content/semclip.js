@@ -7,12 +7,10 @@
 *
 */
 
-//we are using jquery within a Firefox extension
+/**We are using jquery within a Firefox extension*/
 $jq = jQuery.noConflict();
 
-//$jq(window.content.document).ready(findImagesThatCanBeCopied());
-
-//When the user hovers over an image show which images can be copied by displaying a tool tip
+/**When the user hovers over an image show whether it can be copied by displaying a tool tip*/
 function findImagesThatCanBeCopied(){
     var imgs = $jq("img",window.content.document);
     for (var i=0; i<imgs.length; i++){
@@ -105,6 +103,7 @@ function copyImageWithLicense(){
   //alert(pasteFromClipboard());
 }
 
+/**Get the Mozilla clipboard interface*/
 function getClipboard()
 {
     const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
@@ -112,20 +111,19 @@ function getClipboard()
     return Components.classes[kClipboardContractID].getService(kClipboardIID);
 }
 
+//Some mozilla specific global vars
 var Transferable = Components.Constructor("@mozilla.org/widget/transferable;1", Components.interfaces.nsITransferable);
-
 var SupportsArray = Components.Constructor("@mozilla.org/supports-array;1", Components.interfaces.nsISupportsArray);
-
 var SupportsCString = (("nsISupportsCString" in Components.interfaces)
                        ? Components.Constructor("@mozilla.org/supports-cstring;1", Components.interfaces.nsISupportsCString)
                        : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
                       );
-
 var SupportsString = (("nsISupportsWString" in Components.interfaces)
                       ? Components.Constructor("@mozilla.org/supports-wstring;1", Components.interfaces.nsISupportsWString)
                       : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
                      );
-
+                     
+/**Check whether the data formats that have been copied to the clipboard and the target data formats are matching*/
 function canPaste()
 {
     const kClipboardIID = Components.interfaces.nsIClipboard;
@@ -143,6 +141,9 @@ function canPaste()
     return clipboard.hasDataMatchingFlavors(flavourArray, kClipboardIID.kGlobalClipboard);
 }
 
+/**Copies the data to the clipboard 
+* @@@ be warned about the data flavors - as a result this could be a bit flaky
+*/
 function copyToClipboard(html,unicode){
 
     // 1. get the clipboard service
@@ -178,6 +179,9 @@ function copyToClipboard(html,unicode){
     return true;
 } 
 
+/**Not really used - beacuse a specific editor application is not implemented
+* nevertheless this code would be useful in the future
+*/
 function pasteFromClipboard(){
     
     if (!canPaste()) {
@@ -222,22 +226,6 @@ function pasteFromClipboard(){
             dump("Unknown clipboard type: " + flavour.value);
     }*/
 
-}
-
-function copyFromClipboard(){
-    var clip = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard); 
-    if (!clip) return false;
-    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);  
-    if (!trans) return false;  
-    trans.addDataFlavor("text/unicode");  
-    clip.getData(trans, clip.kGlobalClipboard);
-    var str       = new Object();  
-    var strLength = new Object();  
-  
-    trans.getTransferData("text/unicode", str, strLength);  
-    if (str) str       = str.value.QueryInterface(Components.interfaces.nsISupportsString);
-    if (str) pastetext = str.data.substring(0, strLength.value / 2);  
-    return pastetext;
 }
 
 /**

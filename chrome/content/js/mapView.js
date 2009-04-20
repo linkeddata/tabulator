@@ -255,6 +255,7 @@ function mapView(container) {
         for(i=0; i<ns; i++) {
             pred=q.pat.statements[i].predicate.uri;
             switch(pred) {
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#location':
                 case 'http://xmlns.com/foaf/0.1/based_near':
                     q.pat.statements[i].object.mapUsed='based_near';canBeMapped=true; break;
                 case 'http://www.w3.org/2000/10/swap/pim/contact#address':
@@ -290,6 +291,7 @@ function mapView(container) {
         for(i=0; i<ns; i++) {
             pred=optional.statements[i].predicate.uri;
             switch(pred) {
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#location':
                 case 'http://xmlns.com/foaf/0.1/based_near':
                     optional.statements[i].object.mapUsed='based_near';canBeMapped=true; break;
                 case 'http://www.w3.org/2000/10/swap/pim/contact#address':
@@ -424,6 +426,7 @@ MapViewFactory = {
         for(i=0; i<ns; i++) {
             pred=optional.statements[i].predicate.uri;
             switch(pred) {
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#location':
                 case 'http://xmlns.com/foaf/0.1/based_near':
                     optional.statements[i].object.mapUsed='based_near';return true; break;
                 case 'http://www.w3.org/2000/10/swap/pim/contact#address':
@@ -457,6 +460,7 @@ MapViewFactory = {
         for(i=0; i<ns; i++) {
             pred=q.pat.statements[i].predicate.uri;
             switch(pred) {
+                case 'http://www.w3.org/2003/01/geo/wgs84_pos#location':
                 case 'http://xmlns.com/foaf/0.1/based_near':
                     q.pat.statements[i].object.mapUsed='based_near';return true; break;
                 case 'http://www.w3.org/2000/10/swap/pim/contact#address':

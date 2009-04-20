@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25416 2008-12-11 21:45:18Z timbl $
+// SVN ID: $Id: tabulate.js 25898 2009-04-20 13:58:40Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the Web Apps version of the Tabulator.
@@ -193,8 +193,12 @@ Icon.OutlinerIcon= function (src, width, alt, tooltip, filter){
 Icon.termWidgets = {}
 Icon.termWidgets.optOn = new Icon.OutlinerIcon(Icon.src.icon_opton,20,'opt on','Make this branch of your query mandatory.');
 Icon.termWidgets.optOff = new Icon.OutlinerIcon(Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
+
 Icon.termWidgets.map = new Icon.OutlinerIcon(Icon.src.icon_map,30,'mappable','You can view this field in the map view.', 
-function (st, type, inverse) { return (type=='pred' && !inverse&& st.predicate.sameTerm(tabulator.ns.foaf('based_near'))) });
+    function (st, type, inverse) {
+        return (type=='pred' && !inverse && (st.predicate.sameTerm(tabulator.ns.foaf('based_near'))
+                                || st.predicate.sameTerm(tabulator.ns.geo('location')))) });
+
 function calendarable(st, type, inverse){
     var obj = (inverse) ? st.subject : st.object;
     var calType = findCalType(st.predicate.toString());

@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25898 2009-04-20 13:58:40Z timbl $
+// SVN ID: $Id: tabulate.js 25899 2009-04-20 14:08:17Z timbl $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the Web Apps version of the Tabulator.
@@ -20,6 +20,7 @@ tabulator.ns.http = RDFNamespace("http://www.w3.org/2007/ont/http#");
 tabulator.ns.httph = RDFNamespace("http://www.w3.org/2007/ont/httph#");
 tabulator.ns.ical = RDFNamespace("http://www.w3.org/2002/12/cal/icaltzd#");
 tabulator.ns.foaf = RDFNamespace("http://xmlns.com/foaf/0.1/");
+tabulator.ns.geo = RDFNamespace("http://www.w3.org/2003/01/geo/wgs84_pos#");
 tabulator.ns.rdf = rdf = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 tabulator.ns.rdfs = rdfs = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
 tabulator.ns.owl = owl = RDFNamespace("http://www.w3.org/2002/07/owl#");

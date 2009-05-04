@@ -25,7 +25,7 @@
 <!ENTITY semclipToggleHeader.label "Semantic Clipboard">
 <!ENTITY semclipToggleHeader.accesskey "s">
 
-<!ENTITY semclipAnyUse.label "Aurpose">
+<!ENTITY semclipAnyUse.label "Any Purpose">
 <!ENTITY semclipAnyUse.accesskey "1">
 
 <!ENTITY semclipCUse.label "Commercial Purpose">

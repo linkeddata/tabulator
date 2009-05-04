@@ -97,12 +97,23 @@
     <menu id="menu_ToolsTabulatorMenu" label="&toolsTabulatorMenu.label;" accesskey="&toolsTabulatorMenu.accesskey;" insertafter="javascriptConsole">
       <menupopup id="menu_ToolsTabulatorPopup">
         <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" oncommand="toggleSetHeader()"/>
-        <menuitem id="semclip_setaccept" label="&semclipToggleHeader.label;" accesskey="&semclipToggleHeader.accesskey;" type="checkbox" oncommand="toggleSemClip()"/>
       </menupopup>
     </menu>
     <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" insertafter="javascriptConsole" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
     <menuitem label="&tamiconfig.label;" accesskey="&tamiconfig.accesskey;" insertafter="javascriptConsole" oncommand="openTool('chrome://tabulator/content/tami_config.xul','tamiconfig')"/>
   </menupopup>
+<menupopup id="menu_ToolsPopup">
+    <menu id="menu_semclip" label="&semclipToggleHeader.label;" accesskey="&semclipToggleHeader.accesskey;" insertafter="menu_ToolsTabulatorMenu">
+      <menupopup id="semclip">
+      <menuitem id="any_use" label="&semclipAnyUse.label;" accesskey="&semclipAnyUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      <menuitem id="commercial_use" label="&semclipCUse.label;" accesskey="&semclipCUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      <menuitem id="non_commercial_use" label="&semclipNCUse.label;" accesskey="&semclipNCUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      <menuitem id="derivatives" label="&semclipDUse.label;" accesskey="&semclipDUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      <menuitem id="share_alike" label="&semclipSAUse.label;" accesskey="&semclipSAUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      <menuitem id="no_use" label="&semclipNoUse.label;" accesskey="&semclipNoUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      </menupopup>
+      </menu>
+</menupopup>
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
         <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorShowMetadata(event)"/>
@@ -126,10 +137,16 @@
 
   <script type="application/x-javascript"><![CDATA[
     var myCheckbox;
-    var semclipCheckbox;
+    var semclip_any_use;
+    var semclip_no_commercial_use;
+    var semclip_no_modifications;
+    var semclip_no_other_license;
+    var semclip_no_use;
     tabulator_init = function() {
       myCheckbox = document.getElementById("tabulator_setaccept");
-      semclipCheckbox = document.getElementById("semclip_setaccept");
+      //@@@
+      //The following variables are set for the functionality of the Semantic Clipboard
+      //var semclip_any_use = document.getElementById("semclip_");
       var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                           .getService(Components.interfaces.nsIPrefBranch);
       try {
@@ -152,6 +169,8 @@
     var tGRDDL_NS = 'http://www.w3.org/2003/g/data-view#';
     var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
                              'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
+
+    //This gets called when you switch tabs 
     function tabulatorDetectMetadata(){
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');

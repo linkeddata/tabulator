@@ -12,6 +12,59 @@ $jq = jQuery.noConflict();
 
 /**When the user hovers over an image show whether it can be copied by displaying a tool tip*/
 function findImagesThatCanBeCopied(){
+    //First find all the images in the document
+    var imgs = $jq("img",window.content.document);
+    //Then for each of the images found, find if the parent node has any <a> children nodes
+    for (var i=0; i<imgs.length; i++){
+        var licenseLinks = $jq("img[src='"+imgs[i].src+"']",window.content.document).parent().children("a");
+        for (var j=0; j<licenseLinks.length; j++){
+            var currentNode = licenseLinks[j];
+            if (currentNode.getAttribute('rel') == "license"){
+                //Set the tool tip texto to specify that this image can be copied with metadata
+                $jq("img[src='"+imgs[i].src+"']",window.content.document).attr("title","This image can be copied");
+            } 
+            else{
+                //Warn saying that this image cannot be copied
+                $jq("img[src='"+imgs[i].src+"']",window.content.document).attr("title","Sorry! This image cannot be copied");
+            }   
+        }
+    }
+}
+
+function disappear(){
+  alert("Here");
+}
+
+/**Show images that can be used for the specific purpose*/
+function showAcceptedUseOfImage(uses, txt){
+  $jq.each($jq("img",window.content.document), 
+	   function(){
+	     var licenseEls = $jq(this,window.content.document).parent().children('a');
+	     for (var i=0; i<licenseEls.length; i++){
+	       var licenseEl = licenseEls[i];
+	       if (licenseEl.getAttribute('rel') == "license"){
+		 //Check if the image in question is under a license which allows the use specified by the parameter
+		 for (var j=0; j<uses.length; j++){
+		   if (uses[j]=="publicdomain"){
+		     //Content under public domain or CC-Zero have a license like this:
+		     //http://creativecommons.org/publicdomain/zero/1.0/
+		     if (licenseEl.toString().substring(27,39) == uses[j]){
+		       //Create a <div> and append to the parent of this img tag
+		       $jq($jq(this,window.content.document).parent(),window.content.document).css({'position':'relative','float':'left'});
+		       $jq($jq(this,window.content.document).parent(),window.content.document).append('<div style=" position:absolute; top:40px; right:50px; padding: 5px; background: white; border: 2px solid green; -moz-border-radius: 0.75em; font-family: sans-serif;"><p>'+txt+'</p></div>');
+		       }
+		   }
+		   else{
+		     //The license will look like this:
+		     //http://creativecommons.org/licenses/by-nd/3.0/
+		     if (licenseEl.toString().substring(36,36+uses[j].length) == uses[j]){
+		       
+		     }  
+		   }
+		 }
+	       }
+	     }
+	   });
     var imgs = $jq("img",window.content.document);
     for (var i=0; i<imgs.length; i++){
         var licenseLinks = $jq("img[src='"+imgs[i].src+"']",window.content.document).parent().children("a");
@@ -19,10 +72,73 @@ function findImagesThatCanBeCopied(){
             var currentNode = licenseLinks[j];
             if (currentNode.getAttribute('rel') == "license"){
                 //Set the tool tip texto to specify that this image can be copied with metadata
-                $jq("img[src='"+imgs[i].src+"']",window.content.document).attr("title","This image can be copied with a License");
+                $jq("img[src='"+imgs[i].src+"']",window.content.document).attr("title","This image can be copied");
             }    
         }
     }
+}
+
+/**
+* Give visual cues to the user as to what images can be used for what purpose
+*/
+function toggleSemClip(event){
+  var whichOption = event.target;
+  
+  //Different Use Restrictions
+  var anyUse = ["publicdomain"];
+  var commercialUse = [ "publicdomain","by-nd", "by-nd-sa", "by-sa", "by"];
+  var allowModifications = [ "publicdomain", "by-nc-sa", "by-sa", "by-nc", "by" ];
+  var sameLicense = ["by-nc-nd-sa", "by-nd-sa", "by-nc-sa", "by-sa"];
+  var nonCommercialUse = ["by-nc-nd", "by-nc", "by-nc-sa","by-nc-nd-sa"];
+  
+  if (whichOption.getAttribute('checked') == 'true'){
+      switch(whichOption.id.toString()){
+            case "any_use":
+	      showAcceptedUseOfImage(anyUse, "No Restrictions")
+                break;
+            case "commercial_use":
+                break;
+            case "derivatives":
+                break;
+            case "share_alike":
+                break;
+            case "no_use":
+                break;
+            default:
+        }
+    }
+ else if (whichOption.getAttribute('checked') == 'false'){
+      switch(whichOption.id.toString()){
+            case "any_use":
+                break;
+            case "commercial_use":
+                break;
+            case "derivatives":
+                break;
+            case "share_alike":
+                break;
+            case "no_use":
+                break;
+            default:
+        }
+
+ }
+        
+  /*var checked = semclipCheckbox.getAttribute('checked');
+    try {
+        if(checked=='true'){
+            //Show all the images which has a CC license attached with a red border 
+            $jq("a[rel='license']", window.content.document).parent().children("img").css({border: 'dotted 2px red'});
+        }
+        else{
+            //Remove the attached CSS class
+            $jq("a[rel='license']", window.content.document).parent().children("img").css({border: 'dotted 0px red'});
+        }
+    }
+    catch(e) {
+          alert(e);
+    }
+  */
 }
 
 /**
@@ -277,25 +393,6 @@ nsContextMenu.prototype.initClipboardItems = function() {
     this.showItem("context-sep-copyimage", this.onImage);
 }
     
-/**
-* Enable/Disable semantic clipboard
-*/
-function toggleSemClip(){
-    var checked = semclipCheckbox.getAttribute('checked');
-    try {
-        if(checked=='true'){
-            //Show all the images which has a CC license attached with a red border 
-            $jq("a[rel='license']", window.content.document).parent().children("img").css({border: 'dotted 2px red'});
-        }
-        else{
-            //Remove the attached CSS class
-            $jq("a[rel='license']", window.content.document).parent().children("img").css({border: 'dotted 0px red'});
-        }
-    }
-    catch(e) {
-          alert(e);
-    }
-}
 
 /**
 * The insertMetadata function will put the all the extracted RDF data into 

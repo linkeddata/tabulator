@@ -22,11 +22,29 @@
 <!ENTITY tabulatorToggleHeader.label "Make Firefox request RDF">
 <!ENTITY tabulatorToggleHeader.accesskey "m">
 
-<!ENTITY semclipToggleHeader.label "Enable Semantic Clipboard">
+<!ENTITY semclipToggleHeader.label "Semantic Clipboard">
 <!ENTITY semclipToggleHeader.accesskey "s">
 
+<!ENTITY semclipAnyUse.label "Any Purpose">
+<!ENTITY semclipAnyUse.accesskey "1">
+
+<!ENTITY semclipCUse.label "Commercial Purposes">
+<!ENTITY semclipCUse.accesskey "2">
+
+<!ENTITY semclipNCUse.label "Non Commercial Purposes">
+<!ENTITY semclipNCUse.accesskey "3">
+
+<!ENTITY semclipDUse.label "Can be Modified">
+<!ENTITY semclipDUse.accesskey "4">
+
+<!ENTITY semclipSAUse.label "Same License">
+<!ENTITY semclipSAUse.accesskey "5">
+
+<!ENTITY semclipNoUse.label "Cannot be Used">
+<!ENTITY semclipNoUse.accesskey "6">
+
 <!ENTITY copyImageLicenseCmd.label "Copy Image with License">
-<!ENTITY copyImageLicenseCmd.accesskey "l">
+<!ENTITY copyImageLicenseCmd.accesskey "7">
 
 <!ENTITY policysidebar.title "Policy Parser">
 <!ENTITY openPOLICYSidebar.commandkey "E">

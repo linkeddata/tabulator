@@ -9,7 +9,67 @@
 
 /**We are using jquery within a Firefox extension*/
 $jq = jQuery.noConflict();
+//Some mozilla specific global vars
+var Transferable = Components.Constructor("@mozilla.org/widget/transferable;1", Components.interfaces.nsITransferable);
+var SupportsArray = Components.Constructor("@mozilla.org/supports-array;1", Components.interfaces.nsISupportsArray);
+var SupportsCString = (("nsISupportsCString" in Components.interfaces)
+                       ? Components.Constructor("@mozilla.org/supports-cstring;1", Components.interfaces.nsISupportsCString)
+                       : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
+                      );
+var SupportsString = (("nsISupportsWString" in Components.interfaces)
+                      ? Components.Constructor("@mozilla.org/supports-wstring;1", Components.interfaces.nsISupportsWString)
+                      : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
+                     );
 
+/**
+* The following code is copied from nsContextMenu.js
+* The only change done to the original function was 
+* "this.showItem("context-copyimage-License", this.onImage);"
+* This is because the context menu item 'Copy Image with Licnese'
+* appears in every right click, unless we specify that we only want
+* it to display with images
+*/
+nsContextMenu.prototype.initClipboardItems = function() {
+    // Copy depends on whether there is selected text.
+    // Enabling this context menu item is now done through the global
+    // command updating system
+    // this.setItemAttr( "context-copy", "disabled", !this.isTextSelected() );
+    goUpdateGlobalEditMenuItems();
+
+    this.showItem("context-undo", this.onTextInput);
+    this.showItem("context-sep-undo", this.onTextInput);
+    this.showItem("context-cut", this.onTextInput);
+    this.showItem("context-copy",
+                  this.isContentSelected || this.onTextInput);
+    this.showItem("context-paste", this.onTextInput);
+    this.showItem("context-delete", this.onTextInput);
+    this.showItem("context-sep-paste", this.onTextInput);
+    this.showItem("context-selectall",
+                  !(this.onLink || this.onImage) || this.isDesignMode);
+    this.showItem("context-sep-selectall", this.isContentSelected );
+
+    // XXX dr
+    // ------
+    // nsDocumentViewer.cpp has code to determine whether we're
+    // on a link or an image. we really ought to be using that...
+
+    // Copy email link depends on whether we're on an email link.
+    this.showItem("context-copyemail", this.onMailtoLink);
+
+    // Copy link location depends on whether we're on a non-mailto link.
+    this.showItem("context-copylink", this.onLink && !this.onMailtoLink);
+    this.showItem("context-sep-copylink", this.onLink && this.onImage);
+
+    //@line 350 "/builds/tinderbox/Fx-Mozilla1.9-Release/Darwin_8.8.4_Depend/mozilla/browser/base/content/nsContextMenu.js"
+    // Copy image contents depends on whether we're on an image.
+    this.showItem("context-copyimage-contents", this.onImage);
+    this.showItem("context-copyimage-License", this.onImage);
+    //@line 353 "/builds/tinderbox/Fx-Mozilla1.9-Release/Darwin_8.8.4_Depend/mozilla/browser/base/content/nsContextMenu.js"
+    // Copy image location depends on whether we're on an image.
+    this.showItem("context-copyimage", this.onImage);
+    this.showItem("context-sep-copyimage", this.onImage);
+}
+                     
 /**When the user hovers over an image show whether it can be copied by displaying a tool tip*/
 function findImagesThatCanBeCopied(){
     //First find all the images in the document
@@ -31,51 +91,33 @@ function findImagesThatCanBeCopied(){
     }
 }
 
-function disappear(){
-  alert("Here");
-}
-
 /**Show images that can be used for the specific purpose*/
 function showAcceptedUseOfImage(uses, txt){
   $jq.each($jq("img",window.content.document), 
 	   function(){
 	     var licenseEls = $jq(this,window.content.document).parent().children('a');
+         //var foundUse=false;
 	     for (var i=0; i<licenseEls.length; i++){
 	       var licenseEl = licenseEls[i];
 	       if (licenseEl.getAttribute('rel') == "license"){
-		 //Check if the image in question is under a license which allows the use specified by the parameter
-		 for (var j=0; j<uses.length; j++){
-		   if (uses[j]=="publicdomain"){
-		     //Content under public domain or CC-Zero have a license like this:
-		     //http://creativecommons.org/publicdomain/zero/1.0/
-		     if (licenseEl.toString().substring(27,39) == uses[j]){
-		       //Create a <div> and append to the parent of this img tag
-		       $jq($jq(this,window.content.document).parent(),window.content.document).css({'position':'relative','float':'left'});
-		       $jq($jq(this,window.content.document).parent(),window.content.document).append('<div style=" position:absolute; top:40px; right:50px; padding: 5px; background: white; border: 2px solid green; -moz-border-radius: 0.75em; font-family: sans-serif;"><p>'+txt+'</p></div>');
-		       }
-		   }
-		   else{
-		     //The license will look like this:
-		     //http://creativecommons.org/licenses/by-nd/3.0/
-		     if (licenseEl.toString().substring(36,36+uses[j].length) == uses[j]){
-		       
-		     }  
-		   }
-		 }
+            //Check if the image in question is under a license which allows the use specified by the parameter
+            for (var j=0; j<uses.length; j++){
+                if ((uses[j]=="publicdomain" && licenseEl.toString().substring(27,39) == uses[j]) || licenseEl.toString().substring(36,36+uses[j].length) == uses[j]){
+                    //@@There's a bug here FIX ME
+                    //Content under public domain or CC-Zero have a license like this:
+                    //http://creativecommons.org/publicdomain/zero/1.0/
+                    //Otherwise - The OR part
+                    //The license will look like this:
+                    //http://creativecommons.org/licenses/by-nd/3.0/
+                    
+                    //Create a <div> and append to the parent of this img tag
+                    $jq($jq(this,window.content.document).parent(),window.content.document).css({'position':'relative','float':'left'});
+                    $jq($jq(this,window.content.document).parent(),window.content.document).append('<div style=" position:absolute; top:30px; right:50px; padding: 5px; background: white; border: 2px solid green; -moz-border-radius: 0.75em; font-family: sans-serif;"><p>'+txt+'</p></div>');
+                }
+            }
 	       }
 	     }
 	   });
-    var imgs = $jq("img",window.content.document);
-    for (var i=0; i<imgs.length; i++){
-        var licenseLinks = $jq("img[src='"+imgs[i].src+"']",window.content.document).parent().children("a");
-        for (var j=0; j<licenseLinks.length; j++){
-            var currentNode = licenseLinks[j];
-            if (currentNode.getAttribute('rel') == "license"){
-                //Set the tool tip texto to specify that this image can be copied with metadata
-                $jq("img[src='"+imgs[i].src+"']",window.content.document).attr("title","This image can be copied");
-            }    
-        }
-    }
 }
 
 /**
@@ -94,15 +136,22 @@ function toggleSemClip(event){
   if (whichOption.getAttribute('checked') == 'true'){
       switch(whichOption.id.toString()){
             case "any_use":
-	      showAcceptedUseOfImage(anyUse, "No Restrictions")
+                showAcceptedUseOfImage(anyUse, "No restrictions");
                 break;
             case "commercial_use":
+                showAcceptedUseOfImage(commercialUse, "Can be used for<br/> Commercial Purposes");
+                break;
+            case "non_commercial_use":
+                showAcceptedUseOfImage(nonCommercialUse, "Can be used for<br/> Non-Commercial Purposes Only");
                 break;
             case "derivatives":
+                showAcceptedUseOfImage(allowModifications, "Modifications allowed");
                 break;
             case "share_alike":
+                showAcceptedUseOfImage(sameLicense, "Use same license");
                 break;
             case "no_use":
+                showAcceptedUseOfImage(anyUse, "Cannot be reused");
                 break;
             default:
         }
@@ -112,6 +161,8 @@ function toggleSemClip(event){
             case "any_use":
                 break;
             case "commercial_use":
+                break;
+            case "non_commercial_use":
                 break;
             case "derivatives":
                 break;
@@ -227,18 +278,6 @@ function getClipboard()
     return Components.classes[kClipboardContractID].getService(kClipboardIID);
 }
 
-//Some mozilla specific global vars
-var Transferable = Components.Constructor("@mozilla.org/widget/transferable;1", Components.interfaces.nsITransferable);
-var SupportsArray = Components.Constructor("@mozilla.org/supports-array;1", Components.interfaces.nsISupportsArray);
-var SupportsCString = (("nsISupportsCString" in Components.interfaces)
-                       ? Components.Constructor("@mozilla.org/supports-cstring;1", Components.interfaces.nsISupportsCString)
-                       : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
-                      );
-var SupportsString = (("nsISupportsWString" in Components.interfaces)
-                      ? Components.Constructor("@mozilla.org/supports-wstring;1", Components.interfaces.nsISupportsWString)
-                      : Components.Constructor("@mozilla.org/supports-string;1", Components.interfaces.nsISupportsString)
-                     );
-                     
 /**Check whether the data formats that have been copied to the clipboard and the target data formats are matching*/
 function canPaste()
 {
@@ -343,56 +382,6 @@ function pasteFromClipboard(){
     }*/
 
 }
-
-/**
-* The following code is copied from nsContextMenu.js
-* The only change done to the original function was 
-* "this.showItem("context-copyimage-License", this.onImage);"
-* This is because the context menu item 'Copy Image with Licnese'
-* appears in every right click, unless we specify that we only want
-* it to display with images
-*/
-nsContextMenu.prototype.initClipboardItems = function() {
-    // Copy depends on whether there is selected text.
-    // Enabling this context menu item is now done through the global
-    // command updating system
-    // this.setItemAttr( "context-copy", "disabled", !this.isTextSelected() );
-    goUpdateGlobalEditMenuItems();
-
-    this.showItem("context-undo", this.onTextInput);
-    this.showItem("context-sep-undo", this.onTextInput);
-    this.showItem("context-cut", this.onTextInput);
-    this.showItem("context-copy",
-                  this.isContentSelected || this.onTextInput);
-    this.showItem("context-paste", this.onTextInput);
-    this.showItem("context-delete", this.onTextInput);
-    this.showItem("context-sep-paste", this.onTextInput);
-    this.showItem("context-selectall",
-                  !(this.onLink || this.onImage) || this.isDesignMode);
-    this.showItem("context-sep-selectall", this.isContentSelected );
-
-    // XXX dr
-    // ------
-    // nsDocumentViewer.cpp has code to determine whether we're
-    // on a link or an image. we really ought to be using that...
-
-    // Copy email link depends on whether we're on an email link.
-    this.showItem("context-copyemail", this.onMailtoLink);
-
-    // Copy link location depends on whether we're on a non-mailto link.
-    this.showItem("context-copylink", this.onLink && !this.onMailtoLink);
-    this.showItem("context-sep-copylink", this.onLink && this.onImage);
-
-    //@line 350 "/builds/tinderbox/Fx-Mozilla1.9-Release/Darwin_8.8.4_Depend/mozilla/browser/base/content/nsContextMenu.js"
-    // Copy image contents depends on whether we're on an image.
-    this.showItem("context-copyimage-contents", this.onImage);
-    this.showItem("context-copyimage-License", this.onImage);
-    //@line 353 "/builds/tinderbox/Fx-Mozilla1.9-Release/Darwin_8.8.4_Depend/mozilla/browser/base/content/nsContextMenu.js"
-    // Copy image location depends on whether we're on an image.
-    this.showItem("context-copyimage", this.onImage);
-    this.showItem("context-sep-copyimage", this.onImage);
-}
-    
 
 /**
 * The insertMetadata function will put the all the extracted RDF data into 

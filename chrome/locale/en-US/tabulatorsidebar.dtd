@@ -25,10 +25,10 @@
 <!ENTITY semclipToggleHeader.label "Semantic Clipboard">
 <!ENTITY semclipToggleHeader.accesskey "s">
 
-<!ENTITY semclipAnyUse.label "Any Purpose">
+<!ENTITY semclipAnyUse.label "Aurpose">
 <!ENTITY semclipAnyUse.accesskey "1">
 
-<!ENTITY semclipCUse.label "Commercial Purposes">
+<!ENTITY semclipCUse.label "Commercial Purpose">
 <!ENTITY semclipCUse.accesskey "2">
 
 <!ENTITY semclipNCUse.label "Non Commercial Purposes">

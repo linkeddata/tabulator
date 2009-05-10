@@ -1,7 +1,9 @@
 const CLASS_ID = Components.ID("8880af33-15af-4714-abf7-de82ed54ee26");
 const CLASS_NAME = "Converts N3 to HTML";
-const CONVERT_TYPE = "?from=text/rdf+n3&to=*/*";
+const CONVERT_TYPE = "?from=text/n3&to=*/*";
+const LEGACY_CONVERT_TYPE = "?from=text/rdf+n3&to=*/*";
 const CONTRACT_ID = "@mozilla.org/streamconv;1"+CONVERT_TYPE;
+const LEGACY_CONTRACT_ID = "@mozilla.org/streamconv;1"+LEGACY_CONVERT_TYPE;
 
 function N3Converter() {
   this.wrappedJSObject = this;
@@ -100,8 +102,10 @@ var N3ConverterModule = {
   {
     aCompMgr = aCompMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
     aCompMgr.registerFactoryLocation(CLASS_ID, CLASS_NAME, CONTRACT_ID, aFileSpec, aLocation, aType);
+    aCompMgr.registerFactoryLocation(CLASS_ID, CLASS_NAME, LEGACY_CONTRACT_ID, aFileSpec, aLocation, aType);
     var catman = Components.classes["@mozilla.org/categorymanager;1"].getService(Components.interfaces.nsICategoryManager);
     catman.addCategoryEntry("@mozilla.org/streamconv;1",CONVERT_TYPE,"N3 to HTML stream converter", true, true);
+    catman.addCategoryEntry("@mozilla.org/streamconv;1",LEGACY_CONVERT_TYPE,"Legacy N3 to HTML stream converter", true, true);
   },
 
   unregisterSelf: function(aCompMgr, aLocation, aType)

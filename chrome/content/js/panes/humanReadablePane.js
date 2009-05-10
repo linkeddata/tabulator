@@ -15,7 +15,8 @@ tabulator.panes.register({
         var kb = tabulator.kb;
         var request = kb.any(subject, tabulator.ns.link("request"));
         if (!request) return null;
-        var content_type = kb.the(request, tabulator.ns.httph("content-type"));
+        // Don't use the() when it would not be an error for there not to be any.
+        var content_type = kb.any(request, tabulator.ns.httph("content-type"));
         if (!content_type) return null;//this hapeens when request is generated but response not ready        
         var allowed = ['text/plain','application/x-javascript',
                        ,'text/html','application/xhtml+xml','text/css'];

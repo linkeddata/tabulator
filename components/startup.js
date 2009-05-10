@@ -118,7 +118,7 @@ var myModule = {
         
         //deal with local .n3 files, I don't know what the last two arguments do...
         //also a hack on sources.js
-        catMgr.addCategoryEntry('ext-to-type-mapping','n3','text/rdf+n3',true,true);        
+        catMgr.addCategoryEntry('ext-to-type-mapping','n3','text/n3',true,true);        
     },
 
 

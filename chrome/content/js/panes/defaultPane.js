@@ -34,10 +34,10 @@ tabulator.panes.defaultPane = {
         tabulator.outline.appendPropertyTRs(div, plist, true, tabulator.panes.defaultPane.filter)
         if ((subject.termType == 'symbol' && 
              outline.UserInput.updateService.editMethod(kb.sym(Util.uri.docpart(subject.uri)), kb))
-             || (subject.termType == 'bnode' &&
-             outline.UserInput.updateService.editMethod(kb.subjectIndex[subject.hashString()][0].why)
-                //check the document containing the definition of the bnode
-            /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
+             || (subject.termType == 'bnode' && kb.anyStatementMatching(subject) &&
+             outline.UserInput.updateService.editMethod(kb.anyStatementMatching(subject).why)
+                //check the document containing something about of the bnode @@ what about as object?
+             /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
             var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
             var holdingTd = myDocument.createElement('td'); //in userinput.js
             holdingTd.setAttribute('colspan','2');
@@ -45,7 +45,7 @@ tabulator.panes.defaultPane = {
             var img = myDocument.createElement('img');
             img.src = Icon.src.icon_add_new_triple;
             img.className='bottom-border-active'
-            //img.addEventListener('click',thisOutline.UserInput.borderClick,false);
+            //img.addEventListener('click', thisOutline.UserInput.borderClick,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    

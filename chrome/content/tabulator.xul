@@ -110,6 +110,7 @@
       <menuitem id="non_commercial_use" label="&semclipNCUse.label;" accesskey="&semclipNCUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
       <menuitem id="derivatives" label="&semclipDUse.label;" accesskey="&semclipDUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
       <menuitem id="share_alike" label="&semclipSAUse.label;" accesskey="&semclipSAUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
+      <menuitem id="no_use" label="&semclipNoLicense.label;" accesskey="&semclipNoLicense.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
       <menuitem id="no_use" label="&semclipNoUse.label;" accesskey="&semclipNoUse.accesskey;" type="checkbox" oncommand="toggleSemClip(event)"/>
       </menupopup>
       </menu>

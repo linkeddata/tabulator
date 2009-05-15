@@ -831,6 +831,31 @@ Styles for tableViewPane
     border-right: 1px solid black;
 }
 
+.tableViewPane .toolbar td {
+    border: none;
+}
+
+.tableViewPane .sparqlButton {
+    width: 16px;
+    height: 16px;
+    border: 1px solid black;
+}
+
+.tableViewPane .sparqlDialog {
+        position: fixed;
+        top: 40px;
+        left: 100px;
+        width: 600px;
+        background: white;
+        border: 1px solid black;
+        padding: 5px;
+}
+
+.tableViewPane .sparqlDialog textarea {
+        width: 590px;
+        height: 250px;
+}
+
 /*
 End of styles for tableViewPane 
 */

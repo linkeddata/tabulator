@@ -1,7 +1,7 @@
 
 // Format an array of RDF statements as an HTML table.
 
-function renderTableViewPane(doc, statements) {
+function renderTableViewPane(doc, documentSubject) {
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
 
@@ -9,6 +9,7 @@ function renderTableViewPane(doc, statements) {
 
     var FORBIDDEN_COLUMNS = {
         "http://www.w3.org/2002/07/owl#sameAs": true,
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": true
     };
 
     // Number types defined in the XML schema:
@@ -38,15 +39,27 @@ function renderTableViewPane(doc, statements) {
         "http://xmlns.com/foaf/0.1/Image": true,
     };
 
+    // Name of the column used as a "key" value to look up the row.
+    // This is necessary because in the normal view, the columns are
+    // all "optional" values, meaning that we will get a result set 
+    // for every individual value that is found.  The row key acts
+    // as an anchor that can be used to combine this information
+    // back into the same row.
+
+    var ROW_KEY_COLUMN = "_row";
+
     // Use queries to render the table, currently experimental:
  
-    var USE_QUERIES = false;
+    var USE_QUERIES = true;
 
     var subjectIdCounter = 0;
-    var globalColumns, allType, types;
+    var allType, types;
     var typeSelectorDiv, addColumnDiv;
 
-    [globalColumns, allType, types] = calculateTable(statements);
+    // The last SPARQL query used:
+    var lastQuery = null;
+
+    [allType, types] = calculateTable();
 
     var resultDiv = doc.createElement("div");
     resultDiv.className = "tableViewPane";
@@ -69,11 +82,73 @@ function renderTableViewPane(doc, statements) {
 
     return resultDiv;
 
+    function closeDialog(dialog) {
+        dialog.parentNode.removeChild(dialog);
+    }
+
+    function createActionButton(label, callback) {
+        var button = doc.createElement("input");
+        button.setAttribute("type", "submit");
+        button.setAttribute("value", label);
+        button.addEventListener("click", callback, false);
+        return button;
+    }
+
+    function createSparqlWindow() {
+        var dialog = doc.createElement("div");
+
+        dialog.setAttribute("class", "sparqlDialog");
+
+        var title = doc.createElement("h3");
+        title.appendChild(doc.createTextNode("Edit SPARQL query"));
+
+        var inputbox = doc.createElement("textarea");
+        inputbox.value = queryToSPARQL(lastQuery);
+
+        dialog.appendChild(title);
+        dialog.appendChild(inputbox);
+
+        dialog.appendChild(createActionButton("Query", function() {
+            var query = SPARQLToQuery(inputbox.value);
+            updateTable(query);
+            closeDialog(dialog);
+        }));
+
+        dialog.appendChild(createActionButton("Close", function() {
+            closeDialog(dialog);
+        }));
+
+        return dialog;
+    }
+
+    function sparqlButtonPressed() {
+        var dialog = createSparqlWindow();
+
+        resultDiv.appendChild(dialog);
+    }
+
+    function generateSparqlButton() {
+        var image = doc.createElement("img");
+        image.setAttribute("class", "sparqlButton");
+        image.setAttribute("src", "chrome://tabulator/content/icons/1pt5a.gif");
+        image.setAttribute("alt", "Edit SPARQL query");
+
+        image.addEventListener("click", sparqlButtonPressed, false);
+
+        return image;
+    }
+
     // Generate the control bar displayed at the top of the screen.
 
     function generateControlBar() {
         var result = doc.createElement("table");
+        result.setAttribute("class", "toolbar");
+
         var tr = doc.createElement("tr");
+
+        var sparqlButtonDiv = doc.createElement("td");
+        sparqlButtonDiv.appendChild(generateSparqlButton());
+        tr.appendChild(sparqlButtonDiv);
 
         typeSelectorDiv = doc.createElement("td");
         tr.appendChild(typeSelectorDiv);
@@ -88,9 +163,8 @@ function renderTableViewPane(doc, statements) {
 
     // Add the SELECT details to the query being built.
 
-    function addSelectToQuery(query, rowVar, type) {
+    function addSelectToQuery(query, type) {
         var selectedColumns = type.getColumns();
-        query.vars.push(rowVar);
 
         for (var i=0; i<selectedColumns.length; ++i) {
             // TODO: autogenerate nicer names for variables
@@ -141,9 +215,9 @@ function renderTableViewPane(doc, statements) {
 
     function generateQuery(type) {
         var query = new Query();
-        var rowVar = kb.variable("_row");
+        var rowVar = kb.variable(ROW_KEY_COLUMN);
 
-        addSelectToQuery(query, rowVar, type);
+        addSelectToQuery(query, type);
         addWhereToQuery(query, rowVar, type);
         addColumnsToQuery(query, rowVar, type);
 
@@ -160,23 +234,31 @@ function renderTableViewPane(doc, statements) {
         clearElement(addColumnDiv);
         addColumnDiv.appendChild(generateColumnAddDropdown(type));
 
-        // Clear the tableDiv element.
-
-        clearElement(tableDiv);
-
         var query = generateQuery(type);
+
+        updateTable(query, type);
+    }
+
+    function updateTable(query, type) {
+
+        // Stop the previous query from doing any updates.
+
+        if (lastQuery != null) {
+            lastQuery.running = false;
+        }
 
         // Render the HTML table.
 
-        var htmlTable;
+        var htmlTable = renderTableForQuery(query, type);
 
-        if (USE_QUERIES) {
-            htmlTable = renderTableForQuery(query, type);
-        } else {
-            htmlTable = renderTableForType(type);
-        }
+        // Clear the tableDiv element, and replace with the new table.
 
+        clearElement(tableDiv);
         tableDiv.appendChild(htmlTable);
+
+        // Save the query for the edit dialog.
+
+        lastQuery = query;
     }
 
     // Remove all subelements of the specified element.
@@ -191,27 +273,13 @@ function renderTableViewPane(doc, statements) {
 
     function SubjectType(type) {
         this.type = type;
-        this.rows = [];
         this.columns = null;
         this.allColumns = null;
+        this.useCount = 0;
 
         // Get a list of all columns used by this type.
 
         this.getAllColumns = function() {
-
-            // The first time this function is called, we must get
-            // a list of all columns used by this type.
-
-            if (this.allColumns == null) {
-                var filteredColumns = filterColumns(globalColumns, this.rows);
-
-                // Convert columns to a flat list, and sort, so that the most
-                // common columns are on the left.
-
-                this.allColumns = getColumnsList(filteredColumns);
-                sortColumns(this.allColumns);
-            }
-
             return this.allColumns;
         }
 
@@ -262,21 +330,19 @@ function renderTableViewPane(doc, statements) {
             return label(this.type);
         }
 
-        this.addUse = function(row) {
-            this.rows.push(row);
+        this.addUse = function() {
+            this.useCount += 1;
         }
-    }
-
-    function getRangeForPredicate(predicate) {
-        return kb.any(predicate, tabulator.ns.rdfs("range"));
     }
 
     // Class representing a column in the table.
 
-    function Column(predicate) {
-        this.predicate = predicate;
+    function Column() {
         this.useCount = 0;
-        this.range = getRangeForPredicate(predicate);
+
+        // Have we checked any values for this column yet?
+
+        this.checkedAnyValues = false;
 
         // If the range is unknown, but we just get literals in this
         // column, then we can generate a literal selector.
@@ -296,7 +362,7 @@ function renderTableViewPane(doc, statements) {
         // numbers (using regexps).
 
         this.checkValue = function(value) {
-            var termType = value.termType
+            var termType = value.termType;
             if (this.possiblyLiteral && termType != "literal" && termType != "symbol") {
                 this.possiblyNumber = false;
                 this.possiblyLiteral = false;
@@ -311,6 +377,8 @@ function renderTableViewPane(doc, statements) {
                     }
                 }
             }
+
+            this.checkedAnyValues = true;
         }
 
         this.getVariable = function() {
@@ -321,12 +389,27 @@ function renderTableViewPane(doc, statements) {
             this.variable = variable;
         }
 
+        this.getKey = function() {
+            return this.variable.toString();
+        }
+
         this.addUse = function() {
             this.useCount += 1;
         }
 
         this.getLabel = function() {
-            return label(this.predicate);
+            if (this.predicate != null) {
+                return label(this.predicate);
+            } else if (this.variable != null) {
+                return this.variable.toString();
+            } else {
+                return "unlabeled column?";
+            }
+        }
+
+        this.setPredicate = function(predicate) {
+            this.predicate = predicate;
+            this.range = kb.any(predicate, tabulator.ns.rdfs("range"));
         }
 
         this.getRange = function() {
@@ -338,7 +421,7 @@ function renderTableViewPane(doc, statements) {
         }
 
         this.sortKey = function() {
-            return label(this.predicate).toLowerCase();
+            return this.getLabel().toLowerCase();
         }
 
         this.isImageColumn = function() {
@@ -465,40 +548,6 @@ function renderTableViewPane(doc, statements) {
         return resultDiv;
     }
 
-    // Get a unique ID for the given subject.  This is normally the
-    // URI; if the subject has no URI, a unique ID is assigned.
-
-    function getSubjectId(subject) {
-        if ("uri" in subject) {
-            return subject.uri;
-        } else if ("_subject_id" in subject) {
-            return subject._subject_id;
-        } else {
-            var result = "" + subjectIdCounter;
-            subject._subject_id = result;
-            ++subjectIdCounter;
-            return result;
-        }
-    }
-
-    // Find the row for a given subject, creating a new row if necessary.
-
-    function getRowForSubject(allType, subjects, subject) {
-
-        var row;
-        var subjectId = getSubjectId(subject);
-
-        if (subjectId in subjects) {
-            row = subjects[subjectId];
-        } else {
-            row = { _subject: subject };
-            allType.addUse(row);
-            subjects[subjectId] = row;
-        }
-
-        return row;
-    }
-
     // Find the column for a given predicate, creating a new column object
     // if necessary.
 
@@ -509,7 +558,8 @@ function renderTableViewPane(doc, statements) {
         if (predicate.uri in columns) {
             column = columns[predicate.uri];
         } else {
-            column = new Column(predicate);
+            column = new Column();
+            column.setPredicate(predicate);
             columns[predicate.uri] = column;
         }
 
@@ -532,77 +582,131 @@ function renderTableViewPane(doc, statements) {
         return subjectType;
     }
 
-    // Build table information from parsing RDF statements.
+    // Discover types and subjects for search.
 
-    function calculateTable(statements) {
-
-        // Look up table to find rows that have been added to the result
-        // array, by subject URI.
-
-        var subjects = {};
-
-        // Columns, indexed by subject URI.  See Column class.
-
-        var columns = {};
+    function discoverTypes() {
 
         // rdf:type properties of subjects, indexed by URI for the type.
 
         var types = {};
 
-        // Special type that captures all rows.
+        // Get a list of statements that match:  ? rdfs:type ?
+        // From this we can get a list of subjects and types.
 
-        var allType = new SubjectType(null);
+        var subjectList = kb.statementsMatching(undefined,
+                                                tabulator.ns.rdf("type"),
+                                                undefined,
+                                                documentSubject);
 
-        // Process all statements:
+        // Subjects for later lookup.  This is a mapping of type URIs to
+        // lists of subjects (it is necessary to record the type of
+        // a subject).
 
-        for (var i=0; i<statements.length; ++i) {
+        var subjects = {};
 
-            var predicate = statements[i].predicate;
+        for (var i=0; i<subjectList.length; ++i) {
+            var type = subjectList[i].object;
 
-            // Ignore certain columns:
-
-            if (FORBIDDEN_COLUMNS[predicate.uri]) {
+            if (type.termType != "symbol") {
                 continue;
             }
 
-            // Find the row for the subject of this statement.
+            var typeObj = getTypeForObject(types, type);
 
-            var row = getRowForSubject(allType, subjects, statements[i].subject);
+            if (!(type.uri in subjects)) {
+                subjects[type.uri] = [];
+            }
 
-            // Find the column for this predicate.
+            subjects[type.uri].push(subjectList[i].subject);
+            typeObj.addUse();
+        }
+
+        return [ subjects, types ];
+    }
+
+    // Get columns for the given subject.
+
+    function getSubjectProperties(subject, columns) {
+
+        // Get a list of properties of this subject.
+
+        var properties = kb.statementsMatching(subject,
+                                               undefined,
+                                               undefined,
+                                               documentSubject);
+
+        var result = {};
+
+        for (var j=0; j<properties.length; ++j) {
+            var predicate = properties[j].predicate;
+
+            if (predicate.uri in FORBIDDEN_COLUMNS) {
+                continue;
+            }
+
+            // Find/create a column for this predicate.
 
             var column = getColumnForPredicate(columns, predicate);
+            column.checkValue(properties[j].object);
 
-            // Collect rdf:type specifications.  rdf:type is not added
-            // as a column.
+            result[predicate.uri] = column;
+        }
 
-            if (predicate.uri == RDFS_TYPE) {
-                var type = getTypeForObject(types, statements[i].object);
-                type.addUse(row);
-            } else {
+        return result;
+    }
 
-                // Add this triple.
-                // We have to take into account cases like foaf:knows,
-                // where a property can have multiple values, so we
-                // store a list of values.  The first time adding a
-                // value, initialise from an empty list.
+    // Identify the columns associated with a type.
 
-                if (!(predicate.uri in row)) {
-                    row[predicate.uri] = [];
+    function identifyColumnsForType(type, subjects) {
 
-                    // Update use count for this column.
+        var allColumns = {};
 
-                    column.addUse();
-                }
+        // Process each subject of this type to build up the
+        // column list.
 
-                var value = statements[i].object;
+        for (var i=0; i<subjects.length; ++i) {
 
-                column.checkValue(value);
-                row[predicate.uri].push(value);
+            var columns = getSubjectProperties(subjects[i], allColumns);
+
+            for (var predicateUri in columns) {
+
+                var column = columns[predicateUri];
+
+                column.addUse();
             }
         }
 
-        return [columns, allType, types];
+        // Generate the columns list
+
+        var allColumnsList = objectToArray(allColumns);
+        sortColumns(allColumnsList);
+        type.allColumns = allColumnsList;
+    }
+
+    // Build table information from parsing RDF statements.
+
+    function calculateTable() {
+
+        // Find the types that we will display in the dropdown
+        // list box, and associated objects of those types.
+
+        var subjects, types;
+
+        [subjects, types] = discoverTypes();
+
+        for (var typeUrl in subjects) {
+            var subjectList = subjects[typeUrl];
+            var type = types[typeUrl];
+
+            identifyColumnsForType(type, subjectList);
+        }
+
+        // TODO: Special type that captures all rows.
+        // Combine columns from all types
+
+        var allType = new SubjectType(null);
+
+        return [ allType, objectToArray(types) ];
     }
 
     // Sort the list of columns by the most common columns.
@@ -632,9 +736,8 @@ function renderTableViewPane(doc, statements) {
 
     // Render the table header for the HTML table.
 
-    function renderTableHeader(type) {
+    function renderTableHeader(columns, type) {
         var tr = doc.createElement("tr");
-        var columns = type.getColumns();
 
         /* Empty header for link column */
         var linkTd = doc.createElement("th");
@@ -653,7 +756,11 @@ function renderTableViewPane(doc, statements) {
             //alert(column.getRange());
             th.appendChild(doc.createTextNode(column.getLabel()));
 
-            th.appendChild(renderColumnDeleteButton(type, column));
+            // We can only add a delete button if we are using the
+            // proper interface and have a type to delete from:
+            if (type != null) {
+                th.appendChild(renderColumnDeleteButton(type, column));
+            }
 
             tr.appendChild(th);
         }
@@ -665,17 +772,17 @@ function renderTableViewPane(doc, statements) {
     // column, using the provided sort function to compare values.
 
     function applyColumnSort(rows, column, sortFunction, reverse) {
-        var columnUri = column.predicate.uri;
+        var columnKey = column.getKey();
 
         // Sort the rows array.
         rows.sort(function(row1, row2) {
             var row1Value = null, row2Value = null;
 
-            if (columnUri in row1) {
-                row1Value = row1[columnUri][0];
+            if (columnKey in row1) {
+                row1Value = row1[columnKey][0];
             }
-            if (columnUri in row2) {
-                row2Value = row2[columnUri][0];
+            if (columnKey in row2) {
+                row2Value = row2[columnKey][0];
             }
 
             var result = sortFunction(row1Value, row2Value);
@@ -719,12 +826,12 @@ function renderTableViewPane(doc, statements) {
 
             for (var c=0; c<columns.length; ++c) {
                 var column = columns[c];
-                var columnUri = column.predicate.uri;
+                var columnKey = column.getKey();
 
                 var columnValue = null;
 
-                if (columnUri in row) {
-                    columnValue = row[columnUri][0];
+                if (columnKey in row) {
+                    columnValue = row[columnKey][0];
                 }
 
                 if (!column.filterFunction(columnValue)) {
@@ -795,7 +902,7 @@ function renderTableViewPane(doc, statements) {
         sort2.appendChild(doc.createTextNode("\u25B2"));
         sort2.addEventListener("click", function() {
             literalSort(rows, column, true);
-        }, false)
+        }, false);
         result.appendChild(sort2);
 
         var substring = null;
@@ -952,7 +1059,7 @@ function renderTableViewPane(doc, statements) {
 
         // Have all values matched as numbers?
 
-        if (column.possiblyNumber) {
+        if (column.checkedAnyValues && column.possiblyNumber) {
             return renderNumberSelector(rows, columns, column);
         }
 
@@ -988,7 +1095,8 @@ function renderTableViewPane(doc, statements) {
         // Alternatively, is this an rdf:Literal type where all of 
         // the values match as numbers?
 
-        if (column.possiblyNumber || range.uri in XSD_NUMBER_TYPES) {
+        if (column.checkedAnyValues && column.possiblyNumber 
+         || range.uri in XSD_NUMBER_TYPES) {
             return renderNumberSelector(rows, columns, column);
         }
 
@@ -1032,6 +1140,12 @@ function renderTableViewPane(doc, statements) {
 
             if (selector != null) {
                 td.appendChild(selector);
+            }
+
+            // Useful debug: display URI of predicate in column header
+
+            if (false && columns[i].predicate.uri != null) {
+                td.appendChild(document.createTextNode(columns[i].predicate.uri));
             }
 
             tr.appendChild(td);
@@ -1097,17 +1211,11 @@ function renderTableViewPane(doc, statements) {
 
         var linkTd = doc.createElement("td");
 
-        if ("uri" in row._subject) {
+        if (row._subject != null && "uri" in row._subject) {
             linkTd.appendChild(linkTo(row._subject.uri, "\u2192"));
         }
 
         tr.appendChild(linkTd);
-
-        /*
-        var labelTd = doc.createElement("td");
-        labelTd.appendChild(doc.createTextNode(label(row._subject)));
-        tr.appendChild(labelTd);
-        */
 
         // Create a <td> for each column (whether the row has data for that
         // column or not).
@@ -1116,8 +1224,10 @@ function renderTableViewPane(doc, statements) {
             var column = columns[i];
             var td = doc.createElement("td");
 
-            if (column.predicate.uri in row) {
-                var objects = row[column.predicate.uri];
+            var columnKey = column.getKey();
+
+            if (columnKey in row) {
+                var objects = row[columnKey];
 
                 for (var j=0; j<objects.length; ++j) {
                     var obj = objects[j];
@@ -1140,25 +1250,241 @@ function renderTableViewPane(doc, statements) {
         return tr;
     }
 
-    // Convert the table data to an HTML table.
+    // Check if a value is already stored in the list of values for
+    // a cell (the query can sometimes find it multiple times)
 
-    function renderTableForType(type) {
-        var rows = type.rows;
-        var columns = type.getColumns();
+    function valueInList(value, list) {
+        var key = null;
+
+        if (value.termType == "literal") {
+            key = "value";
+        } else if (value.termType == "symbol") {
+            key = "uri";
+        } else {
+            return list.indexOf(value) >= 0;
+        }
+
+        // Check the list and compare keys:
+
+        var i;
+
+        for (i=0; i<list.length; ++i) {
+            if (list[i].termType == value.termType
+             && list[i][key] == value[key]) {
+                return true;
+            }
+        }
+
+        // Not found?
+
+        return false;
+    }
+
+    // Update a row, add new values, and regenerate the HTML element
+    // containing the values.
+
+    function updateRow(row, columns, values) {
+
+        var key;
+        var needUpdate = false;
+
+        for (key in values) {
+            var value = values[key];
+
+            // If this key is not already in the row, create a new entry
+            // for it:
+
+            if (!(key in row)) {
+                row[key] = [];
+            }
+
+            // Possibly add this new value to the list, but don't
+            // add it if we have already added it:
+
+            if (!valueInList(value, row[key])) {
+                row[key].push(value);
+                needUpdate = true;
+            }
+        }
+
+        // Regenerate the HTML row?
+
+        if (needUpdate) {
+            clearElement(row._htmlRow);
+            renderTableRowInto(row._htmlRow, row, columns);
+        }
+    }
+
+    // Get a unique ID for the given subject.  This is normally the
+    // URI; if the subject has no URI, a unique ID is assigned.
+
+    function getSubjectId(subject) {
+        if ("uri" in subject) {
+            return subject.uri;
+        } else if ("_subject_id" in subject) {
+            return subject._subject_id;
+        } else {
+            var result = "" + subjectIdCounter;
+            subject._subject_id = result;
+            ++subjectIdCounter;
+            return result;
+        }
+    }
+
+    // Run a query and generate the table.
+    // Returns an array of rows.  This will be empty when the function
+    // first returns (as the query is performed in the background)
+
+    function runQuery(query, rows, columns, table) {
+
+        var rowsLookup = {};
+
+        query.running = true;
+
+        kb.query(query, function(values) {
+
+            if (!query.running) {
+                return;
+            }
+
+            var row = null;
+            var rowKey = null;
+            var rowKeyId;
+
+            // If the query has a row key, use it to look up the row.
+
+            if (("?" + ROW_KEY_COLUMN) in values) {
+                rowKey = values["?" + ROW_KEY_COLUMN];
+                rowKeyId = getSubjectId(rowKey);
+
+                // Do we have a row for this already?
+                // If so, reuse it; otherwise, we must create a new row.
+
+                if (rowKeyId in rowsLookup) {
+                    row = rowsLookup[rowKeyId];
+                }
+            }
+
+            // Create a new row?
+
+            if (row == null) {
+                var tr = doc.createElement("tr");
+                table.appendChild(tr);
+
+                row = {
+                    _htmlRow: tr,
+                    _subject: rowKey
+                };
+                rows.push(row);
+
+                if (rowKey != null) {
+                    rowsLookup[rowKeyId] = row;
+                }
+            }
+
+            // Add the new values to this row.
+
+            updateRow(row, columns, values);
+        })
+    }
+
+    // Given a formula object, process all statements and infer predicates
+    // for columns.
+
+    function inferColumnsFromFormula(columns, formula) {
+        tabulator.log.debug(">> processing formula");
+
+        for (var i=0; i<formula.statements.length; ++i) {
+            var statement = formula.statements[i];
+            tabulator.log.debug("processing statement " + i);
+
+            // Does it match this?:
+            // <something> <predicate> ?var
+            // If so, we can use the predicate as the predicate for the
+            // column used for the specified variable.
+
+            if (statement.predicate != undefined
+             && statement.predicate.termType == "symbol"
+             && statement.object != undefined
+             && statement.object.termType == "variable") {
+                var variable = statement.object.toString();
+
+                if (variable in columns) {
+                    var column = columns[variable];
+                    column.setPredicate(statement.predicate);
+                }
+            }
+        }
+
+        // Recurse to optional sub-formulas:
+
+        for (var i=0; i<formula.optional.length; ++i) {
+            tabulator.log.debug("recurse to optional subformula " + i);
+            inferColumnsFromFormula(columns, formula.optional[i]);
+        }
+
+        tabulator.log.debug("<< finished processing formula");
+    }
+
+    // Generate a list of column structures and infer details about the
+    // predicates based on the contents of the query
+
+    function inferColumns(query) {
+        
+        // Generate the columns list:
+
+        var result = [];
+        var columns = {};
+
+        for (var i=0; i<query.vars.length; ++i) {
+            var column = new Column();
+            var queryVar = query.vars[i];
+            tabulator.log.debug("column " + i + " : " + queryVar);
+
+            column.setVariable(queryVar);
+            columns[queryVar] = column;
+            result.push(column);
+        }
+
+        inferColumnsFromFormula(columns, query.pat);
+
+        return result;
+    }
+
+    // Generate a table from a query.
+
+    function renderTableForQuery(query, type) {
+
+        // Columns list.  If we are rendering a table for a specific type,
+        // we can use the list of columns for that type.  Otherwise, if
+        // this is a generic query, we must build a list of column
+        // structures from the query, and infer information about the
+        // columns (predicates, etc) from the query statements.
+
+        var columns;
+
+        if (type != null) {
+            columns = type.getColumns();
+        } else {
+            columns = inferColumns(query);
+        }
+
+        // Start with an empty list of rows; this will be populated
+        // by the query.
+
+        var rows = [];
+
+        // Create table element and header.
 
         var table = doc.createElement("table");
 
-        table.appendChild(renderTableHeader(type));
+        table.appendChild(renderTableHeader(columns, type));
         table.appendChild(renderTableSelectors(rows, columns));
 
-        for (var i=0; i<rows.length; ++i) {
-            var row = rows[i];
+        // Run query.  Note that this is perform asynchronously; the
+        // query runs in the background and this call does not block.
 
-            var tr = doc.createElement("tr");
-            renderTableRowInto(tr, row, columns);
-
-            table.appendChild(tr);
-        }
+        runQuery(query, rows, columns, table);
 
         return table;
     }
@@ -1337,11 +1663,10 @@ function renderTableViewPane(doc, statements) {
 
         for (var typeUri in types) {
             var type = types[typeUri];
-            var rowCount = type.rows.length;
 
-            if (rowCount > bestCount) {
+            if (type.useCount > bestCount) {
                 best = type;
-                bestCount = rowCount;
+                bestCount = type.useCount;
             }
         }
 
@@ -1413,9 +1738,7 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); 
-
-        div.appendChild(renderTableViewPane(myDocument, sts));
+        div.appendChild(renderTableViewPane(myDocument, subject));
         return div;
     }
 })

@@ -191,7 +191,7 @@
         var objectIndex = kb.objectIndex[doc.hashString()];
 	
 	//Added for the Semantic Clipboard (see semclip.js) - show all the images that can be copied with a license
-	findImagesThatCanBeCopied();
+	//findImagesThatCanBeCopied(); //@@@ this might be the source of the recursive call in jquery
         
 	//predicateIndex?? hmm...
         var semantics = (subjectIndex? subjectIndex.length:0) + (objectIndex?objectIndex.length:0);        

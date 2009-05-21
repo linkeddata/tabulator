@@ -388,6 +388,8 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     
     function prefixDirectives() {
         str = '';
+	if (sz.defaultNamespace)
+	  str += '@prfix : <'+sz.defaultNamespace+'>.\n';
         for (var ns in namespaceCounts) {
             str += '@prefix ' + sz.prefixes[ns] + ': <'+ns+'>.\n';
         }
@@ -663,6 +665,8 @@ __Serializer.prototype.statementsToXML = function(sts) {
     
     var tree = statementListToXMLTree(sts);
     var str = '<rdf:RDF';
+    if (sz.defaultNamespace)
+      str += ' xmlns="'+escapeForXML(sz.defaultNamespace)+'"';
     for (var ns in namespaceCounts) {
         str += '\n xmlns:' + sz.prefixes[ns] + '="'+escapeForXML(ns)+'"';
     }

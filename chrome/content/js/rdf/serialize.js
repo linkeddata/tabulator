@@ -389,7 +389,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     function prefixDirectives() {
         str = '';
 	if (sz.defaultNamespace)
-	  str += '@prfix : <'+sz.defaultNamespace+'>.\n';
+	  str += '@prefix : <'+sz.defaultNamespace+'>.\n';
         for (var ns in namespaceCounts) {
             str += '@prefix ' + sz.prefixes[ns] + ': <'+ns+'>.\n';
         }

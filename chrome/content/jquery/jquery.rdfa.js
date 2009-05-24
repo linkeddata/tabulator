@@ -111,6 +111,21 @@
       return resources;
     },
 
+    removeCurie = function (curies, resource, options) {
+      var i, r, newCuries = [];
+      resource = resource.type === 'uri' ? resource : $.rdf.resource(resource, options);
+      curies = curies && curies.split ? curies.split(/\s+/) : [];
+      for (i = 0; i < curies.length; i += 1) {
+        if (curies[i] !== '') {
+          r = resourceFromCurie(curies[i], null, options);
+          if (r !== resource) {
+            newCuries.push(curies[i]);
+          }
+        }
+      }
+      return newCuries.reverse().join(' ');
+    },
+
     getObjectResource = function (elem, context, relation) {
       var r, resource, atts, curieOptions;
       context = context || {};
@@ -604,6 +619,60 @@
       }
       this.parents().andSelf().trigger("rdfChange");
       return span;
+    },
+    
+    removeRDFa = function (what) {
+      var span, atts, property, rel, rev, type,
+        ns = this.xmlns();
+      atts = getAttributes(this).atts;
+      if (what.length) {
+        for (i = 0; i < what.length; i += 1) {
+          removeRDFa.call(this, what[i]);
+        }
+        return this;
+      }
+      hasRelation = atts.rel !== undefined || atts.rev !== undefined;
+      hasRDFa = hasRelation || atts.property !== undefined || atts['typeof'] !== undefined;
+      if (hasRDFa) {
+        if (what.property !== undefined) {
+          if (atts.property !== undefined) {
+            property = removeCurie(atts.property, what.property, { namespaces: ns });
+            if (property === '') {
+              this.removeAttr('property');
+            } else {
+              this.attr('property', property);
+            }
+          }
+          if (atts.rel !== undefined) {
+            rel = removeCurie(atts.rel, what.property, { namespaces: ns });
+            if (rel === '') {
+              this.removeAttr('rel');
+            } else {
+              this.attr('rel', rel);
+            }
+          }
+          if (atts.rev !== undefined) {
+            rev = removeCurie(atts.rev, what.property, { namespaces: ns });
+            if (rev === '') {
+              this.removeAttr('rev');
+            } else {
+              this.attr('rev', rev);
+            }
+          }
+        }
+        if (what.type !== undefined) {
+          if (atts['typeof'] !== undefined) {
+            type = removeCurie(atts['typeof'], what.type, { namespaces: ns });
+            if (type === '') {
+              this.removeAttr('typeof');
+            } else {
+              this.attr('typeof', type);
+            }
+          }
+        }
+      }
+      this.parents().andSelf().trigger("rdfChange");
+      return this;
     };
 
   $.fn.rdfa = function (triple) {
@@ -618,6 +687,13 @@
       });
       return this;
     }
+  };
+
+  $.fn.removeRdfa = function (triple) {
+    $(this).each(function () {
+      removeRDFa.call($(this), triple);
+    });
+    return this;
   };
 
   $.rdf.gleaners.push(gleaner);

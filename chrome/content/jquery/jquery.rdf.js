@@ -26,10 +26,15 @@
     literalRegex = /^("""((\\"|[^"])*)"""|"((\\"|[^"])*)")(@([a-z]+(-[a-z0-9]+)*)|\^\^(.+))?$/,
     tripleRegex = /(("""((\\"|[^"])*)""")|("(\\"|[^"]|)*")|(<(\\>|[^>])*>)|\S)+/g,
     
-    blankNodeSeed = new Date().getTime() % 1000,
+    blankNodeSeed = databankSeed = new Date().getTime() % 1000,
     blankNodeID = function () {
       blankNodeSeed += 1;
       return 'b' + blankNodeSeed.toString(16);
+    },
+    
+    databankID = function () {
+      databankSeed += 1;
+      return 'data' + databankSeed.toString(16); 
     },
     
     subject = function (subject, opts) {
@@ -1059,6 +1064,7 @@
       var i;
       triples = triples || [];
       options = options || {};
+      this.id = databankID();
       if (options.union === undefined) {
         this.queries = {};
         this.tripleStore = {};

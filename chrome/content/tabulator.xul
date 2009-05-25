@@ -138,37 +138,55 @@
 
   <script type="application/x-javascript"><![CDATA[
     var myCheckbox;
-    tabulator_init = function() {
-      myCheckbox = document.getElementById("tabulator_setaccept");
-      var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
+
+    var tabulator_init = {
+
+       //This is called when the Browser window has finished loading at startup
+       onLoad : function(loadEvent) {
+          
+          myCheckbox = document.getElementById("tabulator_setaccept");
+          var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                           .getService(Components.interfaces.nsIPrefBranch);
-      try {
-        var value = prefManager.getBoolPref("extensions.tabulator.setheader");
-        if(value) {
-          myCheckbox.setAttribute('checked','true');
-        } else {
-          myCheckbox.setAttribute('checked','false');
-        }
-      } catch(e) {
-        prefManager.setBoolPref("extensions.tabulator.setheader",true);
-        myCheckbox.setAttribute('checked',true);
+          try {
+             var value = prefManager.getBoolPref("extensions.tabulator.setheader");
+                if(value) {
+                   myCheckbox.setAttribute('checked','true');
+                } 
+                else {
+                   myCheckbox.setAttribute('checked','false');
+                }
+          } 
+          catch(e) {
+             prefManager.setBoolPref("extensions.tabulator.setheader",true);
+             myCheckbox.setAttribute('checked',true);
+          }
+
+          var tabulatorDisplay = document.getElementById("tabulator-display");
+          new StatusWidget();
+
+          var appcontent = window.document.getElementById('appcontent');
+          appcontent.addEventListener('DOMContentLoaded', tabulator_init.onDOMContentLoaded, false);
+       },
+
+      //This is called every time a page finishes loading
+      onDOMContentLoaded : function(event) {
+         var doc = event.originalTarget;
+	 
       }
+   };
 
-      var tabulatorDisplay = document.getElementById("tabulator-display");
-      
 
-      new StatusWidget();
-    }
     var tGRDDL_NS = 'http://www.w3.org/2003/g/data-view#';
     var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
                              'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
 
     //This gets called when you switch tabs 
     function tabulatorDetectMetadata(){
+
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
-
-        try{
+	
+	try{
             var divs = content.document.getElementsByTagName('div');
             if (divs.length && divs[0].className.search("TabulatorOutline")!=-1){
                 //already viewing metadata, so disable the icon       
@@ -182,9 +200,6 @@
         var subjectIndex = kb.subjectIndex[doc.hashString()];
         var objectIndex = kb.objectIndex[doc.hashString()];
 	
-	//Added for the Semantic Clipboard (see semclip.js) - show all the images that can be copied with a license
-	//findImagesThatCanBeCopied(); //@@@ this might be the source of the recursive call in jquery
-        
 	//predicateIndex?? hmm...
         var semantics = (subjectIndex? subjectIndex.length:0) + (objectIndex?objectIndex.length:0);        
         //In the future, when there are many "semantics" of a page, we can show the icon based
@@ -208,14 +223,44 @@
         }catch(e){/*no doctype, or missing some elements, these are trivial */}
                 
         //XHTML+RDFa without profile
+	//RDFa parsing code is called only if the proper doctype is set
         try{
             if (doc.doctype.publicId.search('RDF') > 0 || doc.doctype.systemId.search('rdf') >0){ //don't be too strict
                 semanticIcon.setAttribute('metadata', 'RDFa');
-                semanticIcon.setAttribute('tooltiptext', 'RDFa');           
+                semanticIcon.setAttribute('tooltiptext', 'RDFa');    
+
                 return;            
             }
         }catch(e){/*no doctype, or missing some elements, these are trivial */}
         
+	//RDFa without the DOCType
+	try{
+	   //Glean all the RDFa out of the page
+	   var triples = $jq('body', window.content.document).rdf().databank.triples();
+	   for (i = 0; i < triples.length; i += 1) {
+	      t = triples[i];
+	      s = t.subject.value.toString();
+	      p = t.property.value.toString();
+	      o = t.object.value.toString();
+
+	      dump(s + "\t" + p + "\t" + o + "\n");
+	     
+	      var why = gURLBar.value;
+
+	      kb.add(kb.sym(s), kb.sym(p), kb.sym(o), kb.sym(why));
+           }     
+	   
+	   semanticIcon.setAttribute('metadata', 'RDFa');
+           semanticIcon.setAttribute('tooltiptext', 'RDFa');  
+	   semanticIcon.addEventListener('click', pumpRDFa, false);
+	   //Added for the Semantic Clipboard (see semclip.js) - show all the images that can be copied with a license
+	   //findImagesThatCanBeCopied(); //@@@ this might be the source of the recursive call in jquery
+	   
+	   return;            
+ 
+	}catch(e){/*no rdfa or some error*/}
+
+	
         //This I consider non-standard
         try{
 		    var links = doc.getElementsByTagName('link');
@@ -231,7 +276,45 @@
         //finally there's no semantics
         semanticIcon.removeAttribute('metadata');
     }        
-    getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);    
+
+    getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);
+    
+    pumpRDFa = function(e){
+     
+	var doc = window.content.document;
+        //Remove all the style sheet elements and scripts
+	$jq('head', doc).empty();
+	$jq('body', doc).empty();
+	$jq('html', doc).attr("id","docHTML");
+	var uri = gURLBar.value;
+	
+	
+	$jq('head', doc).append('<link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css"/>');
+	$jq('body', doc).append('<div class="TabulatorOutline"><table id="outline"/></div>');
+	
+	//Add the Tabulator outliner
+	var outline = new Outline(doc);
+
+	var a =$jq('.TabulatorOutline', doc);
+	outline.init();
+
+	var nsIURI = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(uri, null, null); //ToDo: make sure the encoding is correct
+	gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
+	
+	var queryButton = doc.createElement('input');
+	queryButton.setAttribute('id','queryButton');
+	queryButton.setAttribute('style','display:none;');
+	queryButton.setAttribute('type','button');
+	queryButton.setAttribute('value','Find All');
+	doc.body.appendChild(queryButton);
+	queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
+
+            
+        outline.GotoSubject(kb.sym(uri),true);
+
+
+    }
+    
     function tabulatorShowMetadata(e){
         canonizeUrl(e,{});
         tabulator.metadataURI = gURLBar.value;
@@ -268,7 +351,7 @@
         }
     }
 
-    window.addEventListener("load",tabulator_init, false);
+    window.addEventListener("load",tabulator_init.onLoad, false);
 
   ]]></script>
   <script type="application/x-javascript" src="statuswidget.js" ></script>

@@ -138,16 +138,8 @@
 
   <script type="application/x-javascript"><![CDATA[
     var myCheckbox;
-    var semclip_any_use;
-    var semclip_no_commercial_use;
-    var semclip_no_modifications;
-    var semclip_no_other_license;
-    var semclip_no_use;
     tabulator_init = function() {
       myCheckbox = document.getElementById("tabulator_setaccept");
-      //@@@
-      //The following variables are set for the functionality of the Semantic Clipboard
-      //var semclip_any_use = document.getElementById("semclip_");
       var prefManager = Components.classes["@mozilla.org/preferences-service;1"]
                           .getService(Components.interfaces.nsIPrefBranch);
       try {

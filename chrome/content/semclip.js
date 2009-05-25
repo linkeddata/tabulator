@@ -7,8 +7,14 @@
 *
 */
 
-/**We are using jquery within a Firefox extension*/
+//Give precedence to internally defined $ variable, if one is available 
 $jq = jQuery.noConflict();
+
+testFunction = function(){
+      var json = $jq('#content', window.content.document).rdf().databank.dump();
+      alert(json);
+}
+
 //Some mozilla specific global vars
 var Transferable = Components.Constructor("@mozilla.org/widget/transferable;1", Components.interfaces.nsITransferable);
 var SupportsArray = Components.Constructor("@mozilla.org/supports-array;1", Components.interfaces.nsISupportsArray);

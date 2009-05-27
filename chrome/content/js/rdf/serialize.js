@@ -452,15 +452,16 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 // String ecaping utilities 
 
 function hexify(str) { // also used in parser
-    var res = '';
-    for (var i=0; i<str.length; i++) {
-        k = str.charCodeAt(i);
-        if (k>126 || k<33)
-            res += '%' + ('0'+n.toString(16)).slice(-2); // convert to upper?
-        else
-            res += str[i];
-    }
-    return res;
+//     var res = '';
+//     for (var i=0; i<str.length; i++) {
+//         k = str.charCodeAt(i);
+//         if (k>126 || k<33)
+//             res += '%' + ('0'+n.toString(16)).slice(-2); // convert to upper?
+//         else
+//             res += str[i];
+//     }
+//     return res;
+  encodeURI(str);
 }
 
 

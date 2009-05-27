@@ -461,7 +461,7 @@ function hexify(str) { // also used in parser
 //             res += str[i];
 //     }
 //     return res;
-  encodeURI(str);
+  return encodeURI(str);
 }
 
 

@@ -216,7 +216,20 @@ div.social_linkButton {
   div.unknown { display:none } 
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 
+  
+/******************* microblog Pane *****************/ 
+div.ppane{
+    background-color: #fff;
+    border: solid 1px #000;
+    padding: 1em;
+}
+.ppane .post{
+    line-height:1.5em;
+}
 
+.ppane .homepage{
+    display: block; 
+}
 /******************* Data Content Pane *****************/
 
 div.dataContentPane {

@@ -6,8 +6,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
     name: 'microblogPane',
     
     label: function(subject) {
+        SIOC = RDFNamespace("http://rdfs.org/sioc/ns#");
         if (!tabulator.kb.whether(
-            subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))) return null;
+            subject, tabulator.ns.rdf( 'type'), SIOC('User'))) return null;
 
         return "Microblog";
     },

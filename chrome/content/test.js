@@ -91,8 +91,9 @@ Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  //@@ Bad ..
 Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
 Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
-Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  //@@ Ask Danny for a better icon
-Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  //@@ Ask Danny for a better icon
+Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  
+Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  
+Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png';  
 
 // For photo albums (By albert08@csail.mit.edu)
 Icon.src.icon_photoPane = iconPrefix + 'icons/photo_small.png';

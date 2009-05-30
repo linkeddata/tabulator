@@ -27,6 +27,7 @@
   <script type="application/x-javascript" src="js/webdav.js"/>
   <script type="application/x-javascript" src="js/outline.js"/>
   <script type="application/x-javascript" src="jquery/jquery-1.3.2.js"/>
+  <script type="application/x-javascript" src="jquery/jquery.json-1.3.min.js"/> <!-- not used at the moment-->
   <script type="application/x-javascript" src="jquery/jquery.uri.js"/>
   <script type="application/x-javascript" src="jquery/jquery.xmlns.js"/>
   <script type="application/x-javascript" src="jquery/jquery.curie.js"/>
@@ -35,6 +36,7 @@
   <script type="application/x-javascript" src="jquery/jquery.rdfa.js"/>
   <script type="application/x-javascript" src="sqlite.js"/> <!-- Functions to create an SQLite database-->
   <script type="application/x-javascript" src="semclip.js"/> <!-- For the Semantic Clipboard -->
+ <script type="application/x-javascript" src="pusbackInterface.js"/> <!-- To talk with the pushback controller hosted at DERI -->
   <script type="application/x-javascript" src="sources-ext.js"/>
   
   <!-- panes must be after outline.js and test.js -->
@@ -54,6 +56,7 @@
   <script type="application/x-javascript" src="js/panes/lawPane.js"/>
   <script type="application/x-javascript" src="js/panes/paneUtils.js"/>
   <script type="application/x-javascript" src="js/panes/microblogPane.js"/>
+  <script type="application/x-javascript" src="js/panes/pushbackPane.js"/>
   
   <!-- browser reload hack -->
   <script type="application/x-javascript" src="refresh_hack.js"/>

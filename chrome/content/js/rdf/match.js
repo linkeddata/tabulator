@@ -73,6 +73,9 @@ RDFVariable.prototype.sameTerm = function (other) {
 
 RDFCollection.prototype.sameTerm = RDFBlankNode.prototype.sameTerm
 
+RDFFormula.prototype.sameTerm = function (other) {
+    return this.hashString() == other.hashString();
+}
 //  Comparison for ordering
 //
 // These compare with ANY term

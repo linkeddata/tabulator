@@ -226,7 +226,9 @@ div.ppane{
 .ppane .post{
     line-height:1.5em;
 }
-
+.ppane .smallImg{
+    height:2em;
+}
 .ppane .homepage{
     display: block; 
 }

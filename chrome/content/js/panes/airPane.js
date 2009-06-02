@@ -1103,8 +1103,6 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		//Display the actual English-like description first
 		//var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
                 var stsDesc = kb.statementsMatching(st, ap_description);
-                if (           
-		divJustification.appendChild(myDocument.createElement('br'));
 
 		for (var j=0; j<stsDesc.length; j++){
 			if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){

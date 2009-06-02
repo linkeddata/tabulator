@@ -349,14 +349,15 @@ function Outline(doc) {
     }
         
             
-    this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why) {
+    this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, statement) {
         tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
         var td = myDocument.createElement('td');
         var theClass = "obj";
                 
         // check the IPR on the data
-        var licenses = kb.each(why, kb.sym('http://creativecommons.org/ns#license'));
-        tabulator.log.info('licenses:'+ why+': '+ licenses)
+	if (statement){
+        var licenses = kb.each(statement.why, kb.sym('http://creativecommons.org/ns#license'));
+        tabulator.log.info('licenses:'+ statement.why+': '+ licenses)
         for (i=0; i< licenses.length; i++) {
             if((tabulator.options.checkedLicenses[0] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') || 
                (tabulator.options.checkedLicenses[1] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-sa/3.0/') ||
@@ -370,7 +371,7 @@ function Outline(doc) {
             }
             
         }
-        
+        }
               
         //set about
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
@@ -400,6 +401,24 @@ function Outline(doc) {
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
         //td.appendChild( iconBox.construct(document.createTextNode('bla')) );
+
+        //Create an inquiry icon if there is proof about this triple
+	if(statement){
+            var one_statement_formula = new RDFIndexedFormula();
+            one_statement_formula.statements.push(statement); //st.asFormula()
+            //The following works because Formula.hashString works fine for
+            //one statement formula
+            var reasons = kb.each(one_statement_formula,
+       kb.sym("http://dig.csail.mit.edu/TAMI/2007/amord/tms#justification"));
+            if(reasons.length){
+                var inquiry_span = myDocument.createElement('span');
+                if(reasons.length>1)
+                     inquiry_span.innerHTML = ' &times; ' + reasons.length;
+                inquiry_span.setAttribute('class', 'inquiry'); 
+                inquiry_span.insertBefore(AJARImage(Icon.src.icon_display_reasons, 'explain'), inquiry_span.firstChild);
+	        td.appendChild(inquiry_span);
+            }
+        }
         return td;
     } //outline_objectTD
     
@@ -688,7 +707,7 @@ function Outline(doc) {
             if (myLang > 0 && langTagged == dups+1) {
                 for (k=j; k <= j+dups; k++) {
                     if (sel(plist[k]).lang.indexOf(LanguagePreference) >=0) {
-                        tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview, undefined, s.why))
+                        tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview, undefined, s))
                         break;
                     }
                 }
@@ -696,7 +715,7 @@ function Outline(doc) {
                 continue;
             }
     
-            tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why));
+            tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s));
     
             /* Note: showNobj shows between n to 2n objects.
              * This is to prevent the case where you have a long list of objects
@@ -723,7 +742,7 @@ function Outline(doc) {
                             var trObj=myDocument.createElement('tr');
                             trObj.style.colspan='1';
                             trObj.appendChild(thisOutline.outline_objectTD(
-                                sel(plist[j+l]),defaultpropview, undefined, s.why));
+                                sel(plist[j+l]),defaultpropview, undefined, s));
                             trObj.AJAR_statement=s;
                             trObj.AJAR_inverse=inverse;
                             parent.appendChild(trObj);
@@ -1528,7 +1547,27 @@ function Outline(doc) {
                 thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
                     choiceQuery,{'clickedTd':p.parentNode});
                 break;
-                
+            case Icon.src.icon_display_reasons:
+                if(!isExtension) return;
+                var TMS = RDFNamespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
+                var st_to_explain = ancestor(target, 'TR').AJAR_statement;
+                //the 'explanationID' triples are used to pass the information
+                //about the triple to be explained to the new tab
+                var one_statement_formula = new RDFIndexedFormula();
+                one_statement_formula.statements.push(st_to_explain);
+                var explained = kb.any(one_statement_formula,
+                                       TMS('explanationID'));
+                if(!explained){
+                    var explained_number = kb.each(undefined, 
+                                           TMS('explainationID')).length;
+                    kb.add(one_statement_formula, TMS('explanationID'),
+                           kb.literal(String(explained_number)));
+                } else
+                    var explained_number = explained.value;
+
+                //open new tab
+                gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
+                break;
             default:  // Look up any icons for panes
                 var pane = tabulator.panes.paneForIcon[tsrc];
                 if (!pane) break;
@@ -1732,7 +1771,7 @@ function Outline(doc) {
         if (level.parentNode.parentNode.id == 'outline') {
             var deleteNode = level.parentNode
         }
-        thisOutline.replaceTD(thisOutline.outline_objectTD(subject,myview,deleteNode),level);                                                
+        thisOutline.replaceTD(thisOutline.outline_objectTD(subject,myview,deleteNode,statement),level);                                                
     } //outline_collapse
     
     this.replaceTD = function replaceTD(newTd,replacedTd){

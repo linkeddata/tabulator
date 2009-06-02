@@ -930,7 +930,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         hideButton.setAttribute('type','button');
         hideButton.setAttribute('id','hide');
         hideButton.setAttribute('value','Start Over');
-    }x
+    }
 
     airPane.render.addInitialButtons = function(){ //Function Call 1
 
@@ -1070,6 +1070,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         }
 
         //Add the More Information Button
+	/* //disable buttons
         var justifyButton = myDocument.createElement('input');
         justifyButton.setAttribute('type','button');
         justifyButton.setAttribute('id','more');
@@ -1082,6 +1083,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 
         div.appendChild(hideButton);
         hideButton.addEventListener('click',airPane.render.hide,false);
+        */
 
         var divJustification = myDocument.createElement("div");
         divJustification.setAttribute('class', 'justification');
@@ -1089,11 +1091,13 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 
         var divDescription = myDocument.createElement("div");
         divDescription.setAttribute('class', 'description');
-        divDescription.setAttribute('id', 'description');
-        
+        //divDescription.setAttribute('id', 'description');
+
+        /*
         var divPremises = myDocument.createElement("div");
         divPremises.setAttribute('class', 'premises');
         divPremises.setAttribute('id', 'premises');
+        */ 
         
         
         var justificationSts;
@@ -1102,27 +1106,38 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 
         //Display the actual English-like description first
         //var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
-                var stsDesc = kb.statementsMatching(st, ap_description);
+        var stsDesc = kb.statementsMatching(st, ap_description);
 
-        for (var j=0; j<stsDesc.length; j++){
-            if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
-                divDescription.appendChild(myDocument.createElement('br'));
-                airPane.render.because.displayDesc(stsDesc[j].object);
-                divDescription.appendChild(myDocument.createElement('br'));
-                divDescription.appendChild(myDocument.createElement('br'));
-            }
-            divJustification.appendChild(divDescription);
+	if(stsDesc.length > 1){
+            for (var j=0; j<stsDesc.length; j++){
+                //Display the header "Reason x:"
+		var h3 = divJustification.appendChild(document.createElement('h3'));
+		h3.textContent = "Reason " + String(j+1); + ":";
+
+		if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
+                    airPane.render.because.displayDesc(stsDesc[j].object);
+		}
+		divJustification.appendChild(divDescription);
+                //Make a copy of the orange box
+		divDescription = divDescription.cloneNode(false); //shallow:true
             
-        }    
+            }
+	}else{
+	    if (stsDesc[0].subject.termType == 'formula' && stsDesc[0].object.termType == 'collection')
+		airPane.render.because.displayDesc(stsDesc[0].object);
+	    divJustification.appendChild(divDescription);
+	}
+    
         
         div.appendChild(divJustification);
-        
-            divJustification.appendChild(myDocument.createElement('br'));
-            divJustification.appendChild(myDocument.createElement('br'));
-            divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
-            divJustification.appendChild(myDocument.createElement('br'));
-            divJustification.appendChild(myDocument.createElement('br'));
 
+        /*
+        divJustification.appendChild(myDocument.createElement('br'));
+        divJustification.appendChild(myDocument.createElement('br'));
+        divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
+        divJustification.appendChild(myDocument.createElement('br'));
+        divJustification.appendChild(myDocument.createElement('br'));
+	
         if (noPremises){
             divPremises.appendChild(myDocument.createElement('br'));
             divPremises.appendChild(myDocument.createElement('br'));
@@ -1170,9 +1185,10 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
             }
         }
         
-        divJustification.appendChild(divPremises);    
+        divJustification.appendChild(divPremises);
+        */    
           
-    }
+    }//end of airPane.render.because
 
 
     //airPane.render.addInitialButtons();

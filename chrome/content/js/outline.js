@@ -1559,7 +1559,7 @@ function Outline(doc) {
                                        TMS('explanationID'));
                 if(!explained){
                     var explained_number = kb.each(undefined, 
-                                           TMS('explainationID')).length;
+                                           TMS('explanationID')).length;
                     kb.add(one_statement_formula, TMS('explanationID'),
                            kb.literal(String(explained_number)));
                 } else

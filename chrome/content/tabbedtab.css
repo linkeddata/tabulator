@@ -871,6 +871,14 @@ Styles for tableViewPane
         height: 250px;
 }
 
+/*The 'display explanation' feature*/
+.inquiry {
+    padding-left: 0.2em;
+    color: red;
+    font-family: Arial;
+    font-weights: bold;
+}
+
 /*
 End of styles for tableViewPane 
 */

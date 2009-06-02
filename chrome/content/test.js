@@ -129,7 +129,11 @@ Icon.src.icon_add_triple = iconPrefix + 'icons/tango/22-list-add.png';
 Icon.src.icon_add_new_triple = iconPrefix + 'icons/tango/22-list-add-new.png';
 Icon.src.icon_show_choices = iconPrefix + 'icons/userinput_show_choices_temp.png'; // looks just like collapse, diff smmantics
 
+// Inline Justification
+Icon.src.icon_display_reasons = iconPrefix + 'icons/tango/22-help-browser.png';
+Icon.tooltips[Icon.src.icon_display_reasons] = 'Display explanations';
 
+// Other tooltips
 Icon.tooltips[Icon.src.icon_add_triple] = 'Add more'
 Icon.tooltips[Icon.src.icon_add_new_triple] = 'Add new triple'
 Icon.tooltips[Icon.src.icon_remove_node] = 'Remove'

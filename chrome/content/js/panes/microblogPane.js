@@ -73,7 +73,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         
         //NAME------------
         var fn =  kb.any(s, foaf("name"));
-        var fullName = doc.createTextNode(fn);
+        var nick = kb.any(s, foaf("nick"))
+        var fullName = doc.createTextNode((fn)?fn+" ("+ nick +")": nick);
         var cardName = doc.createElement("h1");
         cardName.appendChild(fullName);
         

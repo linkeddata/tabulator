@@ -14,19 +14,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
     },
 
     render: function(s, doc) {
-        
-        /**
-         *  makeURIFromSym
-         *
-         *  strips the angle brackets from the symbol (for providing links).
-         *  @@get rid of this; .uri does the trick
-         **/
-        makeURIFromSym = function(uri){
-            return uri.uri;
-//            return String(uri).replace(/\<|\>/g,"");
-        }
-        
-        
         /**
          *  getName
          *
@@ -77,8 +64,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         cardPosts.innerHTML = postHTML;
         
         //AVATAR------------
-        var av =  makeURIFromSym(kb.any(s, SIOC('avatar')));
-        makeURIFromSym(kb.any(s, SIOC('avatar')));
+        var av =  kb.any(s, SIOC('avatar')).uri;
         
         var cardAvatar = doc.createElement("img");
         cardAvatar.setAttribute("src", av);
@@ -92,7 +78,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         cardName.appendChild(fullName);
         
         //HOMEPAGE------------
-        var hp =  makeURIFromSym(kb.any(s, foaf("homepage")));
+        var hp =  kb.any(s, foaf("homepage"));
+        hp = (!hp) ? s.uri : hp.uri;
+
         
         var homePage = doc.createTextNode(hp);
         var cardHome = doc.createElement("a");
@@ -105,49 +93,61 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var followTitle = doc.createElement('h2');
         followTitle.innerHTML = "Follows";
         followContainer.appendChild(followTitle);
-        //@@ figure out why the duplicates occure here.
         var subscribesTo = paneUtils.unique(kb.each(s, foaf('knows')));
 
         //get the information for each person the user subscribes to.
         //these do not necessarily come back in order.
+        var unique = {}
+        usersDisplayContainer = doc.createElement('p')
         for (user in subscribesTo){
-            usersURI = doc.createTextNode(makeURIFromSym(subscribesTo[user]));
-            usersDisplayContainer = doc.createElement('p')
+            if (subscribesTo[user] in unique){
+                continue;
+            }else{
+                unique[subscribesTo[user]] = null;
+            }
+            usersURI = doc.createTextNode(subscribesTo[user].uri);
+            
             
             var get = {}
             get[user] = {
                 info: function (){
                     var This = this;
                     var id = this.id 
-                    if(sf.requested[subscribesTo[id].uri] == 'done'){
+                    if(sf.requested[subscribesTo[id].uri] =="done" || sf.requested[subscribesTo[id].uri]=="redirected"){
                         var access = kb.any(subscribesTo[id], kb.sym("http://www.w3.org/2007/ont/link#request"));
                         var redirected = kb.any(access,kb.sym("http://www.w3.org/2007/ont/http#redirectedTo"));
-                        
+
+
                         //if the look up is not a redirect or if the redirect is
                         //finished, get the user's information.
-                        if (!redirected || sf.requested[redirected.uri]=="done"){
+                        if (!redirected || sf.requested[redirected.uri] == "done"){
                             var usersName =  getName(subscribesTo[id]);
                             var usersAvatarURI =  getAvatarURI(subscribesTo[id]);
+                                                        theUser = doc.createElement("a");
+                            theUser.setAttribute('href',subscribesTo[id].uri);
+
                             usersAvatar = doc.createElement("img");
                             usersAvatar.setAttribute('src',usersAvatarURI);
                             usersAvatar.setAttribute('alt',usersName);
+                            usersAvatar.setAttribute('title',usersName);
                             usersAvatar.className = "smallImg";
-                            usersDisplayContainer.appendChild(usersAvatar);
-                            usersDisplayContainer.innerHTML +=  usersName +"<br\/>";
+                            
+                            theUser.appendChild(usersAvatar);
+                            usersDisplayContainer.appendChild(theUser);
+                            //usersDisplayContainer.innerHTML +=  usersName +"<br\/>";
                         
                         //Otherwise wait some more. 
                         }else{
-                            
                             //this closure holds the state so that 'this' does
                             //not become the XUL Window. 
-                            setTimeout(function(){This.info()},10);
+                            setTimeout(function(){This.info()},5);
                         }
                         
                     //if the lookup is not finish, wait some more.
                     }else{
                         //this closure holds the state so that 'this' does
                         //not become the XUL Window. 
-                        setTimeout(function(){This.info()},10);
+                        setTimeout(function(){This.info()},5);
                     }
                 }
             }
@@ -165,7 +165,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
 //        //FOLLOWERS------------
 //        var subscribers = paneUtils.unique(kb.each(s, foaf('knows_of')));
         
+        //UPDATE------------
+        
         //BUILD------------
+        
         card.appendChild(cardName);
         card.appendChild(cardAvatar);
         card.appendChild(cardHome);

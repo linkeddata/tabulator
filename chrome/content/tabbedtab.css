@@ -228,6 +228,8 @@ div.ppane{
 }
 .ppane .smallImg{
     height:2em;
+    border:none;
+    margin:.3em;
 }
 .ppane .homepage{
     display: block; 

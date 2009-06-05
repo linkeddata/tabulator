@@ -234,6 +234,9 @@ div.ppane{
 .ppane .homepage{
     display: block; 
 }
+.ppane form input{
+    display: block;
+}
 /******************* Data Content Pane *****************/
 
 div.dataContentPane {

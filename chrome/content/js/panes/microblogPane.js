@@ -89,7 +89,104 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         cardHome.setAttribute('href',hp);
         cardHome.appendChild(homePage);
         
-        //FOLLOWING ------------
+        //UPDATE------------
+        //@@ Make this work.
+        
+        /**
+         * option 
+         * returns an option element for the network api section
+         **/
+        var option = function(opt){
+            var x = doc.createElement('option')
+            x.innerHTML= opt
+            x.value = opt
+            return x
+        }
+        
+        /**
+         * updateNetworkAPI 
+         * change the network to which the post will be submitted
+         **/
+        
+        var updateNetworkAPI = function(){
+            var api = networkAPI.value;
+            var username = userNameBox.value;
+            var passwd = userPassBox.value;
+            var message = talkbox.value;
+            var request = new XMLHttpRequest();
+            /**
+             * updateNetworkAPIResponse
+             * What happens when we get information back from the server.
+             **/
+            var updateNetworkAPIResponse = function(){
+                //Request complete. Notify of Update Success, or Failure
+                if(request.readyState == 4){
+                    dump(request.status)
+                    if(request.status ==200){ //status OK
+                        dump(request.responseText)
+                        dump(" DONE\n")
+                    }
+                    else{
+                        alert("unsuccessful update");
+                        dump(" UNSUCCESSFUL\n");
+                        dump(request.status);
+                        dump("Response dump:\n\n"+request.responseText+"\n\n")
+                    }
+                }
+            }
+            
+            //post message using supplied credentials.  (Twitter-compatible API)
+            request.onreadystatechange = updateNetworkAPIResponse;
+            dump(request.readyState)
+            var stuff = "status="+message;
+            alert(message)
+            request.open("POST",api, true, username, passwd);
+            request.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
+
+            request.send(stuff);
+        }
+        
+        //create API selection list
+        var networkAPI = doc.createElement('select'); //network api to use
+        var apis={
+            "https://identi.ca/api/statuses/update.xml": null,
+            "https://twitter.com/statuses/update.xml": null,
+        }
+        for (opt in apis){
+            networkAPI.appendChild(option(opt))
+        }
+        //build interface for updates
+        var talk = doc.createElement('form');
+            talk.method = "POST";
+            talk.name   = "updateuB";
+            talk.action = "#";
+            talk.setAttribute('onSubmit', "return false;");
+            talk.addEventListener('submit',updateNetworkAPI,false)
+            
+        var sendMsg = doc.createElement('input'); //send message button
+            sendMsg.type  = "submit";
+            sendMsg.value = "update";
+            
+        var userNameBox = doc.createElement('input'); //username field
+            userNameBox.type = 'text';
+            userNameBox.name = 'username';
+            
+        var userPassBox = doc.createElement('input'); //password field
+            userPassBox.type = 'password';
+            userPassBox.name = 'password';
+            
+        var talkbox = doc.createElement('textarea');
+        talkbox.name ="talkbox";
+        
+        talk.appendChild(networkAPI);
+        talk.appendChild(userNameBox);
+        talk.appendChild(userPassBox);
+        talk.appendChild(talkbox);
+        talk.appendChild(sendMsg);
+        
+        
+        //SUBSCRIPTIONS/FOLLOWING ------------
+        //@@ Figure out why this causes a reload of the page
         var followContainer  = doc.createElement('div');
         var followTitle = doc.createElement('h2');
         followTitle.innerHTML = "Follows";
@@ -101,13 +198,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var unique = {}
         usersDisplayContainer = doc.createElement('p')
         for (user in subscribesTo){
+            //ensures that entries are unique
             if (subscribesTo[user] in unique){
                 continue;
             }else{
                 unique[subscribesTo[user]] = null;
             }
             usersURI = doc.createTextNode(subscribesTo[user].uri);
-            
             
             var get = {}
             get[user] = {
@@ -141,7 +238,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         }else{
                             //this closure holds the state so that 'this' does
                             //not become the XUL Window. 
-                            setTimeout(function(){This.info()},5);
+                            setTimeout(function(){This.info()},50);
                         }
                         
                     //if the lookup is not finish, wait some more.
@@ -161,15 +258,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             sf.lookUpThing(subscribesTo[user]);
            
             followContainer.appendChild(usersDisplayContainer);
-        }
-        
-//        //FOLLOWERS------------
-//        var subscribers = paneUtils.unique(kb.each(s, foaf('knows_of')));
-        
-        //UPDATE------------
+        }  
         
         //BUILD------------
-        
+        card.appendChild(talk);
         card.appendChild(cardName);
         card.appendChild(cardAvatar);
         card.appendChild(cardHome);

@@ -1,4 +1,7 @@
-/*   Outline Mode
+/* -*- coding: utf-8-dos -*-
+@@No DOS CRLF please
+
+     Outline Mode
 */
 
 tabulator.panes = {};
@@ -733,8 +736,10 @@ function Outline(doc) {
                     if ((show<predDups)&&(show==1)){ //what case is this...
                         td_p.setAttribute('rowspan',2)  
                     }
-                    var displayed = 0;
+                    var displayed = 0; //The number of cells generated-1,
+                                       //all duplicate thing removed
                     for(l=1;l<k;l++){
+		      //This detects the same things
                         if (!kb.canon(sel(plist[j+l])).sameTerm(kb.canon(sel(plist[j+l-1])))){
                             displayed++;
                             s=plist[j+l];
@@ -755,7 +760,10 @@ function Outline(doc) {
                             tabulator.log.info("there are duplicates here: %s", plist[j+l-1]);
                         }
                     }
-                } // if
+		    //@@a quick fix on the messing problem.
+		    if (show==predDups)
+		      td_p.setAttribute('rowspan',displayed+1);
+                } // end of if (predDups!=1)
 
                 if (show<predDups){ //Add the x more <TR> here
                     var moreTR=myDocument.createElement('tr');

@@ -25,10 +25,10 @@ var ap_instanceOf = ap_air('instanceOf');
 var justificationsArr = [];
 
 airPane.label = function(subject) {
-
+  
     //Flush all the justification statements already found
     justificationsArr = [];
-
+    
 	//Find all the statements with air:justification in it
 	var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
 	//This will hold the string to display if the pane appears
@@ -899,9 +899,9 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         td_s.appendChild(a_s);
         tr.appendChild(td_s);
 
-        var td_is = myDocument.createElement("td");
-        td_is.appendChild(myDocument.createTextNode(' is '));
-        tr.appendChild(td_is);
+        //var td_is = myDocument.createElement("td");
+        //td_is.appendChild(myDocument.createTextNode(' is '));
+        //tr.appendChild(td_is);
 
         var td_p = myDocument.createElement("td");
         var a_p = myDocument.createElement('a');
@@ -911,9 +911,14 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         tr.appendChild(td_p);
 
         var td_o = myDocument.createElement("td");
-        var a_o = myDocument.createElement('a')
-        a_o.setAttribute('href', stsFound.object.uri)
-        a_o.appendChild(myDocument.createTextNode(label(stsFound.object)));
+	var a_o = null;
+	if (stsFound.object.termType == 'literal'){
+	  a_o = myDocument.createTextNode(stsFound.object.value);
+	} else {
+	  var a_o = myDocument.createElement('a');
+	  a_o.setAttribute('href', stsFound.object.uri);
+	  a_o.appendChild(myDocument.createTextNode(label(stsFound.object)));
+	}
         td_o.appendChild(a_o);
         tr.appendChild(td_o);
 
@@ -980,26 +985,181 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
             d.removeChild(whyButton);
     
         airPane.render.because.displayDesc = function(obj){
-            for (var i=0; i<obj.elements.length; i++) {
-                    switch(obj.elements[i].termType) {
+	  //@argument obj: most likely a [] that has 
+	  //a tms:antecedent-expr and a tms:rule-name
+	  var aAnd_justification = kb.the(obj, ap_antcExpr);
+	  var subExprs = kb.each(aAnd_justification, ap_subExpr);
+	  var premiseFormula = null;
+	  if (subExprs[0].termType == 'formula')
+	    premiseFormula = subExprs[0];
+	  else
+	    premiseFormula = subExprs[1];
+	  divDescription.waitingFor = []; //resources of more information 
+                                          //this reason is waiting for
+	  divDescription.informationFound = false; //true if an extra 
+	               //information is found and we can stop the throbber
+	  function dumpFormula(formula, firstLevel){
+	    for (var i=0;i<formula.statements.length;i++){
+	      var st = formula.statements[i];
+	      var elements_to_display = [st.subject, st.predicate, 
+					 st.object];
+	      var p = null; //the paragraph element the description is dumped to
+	      if (firstLevel){
+		p = myDocument.createElement('p');
+		//Look up the outermost subject and object for information
+		if (st.subject.termType == 'symbol'){
+		  var doc_uri = Util.uri.docpart(st.subject.uri);
+		  if (divDescription.waitingFor.indexOf(doc_uri) < 0 &&
+		      typeof sf.requested[doc_uri]=="undefined")
+		    divDescription.waitingFor.push(doc_uri);
+		}
+		if (st.object.termType == 'symbol'){
+		  var doc_uri = Util.uri.docpart(st.object.uri);
+		  if (divDescription.waitingFor.indexOf(doc_uri) < 0 &&
+		      typeof sf.requested[doc_uri]=="undefined")
+		    divDescription.waitingFor.push(doc_uri);
+		}
+	      }
+	      else{
+		p = dumpFormula.current_p;
+	      }
+	      for (var j=0; j<3; j++) {
+		var element = elements_to_display[j];
+		switch(element.termType) {
 
-                        //@@ As per Lalana's request to handle formulas within the description
-                        case 'formula':
-                            divDescription.appendChild(statementsAsTables(obj.elements[i],myDocument));
-
-                        case 'symbol':
-                            var anchor = myDocument.createElement('a')
-                            anchor.setAttribute('href', obj.elements[i].uri)
-                            anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
-                            divDescription.appendChild(anchor);
-                            
-                        case 'literal':
-                            if (obj.elements[i].value != undefined)
-                                divDescription.appendChild(myDocument.createTextNode(obj.elements[i].value)); 
-
-                    }       
-                }
-        }
+		  //@@ As per Lalana's request to handle formulas within the description
+		case 'formula':
+		  p.appendChild(myDocument.createTextNode("{ "));
+		  dumpFormula.current_p = p;
+		  dumpFormula(element, false);
+		  p.appendChild(myDocument.createTextNode(" }"));
+		  break;
+		case 'symbol':
+		  var anchor = myDocument.createElement('a');
+		  anchor.setAttribute('href', element.uri);
+		  anchor.appendChild(myDocument.createTextNode(label(element)));
+		  p.appendChild(anchor);
+		  p.appendChild(myDocument.createTextNode(" "));
+		  break;
+		case 'literal':
+		  //if (obj.elements[i].value != undefined)
+		  p.appendChild(myDocument.createTextNode(element.value)); 
+		  
+		}       
+	      }
+	      p.appendChild(myDocument.createTextNode(". "));
+	      if(firstLevel){
+		divDescription.appendChild(p);
+		var one_statement_formula = new RDFIndexedFormula();
+		one_statement_formula.statements.push(st)
+		p.AJAR_formula = one_statement_formula;
+		function make_callback(st, p, divDescription){
+		  return function statement_more_information_callback(uri){
+		    divDescription.waitingFor.remove(uri);
+		    if(kb.any(p.AJAR_formula, ap_just)) {
+		      //The would get called twice even if the callback
+		      //is canceled
+		      //dump("in statement_more_information_callback with st: "                         +st + "and uri: " + uri + "\n");
+		      divDescription.informationFound = true;
+		      if (p.lastChild.nodeName=="#text"){
+			var explain_icon = p.appendChild(myDocument.createElement('img'));
+			explain_icon.src = "chrome://tabulator/content/icons/tango/22-help-browser.png";
+		      }
+		      if (throbber_p && throbber_callback) 
+			throbber_callback();
+		      return false; //no need to fire this function
+		    }
+		    //Fetch sameAs here. We try to load minimum sources
+		    //so this comes after the above kb.any
+		    for (var h=0;h<2;h++) { //Never use for each!!!
+		                           //Array.prototype.remove would
+                                           //be one of them!!!
+		      var thing =[st.subject, st.object][h];
+		      var uris = kb.uris(thing);
+		      for (var k=0;k<uris.length;k++){
+			var doc_uri = Util.uri.docpart(uris[k])
+			  if (typeof sf.requested[doc_uri]=="undefined" &&
+			     divDescription.waitingFor.indexOf(doc_uri)<0){
+			    //the second condition holds, for example,
+			    //Util.uri.docpart(thing.uri)
+			    divDescription.waitingFor.push(doc_uri);
+			    sf.lookUpThing(kb.sym(doc_uri));
+			  }
+		      }
+		    }
+		    if (divDescription.waitingFor.length == 0){
+		      if (throbber_p && throbber_callback) 
+			throbber_callback();
+		      return false; //the last resource this div is waiting for
+		    }
+		    if (throbber_p && throbber_callback) 
+		      throbber_callback();
+		    return true;
+		  };
+		}
+		var cb = make_callback(st, p, divDescription)
+		cb();
+		//statement_more_information_callback(); //run once for exsiting information
+		sf.addCallback('done',cb);
+		sf.addCallback('fail',cb);
+	      }
+	    } //statement loop
+	  } //function dumpFormula
+	  dumpFormula(premiseFormula, true);
+	  //'Looking for more information...
+	  //@correct the background color of the throbber
+	  var throbber_p = myDocument.createElement('p');
+	  throbber_p.setAttribute('class', 'ap_premise_loading')
+	  var throbber = throbber_p.appendChild(myDocument.createElement
+						('img'));
+	  throbber.src = "chrome://tabulator/content/icons/loading.png";
+	  throbber_p.appendChild(myDocument.createTextNode
+				 ("Looking for more information..."));
+	  divDescription.appendChild(throbber_p);
+	  function throbber_callback(uri){
+	    divDescription.waitingFor.remove(uri);
+	    
+	    if (divDescription.informationFound){
+	      throbber_p.removeChild(throbber_p.firstChild);
+	      throbber_p.textContent = "More information found!";
+	      return false;
+	    } else if (divDescription.waitingFor.length == 0){
+	      
+	      //The final call to this function. But the above callbacks 
+	      //might not have been fired. So check all. Well...
+              //It takes time to close the world
+	      //@@This method assumes there's only one thread for this js.
+	      //Maybe not?
+	      var found = false;
+// 	      for (var i=0;i<divDescription.childNodes.length;i++){
+// 		var p = divDescription.childNodes[i];
+// 		if(p.AJAR_formula && kb.any(p.AJAR_formula, ap_just)){
+// 		  found = true;
+// 		  break;
+// 		}
+// 	      }
+	      if (found){
+		throbber_p.removeChild(throbber_p.firstChild);
+		throbber_p.textContent = "More information found!";
+	      } else {
+		throbber_p.removeChild(throbber_p.firstChild);
+		throbber_p.textContent = "No more information.";
+	      }
+	      return false; //no more resource waiting for
+	    } else {
+	      return true;
+	    }
+	  }
+	  throbber_callback();
+// 	  if(divDescription.waitingFor.length){
+// 	    //we don't need to do call back if there's nothing more to lookup
+// 	    sf.addCallback('done',throbber_callback);
+// 	    sf.addCallback('fail',throbber_callback);
+// 	  }
+	  for (var i=0;i<divDescription.waitingFor.length;i++)
+	    sf.lookUpThing(kb.sym(divDescription.waitingFor[i]));
+	  
+	} //function airPane.render.because.displayDesc
 
         airPane.render.because.moreInfo = function(ruleToFollow){
             //Terminating condition: 
@@ -1105,27 +1265,26 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         
 
         //Display the actual English-like description first
+	//It's no longer English-like, but just property tables
         //var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
-        var stsDesc = kb.statementsMatching(st, ap_description);
+        //var stsDesc = kb.statementsMatching(st, ap_description);
+	var stsDesc = kb.statementsMatching(st, ap_just);
+	// {}  tms:justification []. (multiple)
 
 	if(stsDesc.length > 1){
             for (var j=0; j<stsDesc.length; j++){
                 //Display the header "Reason x:"
 		var h3 = divJustification.appendChild(document.createElement('h3'));
 		h3.textContent = "Reason " + String(j+1); + ":";
-
-		if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
-                    airPane.render.because.displayDesc(stsDesc[j].object);
-		}
+		airPane.render.because.displayDesc(stsDesc[j].object);
 		divJustification.appendChild(divDescription);
                 //Make a copy of the orange box
 		divDescription = divDescription.cloneNode(false); //shallow:true
             
             }
 	}else{
-	    if (stsDesc[0].subject.termType == 'formula' && stsDesc[0].object.termType == 'collection')
-		airPane.render.because.displayDesc(stsDesc[0].object);
-	    divJustification.appendChild(divDescription);
+	  airPane.render.because.displayDesc(stsDesc[0].object);
+	  divJustification.appendChild(divDescription);
 	}
     
         

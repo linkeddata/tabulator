@@ -1394,7 +1394,7 @@ function Outline(doc) {
         var tname = target.tagName;
         //tabulator.log.debug("TabulatorMousedown: " + tname + " shift="+e.shiftKey+" alt="+e.altKey+" ctrl="+e.ctrlKey);
         var p = target.parentNode;
-        var about = getAbout(kb, target)
+        var about = getAbout(kb, target);
         var source = null;
         if (tname == "INPUT" || tname == "TEXTAREA") {
             return
@@ -1466,7 +1466,10 @@ function Outline(doc) {
             //TODO: This check could definitely be made cleaner.
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
-            if (!about && tsrc!=Icon.src.icon_add_new_triple) {
+									   
+										//@@ What's the reason for the following check?	  
+            if (!about && tsrc!=Icon.src.icon_add_new_triple
+		       && tsrc!=Icon.src.icon_display_reasons) {
                 //alert("No about attribute");
                 return;
             }

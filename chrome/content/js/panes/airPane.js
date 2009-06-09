@@ -837,9 +837,40 @@ airPane.render = function(subject, myDocument) {
 	airPane.render.addInitialButtons();
     */
 	return div;
-}
+};
 
 //^^
+airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
+					divJustification){
+  var divDescription = myDocument.createElement("div");
+  divDescription.setAttribute('class', 'description');
+
+        //Display the actual English-like description first
+	//It's no longer English-like, but just property tables
+        //var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
+        //var stsDesc = kb.statementsMatching(st, ap_description);
+	var stsDesc = kb.statementsMatching(st, ap_just);
+	// {}  tms:justification []. (multiple)
+
+	if(stsDesc.length > 1){
+            for (var j=0; j<stsDesc.length; j++){
+                //Display the header "Reason x:"
+		var h3 = divJustification.appendChild(document.createElement('h3'));
+		h3.textContent = "Reason " + String(j+1); + ":";
+		airPane.render.because.displayDesc(stsDesc[j].object,
+						   divDescription);
+		divJustification.appendChild(divDescription);
+                //Make a copy of the orange box
+		divDescription = divDescription.cloneNode(false); //shallow:true
+            
+            }
+	} else{
+	  airPane.render.because.displayDesc(stsDesc[0].object,
+					     divDescription);
+	  divJustification.appendChild(divDescription);
+	}
+};
+    
 airPane.renderExplanationForStatement = function renderExplanationForStatement(st){
     var subject = undefined; //not restricted to a source, but kb
     var div = myDocument.createElement("div"); //the returned div
@@ -984,7 +1015,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         if (d != null && whyButton != null)
             d.removeChild(whyButton);
     
-        airPane.render.because.displayDesc = function(obj){
+        airPane.render.because.displayDesc = function(obj, divDescription){
 	  //@argument obj: most likely a [] that has 
 	  //a tms:antecedent-expr and a tms:rule-name
 	  var aAnd_justification = kb.the(obj, ap_antcExpr);
@@ -1058,12 +1089,19 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		    divDescription.waitingFor.remove(uri);
 		    if(kb.any(p.AJAR_formula, ap_just)) {
 		      //The would get called twice even if the callback
-		      //is canceled
+		      //is canceled, so check the last child.
 		      //dump("in statement_more_information_callback with st: "                         +st + "and uri: " + uri + "\n");
 		      divDescription.informationFound = true;
 		      if (p.lastChild.nodeName=="#text"){
 			var explain_icon = p.appendChild(myDocument.createElement('img'));
 			explain_icon.src = "chrome://tabulator/content/icons/tango/22-help-browser.png";
+			var click_cb = function(){
+			  airPane.renderReasonsForStatement(
+			    p.AJAR_formula, divJustification);
+			};
+			explain_icon.addEventListener('click',
+						      click_cb,
+						      false)
 		      }
 		      if (throbber_p && throbber_callback) 
 			throbber_callback();
@@ -1263,33 +1301,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         var justificationSts;
         
         
-
-        //Display the actual English-like description first
-	//It's no longer English-like, but just property tables
-        //var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
-        //var stsDesc = kb.statementsMatching(st, ap_description);
-	var stsDesc = kb.statementsMatching(st, ap_just);
-	// {}  tms:justification []. (multiple)
-
-	if(stsDesc.length > 1){
-            for (var j=0; j<stsDesc.length; j++){
-                //Display the header "Reason x:"
-		var h3 = divJustification.appendChild(document.createElement('h3'));
-		h3.textContent = "Reason " + String(j+1); + ":";
-		airPane.render.because.displayDesc(stsDesc[j].object);
-		divJustification.appendChild(divDescription);
-                //Make a copy of the orange box
-		divDescription = divDescription.cloneNode(false); //shallow:true
-            
-            }
-	}else{
-	  airPane.render.because.displayDesc(stsDesc[0].object);
-	  divJustification.appendChild(divDescription);
-	}
+	airPane.renderReasonsForStatement(st, divJustification);
     
         
         div.appendChild(divJustification);
-
+	
         /*
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('br'));

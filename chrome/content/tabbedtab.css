@@ -217,26 +217,43 @@ div.social_linkButton {
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 
   
-/******************* microblog Pane *****************/ 
-div.ppane{
-    background-color: #fff;
-    border: solid 1px #000;
-    padding: 1em;
+/******************* microblog Pane *****************/
+
+.ppane{
+ font-family: helvetica, arial, sans-serif;
+ color: #333;
+}
+.ppane .header-container img{
+ float:left;
+ max-height: 75px;
+ margin-right: 1em;
+}
+.ppane .header-container{
+ height: 200px;
 }
 .ppane .post{
-    line-height:1.5em;
+ margin: 0;
+ display:block;
 }
-.ppane .smallImg{
-    height:2em;
-    border:none;
-    margin:.3em;
+.ppane .update-container{
+ margin: 1em 0;
 }
-.ppane .homepage{
-    display: block; 
+
+.ppane .reply{
+    float: right;
 }
-.ppane form input{
-    display: block;
+.ppane ul{
+    padding: 0px;
 }
+
+.ppane .post{
+ border: dashed 1px #888;
+ padding:1em;
+ margin: .2em 0em;
+ -moz-border-radius:.5em;
+ font-family: Georgia, Serif;
+}
+
 /******************* Data Content Pane *****************/
 
 div.dataContentPane {

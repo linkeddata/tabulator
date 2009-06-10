@@ -21,6 +21,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var kb = tabulator.kb;
         var loc =  kb.any(s, foaf("based_near"));
         var terms = RDFNamespace("http://purl.org/dc/terms/")
+        var charCount = 140;
         
         var getMyURI = function(){
             //@@ REMOVE LATER! for testing
@@ -47,6 +48,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
         };
         
+        var mbLetterCount = function(){
+            xupdateStatusCounter.innerHTML = charCount - xupdateStatus.value.length
+        }
         
         //---follow a user--- 
         var mbFollowUser = function (){
@@ -63,24 +67,31 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         xupdateContainer.className="update-container";
         xupdateContainer.innerHTML ="<h3>What are you up to?</h3>";
         var xupdateStatus = doc.createElement('textarea');
+        var xupdateStatusCounter = doc.createElement('span');
+        xupdateStatusCounter.appendChild(doc.createTextNode(charCount))
         xupdateStatus.cols= 30;
         var xupdateSubmit = doc.createElement('input');
         xupdateSubmit.type = "submit";
         xupdateSubmit.value = "Send";
         
+        xupdateContainer.appendChild(xupdateStatusCounter);
         xupdateContainer.appendChild(xupdateStatus);
         xupdateContainer.appendChild(xupdateSubmit);
         headerContainer.appendChild(xupdateContainer);
-        xupdateContainer.addEventListener('submit',mbSubmitPost,false)
         
-        // CONSTRUCT A HEADER FOR A USER
+        xupdateContainer.addEventListener('submit',mbSubmitPost,false)
+        xupdateStatus.addEventListener('keyup',mbLetterCount,false)
+        
+        var subheaderContainer = doc.createElement('div');
+        subheaderContainer.className ="subheader-container";
+        //USER HEADER
         if (kb.whether(s,tabulator.ns.rdf( 'type'), SIOC('User'))){
             //---display avatar, if available ---
             var mb_avatar = kb.any(s,SIOC("avatar"));
             if (mb_avatar !=""){
                 var avatar = doc.createElement('img');
                 avatar.src = mb_avatar.uri;
-                headerContainer.appendChild(avatar);
+                subheaderContainer.appendChild(avatar);
             }
                         
             //---generate name ---
@@ -88,7 +99,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             userName.className = "fn";
             var username = kb.any(s,SIOC("name"))
             userName.appendChild(doc.createTextNode(username));
-            headerContainer.appendChild(userName);
+            subheaderContainer.appendChild(userName);
             
             //---if not me, and not followed, display follow button---
             if (!thisIsMe && !Ifollow){
@@ -97,20 +108,19 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 followButton.value = "Follow "+ username;
                 //@@ Attach listeners for follow here.
                 followButton.addEventListener('click', mbFollowUser, false);
-                headerContainer.appendChild(followButton);
+                subheaderContainer.appendChild(followButton);
             }
-
-            
-            
-
         }
+        //END USER HEADER
         
-        // CONSTRUCT A HEADER FOR A GROUP
+        
+        
+        //GROUP HEADER
         else if (kb.whether(s, tabulator.ns.rdf( 'type'), SIOC('Usergroup'))){
             kb.statementMatching(s,SIOC("follows"));
         }
-        
-        
+        //END GROUP HEADER
+        headerContainer.appendChild(subheaderContainer);
         
         // POST INFORMATION FOR USER
         var postContainer = doc.createElement('ul');
@@ -126,8 +136,18 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xuname.appendChild (xunameText);
             //post content
             var xpostContent = doc.createElement('blockquote');
-            var postText = String(kb.any(post,SIOC("content")));              
+            var postText = String(kb.any(post,SIOC("content"))); 
+            //post date
+            var xpostLink= doc.createElement("a")
+            xpostLink.setAttribute("href", post.uri)
+            var postLink = kb.any(post,terms('date'))
+            postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
+            xpostLink.appendChild(postLink)
             //post URI
+            
+            
+            
+            //LINK META DATA (MENTIONS, HASHTAGS, GROUPS)
             var mentions =kb.each(post,SIOC("topic"))
             tags = new Object()
             
@@ -136,16 +156,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 tags["@"+id] = mentions[mention]
             }
             
-
-            //@@ insert smarts here for groups and replies
             var postTags = postText.match(/(\@|\#|\!)\w+/g)
             var postFunction = function(){
                 p = postTags.pop()
-                return (tags[p])? tags[p].uri :"#";
+                return (tags[p])? tags[p].uri :p;
             }
             postText = postText.replace(/(\@|\!|\#)(\w+)/g, "$1<a href=\""+postFunction()+"\">$2</a>");
             xpostContent.innerHTML = postText
-            //fill links for hashtags.
             
             //in reply to logic
             var inReplyTo = kb.each(post,SIOC("reply_of"));
@@ -153,16 +170,22 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             for (reply in inReplyTo){
                 if(kb.whether(inReplyTo[reply],RDF('type'),
                     kb.sym("http://rdfs.org/sioc/types#MicroblogPost"))){
-                    xreplyTo.innerHTML = "<a href="+String(inReplyTo[reply].uri)+
-                        ">in reply to</a>";
+                    xreplyTo.innerHTML = "<div><a href="+String(inReplyTo[reply].uri)+
+                        ">[in reply to]</a><div> ";
                 }
             }
+            //END LINK META DATA
+            
+            
+            
+            
             
             //add the reply to button to the interface
             var mbReplyTo = function (){
                 var id= kb.any(s,SIOC("id"));
                 xupdateStatus.value = "@"+id+" ";
                 xupdateStatus.focus();
+                mbLetterCount()
             }
             if (!me){
                 var xreplyButton = doc.createElement('input');
@@ -170,7 +193,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xreplyButton.value = "reply";
                 xreplyButton.className = "reply"
                 xreplyButton.addEventListener('click', mbReplyTo, false);
-                   
+                
             }   
             
             
@@ -179,6 +202,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             if (!me){xpost.appendChild(xreplyButton)}
             xpost.appendChild(xuname);
             if(inReplyTo){xpost.appendChild(xreplyTo)}
+            xpost.appendChild(xpostLink)
             
             
             return xpost;
@@ -187,9 +211,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         for (post in mb_posts){
             postContainer.appendChild (generatePost(username, mb_posts[post],thisIsMe));
         }
+        //END POST INFORMATION
+        
                         
         
-        
+        //build
         var microblogPane  = doc.createElement("div");
         microblogPane.className = "ppane";
         microblogPane.appendChild(headerContainer);

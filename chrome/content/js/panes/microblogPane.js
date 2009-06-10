@@ -17,12 +17,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var foaf = tabulator.ns.foaf;
         var SIOC = RDFNamespace("http://rdfs.org/sioc/ns#");
         var RSS = RDFNamespace("http://purl.org/rss/1.0/");
+        var RDF = tabulator.ns.rdf;
         var kb = tabulator.kb;
         var loc =  kb.any(s, foaf("based_near"));
         var terms = RDFNamespace("http://purl.org/dc/terms/")
         
         var getMyURI = function(){
-            //@@ REMOVE for testing
+            //@@ REMOVE LATER! for testing
             return "http://dig.csail.mit.edu/2007/wiki/sandbox/foaf#Michael"
         };
         var setMyURI = function(uri){
@@ -125,21 +126,39 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xuname.appendChild (xunameText);
             //post content
             var xpostContent = doc.createElement('blockquote');
-            var postText = String(kb.any(post,terms("title")));              
+            var postText = String(kb.any(post,SIOC("content")));              
+            //post URI
+            var mentions =kb.each(post,SIOC("topic"))
+            tags = new Object()
             
-            //@@ insert smarts here for groups and replies
-            postText = postText.replace(/(\@|\!)(\w+)/, "$1<a>$2</a>");
-            xpostContent.innerHTML = postText
-            //in reply to logic
-            var inReplyTo = kb.any(post,SIOC("reply_of"));
-            if (inReplyTo != undefined){
-                var xreplyTo = doc.createElement("span");
-                var replyName = kb.any(inReplyTo, SIOC("has_creator"))
-                xreplyTo.innerHTML = "<a href="+inReplyTo.uri+
-                    ">in reply to</a>";
+            for(mention in mentions){
+                id = kb.any(mentions[mention], SIOC('id'))
+                tags["@"+id] = mentions[mention]
             }
             
-            //reply
+
+            //@@ insert smarts here for groups and replies
+            var postTags = postText.match(/(\@|\#|\!)\w+/g)
+            var postFunction = function(){
+                p = postTags.pop()
+                return (tags[p])? tags[p].uri :"#";
+            }
+            postText = postText.replace(/(\@|\!|\#)(\w+)/g, "$1<a href=\""+postFunction()+"\">$2</a>");
+            xpostContent.innerHTML = postText
+            //fill links for hashtags.
+            
+            //in reply to logic
+            var inReplyTo = kb.each(post,SIOC("reply_of"));
+            var xreplyTo = doc.createElement("span");
+            for (reply in inReplyTo){
+                if(kb.whether(inReplyTo[reply],RDF('type'),
+                    kb.sym("http://rdfs.org/sioc/types#MicroblogPost"))){
+                    xreplyTo.innerHTML = "<a href="+String(inReplyTo[reply].uri)+
+                        ">in reply to</a>";
+                }
+            }
+            
+            //add the reply to button to the interface
             var mbReplyTo = function (){
                 var id= kb.any(s,SIOC("id"));
                 xupdateStatus.value = "@"+id+" ";

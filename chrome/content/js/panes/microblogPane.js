@@ -1,3 +1,13 @@
+/*
+ Microblog pane
+ Charles McKenzie <charles2@mit.edu>
+
+ @@ Authentication?
+ @@ Flood control: prevent microblogpane from loading too many posts/followers
+ @@ submitting updates
+ @@ follower's stream on users mb view
+*/
+
 
 tabulator.panes.register (tabulator.panes.microblogPane ={
 
@@ -6,77 +16,154 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
     name: 'microblogPane',
     
     label: function(subject) {
-        SIOC = RDFNamespace("http://rdfs.org/sioc/ns#");
-        if (!tabulator.kb.whether(
-            subject, tabulator.ns.rdf( 'type'), SIOC('User'))) return null;
+        var SIOCt = RDFNamespace('http://rdfs.org/sioc/types#');
+        if (tabulator.kb.whether(
+            subject, tabulator.ns.rdf( 'type'), SIOCt('Microblog')) ||
+            tabulator.kb.whether(
+            subject, tabulator.ns.rdf( 'type'), SIOCt('MicroblogPost'))) return "Microblog";
+            return null;
 
-        return "Microblog";
+        
     },
 
     render: function(s, doc) {
-        var foaf = tabulator.ns.foaf;
         var SIOC = RDFNamespace("http://rdfs.org/sioc/ns#");
         var RSS = RDFNamespace("http://purl.org/rss/1.0/");
         var RDF = tabulator.ns.rdf;
         var kb = tabulator.kb;
-        var loc =  kb.any(s, foaf("based_near"));
         var terms = RDFNamespace("http://purl.org/dc/terms/")
         var charCount = 140;
+        var sparqlUpdater= new sparql(kb);
+        
+        var statusUpdate = function(statusMsg, callback, replyTo, meta){
+//            var myUser = kb.sym(getMyURI());
+//            kb.any()
+//            
+//            
+//            
+//            //generate new post 
+//            batch = [
+//                newRDFStatement(newPost, RDF('type'),SOIC('MicroblogPost'),newPost)
+//                newRDFStatement(newPost, RDF('type'),SOIC('MicroblogPost'),newPost),
+//                newRDFStatement(newPost, SOIC('CONTENT'),statusMsg,newPost),
+//                newRDFStatement(newPost, terms('date'), new Date(),newPost),
+//            ];
+//            
+//            // message replies
+//            if (replyTo){
+//                batch.push(newRDFStatement(newPost, SOIC('reply_of'), replyTo,newPost))
+//            }
+//            
+//            // @replies, #hashtags, !groupReplies
+////            if (meta){
+////                var topics = []
+////                for(topic in meta){
+////                    topics.push(metas[topic])
+////                }
+////                batch.push(topics)
+////            }
+//            
+//            sparqlUpdater.batch_insert_statement(batch, callback) 
+//            //@@ write the batch inserter.
+        }
+        
+        var notify = function(messageString){
+            alert(messageString) //maybe something less obnoxious than an alert.
+        };
         
         var getMyURI = function(){
-            //@@ REMOVE LATER! for testing
-            return "http://dig.csail.mit.edu/2007/wiki/sandbox/foaf#Michael"
+            var myMicroblog = tabulator.preferences.get('myMB').split(",")
+            return myMicroblog[0];
         };
         var setMyURI = function(uri){
-            
+            var myself = new Array()
+                myself[0]=doc.location
+                myself[1]=kb.any(s,SIOC('has_creator')).uri
+            tabulator.preferences.set('myMB',myself)
+            notify("Preference set.")
         };
         var thisIsMe = (doc.location == getMyURI());
         var Ifollow;
         // EVENT LISTENERS
         //---submit a post---
         var mbSubmitPost = function(){
-            alert("mbSubmitPost not Implemented");
+            var postDate = new Date()
+            notify(
+                "Update: "+xupdateStatus.value+
+                "\nto "+getMyURI()+
+                "\nIn Reply to "+xinReplyToContainer.value+
+                "\nat "+postDate
+            );
             if(getMyURI()){
-                //@@ determine submission destination
-                //@@ submit post
-                //@@ group post
-                //@@ reply post
+                myUser = kb.sym(getMyURI());
+                var mbconfirmSubmit = function(){
+                    notify("submitted.")
+                    xupdateStatus.value=""
+                }
+                statusUpdate(xupdateStatus.value,mbconfirmSubmit)
+
             }else{
-                //@@ does not have a URI. ask user.
+                notify("Please set your microblog first.");
             }
-                
-            
         };
+        var mbSetMyMB =  function(){
+            setMyURI()
+            xfollowButton.style.display = 'none';
+            xsetMyMB.style.display = 'none';
+        }
         
         var mbLetterCount = function(){
             xupdateStatusCounter.innerHTML = charCount - xupdateStatus.value.length
+            if (xupdateStatus.value.length == 0){
+                xinReplyToContainer.value = "";
+                xupdateSubmit.value = "Send";
+            }
         }
         
         //---follow a user--- 
         var mbFollowUser = function (){
-            //@@ update follows list;
-            alert("mbFollowUser not Implemented");
+            var myUser = kb.sym(getMyURI());
+            var mbconfirmFollow = function(data){
+                notify(data+" followed.")
+            }
+            var followMe = new RDFStatement(myUser,SIOC('follows'),creator,myUser)
+            sparqlUpdater.insert_statement(followMe,mbconfirmFollow)
         };
         
         // HEADER INFORMATION
         var headerContainer = doc.createElement('div');
-        headerContainer.className ="header-container";
+            headerContainer.className ="header-container";
         
         //---create status update box---
         var xupdateContainer = doc.createElement('form');
-        xupdateContainer.className="update-container";
-        xupdateContainer.innerHTML ="<h3>What are you up to?</h3>";
-        var xupdateStatus = doc.createElement('textarea');
-        var xupdateStatusCounter = doc.createElement('span');
-        xupdateStatusCounter.appendChild(doc.createTextNode(charCount))
-        xupdateStatus.cols= 30;
-        var xupdateSubmit = doc.createElement('input');
-        xupdateSubmit.type = "submit";
-        xupdateSubmit.value = "Send";
+            xupdateContainer.className="update-container";
+            xupdateContainer.innerHTML ="<h3>What are you up to?</h3>";
+
+        var xinReplyToContainer = doc.createElement('input')
+            xinReplyToContainer.type="hidden";
         
+        var xupdateStatus = doc.createElement('textarea');
+        
+        var xupdateStatusCounter = doc.createElement('span');
+            xupdateStatusCounter.appendChild(doc.createTextNode(charCount))
+            xupdateStatus.cols= 30;
+            
+        var xupdateSubmit = doc.createElement('input');
+            xupdateSubmit.type = "submit";
+            xupdateSubmit.value = "Send";
+        
+        if (!thisIsMe){
+            var xsetMyMB = doc.createElement('input');
+                xsetMyMB.type = 'button';
+                xsetMyMB.value = 'This is my Microblog';
+                xsetMyMB.addEventListener('click', mbSetMyMB, false)
+        }
+            
+        xupdateContainer.appendChild (xinReplyToContainer);
         xupdateContainer.appendChild(xupdateStatusCounter);
         xupdateContainer.appendChild(xupdateStatus);
         xupdateContainer.appendChild(xupdateSubmit);
+        if (!thisIsMe) xupdateContainer.appendChild(xsetMyMB);
         headerContainer.appendChild(xupdateContainer);
         
         xupdateContainer.addEventListener('submit',mbSubmitPost,false)
@@ -85,30 +172,56 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var subheaderContainer = doc.createElement('div');
         subheaderContainer.className ="subheader-container";
         //USER HEADER
-        if (kb.whether(s,tabulator.ns.rdf( 'type'), SIOC('User'))){
+        var creator = kb.any(s, SIOC('has_creator'))
+        if (kb.whether(creator,tabulator.ns.rdf( 'type'), SIOC('User'))){
             //---display avatar, if available ---
-            var mb_avatar = kb.any(s,SIOC("avatar"));
+            var mb_avatar = kb.any(creator,SIOC("avatar"));
             if (mb_avatar !=""){
                 var avatar = doc.createElement('img');
-                avatar.src = mb_avatar.uri;
+                    avatar.src = mb_avatar.uri;
                 subheaderContainer.appendChild(avatar);
             }
                         
             //---generate name ---
             var userName = doc.createElement('h1');
             userName.className = "fn";
-            var username = kb.any(s,SIOC("name"))
-            userName.appendChild(doc.createTextNode(username));
+            var username = kb.any(creator,SIOC("name"))
+            userName.appendChild(doc.createTextNode(username+" ("+kb.any(creator,SIOC("id"))+")"));
             subheaderContainer.appendChild(userName);
             
+            //---generate follows---
+            var getFollowed = function(user){
+                var userid = kb.any(user, SIOC('id'))
+                var follow = doc.createElement('li')
+                follow.className = "follow"
+                userid = (userid)? userid : user.uri 
+                alert(userid)
+                follow.innerHTML = "<a href=\""+user.uri+"\">"+
+                    userid+"</a>"
+                return follow
+            }
+            if (kb.whether(creator, SIOC('follows'))){
+                var creatorFollows = kb.each(creator, SIOC('follows'))
+                var xfollows = doc.createElement('div')
+                var xfollowsHead = doc.createElement('h3')
+                var xfollowsList = doc.createElement('ul')
+                
+                for (thisPerson in creatorFollows){
+                    xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]))
+                }
+                xfollowsHead.appendChild(doc.createTextNode('Follows:'))
+                xfollows.appendChild(xfollowsHead)
+                xfollows.appendChild(xfollowsList)
+                
+            }
             //---if not me, and not followed, display follow button---
             if (!thisIsMe && !Ifollow){
-                var followButton = doc.createElement('input');
-                followButton.setAttribute("type", "button");
-                followButton.value = "Follow "+ username;
-                //@@ Attach listeners for follow here.
-                followButton.addEventListener('click', mbFollowUser, false);
-                subheaderContainer.appendChild(followButton);
+                var xfollowButton = doc.createElement('input');
+                    xfollowButton.setAttribute("type", "button");
+                    xfollowButton.value = "Follow "+ username;
+                    xfollowButton.addEventListener('click', mbFollowUser, false);
+        
+                subheaderContainer.appendChild(xfollowButton);
             }
         }
         //END USER HEADER
@@ -121,10 +234,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         //END GROUP HEADER
         headerContainer.appendChild(subheaderContainer);
+        headerContainer.appendChild(xfollows);
         
         // POST INFORMATION FOR USER
         var postContainer = doc.createElement('ul');
-        var mb_posts = kb.each(s, SIOC("creator_of"));
+        var mb_posts = kb.each(s, SIOC("container_of"));
         //---returns a microblog post---
         var generatePost = function (uname, post,me){
             //container for post
@@ -139,19 +253,17 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var postText = String(kb.any(post,SIOC("content"))); 
             //post date
             var xpostLink= doc.createElement("a")
-            xpostLink.setAttribute("href", post.uri)
+                xpostLink.setAttribute("href", post.uri)
             var postLink = kb.any(post,terms('date'))
             postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
             xpostLink.appendChild(postLink)
-            //post URI
-            
-            
-            
+   
             //LINK META DATA (MENTIONS, HASHTAGS, GROUPS)
             var mentions =kb.each(post,SIOC("topic"))
             tags = new Object()
-            
+
             for(mention in mentions){
+                sf.lookUpThing(mentions[mention]) //@@make this work properly
                 id = kb.any(mentions[mention], SIOC('id'))
                 tags["@"+id] = mentions[mention]
             }
@@ -161,7 +273,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 p = postTags.pop()
                 return (tags[p])? tags[p].uri :p;
             }
-            postText = postText.replace(/(\@|\!|\#)(\w+)/g, "$1<a href=\""+postFunction()+"\">$2</a>");
+            if (postTags){
+                postText = postText.replace(/(\@|\!|\#)(\w+)/g, "$1<a href=\""+postFunction()+"\">$2</a>");
+            }
             xpostContent.innerHTML = postText
             
             //in reply to logic
@@ -182,17 +296,19 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
             //add the reply to button to the interface
             var mbReplyTo = function (){
-                var id= kb.any(s,SIOC("id"));
+                var id= kb.any(creator,SIOC("id"));
                 xupdateStatus.value = "@"+id+" ";
                 xupdateStatus.focus();
+                xinReplyToContainer.value = post
+                xupdateSubmit.value = "Reply";
                 mbLetterCount()
             }
             if (!me){
                 var xreplyButton = doc.createElement('input');
-                xreplyButton.type = "button";
-                xreplyButton.value = "reply";
-                xreplyButton.className = "reply"
-                xreplyButton.addEventListener('click', mbReplyTo, false);
+                    xreplyButton.type = "button";
+                    xreplyButton.value = "reply";
+                    xreplyButton.className = "reply"
+                    xreplyButton.addEventListener('click', mbReplyTo, false);
                 
             }   
             
@@ -211,18 +327,17 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         for (post in mb_posts){
             postContainer.appendChild (generatePost(username, mb_posts[post],thisIsMe));
         }
-        //END POST INFORMATION
-        
-                        
+        //END POST INFORMATION        
         
         //build
         var microblogPane  = doc.createElement("div");
-        microblogPane.className = "ppane";
-        microblogPane.appendChild(headerContainer);
-        microblogPane.appendChild(postContainer);
+            microblogPane.className = "ppane";
+            microblogPane.appendChild(headerContainer);
+            microblogPane.appendChild(postContainer);
         
         return microblogPane;
     }
+
 }, false);
 
 // ends

@@ -3,6 +3,7 @@
  Charles McKenzie <charles2@mit.edu>
 
  @@ Authentication?
+ @@ support update/read of other microblogs (maybe incorporate PB?)
  @@ Flood control: prevent microblogpane from loading too many posts/followers
  @@ submitting updates
  @@ follower's stream on users mb view
@@ -75,6 +76,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var myMicroblog = tabulator.preferences.get('myMB').split(",")
             return myMicroblog[0];
         };
+        var getMyUser = function(){
+            var myUser = tabulator.preferences.get('myMB').split(",")
+            return myUser[1];
+        };
+        
+        var Ifollow = kb.whether(kb.sym(getMyUser()),SIOC('follows'),
+            kb.any(s,SIOC('has_creator')))
         var setMyURI = function(uri){
             var myself = new Array()
                 myself[0]=doc.location
@@ -120,14 +128,21 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
         }
         
-        //---follow a user--- 
+        //---(un)follow a user--- 
         var mbFollowUser = function (){
-            var myUser = kb.sym(getMyURI());
-            var mbconfirmFollow = function(data){
-                notify(data+" followed.")
+            var myUser = kb.sym(getMyUser());
+            var mbconfirmFollow = function(uri,stat,msg){
+                Ifollow= !Ifollow
+                followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
+                xfollowButton.value = followButtonLabel+ username;
+                notify("Follow list updated.")
             }
             var followMe = new RDFStatement(myUser,SIOC('follows'),creator,myUser)
-            sparqlUpdater.insert_statement(followMe,mbconfirmFollow)
+            if (!Ifollow){
+                sparqlUpdater.insert_statement(followMe, mbconfirmFollow)
+            }else {
+                sparqlUpdater.delete_statement(followMe, mbconfirmFollow)
+            }
         };
         
         // HEADER INFORMATION
@@ -195,7 +210,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var follow = doc.createElement('li')
                 follow.className = "follow"
                 userid = (userid)? userid : user.uri 
-                alert(userid)
                 follow.innerHTML = "<a href=\""+user.uri+"\">"+
                     userid+"</a>"
                 return follow
@@ -205,7 +219,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var xfollows = doc.createElement('div')
                 var xfollowsHead = doc.createElement('h3')
                 var xfollowsList = doc.createElement('ul')
-                
                 for (thisPerson in creatorFollows){
                     xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]))
                 }
@@ -215,10 +228,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 
             }
             //---if not me, and not followed, display follow button---
-            if (!thisIsMe && !Ifollow){
+            if (!thisIsMe){
                 var xfollowButton = doc.createElement('input');
                     xfollowButton.setAttribute("type", "button");
-                    xfollowButton.value = "Follow "+ username;
+                    followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
+                    xfollowButton.value = followButtonLabel+ username;
                     xfollowButton.addEventListener('click', mbFollowUser, false);
         
                 subheaderContainer.appendChild(xfollowButton);
@@ -234,7 +248,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         //END GROUP HEADER
         headerContainer.appendChild(subheaderContainer);
-        headerContainer.appendChild(xfollows);
+        if (xfollows != undefined){
+            headerContainer.appendChild(xfollows);
+        }
         
         // POST INFORMATION FOR USER
         var postContainer = doc.createElement('ul');

@@ -10,6 +10,7 @@
 */
 
 
+    
 tabulator.panes.register (tabulator.panes.microblogPane ={
 
     icon: Icon.src.icon_mb,
@@ -23,49 +24,55 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             tabulator.kb.whether(
             subject, tabulator.ns.rdf( 'type'), SIOCt('MicroblogPost'))) return "Microblog";
             return null;
-
+    
         
     },
 
     render: function(s, doc) {
         var SIOC = RDFNamespace("http://rdfs.org/sioc/ns#");
+        var SIOCt = RDFNamespace('http://rdfs.org/sioc/types#');
         var RSS = RDFNamespace("http://purl.org/rss/1.0/");
         var RDF = tabulator.ns.rdf;
         var kb = tabulator.kb;
         var terms = RDFNamespace("http://purl.org/dc/terms/")
         var charCount = 140;
         var sparqlUpdater= new sparql(kb);
+               
+        var gen_random_uri = function(base){
+            //generate random uri
+            var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+7);
+            return kb.sym(uri_nonce)
+        }
         
         var statusUpdate = function(statusMsg, callback, replyTo, meta){
-//            var myUser = kb.sym(getMyURI());
-//            kb.any()
-//            
-//            
-//            
-//            //generate new post 
-//            batch = [
-//                newRDFStatement(newPost, RDF('type'),SOIC('MicroblogPost'),newPost)
-//                newRDFStatement(newPost, RDF('type'),SOIC('MicroblogPost'),newPost),
-//                newRDFStatement(newPost, SOIC('CONTENT'),statusMsg,newPost),
-//                newRDFStatement(newPost, terms('date'), new Date(),newPost),
-//            ];
-//            
-//            // message replies
+            var creator = getMyUser();
+            myUser = kb.sym(creator.split("#")[0])
+            var newPost = gen_random_uri(myUser.uri)
+            var micro = kb.any(undefined,RDF('type'), SIOCt('Microblog'))
+            
+            //generate new post 
+           var batch =[
+                new RDFStatement(newPost, RDF('type'),SIOCt('MicroblogPost'),myUser),
+                new RDFStatement(newPost, SIOC('has_creator'),kb.sym(creator),myUser),
+                new RDFStatement(newPost, SIOC('content'),statusMsg,myUser),
+                new RDFStatement(newPost, terms('date'), String(new Date()),myUser),
+                new RDFStatement(micro,SIOC('container_of'),newPost)
+            ];
+            
+            // message replies
 //            if (replyTo){
-//                batch.push(newRDFStatement(newPost, SOIC('reply_of'), replyTo,newPost))
+//                batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser))
 //            }
-//            
-//            // @replies, #hashtags, !groupReplies
-////            if (meta){
-////                var topics = []
-////                for(topic in meta){
-////                    topics.push(metas[topic])
-////                }
-////                batch.push(topics)
-////            }
-//            
-//            sparqlUpdater.batch_insert_statement(batch, callback) 
-//            //@@ write the batch inserter.
+            
+            // @replies, #hashtags, !groupReplies
+//            if (meta){
+//                var topics = []
+//                for(topic in meta){
+//                    topics.push(metas[topic])
+//                }
+//                batch.push(topics)
+//            }
+            sparqlUpdater.insert_statement(batch, callback)
         }
         
         var notify = function(messageString){
@@ -104,8 +111,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             );
             if(getMyURI()){
                 myUser = kb.sym(getMyURI());
-                var mbconfirmSubmit = function(){
-                    notify("submitted.")
+                var mbconfirmSubmit = function(a,b,c){
+                    notify("submitted.\n"+a+"\n"+b+"\n"+c)
                     xupdateStatus.value=""
                 }
                 statusUpdate(xupdateStatus.value,mbconfirmSubmit)
@@ -354,7 +361,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         return microblogPane;
     }
 
-}, false);
+}, true);
 
 // ends
 

@@ -5,7 +5,6 @@
  @@ Authentication?
  @@ support update/read of other microblogs (maybe incorporate PB?)
  @@ Flood control: prevent microblogpane from loading too many posts/followers
- @@ submitting updates
  @@ follower's stream on users mb view
 */
 
@@ -45,24 +44,27 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         
         var statusUpdate = function(statusMsg, callback, replyTo, meta){
-            var creator = getMyUser();
-            myUser = kb.sym(creator.split("#")[0])
+            var myUserURI = getMyUser();
+            myUser = kb.sym(myUserURI.split("#")[0])
             var newPost = gen_random_uri(myUser.uri)
-            var micro = kb.any(undefined,RDF('type'), SIOCt('Microblog'))
+            micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'))
+//            var micro = kb.any(,RDF('type'), SIOCt('Microblog'))
+//            alert(micro)
             
             //generate new post 
            var batch =[
                 new RDFStatement(newPost, RDF('type'),SIOCt('MicroblogPost'),myUser),
-                new RDFStatement(newPost, SIOC('has_creator'),kb.sym(creator),myUser),
+                new RDFStatement(newPost, SIOC('has_creator'),kb.sym(myUserURI),myUser),
                 new RDFStatement(newPost, SIOC('content'),statusMsg,myUser),
                 new RDFStatement(newPost, terms('date'), String(new Date()),myUser),
                 new RDFStatement(micro,SIOC('container_of'),newPost)
             ];
             
             // message replies
-//            if (replyTo){
-//                batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser))
-//            }
+            alert(replyTo)
+            if (replyTo){
+                batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser))
+            }
             
             // @replies, #hashtags, !groupReplies
 //            if (meta){
@@ -115,7 +117,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     notify("submitted.\n"+a+"\n"+b+"\n"+c)
                     xupdateStatus.value=""
                 }
-                statusUpdate(xupdateStatus.value,mbconfirmSubmit)
+                statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value)
 
             }else{
                 notify("Please set your microblog first.");
@@ -305,11 +307,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var inReplyTo = kb.each(post,SIOC("reply_of"));
             var xreplyTo = doc.createElement("span");
             for (reply in inReplyTo){
-                if(kb.whether(inReplyTo[reply],RDF('type'),
-                    kb.sym("http://rdfs.org/sioc/types#MicroblogPost"))){
-                    xreplyTo.innerHTML = "<div><a href="+String(inReplyTo[reply].uri)+
-                        ">[in reply to]</a><div> ";
-                }
+                var theReply = new RDFNamespace()
+                theReply =String(inReplyTo[reply]).replace(/\<|\>/g,"")
+
+                xreplyTo.innerHTML = "<div><a href="+theReply+">[in reply to]</a><div> ";
+
             }
             //END LINK META DATA
             
@@ -340,15 +342,24 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xpost.appendChild(xpostContent);
             if (!me){xpost.appendChild(xreplyButton)}
             xpost.appendChild(xuname);
-            if(inReplyTo){xpost.appendChild(xreplyTo)}
+            if(inReplyTo != ""){xpost.appendChild(xreplyTo)}
             xpost.appendChild(xpostLink)
             
             
             return xpost;
         }
         //---if not me, generate post list ---
+        var postlist = new Object()
+        var datelist = new Array()
         for (post in mb_posts){
-            postContainer.appendChild (generatePost(username, mb_posts[post],thisIsMe));
+//            postContainer.appendChild (generatePost(username, mb_posts[post],thisIsMe));
+            postDate = kb.any(mb_posts[post],terms('date'));
+            datelist.push(postDate);
+            postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);
+        }
+        datelist.sort().reverse()
+        for (d in datelist){
+            postContainer.appendChild (postlist[datelist[d]])
         }
         //END POST INFORMATION        
         

@@ -64,7 +64,31 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var terms = RDFNamespace("http://purl.org/dc/terms/")
         var charCount = 140;
         var sparqlUpdater= new sparql(kb);
-               
+        
+        followlist =new Object()
+        followlist.userlist = {}
+        followlist.add = function(user,uri){
+            if (followlist.userlist[user]){
+                followlist.userlist[user].push(uri);
+            }else{
+                followlist.userlist[user] = [uri]
+            }
+        }
+        followlist.selectUser= function(user){
+            alert(this.userlist[user] +"  [[followlist.selectuser]]")
+            if (followlist.userlist[user].length == 1){
+                //user follows only one user with nick
+                return [true, followlist.userlist[user]]
+            }else if (followlist.userlist[user].length > 1){
+                //user follows multiple users with this nick.
+                return [false, followlist.userlist[user]]
+            }else{
+                //user does not follow any users with this nick
+                return [false, []] 
+            }
+        }
+
+
         var gen_random_uri = function(base){
             //generate random uri
             var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+7);
@@ -95,13 +119,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
             
             // @replies, #hashtags, !groupReplies
-//            if (meta){
-//                var topics = []
-//                for(topic in meta){
-//                    topics.push(metas[topic])
-//                }
-//                batch.push(topics)
-//            }
+            for (r in meta.recipients){
+                alert(meta.recipients.r)
+                batch.push(new RDFStatement(newPost, SIOC('topic'),kb.sym(meta.recipients[r]),myUser))
+            }
+                
             sparqlUpdater.insert_statement(batch, callback)
         }
         
@@ -133,16 +155,31 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //---submit a post---
         var mbSubmitPost = function(){
             var postDate = new Date()
+            var meta ={
+                recipients:[]
+            }
             if(getMyURI()){
                 myUser = kb.sym(getMyURI());
                 var mbconfirmSubmit = function(a,success){
                     if (success){
-                        notify("submitted.\n"+a+"\n"+b+)
+                        notify("submitted.\n"+a+"\n"+b)
                         xupdateStatus.value=""
                         //add update to list
                     }
                 }
-                statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value)
+                var words = xupdateStatus.value.split(" ")
+                for (word in words){
+                   if (words[word].match(/\@\w+/)){
+                       var atUser = words[word].replace("@","")
+                       var recipient = followlist.selectUser(atUser)
+                       if (recipient[0] ==true){
+                            meta.recipients.push(recipient[1][0])
+                       }
+                   }
+                }
+                alert(meta.toSource())
+                
+                statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value,meta)
 
             }else{
                 notify("Please set your microblog first.");
@@ -239,15 +276,17 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             subheaderContainer.appendChild(userName);
             
             //---generate follows---
-            var getFollowed = function(user){
+                var getFollowed = function(user){
                 var userid = kb.any(user, SIOC('id'))
                 var follow = doc.createElement('li')
                 follow.className = "follow"
                 userid = (userid)? userid : user.uri 
                 follow.innerHTML = "<a href=\""+user.uri+"\">"+
                     userid+"</a>"
+                followlist.add(userid,user.uri)
                 return follow
             }
+            
             if (kb.whether(creator, SIOC('follows'))){
                 var creatorFollows = kb.each(creator, SIOC('follows'))
                 var xfollows = doc.createElement('div')

@@ -8,7 +8,37 @@
  @@ follower's stream on users mb view
 */
 
+//ISO 8601 DATE
 
+Date.prototype.getISOdate = function (){
+    var padZero = function(n){
+        return (n<10)? "0"+n: n;
+    }
+    var ISOdate = this.getUTCFullYear()+"-"+
+        padZero (this.getUTCMonth())+"-"+
+        padZero (this.getUTCDate())+"T"+
+        padZero (this.getUTCHours())+":"+
+        padZero (this.getUTCMinutes())+":"+
+        padZero (this.getUTCSeconds())+"Z"
+    return ISOdate
+}
+
+Date.prototype.parseISOdate= function(dateString){
+    var arrDateTime = dateString.split("T");
+    var theDate = arrDateTime[0].split("-");
+    var theTime = arrDateTime[1].replace("Z","").split(":");
+    
+    this.setUTCDate(1);
+    this.setUTCFullYear(theDate[0]);  
+    this.setUTCMonth(theDate[1]);  
+    this.setUTCDate(theDate[2]);  
+    this.setUTCHours(theTime[0]);  
+    this.setUTCMinutes(theTime[1]);  
+    this.setUTCSeconds(theTime[2]);
+    
+    return this;
+    
+}
     
 tabulator.panes.register (tabulator.panes.microblogPane ={
 
@@ -22,9 +52,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             subject, tabulator.ns.rdf( 'type'), SIOCt('Microblog')) ||
             tabulator.kb.whether(
             subject, tabulator.ns.rdf( 'type'), SIOCt('MicroblogPost'))) return "Microblog";
-            return null;
-    
-        
+            return null;  
     },
 
     render: function(s, doc) {
@@ -56,7 +84,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 new RDFStatement(newPost, RDF('type'),SIOCt('MicroblogPost'),myUser),
                 new RDFStatement(newPost, SIOC('has_creator'),kb.sym(myUserURI),myUser),
                 new RDFStatement(newPost, SIOC('content'),statusMsg,myUser),
-                new RDFStatement(newPost, terms('date'), String(new Date()),myUser),
+                new RDFStatement(newPost, terms('date'), String(new Date().getISOdate()),myUser),
                 new RDFStatement(micro,SIOC('container_of'),newPost)
             ];
             
@@ -105,17 +133,14 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //---submit a post---
         var mbSubmitPost = function(){
             var postDate = new Date()
-            notify(
-                "Update: "+xupdateStatus.value+
-                "\nto "+getMyURI()+
-                "\nIn Reply to "+xinReplyToContainer.value+
-                "\nat "+postDate
-            );
             if(getMyURI()){
                 myUser = kb.sym(getMyURI());
-                var mbconfirmSubmit = function(a,b,c){
-                    notify("submitted.\n"+a+"\n"+b+"\n"+c)
-                    xupdateStatus.value=""
+                var mbconfirmSubmit = function(a,success){
+                    if (success){
+                        notify("submitted.\n"+a+"\n"+b+)
+                        xupdateStatus.value=""
+                        //add update to list
+                    }
                 }
                 statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value)
 
@@ -279,7 +304,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //post date
             var xpostLink= doc.createElement("a")
                 xpostLink.setAttribute("href", post.uri)
-            var postLink = kb.any(post,terms('date'))
+            var postLink = new Date()
+            postLink = postLink.parseISOdate(String(kb.any(post,terms('date'))))
             postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
             xpostLink.appendChild(postLink)
    
@@ -353,9 +379,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var datelist = new Array()
         for (post in mb_posts){
 //            postContainer.appendChild (generatePost(username, mb_posts[post],thisIsMe));
-            postDate = kb.any(mb_posts[post],terms('date'));
-            datelist.push(postDate);
-            postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);
+            var postDate = kb.any(mb_posts[post],terms('date'));
+            if (postDate){
+                datelist.push(postDate);
+                postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);
+            }
         }
         datelist.sort().reverse()
         for (d in datelist){
@@ -373,6 +401,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
     }
 
 }, true);
+
 
 // ends
 

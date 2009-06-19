@@ -1,11 +1,6 @@
 /*
  Microblog pane
  Charles McKenzie <charles2@mit.edu>
-
- @@ Authentication?
- @@ support update/read of other microblogs (maybe incorporate PB?)
- @@ Flood control: prevent microblogpane from loading too many posts/followers
- @@ follower's stream on users mb view
 */
 
 //ISO 8601 DATE
@@ -65,6 +60,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var charCount = 140;
         var sparqlUpdater= new sparql(kb);
         
+        
+        /*
+            FOLLOW LIST
+            store the uri's of followed users for dereferencing the @replies
+        */
         followlist =new Object()
         followlist.userlist = {}
         followlist.add = function(user,uri){
@@ -75,7 +75,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
         }
         followlist.selectUser= function(user){
-            alert(this.userlist[user] +"  [[followlist.selectuser]]")
             if (followlist.userlist[user].length == 1){
                 //user follows only one user with nick
                 return [true, followlist.userlist[user]]
@@ -99,9 +98,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var myUserURI = getMyUser();
             myUser = kb.sym(myUserURI.split("#")[0])
             var newPost = gen_random_uri(myUser.uri)
-            micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'))
-//            var micro = kb.any(,RDF('type'), SIOCt('Microblog'))
-//            alert(micro)
+            var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'))
             
             //generate new post 
            var batch =[
@@ -113,18 +110,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             ];
             
             // message replies
-            alert(replyTo)
             if (replyTo){
                 batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser))
             }
             
             // @replies, #hashtags, !groupReplies
             for (r in meta.recipients){
-                alert(meta.recipients.r)
                 batch.push(new RDFStatement(newPost, SIOC('topic'),kb.sym(meta.recipients[r]),myUser))
             }
                 
-            sparqlUpdater.insert_statement(batch, callback)
+            sparqlUpdater.insert_statement(batch, function(a,b,c) {callback(a,b,c, batch)})
         }
         
         var notify = function(messageString){
@@ -150,6 +145,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             notify("Preference set.")
         };
         var thisIsMe = (doc.location == getMyURI());
+        //get follow data
+        var myFollows = kb.each(kb.sym(getMyURI()),SIOC('follows'))
+        for(f in myFollows){
+            followlist.add(kb.any(myFollows[f],SIOC('id')),myFollows[f].uri)
+        }
         var Ifollow;
         // EVENT LISTENERS
         //---submit a post---
@@ -160,12 +160,15 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
             if(getMyURI()){
                 myUser = kb.sym(getMyURI());
-                var mbconfirmSubmit = function(a,success){
-                    if (success){
-                        notify("submitted.\n"+a+"\n"+b)
+                var mbconfirmSubmit = function(a,b,c,d){
+                    if(b == true){
+                        for (triple in d){
+                            kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why)
+                        }
+                        notify("submitted.")
                         xupdateStatus.value=""
-                        //add update to list
                     }
+                    //add update to list
                 }
                 var words = xupdateStatus.value.split(" ")
                 for (word in words){
@@ -177,7 +180,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                        }
                    }
                 }
-                alert(meta.toSource())
                 
                 statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value,meta)
 
@@ -203,12 +205,21 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var mbFollowUser = function (){
             var myUser = kb.sym(getMyUser());
             var mbconfirmFollow = function(uri,stat,msg){
-                Ifollow= !Ifollow
-                followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
-                xfollowButton.value = followButtonLabel+ username;
-                notify("Follow list updated.")
+                alert(Array([uri, stat, msg]).toSource())
+                if (stat == true){
+                    if (!Ifollow){
+                        kb.add(followMe.subject, followMe.predicate, followMe.object, followMe.why)
+                    }else{
+//                        kb.remove(followMe)
+                        //@@ figure out why this cannot be removed from the kb.
+                    }
+                    Ifollow= !Ifollow
+                    followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
+                    xfollowButton.value = followButtonLabel+ username;
+                    notify("Follow list updated.")
+                }
             }
-            var followMe = new RDFStatement(myUser,SIOC('follows'),creator,myUser)
+            followMe = new RDFStatement(myUser,SIOC('follows'),creator,myUser)
             if (!Ifollow){
                 sparqlUpdater.insert_statement(followMe, mbconfirmFollow)
             }else {

@@ -15,11 +15,9 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
 	
     label: function(subject) {
         typeTriples = tabulator.kb.statementsMatching(subject,tabulator.ns.rdf('type'),null,null); // Stores all the 'types' of the URI in an array
-        if(typeTriples == null) return null;
-        else if(typeTriples.length == 0) return null;
+        if(this.isEmpty(typeTriples)) return null;
         for(var ind = 0;ind < typeTriples.length;ind++) {
-            if(typeTriples[ind] == null) continue;
-            else if(typeTriples[ind].length == 0) continue;
+            if(this.isEmpty(typeTriples[ind])) continue;
             else if(tabulator.kb.whether(typeTriples[ind].object,tabulator.ns.rdfs('subClassOf'),tabulator.ns.bibo('Document'),null))
                 return this.name;
         }
@@ -37,7 +35,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
 
         var authorTags = ["Authors(s)","Creator"];
         var authorPredicateURIs = [[bibo('authorList')],[dct('creator')]];
-        var authorIfContainerURIs = [[bibo('Person')]];
+        var authorIfContainerURIs = [[bibo('Person')],[null]];
 
         var indexingTags = ["EISSN","ISSN-10","ISSN-13"];
 
@@ -51,11 +49,11 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
     },
 
     /* Helper Functions */
-    getInfoDiv: function(document,subject,tags,uris) {
+    getInfoDiv: function(document,subject,tags,uris,containerUris) { // containerUris is optional
         var div = document.createElement('div');
         var data = new Array();
         for(var index = 0;index < uris.length;index++) {
-            data.push(this.getObjectURIs(subject,uris[index]));
+            data.push(this.getObjectURIs(subject,uris[index],((containerUris == null)?null:containerUris[index])));
             div = this.appendEntry(document,div,tags[index],data[index]);
         }
         return div;
@@ -65,39 +63,49 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
         var objects = new Array();
         for(var i = 0;i < filterURIs.length;i++) {
             var queried = tabulator.kb.statementsMatching(subject,filterURIs[i],null,null);
-            if(queried == null)
-                continue;
-            else if(queried.length == 0)
+            if(this.isEmpty(queried))
                 continue;
             for(var j = 0;j < queried.length;j++) {
-                alert(queried[j].object.termType);
                 if(queried[j].object.termType === 'literal')
                     objects.push(queried[j].object);
+
                 else if(queried[j].object.termType === 'symbol')
                     objects.push(queried[j].object);
+
                 else if(queried[j].object.termType === 'bnode') {
-                    var collectionObjects = this.getObjectURIs(queried[j].object);
-                    if(collectionObjects == null) continue; // Empty bnode
-                    for(var k = 0;k < collectionObjects.length;k++) {
-                        alert(ifCollectionFilterURIs.toSource());
-                        var matchedCont = this.getObjectURIs(collectionObjects[k],ifCollectionFilterURIs,null);
-                        if(matchedCont != null)
-                            objects.concat();
-                    }
+                    var collectionObjects = this.filterObjectsByType(queried[j].object,ifCollectionFilterURIs); // Traverses container/bnode recursively
+                    if(this.isEmpty(collectionObjects)) continue; // Empty bnode
+                    for(var k = 0;k < collectionObjects.length;k++) // array.concat was not working; concatenating manually
+                        objects.push(collectionObjects[k]);
                 }
-                else if(queried[j].object.termType === 'collection') { }
+
+                else if(queried[j].object.termType === 'collection') { } // TODO: implement case for collections; easier than bnodes
             }
         }
-        if(objects.length == 0) return null;
+        if(this.isEmpty(objects)) return null;
         else return objects;
     },
+
+    filterObjectsByType: function(subject,desiredTypes) { // Returns objects that are children of subject and of type desiredType
+        triples = tabulator.kb.statementsMatching(subject,null,null,null);
+        if(this.isEmpty(triples)) return null;
+        matchingObjects = new Array();
+        for(var i = 0;i < triples.length;i++)
+            for(var j = 0;j < desiredTypes.length;j++)
+                if(tabulator.kb.whether(triples[i].object,tabulator.ns.rdf('type'),desiredTypes[j])) {
+                    matchingObjects.push(triples[i].object);
+                    break;
+                }
+        if(this.isEmpty(matchingObjects)) return null;
+        else return matchingObjects;
+    },            
 
     // This function was being troublesome. After some tinkering, it turns out that instantiating a string with
     // double quotes instead of single quotes fixes the issue. NOTE: double quotes are safer.
     appendEntry: function(doc,div,tag,data) {
         if(data == null) return div;
         var subDiv = doc.createElement('div');
-        var label = doc.createTextNode(tag); //<---- This was the problem. WTH? / Double quotes fixed it. Weird.
+        var label = doc.createTextNode(tag);
         list = doc.createElement('ul');
         for(var index = 0;index < data.length;index++) {
             li = doc.createElement('li');
@@ -108,5 +116,11 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
         subDiv.appendChild(label);
         subDiv.appendChild(list);
         return div;
-    }   
+    },
+
+    isEmpty: function(arr) {
+        if(arr == null) return true;
+        else if(arr.length == 0) return true;
+        else return false;
+    }  
 }, false);

@@ -65,11 +65,12 @@ Util.uri.join = function (given, base) {
     while (path.match(/[^\/]*\/\.\.\//)) // must apply to result of prev
 	path = path.replace( /[^\/]*\/\.\.\//, '') // ECMAscript spec 7.8.5
     path = path.replace( /\.\//g, '') // spec vague on escaping
+    path = path.replace( /\/\.$/, '/' )
     return base.slice(0, baseSingle) + path
 }
 
 var tIOService;
-if (isExtension) {
+if (typeof( isExtension ) != "undefined" && isExtension) {
     tIOService = Components.classes['@mozilla.org/network/io-service;1']
                         .getService(Components.interfaces.nsIIOService);
     Util.uri.join2 = function (given, base){

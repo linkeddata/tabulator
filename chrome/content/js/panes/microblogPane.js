@@ -85,12 +85,14 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
         }
         followlist.selectUser= function(user){
-            if (followlist.userlist[user].length == 1){
-                //user follows only one user with nick
-                return [true, followlist.userlist[user]];
-            }else if (followlist.userlist[user].length > 1){
-                //user follows multiple users with this nick.
-                return [false, followlist.userlist[user]];
+            if (followlist.userlist[user]){
+                if (followlist.userlist[user].length == 1){
+                    //user follows only one user with nick
+                    return [true, followlist.userlist[user]];
+                }else if (followlist.userlist[user].length > 1){
+                    //user follows multiple users with this nick.
+                    return [false, followlist.userlist[user]];
+                }
             }else{
                 //user does not follow any users with this nick
                 return [false, []] ;
@@ -188,12 +190,15 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var words = xupdateStatus.value.split(" ")
                 for (word in words){
                     if (words[word].match(/\@\w+/)){
-                        alert("at reply")
-                        var atUser = words[word].replace("@","")
+                        var atUser = words[word].replace(/\W/g,"")
                         var recipient = followlist.selectUser(atUser)
-                        alert(recipient)
                         if (recipient[0] ==true){
                             meta.recipients.push(recipient[1][0])
+                        }else if (recipient[1].length > 1) { // if  multiple users allow the user to choose
+                          //write logic here
+                        }else{ //no users known
+                            notify("you do not follow "+atUser+". Try following "+atUser+" before mentioning them.")
+                            return
                         }
                     }
                 }
@@ -314,8 +319,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 userid = (userid)? userid : user.uri 
                 follow.innerHTML = "<a href=\""+user.uri+"\">"+
                     userid+"</a>"
-//                alert("adding")
-//                followlist.add(userid,user.uri)
                 return follow
             }
             

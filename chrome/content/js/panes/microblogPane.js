@@ -14,8 +14,8 @@ Date.prototype.getISOdate = function (){
         padZero (this.getUTCDate())+"T"+
         padZero (this.getUTCHours())+":"+
         padZero (this.getUTCMinutes())+":"+
-        padZero (this.getUTCSeconds())+"Z"
-    return ISOdate
+        padZero (this.getUTCSeconds())+"Z";
+    return ISOdate;
 }
 
 Date.prototype.parseISOdate= function(dateString){
@@ -34,7 +34,17 @@ Date.prototype.parseISOdate= function(dateString){
     return this;
     
 }
-    
+
+sparql.prototype.batch_delete_statement= function(st, callback){
+    alert(st)
+    for (var i in st){
+        var query = this._context_where(this._statement_context(st[1]));
+        query += "DELETE { " + anonymizeNT(st[i]) + " }\n";
+    }
+    this._fire(st[0].why.uri, query, callback);
+}
+
+
 tabulator.panes.register (tabulator.panes.microblogPane ={
 
     icon: Icon.src.icon_mb,
@@ -71,19 +81,19 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             if (followlist.userlist[user]){
                 followlist.userlist[user].push(uri);
             }else{
-                followlist.userlist[user] = [uri]
+                followlist.userlist[user] = [uri];
             }
         }
         followlist.selectUser= function(user){
             if (followlist.userlist[user].length == 1){
                 //user follows only one user with nick
-                return [true, followlist.userlist[user]]
+                return [true, followlist.userlist[user]];
             }else if (followlist.userlist[user].length > 1){
                 //user follows multiple users with this nick.
-                return [false, followlist.userlist[user]]
+                return [false, followlist.userlist[user]];
             }else{
                 //user does not follow any users with this nick
-                return [false, []] 
+                return [false, []] ;
             }
         }
 
@@ -91,14 +101,14 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var gen_random_uri = function(base){
             //generate random uri
             var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+7);
-            return kb.sym(uri_nonce)
+            return kb.sym(uri_nonce);
         }
         
         var statusUpdate = function(statusMsg, callback, replyTo, meta){
             var myUserURI = getMyUser();
-            myUser = kb.sym(myUserURI.split("#")[0])
-            var newPost = gen_random_uri(myUser.uri)
-            var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'))
+            myUser = kb.sym(myUserURI.split("#")[0]);
+            var newPost = gen_random_uri(myUser.uri);
+            var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'));
             
             //generate new post 
            var batch =[
@@ -111,23 +121,23 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
             // message replies
             if (replyTo){
-                batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser))
+                batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser));
             }
             
             // @replies, #hashtags, !groupReplies
             for (r in meta.recipients){
-                batch.push(new RDFStatement(newPost, SIOC('topic'),kb.sym(meta.recipients[r]),myUser))
+                batch.push(new RDFStatement(newPost, SIOC('topic'),kb.sym(meta.recipients[r]),myUser));
             }
                 
-            sparqlUpdater.insert_statement(batch, function(a,b,c) {callback(a,b,c, batch)})
+            sparqlUpdater.insert_statement(batch, function(a,b,c) {callback(a,b,c, batch)});
         }
         
         var notify = function(messageString){
-            alert(messageString) //maybe something less obnoxious than an alert.
+            alert(messageString); //maybe something less obnoxious than an alert.
         };
         
         var getMyURI = function(){
-            var myMicroblog = tabulator.preferences.get('myMB').split(",")
+            var myMicroblog = tabulator.preferences.get('myMB').split(",");
             return myMicroblog[0];
         };
         var getMyUser = function(){
@@ -158,29 +168,37 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var meta ={
                 recipients:[]
             }
+            //user has selected a microblog to post to
             if(getMyURI()){
                 myUser = kb.sym(getMyURI());
+                //submission callback
                 var mbconfirmSubmit = function(a,b,c,d){
                     if(b == true){
                         for (triple in d){
                             kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why)
                         }
                         notify("submitted.")
+                        if (thisIsMe) doc.getElementById('postList').insertBefore(generatePost(username, d[0].subject,thisIsMe),doc.getElementById('postList').childNodes[0])
+                        xupdateSubmit.disabled = false;
                         xupdateStatus.value=""
+                        mbLetterCount();
                     }
                     //add update to list
                 }
                 var words = xupdateStatus.value.split(" ")
                 for (word in words){
-                   if (words[word].match(/\@\w+/)){
-                       var atUser = words[word].replace("@","")
-                       var recipient = followlist.selectUser(atUser)
-                       if (recipient[0] ==true){
+                    if (words[word].match(/\@\w+/)){
+                        alert("at reply")
+                        var atUser = words[word].replace("@","")
+                        var recipient = followlist.selectUser(atUser)
+                        alert(recipient)
+                        if (recipient[0] ==true){
                             meta.recipients.push(recipient[1][0])
-                       }
-                   }
+                        }
+                    }
                 }
-                
+                xupdateSubmit.disabled = true;
+                xupdateSubmit.value = "Updating..."
                 statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value,meta)
 
             }else{
@@ -205,21 +223,23 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var mbFollowUser = function (){
             var myUser = kb.sym(getMyUser());
             var mbconfirmFollow = function(uri,stat,msg){
-                alert(Array([uri, stat, msg]).toSource())
                 if (stat == true){
                     if (!Ifollow){
                         kb.add(followMe.subject, followMe.predicate, followMe.object, followMe.why)
                     }else{
-//                        kb.remove(followMe)
+                        kb.removeMany(followMe.subject, followMe.predicate, followMe.object, followMe.why)
                         //@@ figure out why this cannot be removed from the kb.
                     }
                     Ifollow= !Ifollow
+                    xfollowButton.disabled = false;
                     followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
                     xfollowButton.value = followButtonLabel+ username;
                     notify("Follow list updated.")
                 }
             }
             followMe = new RDFStatement(myUser,SIOC('follows'),creator,myUser)
+            xfollowButton.disabled= true;
+            xfollowButton.value = "Updating..."
             if (!Ifollow){
                 sparqlUpdater.insert_statement(followMe, mbconfirmFollow)
             }else {
@@ -294,7 +314,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 userid = (userid)? userid : user.uri 
                 follow.innerHTML = "<a href=\""+user.uri+"\">"+
                     userid+"</a>"
-                followlist.add(userid,user.uri)
+//                alert("adding")
+//                followlist.add(userid,user.uri)
                 return follow
             }
             
@@ -338,12 +359,14 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         
         // POST INFORMATION FOR USER
         var postContainer = doc.createElement('ul');
+            postContainer.id = "postList";
         var mb_posts = kb.each(s, SIOC("container_of"));
         //---returns a microblog post---
         var generatePost = function (uname, post,me){
             //container for post
             var xpost = doc.createElement('li');
-            xpost.className = "post"
+                xpost.className = "post"
+                xpost.setAttribute("id", String(post.uri).split("#")[1])
             //username text 
             var xuname = doc.createElement('p');
             var xunameText = doc.createTextNode("-"+uname);
@@ -354,10 +377,12 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //post date
             var xpostLink= doc.createElement("a")
                 xpostLink.setAttribute("href", post.uri)
+                xpostLink.id = "post_"+String(post.uri).split("#")[1]
             var postLink = new Date()
             postLink = postLink.parseISOdate(String(kb.any(post,terms('date'))))
             postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
             xpostLink.appendChild(postLink)
+            
    
             //LINK META DATA (MENTIONS, HASHTAGS, GROUPS)
             var mentions =kb.each(post,SIOC("topic"))
@@ -395,7 +420,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
             
             
-            //add the reply to button to the interface
+            //add the reply to and delete buttons to the interface
             var mbReplyTo = function (){
                 var id= kb.any(creator,SIOC("id"));
                 xupdateStatus.value = "@"+id+" ";
@@ -404,19 +429,55 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xupdateSubmit.value = "Reply";
                 mbLetterCount()
             }
+            
+            var mbDeletePost = function (evt){
+                var reallyDelete = confirm("are you sure you wish to delete this post?")
+                if (reallyDelete){
+                    //callback after deletion
+                    var mbconfirmDeletePost= function(a,b,c,d){
+                        alert("delete confirmed")
+                        //update the ui to reflect model changes.
+                        var deleteThisNode = evt.target.parentNode;
+                        deleteThisNode.parentNode.removeChild(deleteThisNode);
+                        notify("Post Removed"+"\n"+a+" "+b+" "+c+" "+d);
+                        kb.removeMany(deleteMe);
+                    }
+                    //delete references to post
+                    var deleteContainerOf= function(){
+                        alert("now deleting container")
+                        var deleteMe = kb.statementsMatching(
+                            undefined,SIOC('container_of'),kb.sym(doc.getElementById(
+                            "post_"+evt.target.parentNode.id)))
+                        alert(deleteMe)
+                        sparqlUpdater.batch_delete_statement(deleteMe, mbconfirmDeletePost)
+                    }
+                    //delete attributes of post
+                    deleteMe = kb.statementsMatching(kb.sym(doc.getElementById(
+                        "post_"+evt.target.parentNode.id)))
+                    sparqlUpdater.batch_delete_statement(deleteMe, deleteContainerOf)
+                }
+            }
+            
             if (!me){
                 var xreplyButton = doc.createElement('input');
                     xreplyButton.type = "button";
                     xreplyButton.value = "reply";
                     xreplyButton.className = "reply"
-                    xreplyButton.addEventListener('click', mbReplyTo, false);
-                
-            }   
+                    xreplyButton.addEventListener('click', mbReplyTo, false);   
+            }else{
+                var xdeleteButton = doc.createElement('input');
+                    xdeleteButton.type = 'button';
+                    xdeleteButton.value = "delete";
+                    xdeleteButton.className = "reply"
+                    xdeleteButton.addEventListener('click', mbDeletePost, false);
+            }
+            
             
             
             //build
             xpost.appendChild(xpostContent);
             if (!me){xpost.appendChild(xreplyButton)}
+            else{xpost.appendChild(xdeleteButton)}
             xpost.appendChild(xuname);
             if(inReplyTo != ""){xpost.appendChild(xreplyTo)}
             xpost.appendChild(xpostLink)

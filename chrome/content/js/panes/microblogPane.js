@@ -36,9 +36,8 @@ Date.prototype.parseISOdate= function(dateString){
 }
 
 sparql.prototype.batch_delete_statement= function(st, callback){
-    alert(st)
-    for (var i in st){
-        var query = this._context_where(this._statement_context(st[1]));
+    var query = this._context_where(this._statement_context(st[0]));
+    for (var i=0; i < st.length; i++){
         query += "DELETE { " + anonymizeNT(st[i]) + " }\n";
     }
     this._fire(st[0].why.uri, query, callback);
@@ -118,7 +117,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 new RDFStatement(newPost, SIOC('has_creator'),kb.sym(myUserURI),myUser),
                 new RDFStatement(newPost, SIOC('content'),statusMsg,myUser),
                 new RDFStatement(newPost, terms('date'), String(new Date().getISOdate()),myUser),
-                new RDFStatement(micro,SIOC('container_of'),newPost)
+                new RDFStatement(micro,SIOC('container_of'),newPost,myUser)
             ];
             
             // message replies
@@ -195,11 +194,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         if (recipient[0] ==true){
                             meta.recipients.push(recipient[1][0])
                         }else if (recipient[1].length > 1) { // if  multiple users allow the user to choose
-                          //write logic here
+                          choice = 
+                          meta.recpieients.push(recipient[1][choice])
                         }else{ //no users known
-                            notify("you do not follow "+atUser+". Try following "+atUser+" before mentioning them.")
+                            notify("You do not follow "+atUser+". Try following "+atUser+" before mentioning them.")
                             return
                         }
+                    } else if(words[word].match(/\#\w+/)){
+                        //hashtag
+                    } else if(words[word].match(/\!\w+/)){
+                        //usergroup
                     }
                 }
                 xupdateSubmit.disabled = true;
@@ -437,24 +441,32 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var reallyDelete = confirm("are you sure you wish to delete this post?")
                 if (reallyDelete){
                     //callback after deletion
-                    var mbconfirmDeletePost= function(a,b,c,d){
-                        alert("delete confirmed")
-                        //update the ui to reflect model changes.
-                        var deleteThisNode = evt.target.parentNode;
-                        deleteThisNode.parentNode.removeChild(deleteThisNode);
-                        notify("Post Removed"+"\n"+a+" "+b+" "+c+" "+d);
-                        kb.removeMany(deleteMe);
+                    var mbconfirmDeletePost= function(a,success){
+                        if (success){
+                            notify("delete confirmed")
+                            //update the ui to reflect model changes.
+                            var deleteThisNode = evt.target.parentNode;
+                            deleteThisNode.parentNode.removeChild(deleteThisNode);
+                            kb.removeMany(deleteMe);
+                        }else{
+                            notify("Oops, there was a problem, please try again")
+                            evt.target.disabled = true
+                        }
                     }
                     //delete references to post
-                    var deleteContainerOf= function(){
-                        alert("now deleting container")
-                        var deleteMe = kb.statementsMatching(
-                            undefined,SIOC('container_of'),kb.sym(doc.getElementById(
-                            "post_"+evt.target.parentNode.id)))
-                        alert(deleteMe)
-                        sparqlUpdater.batch_delete_statement(deleteMe, mbconfirmDeletePost)
+                    var deleteContainerOf= function(a,success){
+                        if (success){
+                            var deleteContainer = kb.statementsMatching(
+                                undefined,SIOC('container_of'),kb.sym(doc.getElementById(
+                                "post_"+evt.target.parentNode.id)))
+                            sparqlUpdater.batch_delete_statement(deleteContainer, mbconfirmDeletePost)
+                        } else{
+                            notify("Oops, there was a problem, please try again")
+                            evt.target.disabled = false
+                        }
                     }
                     //delete attributes of post
+                    evt.target.disabled = true
                     deleteMe = kb.statementsMatching(kb.sym(doc.getElementById(
                         "post_"+evt.target.parentNode.id)))
                     sparqlUpdater.batch_delete_statement(deleteMe, deleteContainerOf)

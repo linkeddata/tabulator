@@ -247,7 +247,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var mbconfirmFollow = function(uri,stat,msg){
                 if (stat == true){
                     if (!Ifollow){
-                        kb.add(followMe.subject, followMe.predicate, followMe.object, followMe.why)
+                        //prevent duplicate entries from being added to kb (because that was happening)
+                        if (!kb.whether(followMe.subject, followMe.predicate, followMe.object, followMe.why)){
+                            kb.add(followMe.subject, followMe.predicate, followMe.object, followMe.why)
+                        }
                     }else{
                         kb.removeMany(followMe.subject, followMe.predicate, followMe.object, followMe.why)
                         //@@ figure out why this cannot be removed from the kb.

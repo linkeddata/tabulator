@@ -74,11 +74,18 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             FOLLOW LIST
             store the uri's of followed users for dereferencing the @replies
         */
-        followlist =new Object()
+        var followlist =new Object()
         followlist.userlist = {}
+        followlist.uris = {}
         followlist.add = function(user,uri){
             if (followlist.userlist[user]){
-                followlist.userlist[user].push(uri);
+                if (uri in followlist.uris){
+                    //do nothing here, the user has already added the user
+                    //at some point this session.
+                }else{
+                    followlist.userlist[user].push(uri);
+                    followlist.uris[uri] = "";
+                }
             }else{
                 followlist.userlist[user] = [uri];
             }
@@ -153,6 +160,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 myself[0]=doc.location
                 myself[1]=kb.any(s,SIOC('has_creator')).uri
             tabulator.preferences.set('myMB',myself)
+            while (postContainer.hasChildNodes()){
+        	    postContainer.removeChild(postContainer.firstChild);
+        	}
+            thisIsMe = !thisIsMe;
+            generatePostList()
             notify("Preference set.")
         };
         var thisIsMe = (doc.location == getMyURI());
@@ -194,7 +206,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         if (recipient[0] ==true){
                             meta.recipients.push(recipient[1][0])
                         }else if (recipient[1].length > 1) { // if  multiple users allow the user to choose
-                          choice = 
+                          choice = 0
+                          alert("insert choose interface here")
                           meta.recpieients.push(recipient[1][choice])
                         }else{ //no users known
                             notify("You do not follow "+atUser+". Try following "+atUser+" before mentioning them.")
@@ -500,21 +513,22 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
             return xpost;
         }
-        //---if not me, generate post list ---
-        var postlist = new Object()
-        var datelist = new Array()
-        for (post in mb_posts){
-//            postContainer.appendChild (generatePost(username, mb_posts[post],thisIsMe));
-            var postDate = kb.any(mb_posts[post],terms('date'));
-            if (postDate){
-                datelist.push(postDate);
-                postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);
+        var generatePostList =  function(){
+            var postlist = new Object()
+            var datelist = new Array()
+            for (post in mb_posts){
+                var postDate = kb.any(mb_posts[post],terms('date'));
+                if (postDate){
+                    datelist.push(postDate);
+                    postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);
+                }
+            }
+            datelist.sort().reverse()
+            for (d in datelist){
+                postContainer.appendChild (postlist[datelist[d]])
             }
         }
-        datelist.sort().reverse()
-        for (d in datelist){
-            postContainer.appendChild (postlist[datelist[d]])
-        }
+        generatePostList()
         //END POST INFORMATION        
         
         //build

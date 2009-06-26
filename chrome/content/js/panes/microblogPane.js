@@ -123,13 +123,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 new RDFStatement(newPost, RDF('type'),SIOCt('MicroblogPost'),myUser),
                 new RDFStatement(newPost, SIOC('has_creator'),kb.sym(myUserURI),myUser),
                 new RDFStatement(newPost, SIOC('content'),statusMsg,myUser),
-                new RDFStatement(newPost, terms('date'), String(new Date().getISOdate()),myUser),
+                new RDFStatement(newPost, terms('created'), String(new Date().getISOdate()),myUser),
                 new RDFStatement(micro,SIOC('container_of'),newPost,myUser)
             ];
             
             // message replies
             if (replyTo){
-                batch.push(new RDFStatement(newPost, SIOC('reply_of'), replyTo,myUser));
+                batch.push(new RDFStatement(newPost, SIOC('reply_of'), kb.sym(replyTo),myUser));
             }
             
             // @replies, #hashtags, !groupReplies
@@ -402,7 +402,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xpostLink.setAttribute("href", post.uri)
                 xpostLink.id = "post_"+String(post.uri).split("#")[1]
             var postLink = new Date()
-            postLink = postLink.parseISOdate(String(kb.any(post,terms('date'))))
+            postLink = postLink.parseISOdate(String(kb.any(post,terms('created'))))
             postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
             xpostLink.appendChild(postLink)
             
@@ -448,7 +448,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var id= kb.any(creator,SIOC("id"));
                 xupdateStatus.value = "@"+id+" ";
                 xupdateStatus.focus();
-                xinReplyToContainer.value = post
+                xinReplyToContainer.value = post.uri
                 xupdateSubmit.value = "Reply";
                 mbLetterCount()
             }
@@ -520,7 +520,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var postlist = new Object()
             var datelist = new Array()
             for (post in mb_posts){
-                var postDate = kb.any(mb_posts[post],terms('date'));
+                var postDate = kb.any(mb_posts[post],terms('created'));
                 if (postDate){
                     datelist.push(postDate);
                     postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);

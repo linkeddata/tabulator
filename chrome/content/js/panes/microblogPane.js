@@ -63,49 +63,50 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var SIOC = RDFNamespace("http://rdfs.org/sioc/ns#");
         var SIOCt = RDFNamespace('http://rdfs.org/sioc/types#');
         var RSS = RDFNamespace("http://purl.org/rss/1.0/");
+        var FOAF = RDFNamespace('http://xmlns.com/foaf/0.1/');
+        var terms = RDFNamespace("http://purl.org/dc/terms/");
         var RDF = tabulator.ns.rdf;
         var kb = tabulator.kb;
-        var terms = RDFNamespace("http://purl.org/dc/terms/")
         var charCount = 140;
         var sparqlUpdater= new sparql(kb);
-        
         
         /*
             FOLLOW LIST
             store the uri's of followed users for dereferencing the @replies
         */
-        var followlist =new Object()
-        followlist.userlist = {}
-        followlist.uris = {}
-        followlist.add = function(user,uri){
+        var FollowList = function(){
+            this.userlist = {};
+            this.uris = {};
+        }
+        FollowList.prototype.add = function(user,uri){
             if (followlist.userlist[user]){
                 if (uri in followlist.uris){
                     //do nothing here, the user has already added the user
                     //at some point this session.
                 }else{
-                    followlist.userlist[user].push(uri);
-                    followlist.uris[uri] = "";
+                    this.userlist[user].push(uri);
+                    this.uris[uri] = "";
                 }
             }else{
                 followlist.userlist[user] = [uri];
             }
         }
-        followlist.selectUser= function(user){
-            if (followlist.userlist[user]){
-                if (followlist.userlist[user].length == 1){
+        FollowList.prototype.selectUser= function(user){
+            if (this.userlist[user]){
+                if (this.userlist[user].length == 1){
                     //user follows only one user with nick
-                    return [true, followlist.userlist[user]];
+                    return [true, this.userlist[user]];
                 }else if (followlist.userlist[user].length > 1){
                     //user follows multiple users with this nick.
-                    return [false, followlist.userlist[user]];
+                    return [false, this.userlist[user]];
                 }
             }else{
                 //user does not follow any users with this nick
                 return [false, []] ;
             }
         }
-
-
+        var followlist = new FollowList();
+        
         var gen_random_uri = function(base){
             //generate random uri
             var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+7);
@@ -135,6 +136,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             // @replies, #hashtags, !groupReplies
             for (r in meta.recipients){
                 batch.push(new RDFStatement(newPost, SIOC('topic'),kb.sym(meta.recipients[r]),myUser));
+                batch.push(new RDFStatement(kb.any(), SIOC("container_of"), newPost, myUser))
             }
                 
             sparqlUpdater.insert_statement(batch, function(a,b,c) {callback(a,b,c, batch)});
@@ -145,14 +147,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         };
         
         var getMyURI = function(){
-            var myMicroblog = tabulator.preferences.get('myMB').split(",");
-            return myMicroblog[0];
+            var me =  tabulator.preferences.get('me')
+            var myMicroblog = kb.any(kb.sym(me), FOAF('holdsAccount'))
+            return myMicroblog.uri;
         };
-        var getMyUser = function(){
-            var myUser = tabulator.preferences.get('myMB').split(",")
-            return myUser[1];
-        };
-        
+        var getMyUser = getMyURI; // fix this later         
         var Ifollow = kb.whether(kb.sym(getMyUser()),SIOC('follows'),
             kb.any(s,SIOC('has_creator')))
         var setMyURI = function(uri){
@@ -167,7 +166,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             generatePostList()
             notify("Preference set.")
         };
-        var thisIsMe = (doc.location == getMyURI());
+        var thisIsMe;
+        var resourceType = kb.any(kb.sym(doc.location), RDF('type'))
+        if (resourceType.uri == SIOCt('Microblog').uri || resourceType.uri == SIOCt('MicroblogPost').uri){ 
+            thisIsMe = (kb.any(kb.sym(doc.location), SIOC('has_creator')).uri == getMyURI())
+        } else if(resourceType.uri == SIOC('User').uri){
+            thisIsMe = (doc.location == getMyURI())
+        } else{
+            thisIsMe = false
+        }
+
         //get follow data
         var myFollows = kb.each(kb.sym(getMyURI()),SIOC('follows'))
         for(f in myFollows){
@@ -253,7 +261,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         }
                     }else{
                         kb.removeMany(followMe.subject, followMe.predicate, followMe.object, followMe.why)
-                        //@@ figure out why this cannot be removed from the kb.
                     }
                     Ifollow= !Ifollow
                     xfollowButton.disabled = false;
@@ -294,18 +301,18 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xupdateSubmit.type = "submit";
             xupdateSubmit.value = "Send";
         
-        if (!thisIsMe){
-            var xsetMyMB = doc.createElement('input');
-                xsetMyMB.type = 'button';
-                xsetMyMB.value = 'This is my Microblog';
-                xsetMyMB.addEventListener('click', mbSetMyMB, false)
-        }
+//        if (!thisIsMe){
+//            var xsetMyMB = doc.createElement('input');
+//                xsetMyMB.type = 'button';
+//                xsetMyMB.value = 'This is my Microblog';
+//                xsetMyMB.addEventListener('click', mbSetMyMB, false)
+//        }
             
         xupdateContainer.appendChild (xinReplyToContainer);
         xupdateContainer.appendChild(xupdateStatusCounter);
         xupdateContainer.appendChild(xupdateStatus);
         xupdateContainer.appendChild(xupdateSubmit);
-        if (!thisIsMe) xupdateContainer.appendChild(xsetMyMB);
+//        if (!thisIsMe) xupdateContainer.appendChild(xsetMyMB);
         headerContainer.appendChild(xupdateContainer);
         
         xupdateContainer.addEventListener('submit',mbSubmitPost,false)
@@ -341,7 +348,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     userid+"</a>"
                 return follow
             }
-            
+
             if (kb.whether(creator, SIOC('follows'))){
                 var creatorFollows = kb.each(creator, SIOC('follows'))
                 var xfollows = doc.createElement('div')
@@ -412,7 +419,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             tags = new Object()
 
             for(mention in mentions){
-                sf.lookUpThing(mentions[mention]) //@@make this work properly
+                sf.lookUpThing(mentions[mention])
                 id = kb.any(mentions[mention], SIOC('id'))
                 tags["@"+id] = mentions[mention]
             }
@@ -428,6 +435,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xpostContent.innerHTML = postText
             
             //in reply to logic
+            // This has the potential to support a post that replies to many messages.
             var inReplyTo = kb.each(post,SIOC("reply_of"));
             var xreplyTo = doc.createElement("span");
             for (reply in inReplyTo){
@@ -516,6 +524,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
             return xpost;
         }
+        
+        /*
+            generatePostList - Generate the posts as well as their and
+            display their results on the interface.
+        */
         var generatePostList =  function(){
             var postlist = new Object()
             var datelist = new Array()

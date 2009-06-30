@@ -18,32 +18,19 @@
 			prefix = m[2],
 			local = m[3],
 			ns = opts.namespaces[prefix];
-		if (prefix === "") { // This is the case of a CURIE like ":test"
-		  if (opts.reservedNamespace === undefined || opts.reservedNamespace === null) {
-		    throw "Malformed CURIE: No prefix and no default namespace for unprefixed CURIE " + curie;
-		  } else {
-  		  ns = opts.reservedNamespace;
-		  }
-		} else if (prefix) {
+		if (prefix) {
 		  if (ns === undefined) {
   			throw "Malformed CURIE: No namespace binding for " + prefix + " in CURIE " + curie;
 		  }
+		} else if (opts.reserved.length && $.inArray(curie, opts.reserved) >= 0) {
+		  ns = opts.reservedNamespace;
+		  local = curie;
+    } else if (opts.defaultNamespace === undefined) {
+			// the default namespace is provided by the application; it's not clear whether
+			// the default XML namespace should be used if there's a colon but no prefix
+			throw "Malformed CURIE: No prefix and no default namespace for unprefixed CURIE " + curie;
 		} else {
-		  if (opts.charcase === 'lower') {
-		    curie = curie.toLowerCase();
-		  } else if (opts.charcase === 'upper') {
-		    curie = curie.toUpperCase();
-		  }
-  		if (opts.reserved.length && $.inArray(curie, opts.reserved) >= 0) {
-  		  ns = opts.reservedNamespace;
-  		  local = curie;
-      } else if (opts.defaultNamespace === undefined || opts.defaultNamespace === null) {
-  			// the default namespace is provided by the application; it's not clear whether
-  			// the default XML namespace should be used if there's a colon but no prefix
-  			throw "Malformed CURIE: No prefix and no default namespace for unprefixed CURIE " + curie;
-  		} else {
-  		  ns = opts.defaultNamespace;
-  		}
+		  ns = opts.defaultNamespace;
 		}
 	  return $.uri(ns + local);
 	};
@@ -52,8 +39,7 @@
 		namespaces: {},
 		reserved: [],
 		reservedNamespace: undefined,
-		defaultNamespace: undefined,
-		charcase: 'preserve'
+		defaultNamespace: undefined
 	};
 	
 	$.safeCurie = function (safeCurie, options) {
@@ -101,8 +87,7 @@
 			'p3pv1', 'prev', 'role', 'section', 'stylesheet', 'subsection', 'start', 'top', 'up'
 		],
 		reservedNamespace: 'http://www.w3.org/1999/xhtml/vocab#',
-		defaultNamespace: undefined,
-		charcase: 'lower'
+		defaultNamespace: undefined
 	};
 	
 	$.fn.safeCurie = function (safeCurie, options) {

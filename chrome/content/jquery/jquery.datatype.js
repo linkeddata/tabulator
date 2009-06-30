@@ -161,37 +161,11 @@
 		}
 	};
 	
-	$.typedValue.types['http://www.w3.org/2001/XMLSchema#gMonthDay'] = {
-		regex: /^--([0-9]{2})-([0-9]{2})((?:[\-\+]([0-9]{2}):([0-9]{2}))|Z)?$/,
-		validate: function (v) {
-			var 
-				m = this.regex.exec(v),
-				month = parseInt(m[1], 10),
-				day = parseInt(m[2], 10),
-				tz = m[3] === undefined || m[3] === 'Z' ? '+0000' : m[3].replace(/:/, '');
-			if (month > 12 ||
-				  day > 31 ||
-				  parseInt(tz, 10) < -1400 || parseInt(tz, 10) > 1400) {
-				return false;
-			} else if (month === 2 && day > 29) {
-			  return false;
-			} else if ((month === 4 || month === 6 || month === 9 || month === 11) && day > 30) {
-			  return false;
-			} else {
-				return true;
-			}
-		},
-		strip: true,
-		value: function (v) {
-			return v;
-		}
-	};
-	
 	$.typedValue.types['http://www.w3.org/2001/XMLSchema#anyURI'] = {
 		regex: /^.*$/,
 		strip: true,
 		value: function (v, options) {
-			var opts = $.extend({}, $.typedValue.defaults, options);
+			var opts = $.extend({}, $.xsd.defaults, options);
 			return $.uri.resolve(v, opts.base);
 		}
 	};

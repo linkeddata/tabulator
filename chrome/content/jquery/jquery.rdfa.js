@@ -40,7 +40,7 @@
         while (a !== null) {
           name = a[1];
           value = a[2] || a[3] || a[4];
-          if (/^xmlns/.test(name) && value !== '') {
+          if (/^xmlns/.test(name)) {
             prefix = /^xmlns(:(.+))?$/.exec(name)[2] || '';
             ns[prefix] = $.uri(value);
             ns[':length'] += 1;
@@ -54,7 +54,7 @@
         attMap = e.attributes;
         for (i = 0; i < attMap.length; i += 1) {
           a = attMap[i];
-          if (/^xmlns(:(.+))?$/.test(a.nodeName) && a.nodeValue !== '') {
+          if (/^xmlns/.test(a.nodeName)) {
             prefix = /^xmlns(:(.+))?$/.exec(a.nodeName)[2] || '';
             ns[prefix] = $.uri(a.nodeValue);
             ns[':length'] += 1;
@@ -93,14 +93,13 @@
     },
     
     resourceFromSafeCurie = function (safeCurie, elem, options) {
-      var m = /^\[([^\]]+)\]$/.exec(safeCurie),
-        base = options.base || elem.base();
-      return m ? resourceFromCurie(m[1], elem, options) : resourceFromUri($.uri(safeCurie, base));
+      var m = /^\[([^\]]+)\]$/.exec(safeCurie);
+      return m ? resourceFromCurie(m[1], elem, options) : resourceFromUri($.uri(safeCurie));
     },
 
     resourcesFromCuries = function (curies, elem, options) {
       var i, resource, resources = [];
-      curies = curies && curies.split ? curies.split(/[ \t\n\r\x0C]+/g) : [];
+      curies = curies && curies.split ? curies.split(/\s+/) : [];
       for (i = 0; i < curies.length; i += 1) {
         if (curies[i] !== '') {
           resource = resourceFromCurie(curies[i], elem, options);
@@ -147,7 +146,7 @@
       var r, atts, curieOptions, subject, skip = false;
       context = context || {};
       atts = context.atts || getAttributes(elem).atts;
-      curieOptions = context.curieOptions || $.extend({}, rdfaCurieDefaults, { namespaces: elem.xmlns(), base: elem.base() });
+      curieOptions = context.curieOptions || $.extend({}, rdfaCurieDefaults, { namespaces: elem.xmlns() });
       r = relation === undefined ? atts.rel !== undefined || atts.rev !== undefined : relation;
       if (atts.about !== undefined) {
         subject = resourceFromSafeCurie(atts.about, elem, curieOptions);
@@ -180,8 +179,8 @@
       var lang;
       context = context || {};
       if (context.atts) {
-        lang = context.atts.lang;
-        lang = lang || context.atts['xml:lang'];
+	      lang = context.atts['xml:lang'];
+	      lang = lang === undefined ? context.atts.lang : lang;
       } else {
       	lang = elem[0].getAttribute('lang');
       	lang = (lang === null || lang === '') ? elem[0].getAttribute('xml:lang') : lang;
@@ -281,14 +280,14 @@
           }
         }
       }
-      context.curieOptions = $.extend({}, rdfaCurieDefaults, { namespaces: namespaces, base: this.base() });
+      context.curieOptions = $.extend({}, rdfaCurieDefaults, { namespaces: namespaces });
       subject = getSubject(this, context);
       lang = getLang(this, context);
       if (subject.skip) {
         rels = context.forward;
         revs = context.backward;
         subject = context.subject;
-        resource = context.object;
+        object = context.object;
       } else {
         subject = subject.subject;
         if (forward.length > 0 || backward.length > 0) {
@@ -424,7 +423,7 @@
       if (resource.type === 'bnode') {
         ref = '[_:' + resource.id + ']';
       } else {
-        ref = $(elem).base().relative(resource.value);
+        ref = $.uri.base().relative(resource.value);
       }
       elem.attr(attr, ref);
     },
@@ -462,7 +461,7 @@
       span = this;
       atts = getAttributes(this).atts;
       if (typeof triple === 'string') {
-        triple = $.rdf.triple(triple, { namespaces: ns, base: this.base() });
+        triple = $.rdf.triple(triple, { namespaces: ns, base: $.uri.base() });
       } else if (triple.rdfquery) {
         addRDFa.call(this, triple.sources().get(0));
         return this;
@@ -670,9 +669,6 @@
               this.attr('typeof', type);
             }
           }
-        }
-        if (atts.property === this.attr('property') && atts.rel === this.attr('rel') && atts.rev === this.attr('rev') && atts['typeof'] === this.attr('typeof')) {
-          return removeRDFa.call(this.parent(), what);
         }
       }
       this.parents().andSelf().trigger("rdfChange");

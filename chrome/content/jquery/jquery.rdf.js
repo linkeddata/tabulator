@@ -356,7 +356,7 @@
     createJson = function (triples) {
       var e = {},
         i, t, s, p;
-      for (i = 0; i < triples.length; i += 1) {
+    
         t = triples[i];
         s = t.subject.value.toString();
         p = t.property.value.toString();
@@ -471,8 +471,8 @@
       var parser, doc, i, child;
       parser = new DOMParser();
       doc = parser.parseFromString('<temp>' + xml + '</temp>', 'text/xml');
-      while (doc.documentElement.childNodes.length > 0) {
-        parent.appendChild(doc.documentElement.childNodes[0]);
+      for (i = 0; i < doc.documentElement.childNodes.length; i += 1) {
+        parent.appendChild(doc.documentElement.childNodes[i].cloneNode(true));
       }
       return parent;
     },
@@ -1008,7 +1008,9 @@
   
   $.fn.rdf = function () {
     var triples = [];
-    if ($(this).length > 0) {
+    if ($(this)[0] && $(this)[0].nodeType === 9) {
+      return $(this).children('*').rdf(); 
+    } else if ($(this).length > 0) {
       triples = $(this).map(function (i, elem) {
         return $.map($.rdf.gleaners, function (gleaner) {
           return gleaner.call($(elem));

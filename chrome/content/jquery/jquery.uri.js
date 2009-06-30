@@ -186,10 +186,14 @@
     return $.uri(base, {}).relative(absolute);
   };
   
-  docURI = $.uri.absolute(document.location.href);
-  
   $.uri.base = function () {
-    var base = $('head > base').attr('href');
+    return $(document).base();
+  };
+  
+  $.fn.base = function () {
+    var base = $(this).parents().andSelf().find('base').attr('href'),
+      doc = $(this)[0].ownerDocument || document,
+      docURI = $.uri.absolute(doc.location === null ? document.location.href : doc.location.href);
     return base === undefined ? docURI : $.uri(base, docURI);
   };
 

@@ -25,7 +25,8 @@
 
   $.rdf.ruleset.fn = $.rdf.ruleset.prototype = {
     init: function (rules, options) {
-      var opts = $.extend({}, $.rdf.ruleset.defaults, options);
+      var i,
+        opts = $.extend({}, $.rdf.ruleset.defaults, options);
       rules = rules || [];
       this.baseURI = opts.base;
       this.namespaces = $.extend({}, opts.namespaces);
@@ -61,13 +62,18 @@
     },
     
     add: function (lhs, rhs) {
-      if (lhs.lhs) {
-        rule = lhs;
+      var rule;
+      if (rhs === undefined && lhs.rules) {
+        this.rules = this.rules.concat(lhs.rules);
       } else {
-        rule = $.rdf.rule(lhs, rhs, { namespaces: this.prefix(), base: this.base() })
-      }
-      if ($.inArray(rule, this.rules) === -1) {
-        this.rules.push(rule);
+        if (rhs === undefined && lhs.lhs) {
+          rule = lhs;
+        } else {
+          rule = $.rdf.rule(lhs, rhs, { namespaces: this.prefix(), base: this.base() });
+        }
+        if ($.inArray(rule, this.rules) === -1) {
+          this.rules.push(rule);
+        }
       }
       return this;
     },
@@ -83,7 +89,7 @@
           r.run(data);
         }
         limit -= 1;
-      } while (data.size() > ntriples && limit > 0)
+      } while (data.size() > ntriples && limit > 0);
       return this;
     }
   };
@@ -93,7 +99,7 @@
   $.rdf.ruleset.defaults = {
     base: $.uri.base(),
     namespaces: {}
-  }
+  };
 
 /* Rules */
 
@@ -156,7 +162,7 @@
         condition,
         opts = $.extend({ limit: 50 }, options), limit = opts.limit,
         ntriples,
-        i, pattern, s, p, o, q,
+        i, j, pattern, s, p, o, q,
         blanks = this.rhsBlanks,
         cache, sources, triples, add;
       if (this.cache[data.id] === undefined) {
@@ -218,7 +224,7 @@
           }
         }
         limit -= 1;
-      } while (query.length > ntriples && limit > 0)
+      } while (query.length > ntriples && limit > 0);
       return this;
     }
   };

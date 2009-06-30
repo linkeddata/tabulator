@@ -19,6 +19,7 @@
       ns = elem.data('xmlns'),
       e = elem[0], a, p, i,
       decl = prefix ? 'xmlns:' + prefix : 'xmlns',
+      value,
       tag, found = false;
     if (uri === undefined) {
       if (prefix === undefined) { // get the in-scope declarations on the first element
@@ -29,18 +30,24 @@
             a = xmlnsRegex.exec(tag);
             while (a !== null) {
               prefix = a[1] || '';
-              ns[prefix] = $.uri(a[2] || a[3]);
-              found = true;
+              value = a[2] || a[3];
+              if (prefix === '' || value !== '') {
+                ns[prefix] = $.uri(a[2] || a[3]);
+                found = true;
+              }
               a = xmlnsRegex.exec(tag);
             }
             xmlnsRegex.lastIndex = 0;
           } else {
             for (i = 0; i < e.attributes.length; i += 1) {
               a = e.attributes[i];
-              if (/^xmlns/.test(a.nodeName)) {
+              if (/^xmlns(:(.+))?$/.test(a.nodeName)) {
                 prefix = /^xmlns(:(.+))?$/.exec(a.nodeName)[2] || '';
-                ns[prefix] = $.uri(a.nodeValue);
-                found = true;
+                value = a.nodeValue;
+                if (prefix === '' || value !== '') {
+                  ns[prefix] = $.uri(a.nodeValue);
+                  found = true;
+                }
               }
             }
           }

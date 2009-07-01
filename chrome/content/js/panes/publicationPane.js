@@ -27,15 +27,15 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
     render: function(subject, document) {
         var div = document.createElement('div');
         var bibo = tabulator.ns.bibo; // for aesthetics
+        var foaf = tabulator.ns.foaf;
         var dct = tabulator.ns.dct;
 
         var mainTags = ["Title","Short Title","Abstract","Short Description","Subject","Created"];
         var mainPredicateURIs = [[dct('title')],[bibo('shortTitle')],[dct('abstract'),bibo('abstract')],
                                  [bibo('shortDescription')],[dct('subject')],[dct('created')]];
 
-        var authorTags = ["Authors(s)","Creator"];
-        var authorPredicateURIs = [[bibo('authorList')],[dct('creator')]];
-        var authorIfContainerURIs = [[bibo('Person')],[null]];
+        
+        //var authorDataToLookFor = [[foaf('name'),[foaf('firstName'), TODO 2009-06-23
 
         var indexingTags = ["EISSN","ISSN-10","ISSN-13"];
 
@@ -70,7 +70,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
                     objects.push(queried[j].object);
 
                 else if(queried[j].object.termType === 'symbol')
-                    objects.push(queried[j].object);
+                    this.handleSymbol(queried[j].object);
 
                 else if(queried[j].object.termType === 'bnode') {
                     var collectionObjects = this.filterObjectsByType(queried[j].object,ifCollectionFilterURIs); // Traverses container/bnode recursively
@@ -122,5 +122,5 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
         if(arr == null) return true;
         else if(arr.length == 0) return true;
         else return false;
-    }  
+    }
 }, false);

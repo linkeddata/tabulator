@@ -134,9 +134,21 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
             
             // @replies, #hashtags, !groupReplies
-            for (r in meta.recipients){
+            for (var r in meta.recipients){
                 batch.push(new RDFStatement(newPost, SIOC('topic'),kb.sym(meta.recipients[r]),myUser));
                 batch.push(new RDFStatement(kb.any(), SIOC("container_of"), newPost, myUser))
+                var microblogs = kb.each(kb.sym(meta.recipients[r]),SIOC('creator_of'))
+                for (var mb in microblogs){
+                    if (kb.whether(microblogs[mb], SIOC('topic'), kb.sym(meta.recipients[r]))){
+                        var replyBatch = new RDFStatement(
+                            microblogs[mb],
+                            SIOC("container_of"),
+                            newPost,
+                            kb.sym(meta.recipients[r].split('#')[0])
+                        )
+                        sparqlUpdater.insert_statement(replyBatch, function(a,b,c) {alert(b)});
+                    }
+                }
             }
                 
             sparqlUpdater.insert_statement(batch, function(a,b,c) {callback(a,b,c, batch)});
@@ -149,23 +161,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var getMyURI = function(){
             var me =  tabulator.preferences.get('me')
             var myMicroblog = kb.any(kb.sym(me), FOAF('holdsAccount'))
-            return myMicroblog.uri;
+            return (myMicroblog) ? myMicroblog.uri: false;
         };
-        var getMyUser = getMyURI; // fix this later         
+        var getMyUser = getMyURI; //TODO fix this later         
         var Ifollow = kb.whether(kb.sym(getMyUser()),SIOC('follows'),
             kb.any(s,SIOC('has_creator')))
-        var setMyURI = function(uri){
-            var myself = new Array()
-                myself[0]=doc.location
-                myself[1]=kb.any(s,SIOC('has_creator')).uri
-            tabulator.preferences.set('myMB',myself)
-            while (postContainer.hasChildNodes()){
-        	    postContainer.removeChild(postContainer.firstChild);
-        	}
-            thisIsMe = !thisIsMe;
-            generatePostList()
-            notify("Preference set.")
-        };
         var thisIsMe;
         var resourceType = kb.any(kb.sym(doc.location), RDF('type'))
         if (resourceType.uri == SIOCt('Microblog').uri || resourceType.uri == SIOCt('MicroblogPost').uri){ 
@@ -287,36 +287,35 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var xupdateContainer = doc.createElement('form');
             xupdateContainer.className="update-container";
             xupdateContainer.innerHTML ="<h3>What are you up to?</h3>";
-
-        var xinReplyToContainer = doc.createElement('input')
-            xinReplyToContainer.type="hidden";
         
-        var xupdateStatus = doc.createElement('textarea');
-        
-        var xupdateStatusCounter = doc.createElement('span');
-            xupdateStatusCounter.appendChild(doc.createTextNode(charCount))
-            xupdateStatus.cols= 30;
+        if (getMyURI()){
+            var xinReplyToContainer = doc.createElement('input')
+                xinReplyToContainer.type="hidden";
             
-        var xupdateSubmit = doc.createElement('input');
-            xupdateSubmit.type = "submit";
-            xupdateSubmit.value = "Send";
-        
-//        if (!thisIsMe){
-//            var xsetMyMB = doc.createElement('input');
-//                xsetMyMB.type = 'button';
-//                xsetMyMB.value = 'This is my Microblog';
-//                xsetMyMB.addEventListener('click', mbSetMyMB, false)
-//        }
+            var xupdateStatus = doc.createElement('textarea');
             
-        xupdateContainer.appendChild (xinReplyToContainer);
-        xupdateContainer.appendChild(xupdateStatusCounter);
-        xupdateContainer.appendChild(xupdateStatus);
-        xupdateContainer.appendChild(xupdateSubmit);
-//        if (!thisIsMe) xupdateContainer.appendChild(xsetMyMB);
+            var xupdateStatusCounter = doc.createElement('span');
+                xupdateStatusCounter.appendChild(doc.createTextNode(charCount))
+                xupdateStatus.cols= 30;
+                
+            var xupdateSubmit = doc.createElement('input');
+                xupdateSubmit.type = "submit";
+                xupdateSubmit.value = "Send";
+                
+            xupdateContainer.appendChild (xinReplyToContainer);
+            xupdateContainer.appendChild(xupdateStatusCounter);
+            xupdateContainer.appendChild(xupdateStatus);
+            xupdateContainer.appendChild(xupdateSubmit);
+            xupdateContainer.addEventListener('submit',mbSubmitPost,false)
+            xupdateStatus.addEventListener('keyup',mbLetterCount,false)
+        } else {
+            var xnewUser = doc.createTextNode("Hi, it looks like you don't have \
+                would you like to create one?"
+            ) 
+            xupdateContainer.appendChild(xnewUser);
+        }
+        
         headerContainer.appendChild(xupdateContainer);
-        
-        xupdateContainer.addEventListener('submit',mbSubmitPost,false)
-        xupdateStatus.addEventListener('keyup',mbLetterCount,false)
         
         var subheaderContainer = doc.createElement('div');
         subheaderContainer.className ="subheader-container";
@@ -363,7 +362,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 
             }
             //---if not me, and not followed, display follow button---
-            if (!thisIsMe){
+            if (!thisIsMe && getMyURI()){
                 var xfollowButton = doc.createElement('input');
                     xfollowButton.setAttribute("type", "button");
                     followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
@@ -496,32 +495,30 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     sparqlUpdater.batch_delete_statement(deleteMe, deleteContainerOf)
                 }
             }
-            
-            if (!me){
-                var xreplyButton = doc.createElement('input');
-                    xreplyButton.type = "button";
-                    xreplyButton.value = "reply";
-                    xreplyButton.className = "reply"
-                    xreplyButton.addEventListener('click', mbReplyTo, false);   
-            }else{
-                var xdeleteButton = doc.createElement('input');
-                    xdeleteButton.type = 'button';
-                    xdeleteButton.value = "delete";
-                    xdeleteButton.className = "reply"
-                    xdeleteButton.addEventListener('click', mbDeletePost, false);
+            if (getMyURI()){ //generate buttons if the uri is not set. 
+                if (!me){
+                    var xreplyButton = doc.createElement('input');
+                        xreplyButton.type = "button";
+                        xreplyButton.value = "reply";
+                        xreplyButton.className = "reply"
+                        xreplyButton.addEventListener('click', mbReplyTo, false);   
+                }else{
+                    var xdeleteButton = doc.createElement('input');
+                        xdeleteButton.type = 'button';
+                        xdeleteButton.value = "delete";
+                        xdeleteButton.className = "reply"
+                        xdeleteButton.addEventListener('click', mbDeletePost, false);
+                }
             }
-            
-            
-            
             //build
             xpost.appendChild(xpostContent);
-            if (!me){xpost.appendChild(xreplyButton)}
-            else{xpost.appendChild(xdeleteButton)}
+            if(getMyURI()){ 
+                if (!me){xpost.appendChild(xreplyButton)}
+                else{xpost.appendChild(xdeleteButton)}
+            }
             xpost.appendChild(xuname);
             if(inReplyTo != ""){xpost.appendChild(xreplyTo)}
             xpost.appendChild(xpostLink)
-            
-            
             return xpost;
         }
         

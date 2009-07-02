@@ -8,7 +8,7 @@
  *  'sources' -- meaning any document we are trying to get data out of
  *  This implementsquite a lot of the web architecture
  * 
- * SVN ID: $Id: sources.js 25776 2009-04-09 18:50:29Z timbl $
+ * SVN ID: $Id: sources.js 26584 2009-07-02 07:30:26Z jambo $
  *
  ************************************************************/
 
@@ -446,9 +446,11 @@ function SourceFetcher(store, timeout, async) {
         if (rel == 'alternate'|| rel == 'seeAlso' || rel == 'meta'|| rel == 'describedby') {
             var join = Util.uri.join2;
             var obj = kb.sym(join(uri, xhr.uri.uri))
-            kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'), obj,
-                   xhr.uri)
-            tabulator.log.info("Loading "+obj+" from link rel in "+xhr.uri)            
+            if( obj.uri != xhr.uri ) { 
+                kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'), obj,
+                       xhr.uri);
+                tabulator.log.info("Loading "+obj+" from link rel in "+xhr.uri);
+            }
         }
     };
     

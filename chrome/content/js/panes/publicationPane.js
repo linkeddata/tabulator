@@ -28,6 +28,8 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
 
     render: function(subject, document) {
         var div = document.createElement('div');
+        div.style.backgroundColor="#FFFFFF";
+        div.style.border="thin dotted #000000";
         var bibo = tabulator.ns.bibo; // for aesthetics
         var foaf = tabulator.ns.foaf;
         var dct = tabulator.ns.dct;
@@ -35,17 +37,21 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
         var rdf = tabulator.ns.rdf;
 
         var ps = new PatternSearch();
-
+        var personNameTree = ps.MOTN(foaf('Person'),[
+                                                     ps.SPEN(dct('name')),
+                                                     ps.ABN([
+                                                             ps.SPEN(foaf('givenname')),
+                                                             ps.SPEN(foaf('family_name'))
+                                                            ])
+                                                    ])
+        
         var authorTree = ps.MOBN([
                                   ps.SOPN(bibo('authorList'),[
-                                                              ps.MOTN(foaf('Person'),[
-                                                                                      ps.SPEN(dct('name')),
-                                                                                      ps.ABN([
-                                                                                              ps.SPEN(foaf('givenname')),
-                                                                                              ps.SPEN(foaf('family_name'))
-                                                                                             ])
-                                                                                     ])
+                                                              personNameTree
                                                              ]),
+                                  ps.SOPN(bibo('contributorList'),[
+                                                                   personNameTree
+                                                                  ]),
                                   ps.MOPN(dct('creator'),[
                                                           ps.SPEN(dct('name'))
                                                          ])

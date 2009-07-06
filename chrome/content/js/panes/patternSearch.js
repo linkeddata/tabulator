@@ -1,3 +1,21 @@
+/*
+    Why patternSearch was created:
+        Bibliographical data can be represented in many different ways. The
+        goal of patternSearch is to provide a convenient way of establishing
+        searching patterns and alternatives, so as to be able to collect data
+        from a document without having to resort to nested arrays or complic-
+        ated logical structures.
+        These patterns are represented as trees of nodes, each of which has
+        its own searching and fetch methods. Intermediary nodes fetch
+        what their children nodes return; end nodes fetch literals (or URIs).
+        If one specific pattern fails to encounter data, then fetch attempts
+        to use the following patterns. Nested arrays of literals and contain-
+        ers are returned and then parsed.
+
+        search methods always begin with search; fetch methods also follow
+        this pattern.
+*/
+
 function PatternSearch() { // Encapsulates all of the methods and classes
     /*****************************
      *     Main Node Class       *

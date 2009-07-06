@@ -11,24 +11,27 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         this.fetch = function(subject) {
             var newTerm = AJAR_handleNewTerm(tabulator.kb, subject, subject);
             if(subject == null) return null;
-            searchM = this.searchMethod(subject);
-            fetchM = this.fetchMethod(searchM, children);
+            var searchM = this.searchMethod(subject);
+            var fetchM = this.fetchMethod(searchM, children);
             return fetchM;
         }   
+    }
+    this.PatternNode.prototype.toString = function() {
+        return this.children.toString();
     }
 
     /******************************
      *       Fetch Methods        *
      ******************************/
     this.fetchSingle = function(subjects) {
-        if(subjects == null) return null;
+        if(isEmpty(subjects)) return null;
         else if(subjects[0].termType === 'literal' || subjects[0].termType === 'symbol')
             return new DataContainer([subjects[0].toString()]);
         else return null;
     }
 
     this.fetchMultiple = function(subjects) {
-        if(subjects == null) return null;
+        if(isEmpty(subjects)) return null;
         var dataContainers = new Array();
         for(var i = 0;i < subjects.length;i++)
             if(subjects[i] == null) continue;
@@ -39,41 +42,44 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     }
 
     this.fetchSingleOr = function(subjects, children) {
-        if(subjects == null || children == null) return null;
+        if(isEmpty(subjects) || isEmpty(children)) return null;
         for(var i = 0;i < subjects.length;i++)
             for(var j = 0;j < children.length;j++) {
-                fetchedData = children[j].fetch(subjects[i]);
+                var fetchedData = children[j].fetch(subjects[i]);
                 if(fetchedData != null) return fetchedData;
             }
         return null;
     }
 
     this.fetchAnd = function(subjects, children) { // Children of And nodes must not return arrays
-        if(subjects == null || children == null) return null;
-        for(var i = 0;i < children.length;i++) {
+        if(isEmpty(subjects) || isEmpty(children)) return null;
+        for(var i = 0;i < subjects.length;i++) {;
             var dataContainer = new DataContainer();
-            for(var j = 0;j < subjects.length;j++) {
-                fetchedData = children[i].fetch(subjects[j]);
-                if(fetchedData == null) break;
-                else if(fetchedData.data) dataContainer.appendData(fetchedData.data)
-                else if(fetchedData.length) break; // fetchAnd only works when each node returns one set of data
+            for(var j = 0;j < children.length;j++) {
+                var fetchedData = children[j].fetch(subjects[i]);
+                if(isEmpty(fetchedData) || fetchedData instanceof Array) break;
+                else if(fetchedData.data) dataContainer.appendData(fetchedData.data);
             }
-            if(dataContainer.data.length == subjects.length) return dataContainer;
+            if(dataContainer.data.length == children.length) return dataContainer;
         }
         return null;
     }
 
     this.fetchMultipleOr = function(subjects, children) {
-        if(subjects == null || children == null) return null;
+        if(isEmpty(subjects) || isEmpty(children)) return null;
         var dataContainers = new Array();
-        for(var i = 0;i < children.length;i++) {
-            fetchedData = anchor.fetchSingleOr(subjects, children); //TODO
-            if(fetchedData == null) continue;
-            else if(fetchedData.data) dataContainers.push(fetchedData);
-            else if(fetchedData.length) // In case one child returns multiple DataContainers
-                for(var j = 0;j < fetchedData.length;j++)
-                    dataContainers.push(fetchedData[j]);
-        }
+        for(var i = 0;i < children.length;i++)
+            for(var j = 0;j < subjects.length;j++) {
+                var fetchedData = children[i].fetch(subjects[j]);
+                if(isEmpty(fetchedData)) continue;
+                else {
+                    if(fetchedData instanceof DataContainer) dataContainers.push(fetchedData);
+                    else if(fetchedData instanceof Array) // In case one child returns multiple DataContainers
+                        for(var k = 0;k < fetchedData.length;k++)
+                            dataContainers.push(fetchedData[k]);
+                    break;
+                }
+            }
         if(dataContainers.length == 0) return null;
         else return dataContainers;
     }
@@ -86,7 +92,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         return function(subject) {
             var triples = tabulator.kb.statementsMatching(subject, uri);
             if(isEmpty(triples)) return new Array();
-            else return getObjects(triples);
+            return getObjects(triples);
         }
     }
 
@@ -136,8 +142,29 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     }
 
     // Returns an array of strings
-    //this.parseResults = function(results) {
-        
+    this.parseResults = function(results) {
+        if(isEmpty(results)) return null;
+        var values = new Array();
+        if(results instanceof Array) {
+            for(var i = 0;i < results.length;i++) {
+                var subValues = anchor.parseResults(results[i]);
+                if(subValues == null) continue;
+                else if(subValues instanceof Array)
+                    for(var j = 0;j < subValues.length;j++)
+                        values.push(subValues[j]);
+            }
+        }
+        else if(results instanceof DataContainer) {
+            var datum = "";
+            for(var i = 0;i < results.data.length;i++)
+                if(i < results.data.length-1)
+                    datum += results.data[i]+" ";
+                else
+                    datum += results.data[i];
+            values.push(datum);
+        }
+        return values;
+    }
 
 
     /**********************************
@@ -173,6 +200,15 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     this.AndPredicateNode = function(uri, children) {
         return new this.PatternNode(this.searchByPredicate(uri),this.fetchAnd,children);
     }
+    this.MultipleOrBlankNode = function(children) {
+        return new this.PatternNode(this.searchBlankPatternNode(),this.fetchMultipleOr,children);
+    }
+    this.SingleOrBlankNode = function(children) {
+        return new this.PatternNode(this.searchBlankPatternNode(),this.fetchSingleOr,children);
+    }
+    this.AndBlankNode = function(children) {
+        return new this.PatternNode(this.searchBlankPatternNode(),this.fetchAnd,children);
+    }
 
     this.MOTN = this.MultipleOrTypeNode;
     this.MOPN = this.MultipleOrPredicateNode;
@@ -184,4 +220,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     this.SPEN = this.SinglePredicateEndNode;
     this.APN = this.AndPredicateNode;
     this.ATN = this.AndTypeNode;
+    this.MOBN = this.MultipleOrBlankNode;
+    this.SOBN = this.SingleOrBlankNode;
+    this.ABN = this.AndBlankNode;
 }

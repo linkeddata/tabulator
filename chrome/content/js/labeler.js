@@ -4,11 +4,20 @@
                                                                     Sunday 2007.07.22 kennyluck
 */
 //ToDo: sorted array for optimization, I need a binary search tree... - Kenny
-
-function Labeler(kb,lang){
+Util.string.trim = function trim(str){return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');};
+function Labeler(kb, LanguagePreference){
     this.kb=kb;
     var ns = tabulator.ns;
-    this.lang=lang; // a universal version? how to sort?
+    var trim = Util.string.trim;
+    this.isLanguagePreferred = 10; //how much you like your language
+    //this.lang=lang; // a universal version? how to sort?
+    this.preferredLanguages = [];
+    if (LanguagePreference){
+      var order = LanguagePreference.split(',');
+      for (var i=order.length-1;i>=0;i--)
+	this.preferredLanguages.push(trim(order[i].split(";")[0]));
+    }
+    this.LanguagePreference = LanguagePreference;
     this.addLabelProperty(ns.link('message'),20); //quite a different semantic, cause confusion?
     this.addLabelProperty(ns.foaf('name'),10);
     this.addLabelProperty(ns.dc('title'),8);
@@ -76,6 +85,9 @@ Labeler.prototype={
             var hashP = predicate.hashString();
             var priority = lb.priority[hashP];
             if (priority == undefined) priority = 3;
+	    var languageIndex = lb.preferredLanguages.indexOf(object.lang);
+	    if (languageIndex >= 0)
+	      priority = priority + (languageIndex + 1) * lb.isLanguagePreferred;
             // if (typeof object.lang !='undefined' && object.lang!="" && object.lang!=lb.lang) return;
             if (object.termType!='literal') return; //Request
             var label=object.value.toLowerCase();

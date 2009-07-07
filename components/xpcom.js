@@ -186,7 +186,11 @@ function Tabulator() {
     Icon.termWidgets.addTri = new Icon.OutlinerIcon(Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
 
 
-    LanguagePreference = "en"
+    //LanguagePreference = "en"
+    //@ I am not sure what will happen if you change accpet_languages manully
+    var prefManager = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService);
+    var pref_intl = prefManager.getBranch('intl.');
+    var LanguagePreference = pref_intl.getComplexValue("accept_languages", Components.interfaces.nsIPrefLocalizedString).data;
     labelPriority = []
     labelPriority[foaf('name').uri] = 10
     labelPriority[dc('title').uri] = 8

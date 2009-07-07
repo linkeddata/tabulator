@@ -21,7 +21,7 @@
 .ppane .follow{
     display: block;
 }
-.ppane .update-container{
+.ppane .update-container, .ppane .createNewMB{
     margin: 1em 0;
     background-color: #fafafa;
     border: solid 1px #ccc;
@@ -42,7 +42,10 @@
 .ppane ul{
     padding: 0px;
 }
-.ppane input[type=button]{
+.ppane input{
+    border: solid 1px #333 !important;
+}
+.ppane input[type=button], .ppane input[type=submit]{
     background-color: #eee;
     padding: 0 .5em;
     border: solid 1px #333;
@@ -57,4 +60,9 @@
 }
 .ppane .post div{
     margin: .5em auto;
+}
+
+.ppane .createNewMB input[type=text]{
+    width:25em;
+    
 }

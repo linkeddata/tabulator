@@ -120,7 +120,15 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var myUserURI = getMyURI();
             myUser = kb.sym(myUserURI.split("#")[0]);
             var newPost = gen_random_uri(myUser.uri);
-            var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of')); //TODO make this get the correct mb
+            var microlist = kb.each(kb.sym(myUserURI), SIOC('creator_of')); //TODO make this get the correct mb
+            var micro;
+            for (var microlistelement in microlist){
+                if(kb.whether(microlist[microlistelement], RDF('type'),SIOCt('Microblog')) &&
+                    !kb.whether(microlist[microlistelement], SIOC('topic'), kb.sym(getMyURI()))){
+                        micro = microlist[microlistelement]
+                        break;
+                    }
+            }
             
             //generate new post 
            var batch =[

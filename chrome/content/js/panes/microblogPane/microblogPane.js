@@ -117,7 +117,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         
         var statusUpdate = function(statusMsg, callback, replyTo, meta){
-            var myUserURI = getMyUser();
+            var myUserURI = getMyURI();
             myUser = kb.sym(myUserURI.split("#")[0]);
             var newPost = gen_random_uri(myUser.uri);
             var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'));
@@ -165,17 +165,18 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var me =  tabulator.preferences.get('me')
             var myMicroblog = kb.any(kb.sym(me), FOAF('holdsAccount'))
             return (myMicroblog) ? myMicroblog.uri: false;
-        };
-        var getMyUser = getMyURI; //TODO fix this later         
-        var Ifollow = kb.whether(kb.sym(getMyUser()),SIOC('follows'),
+        };        
+        var Ifollow = kb.whether(kb.sym(getMyURI()),SIOC('follows'),
             kb.any(s,SIOC('has_creator')))
         var thisIsMe;
-        var resourceType = kb.any(kb.sym(doc.location), RDF('type'))
+        var resourceType = kb.any(s, RDF('type'))
         if (resourceType.uri == SIOCt('Microblog').uri || resourceType.uri == SIOCt('MicroblogPost').uri){ 
-            thisIsMe = (kb.any(kb.sym(doc.location), SIOC('has_creator')).uri == getMyURI())
+            thisIsMe = (kb.any(s, SIOC('has_creator')).uri == getMyURI())
         } else if(resourceType.uri == SIOC('User').uri){
-            thisIsMe = (doc.location == getMyURI())
-        } else{
+            thisIsMe = (s.uri == getMyURI())
+        } else if (resourceType.uri == FOAF('Person').uri){
+            thisIsMe = (s.uri == tabulator.preferences.get('me'))
+        }else{
             thisIsMe = false
         }
 
@@ -186,6 +187,88 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         var Ifollow;
         // EVENT LISTENERS
+        var mbGenerateNewMB = function(id, name, avatar, loc){
+            var host =  loc + "/"+ id;
+            
+            var cbgenUserMB = function(a,b,c){
+                alert(a+"\n"+b+"\n"+c)
+            }
+            
+            var genUserMB = [
+                //user
+                new RDFStatement(kb.sym(host+"#"+id), RDF('type'), RDF('user'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#mb'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#mbn'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), SIOC('name'), name, kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), SIOC('id'), id, kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), RDF('label'), id, kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), FOAF('account_of'), s, kb.sym(host)),
+                //microblog 
+                new RDFStatement(kb.sym(host+'#mb'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+'#mb'), SIOC('has_creator'), kb.sym(host+"#"+id), kb.sym(host)),
+                //notification microblog
+                new RDFStatement(kb.sym(host+'#mbn'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+'#mbn'), SIOC('topic'), kb.sym(host+"#"+id), kb.sym(host)),
+                new RDFStatement(kb.sym(host+'#mbn'), SIOC('has_creator'), kb.sym(host+"#"+id), kb.sym(host)),
+            ]
+            if (avatar){
+                //avatar optional
+                genUserMB.push(new RDFStatement(kb.sym(host+"#"+id), SIOC('avatar'), kb.sym(avatar), kb.sym(host)))
+            }
+            alert(host)
+            sparqlUpdater.insert_statement(genUserMB,cbgenUserMB)
+            
+        }
+        
+        var mbCancelNewMB = function(evt){
+            alert("insert cancel logic")
+            // subheaderContainer.removeChild(subheaderContainer.)
+        }
+        var mbCreateNewMB = function(){
+            //disable the create new microblog button.
+            //then prefills the information.
+            xcreateNewMB.disabled= true;
+            var xcmb = doc.createElement('div');
+            var xcmbName = doc.createElement('input');
+                if(kb.whether(s,FOAF('name'))){  //handle use of FOAF:NAME
+                    xcmbName.value = kb.any(s,FOAF('name'))
+                }else{ //handle use of family and given name
+                    xcmbName.value = (kb.any(s,FOAF('givenname')))? 
+                        kb.any(s,FOAF('givenname'))+ " " : ""
+                    xcmbName.value += (kb.any(s,FOAF("family_name")))?
+                        kb.any(s,FOAF('givenname')) : "";
+                    xcmbName.value = kb.any(s,FOAF('givenname')) + " "+
+                        kb.any(s,FOAF("family_name"));
+                }
+            var xcmbId = doc.createElement('input');
+                xcmbId.value  = (kb.any(s, FOAF('nick')))? kb.any(s, FOAF('nick')) : "";
+            var xcmbAvatar = doc.createElement('input');
+                if(kb.whether(s,FOAF('img'))){ // handle use of img
+                    xcmbAvatar.value = kb.any(s,FOAF('img')).uri
+                }else{ //otherwise try depiction
+                    xcmbAvatar.value = (kb.any(s,FOAF('depiction')))?
+                        kb.any(s,FOAF('depiction')).uri : "";
+                }
+            var xcmbWritable = doc.createElement("input");
+                xcmbWritable.value = "http://dig.csail.mit.edu/2007/wiki/sandbox" //TODO remove after testing
+                xcmb.innerHTML = '\
+                    <form class ="createNewMB" id="createNewMB">\
+                        <p id="xcmbname"><span class="">Name: </span></p>\
+                        <p id="xcmbid">Id: </p>\
+                        <p id="xcmbavatar">Avatar: </p> \
+                        <p id="xcmbwritable">Host my microblog at: </p>\
+                        <input type="button" id="mbCancel" value="Cancel" />\
+                        <input type="submit" id="mbCreate" value="Create\!" />\
+                    </form>\
+                    ';
+            subheaderContainer.appendChild(xcmb)   
+            doc.getElementById("xcmbname").appendChild(xcmbName) 
+            doc.getElementById("xcmbid").appendChild(xcmbId)
+            doc.getElementById("xcmbavatar").appendChild(xcmbAvatar)
+            doc.getElementById("xcmbwritable").appendChild(xcmbWritable)
+            doc.getElementById("mbCancel").addEventListener("click", mbCancelNewMB, false)
+            doc.getElementById("createNewMB").addEventListener("submit",function(){mbGenerateNewMB(xcmbId.value, xcmbName.value, xcmbAvatar.value, xcmbWritable.value)}, false)
+        }
         //---submit a post---
         var mbSubmitPost = function(){
             var postDate = new Date()
@@ -254,7 +337,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         
         //---(un)follow a user--- 
         var mbFollowUser = function (){
-            var myUser = kb.sym(getMyUser());
+            var myUser = kb.sym(getMyURI());
             var mbconfirmFollow = function(uri,stat,msg){
                 if (stat == true){
                     if (!Ifollow){
@@ -312,10 +395,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xupdateContainer.addEventListener('submit',mbSubmitPost,false)
             xupdateStatus.addEventListener('keyup',mbLetterCount,false)
         } else {
-            var xnewUser = doc.createTextNode("Hi, it looks like you don't have \
-                would you like to create one?"
-            ) 
+            var xnewUser = doc.createTextNode("\
+                Hi, it looks like you don't have a microblog,\
+                would you like to create one? "
+            );
+            var xcreateNewMB = doc.createElement("input");
+                xcreateNewMB.type = "button";
+                xcreateNewMB.value ="Create a new Microblog";
+                xcreateNewMB.addEventListener("click", mbCreateNewMB, false)
             xupdateContainer.appendChild(xnewUser);
+            xupdateContainer.appendChild(xcreateNewMB);
         }
         
         headerContainer.appendChild(xupdateContainer);
@@ -334,12 +423,14 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
                         
             //---generate name ---
-            var userName = doc.createElement('h1');
-            userName.className = "fn";
-            var username = kb.any(creator,SIOC("name"))
-            userName.appendChild(doc.createTextNode(username+" ("+kb.any(creator,SIOC("id"))+")"));
-            subheaderContainer.appendChild(userName);
-            
+            if ( kb.whether(s,RDF('type'), FOAF('Person'))){}
+            else{
+                var userName = doc.createElement('h1');
+                userName.className = "fn";
+                var username = kb.any(creator,SIOC("name"))
+                userName.appendChild(doc.createTextNode(username+" ("+kb.any(creator,SIOC("id"))+")"));
+                subheaderContainer.appendChild(userName);
+            }
             //---generate follows---
                 var getFollowed = function(user){
                 var userid = kb.any(user, SIOC('id'))
@@ -364,7 +455,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xfollows.appendChild(xfollowsList)
                 
             }
-            //---if not me, and not followed, display follow button---
+            //---display follow button---
             if (!thisIsMe && getMyURI()){
                 var xfollowButton = doc.createElement('input');
                     xfollowButton.setAttribute("type", "button");
@@ -389,17 +480,38 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             headerContainer.appendChild(xfollows);
         }
         
+       
         // POST INFORMATION FOR USER
         var postContainer = doc.createElement('ul');
             postContainer.id = "postList";
         var mb_posts = kb.each(s, SIOC("container_of"));
+        
+        //STREAM VIEW
+        sf.lookUpThing(kb.sym(getMyURI()))
+        var follows = kb.each(kb.sym(getMyURI()), SIOC('follows'))
+        for (f in follows){
+            sf.lookUpThing(follows[f]) //look up people user follows
+            var microblogs = kb.each(follows[f],SIOC('creator_of')) //get the follows microblogs
+            for (var mb in microblogs){
+                sf.lookUpThing(microblogs[mb])
+                if (kb.whether(microblogs[mb], SIOC('topic'), follows[f])){
+                    continue; //ignore mentions microblog
+                }else{
+                    mb_posts = mb_posts.concat(kb.each(microblogs[mb], SIOC('container_of')))
+               }
+           }
+       }
+        //END STREAM VIEW
+        
+        
         //---returns a microblog post---
-        var generatePost = function (uname, post,me){
+        var generatePost = function (post,me){
             //container for post
             var xpost = doc.createElement('li');
                 xpost.className = "post"
                 xpost.setAttribute("id", String(post.uri).split("#")[1])
             //username text 
+            var uname = kb.any(kb.any(post , SIOC('has_creator')),SIOC('name'));
             var xuname = doc.createElement('p');
             var xunameText = doc.createTextNode("-"+uname);
             xuname.appendChild (xunameText);
@@ -536,7 +648,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var postDate = kb.any(mb_posts[post],terms('created'));
                 if (postDate){
                     datelist.push(postDate);
-                    postlist[postDate] = generatePost(username, mb_posts[post],thisIsMe);
+                    postlist[postDate] = generatePost(mb_posts[post],thisIsMe);
                 }
             }
             datelist.sort().reverse()

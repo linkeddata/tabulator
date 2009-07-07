@@ -412,12 +412,12 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var subheaderContainer = doc.createElement('div');
         subheaderContainer.className ="subheader-container";
         //USER HEADER
-        var creator = kb.any(s, SIOC('has_creator'))
+        if ( kb.whether(s,RDF('type'), FOAF('Person'))){
+            var creator = kb.any(s, FOAF('holdsAccount'))
+        }else{
+            var creator = kb.any(s, SIOC('has_creator'))
+        }
         if (kb.whether(creator,tabulator.ns.rdf( 'type'), SIOC('User'))){
-            if ( kb.whether(s,RDF('type'), FOAF('Person'))){
-                creator = kb.any(s, FOAF('holdsAccount'))
-            }
-            else{}
             //---display avatar, if available ---
             var mb_avatar = (kb.any(creator,SIOC("avatar"))) ? kb.any(creator,SIOC("avatar")): "";
             if (mb_avatar !=""){
@@ -490,19 +490,23 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var mb_posts = kb.each(s, SIOC("container_of"));
         
         //STREAM VIEW
-        sf.lookUpThing(kb.any(s, FOAF('holdsAccount')))
-        var follows = kb.each(kb.any(s, FOAF('holdsAccount'))   , SIOC('follows'))
-        for (f in follows){
-            sf.lookUpThing(follows[f]) //look up people user follows
-            var microblogs = kb.each(follows[f],SIOC('creator_of')) //get the follows microblogs
-            for (var mb in microblogs){
-                sf.lookUpThing(microblogs[mb])
-                if (kb.whether(microblogs[mb], SIOC('topic'), follows[f])){
-                    continue; //ignore mentions microblog
-                }else{
-                    mb_posts = mb_posts.concat(kb.each(microblogs[mb], SIOC('container_of')))
+        if (kb.whether(s,FOAF('name'))){
+            sf.lookUpThing(kb.any(s, FOAF('holdsAccount')))
+            var follows = kb.each(kb.any(s, FOAF('holdsAccount'))   , SIOC('follows'))
+            for (f in follows){
+                sf.lookUpThing(follows[f]) //look up people user follows
+                var microblogs = kb.each(follows[f],SIOC('creator_of')) //get the follows microblogs
+                for (var mb in microblogs){
+                    sf.lookUpThing(microblogs[mb])
+                    if (kb.whether(microblogs[mb], SIOC('topic'), follows[f])){
+                        continue; //ignore mentions microblog
+                    }else{
+                        mb_posts = mb_posts.concat(kb.each(microblogs[mb], SIOC('container_of')))
+                   }
                }
            }
+       }else{
+           sf.lookUpThing(s)
        }
         //END STREAM VIEW
         

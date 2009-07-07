@@ -120,7 +120,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var myUserURI = getMyURI();
             myUser = kb.sym(myUserURI.split("#")[0]);
             var newPost = gen_random_uri(myUser.uri);
-            var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of'));
+            var micro = kb.any(kb.sym(myUserURI), SIOC('creator_of')); //TODO make this get the correct mb
             
             //generate new post 
            var batch =[
@@ -196,13 +196,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
             var genUserMB = [
                 //user
-                new RDFStatement(kb.sym(host+"#"+id), RDF('type'), RDF('user'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), RDF('type'), SIOC('User'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#mb'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#mbn'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('name'), name, kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('id'), id, kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), RDF('label'), id, kb.sym(host)),
-                new RDFStatement(kb.sym(host+"#"+id), FOAF('account_of'), s, kb.sym(host)),
+                new RDFStatement(s, FOAF('holdsAccount'), kb.sym(host+"#"+id), kb.sym(host)),
                 //microblog 
                 new RDFStatement(kb.sym(host+'#mb'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+'#mb'), SIOC('has_creator'), kb.sym(host+"#"+id), kb.sym(host)),
@@ -373,7 +373,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var xupdateContainer = doc.createElement('form');
             xupdateContainer.className="update-container";
             xupdateContainer.innerHTML ="<h3>What are you up to?</h3>";
-        
+
         if (getMyURI()){
             var xinReplyToContainer = doc.createElement('input')
                 xinReplyToContainer.type="hidden";
@@ -414,8 +414,12 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //USER HEADER
         var creator = kb.any(s, SIOC('has_creator'))
         if (kb.whether(creator,tabulator.ns.rdf( 'type'), SIOC('User'))){
+            if ( kb.whether(s,RDF('type'), FOAF('Person'))){
+                creator = kb.any(s, FOAF('holdsAccount'))
+            }
+            else{}
             //---display avatar, if available ---
-            var mb_avatar = kb.any(creator,SIOC("avatar"));
+            var mb_avatar = (kb.any(creator,SIOC("avatar"))) ? kb.any(creator,SIOC("avatar")): "";
             if (mb_avatar !=""){
                 var avatar = doc.createElement('img');
                     avatar.src = mb_avatar.uri;
@@ -423,14 +427,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
                         
             //---generate name ---
-            if ( kb.whether(s,RDF('type'), FOAF('Person'))){}
-            else{
-                var userName = doc.createElement('h1');
-                userName.className = "fn";
-                var username = kb.any(creator,SIOC("name"))
-                userName.appendChild(doc.createTextNode(username+" ("+kb.any(creator,SIOC("id"))+")"));
-                subheaderContainer.appendChild(userName);
-            }
+           
+            var userName = doc.createElement('h1');
+            userName.className = "fn";
+            var username = kb.any(creator,SIOC("name"))
+            userName.appendChild(doc.createTextNode(username+" ("+kb.any(creator,SIOC("id"))+")"));
+            subheaderContainer.appendChild(userName);
+
             //---generate follows---
                 var getFollowed = function(user){
                 var userid = kb.any(user, SIOC('id'))
@@ -487,8 +490,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var mb_posts = kb.each(s, SIOC("container_of"));
         
         //STREAM VIEW
-        sf.lookUpThing(kb.sym(getMyURI()))
-        var follows = kb.each(kb.sym(getMyURI()), SIOC('follows'))
+        sf.lookUpThing(kb.any(s, FOAF('holdsAccount')))
+        var follows = kb.each(kb.any(s, FOAF('holdsAccount'))   , SIOC('follows'))
         for (f in follows){
             sf.lookUpThing(follows[f]) //look up people user follows
             var microblogs = kb.each(follows[f],SIOC('creator_of')) //get the follows microblogs

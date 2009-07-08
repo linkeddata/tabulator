@@ -27,8 +27,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
 
     this.render = function(subject, document) {
         var div = document.createElement('div');
-        div.style.backgroundColor="#FFFFFF";
-        div.style.border="thin dotted #000000";
+        div.setAttribute('id','publicationPane');
         var bibo = tabulator.ns.bibo; // for aesthetics
         var foaf = tabulator.ns.foaf;
         var dct = tabulator.ns.dct;
@@ -104,14 +103,14 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                                     ps.SPEN(dct('abstract'))
                                    ]);
 
-        var dataToAssemble = [['Author(s)',ps.parseResults(authorTree.fetch(subject))],
-                              ['Title',ps.parseResults(titleTree.fetch(subject))],
-                              ['Date created',ps.parseResults(dateTree.fetch(subject))],
-                              ['Abstract',ps.parseResults(abstractTree.fetch(subject))],
-                              ['Owner',ps.parseResults(ps.debugStatement(ownerNameTree.fetch(subject)))]];
+        var dataToAssemble = [['Author(s)',ps.parseResults(authorTree.fetch(subject)),'pubAuthor'],
+                              ['Title',ps.parseResults(titleTree.fetch(subject)),'pubTitle'],
+                              ['Date created',ps.parseResults(dateTree.fetch(subject)),'pubDateCreated'],
+                              ['Abstract',ps.parseResults(abstractTree.fetch(subject)),'pubAbstract'],
+                              ['Owner',ps.parseResults(ps.debugStatement(ownerNameTree.fetch(subject))),'pubOwner']];
 
         for(var i = 0;i < dataToAssemble.length;i++)
-            div = this.appendEntry(document, div, dataToAssemble[i][0], dataToAssemble[i][1]);
+            div = this.appendEntry(document, div, dataToAssemble[i][0], dataToAssemble[i][1], dataToAssemble[i][2]);
 
         //alert("statementsMatching: "+tabulator.kb.statementsMatching(tabulator.kb.sym("http://www.advogato.org/person/timbl/foaf.rdf#me"),rdf('type'))+"\nwhether: "+tabulator.kb.statementsMatching(tabulator.kb.sym("http://www.advogato.org/person/timbl/foaf.rdf#me"),rdf('type'),foaf('Person'))+"\nsource of foaf(Person): "+foaf('Person').toSource());
    
@@ -121,9 +120,10 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
     /* Helper Functions */
     // This function was being troublesome. After some tinkering, it turns out that instantiating a string with
     // double quotes instead of single quotes fixes the issue. NOTE: double quotes are safer.
-    this.appendEntry = function(doc,div,tag,data) {
+    this.appendEntry = function(doc,div,tag,data,divClass) {
         if(data == null) return div;
         var subDiv = doc.createElement('div');
+        subDiv.setAttribute('class',divClass);
         var label = doc.createTextNode(tag);
         var list = doc.createElement('ul');
         for(var index = 0;index < data.length;index++) {

@@ -122,7 +122,7 @@
 </menupopup>
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
-        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorShowMetadata(event)"/>
+        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorDetectMetadata(event)"/> 
   </menupopup>
 
   <hbox id="urlbar-icons">
@@ -143,6 +143,8 @@
 
   <script type="application/x-javascript"><![CDATA[
     var myCheckbox;
+
+    var rdfaData;
 
     var tabulator_init = {
 
@@ -176,7 +178,16 @@
       //This is called every time a page finishes loading
       onDOMContentLoaded : function(event) {
          var doc = event.originalTarget;
-	 
+	 dump("\npage " + gURLBar.value +" has finished loading");
+
+	 //Parse RDFa from a document which does not have a DOCType
+	try{
+	   //Glean all the RDFa out of the page, and cache it (so you don't have to parse the page on each tab switch)
+	   rdfaData = $jq('body', window.content.document).rdf().databank.triples();
+	   dump(rdfaData.length);
+	}
+	catch(e){/*no rdfa or some error*/}
+
       }
    };
 
@@ -185,8 +196,9 @@
     var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
                              'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
 
+
     //This gets called when you switch tabs 
-    function tabulatorDetectMetadata(){
+    function tabulatorDetectMetadata(e){
 
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
@@ -239,11 +251,10 @@
         }catch(e){/*no doctype, or missing some elements, these are trivial */}
         
 	//RDFa without the DOCType
-	try{
-	   //Glean all the RDFa out of the page
-	   var triples = $jq('body', window.content.document).rdf().databank.triples();
-	   for (i = 0; i < triples.length; i += 1) {
-	      t = triples[i];
+	
+	if (rdfaData.length >0){
+	   for (i = 0; i < rdfaData.length; i += 1) {
+	      t = rdfaData[i];
 	      s = t.subject.value.toString();
 	      p = t.property.value.toString();
 	      o = t.object.value.toString();
@@ -254,7 +265,7 @@
 
 	      kb.add(kb.sym(s), kb.sym(p), kb.sym(o), kb.sym(why));
            }     
-	   
+
 	   semanticIcon.setAttribute('metadata', 'RDFa');
            semanticIcon.setAttribute('tooltiptext', 'RDFa');  
 	   semanticIcon.addEventListener('click', pumpRDFa, false);
@@ -262,19 +273,17 @@
 	   //findImagesThatCanBeCopied(); //@@@ this might be the source of the recursive call in jquery
 	   
 	   return;            
- 
-	}catch(e){/*no rdfa or some error*/}
-
+	}
 	
         //This I consider non-standard
         try{
 		    var links = doc.getElementsByTagName('link');
 		    for (var x=0;x < links.length; x++) {
-                if (links[x].getAttribute('type') in tRDF_CONTENT_TYPE){
-                    semanticIcon.setAttribute('metadata', 'WildCard');
-                    semanticIcon.setAttribute('tooltiptext', 'link element');
-                    return;
-                }
+		       if (links[x].getAttribute('type') in tRDF_CONTENT_TYPE){
+		          semanticIcon.setAttribute('metadata', 'WildCard');
+                          semanticIcon.setAttribute('tooltiptext', 'link element');
+                          return;
+		       }
 		    }		
         }catch(e){/*no doctype, or missing some elements, these are trivial */}
         		        
@@ -321,14 +330,14 @@
     }
     
     function tabulatorShowMetadata(e){
-        canonizeUrl(e,{});
+        //canonizeUrl(e,{});
         tabulator.metadataURI = gURLBar.value;
         /*
         //before I know more about how cache works in Firefox, cache the DOM        
         tabulator.cacheDOM = content.document;
 		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM);
 		*/        
-        handleURLBarCommand(e);
+        //handleURLBarCommand(e);
     }
     
     function tabulatorCopyURI() {

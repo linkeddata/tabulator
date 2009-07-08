@@ -9,14 +9,13 @@
 
 //load('RDFTreeSearcher.js');
 
-tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-tabulator.panes.register(tabulator.panes.publishingPane = {
-    name: 'Publication',
-
-    icon: Icon.src.icon_publicationPane,
+var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+tabulator.panes.register(tabulator.panes.publishingPane = new function() {
+    this.name = 'Publication';
+    this.icon = Icon.src.icon_publicationPane;
 	
-    label: function(subject) {
-        typeTriples = tabulator.kb.statementsMatching(subject,tabulator.ns.rdf('type'),null,null); // Stores all the 'types' of the URI in an array
+    this.label = function(subject) {
+        var typeTriples = tabulator.kb.statementsMatching(subject,tabulator.ns.rdf('type'),null,null); // Stores all the 'types' of the URI in an array
         if(this.isEmpty(typeTriples)) return null;
         for(var ind = 0;ind < typeTriples.length;ind++) {
             if(this.isEmpty(typeTriples[ind])) continue;
@@ -24,9 +23,9 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
                 return this.name;
         }
         return null;
-    },
+    }
 
-    render: function(subject, document) {
+    this.render = function(subject, document) {
         var div = document.createElement('div');
         div.style.backgroundColor="#FFFFFF";
         div.style.border="thin dotted #000000";
@@ -37,13 +36,30 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
         var rdf = tabulator.ns.rdf;
 
         var ps = new PatternSearch();
-        var personNameTree = ps.MOTN(foaf('Person'),[
-                                                     ps.SPEN(dct('name')),
-                                                     ps.ABN([
-                                                             ps.SPEN(foaf('givenname')),
-                                                             ps.SPEN(foaf('family_name'))
-                                                            ])
-                                                    ])
+
+        var nameTree = ps.SOBN([
+                                ps.ABN([
+                                        ps.SPEN(foaf('givenname')),
+                                        ps.SOBN([
+                                                 ps.SPEN(foaf('family_name')),
+                                                 ps.SPEN(foaf('surname'))
+                                                ])
+                                       ]),
+                                ps.SPEN(foaf('name')),
+                                ps.SPEN(dct('name'))
+                               ]);
+        var titleNameTree = ps.SOBN([
+                                     ps.ABN([
+                                             ps.SPEN(foaf('title')),
+                                             nameTree
+                                            ]),
+                                     nameTree
+                                    ]);
+        var personNameTree = ps.SOBN([
+                                      ps.MOTN(foaf('Person'),[
+                                                              titleNameTree
+                                                             ])
+                                     ]);
         
         var authorTree = ps.MOBN([
                                   ps.SOPN(bibo('authorList'),[
@@ -53,9 +69,26 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
                                                                    personNameTree
                                                                   ]),
                                   ps.MOPN(dct('creator'),[
-                                                          ps.SPEN(dct('name'))
+                                                          titleNameTree
                                                          ])
                                  ]);
+        var editorTree = ps.SOBN([
+                                  ps.SOPN(bibo('editorList'),[
+                                                              personNameTree
+                                                             ]),
+                                  ps.MOPN(bibo('editor'),[
+                                                          titleNameTree,
+                                                          personNameTree
+                                                         ])
+                                 ]);
+        ps.debug = false;
+        var ownerNameTree = ps.SOBN([
+                                     ps.SOBN([
+                                              ps.MOPN(bibo('owner'),[
+                                                                     titleNameTree
+                                                                    ])
+                                             ])
+                                    ]);
 
         var titleTree = ps.SOBN([
                                  ps.SPEN(bibo('shortTitle')),
@@ -63,27 +96,36 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
                                 ]);
 
         var dateTree = ps.SOBN([
+                                ps.SPEN(dct('created')),
                                 ps.SPEN(dct('date'))
                                ]);
 
+        var abstractTree = ps.SOBN([
+                                    ps.SPEN(dct('abstract'))
+                                   ]);
+
         var dataToAssemble = [['Author(s)',ps.parseResults(authorTree.fetch(subject))],
                               ['Title',ps.parseResults(titleTree.fetch(subject))],
-                              ['Date created',ps.parseResults(dateTree.fetch(subject))]];
+                              ['Date created',ps.parseResults(dateTree.fetch(subject))],
+                              ['Abstract',ps.parseResults(abstractTree.fetch(subject))],
+                              ['Owner',ps.parseResults(ps.debugStatement(ownerNameTree.fetch(subject)))]];
 
         for(var i = 0;i < dataToAssemble.length;i++)
             div = this.appendEntry(document, div, dataToAssemble[i][0], dataToAssemble[i][1]);
+
+        //alert("statementsMatching: "+tabulator.kb.statementsMatching(tabulator.kb.sym("http://www.advogato.org/person/timbl/foaf.rdf#me"),rdf('type'))+"\nwhether: "+tabulator.kb.statementsMatching(tabulator.kb.sym("http://www.advogato.org/person/timbl/foaf.rdf#me"),rdf('type'),foaf('Person'))+"\nsource of foaf(Person): "+foaf('Person').toSource());
    
         return div;
-    },
+    }
 
     /* Helper Functions */
     // This function was being troublesome. After some tinkering, it turns out that instantiating a string with
     // double quotes instead of single quotes fixes the issue. NOTE: double quotes are safer.
-    appendEntry: function(doc,div,tag,data) {
+    this.appendEntry = function(doc,div,tag,data) {
         if(data == null) return div;
         var subDiv = doc.createElement('div');
         var label = doc.createTextNode(tag);
-        list = doc.createElement('ul');
+        var list = doc.createElement('ul');
         for(var index = 0;index < data.length;index++) {
             li = doc.createElement('li');
             li.innerHTML = escapeForXML(data[index].toString());
@@ -93,9 +135,9 @@ tabulator.panes.register(tabulator.panes.publishingPane = {
         subDiv.appendChild(label);
         subDiv.appendChild(list);
         return div;
-    },
+    }
 
-    isEmpty: function(arr) {
+    this.isEmpty = function(arr) {
         if(arr == null) return true;
         else if(arr.length == 0) return true;
         else return false;

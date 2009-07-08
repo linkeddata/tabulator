@@ -25,14 +25,12 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         this.searchMethod = searchMethod;
         this.fetchMethod = fetchMethod;
         this.children = children;
-
-        this.fetch = function(subject) {
-            var newTerm = AJAR_handleNewTerm(tabulator.kb, subject, subject);
-            if(subject == null) return null;
-            var searchM = this.searchMethod(subject);
-            var fetchM = this.fetchMethod(searchM, children);
-            return fetchM;
-        }   
+    }
+    this.PatternNode.prototype.fetch = function(subject) {
+        if(subject == null) return null;
+        if(subject.type === 'Symbol')
+            tabulator.sf.requestURI(getBaseURI(subject.uri));
+        return this.fetchMethod(this.searchMethod(subject), this.children);
     }
     this.PatternNode.prototype.toString = function() {
         return this.children.toString();
@@ -71,12 +69,12 @@ function PatternSearch() { // Encapsulates all of the methods and classes
 
     this.fetchAnd = function(subjects, children) { // Children of And nodes must not return arrays
         if(isEmpty(subjects) || isEmpty(children)) return null;
-        for(var i = 0;i < subjects.length;i++) {;
+        for(var i = 0;i < subjects.length;i++) {
             var dataContainer = new DataContainer();
             for(var j = 0;j < children.length;j++) {
                 var fetchedData = children[j].fetch(subjects[i]);
                 if(isEmpty(fetchedData) || fetchedData instanceof Array) break;
-                else if(fetchedData.data) dataContainer.appendData(fetchedData.data);
+                else if(fetchedData instanceof DataContainer) dataContainer.appendData(fetchedData); //@@
             }
             if(dataContainer.data.length == children.length) return dataContainer;
         }
@@ -86,9 +84,9 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     this.fetchMultipleOr = function(subjects, children) {
         if(isEmpty(subjects) || isEmpty(children)) return null;
         var dataContainers = new Array();
-        for(var i = 0;i < children.length;i++)
-            for(var j = 0;j < subjects.length;j++) {
-                var fetchedData = children[i].fetch(subjects[j]);
+        for(var i = 0;i < subjects.length;i++)
+            for(var j = 0;j < children.length;j++) {
+                var fetchedData = children[j].fetch(subjects[i]);
                 if(isEmpty(fetchedData)) continue;
                 else {
                     if(fetchedData instanceof DataContainer) dataContainers.push(fetchedData);
@@ -101,6 +99,8 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         if(dataContainers.length == 0) return null;
         else return dataContainers;
     }
+
+    //this.fetchMultipleAggregate = function(
 
 
     /****************************
@@ -174,14 +174,37 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         }
         else if(results instanceof DataContainer) {
             var datum = "";
-            for(var i = 0;i < results.data.length;i++)
-                if(i < results.data.length-1)
-                    datum += results.data[i]+" ";
-                else
-                    datum += results.data[i];
+            for(var i = 0;i < results.data.length;i++) {
+                var str = "";
+                if(results.data[i] instanceof Array) {
+                    if(results.data[i][0].constructor === String) // "Hello" instanceof String -> false
+                        str = results.data[i].toString();
+                    else if(results.data[i][0] instanceof DataContainer)
+                        str = this.parseResults(results.data[i][0]);
+                }
+                else if(results.data[i].constructor === String)
+                    str = results.data[i].toString();
+                else if(results.data[i] instanceof DataContainer)
+                    str = this.parseResults(results.data[i]);
+                datum += str;
+                if(i < results.data.length-1) datum += " ";
+            }
             values.push(datum);
         }
         return values;
+    }
+
+    function getBaseURI(uri) {
+        if(uri.indexOf('#') >= 0)
+            return uri.substring(0,uri.indexOf('#'));
+        else
+            return uri;
+    }
+
+    this.debugStatement = function(obj) {
+        if(obj == null) alert('null');
+        else alert(obj.toSource());
+        return obj;
     }
 
 

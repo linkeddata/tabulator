@@ -668,9 +668,8 @@ __Serializer.prototype.statementsToXML = function(sts) {
     var str = '<rdf:RDF';
     if (sz.defaultNamespace)
       str += ' xmlns="'+escapeForXML(sz.defaultNamespace)+'"';
-    for (var ns in namespaceCounts) {
+    for (var ns in namespaceCounts)
         str += '\n xmlns:' + sz.prefixes[ns] + '="'+escapeForXML(ns)+'"';
-    }
     str += '>';
 
     var tree2 = [str, tree, '</rdf:RDF>'];  //@@ namespace declrations

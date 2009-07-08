@@ -2,7 +2,7 @@
 // 
 // CVS Id: tabulate.js,v 1.345 2006/01/12 14:00:56 timbl Exp $
 //
-// SVN ID: $Id: tabulate.js 25899 2009-04-20 14:08:17Z timbl $
+// SVN ID: $Id: tabulate.js 26626 2009-07-08 18:40:30Z cruz $
 //
 // See Help.html, About.html, tb.html
 //tabulate.js is now the main driving class behind the Web Apps version of the Tabulator.
@@ -25,7 +25,7 @@ tabulator.ns.rdf = rdf = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-n
 tabulator.ns.rdfs = rdfs = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
 tabulator.ns.owl = owl = RDFNamespace("http://www.w3.org/2002/07/owl#");
 tabulator.ns.dc = dc = RDFNamespace("http://purl.org/dc/elements/1.1/"); // Original dc
-tabulator.ns.dct = dct = RDFNamespace("http://purl.org/dc/terms/");  // New dc
+tabulator.ns.dct = dct = RDFNamespace("http://purl.org/dc/terms/");
 tabulator.ns.rss = rss = RDFNamespace("http://purl.org/rss/1.0/");
 tabulator.ns.xsd = xsd = RDFNamespace("http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-");
 tabulator.ns.contact = contact = RDFNamespace("http://www.w3.org/2000/10/swap/pim/contact#");
@@ -35,7 +35,7 @@ tabulator.ns.doap = doap = RDFNamespace("http://usefulinc.com/ns/doap#");
 var ns = tabulator.ns
 var kb = new RDFIndexedFormula()  // This uses indexing and smushing
 tabulator.kb = kb; 
-var sf = new SourceFetcher(kb) // This handles resource retrieval
+var sf = new SourceFetcher(tabulator.kb) // This handles resource retrieval
 tabulator.sf = sf; 
 
 var outline; // one per document

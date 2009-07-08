@@ -219,6 +219,12 @@ div.social_linkButton {
   div.no > div.affirmative { display: none } 
   
 
+/******************* CV Pane *****************/
+
+.CVclass {
+    background-color: LightSkyBlue;
+}
+
 /******************* Data Content Pane *****************/
 
 div.dataContentPane {

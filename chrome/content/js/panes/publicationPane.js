@@ -89,6 +89,16 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                                              ])
                                     ]);
 
+        var nameTreeStr = "(S,O,N) > (N,A,N) > (S,N,P,foaf:givenname)\n"+
+                          "                  > (S,O,N) > (S,P,foaf:family_name)\n"+
+                          "                            > (S,P,foaf:surname)\n"+
+                          "        > (S,N,P,foaf:name)\n"+
+                          "        > (S,N,P,dct:name)";
+        var titleNameTreeStr = "(S,O,N) > (N,A,N) > (S,P,N,foaf:title)\n"+
+                             //"                  > ["+nameTree+"]\n"+
+                               "        >         ^";
+        ps.parseToTree(titleNameTreeStr);
+
         var titleTree = ps.SOBN([
                                  ps.SPEN(bibo('shortTitle')),
                                  ps.SPEN(dct('title'))

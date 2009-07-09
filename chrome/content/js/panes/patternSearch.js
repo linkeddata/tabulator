@@ -264,4 +264,80 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     this.MOBN = this.MultipleOrBlankNode;
     this.SOBN = this.SingleOrBlankNode;
     this.ABN = this.AndBlankNode;
+
+    /*********************************
+     *    Special Syntax Parser      *
+     *********************************/
+    this.parseToTree = function(stringTree) {
+        // takes in another tree that is placed within brackets and integrates it into the new tree
+        function reallocate(tree) {
+            return tree; // For now.
+        }
+        // Returns the first char in a string that is not a space
+        function firstNonSpaceCharLoc(lineString) {
+            for(var index = 0;index < lineString.length;index++)
+                if(str.charAt(index) !== " ") return index;
+            return -1;
+        }
+        // Returns the level of the node in the tree
+        function nodeLevel(currentIndex,currentLine,indicesLevels) {
+            for(var line = currentLine-1;line >= 0;line--)
+                for(var index = 0;index < indicesLevels[line].length;index++)
+                    if(indicesLevels[line][index][0] == currentIndex)
+                        return indicesLevels[line][index][1];
+            return indicesLevels[currentLine][indicesLevels[currentLine].length-1];
+        }
+        // Returns an array of the indices of the char ch in str
+        function indicesOf(ch,str) {
+            var indices = new Array();
+            var index = str.indexOf(ch);
+            while(index != -1) {
+                indices.push(index);
+                index = str.indexOf(ch,index+1);
+            }
+            return indices;
+        }
+
+        // Builds a two-dimensional array of doubles with the level and index of each '>'
+        var splicedString = reallocate(stringTree).replace(" ^"," >^").split("\n");
+        var indicesLevels = new Array();
+        for(var line = 0;line < splicedString.length;line++) {
+            indicesLevels.push(new Array());
+            var lineIndices = indicesOf(">",splicedString[line]);
+            var levelOffset = 0;
+            if(line > 0) levelOffset = nodeLevel(lineIndices[0],line,indicesLevels);
+            else { lineIndices.push(0); lineIndices.sort(function(a,b){return a - b;}); }
+            for(var level = 0;level < lineIndices.length;level++)
+                indicesLevels[line].push([lineIndices[level],level+levelOffset])
+        }
+        alert(indicesLevels.toSource());
+        
+
+        // Builds a two-dimensional array of nodes resembling the original string
+        var stringTree = new Array();
+        for(var line = 0;line < indicesLevels.length;line++) {
+            stringTree.push(new Array());
+            for(var level = 0;level < indicesLevels[line][0][1];level++)
+                stringTree[line].push(null);
+            for(var level = 0;level < indicesLevels[line].length;level++) {
+                var start = indicesLevels[line][level][0];
+                if(level+1 < indicesLevels[line].length) {
+                    var end = indicesLevels[line][level+1][0];
+                    stringTree[line].push(splicedString[line].substring(start,end)
+                    .replace(" ","").replace(">",""));
+                }
+                else
+                    stringTree[line].push(splicedString[line].substring(start)
+                    .replace(" ","").replace(">",""));
+            }
+        }
+        alert(stringTree.toSource());
+        // ^^ WORKS TILL HERE
+    }
+    function printArr(arr) {
+        str = "";
+        for(var i = 0;i < arr.length;i++)
+            str += arr[i]+"\n";
+        return str;
+    }
 }

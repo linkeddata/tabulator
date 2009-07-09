@@ -606,7 +606,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //END LINK META DATA
             //add the reply to and delete buttons to the interface
             var mbReplyTo = function (){
-                var id= kb.any(creator,SIOC("id"));
+                var id= kb.any(kb.any(post, SIOC('has_creator')),SIOC("id"));
                 xupdateStatus.value = "@"+id+" ";
                 xupdateStatus.focus();
                 xinReplyToContainer.value = post.uri

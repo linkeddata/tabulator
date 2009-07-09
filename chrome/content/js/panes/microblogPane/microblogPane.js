@@ -165,7 +165,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             sparqlUpdater.insert_statement(batch, function(a,b,c) {callback(a,b,c, batch)});
         }       
         var notify = function(messageString){
-            alert(messageString); //maybe something less obnoxious than an alert.
+            var xmsg = doc.createElement('li');
+            xmsg.className ="notify"
+            xmsg.innerHTML = messageString;
+            doc.getElementById("notify-container").appendChild(xmsg)
+            setTimeout(function(){doc.getElementById('notify-container').removeChild(xmsg); delete xmsg}, 4000)
         };      
         var getMyURI = function(){
             var me =  tabulator.preferences.get('me')
@@ -195,9 +199,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         // EVENT LISTENERS
         var mbGenerateNewMB = function(id, name, avatar, loc){
             var host =  loc + "/"+ id;
-            
             var cbgenUserMB = function(a,b,c){
-                alert(a+"\n"+b+"\n"+c)
+                if (b){
+                    notify('Microblog generated at '+host+'#'+id)
+                }
             }
             
             var genUserMB = [
@@ -221,13 +226,12 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 //avatar optional
                 genUserMB.push(new RDFStatement(kb.sym(host+"#"+id), SIOC('avatar'), kb.sym(avatar), kb.sym(host)))
             }
-            alert(host)
             sparqlUpdater.insert_statement(genUserMB,cbgenUserMB)
             
         }
         var mbCancelNewMB = function(evt){
-            alert("insert cancel logic")
-            // subheaderContainer.removeChild(subheaderContainer.)
+            subheaderContainer.removeChild(subheaderContainer.childNodes[0])
+            xcreateNewMB.disabled = false
         }
         var mbCreateNewMB = function(){
             //disable the create new microblog button.
@@ -273,6 +277,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             doc.getElementById("xcmbwritable").appendChild(xcmbWritable)
             doc.getElementById("mbCancel").addEventListener("click", mbCancelNewMB, false)
             doc.getElementById("createNewMB").addEventListener("submit",function(){mbGenerateNewMB(xcmbId.value, xcmbName.value, xcmbAvatar.value, xcmbWritable.value)}, false)
+            xcmbName.focus()
         }
         var mbSubmitPost = function(){
             var postDate = new Date()
@@ -288,11 +293,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         for (triple in d){
                             kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why)
                         }
-                        notify("submitted.")
-                        if (thisIsMe) doc.getElementById('postNotificationList').insertBefore(generatePost(username, d[0].subject,thisIsMe),doc.getElementById('postList').childNodes[0]);
                         xupdateSubmit.disabled = false;
                         xupdateStatus.value=""
                         mbLetterCount();
+                        notify("Microblog Updated.")
+                        if (thisIsMe) doc.getElementById('postNotificationList').insertBefore(generatePost(username, d[0].subject,thisIsMe),doc.getElementById('postList').childNodes[0]);
                     }
                     //add update to list
                 }
@@ -371,10 +376,12 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             headerContainer.className ="header-container";
 
         //---create status update box---
+        var xnotify = doc.createElement('ul');
+            xnotify.id ="notify-container"
+            xnotify.className = "notify-container";
         var xupdateContainer = doc.createElement('form');
             xupdateContainer.className="update-container";
             xupdateContainer.innerHTML ="<h3>What are you up to?</h3>";
-
         if (getMyURI()){
             var xinReplyToContainer = doc.createElement('input')
                 xinReplyToContainer.type="hidden";
@@ -447,69 +454,70 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         //user header end
         //header tabs
-        var mbChangeTab = function(evt){ 
-            //hide active panes
-            postNotificationContainer.className= postNotificationContainer.className.replace(/\w*active\w*/,"")
-            postMentionContainer.className= postNotificationContainer.className.replace(/\w*active\w*/,"")
-            postContainer.className= postContainer.className.replace(/\w*active\w*/,"")
-            xfollows.className = xfollows.className.replace(/\w*active\w*/,"")
-            //clear active tabs
-            xstreamTab.className=xstreamTab.className.replace(/\w*active\w*/,"")
-            xuserPostTab.className=xuserPostTab.className.replace(/\w*active\w*/,"")
-            xuserMentionsTab.className= xuserMentionsTab.className.replace(/\w*active\w*/,"")
-            xfollowsTab.className=xfollowsTab.className.replace(/\w*active\w*/,"")
-            switch (evt.target.id){
-                case "tab-stream":
-                    postContainer.className+=" active"
-                    xstreamTab.className ="active"
-                break
-                case "tab-by-user":
-                    postNotificationContainer.className+=" active"
-                    xuserPostTab.className ="active"
-                break
-                case "tab-at-user":
-                    postMentionContainer.className+=" active"
-                    xuserMentionsTab.className ="active"
-                break
-                case "tab-follows":
-                    xfollows.className+=" active"
-                    xfollowsTab.className ="active"
-                break
-                default:
-                break
+        if (getMyURI()){
+            var mbChangeTab = function(evt){ 
+                //hide active panes
+                postNotificationContainer.className= postNotificationContainer.className.replace(/\w*active\w*/,"")
+                postMentionContainer.className= postNotificationContainer.className.replace(/\w*active\w*/,"")
+                postContainer.className= postContainer.className.replace(/\w*active\w*/,"")
+                xfollows.className = xfollows.className.replace(/\w*active\w*/,"")
+                //clear active tabs
+                xstreamTab.className=xstreamTab.className.replace(/\w*active\w*/,"")
+                xuserPostTab.className=xuserPostTab.className.replace(/\w*active\w*/,"")
+                xuserMentionsTab.className= xuserMentionsTab.className.replace(/\w*active\w*/,"")
+                xfollowsTab.className=xfollowsTab.className.replace(/\w*active\w*/,"")
+                switch (evt.target.id){
+                    case "tab-stream":
+                        postContainer.className+=" active"
+                        xstreamTab.className ="active"
+                    break
+                    case "tab-by-user":
+                        postNotificationContainer.className+=" active"
+                        xuserPostTab.className ="active"
+                    break
+                    case "tab-at-user":
+                        postMentionContainer.className+=" active"
+                        xuserMentionsTab.className ="active"
+                    break
+                    case "tab-follows":
+                        xfollows.className+=" active"
+                        xfollowsTab.className ="active"
+                    break
+                    default:
+                    break
+                }
             }
+            var xtabsList = doc.createElement('ul');
+                xtabsList.className = "tabslist";
+    
+            var xstreamTab = doc.createElement('li');
+                xstreamTab.innerHTML = "By follows";
+                xstreamTab.className = "active";
+                xstreamTab.id = "tab-stream";
+                xstreamTab.addEventListener("click", mbChangeTab, false);
+                xtabsList.appendChild(xstreamTab)
+        
+            var xuserPostTab = doc.createElement('li');
+                xuserPostTab.innerHTML = "By "+uid;
+                xuserPostTab.id = "tab-by-user"
+                xuserPostTab.addEventListener("click", mbChangeTab, false);
+                xtabsList.appendChild(xuserPostTab)
+        
+            var xuserMentionsTab = doc.createElement('li');
+                xuserMentionsTab.innerHTML = "@"+uid;
+                xuserMentionsTab.id = "tab-at-user";
+                xuserMentionsTab.addEventListener("click", mbChangeTab, false);
+                xtabsList.appendChild(xuserMentionsTab)
+        
+            var xfollowsTab = doc.createElement('li')
+                xfollowsTab.innerHTML = uid+"'s follows"
+                xfollowsTab.id= "tab-follows";
+                xfollowsTab.addEventListener("click", mbChangeTab, false);
+                xtabsList.appendChild(xfollowsTab)  
         }
-        var xtabsList = doc.createElement('ul');
-            xtabsList.className = "tabslist";
-        
-        var xstreamTab = doc.createElement('li');
-            xstreamTab.innerHTML = "By follows";
-            xstreamTab.className = "active";
-            xstreamTab.id = "tab-stream";
-            xstreamTab.addEventListener("click", mbChangeTab, false);
-            xtabsList.appendChild(xstreamTab)
-            
-        var xuserPostTab = doc.createElement('li');
-            xuserPostTab.innerHTML = "By "+uid;
-            xuserPostTab.id = "tab-by-user"
-            xuserPostTab.addEventListener("click", mbChangeTab, false);
-            xtabsList.appendChild(xuserPostTab)
-            
-        var xuserMentionsTab = doc.createElement('li');
-            xuserMentionsTab.innerHTML = "@"+uid;
-            xuserMentionsTab.id = "tab-at-user";
-            xuserMentionsTab.addEventListener("click", mbChangeTab, false);
-            xtabsList.appendChild(xuserMentionsTab)
-            
-        var xfollowsTab = doc.createElement('li')
-            xfollowsTab.innerHTML = uid+"'s follows"
-            xfollowsTab.id= "tab-follows";
-            xfollowsTab.addEventListener("click", mbChangeTab, false);
-            xtabsList.appendChild(xfollowsTab)  
-        
         //header tabs end
         headerContainer.appendChild(subheaderContainer);
-        headerContainer.appendChild(xtabsList)
+        if (getMyURI()) headerContainer.appendChild(xtabsList);
         //HEADER END   
         
        //FOLLOWS VIEW
@@ -611,7 +619,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     //callback after deletion
                     var mbconfirmDeletePost= function(a,success){
                         if (success){
-                            notify("delete confirmed")
+                            notify("Post deleted.")
                             //update the ui to reflect model changes.
                             var deleteThisNode = evt.target.parentNode;
                             deleteThisNode.parentNode.removeChild(deleteThisNode);
@@ -752,6 +760,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //build
         var microblogPane  = doc.createElement("div");
             microblogPane.className = "ppane";
+            microblogPane.appendChild(xnotify)
             microblogPane.appendChild(headerContainer);
             if (xfollows != undefined){microblogPane.appendChild(xfollows);}
             microblogPane.appendChild(postContainer);

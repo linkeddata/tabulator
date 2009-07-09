@@ -34,6 +34,19 @@
     border: solid 1px #ccc;
     background-color: #fff;
 }
+.ppane ul{
+    list-style-type:none !important;
+}
+/*notifications*/
+
+.ppane .notify-container .notify{
+    background-color:#FFFAE6;
+    border: solid 1px #FFE788;
+    padding: 1em .5em;
+    margin:1em;
+    -moz-border-radius:.5em;
+}
+
 /*view*/
 .ppane .view-container{
     display:none;
@@ -77,6 +90,9 @@
 }
 .ppane .header-container .createNewMB input[type=text]{
     min-width:25em;  
+}
+.ppane .header-container .createNewMB input[type=submit]{
+    float:none;
 }
 
 /*post list*/

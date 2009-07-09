@@ -3,7 +3,6 @@
     color: #333;
     background-color: #fff;
     border: #999 solid 1px;
-    padding: 1em;
 }
 .ppane a{
     color:#357598;
@@ -12,25 +11,29 @@
     border: solid 1px #333 !important;
 }
 .ppane input[type=button], .ppane input[type=submit]{
-    background-color: #eee;
-    padding: 0 .5em;
+    background-color: #fff;
+    padding: .1em .5em;
     border: solid 1px #333;
-    -moz-border-radius:.5em;
+    -moz-border-radius:3px;
+}
+.ppane input[type=button]:hover, .ppane input[type=submit]:hover{
+    background-color: #eef;
+    border: solid 1px #357598 !important;
 }
 .ppane ul{
     padding: 0px;
 }
 .ppane .update-container, .ppane .createNewMB{
-    margin: 1em 0;
     background-color: #fafafa;
-    border: solid 1px #ccc;
+    background-color: #fff;
     margin-bottom: 2em;
-    -moz-border-radius: 5px;
     padding: 5px 1em;
+    -moz-box-shadow: 0px 5px 10px #fff;    
 }
 /*view*/
 .ppane .view-container{
     display:none;
+    padding:1em;
 }
 .ppane .view-container.active{
     display:block;
@@ -39,18 +42,29 @@
 /*header container*/
 .ppane .header-container{
     border-bottom: solid 1px #999;
+    background-color:#fafaf8;
+    -moz-box-shadow: 0px 0px 8px #fcfcfc;
 }
 .ppane .header-container img{
     float:left;
     max-height: 75px;
-    margin-right: 1em;
-    margin-bottom: 1em;
+    margin: 1em;
+    border: solid 3px #fff;
+    margin-top: 0em;
+    -moz-box-shadow: 0px 0px 8px #ccc;
+
 }
 .ppane .header-container .subheader-container{
     min-height: 75px;
+    margin-bottom:2em;
+    padding: 1em;
 }
 .ppane .header-container textarea{
     width:100%;
+    margin-bottom:.4em;
+}
+.ppane .header-container input[value=Send]{
+    float:right;
 }
 .ppane .header-container .createNewMB input[type=text]{
     width:25em;  
@@ -91,6 +105,7 @@
 }
 .ppane .tabslist li.active{
     border-bottom: solid 1px #fff ;
+    -moz-box-shadow:  0px 10px 0px #fff,0px 0px 8px #ccc;
 }
 .ppane .tabslist li:hover{
     background-color: #eee;  
@@ -98,6 +113,7 @@
 .ppane .tabslist li.active:hover{
     background-color: #fff;
 }
+
 /*follow list*/
 .ppane .followlist-container{
 }

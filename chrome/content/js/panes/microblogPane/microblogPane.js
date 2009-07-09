@@ -289,7 +289,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                             kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why)
                         }
                         notify("submitted.")
-                        if (thisIsMe) doc.getElementById('postList').insertBefore(generatePost(username, d[0].subject,thisIsMe),doc.getElementById('postList').childNodes[0])
+                        if (thisIsMe) doc.getElementById('postNotificationList').insertBefore(generatePost(username, d[0].subject,thisIsMe),doc.getElementById('postList').childNodes[0]);
                         xupdateSubmit.disabled = false;
                         xupdateStatus.value=""
                         mbLetterCount();
@@ -594,12 +594,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xreplyTo.innerHTML = "<div><a href="+theReply+">[in reply to]</a><div> ";
 
             }
+
             //END LINK META DATA
-            
-            
-            
-            
-            
             //add the reply to and delete buttons to the interface
             var mbReplyTo = function (){
                 var id= kb.any(creator,SIOC("id"));
@@ -645,7 +641,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 }
             }
             if (getMyURI()){ //generate buttons if the uri is not set. 
-                if (!me){
+                var themaker = kb.any(post , SIOC('has_creator'))
+                if (getMyURI() != themaker.uri){
                     var xreplyButton = doc.createElement('input');
                         xreplyButton.type = "button";
                         xreplyButton.value = "reply";
@@ -662,7 +659,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //build
             xpost.appendChild(xpostContent);
             if(getMyURI()){ 
-                if (!me){xpost.appendChild(xreplyButton)}
+                if (getMyURI() != themaker.uri){xpost.appendChild(xreplyButton)}
                 else{xpost.appendChild(xdeleteButton)}
             }
             xpost.appendChild(xuname);

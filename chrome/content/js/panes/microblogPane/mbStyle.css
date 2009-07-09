@@ -23,12 +23,16 @@
 .ppane ul{
     padding: 0px;
 }
-.ppane .update-container, .ppane .createNewMB{
-    background-color: #fafafa;
+.ppane .update-container{
     background-color: #fff;
     margin-bottom: 2em;
     padding: 5px 1em;
     -moz-box-shadow: 0px 5px 10px #fff;    
+}
+.ppane .createNewMB{
+    padding: 5px 1em;
+    border: solid 1px #ccc;
+    background-color: #fff;
 }
 /*view*/
 .ppane .view-container{
@@ -63,11 +67,16 @@
     width:100%;
     margin-bottom:.4em;
 }
-.ppane .header-container input[value=Send]{
+.ppane .header-container textarea:focus, .ppane input:focus{
+    border: solid 1px #357598 !important;
+    outline:none;
+    -moz-box-shadow:  0px 0px 2px #357598;
+}
+.ppane .header-container input[type=submit]{
     float:right;
 }
 .ppane .header-container .createNewMB input[type=text]{
-    width:25em;  
+    min-width:25em;  
 }
 
 /*post list*/

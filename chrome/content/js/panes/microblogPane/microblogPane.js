@@ -422,12 +422,17 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         
         
         //user header
-        if ( kb.whether(s,RDF('type'), FOAF('Person'))){
-            var creator = kb.any(s, FOAF('holdsAccount'))
-        }else{
-            var creator = kb.any(s, SIOC('has_creator'))
+        var creator;
+        var creators = kb.each(s, FOAF('holdsAccount'))
+        for (var c in creators){
+            if (kb.whether(creators[c], RDF('type'), SIOC('User')) &&
+                kb.whether(kb.any(creators[c], SIOC('creator_of')), RDF('type'),SIOCt('Microblog'))){
+                creator = creators[c];
+                break;
+                //TODO add support for more than one microblog in same foaf
+            }
         }
-        if (kb.whether(creator,tabulator.ns.rdf( 'type'), SIOC('User'))){
+        if (kb.whether(creator,RDF( 'type'), SIOC('User'))){
             //---display avatar, if available ---
             var mb_avatar = (kb.any(creator,SIOC("avatar"))) ? kb.any(creator,SIOC("avatar")): "";
             if (mb_avatar !=""){

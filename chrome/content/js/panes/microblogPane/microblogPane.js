@@ -53,10 +53,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
     label: function(subject) {
         var SIOCt = RDFNamespace('http://rdfs.org/sioc/types#');
         if (
-            //tabulator.kb.whether(
-            //    subject, tabulator.ns.rdf( 'type'), SIOCt('Microblog')) ||
-            //tabulator.kb.whether(
-            //    subject, tabulator.ns.rdf( 'type'), SIOCt('MicroblogPost')) ||
             tabulator.kb.whether(
                 subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))
             ) return "Microblog";
@@ -73,6 +69,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var kb = tabulator.kb;
         var charCount = 140;
         var sparqlUpdater= new sparql(kb);
+        
+        //attempt to fetch user account from local preferences if just 
+        //in case the user's foaf was not writable. add it to the store
+        //this will probably need to change. 
+        var getHoldsAccountFromPrefs = function(){
+            var the_account = kb.sym(tabulator.preferences.get('acct'))
+            var the_user = kb.sym(tabulator.preferences.get("me"));
+            if (the_user && the_account)
+                kb.add(the_user, FOAF('holdsAccount'), the_account, the_user.uri.split("#")[0])
+        }
          
         var FollowList = function(){        
          /*
@@ -111,6 +117,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         var followlist = new FollowList();
         
+        getHoldsAccountFromPrefs()
         var gen_random_uri = function(base){
             //generate random uri
             var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+7);
@@ -199,9 +206,23 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         // EVENT LISTENERS
         var mbGenerateNewMB = function(id, name, avatar, loc){
             var host =  loc + "/"+ id;
-            var cbgenUserMB = function(a,b,c){
+            
+            var rememberMicroblog= function(){
+                tabulator.preferences.set(
+                    "acct",
+                    host+"#"+id
+                )
+            }
+            var cbgenUserMB = function(a,b,c,d){
                 if (b){
                     notify('Microblog generated at '+host+'#'+id)
+                    //assume the foaf is not writable and store the microblog to the
+                    //preferences for later retrieval.
+                    //this will probably need to change. 
+                    rememberMicroblog()
+                    for (var triple in d){
+                        kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why)
+                    }
                 }
             }
             
@@ -290,7 +311,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 //submission callback
                 var mbconfirmSubmit = function(a,b,c,d){
                     if(b == true){
-                        for (triple in d){
+                        for (var triple in d){
                             kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why)
                         }
                         xupdateSubmit.disabled = false;
@@ -357,8 +378,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     Ifollow= !Ifollow
                     xfollowButton.disabled = false;
                     followButtonLabel = (Ifollow)? "Unfollow ":"Follow ";
+                    var doFollow = (Ifollow)? "now follow ":"no longer follow ";
                     xfollowButton.value = followButtonLabel+ username;
-                    notify("Follow list updated.")
+                    notify("You "+doFollow+username+".")
                 }
             }
             followMe = new RDFStatement(myUser,SIOC('follows'),creator,myUser)

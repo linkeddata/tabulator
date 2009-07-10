@@ -37,8 +37,8 @@
 .ppane ul{
     list-style-type:none !important;
 }
-/*notifications*/
 
+/*notifications*/
 .ppane .notify-container .notify{
     background-color:#FFFAE6;
     border: solid 1px #FFE788;
@@ -146,4 +146,3 @@
     display: block;
     
 }
-

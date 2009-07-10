@@ -530,20 +530,20 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                userid+"</a>"
            return follow
        }
-       if (kb.whether(creator, SIOC('follows'))){
-           var creatorFollows = kb.each(creator, SIOC('follows'))
-           var xfollows = doc.createElement('div')
-               xfollows.className = "followlist-container view-container"
-           var xfollowsHead = doc.createElement('h3')
-           var xfollowsList = doc.createElement('ul')
-           for (thisPerson in creatorFollows){
-               xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]))
-           }
-           xfollowsHead.appendChild(doc.createTextNode('Follows:'))
-           xfollows.appendChild(xfollowsHead)
-           xfollows.appendChild(xfollowsList)  
-       }
-       //FOLLOWS VIEW END 
+        var xfollows = doc.createElement('div')
+            xfollows.className = "followlist-container view-container"
+        if (kb.whether(creator, SIOC('follows'))){
+            var creatorFollows = kb.each(creator, SIOC('follows'))
+            var xfollowsHead = doc.createElement('h3')
+            var xfollowsList = doc.createElement('ul')
+            for (thisPerson in creatorFollows){
+                xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]))
+            }
+            xfollowsHead.appendChild(doc.createTextNode('Follows:'))
+            xfollows.appendChild(xfollowsHead)
+            xfollows.appendChild(xfollowsList)  
+        }
+        //FOLLOWS VIEW END 
        
         var generatePost = function (post,me){
         /* 
@@ -719,10 +719,12 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 }
             }
         }
-        var postList = generatePostList(mb_posts) //generate stream
-            postList.id = "postList"
-            postList.className = "postList"
-        postContainer.appendChild(postList);
+        if (mb_posts.length > 0){
+            var postList = generatePostList(mb_posts) //generate stream
+                postList.id = "postList"
+                postList.className = "postList"
+            postContainer.appendChild(postList);
+        }
         //END STREAM VIEW
         
         //NOTIFICATIONS VIEW

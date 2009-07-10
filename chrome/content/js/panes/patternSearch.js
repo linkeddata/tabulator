@@ -270,22 +270,71 @@ function PatternSearch() { // Encapsulates all of the methods and classes
      *********************************/
     this.parseToTree = function(stringTree) {
         // takes in another tree that is placed within brackets and integrates it into the new tree
-        function reallocate(tree) {
-            return tree; // For now.
+        function reallocate(tree,spaces) { // this function was a pain to debug
+            var br = getBrackets(tree);
+            if(br.length == 0) {
+                var blankStr = createBlankString(spaces);
+                var strs = tree.split("\n");
+                var newTree = "";
+                for(var i = 0;i < strs.length;i++) {
+                    if(i == 0) newTree += strs[i];
+                    else newTree += blankStr + strs[i]
+                    if(i+1 != strs.length)
+                        newTree += "\n";
+                }
+                return newTree;
+            }
+            else {
+                while(br.length > 0) {
+                    var spaces = tree.lastIndexOf(">",br[0])+1;
+                    if(tree.lastIndexOf("\n",br[0]) != -1)
+                        spaces -= tree.lastIndexOf("\n",br[0]);
+                    tree = insertString(tree,reallocate(tree.substring(br[0]+1,br[1]),spaces),br[0],br[1]+1);
+                    br = getBrackets(tree);
+                }   
+                return tree;
+            }
+        }
+        // Gets two bracket indices, within which there are no brackets
+        function getBrackets(tree) {
+            var left = indicesOf("[",tree);
+            var right = indicesOf("]",tree);
+            if(left.length != right.length) alert("Unequal number of brackets");
+            if(left.length == 0 || right.length == 0) return [];
+            var pair = [left[0],right[0]];
+            for(var l = 0;l < left.length;l++)
+                for(var r = 0;r < right.length;r++)
+                    if(right[r]-left[l]<pair[1]-pair[0] && right[r]-left[l]>0) {
+                        minim = right[r] - left[l];
+                        pair = [left[l],right[r]];
+                    }
+            return pair;
+        }
+        // Creates a blank string of length size
+        function createBlankString(size) {
+            var str = "";
+            for(var i = 0;i < size;i++)
+                str += " ";
+            return str;
+        }
+        // replaces the chars between begIndex and endIndex;
+        // inclusive and non-inclusive, respectively; with newStr
+        function insertString(str,newStr,begIndex, endIndex) {
+            return str.substring(0,begIndex).concat(newStr).concat(str.substring(endIndex));
         }
         // Returns the first char in a string that is not a space
-        function firstNonSpaceCharLoc(lineString) {
-            for(var index = 0;index < lineString.length;index++)
-                if(str.charAt(index) !== " ") return index;
-            return -1;
+        function firstNonspace(lineString) {
+            return lineString.indexOf(lineString.replace(/ /g,"").charAt(0));
         }
         // Returns the level of the node in the tree
         function nodeLevel(currentIndex,currentLine,indicesLevels) {
             for(var line = currentLine-1;line >= 0;line--)
-                for(var index = 0;index < indicesLevels[line].length;index++)
-                    if(indicesLevels[line][index][0] == currentIndex)
+                for(var index = indicesLevels[line].length-1;index >= 0;index--)
+                    if(indicesLevels[line][index] == null) break;
+                    else if(indicesLevels[line][index][0] == currentIndex &&
+                           (index == 0 || indicesLevels[line][index-1] != null))
                         return indicesLevels[line][index][1];
-            return indicesLevels[currentLine][indicesLevels[currentLine].length-1];
+            return indicesLevels[currentLine][indicesLevels[currentLine].length-1][1]+1;
         }
         // Returns an array of the indices of the char ch in str
         function indicesOf(ch,str) {
@@ -299,7 +348,10 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         }
 
         // Builds a two-dimensional array of doubles with the level and index of each '>'
-        var splicedString = reallocate(stringTree).replace(" ^"," >^").split("\n");
+        alert("StringTree:\n"+stringTree);
+        var reallocatedString = reallocate(stringTree).replace(/ ^/g," >^");
+        alert("ReallocatedString:\n"+reallocatedString);
+        var splicedString = reallocatedString.split("\n");
         var indicesLevels = new Array();
         for(var line = 0;line < splicedString.length;line++) {
             indicesLevels.push(new Array());
@@ -307,6 +359,8 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             var levelOffset = 0;
             if(line > 0) levelOffset = nodeLevel(lineIndices[0],line,indicesLevels);
             else { lineIndices.push(0); lineIndices.sort(function(a,b){return a - b;}); }
+            for(var nullLevel = 0;nullLevel < levelOffset;nullLevel++)
+                indicesLevels[line].push(null);
             for(var level = 0;level < lineIndices.length;level++)
                 indicesLevels[line].push([lineIndices[level],level+levelOffset])
         }
@@ -317,22 +371,28 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         var stringTree = new Array();
         for(var line = 0;line < indicesLevels.length;line++) {
             stringTree.push(new Array());
-            for(var level = 0;level < indicesLevels[line][0][1];level++)
+            var level = 0;
+            for(;level < indicesLevels[line].length && indicesLevels[line][level] == null;level++)
                 stringTree[line].push(null);
-            for(var level = 0;level < indicesLevels[line].length;level++) {
+            for(;level < indicesLevels[line].length;level++) {
                 var start = indicesLevels[line][level][0];
                 if(level+1 < indicesLevels[line].length) {
                     var end = indicesLevels[line][level+1][0];
                     stringTree[line].push(splicedString[line].substring(start,end)
-                    .replace(" ","").replace(">",""));
+                    .replace(/ /g,"").replace(/>/g,""));
                 }
                 else
                     stringTree[line].push(splicedString[line].substring(start)
-                    .replace(" ","").replace(">",""));
+                    .replace(/ /g,"").replace(/>/g,""));
             }
         }
         alert(stringTree.toSource());
         // ^^ WORKS TILL HERE
+
+        /*
+        for(var line = 0;line < indicesLevels.length;line++) {
+            for(var level = 0;level < indicesLevels[line].length;level++)*/
+        
     }
     function printArr(arr) {
         str = "";

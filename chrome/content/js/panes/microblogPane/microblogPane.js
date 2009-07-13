@@ -405,6 +405,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
         };
         
+        //
+        var xviewReply = doc.createElement('ul');
+            xviewReply.className = "replyView";
+            xviewReply.addEventListener("click", function(){xviewReply.className = "replyView"}, false)
+        
         //HEADER
         var headerContainer = doc.createElement('div');
             headerContainer.className ="header-container";
@@ -590,6 +595,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 post - symbol of the uri the post in question
                 me - 
         */
+            var viewPost = function(uris){
+                for (var n in xviewReply.childNodes){
+                    xviewReply.removeChild(xviewReply.childNodes[0])
+                }
+                for (var uri in uris){
+                    xviewReply.appendChild(generatePost(kb.sym(uris[uri]), thisIsMe))
+                }
+                xviewReply.className = "replyView-active";
+                microblogPane.appendChild(xviewReply)
+            }
             //container for post
             var xpost = doc.createElement('li');
                 xpost.className = "post"
@@ -604,7 +619,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var postText = String(kb.any(post,SIOC("content"))); 
             //post date
             var xpostLink= doc.createElement("a")
-                xpostLink.setAttribute("href", post.uri)
+                xpostLink.addEventListener("click",function(){viewPost([post.uri]);},false);
                 xpostLink.id = "post_"+String(post.uri).split("#")[1]
             var postLink = new Date()
             postLink = postLink.parseISOdate(String(kb.any(post,terms('created'))))
@@ -625,7 +640,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var postTags = postText.match(/(\@|\#|\!)\w+/g)
             var postFunction = function(){
                 p = postTags.pop()
-                return (tags[p])? tags[p].uri :p;
+                return (tags[p])? kb.any(undefined, FOAF('holdsAccount'),tags[p]).uri :p;
             }
             if (postTags){
                 postText = postText.replace(/(\@|\!|\#)(\w+)/g, "$1<a href=\""+postFunction()+"\">$2</a>");
@@ -635,12 +650,17 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //in reply to logic
             // This has the potential to support a post that replies to many messages.
             var inReplyTo = kb.each(post,SIOC("reply_of"));
-            var xreplyTo = doc.createElement("span");
+            var xreplyTo = doc.createElement("div");
             for (reply in inReplyTo){
                 var theReply = new RDFNamespace()
                 theReply =String(inReplyTo[reply]).replace(/\<|\>/g,"")
-
-                xreplyTo.innerHTML = "<div><a href="+theReply+">[in reply to]</a><div> ";
+                var genReplyTo = function(){
+                    var reply = doc.createElement('a')
+                        reply.innerHTML = "[in reply to]"
+                        reply.addEventListener("click",function(){viewPost([post.uri,theReply]); return false;},false);
+                    return reply
+                }
+                xreplyTo.appendChild(genReplyTo());
 
             }
 
@@ -803,7 +823,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //build
         var microblogPane  = doc.createElement("div");
             microblogPane.className = "ppane";
-            microblogPane.appendChild(xnotify)
+            microblogPane.appendChild(xviewReply);
+            microblogPane.appendChild(xnotify);
             microblogPane.appendChild(headerContainer);
             if (xfollows != undefined){microblogPane.appendChild(xfollows);}
             microblogPane.appendChild(postContainer);

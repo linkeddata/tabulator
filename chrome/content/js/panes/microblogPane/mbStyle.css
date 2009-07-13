@@ -38,6 +38,33 @@
     list-style-type:none !important;
 }
 
+/**/
+.ppane .replyView{
+    display:none;
+}
+.ppane .replyView-active{
+    margin:0 !important;
+    position:fixed;
+    left:0px;
+    top:0px;
+    background-color: #fff;
+    opacity: .9;
+    z-index:5;
+    width:100%;
+    height:100%;
+    padding-top: 20%;
+}
+.ppane .replyView-active li{
+    display:block;
+    opacity:1 !important;
+    margin: 1em auto;
+    width:30em;
+    border: solid 1px #888;
+    background-color:#fff;
+    padding:1em;
+    -moz-box-shadow: 0px 3px 10px #666;
+
+}
 /*notifications*/
 .ppane .notify-container .notify{
     background-color:#FFFAE6;
@@ -103,10 +130,10 @@
     padding:1em;
     margin: .2em 0em;
 }
-.ppane .postList blockquote{
+.ppane .postList blockquote, .ppane .replyView-active blockquote{
     margin-left:0;
 }
-.ppane .postList .reply{
+.ppane .postList .reply, .ppane .replyView-active .reply{
     float: right;
 }
 .ppane .postList .post div{

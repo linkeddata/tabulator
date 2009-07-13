@@ -90,11 +90,11 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                                     ]);
 
         var nameTreeStr = "(S,O,N) > (N,A,N) > (S,N,P,foaf:givenname)\n"+
-                          "                  > (S,O,N) > (S,P,foaf:family_name)\n"+
-                          "                            > (S,P,foaf:surname)\n"+
+                          "                  > (S,O,N) > (S,N,P,foaf:family_name)\n"+
+                          "                            > (S,N,P,foaf:surname)\n"+
                           "        > (S,N,P,foaf:name)\n"+
                           "        > (S,N,P,dct:name)";
-        var titleNameTreeStr = "(S,O,N) > (N,A,N) > (S,P,N,foaf:title)\n"+
+        var titleNameTreeStr = "(S,O,N) > (N,A,N) > (S,N,P,foaf:title)\n"+
                                "                  > ["+nameTreeStr+"]\n"+
                                "        >         ^";
         var personNameTreeStr = "(S,O,N) > (M,O,T,foaf:Person) > ["+titleNameTreeStr+"]";
@@ -103,7 +103,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                                 "        > (S,O,P,bibo:contributorList) ^\n"+
                                 "        > (S,O,P,dct:creator)          > ["+titleNameTreeStr+"]";
 
-        ps.parseToTree(authorNameTreeStr);
+        alert(ps.parseToTree(authorNameTreeStr).toSource());
 
         var titleTree = ps.SOBN([
                                  ps.SPEN(bibo('shortTitle')),

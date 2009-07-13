@@ -33,7 +33,14 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         return this.fetchMethod(this.searchMethod(subject), this.children);
     }
     this.PatternNode.prototype.toString = function() {
-        return this.children.toString();
+        if(this.children) {
+            var str = "{children:[\n";
+            for(var i = 0;i < this.children.length;i++)
+                str += "        "+this.children[i].toString();
+            return str+"          ]};\n";
+        }
+        else
+            return "END\n";
     }
 
     /******************************
@@ -270,45 +277,35 @@ function PatternSearch() { // Encapsulates all of the methods and classes
      *********************************/
     this.parseToTree = function(stringTree) {
         // takes in another tree that is placed within brackets and integrates it into the new tree
-        function reallocate(tree,spaces) { // this function was a pain to debug
-            var br = getBrackets(tree);
-            if(br.length == 0) {
-                var blankStr = createBlankString(spaces);
-                var strs = tree.split("\n");
-                var newTree = "";
-                for(var i = 0;i < strs.length;i++) {
-                    if(i == 0) newTree += strs[i];
-                    else newTree += blankStr + strs[i]
-                    if(i+1 != strs.length)
-                        newTree += "\n";
-                }
-                return newTree;
+        function reallocate(tree) { // this function was a pain to debug
+            var numberOfSpaces = new Array();
+            var treeArray = stringTree.split("\n");
+            for(var i = 0;i < treeArray.length;i++) {
+                var leftBrackets = indicesOf("[",treeArray[i]);
+                var rightBrackets = indicesOf("]",treeArray[i]);
+                var toBeAdded = 0;
+                if(leftBrackets.length > 0)
+                    toBeAdded = treeArray[i].lastIndexOf(">",leftBrackets[leftBrackets.length-1])-(leftBrackets.length)+3;
+                var toBePopped = rightBrackets.length;
+                var spaces = sumArray(numberOfSpaces);
+                
+                treeArray[i] = createBlankString(spaces) + treeArray[i];
+                if(toBeAdded > 0) numberOfSpaces.push(toBeAdded);
+                for(;toBePopped > 0;toBePopped--)
+                    numberOfSpaces.pop();
+                treeArray[i] = treeArray[i].replace(/\[/g,"").replace(/\]/g,"");
             }
-            else {
-                while(br.length > 0) {
-                    var spaces = tree.lastIndexOf(">",br[0])+1;
-                    if(tree.lastIndexOf("\n",br[0]) != -1)
-                        spaces -= tree.lastIndexOf("\n",br[0]);
-                    tree = insertString(tree,reallocate(tree.substring(br[0]+1,br[1]),spaces),br[0],br[1]+1);
-                    br = getBrackets(tree);
-                }   
-                return tree;
-            }
+            var newTree = "";
+            for(var i = 0;i < treeArray.length;i++)
+                newTree += treeArray[i]+(i+1==treeArray.length?"":"\n");
+            return newTree;
         }
-        // Gets two bracket indices, within which there are no brackets
-        function getBrackets(tree) {
-            var left = indicesOf("[",tree);
-            var right = indicesOf("]",tree);
-            if(left.length != right.length) alert("Unequal number of brackets");
-            if(left.length == 0 || right.length == 0) return [];
-            var pair = [left[0],right[0]];
-            for(var l = 0;l < left.length;l++)
-                for(var r = 0;r < right.length;r++)
-                    if(right[r]-left[l]<pair[1]-pair[0] && right[r]-left[l]>0) {
-                        minim = right[r] - left[l];
-                        pair = [left[l],right[r]];
-                    }
-            return pair;
+        // Sums the members of an array
+        function sumArray(arr) {
+            var sum = 0;
+            for(var i = 0;i < arr.length;i++)
+                sum += arr[i];
+            return sum;
         }
         // Creates a blank string of length size
         function createBlankString(size) {
@@ -321,10 +318,6 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         // inclusive and non-inclusive, respectively; with newStr
         function insertString(str,newStr,begIndex, endIndex) {
             return str.substring(0,begIndex).concat(newStr).concat(str.substring(endIndex));
-        }
-        // Returns the first char in a string that is not a space
-        function firstNonspace(lineString) {
-            return lineString.indexOf(lineString.replace(/ /g,"").charAt(0));
         }
         // Returns the level of the node in the tree
         function nodeLevel(currentIndex,currentLine,indicesLevels) {
@@ -349,7 +342,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
 
         // Builds a two-dimensional array of doubles with the level and index of each '>'
         alert("StringTree:\n"+stringTree);
-        var reallocatedString = reallocate(stringTree).replace(/ ^/g," >^");
+        var reallocatedString = reallocate(stringTree).replace(/ \^/g," >^");
         alert("ReallocatedString:\n"+reallocatedString);
         var splicedString = reallocatedString.split("\n");
         var indicesLevels = new Array();
@@ -389,10 +382,71 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         alert(stringTree.toSource());
         // ^^ WORKS TILL HERE
 
-        /*
-        for(var line = 0;line < indicesLevels.length;line++) {
-            for(var level = 0;level < indicesLevels[line].length;level++)*/
-        
+        function instantiateNode(nodeString) {
+            if(nodeString == null) return null;
+            else if(nodeString.length == 0) return anchor.SOBN();
+            else if(nodeString.indexOf("^") != -1) return nodeString;
+            var nodeString = nodeString.replace(/\(/g,"").replace(/\)/g,"");
+            var params = nodeString.split(",");
+            if(params[0] === "S" && params[1] === "O" && params[3]) {
+                if(params[2] === "T") return anchor.SOTN(params[3]);
+                else if(params[2] === "P") return anchor.SOPN(params[3]);
+            }
+            else if(params[0] === "M" && params[1] === "O" && params[3]) {
+                if(params[2] === "T") return anchor.MOTN(params[3]);
+                else if(params[2] === "P") return anchor.MOPN(params[3]);
+            }
+            else if(params[0] === "S" && params[1] === "O" && params[2] === "N")
+                return anchor.SOBN();
+            else if(params[0] === "S" && params[3]) {
+                if(params[2] === "T") return anchor.STEN(params[3]);
+                else if(params[2] === "P") return anchor.SPEN(params[3]);
+            }
+            else if(params[0] === "M" && params[3]) {
+                if(params[2] === "T") return anchor.MTEN(params[3]);
+                else if(params[2] === "P") return anchor.MPEN(params[3]);
+            }
+            else if(params[1] === "A")
+                return anchor.ABN();
+            alert("Unrecognized node string value: "+params.toSource());
+            return nodeString;
+        }
+
+        var instantiatedNodes = new Array();
+        for(var line = 0;line < stringTree.length;line++) {
+            var lineInstantiatedNodes = new Array();
+            instantiatedNodes.push(lineInstantiatedNodes);
+            for(var level = 0;level < indicesLevels[line].length;level++)
+                lineInstantiatedNodes.push(instantiateNode(stringTree[line][level]));
+        }
+        alert(instantiatedNodes.toSource());
+
+        function linkNodes(nodes,line,level) {
+            if(nodes[line].length == level+1) return nodes[line][level];
+            nodes[line][level].children = new Array();
+            for(var endingLine = line;nodes[endingLine]&&(nodes[endingLine][level]===null||endingLine==line);endingLine++);
+            alert("Number of possible children: "+endingLine);
+            for(var i = line;i < endingLine;i++) {
+                var childrenLevel = level+1;
+                if(nodes[i] && nodes[i][childrenLevel]) {
+                    if(nodes[i][childrenLevel].constructor === String) {
+                        var numNodes = indicesOf("^",nodes[i][childrenLevel]).length;
+                        for(var j=i-1;numNodes > 0 && j >= 0;j--) {
+                            if(nodes[j] != null && numNodes == 1)
+                                nodes[i][childrenLevel] = nodes[j][childrenLevel];
+                            if(nodes[j] != null) numNodes--;
+                        }
+                        if(numNodes > 0) nodes[line][level].children.push(null);
+                        else nodes[line][level].children.push(nodes[i][childrenLevel]);
+                    }
+                    else
+                        nodes[line][level].children.push(linkNodes(nodes,i,childrenLevel));
+                }
+            }
+            return nodes[line][level];
+        }
+
+        return linkNodes(instantiatedNodes,0,0);
     }
     function printArr(arr) {
         str = "";
@@ -401,3 +455,31 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         return str;
     }
 }
+
+
+
+
+/* Unused functions
+
+        // Gets two bracket indices, within which there are no brackets
+        function getBrackets(tree) {
+            var left = indicesOf("[",tree);
+            var right = indicesOf("]",tree);
+            if(left.length != right.length) alert("Unequal number of brackets");
+            if(left.length == 0 || right.length == 0) return [];
+            var pair = [left[0],right[0]];
+            for(var l = 0;l < left.length;l++)
+                for(var r = 0;r < right.length;r++)
+                    if(right[r]-left[l]<pair[1]-pair[0] && right[r]-left[l]>0) {
+                        minim = right[r] - left[l];
+                        pair = [left[l],right[r]];
+                    }
+            return pair;
+        }
+
+        // Returns the first char in a string that is not a space
+        function firstNonspace(lineString) {
+            return lineString.indexOf(lineString.replace(/ /g,"").charAt(0));
+        }
+
+*/

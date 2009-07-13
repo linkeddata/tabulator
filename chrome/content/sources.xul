@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://tabulator/skin/tabulator.css" type="text/css"?>
+<!DOCTYPE window SYSTEM "chrome://tabulator/locale/en-US/tabulatorsidebar.dtd">
+<window id="tabulatorsources"  flex="1"
+        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        contenttitlesetting="true"
+	  title="&tabsources.title;"
+        windowtype="tabulatorsources">
+        <checkbox id="tabsourcesontop" checked="false" oncommand="toggleOnTop()" label="Always on Top" /> 
+        <iframe type="content-primary" flex="1" id="sourceshtml" src="chrome://tabulator/content/sources.html"/>
+        <script type="application/x-javascript">        
+        //  To go in above:?
+            function toggleOnTop() {
+              window.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+              var webnav = window.getInterface(Components.interfaces.nsIWebNavigation);
+              var dsti = webnav.QueryInterface(Components.interfaces.nsIDocShellTreeItem);
+              var treeowner = dsti.treeOwner;
+              var ifreq = treeowner.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+              var xulwin = ifreq.getInterface(Components.interfaces.nsIXULWindow);
+              if (xulwin.zLevel > xulwin.normalZ) {
+                xulwin.zLevel = xulwin.normalZ;
+              } else {
+                xulwin.zLevel = xulwin.raisedZ;
+              }
+            }
+            var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
+                                .getService(Components.interfaces.nsISupports)
+                                .wrappedJSObject;
+            function setup()
+            {
+                //load is triggered twice, might be because type="content-primary"
+                //tabulator.log.warn("'this' is %s",this.location); 
+                var doc=content.document;
+                var div = doc.createElement('div');
+                div.setAttribute('id','sourcesdiv');
+                doc.body.appendChild(div);
+                tabulator.sourceWidget.setContainer(div);
+            }
+            window.addEventListener('load',setup,true);            
+        </script>
+</window>

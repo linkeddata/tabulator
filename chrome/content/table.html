@@ -1,0 +1,35 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html id='docHTML'>
+<head>
+    <title>Tabulator: Async Javascript And Semantic Web</title>
+    <link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css" />
+    <script src="tableutil.js" type="text/javascript"></script>
+    <script src="js/tableView.js" type="text/javascript"></script>
+    <script src="js/sorttable.js" type="text/javascript"></script>
+    <script src="js/rdf/term.js" type="text/javascript"></script>
+    <script src="js/util.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <div class="viewArea" id="viewArea">
+    </div>
+</body>
+    <script type="application/x-javascript">
+      function tableLoader() {
+        tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+        //Horrible global vars :(
+        kb = tabulator.kb;
+        sf = tabulator.sf;
+        qs = tabulator.qs;
+        var myTableView = new tableView(document.getElementById('viewArea'));
+        qs.addListener(myTableView);
+        //extract the query ID Here!
+        var q = qs.queries[getURIQueryParameters(window.location)['query']];
+        myTableView.drawQuery(q);
+      }
+      document.onLoad=tableLoader();
+    </script>
+
+</html>

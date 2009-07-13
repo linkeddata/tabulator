@@ -1,0 +1,97 @@
+
+
+/* .tm the event cells */
+table.tm {
+position:relative;
+/*background-color:#CCFFFF; default background color*/
+width:100%;
+font-size:90%;
+border-color:#C0C0C0;
+border-style:dashed;
+border-width:thin;
+}
+table.tm:hover {
+background-color:#6666FF;
+color:white;
+}
+
+td.bigcalcell {
+	width:14.3%; 
+	height:10em;
+	border:1px solid #E0E0E0;
+	background-color:#FFF;
+	text-align:left;
+}
+
+.calendar.wait td.bigcalcell {
+	color:#999;
+	background-color:#CCC;
+}
+
+.calendar.wait td.bigcalcell a {
+	color:#999;
+	font-style:italic;
+}
+
+td.bigcalcell a {
+	color:#003DB8;
+	text-decoration:none;
+}
+
+td.bigcalcell.today {
+	border:1px solid #000;
+}
+
+td.bigcalcell.oom {
+	cursor:default;
+	color:#999;
+	background-color:#EEE;
+	border:1px solid #E0E0E0;
+}
+
+td.bigcalcell.selected {
+	color:#003DB8;
+	background-color:#FFF19F;
+	border:1px solid #FF9900;
+}
+
+/*
+td.bigcalcell.calcellhover {
+	cursor:pointer;
+	color:#FFF;
+	background-color:#FF9900;
+	border:1px solid #FF9900;
+}
+*/
+
+
+/* Added to perform some correction for Opera 8.5
+   hover redraw bug */
+/*table:hover {
+	background-color:#FFF;
+}*/
+
+/*
+td.bigcalcell.calcellhover a {
+	color:#FFF;
+}
+*/
+
+table.tm a:hover {
+color:#FFF;
+}
+
+td.bigcalcell.restricted {
+	text-decoration:line-through;
+}
+
+td.bigcalcell.previous {
+	color:#CCC;
+}
+
+td.bigcalcell.highlight1 { background-color:#CCFF99; }
+td.bigcalcell.highlight2 { background-color:#99CCFF; }
+td.bigcalcell.highlight3 { background-color:#FFCCCC; }
+td.bigcalcell.highlight4 { background-color:#CCFF99; }
+
+

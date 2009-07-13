@@ -1,0 +1,42 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html id='docHTML'>
+<head>
+    <title>Tabulator: Async Javascript And Semantic Web</title>
+    <link rel="stylesheet" href="chrome://tabulator/content/js/calView/assets/calendar.css" type="text/css" />
+    <link rel="stylesheet" href="chrome://tabulator/content/js/calView/assets/bigCal.css" type="text/css" />
+    <link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css" />
+    <script src="timeutil.js" type="text/javascript"></script>
+    <script src="js/calView.js" type="text/javascript"></script>
+    <script src="js/calView/timeline/api/timeline-api.js" type="text/javascript"></script>
+    <script src="js/calView/timeline/api/timelineView.js" type="text/javascript"></script>
+    <script src="js/calView/calView.js" type="text/javascript"></script>
+    <script src="js/util.js" type="text/javascript"></script>
+
+</head>
+
+<body>
+    <div class="viewArea" id="viewArea">
+    </div>
+    <div id="divCal" class="divCal" style="display:none">
+    </div>
+</body>
+
+    <script type="application/x-javascript">
+      function calLoader() {
+        tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+        //Horrible global vars :(
+        kb = tabulator.kb;
+        sf = tabulator.sf;
+        qs = tabulator.qs;
+        var myCalView = new calView(document.getElementById('viewArea'));
+        qs.addListener(myCalView);
+        //extract the query ID Here!
+        
+        var q = qs.queries[getURIQueryParameters(window.location)['query']];
+        myCalView.drawQuery(q);
+      }
+      document.onLoad=calLoader();
+    </script>
+</html>

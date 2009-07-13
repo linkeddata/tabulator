@@ -370,6 +370,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         }
         var mbLetterCount = function(){
             xupdateStatusCounter.innerHTML = charCount - xupdateStatus.value.length
+            xupdateStatusCounter.style.color= (charCount - xupdateStatus.value.length < 0)? "#c33":"";
             if (xupdateStatus.value.length == 0){
                 xinReplyToContainer.value = "";
                 xupdateSubmit.value = "Send";
@@ -565,12 +566,14 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //HEADER END   
         
        //FOLLOWS VIEW
-       var getFollowed = function(user){
-           var userid = kb.any(user, SIOC('id'))
-           var follow = doc.createElement('li')
-           follow.className = "follow"
-           userid = (userid)? userid : user.uri 
-           follow.innerHTML = "<a href=\""+user.uri+"\">"+
+        var getFollowed = function(user){
+            var userid = kb.any(user, SIOC('id'))
+            var follow = doc.createElement('li')
+            follow.className = "follow"
+            userid = (userid)? userid : user.uri 
+            var fol=kb.any(undefined,FOAF('holdsAccount'),user);
+                fol = (fol)? fol.uri:user.uri
+           follow.innerHTML = "<a href=\""+fol+"\">"+
                userid+"</a>"
            return follow
        }
@@ -578,13 +581,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xfollows.className = "followlist-container view-container"
         if (kb.whether(creator, SIOC('follows'))){
             var creatorFollows = kb.each(creator, SIOC('follows'))
-            var xfollowsHead = doc.createElement('h3')
+            // var xfollowsHead = doc.createElement('h3')
             var xfollowsList = doc.createElement('ul')
             for (thisPerson in creatorFollows){
                 xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]))
             }
-            xfollowsHead.appendChild(doc.createTextNode('Follows:'))
-            xfollows.appendChild(xfollowsHead)
+            // xfollowsHead.appendChild(doc.createTextNode('Follows:'))
+            // xfollows.appendChild(xfollowsHead)
             xfollows.appendChild(xfollowsList)  
         }
         //FOLLOWS VIEW END 

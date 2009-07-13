@@ -38,7 +38,7 @@
     list-style-type:none !important;
 }
 
-/**/
+/*reply view*/
 .ppane .replyView{
     display:none;
 }
@@ -65,6 +65,7 @@
     -moz-box-shadow: 0px 3px 10px #666;
 
 }
+
 /*notifications*/
 .ppane .notify-container .notify{
     background-color:#FFFAE6;
@@ -106,6 +107,10 @@
 .ppane .header-container textarea{
     width:100%;
     margin-bottom:.4em;
+    font-family:helvetica, arial, sans-serif;
+    font-size:100%;
+    padding:.5em 0;
+    line-height:120%;
 }
 .ppane .header-container textarea:focus, .ppane input:focus{
     border: solid 1px #357598 !important;
@@ -170,6 +175,8 @@
 .ppane .followlist-container{
 }
 .ppane .followlist-container .follow{
-    display: block;
-    
+    display: inline;
+    font-size: 120%;
+    padding:0 2em;
+    line-height: 150%;
 }

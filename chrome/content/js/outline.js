@@ -1,7 +1,4 @@
-/* -*- coding: utf-8-dos -*-
-@@No DOS CRLF please
-
-     Outline Mode
+/*   Outline Mode
 */
 
 tabulator.panes = {};
@@ -352,15 +349,16 @@ function Outline(doc) {
     }
         
             
-    this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, statement) {
+    this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, why, color) {
         tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
         var td = myDocument.createElement('td');
         var theClass = "obj";
+        
+        
                 
         // check the IPR on the data
-	if (statement){
-        var licenses = kb.each(statement.why, kb.sym('http://creativecommons.org/ns#license'));
-        tabulator.log.info('licenses:'+ statement.why+': '+ licenses)
+        var licenses = kb.each(why, kb.sym('http://creativecommons.org/ns#license'));
+        tabulator.log.info('licenses:'+ why+': '+ licenses)
         for (i=0; i< licenses.length; i++) {
             if((tabulator.options.checkedLicenses[0] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') || 
                (tabulator.options.checkedLicenses[1] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-sa/3.0/') ||
@@ -374,7 +372,7 @@ function Outline(doc) {
             }
             
         }
-        }
+        
               
         //set about
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
@@ -384,7 +382,12 @@ function Outline(doc) {
          tabulator.log.info('class on '+td)
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
-         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
+         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", ")); 
+         
+         if (color != null)
+         {
+         	td.setAttribute('bgcolor', color);
+         }
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl
@@ -404,24 +407,6 @@ function Outline(doc) {
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
         //td.appendChild( iconBox.construct(document.createTextNode('bla')) );
-
-        //Create an inquiry icon if there is proof about this triple
-	if(statement){
-            var one_statement_formula = new RDFIndexedFormula();
-            one_statement_formula.statements.push(statement); //st.asFormula()
-            //The following works because Formula.hashString works fine for
-            //one statement formula
-            var reasons = kb.each(one_statement_formula,
-       kb.sym("http://dig.csail.mit.edu/TAMI/2007/amord/tms#justification"));
-            if(reasons.length){
-                var inquiry_span = myDocument.createElement('span');
-                if(reasons.length>1)
-                     inquiry_span.innerHTML = ' &times; ' + reasons.length;
-                inquiry_span.setAttribute('class', 'inquiry'); 
-                inquiry_span.insertBefore(AJARImage(Icon.src.icon_display_reasons, 'explain'), inquiry_span.firstChild);
-	        td.appendChild(inquiry_span);
-            }
-        }
         return td;
     } //outline_objectTD
     
@@ -652,6 +637,27 @@ function Outline(doc) {
     this.propertyTR = propertyTR;
     
     ///////////// Property list 
+    
+    this.addArray = [];
+    this.trArray = [];   
+    this.ccArray = new Array(6);
+    this.rmpArray = new Array(5);
+    
+    this.outline_getPolicyColor = function outline_getPolicyColor(s) {
+    	var licType = s.object.uri;
+    	
+    	var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
+    	
+    	var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
+    	
+    	if (policyURIArray.indexOf(licType) > -1)
+	{
+		return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+	}    
+	return '';
+    }
+    
+
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
         tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+
                            "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
@@ -669,6 +675,57 @@ function Outline(doc) {
         }
         var j
         var max = plist.length
+        var initLength = this.trArray.length;
+        var startAdd = this.addArray.length;
+        var trArray = this.trArray =  [];
+        var addArray = this.addArray = [];
+        
+        var ccArray = this.ccArray;
+	var rmpArray = this.rmpArray;
+        
+        
+        var docArray = [];
+        var highlights = [];
+        var sideBar = 0;
+        
+	//alert(tabulator.preferences.get('ccByNC'));
+        
+	var sidebarDoc = document.getElementById("sidebar").contentDocument;
+            
+	var sDiv = sidebarDoc.getElementById('mainBox');
+	if (sDiv == null)
+		sideBar = 0;
+	else
+		sideBar = 1;
+	
+	tabulator.ns.cc = cc = RDFNamespace("http://creativecommons.org/ns#");
+	tabulator.ns.rmp = rmp = RDFNamespace("http://web.mit.edu/tkang/www/rmp/rmp-schema.n3");
+	
+	//toggleSidebar("viewHighlightSidebar", true);
+	
+	// Code for hardcoded cc/rmp license viewer sidebar
+	
+	// Set where the color matching starts
+	var defaultCol = '';
+	var ccPrefix = 'http://creativecommons.org/licenses/';
+	
+	//this.outline_loadHighlightSettings();
+
+	
+	for (var count = 0; count < max; count++)
+	{
+		if ((plist[count].predicate.sameTerm(tabulator.ns.cc('license'))) || (plist[count].predicate.sameTerm(kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'))))
+		{
+			if (plist[count].subject.sameTerm(plist[count].why))
+			{
+				//docArray has why then color
+				docArray.push(plist[count].why);
+				docArray.push(this.outline_getPolicyColor(plist[count]));
+			}
+		}
+	}
+	
+	
         for (j=0; j<max; j++) { //squishing together equivalent properties I think
             var s = plist[j]
         //      if (s.object == parentSubject) continue; // that we knew
@@ -697,6 +754,20 @@ function Outline(doc) {
     
 
             var tr = propertyTR(myDocument, s, inverse);
+            
+            if (docArray.indexOf(s.why) > -1)
+            {
+            	tr.setAttribute('bgcolor', docArray[docArray.indexOf(s.why) + 1]);
+            }
+            else
+            {
+	    	tr.setAttribute('bgcolor', this.outline_getPolicyColor(s));
+	    }
+            
+	            	
+            //this.ccHighlighter(s, tr, docArray);
+            //this.rmpHighlighter(s, tr, docArray);
+            
             parent.appendChild(tr);
             var td_p = tr.firstChild; // we need to kludge the rowspan later
 
@@ -710,15 +781,22 @@ function Outline(doc) {
             if (myLang > 0 && langTagged == dups+1) {
                 for (k=j; k <= j+dups; k++) {
                     if (sel(plist[k]).lang.indexOf(LanguagePreference) >=0) {
-                        tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview, undefined, s))
+                        tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview, undefined, s.why, 'yellow'))
                         break;
                     }
                 }
                 j += dups  // extra push
                 continue;
             }
-    
-            tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s));
+            
+            if (docArray.indexOf(s.why) > -1)
+            {
+               	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));              	
+            }
+            else
+            {
+    	    	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, this.outline_getPolicyColor(s))); 	    	
+	    }
     
             /* Note: showNobj shows between n to 2n objects.
              * This is to prevent the case where you have a long list of objects
@@ -736,20 +814,40 @@ function Outline(doc) {
                     if ((show<predDups)&&(show==1)){ //what case is this...
                         td_p.setAttribute('rowspan',2)  
                     }
-                    var displayed = 0; //The number of cells generated-1,
-                                       //all duplicate thing removed
+                    var displayed = 0;
                     for(l=1;l<k;l++){
-		      //This detects the same things
                         if (!kb.canon(sel(plist[j+l])).sameTerm(kb.canon(sel(plist[j+l-1])))){
                             displayed++;
                             s=plist[j+l];
                             defaultpropview = views.defaults[s.predicate.uri];
                             var trObj=myDocument.createElement('tr');
                             trObj.style.colspan='1';
-                            trObj.appendChild(thisOutline.outline_objectTD(
-                                sel(plist[j+l]),defaultpropview, undefined, s));
+			    if (docArray.indexOf(s.why) > -1)
+			    {
+			    	trObj.appendChild(thisOutline.outline_objectTD(
+                                sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));            	
+			    }
+			    else
+			    {
+			      trObj.appendChild(thisOutline.outline_objectTD(
+                                sel(plist[j+l]),defaultpropview, undefined, s.why, thisOutline.outline_getPolicyColor(s)));	    	
+			    }                            
                             trObj.AJAR_statement=s;
                             trObj.AJAR_inverse=inverse;
+                            /*
+			    if (docArray.indexOf(s.why) > -1)
+			    {
+				    trObj.setAttribute('bgcolor', docArray[docArray.indexOf(s.why) + 1]);
+		            }
+			    else
+			    {
+			    	    trObj.setAttribute('bgcolor', thisOutline.outline_getPolicyColor(s));
+	                    }
+            		    */
+            		    //trObj.setAttribute('bgcolor', 'magenta');
+                            
+                            // Test seems to say this td doesn't show anything not covered by obj_outline and the regular pred.
+                            
                             parent.appendChild(trObj);
                             if (displayed>=show){
                                 trObj.style.display='none';
@@ -760,10 +858,7 @@ function Outline(doc) {
                             tabulator.log.info("there are duplicates here: %s", plist[j+l-1]);
                         }
                     }
-		    //@@a quick fix on the messing problem.
-		    if (show==predDups)
-		      td_p.setAttribute('rowspan',displayed+1);
-                } // end of if (predDups!=1)
+                } // if
 
                 if (show<predDups){ //Add the x more <TR> here
                     var moreTR=myDocument.createElement('tr');
@@ -799,6 +894,15 @@ function Outline(doc) {
                         toggleObj();
                         small.addEventListener('click', toggleObj, false); 
                         } //if(predDups>n)
+                        
+			if (addArray.indexOf(moreTR) == -1)
+            			addArray.push(moreTR);
+            			
+		        if (trArray.indexOf(trObj) == -1)
+            		        trArray.push(trObj);	            			
+            		        
+            		//moreTr.setAttribute('bgcolor', 'yellow');
+                        //this.highlightOnMatch(moreTR, subjArray, predArray, objArray, highlights);
                         parent.appendChild(moreTR);
                 } // if
             } // tr.showNobj
@@ -809,6 +913,9 @@ function Outline(doc) {
                     [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
                     "appendPropertyTRs()");*/ 
             tr.showNobj(10);
+            
+            
+            
 
             if (HCIoptions["bottom insert highlights"].enabled){
                 var holdingTr=myDocument.createElement('tr');
@@ -825,6 +932,9 @@ function Outline(doc) {
         
             j += k-1  // extra push
         }
+        
+  
+        
     } //  appendPropertyTRs
 
     this.appendPropertyTRs = appendPropertyTRs;
@@ -1394,7 +1504,7 @@ function Outline(doc) {
         var tname = target.tagName;
         //tabulator.log.debug("TabulatorMousedown: " + tname + " shift="+e.shiftKey+" alt="+e.altKey+" ctrl="+e.ctrlKey);
         var p = target.parentNode;
-        var about = getAbout(kb, target);
+        var about = getAbout(kb, target)
         var source = null;
         if (tname == "INPUT" || tname == "TEXTAREA") {
             return
@@ -1466,10 +1576,7 @@ function Outline(doc) {
             //TODO: This check could definitely be made cleaner.
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
-									   
-										//@@ What's the reason for the following check?	  
-            if (!about && tsrc!=Icon.src.icon_add_new_triple
-		       && tsrc!=Icon.src.icon_display_reasons) {
+            if (!about && tsrc!=Icon.src.icon_add_new_triple) {
                 //alert("No about attribute");
                 return;
             }
@@ -1558,27 +1665,7 @@ function Outline(doc) {
                 thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
                     choiceQuery,{'clickedTd':p.parentNode});
                 break;
-            case Icon.src.icon_display_reasons:
-                if(!isExtension) return;
-                var TMS = RDFNamespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
-                var st_to_explain = ancestor(target, 'TR').AJAR_statement;
-                //the 'explanationID' triples are used to pass the information
-                //about the triple to be explained to the new tab
-                var one_statement_formula = new RDFIndexedFormula();
-                one_statement_formula.statements.push(st_to_explain);
-                var explained = kb.any(one_statement_formula,
-                                       TMS('explanationID'));
-                if(!explained){
-                    var explained_number = kb.each(undefined, 
-                                           TMS('explanationID')).length;
-                    kb.add(one_statement_formula, TMS('explanationID'),
-                           kb.literal(String(explained_number)));
-                } else
-                    var explained_number = explained.value;
-
-                //open new tab
-                gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
-                break;
+                
             default:  // Look up any icons for panes
                 var pane = tabulator.panes.paneForIcon[tsrc];
                 if (!pane) break;
@@ -1782,7 +1869,7 @@ function Outline(doc) {
         if (level.parentNode.parentNode.id == 'outline') {
             var deleteNode = level.parentNode
         }
-        thisOutline.replaceTD(thisOutline.outline_objectTD(subject,myview,deleteNode,statement),level);                                                
+        thisOutline.replaceTD(thisOutline.outline_objectTD(subject,myview,deleteNode),level);                                                
     } //outline_collapse
     
     this.replaceTD = function replaceTD(newTd,replacedTd){

@@ -170,7 +170,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                             newPost,
                             kb.sym(meta.recipients[r].split('#')[0])
                         )
-                        sparqlUpdater.insert_statement(replyBatch, function(a,b,c) {alert(b)});
+                        sparqlUpdater.insert_statement(replyBatch);
                     }
                 }
             }
@@ -324,7 +324,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         xupdateStatus.value=""
                         mbLetterCount();
                         notify("Microblog Updated.")
-                        if (thisIsMe) doc.getElementById('postNotificationList').insertBefore(generatePost(username, d[0].subject,thisIsMe),doc.getElementById('postList').childNodes[0]);
+                        if (thisIsMe){
+                            doc.getElementById('postNotificationList').insertBefore( generatePost(d[0].subject,thisIsMe), doc.getElementById('postNotificationList').childNodes[0]);
+                        } 
                     }
                     //add update to list
                 }
@@ -337,11 +339,15 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                             meta.recipients.push(recipient[1][0])
                         }else if (recipient[1].length > 1) { // if  multiple users allow the user to choose
                           choice = 0
-                          alert("insert choose interface here")
-                          meta.recpieients.push(recipient[1][choice])
-                        }else{ //no users known
-                            notify("You do not follow "+atUser+". Try following "+atUser+" before mentioning them.")
-                            return
+                          alert("insert choose interface here") //TODO - multiple user interface
+                          meta.recpients.push(recipient[1][choice])
+                        }else{ //no users known or self reference.
+                            if (String(kb.any(kb.sym(getMyURI()), SIOC("id"))).toLowerCase() == atUser.toLowerCase()){
+                                meta.recipients.push(getMyURI())
+                            } else{
+                                notify("You do not follow "+atUser+". Try following "+atUser+" before mentioning them.") 
+                                return
+                            }
                         }
                     } else if(words[word].match(/\#\w+/)){
                         //hashtag
@@ -581,6 +587,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var generatePost = function (post,me){
         /* 
             generatePost - Creates and formats microblog posts 
+                post - symbol of the uri the post in question
+                me - 
         */
             //container for post
             var xpost = doc.createElement('li');

@@ -54,13 +54,13 @@
 }
 .ppane .view-container.active{
     display:block;
+     -moz-box-shadow: 0px 3px 8px #ccc;
 }
 
 /*header container*/
 .ppane .header-container{
     border-bottom: solid 1px #999;
     background-color:#fafaf8;
-    -moz-box-shadow: 0px 0px 8px #fcfcfc;
 }
 .ppane .header-container img{
     float:left;

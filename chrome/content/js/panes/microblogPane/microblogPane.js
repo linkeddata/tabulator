@@ -75,15 +75,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //this will probably need to change. 
         var getHoldsAccountFromPrefs = function(){
             var the_user = tabulator.preferences.get("me");
-            var the_account;
+            var the_account =tabulator.preferences.get('acct');
             if (the_user ==''){
                 tabulator.preferences.set('acct', '')
-            }else{
+            }else if (the_account != ''){
                 the_user = kb.sym(the_user)
                 the_account = kb.sym(tabulator.preferences.get('acct'))
             }
-            if (the_user && the_account && the_account != '')
+            if (the_user && the_account && the_account != ''){
                 kb.add(the_user, FOAF('holdsAccount'), the_account, the_user.uri.split("#")[0])
+            }
         }
          
         var FollowList = function(){        

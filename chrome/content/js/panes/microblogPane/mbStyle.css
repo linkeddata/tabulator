@@ -37,6 +37,24 @@
 .ppane ul{
     list-style-type:none !important;
 }
+.ppane .postLink{
+    display:inline;
+    margin-top:.7em;
+    font-size: 90%;
+    color: #888 !important;
+}
+.ppane .userLink{
+    display:block;
+    margin-bottom:1em;
+}
+.ppane .postAvatar{
+    max-width:4em;
+    max-height:4em;
+    float:left;
+    margin-right: 1em;
+    border: double 3px #888;
+    -moz-box-shadow: 0px 0px 8px #ccc;
+}
 
 /*reply view*/
 .ppane .replyView{
@@ -47,8 +65,8 @@
     position:fixed;
     left:0px;
     top:0px;
-    background-color: #fff;
-    opacity: .95;
+    background-color: #eee;
+    opacity: .97;
     z-index:5;
     width:100%;
     height:100%;
@@ -62,7 +80,7 @@
     border: solid 1px #888;
     background-color:#fff;
     padding:1em;
-    -moz-box-shadow: 0px 3px 10px #666;
+    -moz-box-shadow: 0px 0px 10px #aaa;
 
 }
 .ppane .replyView-active .closeContainer{
@@ -72,6 +90,7 @@
     margin-bottom:-2.2em;
     border:none;
     padding:none;
+    background:none;
 }
 .ppane .replyView-active .closeContainer .closeButton{
     background-color:#000;
@@ -83,7 +102,7 @@
     font-weight:bold;
     border: solid 3px #fff;
     -moz-border-radius: 2em;
-    -moz-box-shadow: 0px 0px 10px #666;
+    -moz-box-shadow: 0px 0px 10px #333;
     cursor: pointer;
 }
 
@@ -158,6 +177,7 @@
 }
 .ppane .postList blockquote, .ppane .replyView-active blockquote{
     margin-left:0;
+    font-size:110%;
 }
 .ppane .postList .reply, .ppane .replyView-active .reply{
     float: right;

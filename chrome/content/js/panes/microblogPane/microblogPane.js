@@ -618,21 +618,39 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xpost.className = "post"
                 xpost.setAttribute("id", String(post.uri).split("#")[1])
             //username text 
-            var uname = kb.any(kb.any(post , SIOC('has_creator')),SIOC('name'));
-            var xuname = doc.createElement('p');
-            var xunameText = doc.createTextNode("-"+uname);
+            var uname = kb.any(kb.any(post , SIOC('has_creator')),SIOC('id'));
+            var uholdsaccount = kb.any(undefined, FOAF('holdsAccount'),kb.any(post , SIOC('has_creator')))
+            var xuname = doc.createElement('a');
+                xuname.href= uholdsaccount.uri
+                xuname.className = "userLink"
+            var xunameText = doc.createTextNode(uname);
             xuname.appendChild (xunameText);
+            //user image
+            var uavatar = kb.any(kb.any(post , SIOC('has_creator')),SIOC('avatar'));
+            var xuavatar = doc.createElement('img')
+                xuavatar.src = uavatar.uri
+                xuavatar.className = "postAvatar"
             //post content
             var xpostContent = doc.createElement('blockquote');
             var postText = String(kb.any(post,SIOC("content"))); 
             //post date
             var xpostLink= doc.createElement("a")
+                xpostLink.className="postLink"
                 xpostLink.addEventListener("click",function(){viewPost([post.uri]);},false);
                 xpostLink.id = "post_"+String(post.uri).split("#")[1]
                 xpostLink.setAttribute("content",post.uri)
                 xpostLink.setAttribute("property","permalink")
             var postLink = new Date()
             postLink = postLink.parseISOdate(String(kb.any(post,terms('created'))))
+            var h = postLink.getHours()
+            var a = (h>12)?" PM":" AM"
+                h = (h>12)?(h-12):h
+            var m = postLink.getMinutes()
+                m = (m<10)?"0"+m:m
+            var mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+            var da = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+            var ds = da[postLink.getDay()]+" "+postLink.getDate()+" "+mo[postLink.getMonth()]+ " "+postLink.getFullYear()
+            postLink = h+":"+m+a+" on "+ds
             postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
             xpostLink.appendChild(postLink)
             
@@ -660,13 +678,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //in reply to logic
             // This has the potential to support a post that replies to many messages.
             var inReplyTo = kb.each(post,SIOC("reply_of"));
-            var xreplyTo = doc.createElement("div");
+            var xreplyTo = doc.createElement("span");
             for (reply in inReplyTo){
                 var theReply = new RDFNamespace()
                 theReply =String(inReplyTo[reply]).replace(/\<|\>/g,"")
                 var genReplyTo = function(){
                     var reply = doc.createElement('a')
-                        reply.innerHTML = "[in reply to]"
+                        reply.innerHTML = ", <b>in reply to</b>"
                         reply.addEventListener("click",function(){viewPost([post.uri,theReply]); return false;},false);
                     return reply
                 }
@@ -736,14 +754,15 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 }
             }
             //build
+            xpost.appendChild(xuavatar);
             xpost.appendChild(xpostContent);
             if(getMyURI()){ 
                 if (getMyURI() != themaker.uri){xpost.appendChild(xreplyButton)}
                 else{xpost.appendChild(xdeleteButton)}
             }
             xpost.appendChild(xuname);
-            if(inReplyTo != ""){xpost.appendChild(xreplyTo)}
             xpost.appendChild(xpostLink)
+            if(inReplyTo != ""){xpost.appendChild(xreplyTo)}
             return xpost;
         }  
         var generatePostList =  function(gmb_posts){

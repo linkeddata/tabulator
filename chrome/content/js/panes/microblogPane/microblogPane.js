@@ -134,7 +134,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var myUserURI = getMyURI();
             myUser = kb.sym(myUserURI.split("#")[0]);
             var newPost = gen_random_uri(myUser.uri);
-            var microlist = kb.each(kb.sym(myUserURI), SIOC('creator_of')); //TODO make this get the correct mb
+            var microlist = kb.each(kb.sym(myUserURI), SIOC('creator_of'));
             var micro;
             for (var microlistelement in microlist){
                 if(kb.whether(microlist[microlistelement], RDF('type'),SIOCt('Microblog')) &&
@@ -286,8 +286,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     xcmbAvatar.value = (kb.any(s,FOAF('depiction')))?
                         kb.any(s,FOAF('depiction')).uri : "";
                 }
+            var workspace //= kb.any(s,WORKSPACE) //TODO - ADD URI FOR WORKSPACE DEFINITION
             var xcmbWritable = doc.createElement("input");
-                xcmbWritable.value = "http://dig.csail.mit.edu/2007/wiki/sandbox" //TODO remove after testing
+                xcmbWritable.value = (workspace)? workspace :"http://dig.csail.mit.edu/2007/wiki/sandbox";
                 xcmb.innerHTML = '\
                     <form class ="createNewMB" id="createNewMB">\
                         <p id="xcmbname"><span class="">Name: </span></p>\
@@ -353,7 +354,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     } else if(words[word].match(/\#\w+/)){
                         //hashtag
                     } else if(words[word].match(/\!\w+/)){
-                        //usergroup
+                        //usergroup 
                     }
                 }
                 xupdateSubmit.disabled = true;
@@ -407,7 +408,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
         };
         
-        //
+        //reply viewer
         var xviewReply = doc.createElement('ul');
             xviewReply.className = "replyView";
             xviewReply.addEventListener("click", function(){xviewReply.className = "replyView"}, false)
@@ -582,13 +583,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             xfollows.className = "followlist-container view-container"
         if (kb.whether(creator, SIOC('follows'))){
             var creatorFollows = kb.each(creator, SIOC('follows'))
-            // var xfollowsHead = doc.createElement('h3')
             var xfollowsList = doc.createElement('ul')
             for (thisPerson in creatorFollows){
                 xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]))
             }
-            // xfollowsHead.appendChild(doc.createTextNode('Follows:'))
-            // xfollows.appendChild(xfollowsHead)
             xfollows.appendChild(xfollowsList)  
         }
         //FOLLOWS VIEW END 
@@ -597,14 +595,20 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         /* 
             generatePost - Creates and formats microblog posts 
                 post - symbol of the uri the post in question
-                me - 
         */
             var viewPost = function(uris){
                 for (var n in xviewReply.childNodes){
                     xviewReply.removeChild(xviewReply.childNodes[0])
                 }
+                var xcloseContainer = doc.createElement('li')
+                    xcloseContainer.className="closeContainer"
+                var xcloseButton= doc.createElement('span')
+                    xcloseButton.innerHTML = "&#215;"
+                    xcloseButton.className = "closeButton"
+                xcloseContainer.appendChild(xcloseButton)
+                xviewReply.appendChild(xcloseContainer)
                 for (var uri in uris){
-                    xviewReply.appendChild(generatePost(kb.sym(uris[uri]), thisIsMe))
+                    xviewReply.appendChild(generatePost(kb.sym(uris[uri]), thisIsMe,"view"))
                 }
                 xviewReply.className = "replyView-active";
                 microblogPane.appendChild(xviewReply)
@@ -625,6 +629,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var xpostLink= doc.createElement("a")
                 xpostLink.addEventListener("click",function(){viewPost([post.uri]);},false);
                 xpostLink.id = "post_"+String(post.uri).split("#")[1]
+                xpostLink.setAttribute("content",post.uri)
+                xpostLink.setAttribute("property","permalink")
             var postLink = new Date()
             postLink = postLink.parseISOdate(String(kb.any(post,terms('created'))))
             postLink = doc.createTextNode((postLink)?postLink:"post date unknown");
@@ -699,7 +705,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         if (success){
                             var deleteContainer = kb.statementsMatching(
                                 undefined,SIOC('container_of'),kb.sym(doc.getElementById(
-                                "post_"+evt.target.parentNode.id)))
+                                "post_"+evt.target.parentNode.id).getAttribute("content")))
                             sparqlUpdater.batch_delete_statement(deleteContainer, mbconfirmDeletePost)
                         } else{
                             notify("Oops, there was a problem, please try again")
@@ -709,7 +715,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     //delete attributes of post
                     evt.target.disabled = true
                     deleteMe = kb.statementsMatching(kb.sym(doc.getElementById(
-                        "post_"+evt.target.parentNode.id)))
+                        "post_"+evt.target.parentNode.id).getAttribute("content")))
                     sparqlUpdater.batch_delete_statement(deleteMe, deleteContainerOf)
                 }
             }
@@ -820,8 +826,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             postMentionList.className = "postList"
         postMentionContainer.appendChild(postMentionList);
         //NOTIFICATIONS VIEW END
-        
-        
         //POST INFORMATION END      
         
         //build
@@ -836,6 +840,4 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             microblogPane.appendChild(postMentionContainer);
         return microblogPane;
     }
-
 }, true);
-// ends

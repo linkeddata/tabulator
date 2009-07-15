@@ -45,7 +45,9 @@
 }
 .ppane .userLink{
     display:block;
+    clear:both;
     margin-bottom:1em;
+    margin-right:1em;
 }
 .ppane .postAvatar{
     max-width:4em;
@@ -89,7 +91,7 @@
     vertical-align:bottom;
     margin-bottom:-2.2em;
     border:none;
-    padding:none;
+    padding:0px;
     background:none;
 }
 .ppane .replyView-active .closeContainer .closeButton{
@@ -184,6 +186,18 @@
 }
 .ppane .postList .post div{
     margin: .5em auto;
+}
+.ppane .postList .favorit{
+    color: #aaa;
+    float:right;
+    font-size:150%;
+    margin-left:.5em;
+}
+.ppane .postList .favorit.ed{
+    color: #357598;
+}
+.ppane .postList .favorit.ing{
+    
 }
 
 /*tabs list*/

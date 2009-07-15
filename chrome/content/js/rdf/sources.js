@@ -8,7 +8,7 @@
  *  'sources' -- meaning any document we are trying to get data out of
  *  This implementsquite a lot of the web architecture
  * 
- * SVN ID: $Id: sources.js 26584 2009-07-02 07:30:26Z jambo $
+ * SVN ID: $Id: sources.js 26684 2009-07-15 15:16:13Z oshani $
  *
  ************************************************************/
 
@@ -281,6 +281,8 @@ function SourceFetcher(store, timeout, async) {
 		}
 
 
+        //  rdfa parse here @@
+        
 		// dc:title	                       //no need to escape '/' here
 		var titleMatch = (new RegExp("<title>([\\s\\S]+?)</title>",'im')).exec(rt);
 		if (titleMatch){

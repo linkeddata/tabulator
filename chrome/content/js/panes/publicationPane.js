@@ -35,100 +35,42 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
         var rdf = tabulator.ns.rdf;
 
         var ps = new PatternSearch();
+        var extract = ps.extract;
+        var parse = ps.parse;
 
-        var nameTree = ps.SOBN([
-                                ps.ABN([
-                                        ps.SPEN(foaf('givenname')),
-                                        ps.SOBN([
-                                                 ps.SPEN(foaf('family_name')),
-                                                 ps.SPEN(foaf('surname'))
-                                                ])
-                                       ]),
-                                ps.SPEN(foaf('name')),
-                                ps.SPEN(dct('name'))
-                               ]);
-        var titleNameTree = ps.SOBN([
-                                     ps.ABN([
-                                             ps.SPEN(foaf('title')),
-                                             nameTree
-                                            ]),
-                                     nameTree
-                                    ]);
-        var personNameTree = ps.SOBN([
-                                      ps.MOTN(foaf('Person'),[
-                                                              titleNameTree
-                                                             ])
-                                     ]);
-        
-        var authorTree = ps.MOBN([
-                                  ps.SOPN(bibo('authorList'),[
-                                                              personNameTree
-                                                             ]),
-                                  ps.SOPN(bibo('contributorList'),[
-                                                                   personNameTree
-                                                                  ]),
-                                  ps.MOPN(dct('creator'),[
-                                                          titleNameTree
-                                                         ])
-                                 ]);
-        var editorTree = ps.SOBN([
-                                  ps.SOPN(bibo('editorList'),[
-                                                              personNameTree
-                                                             ]),
-                                  ps.MOPN(bibo('editor'),[
-                                                          titleNameTree,
-                                                          personNameTree
-                                                         ])
-                                 ]);
-        ps.debug = false;
-        var ownerNameTree = ps.SOBN([
-                                     ps.SOBN([
-                                              ps.MOPN(bibo('owner'),[
-                                                                     titleNameTree
-                                                                    ])
-                                             ])
-                                    ]);
+        var nameTree = "(S,O,N) > (S,A,N) > (S,N,P,foaf:givenname)\n"+
+                       "                  > (S,O,N) > (S,N,P,foaf:family_name)\n"+
+                       "                            > (S,N,P,foaf:surname)\n"+
+                       "        > (S,N,P,foaf:name)\n"+
+                       "        > (S,N,P,dct:name)";
 
-        var nameTreeStr = "(S,O,N) > (N,A,N) > (S,N,P,foaf:givenname)\n"+
-                          "                  > (S,O,N) > (S,N,P,foaf:family_name)\n"+
-                          "                            > (S,N,P,foaf:surname)\n"+
-                          "        > (S,N,P,foaf:name)\n"+
-                          "        > (S,N,P,dct:name)";
-        var titleNameTreeStr = "(S,O,N) > (N,A,N) > (S,N,P,foaf:title)\n"+
-                               "                  > ["+nameTreeStr+"]\n"+
-                               "        >         ^";
-        var personNameTreeStr = "(S,O,N) > (M,O,T,foaf:Person) > ["+titleNameTreeStr+"]";
+        var titleNameTree = "(S,O,N) > (S,A,N) > (S,N,P,foaf:title)\n"+
+                            "                  > ["+nameTree+"]\n"+
+                            "        >         ^";
 
-        var authorNameTreeStr = "(S,O,N) > (S,O,P,bibo:authorList)      > ["+personNameTreeStr+"]\n"+
-                                "        > (S,O,P,bibo:contributorList) ^\n"+
-                                "        > (S,O,P,dct:creator)          > ["+titleNameTreeStr+"]";
+        var personNameTree = "(S,O,N) > (M,O,T,foaf:Person) > ["+titleNameTree+"]";
 
-        alert(ps.parseToTree(authorNameTreeStr).toSource());
+        var authorNameTree = "(S,O,N) > (S,O,P,bibo:authorList)      > ["+personNameTree+"]\n"+
+                             "        > (S,O,P,bibo:contributorList) ^\n"+
+                             "        > (M,O,P,dct:creator)          > ["+titleNameTree+"]";
 
-        var titleTree = ps.SOBN([
-                                 ps.SPEN(bibo('shortTitle')),
-                                 ps.SPEN(dct('title'))
-                                ]);
+        var titleTree = "(S,O,N) > (S,N,P,bibo:shortTitle)\n"+
+                        "        > (S,N,P,dct:title)";
 
-        var dateTree = ps.SOBN([
-                                ps.SPEN(dct('created')),
-                                ps.SPEN(dct('date'))
-                               ]);
+        var dateTree = "(S,O,N) > (S,N,P,dct:created)\n"+
+                       "        > (S,N,P,dct:date)";
 
-        var abstractTree = ps.SOBN([
-                                    ps.SPEN(dct('abstract'))
-                                   ]);
+        var abstractTree = "(S,O,N) > (S,N,P,dct:abstract)";
 
-        var dataToAssemble = [['Author(s)',ps.parseResults(authorTree.fetch(subject)),'pubAuthor'],
-                              ['Title',ps.parseResults(titleTree.fetch(subject)),'pubTitle'],
-                              ['Date created',ps.parseResults(dateTree.fetch(subject)),'pubDateCreated'],
-                              ['Abstract',ps.parseResults(abstractTree.fetch(subject)),'pubAbstract'],
-                              ['Owner',ps.parseResults(ps.debugStatement(ownerNameTree.fetch(subject))),'pubOwner']];
+        alert(parse(authorNameTree).fetch(subject).toSource());
+
+        var dataToAssemble = [['Author(s)',extract(parse(authorNameTree).fetch(subject)),'pubAuthor'],
+                              ['Title',extract(parse(titleTree).fetch(subject)),'pubTitle'],
+                              ['Date created',extract(parse(dateTree).fetch(subject)),'pubDateCreated'],
+                              ['Abstract',extract(parse(abstractTree).fetch(subject)),'pubAbstract']];
 
         for(var i = 0;i < dataToAssemble.length;i++)
             div = this.appendEntry(document, div, dataToAssemble[i][0], dataToAssemble[i][1], dataToAssemble[i][2]);
-
-        //alert("statementsMatching: "+tabulator.kb.statementsMatching(tabulator.kb.sym("http://www.advogato.org/person/timbl/foaf.rdf#me"),rdf('type'))+"\nwhether: "+tabulator.kb.statementsMatching(tabulator.kb.sym("http://www.advogato.org/person/timbl/foaf.rdf#me"),rdf('type'),foaf('Person'))+"\nsource of foaf(Person): "+foaf('Person').toSource());
    
         return div;
     }

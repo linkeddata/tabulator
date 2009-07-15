@@ -1,198 +1,159 @@
-/*
-    Why patternSearch was created:
-        Bibliographical data can be represented in many different ways. The
-        goal of patternSearch is to provide a convenient way of establishing
-        searching patterns and alternatives, so as to be able to collect data
-        from a document without having to resort to nested arrays or complic-
-        ated logical structures.
-        These patterns are represented as trees of nodes, each of which has
-        its own searching and fetch methods. Intermediary nodes fetch
-        what their children nodes return; end nodes fetch literals (or URIs).
-        If one specific pattern fails to encounter data, then fetch attempts
-        to use the following patterns. Nested arrays of literals and contain-
-        ers are returned and then parsed.
-
-        search methods always begin with search; fetch methods also follow
-        this pattern.
-*/
+// PatternSearch: SPARQL's very primitve cousin
 
 function PatternSearch() { // Encapsulates all of the methods and classes
     /*****************************
      *     Main Node Class       *
      *****************************/
-    anchor = this;
-    this.PatternNode = function(searchMethod, fetchMethod, children) {
-        this.searchMethod = searchMethod;
+    var anchor = this;
+    this.debug = false;
+    this.PatternNode = function(amountMethod, fetchMethod, searchMethod, children) {
+        this.amountMethod = amountMethod;
         this.fetchMethod = fetchMethod;
+        this.searchMethod = searchMethod;
         this.children = children;
     }
     this.PatternNode.prototype.fetch = function(subject) {
         if(subject == null) return null;
         if(subject.type === 'Symbol')
             tabulator.sf.requestURI(getBaseURI(subject.uri));
-        return this.fetchMethod(this.searchMethod(subject), this.children);
+        return this.amountMethod(this.searchMethod(subject), this.fetchMethod, this.children);
     }
     this.PatternNode.prototype.toString = function() {
         if(this.children) {
-            var str = "{children:[\n";
-            for(var i = 0;i < this.children.length;i++)
-                str += "        "+this.children[i].toString();
-            return str+"          ]};\n";
+            var str = "";
+            if(this.type) str = "{["+this.type+"\n";
+            else str = "{[\n";
+            for(var i = 0;i < this.children.length;i++) {
+                var strarr = this.children[i].toString().split("\n");
+                for(var j = 0;j < strarr.length;j++)
+                    str += "   "+strarr[j]+"\n";
+            }
+            return str+"]}";
         }
         else
-            return "END\n";
+            return "END"+(this.type?"/"+this.type:"");
+    }
+
+    /******************************
+     *       Amount Methods       *
+     ******************************/
+     var amount = new function() {
+        this.single = function(searchResults, fetchMethod, children) {
+            if(util.isEmpty(searchResults)) return null;
+            for(var i = 0;i < searchResults.length;i++) {
+                var data = fetchMethod(searchResults[i], children);
+                if(!util.isEmpty(data)) return data;
+            }
+            return null;
+        }
+        this.multiple = function(searchResults, fetchMethod, children) {
+            if(util.isEmpty(searchResults)) return null;
+            var data = new Array();
+            for(var i = 0;i < searchResults.length;i++) {
+                var fetchedData = fetchMethod(searchResults[i], children);
+                if(!util.isEmpty(fetchedData)) data.push(fetchedData);
+            }
+            if(data.length == 0) return null;
+            else return data; // Might need to change this
+        }
     }
 
     /******************************
      *       Fetch Methods        *
      ******************************/
-    this.fetchSingle = function(subjects) {
-        if(isEmpty(subjects)) return null;
-        else if(subjects[0].termType === 'literal' || subjects[0].termType === 'symbol')
-            return new DataContainer([subjects[0].toString()]);
-        else return null;
-    }
+    var fetch = new function() {
+        this.end = function(subject) {
+            if(subject == null) return null;
+            else if(subject.termType === 'literal' || subject.termType === 'symbol')
+                return new util.Container([subject.toString()]);
+            else return null;
+        }
 
-    this.fetchMultiple = function(subjects) {
-        if(isEmpty(subjects)) return null;
-        var dataContainers = new Array();
-        for(var i = 0;i < subjects.length;i++)
-            if(subjects[i] == null) continue;
-            else if(subjects[i].termType === 'literal' || subjects[i].termType === 'symbol')
-                dataContainers.push(new DataContainer([subjects[i].toString()]));
-        if(isEmpty(dataContainers)) return null;
-        else return dataContainers;
-    }
-
-    this.fetchSingleOr = function(subjects, children) {
-        if(isEmpty(subjects) || isEmpty(children)) return null;
-        for(var i = 0;i < subjects.length;i++)
-            for(var j = 0;j < children.length;j++) {
-                var fetchedData = children[j].fetch(subjects[i]);
+        this.or = function(subject, children) {
+            if(subject == null || util.isEmpty(children)) return null;
+            for(var i = 0;i < children.length;i++) {
+                var fetchedData = children[i].fetch(subject);
                 if(fetchedData != null) return fetchedData;
             }
-        return null;
-    }
+            return null;
+        }
 
-    this.fetchAnd = function(subjects, children) { // Children of And nodes must not return arrays
-        if(isEmpty(subjects) || isEmpty(children)) return null;
-        for(var i = 0;i < subjects.length;i++) {
-            var dataContainer = new DataContainer();
-            for(var j = 0;j < children.length;j++) {
-                var fetchedData = children[j].fetch(subjects[i]);
-                if(isEmpty(fetchedData) || fetchedData instanceof Array) break;
-                else if(fetchedData instanceof DataContainer) dataContainer.appendData(fetchedData); //@@
+        this.and = function(subject, children) { // Children of And nodes must not return arrays
+            if(subject == null || util.isEmpty(children)) return null;
+            var dataContainer = new util.Container();
+            for(var i = 0;i < children.length;i++) {
+                var fetchedData = children[i].fetch(subject);
+                if(util.isEmpty(fetchedData)) break; // Eliminating Array check for now
+                else dataContainer.appendData(fetchedData);
             }
             if(dataContainer.data.length == children.length) return dataContainer;
+            else return null;
         }
-        return null;
+        //this.fetchMultipleAggregate = function(
     }
-
-    this.fetchMultipleOr = function(subjects, children) {
-        if(isEmpty(subjects) || isEmpty(children)) return null;
-        var dataContainers = new Array();
-        for(var i = 0;i < subjects.length;i++)
-            for(var j = 0;j < children.length;j++) {
-                var fetchedData = children[j].fetch(subjects[i]);
-                if(isEmpty(fetchedData)) continue;
-                else {
-                    if(fetchedData instanceof DataContainer) dataContainers.push(fetchedData);
-                    else if(fetchedData instanceof Array) // In case one child returns multiple DataContainers
-                        for(var k = 0;k < fetchedData.length;k++)
-                            dataContainers.push(fetchedData[k]);
-                    break;
-                }
-            }
-        if(dataContainers.length == 0) return null;
-        else return dataContainers;
-    }
-
-    //this.fetchMultipleAggregate = function(
 
 
     /****************************
      *     Search Methods       *
      ****************************/
-    this.searchByPredicate = function(uri) {
-        return function(subject) {
-            var triples = tabulator.kb.statementsMatching(subject, uri);
-            if(isEmpty(triples)) return new Array();
-            return getObjects(triples);
+    var search = new function() {
+        this.byPredicate = function(uri) {
+            return function(subject) {
+                var triples = tabulator.kb.statementsMatching(subject, uri);
+                if(util.isEmpty(triples)) return new Array();
+                return util.getObjects(triples);
+            }
+        }
+
+        this.byType = function(uri) {
+            return function(subject) {
+                var triples = tabulator.kb.statementsMatching(subject,null,null,null);
+                var objects = util.getObjects(triples);
+                var matchingTriples = new Array();
+                if(util.isEmpty(triples)) return matchingTriples;
+                for(var i = 0;i < objects.length;i++)
+                    if(tabulator.kb.whether(objects[i],tabulator.ns.rdf('type'),uri))
+                        matchingTriples.push(triples[i]);
+                return util.getObjects(matchingTriples);
+            }
+        }
+
+        this.blank = function() {
+            return function(subject) {
+                return [subject];
+            }
         }
     }
 
-    this.searchByObjectType = function(uri) {
-        return function(subject) {
-            var triples = tabulator.kb.statementsMatching(subject,null,null,null);
-            var objects = getObjects(triples);
-            var matchingTriples = new Array();
-            if(isEmpty(triples)) return matchingTriples;
-            for(var i = 0;i < objects.length;i++)
-                if(tabulator.kb.whether(objects[i],tabulator.ns.rdf('type'),uri))
-                    matchingTriples.push(triples[i]);
-            return getObjects(matchingTriples);
-        }
-    }
-
-    this.searchBlankPatternNode = function() {
-        return function(subject) {
-            return [subject];
-        }
-    }
-
-
-    /********************************
-     *  Utility Methods & Classes   *
-     ********************************/
-    function DataContainer(data) {
-        if(data == null || data == undefined) this.data = new Array();
-        else this.data = data;
-    }
-    DataContainer.prototype.appendData = function(data) {
-        this.data.push(data);
-    }
-
-    function isEmpty(array) {
-        if(array == null) return true;
-        else if(array.length == 0) return true;
-        else return false;
-    }
-
-    function getObjects(triples) {
-        if(isEmpty(triples)) return new Array();
-        var objects = new Array();
-        for(var i = 0;i < triples.length;i++)
-            objects.push(triples[i].object);
-        return objects;
-    }
-
-    // Returns an array of strings
-    this.parseResults = function(results) {
-        if(isEmpty(results)) return null;
+    /****************************
+     *    Results extractor     *
+     ****************************/
+    this.extract = function(results) {
+        if(util.isEmpty(results)) return null;
         var values = new Array();
         if(results instanceof Array) {
             for(var i = 0;i < results.length;i++) {
-                var subValues = anchor.parseResults(results[i]);
+                var subValues = anchor.extract(results[i]);
                 if(subValues == null) continue;
                 else if(subValues instanceof Array)
                     for(var j = 0;j < subValues.length;j++)
                         values.push(subValues[j]);
             }
         }
-        else if(results instanceof DataContainer) {
+        else if(results instanceof util.Container) {
             var datum = "";
             for(var i = 0;i < results.data.length;i++) {
                 var str = "";
                 if(results.data[i] instanceof Array) {
                     if(results.data[i][0].constructor === String) // "Hello" instanceof String -> false
                         str = results.data[i].toString();
-                    else if(results.data[i][0] instanceof DataContainer)
-                        str = this.parseResults(results.data[i][0]);
+                    else if(results.data[i][0] instanceof util.Container)
+                        str = anchor.extract(results.data[i][0]);
                 }
                 else if(results.data[i].constructor === String)
                     str = results.data[i].toString();
-                else if(results.data[i] instanceof DataContainer)
-                    str = this.parseResults(results.data[i]);
+                else if(results.data[i] instanceof util.Container)
+                    str = anchor.extract(results.data[i]);
                 datum += str;
                 if(i < results.data.length-1) datum += " ";
             }
@@ -201,95 +162,80 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         return values;
     }
 
-    function getBaseURI(uri) {
-        if(uri.indexOf('#') >= 0)
-            return uri.substring(0,uri.indexOf('#'));
-        else
-            return uri;
-    }
-
-    this.debugStatement = function(obj) {
-        if(obj == null) alert('null');
-        else alert(obj.toSource());
-        return obj;
-    }
-
-
     /**********************************
-     *   Shortcuts & Abbreviations    *
+      *   Shortcuts & Abbreviations    *
      **********************************/
-    this.MultipleOrTypeNode = function(uri, children) {
-        return new this.PatternNode(this.searchByObjectType(uri),this.fetchMultipleOr,children);
-    }
-    this.MultipleOrPredicateNode = function(uri, children) {
-        return new this.PatternNode(this.searchByPredicate(uri),this.fetchMultipleOr,children);
-    }
-    this.MultipleTypeEndNode = function(uri) {
-        return new this.PatternNode(this.searchByObjectType(uri),this.fetchMultiple);
-    }
-    this.MultiplePredicateEndNode = function(uri) {
-        return new this.PatternNode(this.searchByPredicate(uri),this.fetchMultiple);
-    }
-    this.SingleOrTypeNode = function(uri, children) {
-        return new this.PatternNode(this.searchByObjectType(uri),this.fetchSingleOr,children);
-    }
-    this.SingleOrPredicateNode = function(uri, children) {
-        return new this.PatternNode(this.searchByPredicate(uri),this.fetchSingleOr,children);
-    }
-    this.SingleTypeEndNode = function(uri) {
-        return new this.PatternNode(this.searchByObjectType(uri),this.fetchSingle);
-    }
-    this.SinglePredicateEndNode = function(uri) {
-        return new this.PatternNode(this.searchByPredicate(uri),this.fetchSingle);
-    }
-    this.AndTypeNode = function(uri, children) {
-        return new this.PatternNode(this.searchByObjectType(uri),this.fetchAnd,children);
-    }
-    this.AndPredicateNode = function(uri, children) {
-        return new this.PatternNode(this.searchByPredicate(uri),this.fetchAnd,children);
-    }
-    this.MultipleOrBlankNode = function(children) {
-        return new this.PatternNode(this.searchBlankPatternNode(),this.fetchMultipleOr,children);
-    }
-    this.SingleOrBlankNode = function(children) {
-        return new this.PatternNode(this.searchBlankPatternNode(),this.fetchSingleOr,children);
-    }
-    this.AndBlankNode = function(children) {
-        return new this.PatternNode(this.searchBlankPatternNode(),this.fetchAnd,children);
-    }
+    this.scut = new function() {
+        this.debug = function(type, arg) {
+            var node = anchor.scut[type](arg);
+            node.type = type;
+            if(arg) node.type += ":"+arg;
+            return node;
+        }
+        this.SAT = function(uri, children) {
+            return new anchor.PatternNode(amount.single, fetch.and, search.byType(uri) , children);
+        }
+        this.SAP = function(uri, children) {
+            return new anchor.PatternNode(amount.single, fetch.and, search.byPredicate(uri), children);
+        }
+        this.SAN = function(children) {
+            return new anchor.PatternNode(amount.single, fetch.and, search.blank(), children);
+        }
+        this.MAT = function(uri, children) {
+            return new anchor.PatternNode(amount.multiple, fetch.and, search.byType(uri), children);
+        }
+        this.MAP = function(uri, children) {
+            return new anchor.PatternNode(amount.multiple, fetch.and, search.byPredicate(uri), children);
+        }
 
-    this.MOTN = this.MultipleOrTypeNode;
-    this.MOPN = this.MultipleOrPredicateNode;
-    this.MTEN = this.MultipleTypeEndNode;
-    this.MPEN = this.MultiplePredicateEndNode;
-    this.SOTN = this.SingleOrTypeNode;
-    this.SOPN = this.SingleOrPredicateNode;
-    this.STEN = this.SingleTypeEndNode;
-    this.SPEN = this.SinglePredicateEndNode;
-    this.APN = this.AndPredicateNode;
-    this.ATN = this.AndTypeNode;
-    this.MOBN = this.MultipleOrBlankNode;
-    this.SOBN = this.SingleOrBlankNode;
-    this.ABN = this.AndBlankNode;
+        this.SOT = function(uri, children) {
+            return new anchor.PatternNode(amount.single, fetch.or, search.byType(uri), children);
+        }
+        this.SOP = function(uri, children) {
+            return new anchor.PatternNode(amount.single, fetch.or, search.byPredicate(uri), children);
+        }
+        this.SON = function(children) {
+            return new anchor.PatternNode(amount.single, fetch.or, search.blank(), children);
+        }
+        this.MOT = function(uri, children) {
+            return new anchor.PatternNode(amount.multiple, fetch.or, search.byType(uri), children);
+        }
+        this.MOP = function(uri, children) {
+            return new anchor.PatternNode(amount.multiple, fetch.or, search.byPredicate(uri), children);
+        }
+
+        this.SNT = function(uri) {
+            return new anchor.PatternNode(amount.single, fetch.end, search.byType(uri));
+        }
+        this.SNP = function(uri) {
+            return new anchor.PatternNode(amount.single, fetch.end, search.byPredicate(uri));
+        }
+        this.MNT = function(uri) {
+            return new anchor.PatternNode(amount.multiple, fetch.end, search.byType(uri));
+        }
+        this.MNP = function(uri) {
+            return new anchor.PatternNode(amount.multiple, fetch.end, search.byPredicate(uri));
+        }
+    }
 
     /*********************************
      *    Special Syntax Parser      *
      *********************************/
-    this.parseToTree = function(stringTree) {
-        // takes in another tree that is placed within brackets and integrates it into the new tree
-        function reallocate(tree) { // this function was a pain to debug
+    this.parse = function(stringTree) {
+        // takes in trees that are placed within brackets and integrates them into the new tree
+        var reallocatedString = function(tree) { // this function was a pain to debug
             var numberOfSpaces = new Array();
             var treeArray = stringTree.split("\n");
             for(var i = 0;i < treeArray.length;i++) {
-                var leftBrackets = indicesOf("[",treeArray[i]);
-                var rightBrackets = indicesOf("]",treeArray[i]);
+                var leftBrackets = util.indicesOf("[",treeArray[i]);
+                var rightBrackets = util.indicesOf("]",treeArray[i]);
                 var toBeAdded = 0;
                 if(leftBrackets.length > 0)
                     toBeAdded = treeArray[i].lastIndexOf(">",leftBrackets[leftBrackets.length-1])-(leftBrackets.length)+3;
                 var toBePopped = rightBrackets.length;
-                var spaces = sumArray(numberOfSpaces);
+                var spaces = util.sumArray(numberOfSpaces);
                 
-                treeArray[i] = createBlankString(spaces) + treeArray[i];
+                treeArray[i] = util.createBlankString(spaces) + treeArray[i];
                 if(toBeAdded > 0) numberOfSpaces.push(toBeAdded);
                 for(;toBePopped > 0;toBePopped--)
                     numberOfSpaces.pop();
@@ -299,28 +245,13 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             for(var i = 0;i < treeArray.length;i++)
                 newTree += treeArray[i]+(i+1==treeArray.length?"":"\n");
             return newTree;
-        }
-        // Sums the members of an array
-        function sumArray(arr) {
-            var sum = 0;
-            for(var i = 0;i < arr.length;i++)
-                sum += arr[i];
-            return sum;
-        }
-        // Creates a blank string of length size
-        function createBlankString(size) {
-            var str = "";
-            for(var i = 0;i < size;i++)
-                str += " ";
-            return str;
-        }
-        // replaces the chars between begIndex and endIndex;
-        // inclusive and non-inclusive, respectively; with newStr
-        function insertString(str,newStr,begIndex, endIndex) {
-            return str.substring(0,begIndex).concat(newStr).concat(str.substring(endIndex));
-        }
+        }(stringTree).replace(/ \^/g," >^"); // Built as it is because the procedure was recursive
+        // 1) reallocatedString checks out
+
+        var splicedString = reallocatedString.split("\n");
+
         // Returns the level of the node in the tree
-        function nodeLevel(currentIndex,currentLine,indicesLevels) {
+        var nodeLevel = function(currentIndex,currentLine,indicesLevels) {
             for(var line = currentLine-1;line >= 0;line--)
                 for(var index = indicesLevels[line].length-1;index >= 0;index--)
                     if(indicesLevels[line][index] == null) break;
@@ -329,36 +260,20 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                         return indicesLevels[line][index][1];
             return indicesLevels[currentLine][indicesLevels[currentLine].length-1][1]+1;
         }
-        // Returns an array of the indices of the char ch in str
-        function indicesOf(ch,str) {
-            var indices = new Array();
-            var index = str.indexOf(ch);
-            while(index != -1) {
-                indices.push(index);
-                index = str.indexOf(ch,index+1);
-            }
-            return indices;
-        }
-
-        // Builds a two-dimensional array of doubles with the level and index of each '>'
-        alert("StringTree:\n"+stringTree);
-        var reallocatedString = reallocate(stringTree).replace(/ \^/g," >^");
-        alert("ReallocatedString:\n"+reallocatedString);
-        var splicedString = reallocatedString.split("\n");
+        // Builds an array of the indices of the '>'
         var indicesLevels = new Array();
         for(var line = 0;line < splicedString.length;line++) {
             indicesLevels.push(new Array());
-            var lineIndices = indicesOf(">",splicedString[line]);
+            var lineIndices = util.indicesOf(">",splicedString[line]);
             var levelOffset = 0;
             if(line > 0) levelOffset = nodeLevel(lineIndices[0],line,indicesLevels);
-            else { lineIndices.push(0); lineIndices.sort(function(a,b){return a - b;}); }
+            else { lineIndices.push(0); lineIndices.sort(function(a,b){return a - b;}); };
             for(var nullLevel = 0;nullLevel < levelOffset;nullLevel++)
                 indicesLevels[line].push(null);
             for(var level = 0;level < lineIndices.length;level++)
-                indicesLevels[line].push([lineIndices[level],level+levelOffset])
+                indicesLevels[line].push([lineIndices[level],level+levelOffset]);
         }
-        alert(indicesLevels.toSource());
-        
+        // 2) indicesLevels checks out
 
         // Builds a two-dimensional array of nodes resembling the original string
         var stringTree = new Array();
@@ -379,39 +294,31 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                     .replace(/ /g,"").replace(/>/g,""));
             }
         }
-        alert(stringTree.toSource());
-        // ^^ WORKS TILL HERE
 
-        function instantiateNode(nodeString) {
+        // Converts a string representation of a node into a node object (without children)
+        var instantiateNode = function(nodeString) {
             if(nodeString == null) return null;
-            else if(nodeString.length == 0) return anchor.SOBN();
+            else if(nodeString.length == 0) return anchor.scut.debug('SON');
             else if(nodeString.indexOf("^") != -1) return nodeString;
             var nodeString = nodeString.replace(/\(/g,"").replace(/\)/g,"");
             var params = nodeString.split(",");
-            if(params[0] === "S" && params[1] === "O" && params[3]) {
-                if(params[2] === "T") return anchor.SOTN(params[3]);
-                else if(params[2] === "P") return anchor.SOPN(params[3]);
+            if(params[3]) params[3] = util.normalizeURI(params[3]);
+            var nodeType = params[0]+params[1]+params[2];
+            if(anchor.scut[nodeType]) {
+                if(params[3]) {
+                    if(anchor.debug) return anchor.scut.debug(nodeType,params[3]);
+                    else return anchor.scut[nodeType](params[3]);
+                } // Added debugging functionality
+                else {
+                    if(anchor.debug) return anchor.scut.debug(nodeType);
+                    else return anchor.scut[nodeType](params[3]);
+                }
             }
-            else if(params[0] === "M" && params[1] === "O" && params[3]) {
-                if(params[2] === "T") return anchor.MOTN(params[3]);
-                else if(params[2] === "P") return anchor.MOPN(params[3]);
-            }
-            else if(params[0] === "S" && params[1] === "O" && params[2] === "N")
-                return anchor.SOBN();
-            else if(params[0] === "S" && params[3]) {
-                if(params[2] === "T") return anchor.STEN(params[3]);
-                else if(params[2] === "P") return anchor.SPEN(params[3]);
-            }
-            else if(params[0] === "M" && params[3]) {
-                if(params[2] === "T") return anchor.MTEN(params[3]);
-                else if(params[2] === "P") return anchor.MPEN(params[3]);
-            }
-            else if(params[1] === "A")
-                return anchor.ABN();
-            alert("Unrecognized node string value: "+params.toSource());
+            alert('Unrecognized type of node: '+nodeType);
             return nodeString;
         }
 
+        // Actual instantiation
         var instantiatedNodes = new Array();
         for(var line = 0;line < stringTree.length;line++) {
             var lineInstantiatedNodes = new Array();
@@ -419,22 +326,21 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             for(var level = 0;level < indicesLevels[line].length;level++)
                 lineInstantiatedNodes.push(instantiateNode(stringTree[line][level]));
         }
-        alert(instantiatedNodes.toSource());
 
-        function linkNodes(nodes,line,level) {
+        // Links and returns the tree
+        return function linkNodes(nodes,line,level) {
             if(nodes[line].length == level+1) return nodes[line][level];
             nodes[line][level].children = new Array();
             for(var endingLine = line;nodes[endingLine]&&(nodes[endingLine][level]===null||endingLine==line);endingLine++);
-            alert("Number of possible children: "+endingLine);
             for(var i = line;i < endingLine;i++) {
                 var childrenLevel = level+1;
                 if(nodes[i] && nodes[i][childrenLevel]) {
                     if(nodes[i][childrenLevel].constructor === String) {
-                        var numNodes = indicesOf("^",nodes[i][childrenLevel]).length;
+                        var numNodes = util.indicesOf("^",nodes[i][childrenLevel]).length;
                         for(var j=i-1;numNodes > 0 && j >= 0;j--) {
-                            if(nodes[j] != null && numNodes == 1)
+                            if(nodes[j] && nodes[j][childrenLevel] != null && numNodes == 1)
                                 nodes[i][childrenLevel] = nodes[j][childrenLevel];
-                            if(nodes[j] != null) numNodes--;
+                            if(nodes[j] && nodes[j][childrenLevel] != null) numNodes--;
                         }
                         if(numNodes > 0) nodes[line][level].children.push(null);
                         else nodes[line][level].children.push(nodes[i][childrenLevel]);
@@ -444,19 +350,98 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                 }
             }
             return nodes[line][level];
-        }
-
-        return linkNodes(instantiatedNodes,0,0);
+        }(instantiatedNodes,0,0);
     }
-    function printArr(arr) {
-        str = "";
-        for(var i = 0;i < arr.length;i++)
-            str += arr[i]+"\n";
-        return str;
+
+    /********************************
+     *  Utility Methods & Classes   *
+     ********************************/
+    var util = new function() {
+        // Container object that is used to store fetched data
+        this.Container = function(data) {
+            if(data == null || data == undefined) this.data = new Array();
+            else this.data = data;
+        }
+        this.Container.prototype.appendData = function(data) {
+            this.data.push(data);
+        }
+        /***** Array methods ****/
+        // Tests whether an array is empty
+        this.isEmpty = function(array) {
+            if(array == null) return true;
+            else if(array.length == 0) return true;
+            else return false;
+        }
+        // Prints the members of an array
+        this.printArray = function(arr) {
+            var str = "";
+            for(var i = 0;i < arr.length;i++)
+                str += arr[i]+"\n";
+            return str;
+        }
+        // Sums the members of an array
+        this.sumArray = function(arr) {
+            var sum = 0;
+            for(var i = 0;i < arr.length;i++)
+                sum += arr[i];
+            return sum;
+        }
+        /***** String methods *****/
+        // Creates a blank string of length size
+        this.createBlankString = function(size) {
+            var str = "";
+            for(var i = 0;i < size;i++)
+                str += " ";
+            return str;
+        }
+        // Returns an array of the indices of the char ch in str
+        this.indicesOf = function(ch,str) {
+            var indices = new Array();
+            var index = str.indexOf(ch);
+            while(index != -1) {
+                indices.push(index);
+                index = str.indexOf(ch,index+1);
+            }
+            return indices;
+        }
+        // replaces the chars between begIndex and endIndex;
+        // inclusive and non-inclusive, respectively; with newStr
+        this.insertString = function(str,newStr,begIndex, endIndex) {
+            return str.substring(0,begIndex).concat(newStr).concat(str.substring(endIndex));
+        }
+        /***** URI methods *****/
+        // Normalizes a URI of type 'base:child'
+        this.normalizeURI = function(shortURI) {
+            var base = shortURI.substring(0,shortURI.indexOf(":"));
+            var obj = shortURI.substring(shortURI.indexOf(":")+1);
+            //alert("Base: "+base+";   "+obj);
+            return tabulator.ns[base](obj);
+        }
+        // Gets the base URI of a standard uri: base#child
+        this.getBaseURI = function(uri) {
+            if(uri.indexOf('#') >= 0)
+                return uri.substring(0,uri.indexOf('#'));
+            else
+                return uri;
+        }
+        /**** Triple methods *****/
+        // Yanks the objects out of an array of triples
+        this.getObjects = function(triples) {
+            if(util.isEmpty(triples)) return new Array();
+            var objects = new Array();
+            for(var i = 0;i < triples.length;i++)
+                objects.push(triples[i].object);
+            return objects;
+        }
+        /***** Debugging methods *****/
+        // Debugs an object; prints source or null
+        this.debug = function(obj) {
+            if(obj == null) alert('null');
+            else alert(obj.toSource());
+            return obj;
+        }
     }
 }
-
-
 
 
 /* Unused functions
@@ -481,5 +466,10 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         function firstNonspace(lineString) {
             return lineString.indexOf(lineString.replace(/ /g,"").charAt(0));
         }
+
+        alert("searchByPredicate:\nuri: "+uri.toSource()+"\nsubject: "+subject.toSource()+"\ntriples: "+util.getObjects(triples).toSource());
+        alert("searchByObjectType:\nuri: "+uri.toSource()+"\nsubject: "+subject.toSource()+"\nmatchingObjects: "+
+                util.getObjects(matchingTriples).toSource());
+        alert("searchBlankPatternNode:\nsubject: "+subject.toSource());
 
 */

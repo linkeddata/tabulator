@@ -8,7 +8,7 @@ const LEGACY_CONTRACT_ID = "@mozilla.org/streamconv;1"+LEGACY_CONVERT_TYPE;
 function N3Converter() {
   this.wrappedJSObject = this;
 }
-
+var unicode_converter = Components.classes['@mozilla.org/intl/scriptableunicodeconverter'].getService(Components.interfaces.nsIScriptableUnicodeConverter);
 
 //Most code for the converter is derived from the WMLBrowser, by Matthew Wilson et al.
 //See http://wmlbrowser.mozdev.org/ for more on the WML Browser.
@@ -40,6 +40,8 @@ N3Converter.prototype = {
     //var nodeTree = parser.parseFromString(this.data, "text/xml");
     var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     var displayURI = tabulator.rc.getDisplayURI(request);
+
+    displayURI = decodeURIComponent(displayURI); //if this thing of interest has URI containing foreign characters, etc.
     var outlineHTML = 
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
         "<html id='docHTML'>"+
@@ -52,8 +54,11 @@ N3Converter.prototype = {
         "            <table id=\"outline\"></table>"+
         "        </div>"+
         "    </body>"+
-        "</html>";
+        "</html>"; 
 
+    unicode_converter.charset = 'UTF-8'; 
+    outlineHTML = unicode_converter.ConvertFromUnicode(outlineHTML);
+    //outlineHTML is now b"" (bytes), since this is what nsIStringInputStream accepts.
     var sis =
         Components.classes["@mozilla.org/io/string-input-stream;1"]
         .createInstance(Components.interfaces.nsIStringInputStream);

@@ -8,6 +8,7 @@
  ***/
 
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+tabulator.icon.src.icon_publicationPane = "chrome://tabulator/content/icons/publicationPaneIcon.gif";
 tabulator.panes.register(tabulator.panes.publishingPane = new function() {
     //add these to the xpcom.js file
     tabulator.ns.dcmi = RDFNamespace("http://purl.org/dc/dcmitype/");
@@ -18,7 +19,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
     loader.loadSubScript('chrome://tabulator/content/js/panes/patternSearch.js');
 
     this.name = 'Publication';
-    this.icon = Icon.src.icon_publicationPane;
+    this.icon = tabulator.icon.src.icon_publicationPane;
 
     var ps = new PatternSearch();
     var extract = ps.extract;

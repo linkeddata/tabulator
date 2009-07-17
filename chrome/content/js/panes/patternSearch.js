@@ -123,6 +123,13 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                 return [subject];
             }
         }
+
+        this.filter = function(uri) {
+            return function(subject) {
+                if(uri.uri == subject.uri) return [subject];
+                else return null;
+            }
+        }
     }
 
     /****************************
@@ -181,11 +188,17 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         this.SAN = function(children) {
             return new anchor.PatternNode(amount.single, fetch.and, search.blank(), children);
         }
+        this.SAF = function(uri, children) {
+            return new anchor.PatternNode(amount.single, fetch.and, search.filter(uri), children);
+        }
         this.MAT = function(uri, children) {
             return new anchor.PatternNode(amount.multiple, fetch.and, search.byType(uri), children);
         }
         this.MAP = function(uri, children) {
             return new anchor.PatternNode(amount.multiple, fetch.and, search.byPredicate(uri), children);
+        }
+        this.MAF = function(uri, children) {
+            return new anchor.PatternNode(amount.multiple, fetch.and, search.filter(uri), children);
         }
 
         this.SOT = function(uri, children) {
@@ -197,11 +210,17 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         this.SON = function(children) {
             return new anchor.PatternNode(amount.single, fetch.or, search.blank(), children);
         }
+        this.SOF = function(children) {
+            return new anchor.PatternNode(amount.single, fetch.or, search.filter(uri), children);
+        }
         this.MOT = function(uri, children) {
             return new anchor.PatternNode(amount.multiple, fetch.or, search.byType(uri), children);
         }
         this.MOP = function(uri, children) {
             return new anchor.PatternNode(amount.multiple, fetch.or, search.byPredicate(uri), children);
+        }
+        this.MOF = function(uri, children) {
+            return new anchor.PatternNode(amount.multiple, fetch.or, search.filter(uri), children);
         }
 
         this.SNT = function(uri) {
@@ -210,11 +229,17 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         this.SNP = function(uri) {
             return new anchor.PatternNode(amount.single, fetch.end, search.byPredicate(uri));
         }
+        this.SNF = function(uri) {
+            return new anchor.PatternNode(amount.single, fetch.end, search.filter(uri));
+        }
         this.MNT = function(uri) {
             return new anchor.PatternNode(amount.multiple, fetch.end, search.byType(uri));
         }
         this.MNP = function(uri) {
             return new anchor.PatternNode(amount.multiple, fetch.end, search.byPredicate(uri));
+        }
+        this.MNF = function(uri) {
+            return new anchor.PatternNode(amount.multiple, fetch.end, search.filter(uri));
         }
     }
 

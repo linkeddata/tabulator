@@ -7,36 +7,36 @@
  * Most of the following code will change. This is a work in progress.
  ***/
 
-//load('RDFTreeSearcher.js');
-
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
 tabulator.panes.register(tabulator.panes.publishingPane = new function() {
+    //add these to the xpcom.js file
+    tabulator.ns.dcmi = RDFNamespace("http://purl.org/dc/dcmitype/");
+    tabulator.ns.dblp = RDFNamespace("http://www4.wiwiss.fu-berlin.de/dblp/terms.rdf#");
+
+    var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
+                           .getService(Components.interfaces.mozIJSSubScriptLoader);
+    loader.loadSubScript('chrome://tabulator/content/js/panes/patternSearch.js');
+
     this.name = 'Publication';
     this.icon = Icon.src.icon_publicationPane;
-	
+
+    var ps = new PatternSearch();
+    var extract = ps.extract;
+    var parse = ps.parse;
+
     this.label = function(subject) {
-        var typeTriples = tabulator.kb.statementsMatching(subject,tabulator.ns.rdf('type'),null,null); // Stores all the 'types' of the URI in an array
-        if(this.isEmpty(typeTriples)) return null;
-        for(var ind = 0;ind < typeTriples.length;ind++) {
-            if(this.isEmpty(typeTriples[ind])) continue;
-            else if(tabulator.kb.whether(typeTriples[ind].object,tabulator.ns.rdfs('subClassOf'),tabulator.ns.bibo('Document'),null))
-                return this.name;
-        }
-        return null;
+        var criteria = "(S,O,N) > (S,O,P,rdf:type) > (S,O,P,rdfs:subClassOf) > (S,O,N) > (S,N,F,bibo:Document)\n"+
+                       "                                                               > (S,N,F,dblp:Article)\n"+
+                       "                                                               > (S,N,F,dcmi:Text)\n"+
+                       "                                                               > (S,N,F,foaf:Document)\n"+
+                       "                           >                         ^";
+        if(!this.isEmpty(parse(criteria).fetch(subject))) return this.name;
+        else return null;
     }
 
     this.render = function(subject, document) {
         var div = document.createElement('div');
         div.setAttribute('id','publicationPane');
-        var bibo = tabulator.ns.bibo; // for aesthetics
-        var foaf = tabulator.ns.foaf;
-        var dct = tabulator.ns.dct;
-        var owl = tabulator.ns.owl;
-        var rdf = tabulator.ns.rdf;
-
-        var ps = new PatternSearch();
-        var extract = ps.extract;
-        var parse = ps.parse;
 
         var nameTree = "(S,O,N) > (S,A,N) > (S,N,P,foaf:givenname)\n"+
                        "                  > (S,O,N) > (S,N,P,foaf:family_name)\n"+
@@ -52,7 +52,8 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
 
         var authorNameTree = "(S,O,N) > (S,O,P,bibo:authorList)      > ["+personNameTree+"]\n"+
                              "        > (S,O,P,bibo:contributorList) ^\n"+
-                             "        > (M,O,P,dct:creator)          > ["+titleNameTree+"]";
+                             "        > (M,O,P,dct:creator)          > ["+titleNameTree+"]\n"+
+                             "        > (M,O,P,dc:creator)           ^";
 
         var titleTree = "(S,O,N) > (S,N,P,bibo:shortTitle)\n"+
                         "        > (S,N,P,dct:title)";
@@ -61,8 +62,6 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                        "        > (S,N,P,dct:date)";
 
         var abstractTree = "(S,O,N) > (S,N,P,dct:abstract)";
-
-        alert(parse(authorNameTree).fetch(subject).toSource());
 
         var dataToAssemble = [['Author(s)',extract(parse(authorNameTree).fetch(subject)),'pubAuthor'],
                               ['Title',extract(parse(titleTree).fetch(subject)),'pubTitle'],

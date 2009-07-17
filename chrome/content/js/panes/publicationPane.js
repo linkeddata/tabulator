@@ -8,11 +8,13 @@
  ***/
 
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-tabulator.icon.src.icon_publicationPane = "chrome://tabulator/content/icons/publicationPaneIcon.gif";
+tabulator.icon.src.icon_publicationPane = "chrome://tabulator/content/icons/publication/publicationPaneIcon.gif";
 tabulator.panes.register(tabulator.panes.publishingPane = new function() {
     //add these to the xpcom.js file
     tabulator.ns.dcmi = RDFNamespace("http://purl.org/dc/dcmitype/");
     tabulator.ns.dblp = RDFNamespace("http://www4.wiwiss.fu-berlin.de/dblp/terms.rdf#");
+    tabulator.ns.bibo = RDFNamespace("http://purl.org/ontology/bibo/");
+    tabulator.ns.dct = RDFNamespace("http://purl.org/dc/terms/");
 
     var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
                            .getService(Components.interfaces.mozIJSSubScriptLoader);

@@ -440,7 +440,13 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             var base = shortURI.substring(0,shortURI.indexOf(":"));
             var obj = shortURI.substring(shortURI.indexOf(":")+1);
             //alert("Base: "+base+";   "+obj);
-            return tabulator.ns[base](obj);
+            if(tabulator.ns[base]) {
+                return tabulator.ns[base](obj);
+            }
+            else {
+                alert("BaseURI is not registered in tabulator.ns: "+base);
+                return null;
+            }
         }
         // Gets the base URI of a standard uri: base#child
         this.getBaseURI = function(uri) {

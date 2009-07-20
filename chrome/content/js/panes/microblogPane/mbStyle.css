@@ -185,6 +185,7 @@
     margin-left:0;
     font-size:110%;
     max-width: 30em;
+    padding-left: 5em;
 }
 .ppane .postList .reply, .ppane .replyView-active .reply{
     float: right;

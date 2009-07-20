@@ -75,16 +75,17 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //this will probably need to change. 
         var getHoldsAccountFromPrefs = function(){
             var the_user = tabulator.preferences.get("me");
-            if (!the_user){return;}
-            var the_account =tabulator.preferences.get('acct');
-            if (the_user ===''){
-                tabulator.preferences.set('acct', '');
-            }else if (the_account && the_account !== ''){
-                the_user = kb.sym(the_user);
-                the_account = kb.sym(tabulator.preferences.get('acct'));
-            }
-            if (the_user && the_account && the_account !== ''){
-                kb.add(the_user, FOAF('holdsAccount'), the_account, the_user.uri.split("#")[0]);
+            if (the_user){
+                var the_account =tabulator.preferences.get('acct');
+                if (the_user ===''){
+                    tabulator.preferences.set('acct', '');
+                }else if (the_account && the_account !== ''){
+                    the_user = kb.sym(the_user);
+                    the_account = kb.sym(tabulator.preferences.get('acct'));
+                }
+                if (the_user && the_account && the_account !== ''){
+                    kb.add(the_user, FOAF('holdsAccount'), the_account, the_user.uri.split("#")[0]);
+                }
             }
         };
          
@@ -192,8 +193,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             return (myMicroblog) ? myMicroblog.uri: false;
         };        
         var Ifollow = kb.whether(kb.sym(getMyURI()),SIOC('follows'),
-            kb.any(s,SIOC('has_creator')));
-        alert(Ifollow);
+            kb.any(s,FOAF('holdsAccount')));
         var thisIsMe;
         var resourceType = kb.any(s, RDF('type'));
         if (resourceType.uri == SIOCt('Microblog').uri || resourceType.uri == SIOCt('MicroblogPost').uri){ 
@@ -208,7 +208,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
 
         //get follow data
         var myFollows = kb.each(kb.sym(getMyURI()),SIOC('follows'));
-        alert(myFollows);
         for( var mf in myFollows){
             followlist.add(kb.any(myFollows[mf],SIOC('id')),myFollows[mf].uri);
         }

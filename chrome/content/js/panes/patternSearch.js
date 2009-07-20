@@ -1,4 +1,4 @@
-// PatternSearch: SPARQL's very primitve cousin
+// PatternSearch: SPARQL's very primitive cousin
 
 function PatternSearch() { // Encapsulates all of the methods and classes
     /*****************************
@@ -13,7 +13,6 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         this.children = children;
     }
     this.PatternNode.prototype.fetch = function(subject) {
-        if(subject == null) return null;
         if(subject.type === 'Symbol')
             tabulator.sf.requestURI(getBaseURI(subject.uri));
         return this.amountMethod(this.searchMethod(subject), this.fetchMethod, this.children);
@@ -89,7 +88,17 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             if(dataContainer.data.length == children.length) return dataContainer;
             else return null;
         }
-        //this.fetchMultipleAggregate = function(
+
+        this.wildcard = function(subject, children) {
+            if(subject == null || util.isEmpty(children)) return null;
+            var containers = new Array();
+            for(var i = 0;i < children.length;i++) {
+                var fetchedData = children[i].fetch(subject);
+                if(!util.isEmpty(fetchedData)) containers.push(fetchedData);
+            }
+            if(containers.length == 0) return null;
+            else return containers;
+        } // TODO: Add wildcard to scut
     }
 
 
@@ -271,7 +280,6 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                 newTree += treeArray[i]+(i+1==treeArray.length?"":"\n");
             return newTree;
         }(stringTree).replace(/ \^/g," >^"); // Built as it is because the procedure was recursive
-        // 1) reallocatedString checks out
 
         var splicedString = reallocatedString.split("\n");
 
@@ -285,6 +293,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                         return indicesLevels[line][index][1];
             return indicesLevels[currentLine][indicesLevels[currentLine].length-1][1]+1;
         }
+
         // Builds an array of the indices of the '>'
         var indicesLevels = new Array();
         for(var line = 0;line < splicedString.length;line++) {
@@ -298,7 +307,6 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             for(var level = 0;level < lineIndices.length;level++)
                 indicesLevels[line].push([lineIndices[level],level+levelOffset]);
         }
-        // 2) indicesLevels checks out
 
         // Builds a two-dimensional array of nodes resembling the original string
         var stringTree = new Array();
@@ -323,7 +331,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         // Converts a string representation of a node into a node object (without children)
         var instantiateNode = function(nodeString) {
             if(nodeString == null) return null;
-            else if(nodeString.length == 0) return anchor.scut.debug('SON');
+            else if(nodeString.length == 0) return anchor.scut['SON']();
             else if(nodeString.indexOf("^") != -1) return nodeString;
             var nodeString = nodeString.replace(/\(/g,"").replace(/\)/g,"");
             var params = nodeString.split(",");
@@ -331,6 +339,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
             var nodeType = params[0]+params[1]+params[2];
             if(anchor.scut[nodeType]) {
                 if(params[3]) {
+                    if(params[3] === "*") params[3] = null;
                     if(anchor.debug) return anchor.scut.debug(nodeType,params[3]);
                     else return anchor.scut[nodeType](params[3]);
                 } // Added debugging functionality

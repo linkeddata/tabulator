@@ -75,7 +75,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //this will probably need to change. 
         var getHoldsAccountFromPrefs = function(){
             var the_user = tabulator.preferences.get("me");
-            alert(the_user.constructor)
+            if (!the_user){return;}
             var the_account =tabulator.preferences.get('acct');
             if (the_user ===''){
                 tabulator.preferences.set('acct', '');

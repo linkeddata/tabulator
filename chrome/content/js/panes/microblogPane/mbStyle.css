@@ -3,6 +3,7 @@
     color: #333;
     background-color: #fff;
     border: #999 solid 1px;
+    min-width: 35em !important;
 }
 .ppane a{
     color:#357598;
@@ -62,6 +63,9 @@
 .ppane .replyView{
     display:none;
 }
+.replyView-active .favorit{
+    display:none;
+}
 .ppane .replyView-active{
     margin:0 !important;
     position:fixed;
@@ -89,7 +93,7 @@
     -moz-box-shadow:none;
     text-align:right;
     vertical-align:bottom;
-    margin-bottom:-2.2em;
+    margin-bottom:-1em;
     border:none;
     padding:0px;
     background:none;
@@ -180,6 +184,7 @@
 .ppane .postList blockquote, .ppane .replyView-active blockquote{
     margin-left:0;
     font-size:110%;
+    max-width: 30em;
 }
 .ppane .postList .reply, .ppane .replyView-active .reply{
     float: right;

@@ -75,10 +75,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         //this will probably need to change. 
         var getHoldsAccountFromPrefs = function(){
             var the_user = tabulator.preferences.get("me");
+            alert(the_user.constructor)
             var the_account =tabulator.preferences.get('acct');
             if (the_user ===''){
                 tabulator.preferences.set('acct', '');
-            }else if (the_account !== ''){
+            }else if (the_account && the_account !== ''){
                 the_user = kb.sym(the_user);
                 the_account = kb.sym(tabulator.preferences.get('acct'));
             }
@@ -124,7 +125,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         getHoldsAccountFromPrefs();
         var gen_random_uri = function(base){
             //generate random uri
-            var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+7);
+            var uri_nonce = base + "#n"+Math.floor(Math.random()*10e+9);
             return kb.sym(uri_nonce);
         };
         var statusUpdate = function(statusMsg, callback, replyTo, meta){
@@ -192,20 +193,22 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         };        
         var Ifollow = kb.whether(kb.sym(getMyURI()),SIOC('follows'),
             kb.any(s,SIOC('has_creator')));
+        alert(Ifollow);
         var thisIsMe;
         var resourceType = kb.any(s, RDF('type'));
         if (resourceType.uri == SIOCt('Microblog').uri || resourceType.uri == SIOCt('MicroblogPost').uri){ 
-            thisIsMe = (kb.any(s, SIOC('has_creator')).uri == getMyURI());
-        } else if(resourceType.uri == SIOC('User').uri){
-            thisIsMe = (s.uri == getMyURI());
-        } else if (resourceType.uri == FOAF('Person').uri){
+            thisIsMe = ( kb.any(s, SIOC( 'has_creator' ) ).uri == getMyURI());
+        } else if( resourceType.uri == SIOC('User').uri ){
+            thisIsMe = ( s.uri == getMyURI() );
+        } else if ( resourceType.uri == FOAF('Person').uri ){
             thisIsMe = (s.uri == tabulator.preferences.get('me'));
-        }else{
+        } else {
             thisIsMe = false;
         }
 
         //get follow data
         var myFollows = kb.each(kb.sym(getMyURI()),SIOC('follows'));
+        alert(myFollows);
         for( var mf in myFollows){
             followlist.add(kb.any(myFollows[mf],SIOC('id')),myFollows[mf].uri);
         }

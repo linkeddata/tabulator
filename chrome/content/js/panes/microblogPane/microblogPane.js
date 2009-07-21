@@ -193,7 +193,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             return (myMicroblog) ? myMicroblog.uri: false;
         };        
         var Ifollow = kb.whether(kb.sym(getMyURI()),SIOC('follows'),
-            kb.any(s,FOAF('holdsAccount')));
+            kb.any(s,FOAF('holdsAccount')));//TODO - make this safe for mult accounts.
         var thisIsMe;
         var resourceType = kb.any(s, RDF('type'));
         if (resourceType.uri == SIOCt('Microblog').uri || resourceType.uri == SIOCt('MicroblogPost').uri){ 
@@ -256,10 +256,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             
         };
         var mbCancelNewMB = function(evt){
-            subheaderContainer.removeChild(subheaderContainer.childNodes[0]);
+            xupdateContainer.removeChild(xupdateContainer.childNodes[xupdateContainer.childNodes.length-1]);
             xcreateNewMB.disabled = false;
         };
-        var mbCreateNewMB = function(){
+        var lsCreateNewMB = function(evt){
             //disable the create new microblog button.
             //then prefills the information.
             xcreateNewMB.disabled= true;
@@ -297,7 +297,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         <input type="submit" id="mbCreate" value="Create\!" />\
                     </form>\
                     ';
-            subheaderContainer.appendChild(xcmb);
+            xupdateContainer.appendChild(xcmb);
             doc.getElementById("xcmbname").appendChild(xcmbName); 
             doc.getElementById("xcmbid").appendChild(xcmbId);
             doc.getElementById("xcmbavatar").appendChild(xcmbAvatar);
@@ -317,8 +317,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             if(getMyURI()){
                 myUser = kb.sym(getMyURI());
                 //submission callback
-                var mbconfirmSubmit = function(a,b,c,d){
-                    if(b === true){
+                var cbconfirmSubmit = function(uri, success, responseText,d){
+                    if(success === true){
                         for (var triple in d){
                             kb.add(d[triple].subject, d[triple].predicate, d[triple].object, d[triple].why);
                         }
@@ -329,8 +329,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         if (thisIsMe){
                             doc.getElementById('postNotificationList').insertBefore( generatePost(d[0].subject,thisIsMe), doc.getElementById('postNotificationList').childNodes[0]);
                         } 
+                    } else {
+                        notify("There was a problem submitting your post.")
                     }
-                    //add update to list
                 };
                 var words = xupdateStatus.value.split(" ");
                 for (var word in words){
@@ -340,9 +341,23 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         if (recipient[0] ===true){
                             meta.recipients.push(recipient[1][0]);
                         }else if (recipient[1].length > 1) { // if  multiple users allow the user to choose
-                          choice = 0;
-                          alert("insert choose interface here"); //TODO - multiple user interface
-                          meta.recpients.push(recipient[1][choice]);
+                            choice = 0;
+                            var xrecipients = doc.createElement( 'select' );
+                                xrecipients.addEventListener( "change", selectUser, false )
+                            //TODO finish the multi user bit
+                            var recipChoice =  function( recip, c ){
+                                var name = kb.any( kb.sym( recip ), SIOC('name'));
+                                var choice = doc.createElement( 'option' );
+                                    choice.value = c;
+                                    choice.innerHTML = name;
+                                return choice;
+                            };
+                            for ( var r in recipient[1] ){
+                                xrecipients.appendChild( recipChoice( recipient[1][r], r ) );
+                            }
+                            xupdateContainer.appendChild( xrecipients );
+                            return
+                            meta.recpients.push(recipient[1][choice]);
                         }else{ //no users known or self reference.
                             if (String(kb.any(kb.sym(getMyURI()), SIOC("id"))).toLowerCase() == atUser.toLowerCase()){
                                 meta.recipients.push(getMyURI());
@@ -359,7 +374,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 }
                 xupdateSubmit.disabled = true;
                 xupdateSubmit.value = "Updating...";
-                statusUpdate(xupdateStatus.value,mbconfirmSubmit,xinReplyToContainer.value,meta);
+                statusUpdate(xupdateStatus.value,cbconfirmSubmit,xinReplyToContainer.value,meta);
 
             }else{
                 notify("Please set your microblog first.");
@@ -449,11 +464,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         } else {
             var xnewUser = doc.createTextNode("\
                 Hi, it looks like you don't have a microblog,\
-                would you like to create one?");
+                would you like to create one? ");
             var xcreateNewMB = doc.createElement("input");
                 xcreateNewMB.type = "button";
                 xcreateNewMB.value ="Create a new Microblog";
-                xcreateNewMB.addEventListener("click", mbCreateNewMB, false);
+                xcreateNewMB.addEventListener("click", lsCreateNewMB, false);
             xupdateContainer.appendChild(xnewUser);
             xupdateContainer.appendChild(xcreateNewMB);
         }
@@ -475,7 +490,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 //TODO add support for more than one microblog in same foaf
             }
         }
-        if (kb.whether(creator,RDF( 'type'), SIOC('User'))){
+        if (creator){
             //---display avatar, if available ---
             var mb_avatar = (kb.any(creator,SIOC("avatar"))) ? kb.any(creator,SIOC("avatar")): "";
             if (mb_avatar !==""){
@@ -499,10 +514,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     xfollowButton.addEventListener('click', mbFollowUser, false);
                 subheaderContainer.appendChild(xfollowButton);
             }
-        }
-        //user header end
-        //header tabs
-        if (getMyURI()){
+            //user header end
+            //header tabs
             var mbChangeTab = function(evt){ 
                 //hide active panes
                 postNotificationContainer.className= postNotificationContainer.className.replace(/\w*active\w*/,"");
@@ -537,7 +550,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             };
             var xtabsList = doc.createElement('ul');
                 xtabsList.className = "tabslist";
-    
+
             var xstreamTab = doc.createElement('li');
                 xstreamTab.innerHTML = "By follows";
                 xstreamTab.className = "active";
@@ -562,10 +575,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 xfollowsTab.id= "tab-follows";
                 xfollowsTab.addEventListener("click", mbChangeTab, false);
                 xtabsList.appendChild(xfollowsTab);  
+            //header tabs end
+            headerContainer.appendChild(subheaderContainer);
+            headerContainer.appendChild(xtabsList);
         }
-        //header tabs end
-        headerContainer.appendChild(subheaderContainer);
-        if (getMyURI()) headerContainer.appendChild(xtabsList);
+
         //HEADER END   
         
        //FOLLOWS VIEW
@@ -665,14 +679,15 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 id = kb.any(mentions[mention], SIOC('id'));
                 tags["@"+id] = mentions[mention];
             }
-            
             var postTags = postText.match(/(\@|\#|\!)\w+/g);
             var postFunction = function(){
                 p = postTags.pop();
                 return (tags[p])? kb.any(undefined, FOAF('holdsAccount'),tags[p]).uri :p;
             };
-            if (postTags){
-                postText = postText.replace(/(\@|\!|\#)(\w+)/g, "$1<a href=\""+postFunction()+"\">$2</a>");
+            for ( var t in tags){
+                var person = t.replace(/\@/, "");
+                var replacePerson = RegExp("(\@|\!|\#)("+person+")");
+                postText = postText.replace(replacePerson, "$1<a href=\""+postFunction()+"\">$2</a>");
             }
             xpostContent.innerHTML = postText;
             
@@ -705,8 +720,37 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 mbLetterCount();
             };
             var mbDeletePost = function (evt){
-                var reallyDelete = confirm("are you sure you wish to delete this post?");
-                if (reallyDelete){
+                var lsconfirmNo= function (){
+                    doc.getElementById('notify-container').removeChild(xconfirmDeletionDialog);
+                }
+                var lsconfirmYes= function(){
+                    reallyDelete();
+                    doc.getElementById('notify-container').removeChild(xconfirmDeletionDialog);
+                }
+                var xconfirmDeletionDialog =  doc.createElement('li');
+                    xconfirmDeletionDialog.className = "notify conf";
+                    xconfirmDeletionDialog.innerHTML ="<p>Are you sure you want to delete this post?</p>";
+                    xconfirmDeletionDialog.addEventListener("keyup",function(evt){
+                        if(evt.keyCode == 27){
+                            lsconfirmNo();
+                        }
+                    },false);
+                var confirmyes = doc.createElement("input");
+                    confirmyes.type = "button";
+                    confirmyes.className = "confirm";
+                    confirmyes.value = "Delete";
+                    confirmyes.addEventListener("click",lsconfirmYes, false);
+                var confirmno = doc.createElement("input");
+                    confirmno.type = "button";
+                    confirmno.className = "confirm";
+                    confirmno.value = "Cancel";
+                    confirmno.addEventListener("click", lsconfirmNo, false);
+                xconfirmDeletionDialog.appendChild(confirmno);
+                xconfirmDeletionDialog.appendChild(confirmyes);
+                doc.getElementById("notify-container").appendChild(xconfirmDeletionDialog);
+                confirmno.focus();
+
+                var reallyDelete=function(){
                     //callback after deletion
                     var mbconfirmDeletePost= function(a,success){
                         if (success){
@@ -751,7 +795,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 }else{
                     var xdeleteButton = doc.createElement('input');
                         xdeleteButton.type = 'button';
-                        xdeleteButton.value = "delete";
+                        xdeleteButton.value = "Delete";
                         xdeleteButton.className = "reply";
                         xdeleteButton.addEventListener('click', mbDeletePost, false);
                 }
@@ -769,8 +813,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             //build
             xpost.appendChild(xuavatar);
             xpost.appendChild(xpostContent);
-            xpost.appendChild(xfavorite);
             if(getMyURI()){ 
+                xpost.appendChild(xfavorite);
                 if (getMyURI() != themaker.uri){xpost.appendChild(xreplyButton);}
                 else{xpost.appendChild(xdeleteButton);}
             }

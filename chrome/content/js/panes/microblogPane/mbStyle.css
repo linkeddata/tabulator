@@ -113,6 +113,9 @@
 }
 
 /*notifications*/
+.ppane .notify-container{
+    width: 100%;
+}
 .ppane .notify-container .notify{
     background-color:#FFFAE6;
     border: solid 1px #FFE788;
@@ -120,7 +123,23 @@
     margin:1em;
     -moz-border-radius:.5em;
 }
-
+.ppane .notify-container .notify.conf{
+    background-color: #FFEEEE;
+    border-color: #880000;
+    text-align:right;
+    position:fixed;
+    margin:0px auto;
+    left:3em;
+    width: 35em !important;
+    top:40%;
+    -moz-box-shadow: 0px 0px 10px #800;
+}
+.ppane .notify-container .notify.conf p{
+    text-align:left;
+}
+.ppane .notify-container .notify.conf .confirm{
+    margin-left: 1em;
+}
 /*view*/
 .ppane .view-container{
     display:none;

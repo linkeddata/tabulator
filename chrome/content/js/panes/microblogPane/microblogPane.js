@@ -722,14 +722,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var mbDeletePost = function (evt){
                 var lsconfirmNo= function (){
                     doc.getElementById('notify-container').removeChild(xconfirmDeletionDialog);
+                    evt.target.disabled = false;
                 }
                 var lsconfirmYes= function(){
                     reallyDelete();
                     doc.getElementById('notify-container').removeChild(xconfirmDeletionDialog);
                 }
+                evt.target.disabled = true;
                 var xconfirmDeletionDialog =  doc.createElement('li');
                     xconfirmDeletionDialog.className = "notify conf";
-                    xconfirmDeletionDialog.innerHTML ="<p>Are you sure you want to delete this post?</p>";
+                    xconfirmDeletionDialog.innerHTML +="<p>Are you sure you want to delete this post?</p>";
                     xconfirmDeletionDialog.addEventListener("keyup",function(evt){
                         if(evt.keyCode == 27){
                             lsconfirmNo();

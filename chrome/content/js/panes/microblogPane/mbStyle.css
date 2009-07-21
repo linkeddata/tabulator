@@ -4,6 +4,7 @@
     background-color: #fff;
     border: #999 solid 1px;
     min-width: 35em !important;
+    word-wrap: break-word;
 }
 .ppane a{
     color:#357598;

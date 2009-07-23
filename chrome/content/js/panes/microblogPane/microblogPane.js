@@ -70,10 +70,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
         var charCount = 140;
         var sparqlUpdater= new sparql(kb);
         
+        var getHoldsAccountFromPrefs = function(){
         //attempt to fetch user account from local preferences if just 
         //in case the user's foaf was not writable. add it to the store
         //this will probably need to change. 
-        var getHoldsAccountFromPrefs = function(){
             var the_user = tabulator.preferences.get("me");
             if (the_user){
                 var the_account =tabulator.preferences.get('acct');
@@ -97,31 +97,74 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             this.userlist = {};
             this.uris = {};
         };
-        FollowList.prototype.add = function(user,uri){
-            if (followlist.userlist[user]){
-                if (!(uri in followlist.uris)){
-                    this.userlist[user].push(uri);
-                    this.uris[uri] = "";
+            FollowList.prototype.add = function(user,uri){
+                if (followlist.userlist[user]){
+                    if (!(uri in followlist.uris)){
+                        this.userlist[user].push(uri);
+                        this.uris[uri] = "";
+                    }
+                }else{
+                    followlist.userlist[user] = [uri];
                 }
-            }else{
-                followlist.userlist[user] = [uri];
-            }
-        };
-        FollowList.prototype.selectUser= function(user){
-            if (this.userlist[user]){
-                if (this.userlist[user].length == 1){
-                    //user follows only one user with nick
-                    return [true, this.userlist[user]];
-                }else if (followlist.userlist[user].length > 1){
-                    //user follows multiple users with this nick.
-                    return [false, this.userlist[user]];
+            };
+            FollowList.prototype.selectUser= function(user){
+                if (this.userlist[user]){
+                    if (this.userlist[user].length == 1){
+                        //user follows only one user with nick
+                        return [true, this.userlist[user]];
+                    }else if (followlist.userlist[user].length > 1){
+                        //user follows multiple users with this nick.
+                        return [false, this.userlist[user]];
+                    }
+                }else{
+                    //user does not follow any users with this nick
+                    return [false, []] ;
                 }
-            }else{
-                //user does not follow any users with this nick
-                return [false, []] ;
-            }
-        };
+            };
         var followlist = new FollowList();
+        
+        var FavoritesList = function(user){
+            /*Favorites 
+                controls the list of favorites. expects a uri as user.*/
+                
+            this.favorites = {};
+            this.favoritesURI ="";
+            this.user = user.split("#")[0];
+            created = kb.each (kb.sym(user), SIOC('creator_of'))
+            for ( var c in created ){
+                if (kb.whether(created[c], RDF('type'), SIOCt('FavouriteThings'))){
+                    this.favoritesURI = created[c];
+                    var favs = kb.each(created[c], SIOC('container_of'));
+                    for (var f in favs){
+                        this.favorites[favs[f]]="";
+                    }
+                    break;
+                }
+            }
+        }
+            FavoritesList.prototype.favorited =  function( post ){
+            /*Favorited- returns true if the post is a favorite
+                false otherwise*/
+                return (kb.sym(post) in this.favorites)
+            };
+            FavoritesList.prototype.add= function(post, callback){
+                var batch = new RDFStatement(this.favoritesURI, SIOC('container_of'), kb.sym(post), kb.sym(this.user));
+                sparqlUpdater.insert_statement(batch, function(a, success,c){
+                    if (success){
+                        kb.add(batch.subject, batch.predicate, batch.object, batch.why);
+                    }
+                    callback(a,success,c);
+                });
+            };
+            FavoritesList.prototype.remove= function(post,callback){
+                var batch = new RDFStatement(this.favoritesURI, SIOC('container_of'), kb.sym(post), kb.sym(this.user));
+                sparqlUpdater.delete_statement(batch,  function(a, success,c){
+                    if (success){
+                        kb.add(batch.subject, batch.predicate, batch.object, batch.why);
+                    }
+                    callback(a,success,c);
+                });
+            };
         
         getHoldsAccountFromPrefs();
         var gen_random_uri = function(base){
@@ -169,8 +212,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                             SIOC("container_of"),
                             newPost,
                             kb.sym(meta.recipients[r].split('#')[0]));
-                        sparqlUpdater.insert_statement(replyBatch);
-                    }
+                        sparqlUpdater.insert_statement(replyBatch);                     }
                 }
             }
                 
@@ -192,6 +234,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var myMicroblog = kb.any(kb.sym(me), FOAF('holdsAccount'));
             return (myMicroblog) ? myMicroblog.uri: false;
         };        
+        var favorites = new FavoritesList(getMyURI());
         var Ifollow = kb.whether(kb.sym(getMyURI()),SIOC('follows'),
             kb.any(s,FOAF('holdsAccount')));//TODO - make this safe for mult accounts.
         var thisIsMe;
@@ -218,8 +261,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var rememberMicroblog= function(){
                 tabulator.preferences.set( "acct", host+"#"+id );
             };
-            var cbgenUserMB = function(a,b,c,d){
-                if (b){
+            var cbgenUserMB = function(a,success,c,d){
+                if (success){
                     notify('Microblog generated at '+host+'#'+id);
                     //assume the foaf is not writable and store the microblog to the
                     //preferences for later retrieval.
@@ -236,6 +279,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 new RDFStatement(kb.sym(host+"#"+id), RDF('type'), SIOC('User'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#mb'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#mbn'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+"#"+id), SIOC('creator_of'), kb.sym(host+'#fav'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('name'), name, kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), SIOC('id'), id, kb.sym(host)),
                 new RDFStatement(kb.sym(host+"#"+id), RDF('label'), id, kb.sym(host)),
@@ -246,7 +290,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 //notification microblog
                 new RDFStatement(kb.sym(host+'#mbn'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
                 new RDFStatement(kb.sym(host+'#mbn'), SIOC('topic'), kb.sym(host+"#"+id), kb.sym(host)),
-                new RDFStatement(kb.sym(host+'#mbn'), SIOC('has_creator'), kb.sym(host+"#"+id), kb.sym(host))
+                new RDFStatement(kb.sym(host+'#mbn'), SIOC('has_creator'), kb.sym(host+"#"+id), kb.sym(host)),
+                //favorites container
+                new RDFStatement(kb.sym(host+'#fav'), RDF('type'), SIOCt('FavouriteThings'), kb.sym(host)),
+                new RDFStatement(kb.sym(host+'#fav'), SIOC('has_creator'), kb.sym(host+'#'+id), kb.sym(host))
             ];
             if (avatar){
                 //avatar optional
@@ -486,6 +533,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             if (kb.whether(creators[c], RDF('type'), SIOC('User')) &&
                 kb.whether(kb.any(creators[c], SIOC('creator_of')), RDF('type'),SIOCt('Microblog'))){
                 creator = creators[c];
+                var mb = kb.sym(creator.uri.split("#")[0]);
+                //tabulator.sf.refresh(mb);
                 break;
                 //TODO add support for more than one microblog in same foaf
             }
@@ -802,16 +851,32 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         xdeleteButton.addEventListener('click', mbDeletePost, false);
                 }
             }
-            //add the favorites button to the interface
-            var mbFavorite = function(){
-                notify("add functionality");
-                xfavorite.className = (xfavorite.className.split(" ")[1]=="ed")? "favorit": "favorit ed";
+
+            var mbFavorite = function(evt){
+                var nid = evt.target.parentNode.id;
+                var favpost = doc.getElementById("post_"+nid).getAttribute("content");
+                xfavorite.className+=" ing"
+                var cbFavorite = function (a,success,c,d){
+                    if (success){
+                        xfavorite.className = (xfavorite.className.split(" ")[1]=="ed")? 
+                            "favorit": "favorit ed";
+                    }
+                }
+                if (!favorites.favorited(favpost)){
+                    favorites.add(favpost,cbFavorite);
+                } else {
+                    favorites.remove(favpost, cbFavorite);
+                }
             };
             var xfavorite = doc.createElement('a');
                 xfavorite.innerHTML="&#9733;";
-                xfavorite.className ="favorit";
                 xfavorite.addEventListener("click", mbFavorite, false);
-            
+            if (favorites.favorited(post.uri)){
+                xfavorite.className = "favorit ed";
+                
+            } else {
+                xfavorite.className ="favorit";
+            }
             //build
             xpost.appendChild(xuavatar);
             xpost.appendChild(xpostContent);
@@ -826,10 +891,10 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             return xpost;
         }; 
         var generatePostList = function(gmb_posts){
-            /*
-                generatePostList - Generate the posts as well as their and
-                display their results on the interface.
-            */
+        /*
+            generatePostList - Generate the posts and 
+            display their results on the interface.
+        */
             var post_list =  doc.createElement('ul');
             var postlist = new Object();
             var datelist = new Array();
@@ -892,7 +957,9 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             if (kb.whether(microblogs[mbm], SIOC('topic'), theUser)){
                 mbm_posts = mbm_posts.concat(kb.each(microblogs[mbm], SIOC('container_of')));
             }else{
-                mbn_posts = mbn_posts.concat(kb.each(microblogs[mbm], SIOC('container_of')));
+                if (kb.whether(microblogs[mbm], RDF('type'), SIOCt('Microblog'))){
+                    mbn_posts = mbn_posts.concat(kb.each(microblogs[mbm], SIOC('container_of')));
+                }
             }
         }
         var postNotificationList= generatePostList(mbn_posts);

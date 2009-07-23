@@ -309,7 +309,7 @@ div.RDFXMLPane {
 .paneHidden { -moz-border-radius: 0.5em; margin-left: 1em; padding: 3px;  }
 
 /* outline object view */
-img.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
+.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
 /* Compare facebook which only limits width -> lots of tall images! */
 
 img.phoneIcon { border: 0; margin-left: 1em}

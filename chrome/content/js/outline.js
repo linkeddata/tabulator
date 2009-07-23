@@ -2121,9 +2121,9 @@ function Outline(doc) {
     }  //boring_default
     
     function VIEWAS_image(obj) {
-        img = AJARImage(obj.uri, label(obj), label(obj));
-        img.setAttribute('class', 'outlineImage')
-        return img
+      var img = Util.image.AJARInteractive_Image(obj.uri, label(obj), label(obj));
+      img.setAttribute('class', 'outlineImage'); //this limits the size, see CSS
+      return img;
     }
     
     function VIEWAS_mbox(obj) {

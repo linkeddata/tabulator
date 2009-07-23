@@ -164,6 +164,46 @@ Util.string = {
         return result + baseA.slice(subs.length).join(); 
     }
 };
+
+//////////////////////Images Utility
+if (Util.image) throw "Util.image has already been defined.";
+Util.image = {};
+
+Util.image.AJARImage = function AJARImage(src, alt, tt) {
+  if (!tt && Icon.tooltips[src]) tt = Icon.tooltips[src];
+  //var sp = document.createElement('span')
+  var image = content.document.createElement('img');
+  image.setAttribute('src', src);
+  if (typeof alt != 'undefined') image.setAttribute('alt', alt);
+  if (typeof tt != 'undefined') image.setAttribute('title',tt);
+  return image;
+};
+
+/* This generates an interactive 'image' object as explained clearly in HTML5
+ * spec <http://dev.w3.org/html5/spec/Overview.html#the-object-element> .
+ * The reason why I (Kenny) put this in is because Firfox <img> elements does 
+ * not allows SVG and I want to display SVG for foaf:img. See firefox issue
+ * <https://bugzilla.mozilla.org/show_bug.cgi?id=276431> for discussion and 
+ * example. Notice that indeed HTML5 does say <img> allows non-interactive 
+ * SVG <http://dev.w3.org/html5/spec/Overview.html#the-img-element>.
+
+ Therefore, outline.js:VIEWAS_image now calls this function, but when this 
+ issue is fixed we might turn back to the function above 
+*/
+Util.image.AJARInteractive_Image = function AJARInteractive_Image(src, alt, tt){
+  var image = content.document.createElement('object');
+  image.setAttribute('data', src);
+  image.setAttribute('style', "overflow: hidden;"); // a weird bug
+  //For SVG objects the box seems big enough to display the whole picture, but
+  //strangely the scroll bars appear. If you zoom in and zoom out, the scroll
+  //bar disappear. I assume this is a Firefox bug and setting this style avoids
+  //the scroll bars.
+  
+  if (typeof alt != 'undefined') 
+    image.appendChild(content.document.createTextNode(alt));
+  return image;
+};
+
 //================================================
 function findLabelSubProperties() {
     var i,n

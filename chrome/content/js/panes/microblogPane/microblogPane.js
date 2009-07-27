@@ -89,22 +89,26 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             }
         };
          
-        var FollowList = function(){        
+        var FollowList = function(user){        
          /*
             FOLLOW LIST
             store the uri's of followed users for dereferencing the @replies
         */
             this.userlist = {};
             this.uris = {};
+            var myFollows = kb.each(kb.sym(user),SIOC('follows'));
+            for( var mf in myFollows){
+                this.add(kb.any(myFollows[mf],SIOC('id')),myFollows[mf].uri);
+            }
         };
             FollowList.prototype.add = function(user,uri){
-                if (followlist.userlist[user]){
-                    if (!(uri in followlist.uris)){
+                if (this.userlist[user]){
+                    if (!(uri in this.uris)){
                         this.userlist[user].push(uri);
                         this.uris[uri] = "";
                     }
                 }else{
-                    followlist.userlist[user] = [uri];
+                    this.userlist[user] = [uri];
                 }
             };
             FollowList.prototype.selectUser= function(user){
@@ -112,7 +116,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     if (this.userlist[user].length == 1){
                         //user follows only one user with nick
                         return [true, this.userlist[user]];
-                    }else if (followlist.userlist[user].length > 1){
+                    }else if (this.userlist[user].length > 1){
                         //user follows multiple users with this nick.
                         return [false, this.userlist[user]];
                     }
@@ -121,14 +125,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     return [false, []] ;
                 }
             };
-        var followlist = new FollowList();
         
         var FavoritesList = function(user){
             /*Favorites 
-                controls the list of favorites. expects a uri as user.*/
+                controls the list of favorites. constructor expects a user as uri.*/
                 
             this.favorites = {};
             this.favoritesURI ="";
+            if (!user){
+                return;
+            }
             this.user = user.split("#")[0];
             created = kb.each (kb.sym(user), SIOC('creator_of'))
             for ( var c in created ){
@@ -235,6 +241,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             return (myMicroblog) ? myMicroblog.uri: false;
         };        
         var favorites = new FavoritesList(getMyURI());
+        var followlist = new FollowList(getMyURI());
         var Ifollow = kb.whether(kb.sym(getMyURI()),SIOC('follows'),
             kb.any(s,FOAF('holdsAccount')));//TODO - make this safe for mult accounts.
         var thisIsMe;
@@ -249,11 +256,6 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             thisIsMe = false;
         }
 
-        //get follow data
-        var myFollows = kb.each(kb.sym(getMyURI()),SIOC('follows'));
-        for( var mf in myFollows){
-            followlist.add(kb.any(myFollows[mf],SIOC('id')),myFollows[mf].uri);
-        }
         // EVENT LISTENERS
         var mbGenerateNewMB = function(id, name, avatar, loc){
             var host =  loc + "/"+ id;
@@ -264,6 +266,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var cbgenUserMB = function(a,success,c,d){
                 if (success){
                     notify('Microblog generated at '+host+'#'+id);
+                    mbCancelNewMB();
                     //assume the foaf is not writable and store the microblog to the
                     //preferences for later retrieval.
                     //this will probably need to change. 
@@ -381,6 +384,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     }
                 };
                 var words = xupdateStatus.value.split(" ");
+                var mbUpdateWithReplies= function(){
+                    xupdateSubmit.disabled = true;
+                    xupdateSubmit.value = "Updating...";
+                    statusUpdate(xupdateStatus.value,cbconfirmSubmit,xinReplyToContainer.value,meta);
+                };
                 for (var word in words){
                     if (words[word].match(/\@\w+/)){
                         var atUser = words[word].replace(/\W/g,"");
@@ -388,10 +396,16 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         if (recipient[0] ===true){
                             meta.recipients.push(recipient[1][0]);
                         }else if (recipient[1].length > 1) { // if  multiple users allow the user to choose
-                            choice = 0;
                             var xrecipients = doc.createElement( 'select' );
-                                xrecipients.addEventListener( "change", selectUser, false )
-                            //TODO finish the multi user bit
+                            var xrecipientsSubmit = doc.createElement( 'input' );
+                                xrecipientsSubmit.type = "button";
+                                xrecipientsSubmit.value = "Continue";
+                                xrecipientsSubmit.addEventListener( "click", function(){
+                                    meta.recipients.push(recipient[1][xrecipients.value]);
+                                    mbUpdateWithReplies();
+                                    xrecipients.parentNode.removeChild(xrecipientsSubmit);
+                                    xrecipients.parentNode.removeChild(xrecipients);
+                                }, false );
                             var recipChoice =  function( recip, c ){
                                 var name = kb.any( kb.sym( recip ), SIOC('name'));
                                 var choice = doc.createElement( 'option' );
@@ -403,8 +417,8 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                                 xrecipients.appendChild( recipChoice( recipient[1][r], r ) );
                             }
                             xupdateContainer.appendChild( xrecipients );
-                            return
-                            meta.recpients.push(recipient[1][choice]);
+                            xupdateContainer.appendChild( xrecipientsSubmit );
+                            return;
                         }else{ //no users known or self reference.
                             if (String(kb.any(kb.sym(getMyURI()), SIOC("id"))).toLowerCase() == atUser.toLowerCase()){
                                 meta.recipients.push(getMyURI());
@@ -419,10 +433,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                         //usergroup 
                     }*/
                 }
-                xupdateSubmit.disabled = true;
-                xupdateSubmit.value = "Updating...";
-                statusUpdate(xupdateStatus.value,cbconfirmSubmit,xinReplyToContainer.value,meta);
-
+                mbUpdateWithReplies();
             }else{
                 notify("Please set your microblog first.");
             }

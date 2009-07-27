@@ -136,7 +136,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 return;
             }
             this.user = user.split("#")[0];
-            created = kb.each (kb.sym(user), SIOC('creator_of'))
+            created = kb.each (kb.sym(user), SIOC('creator_of'));
             for ( var c in created ){
                 if (kb.whether(created[c], RDF('type'), SIOCt('FavouriteThings'))){
                     this.favoritesURI = created[c];
@@ -147,11 +147,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     break;
                 }
             }
-        }
+        };
             FavoritesList.prototype.favorited =  function( post ){
             /*Favorited- returns true if the post is a favorite
                 false otherwise*/
-                return (kb.sym(post) in this.favorites)
+                return (kb.sym(post) in this.favorites);
             };
             FavoritesList.prototype.add= function(post, callback){
                 var batch = new RDFStatement(this.favoritesURI, SIOC('container_of'), kb.sym(post), kb.sym(this.user));
@@ -380,7 +380,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                             doc.getElementById('postNotificationList').insertBefore( generatePost(d[0].subject,thisIsMe), doc.getElementById('postNotificationList').childNodes[0]);
                         } 
                     } else {
-                        notify("There was a problem submitting your post.")
+                        notify("There was a problem submitting your post.");
                     }
                 };
                 var words = xupdateStatus.value.split(" ");
@@ -783,11 +783,11 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                 var lsconfirmNo= function (){
                     doc.getElementById('notify-container').removeChild(xconfirmDeletionDialog);
                     evt.target.disabled = false;
-                }
+                };
                 var lsconfirmYes= function(){
                     reallyDelete();
                     doc.getElementById('notify-container').removeChild(xconfirmDeletionDialog);
-                }
+                };
                 evt.target.disabled = true;
                 var xconfirmDeletionDialog =  doc.createElement('li');
                     xconfirmDeletionDialog.className = "notify conf";
@@ -843,7 +843,7 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
                     deleteMe = kb.statementsMatching(kb.sym(doc.getElementById(
                         "post_"+evt.target.parentNode.id).getAttribute("content")));
                     sparqlUpdater.batch_delete_statement(deleteMe, deleteContainerOf);
-                }
+                };
             };
             
             if (getMyURI()){ //generate buttons if the uri is not set. 
@@ -866,13 +866,13 @@ tabulator.panes.register (tabulator.panes.microblogPane ={
             var mbFavorite = function(evt){
                 var nid = evt.target.parentNode.id;
                 var favpost = doc.getElementById("post_"+nid).getAttribute("content");
-                xfavorite.className+=" ing"
+                xfavorite.className+=" ing";
                 var cbFavorite = function (a,success,c,d){
                     if (success){
                         xfavorite.className = (xfavorite.className.split(" ")[1]=="ed")? 
                             "favorit": "favorit ed";
                     }
-                }
+                };
                 if (!favorites.favorited(favpost)){
                     favorites.add(favpost,cbFavorite);
                 } else {

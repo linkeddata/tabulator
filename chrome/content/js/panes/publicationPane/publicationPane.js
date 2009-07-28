@@ -127,6 +127,10 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
              nameTree
             ]);
 
+        this.getName = function(person) {
+            return titleNameTree.fetch(person);
+        }
+
         // returns an array of doubles containing the author's URI and name
         this.getAuthorNames = function(doc) {
             var data = authorTemplate([n('SNA')(false,[isAPerson,titleNameTree])]).fetch(doc);
@@ -188,6 +192,8 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                         ]),
                         n('MSN')(1, dct('creator'), author, 0)
                        ]);
+
+            alert(n('MSN')(1, bibo('authorList'),null,0).fetch(null).toSource());
             //alert(tree.fetch(null).toSource());
             return tree.fetch(null);
         }
@@ -198,6 +204,15 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                 pairs.push([publications[i], this.getTitle(publications[i]).toString()]);
             }
             return pairs;
+        }
+
+        this.getDepiction = function(subject) {
+            var tree = n('SNO')(0,
+                       [
+                        n('SSN')(1, foaf('img'), null, 2),
+                        n('SSN')(1, foaf('depiction'), null, 2)
+                       ]);
+            return tree.fetch(subject);
         }
     }
 
@@ -382,7 +397,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
                 }
                 var tab = this.renderer.tabs[i];
                 if(tab.isValid(subject)) {
-                    addClass("link",item);
+                    addClass(item,"link");
                     item.addEventListener("click",this.renderer.switchToAndRender(subject,tab),false);
                     break;
                 }
@@ -421,7 +436,7 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
         var label = document.createTextNode(tag);
         var list = document.createElement('ul');
         for(var i = 0;i < data.length;i++) {
-            li = document.createElement('li');
+            var li = document.createElement('li');
             if(data[i].length == 2) {
                 li.innerHTML = escapeForXML(data[i][1].toString());
                 render.link(li,data[i][0]);
@@ -441,8 +456,22 @@ tabulator.panes.register(tabulator.panes.publishingPane = new function() {
             //alert("Render.prototype.Author is getting called: "+subject.toString());
             var div = document.createElement('div');
             div.id = "Author";
-            div.className += " tab";
-            div.innerHTML = "Testing";
+            addClass(div, "pubAuthor");
+            var title = document.createElement('h2');
+            if(dataGatherer.getName(subject)) {
+                title.innerHTML = dataGatherer.getName(subject);
+            }
+            else {
+                title.innerHTML = "Anonymous";
+            }
+            /*
+            if(dataGatherer.getDepiction(subject)) {
+                var pic = new Image();
+                pic.setAttribute('src',dataGatherer.getDepiction(subject).uri);
+                div.appendChild(pic);
+            }
+            */
+            div.appendChild(title);
             div.innerHTML += "<br />subject: "+subject.toSource();
             div.innerHTML += "<br />publication URIs: "+dataGatherer.getPublications(subject).toSource();
             div.innerHTML += "<br />publications titles: "+dataGatherer.getPublicationTitles(dataGatherer.getPublications(subject)).toSource();

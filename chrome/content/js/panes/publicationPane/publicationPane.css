@@ -35,6 +35,5 @@ div#publicationPane > div {
 }
 
 .link {
-    cursor: pointer;
     cursor: hand;
 }

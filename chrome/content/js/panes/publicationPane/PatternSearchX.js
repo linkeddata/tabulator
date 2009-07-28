@@ -89,15 +89,22 @@ function PatternSearchX() {
                     for(var i = 0;i < children.length;i++) {
                         var childFetched = children[i].fetch(symbol);
                         if(!childFetched) continue;
-                        alert("childFetched: "+childFetched.toSource());
-                        if(childFetched.constructor === Array) {
-                            for(var i = 0;i < childFetched.length;i++)
-                                container.push(childFetched[i]);
-                        }
                         else container.push(childFetched);
                     }
                     if(container.length == 0) return false;
                     var pruned = pruneBooleans(container);
+                    var extracted = [];
+                    for(var i = 0;i < pruned.length;i++) {
+                        if(pruned[i].constructor === Array) {
+                            for(var j = 0;j < pruned[i].length;j++) {
+                                extracted.push(pruned[i][j]);
+                            }
+                        }
+                        else {
+                            extracted.push(pruned[i]);
+                        }
+                    }
+                    pruned = extracted;
                     if(collect) {
                         if(pruned.length == 0) return [symbol];
                         else if(pruned.length == 1) return [symbol, pruned[0]];
@@ -111,6 +118,7 @@ function PatternSearchX() {
                 }
             }
         }
+
 
         this.end = function(collect) {
             var collect = new Boolean(collect).valueOf();

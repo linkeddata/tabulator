@@ -8,7 +8,7 @@
     */
 tabulator.panes.register ({
 
-    icon: Icon.src.icon_RDFXMLPane,
+    icon: tabulator.Icon.src.icon_RDFXMLPane,
     
     name: 'RDFXML',
     

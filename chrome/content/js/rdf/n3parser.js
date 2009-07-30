@@ -5,6 +5,12 @@
 *
 **/
 
+$rdf.N3Parser = function () {
+
+function hexify(str) { // also used in parser
+  return encodeURI(str);
+}
+
 var Utf8 = {
 
     // public method for url encoding
@@ -62,7 +68,7 @@ var Utf8 = {
     }
 
 }// Things we need to define to make converted pythn code work in js
-// environment of tabulator
+// environment of $rdf
 
 var RDFSink_forSomeSym = "http://www.w3.org/2000/10/swap/log#forSome";
 var RDFSink_forAllSym = "http://www.w3.org/2000/10/swap/log#forAll";
@@ -70,27 +76,27 @@ var Logic_NS = "http://www.w3.org/2000/10/swap/log#";
 
 //  pyjs seems to reference runtime library which I didn't find
 
-pyjslib_Tuple = function(theList) { return theList };
+var pyjslib_Tuple = function(theList) { return theList };
 
-pyjslib_List = function(theList) { return theList };
+var pyjslib_List = function(theList) { return theList };
 
-pyjslib_Dict = function(listOfPairs) {
+var pyjslib_Dict = function(listOfPairs) {
     if (listOfPairs.length > 0)
 	throw "missing.js: oops nnonempty dict not imp";
     return [];
 }
 
-pyjslib_len = function(s) { return s.length }
+var pyjslib_len = function(s) { return s.length }
 
-pyjslib_slice = function(str, i, j) {
+var pyjslib_slice = function(str, i, j) {
     if (typeof str.slice == 'undefined')
         throw '@@ mising.js: No .slice function for '+str+' of type '+(typeof str) 
     if ((typeof j == 'undefined') || (j ==null)) return str.slice(i);
     return str.slice(i, j) // @ exactly the same spec?
 }
-StopIteration = Error('dummy error stop iteration')
+var StopIteration = Error('dummy error stop iteration');
 
-pyjslib_Iterator = function(theList) {
+var pyjslib_Iterator = function(theList) {
     this.last = 0;
     this.li = theList;
     this.next = function() {
@@ -98,24 +104,24 @@ pyjslib_Iterator = function(theList) {
 	return this.li[this.last++];
     }
     return this;
-}
+};
 
-ord = function(str) {
+var ord = function(str) {
     return str.charCodeAt(0)
 }
 
-string_find = function(str, s) {
+var string_find = function(str, s) {
     return str.indexOf(s)
 }
 
-assertFudge = function(condition, desc) {
+var assertFudge = function(condition, desc) {
     if (condition) return;
     if (desc) throw "python Assertion failed: "+desc;
     throw "(python) Assertion failed.";  
 }
 
 
-stringFromCharCode = function(uesc) {
+var stringFromCharCode = function(uesc) {
     return String.fromCharCode(uesc);
 }
 
@@ -132,20 +138,20 @@ String.prototype.decode = function(encoding) {
 
 
 
-uripath_join = function(base, given) {
-    return Util.uri.join(given, base)  // sad but true
+var uripath_join = function(base, given) {
+    return $rdf.Util.uri.join(given, base)  // sad but true
 }
 
 var becauseSubexpression = null; // No reason needed
 var diag_tracking = 0;
 var diag_chatty_flag = 0;
-diag_progress = function(str) { tabulator.log.debug(str); }
+var diag_progress = function(str) { /*$rdf.log.debug(str);*/ }
 
 // why_BecauseOfData = function(doc, reason) { return doc };
 
 
-RDF_type_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-DAML_sameAs_URI = "http://www.w3.org/2002/07/owl#sameAs";
+var RDF_type_URI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+var DAML_sameAs_URI = "http://www.w3.org/2002/07/owl#sameAs";
 
 /*
 function SyntaxError(details) {
@@ -341,18 +347,17 @@ __SinkParser.prototype.tok = function(tok, str, i) {
     /*
     Check for keyword.  Space must have been stripped on entry and
     we must not be at end of file.*/
-    
     var whitespace = "\t\n\v\f\r ";
     if ((pyjslib_slice(str, i,  ( i + 1 ) ) == "@")) {
         var i =  ( i + 1 ) ;
     }
     else {
-        if ((this.keywords.indexOf(tok) < 0)) {
+        if (($rdf.Util.ArrayIndexOf(this.keywords,tok) < 0)) {
             return -1;
         }
     }
     var k =  ( i + pyjslib_len(tok) ) ;
-    if ((pyjslib_slice(str, i, k) == tok) && (_notQNameChars.indexOf(str[k]) >= 0)) {
+    if ((pyjslib_slice(str, i, k) == tok) && (_notQNameChars.indexOf(str.charAt(k)) >= 0)) {
         return k;
     }
     else {
@@ -394,7 +399,7 @@ __SinkParser.prototype.directive = function(str, i) {
                 var x = __x.next();
                 
                 
-                if ((this._variables.indexOf(x) < 0) || (this._parentVariables.indexOf(x) >= 0)) {
+                if ($rdf.Util.ArrayIndexOf(this._variables,x) < 0 || ($rdf.Util.ArrayIndexOf(this._parentVariables,x) >= 0)) {
                     this._variables[x] = ( this._context.newUniversal(x));
                 }
                 
@@ -936,7 +941,7 @@ __SinkParser.prototype.commaSeparatedList = function(str, j, res, ofUris) {
         throw BadSyntax(this._thisDoc, this.lines, str, i, "EOF found expecting comma sep list");
         return i;
     }
-    if ((str[i] == ".")) {
+    if ((str.charAt(i) == ".")) {
         return j;
     }
     if (ofUris) {
@@ -1039,7 +1044,7 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
             }
         }
         var symb = this._store.sym( ( ns + ln ) );
-        if ((this._variables.indexOf(symb) >= 0)) {
+        if (($rdf.Util.ArrayIndexOf(this._variables, symb) >= 0)) {
             res.push(this._variables[symb]);
         }
         else {
@@ -1051,7 +1056,7 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
     if ((i < 0)) {
         return -1;
     }
-    if ((str[i] == "?")) {
+    if ((str.charAt(i) == "?")) {
         var v = new pyjslib_List([]);
         var j = this.variable(str, i, v);
         if ((j > 0)) {
@@ -1060,11 +1065,11 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
         }
         return -1;
     }
-    else if ((str[i] == "<")) {
+    else if ((str.charAt(i) == "<")) {
         var i =  ( i + 1 ) ;
         var st = i;
         while ((i < pyjslib_len(str))) {
-            if ((str[i] == ">")) {
+            if ((str.charAt(i) == ">")) {
                 var uref = pyjslib_slice(str, st, i);
                 if (this._baseURI) {
                     var uref = uripath_join(this._baseURI, uref);
@@ -1076,7 +1081,7 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
                     var uref =  ( uref + "#" ) ;
                 }
                 var symb = this._store.sym(uref);
-                if ((this._variables.indexOf(symb) >= 0)) {
+                if (($rdf.Util.ArrayIndexOf(this._variables,symb) >= 0)) {
                     res.push(this._variables[symb]);
                 }
                 else {
@@ -1094,7 +1099,7 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
         if ((j < 0)) {
             return -1;
         }
-        if ((this.keywords.indexOf(v[0]) >= 0)) {
+        if (($rdf.Util.ArrayIndexOf(this.keywords, v[0]) >= 0)) {
             throw BadSyntax(this._thisDoc, this.lines, str, i,  (  ( "Keyword \"" + v[0] )  + "\" not allowed here." ) );
         }
         res.push(this._store.sym( ( this._bindings[""] + v[0] ) ));
@@ -1119,7 +1124,7 @@ __SinkParser.prototype.skipSpace = function(str, i) {
         i += eol.lastIndex;
         this.previousLine = this.startOfLine;
         this.startOfLine = i;
-        tabulator.log.debug( (  (  ( "N3 line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
+        //$rdf.log.debug( (  (  ( "N3 line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
     }
     ws.lastIndex = 0;
     var m = ws.exec(str.slice(i));
@@ -1145,11 +1150,11 @@ __SinkParser.prototype.variable = function(str, i, res) {
     }
     var j =  ( j + 1 ) ;
     var i = j;
-    if (("0123456789-".indexOf(str[j]) >= 0)) {
-        throw BadSyntax(this._thisDoc, this.lines, str, j,  (  ( "Varible name can't start with '" + str[j] )  + "s'" ) );
+    if (("0123456789-".indexOf(str.charAt(j)) >= 0)) {
+        throw BadSyntax(this._thisDoc, this.lines, str, j,  (  ( "Varible name can't start with '" + str.charAt(j) )  + "s'" ) );
         return -1;
     }
-    while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str[i]) < 0)) {
+    while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str.charAt(i)) < 0)) {
         var i =  ( i + 1 ) ;
     }
     if ((this._parentContext == null)) {
@@ -1167,7 +1172,7 @@ __SinkParser.prototype.bareWord = function(str, i, res) {
     if ((j < 0)) {
         return -1;
     }
-    var ch = str[j];
+    var ch = str.charAt(j);
     if (("0123456789-".indexOf(ch) >= 0)) {
         return -1;
     }
@@ -1175,7 +1180,7 @@ __SinkParser.prototype.bareWord = function(str, i, res) {
         return -1;
     }
     var i = j;
-    while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str[i]) < 0)) {
+    while ((i < pyjslib_len(str)) && (_notNameChars.indexOf(str.charAt(i)) < 0)) {
         var i =  ( i + 1 ) ;
     }
     res.push(pyjslib_slice(str, j, i));
@@ -1193,7 +1198,7 @@ __SinkParser.prototype.qname = function(str, i, res) {
     if ((i < 0)) {
         return -1;
     }
-    var c = str[i];
+    var c = str.charAt(i);
     if (("0123456789-+".indexOf(c) >= 0)) {
         return -1;
     }
@@ -1201,7 +1206,7 @@ __SinkParser.prototype.qname = function(str, i, res) {
         var ln = c;
         var i =  ( i + 1 ) ;
         while ((i < pyjslib_len(str))) {
-            var c = str[i];
+            var c = str.charAt(i);
             if ((_notNameChars.indexOf(c) < 0)) {
                 var ln =  ( ln + c ) ;
                 var i =  ( i + 1 ) ;
@@ -1214,12 +1219,12 @@ __SinkParser.prototype.qname = function(str, i, res) {
     else {
         var ln = "";
     }
-    if ((i < pyjslib_len(str)) && (str[i] == ":")) {
+    if ((i < pyjslib_len(str)) && (str.charAt(i) == ":")) {
         var pfx = ln;
         var i =  ( i + 1 ) ;
         var ln = "";
         while ((i < pyjslib_len(str))) {
-            var c = str[i];
+            var c = str.charAt(i);
             if ((_notNameChars.indexOf(c) < 0)) {
                 var ln =  ( ln + c ) ;
                 var i =  ( i + 1 ) ;
@@ -1232,7 +1237,7 @@ __SinkParser.prototype.qname = function(str, i, res) {
         return i;
     }
     else {
-        if (ln && this.keywordsSet && (this.keywords.indexOf(ln) < 0)) {
+        if (ln && this.keywordsSet && ($rdf.Util.ArrayIndexOf(this.keywords, ln) < 0)) {
             res.push(new pyjslib_Tuple(["", ln]));
             return i;
         }
@@ -1252,7 +1257,7 @@ __SinkParser.prototype.object = function(str, i, res) {
         else {
             var i = j;
         }
-        if ((str[i] == "\"")) {
+        if ((str.charAt(i) == "\"")) {
             if ((pyjslib_slice(str, i,  ( i + 3 ) ) == "\"\"\"")) {
                 var delim = "\"\"\"";
             }
@@ -1285,7 +1290,7 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
         else {
             var i = j;
         }
-        var ch = str[i];
+        var ch = str.charAt(i);
         if (("-+0987654321".indexOf(ch) >= 0)) {
             number_syntax.lastIndex = 0;
             var m = number_syntax.exec(str.slice(i));
@@ -1305,7 +1310,7 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
             }
             return j;
         }
-        if ((str[i] == "\"")) {
+        if ((str.charAt(i) == "\"")) {
             if ((pyjslib_slice(str, i,  ( i + 3 ) ) == "\"\"\"")) {
                 var delim = "\"\"\"";
             }
@@ -1357,7 +1362,7 @@ __SinkParser.prototype.strconst = function(str, i, delim) {
         if ((pyjslib_slice(str, j, i) == delim)) {
             return new pyjslib_Tuple([i, ustr]);
         }
-        if ((str[j] == "\"")) {
+        if ((str.charAt(j) == "\"")) {
             var ustr =  ( ustr + "\"" ) ;
             var j =  ( j + 1 ) ;
             continue;
@@ -1369,7 +1374,7 @@ __SinkParser.prototype.strconst = function(str, i, delim) {
         }
         var i =  (  ( j + interesting.lastIndex )  - 1 ) ;
         var ustr =  ( ustr + pyjslib_slice(str, j, i) ) ;
-        var ch = str[i];
+        var ch = str.charAt(i);
         if ((ch == "\"")) {
             var j = i;
             continue;
@@ -1396,7 +1401,7 @@ __SinkParser.prototype.strconst = function(str, i, delim) {
             }
             var k = string_find("abfrtvn\\\"", ch);
             if ((k >= 0)) {
-                var uch = "\a\b\f\r\t\v\n\\\""[k];
+                var uch = "\a\b\f\r\t\v\n\\\"".charAt(k);
                 var ustr =  ( ustr + uch ) ;
                 var j =  ( j + 1 ) ;
             }
@@ -1523,4 +1528,6 @@ function stripCR(str) {
 function dummyWrite(x) {
 }
 
+return SinkParser;
 
+}();

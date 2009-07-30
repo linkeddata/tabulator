@@ -4,7 +4,7 @@
 */
 tabulator.panes.register( {
 
-    icon: Icon.src.icon_instances,
+    icon: tabulator.Icon.src.icon_instances,
     
     name: 'classInstance',
     

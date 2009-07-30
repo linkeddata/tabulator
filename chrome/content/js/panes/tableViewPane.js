@@ -170,7 +170,7 @@ function renderTableViewPane(doc, documentSubject) {
             // TODO: autogenerate nicer names for variables
             // variables have to be unambiguous
 
-            var variable = kb.variable("_col" + i);
+            var variable = tabulator.kb.variable("_col" + i);
 
             query.vars.push(variable);
             selectedColumns[i].setVariable(variable);
@@ -183,7 +183,7 @@ function renderTableViewPane(doc, documentSubject) {
         var queryType = type.type;
 
         if (queryType == null) {
-            queryType = kb.variable("_any");
+            queryType = tabulator.kb.variable("_any");
         }
 
         // _row a type
@@ -200,7 +200,7 @@ function renderTableViewPane(doc, documentSubject) {
         for (var i=0; i<selectedColumns.length; ++i) {
             var column = selectedColumns[i];
 
-            var formula = kb.formula();
+            var formula = tabulator.kb.formula();
 
             formula.add(rowVar,
                         column.predicate,
@@ -214,8 +214,8 @@ function renderTableViewPane(doc, documentSubject) {
     // object.
 
     function generateQuery(type) {
-        var query = new Query();
-        var rowVar = kb.variable(ROW_KEY_COLUMN);
+        var query = new tabulator.rdf.Query();
+        var rowVar = tabulator.kb.variable(ROW_KEY_COLUMN);
 
         addSelectToQuery(query, type);
         addWhereToQuery(query, rowVar, type);
@@ -409,7 +409,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         this.setPredicate = function(predicate) {
             this.predicate = predicate;
-            this.range = kb.any(predicate, tabulator.ns.rdfs("range"));
+            this.range = tabulator.kb.any(predicate, tabulator.ns.rdfs("range"));
         }
 
         this.getRange = function() {
@@ -593,7 +593,7 @@ function renderTableViewPane(doc, documentSubject) {
         // Get a list of statements that match:  ? rdfs:type ?
         // From this we can get a list of subjects and types.
 
-        var subjectList = kb.statementsMatching(undefined,
+        var subjectList = tabulator.kb.statementsMatching(undefined,
                                                 tabulator.ns.rdf("type"),
                                                 undefined,
                                                 documentSubject);
@@ -630,7 +630,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         // Get a list of properties of this subject.
 
-        var properties = kb.statementsMatching(subject,
+        var properties = tabulator.kb.statementsMatching(subject,
                                                undefined,
                                                undefined,
                                                documentSubject);
@@ -1108,7 +1108,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         // Is this an enumeration type?
 
-        var matches = kb.statementsMatching(range,
+        var matches = tabulator.kb.statementsMatching(range,
                                             tabulator.ns.owl("oneOf"),
                                             undefined,
                                             undefined);
@@ -1341,7 +1341,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         query.running = true;
 
-        kb.query(query, function(values) {
+        tabulator.kb.query(query, function(values) {
 
             if (!query.running) {
                 return;
@@ -1595,7 +1595,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         var rowsLookup = {};
 
-        kb.query(query, function(values) {
+        tabulator.kb.query(query, function(values) {
 
             var rowKey = values["?_row"];
 
@@ -1722,7 +1722,7 @@ tabulator.panes.register({
             return true;
         }
 
-        var sts = kb.statementsMatching(undefined, undefined, undefined,
+        var sts = tabulator.kb.statementsMatching(undefined, undefined, undefined,
                                         subject); 
 
         // If all the statements are on a single subject, a table view 

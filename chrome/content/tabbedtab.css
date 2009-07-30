@@ -8,7 +8,6 @@
 ** 
 */
 @import url("chrome://tabulator/content/js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
-@import url("chrome://tabulator/content/js/panes/publicationPane/publicationPane.css"); /* publication pane */
 
 body {background-color: white ; font-size: 80%; font-family: sans-serif}
 
@@ -309,7 +308,7 @@ div.RDFXMLPane {
 .paneHidden { -moz-border-radius: 0.5em; margin-left: 1em; padding: 3px;  }
 
 /* outline object view */
-.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
+img.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
 /* Compare facebook which only limits width -> lots of tall images! */
 
 img.phoneIcon { border: 0; margin-left: 1em}

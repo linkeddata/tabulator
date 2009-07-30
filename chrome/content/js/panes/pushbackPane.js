@@ -5,7 +5,7 @@
 */
 
 tabulator.panes.pushbackPane = {
-    icon: Icon.src.icon_pushbackPane,
+    icon: tabulator.Icon.src.icon_pushbackPane,
     
     name: 'pushback',
     

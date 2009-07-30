@@ -4,12 +4,12 @@
 * 
 */
 LawPane = {};
-LawPane.icon = Icon.src.icon_LawPane;
+LawPane.icon = tabulator.Icon.src.icon_LawPane;
 LawPane.name = 'Law';
 
 LawPane.label = function(subject) {
 
-    stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
+    stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
 
         for (var j=0; j<stsJust.length; j++){
             if (stsJust[j].subject.termType == 'formula'){
@@ -63,9 +63,9 @@ LawPane.display = function(myDocument,obj){
 }
 	
 LawPane.render = function(subject, myDocument) {
-
-	var collapse_icon = Icon.src.icon_collapse;
-	var expand_icon = Icon.src.icon_expand;
+    var kb = tabulator.kb
+	var collapse_icon = tabulator.Icon.src.icon_collapse;
+	var expand_icon = tabulator.Icon.src.icon_expand;
 	
 	LawPane.render.show = function(evt){
 		evt["target"].src = collapse_icon;

@@ -5,13 +5,13 @@
     */
 tabulator.panes.internalPane = {
 
-    icon: Icon.src.icon_internals,
+    icon: tabulator.Icon.src.icon_internals,
     
     name: 'internal',
 
     label: function(subject) {
-        var sts = kb.statementsMatching(subject);
-        sts = sts.concat(kb.statementsMatching(undefined, undefined, subject));
+        var sts = tabulator.kb.statementsMatching(subject);
+        sts = sts.concat(tabulator.kb.statementsMatching(undefined, undefined, subject));
         for (var i=0; i<sts.length; i++) {
             if (tabulator.panes.internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
                 return "under the hood";

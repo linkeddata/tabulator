@@ -11,7 +11,7 @@
 
 tabulator.panes.dataContentPane = {
     
-    icon:  Icon.src.icon_dataContents,
+    icon:  tabulator.Icon.src.icon_dataContents,
     
     name: 'dataContents',
     
@@ -28,7 +28,7 @@ tabulator.panes.dataContentPane = {
 
     statementsAsTables: function statementsAsTables(sts, myDocument) {
         var rep = myDocument.createElement('table');
-        var sz = Serializer();
+        var sz = tabulator.rdf.Serializer( tabulator.kb );
         var pair = sz.rootSubjects(sts);
         var roots = pair[0];
         var subjects = pair[1];
@@ -55,7 +55,7 @@ tabulator.panes.dataContentPane = {
                     td_p.setAttribute('class', 'pred');
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', st.predicate.uri)
-                    anchor.appendChild(myDocument.createTextNode(predicateLabelForXML(st.predicate)));
+                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.predicateLabelForXML(st.predicate)));
                     td_p.appendChild(anchor);
                     tr.appendChild(td_p);
                     lastPred = st.predicate.uri;
@@ -77,7 +77,7 @@ tabulator.panes.dataContentPane = {
                 case 'symbol':
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', obj.uri)
-                    anchor.appendChild(myDocument.createTextNode(label(obj)));
+                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
                     return anchor;
                     
                 case 'literal':
@@ -85,7 +85,7 @@ tabulator.panes.dataContentPane = {
                     
                 case 'bnode':
                     var newTable =  propertyTree(obj);
-                    if (ancestor(newTable, 'TABLE') && ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
+                    if (tabulator.Util.ancestor(newTable, 'TABLE') && tabulator.Util.ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
                         newTable.style.backgroundColor='#eee'
                     } else {
                         newTable.style.backgroundColor='white'
@@ -118,7 +118,7 @@ tabulator.panes.dataContentPane = {
             tr.appendChild(td_tree);
             var root = roots[i];
             if (root.termType == 'bnode') {
-                td_s.appendChild(myDocument.createTextNode(label(root))); // Don't recurse!
+                td_s.appendChild(myDocument.createTextNode(tabulator.Util.label(root))); // Don't recurse!
             } 
             else {
                 td_s.appendChild(objectTree(root)); // won't have tree
@@ -143,7 +143,7 @@ tabulator.panes.dataContentPane = {
             div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(sts, myDocument));
             
         } else {  // An outline mode openable rendering .. might be better
-            var sz = Serializer();
+            var sz = tabulator.rdf.Serializer( tabulator.kb );
             var res = sz.rootSubjects(sts);
             var roots = res[0]
             var p  = {};

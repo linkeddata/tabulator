@@ -7,17 +7,17 @@
 */
     
     photoImportPane = {};
-    photoImportPane.icon = Icon.src.icon_photoImportPane;
+    photoImportPane.icon = tabulator.Icon.src.icon_photoImportPane;
     photoImportPane.name = 'Photo Import Pane';
     
     // namespace and shorthand for concepts in the tag ontology
-    var RDF = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    var RDFS = RDFNamespace("http://www.w3.org/2000/01/rdf-schema#");
-    var TAGS = RDFNamespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
-    var PAC = RDFNamespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
+    var RDF = tabulator.rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    var RDFS = tabulator.rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
+    var TAGS = tabulator.rdf.Namespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
+    var PAC = tabulator.rdf.Namespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
     
     photoImportPane.label = function(subject) {
-        
+        var kb = tabulator.kb
         if (subject.uri == undefined) {
             return null;
         }
@@ -41,10 +41,10 @@
     
     
     photoImportPane.render = function(subject, myDocument) {
-        
+        var kb = tabulator.kb
         var new_photos = [];
         var docURI = subject.uri.substring(0,subject.uri.lastIndexOf("#"));
-        var stWhy = new RDFSymbol(docURI);
+        var stWhy = new tabulator.rdf.Symbol(docURI);
         
         // ##########################################################################
         photoImportPane.render.ReadCookie = function(name) {
@@ -96,25 +96,25 @@
             
             // insert triples into the RDF file
             var triples = [];
-            var tagging = new RDFSymbol(docURI+"#tagging"+taggingID);
-            var photo = new RDFSymbol(new_photos[id].url);
+            var tagging = new tabulator.rdf.Symbol(docURI+"#tagging"+taggingID);
+            var photo = new tabulator.rdf.Symbol(new_photos[id].url);
             
-            triples.push(new RDFStatement(subject, PAC("Contains"), photo, stWhy));
-            triples.push(new RDFStatement(photo, PAC("hasTagging"), tagging, stWhy));
-            triples.push(new RDFStatement(tagging, TAGS("taggedResource"), photo, stWhy));
-            triples.push(new RDFStatement(tagging, TAGS("taggedBy"), owner, stWhy));
+            triples.push(new tabulator.rdf.Statement(subject, PAC("Contains"), photo, stWhy));
+            triples.push(new tabulator.rdf.Statement(photo, PAC("hasTagging"), tagging, stWhy));
+            triples.push(new tabulator.rdf.Statement(tagging, TAGS("taggedResource"), photo, stWhy));
+            triples.push(new tabulator.rdf.Statement(tagging, TAGS("taggedBy"), owner, stWhy));
             
             for (var i=0; i < new_photos[id].tags.length; i++) {
                 tag = new_photos[id].tags[i];
                 var tag_uri = docURI + "#" + tag;
                 var seeAlso = "http://www.flickr.com/photos/tags/" + tag;
                 if (existing_tags.indexOf(tag) == -1) {
-                    tag_ref = new RDFSymbol(tag_uri);
-                    triples.push(new RDFStatement(tag_ref, RDF("type"), TAGS("Tag"), stWhy));
-                    triples.push(new RDFStatement(tag_ref, RDFS("seeAlso"), new RDFSymbol(seeAlso), stWhy));
-                    triples.push(new RDFStatement(tag_ref, RDFS("label"), new RDFLiteral(tag), stWhy));
+                    tag_ref = new tabulator.rdf.Symbol(tag_uri);
+                    triples.push(new tabulator.rdf.Statement(tag_ref, RDF("type"), TAGS("Tag"), stWhy));
+                    triples.push(new tabulator.rdf.Statement(tag_ref, RDFS("seeAlso"), new tabulator.rdf.Symbol(seeAlso), stWhy));
+                    triples.push(new tabulator.rdf.Statement(tag_ref, RDFS("label"), new tabulator.rdf.Literal(tag), stWhy));
                 }
-                triples.push(new RDFStatement(tagging, TAGS("associatedTag"), new RDFSymbol(tag_uri), stWhy));
+                triples.push(new tabulator.rdf.Statement(tagging, TAGS("associatedTag"), new tabulator.rdf.Symbol(tag_uri), stWhy));
                 existing_tags.push(tag);
                 tag_uris[tag] = tag_uri;
             }
@@ -191,7 +191,7 @@
         
         photoImportPane.render.InsertTriples = function(triples, id) {
             //var st = new RDFStatement(PAC('PhotoAlbum'),PAC('Owner'),ME('me'));
-            var sparqlService = new sparql(kb);
+            var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             sparqlService.insert_statement(triples, function(uri,success,error){
                 if (!success) {
                     alert("Error.");

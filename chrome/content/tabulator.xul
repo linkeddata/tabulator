@@ -4,72 +4,27 @@
 
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-  <script type="application/x-javascript" src="log-ext.js"/><!-- should be absolute path -->
-  <script type="application/x-javascript" src="js/util.js"/>
-  <script type="application/x-javascript" src="js/configuration.js"/>  
-  <script type="application/x-javascript" src="js/rdf/sparql.js"/>
-  <script type="application/x-javascript" src="js/uri.js"/>
-  <script type="application/x-javascript" src="js/rdf/term.js"/>
-  <script type="application/x-javascript" src="js/rdf/match.js"/>
-  <script type="application/x-javascript" src="js/rdf/identity.js"/>
-  <script type="application/x-javascript" src="js/rdf/rdfs.js"/>
-  <script type="application/x-javascript" src="js/rdf/query.js"/>
-  <script type="application/x-javascript" src="js/rdf/sources.js"/>
-  <script type="application/x-javascript" src="js/rdf/serialize.js"/>
 
-  <script type="application/x-javascript" src="outlineinit.js"/>
-  <script type="application/x-javascript" src="js/userinput.js"/>
-  <script type="application/x-javascript" src="test.js"/>
-  <script type="application/x-javascript" src="prefs.js"/>
+  <script type="application/x-javascript" src="js/tab/browserInit.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery-1.3.2.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.json-1.3.min.js"/> <!-- not used at the moment-->
+  <script type="application/x-javascript" src="js/jquery/jquery.uri.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.xmlns.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.curie.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.datatype.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.rdf.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.rdfa.js"/>
+  <script type="application/x-javascript" src="js/tab/sqlite.js"/> <!-- Functions to create an SQLite database-->
+  <script type="application/x-javascript" src="js/tab/semclip.js"/> <!-- For the Semantic Clipboard -->
+ <script type="application/x-javascript" src="js/tab/pusbackInterface.js"/> <!-- To talk with the pushback controller hosted at DERI -->
 
-  <script type="application/x-javascript" src="js/sparqlUpdate.js"/>
-  <script type="application/x-javascript" src="js/updateCenter.js"/>
-  <script type="application/x-javascript" src="js/webdav.js"/>
-  <script type="application/x-javascript" src="js/outline.js"/>
-  <script type="application/x-javascript" src="jquery/jquery-1.3.2.js"/>
-  <script type="application/x-javascript" src="jquery/jquery.json-1.3.min.js"/> <!-- not used at the moment-->
-  <script type="application/x-javascript" src="jquery/jquery.uri.js"/>
-  <script type="application/x-javascript" src="jquery/jquery.xmlns.js"/>
-  <script type="application/x-javascript" src="jquery/jquery.curie.js"/>
-  <script type="application/x-javascript" src="jquery/jquery.datatype.js"/>
-  <script type="application/x-javascript" src="jquery/jquery.rdf.js"/>
-  <script type="application/x-javascript" src="jquery/jquery.rdfa.js"/>
-  <script type="application/x-javascript" src="sqlite.js"/> <!-- Functions to create an SQLite database-->
-  <script type="application/x-javascript" src="semclip.js"/> <!-- For the Semantic Clipboard -->
- <script type="application/x-javascript" src="pusbackInterface.js"/> <!-- To talk with the pushback controller hosted at DERI -->
-  <script type="application/x-javascript" src="sources-ext.js"/>
-  
-  <!-- panes must be after outline.js and test.js -->
-  <!-- The panes declared first have precedence when there is a choice -->
 
-  <script type="application/x-javascript" src="js/panes/classInstancePane.js"/>
-  <script type="application/x-javascript" src="js/panes/defaultPane.js"/>
-  <script type="application/x-javascript" src="js/panes/internalPane.js"/>
-  <script type="application/x-javascript" src="js/panes/microblogPane/microblogPane.js"/>
-  <script type="application/x-javascript" src="js/panes/imagePane.js"/>
-  <script type="application/x-javascript" src="js/panes/dataContentPane.js"/>
-  <script type="application/x-javascript" src="js/panes/n3Pane.js"/> 
-  <script type="application/x-javascript" src="js/panes/RDFXMLPane.js"/>
-  <script type="application/x-javascript" src="js/panes/humanReadablePane.js"/>
-  <script type="application/x-javascript" src="js/panes/tableViewPane.js"/>
-  <script type="application/x-javascript" src="js/panes/socialPane.js"/>
-  <script type="application/x-javascript" src="js/panes/airPane.js"/>
-  <script type="application/x-javascript" src="js/panes/lawPane.js"/>
-  <script type="application/x-javascript" src="js/panes/paneUtils.js"/>
-  <script type="application/x-javascript" src="js/panes/pushbackPane.js"/>
-  <script type="application/x-javascript" src="js/panes/CVPane.js"/>
-  <script type="application/x-javascript" src="js/panes/publicationPane/publicationPane.js"/>
-  
+
+
+  <script type="application/x-javascript" src="js/tab/sources-ext.js"/>
   <!-- browser reload hack -->
-  <script type="application/x-javascript" src="refresh_hack.js"/>
+  <script type="application/x-javascript" src="js/tab/refresh_hack.js"/>
   
-
-  <!-- panes for Photo access control project (By albert08@csail.mit.edu) -->
-  <script type="application/x-javascript" src="js/panes/photoPane.js"/>
-  <script type="application/x-javascript" src="js/panes/tagPane.js"/>
-  <script type="application/x-javascript" src="js/panes/photoImportPane.js"/>
-  
-  <!--<script type="application/x-javascript" src="searchbarOverlay.js"/>-->
   <menupopup id="viewSidebarMenu">
   <menuitem key="key_openTabulatorSidebar" observes="viewTabulatorSidebar"  />
   </menupopup>
@@ -369,7 +324,7 @@
     window.addEventListener("load",tabulator_init.onLoad, false);
 
   ]]></script>
-  <script type="application/x-javascript" src="statuswidget.js" ></script>
+  <script type="application/x-javascript" src="js/tab/statuswidget.js" ></script>
 
 	<!-- New Addition -->
 

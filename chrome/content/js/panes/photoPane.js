@@ -1,14 +1,14 @@
 // Begin photoPane
 
     photoPane = {};
-    photoPane.icon = Icon.src.icon_photoPane;
+    photoPane.icon = tabulator.Icon.src.icon_photoPane;
     photoPane.name = 'Photo';
     
     // Parameters
     var num_per_page = 5;
     
     // The bullet for the tags in the Tag Menu on the right
-    var tag_bullet = Icon.src.icon_TinyTag;
+    var tag_bullet = tabulator.Icon.src.icon_TinyTag;
 
     // Functions for formatting the tags and URLS of tags from the RDF statements
     function FormatTags(str) {
@@ -26,9 +26,9 @@
     }
     
     // namespace and shorthand for concepts in the tag ontology
-    var RDF = RDFNamespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    var TAGS = RDFNamespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
-    var PAC = RDFNamespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
+    var RDF = tabulator.rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    var TAGS = tabulator.rdf.Namespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
+    var PAC = tabulator.rdf.Namespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
     
     function CompareTags(photo,checked) {
         if (checked.length == 0) {
@@ -51,7 +51,7 @@
     
     photoPane.label = function(subject) {
         
-        if (!kb.whether(subject, RDF('type'), PAC("PhotoAlbum"))) {
+        if (!tabulator.kb.whether(subject, RDF('type'), PAC("PhotoAlbum"))) {
             return null;
         }
         return "Photo Album";
@@ -131,18 +131,18 @@
         photoPane.render.LoadPhotoData = function() {
            
             // Retrieve the photos in the album (using the "Contains" property)
-            var stsPhotos = kb.statementsMatching(subject, PAC("Contains"), undefined);
+            var stsPhotos = tabulator.kb.statementsMatching(subject, PAC("Contains"), undefined);
             for (var i = 0; i < stsPhotos.length; i++) {
                 var photo = {};
                 photo.URI = stsPhotos[i].object.toString();
                 
                 // For each tagging, retrieve all the associated tags
-                var stsTaggings = kb.statementsMatching(stsPhotos[i].object, PAC("hasTagging"), undefined);
+                var stsTaggings = tabulator.kb.statementsMatching(stsPhotos[i].object, PAC("hasTagging"), undefined);
                 for (var j = 0; j < stsTaggings.length; j++) {
                     var tags = [];
-                    var stsTags = kb.statementsMatching(stsTaggings[j].object, TAGS("associatedTag"), undefined);
+                    var stsTags = tabulator.kb.statementsMatching(stsTaggings[j].object, TAGS("associatedTag"), undefined);
                     for (var k = 0; k < stsTags.length; k++) {
-                        var tag = kb.the(stsTags[k].object, RDFS("label"), undefined);
+                        var tag = tabulator.kb.the(stsTags[k].object, RDFS("label"), undefined);
                         tags.push(tag);
                         if (allTags.indexOf(tag) == -1) {
                             allTags.push(tag);
@@ -285,16 +285,16 @@
         info_div.setAttribute("id", "PhotoInfoPanel");
         
         var photo_begin_img = myDocument.createElement("img");
-        photo_begin_img.setAttribute("src",Icon.src.icon_photoBegin);
+        photo_begin_img.setAttribute("src",tabulator.Icon.src.icon_photoBegin);
         photo_begin_img.setAttribute("id","photoBeginButton");
         var photo_end_img = myDocument.createElement("img");
-        photo_end_img.setAttribute("src",Icon.src.icon_photoEnd);
+        photo_end_img.setAttribute("src",tabulator.Icon.src.icon_photoEnd);
         photo_end_img.setAttribute("id","photoEndButton");
         var photo_next_img = myDocument.createElement("img");
-        photo_next_img.setAttribute("src",Icon.src.icon_photoNext);
+        photo_next_img.setAttribute("src",tabulator.Icon.src.icon_photoNext);
         photo_next_img.setAttribute("id","photoNextButton");
         var photo_back_img = myDocument.createElement("img");
-        photo_back_img.setAttribute("src",Icon.src.icon_photoBack);
+        photo_back_img.setAttribute("src",tabulator.Icon.src.icon_photoBack);
         photo_back_img.setAttribute("id","photoBackButton");
         
         var page_info_div = myDocument.createElement("div");

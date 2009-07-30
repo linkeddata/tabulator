@@ -4,7 +4,7 @@
 **  normaly displayed to the user. See also: innternalPane
 */
 tabulator.panes.defaultPane = {
-    icon: Icon.src.icon_defaultPane,
+    icon: tabulator.Icon.src.icon_defaultPane,
     
     name: 'default',
     
@@ -33,7 +33,7 @@ tabulator.panes.defaultPane = {
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, tabulator.panes.defaultPane.filter)
         if ((subject.termType == 'symbol' && 
-             outline.UserInput.updateService.editMethod(kb.sym(Util.uri.docpart(subject.uri)), kb))
+             outline.UserInput.updateService.editMethod(kb.sym(tabulator.rdf.Util.uri.docpart(subject.uri)), kb))
              || (subject.termType == 'bnode' && kb.anyStatementMatching(subject) &&
              outline.UserInput.updateService.editMethod(kb.anyStatementMatching(subject).why)
                 //check the document containing something about of the bnode @@ what about as object?
@@ -43,7 +43,7 @@ tabulator.panes.defaultPane = {
             holdingTd.setAttribute('colspan','2');
             holdingTd.setAttribute('notSelectable','true');
             var img = myDocument.createElement('img');
-            img.src = Icon.src.icon_add_new_triple;
+            img.src = tabulator.Icon.src.icon_add_new_triple;
             img.className='bottom-border-active'
             //img.addEventListener('click', thisOutline.UserInput.borderClick,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          

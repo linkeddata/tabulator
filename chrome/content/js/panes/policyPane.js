@@ -66,28 +66,29 @@ policyPane = {
 	    txtinput.setAttribute("id","log");
 	    txtinput.setAttribute("rows","10");
 	    txtinput.setAttribute("cols","70");
-	    
+	    txtinput.defaultValue = "Is a person or system from ________________ with ___________________ who _____________________" +
+	    		" permitted to ___________________data or a document about ______________ that is _______________ " +
+	    		"and _____________________ if the other party (_________) is _______________ with ___________________ " +
+	    		"who ___________________?";
 	    var buttondiv = doc.createElement("div");
 	    
 	    var btninput = doc.createElement("input");
 	    btninput.setAttribute("type","button");
 	    btninput.setAttribute("value","Go");
 		var uri = "http://dig.csail.mit.edu/2008/webdav/mjsweig/log.n3";
-	//	webdav.manager.register(uri, function(uri, success) {alert(success);});
-	//	webdav.manager.set_data(uri, "test");
-	//	webdav.manager.save_file(uri, "test", function(){});
-		xhr = tabulator.util.XMLHTTPFactory();
-		xhr.onreadystatechange = function(){
-			if(xhr.readyState == 4){
-				alert(xhr.status + " " + xhr.statusText);
-			}
-		};
-		xhr.open('PUT', uri, true);
-		xhr.send("test");
 	    btninput.addEventListener("click", function(){
-	//    	var browser = top.document.getElementById("content");
-	//    	browser.selectedTab = browser.addTab(decodeURIComponent("http://mr-burns.w3.org/cgi-bin/air_2_0.py?" +
-	//    			"logFile=" + uri + "&rulesFile=" + doc.URL));
+	    	function constructLog() {
+	    		
+	    	};
+	    	var xhr = tabulator.util.XMLHTTPFactory();
+			xhr.open('PUT', uri, false);
+			xhr.send(txtinput.value);
+			xhr.open('GET', uri, false);
+			xhr.send(null);
+			var log = xhr.responseText;
+	    	var browser = top.document.getElementById("content");
+	    	browser.selectedTab = browser.addTab(decodeURIComponent("http://mr-burns.w3.org/cgi-bin/air_2_0.py?" +
+	    			"log=" + encodeURIComponent(log) + "&rulesFile=" + doc.URL));
 	    }, false);
 	
 	    buttondiv.appendChild(btninput);

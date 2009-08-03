@@ -94,7 +94,8 @@ Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. f
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
 Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  
 Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  
-Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png';  
+Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png'; 
+Icon.src.icon_policyPane = iconPrefix + 'icons/gavel.png';   
 
 // For photo albums (By albert08@csail.mit.edu)
 Icon.src.icon_photoPane = iconPrefix + 'icons/photo_small.png';

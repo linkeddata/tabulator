@@ -132,6 +132,7 @@ Icon.src.icon_tableView = iconPrefix + 'icons/table-view.png';
 Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
 Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  //@@ Ask Danny for a better icon
 Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  //@@ Ask Danny for a better icon
+Icon.src.icon_policyPane = iconPrefix + 'icons/gavel.png';  
 
 // For that one we need a document with grid lines.  Make data-x-generix maybe
 

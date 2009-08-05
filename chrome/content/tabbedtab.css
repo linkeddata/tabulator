@@ -247,19 +247,20 @@ div.dataContentPane {
 }
 
 div.dataContentPane td {
-                padding-left: 0.2em;
-                padding-top: 0.1em;
-                padding-right: 0.2em;
-                padding-bottom: 0.05em;
-	        vertical-align: middle; /*@@ Lalana's request*/
-                /* background-color: white; */
-                 }
+    padding-left: 0.2em;
+    padding-top: 0.1em;
+    padding-right: 0.2em;
+    padding-bottom: 0.05em;
+    vertical-align: text-top;
+    border-style:dotted;
+    border-width:0.1px; 
+    /* background-color: white; */
+}
 
 div.dataContentPane tr { 
-	margin-bottom: 0.6em;
+	/*margin-bottom: 0.6em;*/
 	padding-top: 1em;
 	padding-bottom: 1em;
-    
 }
 
 div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */

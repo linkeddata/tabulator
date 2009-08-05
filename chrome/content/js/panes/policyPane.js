@@ -11,6 +11,10 @@ var rdf = tabulator.ns.rdf;
 var rdfs = tabulator.ns.rdfs;
 var owl = tabulator.ns.owl;
 var pri = RDFNamespace("http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy#");
+var facts = RDFNamespace("http://dig.csail.mit.edu/2008/webdav/mjsweig/log#");
+var uri = "http://dig.csail.mit.edu/2008/webdav/mjsweig/log.n3";
+var priURI = "http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy.n3";
+var c = 0;
 
 function editDistance(s, target){
 	d = {};
@@ -75,20 +79,18 @@ policyPane = {
 	    var btninput = doc.createElement("input");
 	    btninput.setAttribute("type","button");
 	    btninput.setAttribute("value","Go");
-		var uri = "http://dig.csail.mit.edu/2008/webdav/mjsweig/log.n3";
 	    btninput.addEventListener("click", function(){
 	    	function constructLog() {
-	    		
+	    		//TODO generate log from default sentence?
 	    	};
 	    	var xhr = tabulator.util.XMLHTTPFactory();
 			xhr.open('PUT', uri, false);
 			xhr.send(txtinput.value);
-			xhr.open('GET', uri, false);
-			xhr.send(null);
-			var log = xhr.responseText;
+			//FIXME cant call ui on file in server that needs a password to access
 	    	var browser = top.document.getElementById("content");
-	    	browser.selectedTab = browser.addTab(decodeURIComponent("http://mr-burns.w3.org/cgi-bin/air_2_0.py?" +
-	    			"log=" + encodeURIComponent(log) + "&rulesFile=" + doc.URL));
+	    	browser.selectedTab = browser.addTab("http://mr-burns.w3.org/cgi-bin/air_2_0.py?" +
+	    			"logFile=" + uri + "&logFile=" + priURI +"&rulesFile=" + doc.URL);
+	    	uri = "http://dig.csail.mit.edu/2008/webdav/mjsweig/log" + c++ + ".n3";
 	    }, false);
 	
 	    buttondiv.appendChild(btninput);

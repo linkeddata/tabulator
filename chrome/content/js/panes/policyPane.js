@@ -15,6 +15,8 @@ var facts;
 var uri;
 var priURI = "http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy.n3";
 var c = 0;
+var _senders = ["the cia", "cia", "the department of homeland security", "department of homeland security", "dhs", "the fbi", 
+                "fbi"];
 
 function editDistance(s, target){
 	d = {};
@@ -36,9 +38,48 @@ function editDistance(s, target){
 	}
 	return d[s.length+","+target.length];
 };
+function dropdown(ele, doc) {
+	var possibles;
+	var boxType = ele.id;
+	switch(boxType) {
+	case "sender":
+		possibles = _senders;
+		break;
+	default:
+		possibles = new Array();
+	}
+	var choiceDiv = doc.createElement("div");
+	choiceDiv.setAttribute("style", "position: absolute; top: 100px; left: 100px; display: block; height: 50px; width: 200px; background-color: white");
+	choiceDiv.setAttribute("cellPadding", "0");
+	choiceDiv.setAttribute("cellPadding", "0");
+	
+	var choices = doc.createElement("table");
+	var cBod = doc.createElement("tbody");
+	var closeMatches = new Array();
+	for (var i = 0; i < possibles.length; i++) {
+		var text = ele.value.toLowerCase();
+		if (possibles[i].slice(0,ele.value.length) == text || editDistance(possibles[i], text) <= 1) {
+			closeMatches[closeMatches.length] = possibles[i];
+		}
+	}
+	closeMatches.sort();
+	for (var i = 0; i < closeMatches.length; i++) {
+		var tr = doc.createElement("tr");
+		var td = doc.createElement("td");
+		td.appendChild(doc.createTextNode(closeMatches[i]));
+		tr.appendChild(td);
+		cBod.appendChild(tr);
+	}
+	ele = doc.getElementById("Policy Runner Pane");
+	if (doc.getElementById("choices")) ele.removeChild(doc.getElementById("choices"));
+	choiceDiv.setAttribute('id', 'choices');
+	choices.appendChild(cBod);
+	choiceDiv.appendChild(choices);
+	ele.appendChild(choiceDiv);
+}
 policyPane = {
     icon: Icon.src.icon_policyPane,
-
+    //TODO make this pane open upon loading the file, without clicking on it
     label: function(subject) {
 		var policy = air('Policy');
 		//only display this pane if the document contains an air:Policy that can be reasoned over
@@ -105,6 +146,7 @@ policyPane = {
     					var webID = doc.getElementById("webidField").value;
     		            tabulator.preferences.set('me', webID);
     		            alert("You ID has been set to "+webID);
+    		            doc.location.reload();
     				},false);
     				
     				selectDiv.appendChild(webIDText);
@@ -205,6 +247,7 @@ policyPane = {
     		            xhr.setRequestHeader('Content-type', content_type);//OK?
     		            xhr.send(contents);
     		            tabulator.log.info("sending "+"["+contents+"] to +"+targetURI);
+    		            doc.location.reload();
     				}, false);
     				
     				var statusDiv = doc.createElement("div");
@@ -254,7 +297,12 @@ policyPane = {
 		    var sender = doc.createElement("input");
 		    sender.setAttribute("type", "text");
 		    sender.setAttribute("id", "sender");
-		    sender.addEventListener("change", function(e){
+		    sender.addEventListener("keyup", function(e){
+		    	if (sender.value != "") {
+		    		dropdown(sender, doc);
+		    	}else{
+		    		
+		    	}
 		    }, false);
 		    
 		    var senderProperties = new Array();
@@ -397,9 +445,9 @@ policyPane = {
 		    }, false);
 		    
 		    var forgetDiv = doc.createElement("div");
+		    forgetDiv.setAttribute('style', 'width: 600px; border: medium dashed black; padding: 5px');
 		    
 		    var currentID = doc.createElement("p");
-		    currentID.setAttribute('style', 'width: 600px');
 		    currentID.appendChild(doc.createTextNode("Your current Web ID is "));
 		    var webidlink = doc.createElement("a");
 		    webidlink.setAttribute('href', myURI);
@@ -416,8 +464,7 @@ policyPane = {
 		    forget.addEventListener('click', function(e){
 		    	tabulator.preferences.set('me','');
                 alert('Your Web ID was '+myURI+'. It has been forgotten.');
-                //TODO refresh pane on click.  
-                //open and close pane?
+                doc.location.reload();
 		    },false);
 		    
 		    forgetDiv.appendChild(currentID);

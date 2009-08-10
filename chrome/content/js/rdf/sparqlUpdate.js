@@ -211,6 +211,13 @@ sparql.prototype.delete_statement = function(st, callback) {
     
     this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
 }
+sparql.prototype.batch_delete_statement = function(st, callback) {
+            var query = this._context_where(this._statement_context(st[0]));
+            for (var i = 0; i < st.length; i++) {
+                query += "DELETE { " + anonymizeNT(st[i]) + " }\n";
+            }
+            this._fire(st[0].why.uri, query, callback);
+        };
 
 return sparql;
 

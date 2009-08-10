@@ -59,7 +59,7 @@
   <script type="application/x-javascript" src="js/panes/pushbackPane.js"/>
   <script type="application/x-javascript" src="js/panes/CVPane.js"/>
   <script type="application/x-javascript" src="js/panes/publicationPane/publicationPane.js"/>
-  <script type="application/x-javascript" src="js/panes/policyPane.js"/>
+  <script type="application/x-javascript" src="js/panes/policyPane/policyPane.js"/>
   
   <!-- browser reload hack -->
   <script type="application/x-javascript" src="refresh_hack.js"/>

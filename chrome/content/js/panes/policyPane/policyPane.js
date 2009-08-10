@@ -15,8 +15,25 @@ var facts;
 var uri;
 var priURI = "http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy.n3";
 var c = 0;
-var _senders = ["the cia", "cia", "the department of homeland security", "department of homeland security", "dhs", "the fbi", 
-                "fbi"];
+var current = "";
+var _senders = {"The CIA": pri('CIA'), "CIA": pri('CIA'), "Central Intelligence Agency": pri('CIA'), "The Central Intelligence Agency": pri('CIA'),
+		"The Department of Homeland Security": pri('DHS'), "Department of Homeland Security": pri('DHS'), "DHS": pri('DHS'), "The DHS": pri('DHS'), 
+                "FBI": pri('FBI'), "The FBI": pri('FBI'), "Federal Bureau of Investigation": pri('FBI'), "The Federal Bureau of Investigation": pri('FBI'),
+                "Massachusetts State Police Department": pri('MSP'), "The Massachusetts State Police Department": pri('MSP')};
+var _senderProps = {"maintains": pri('maintains')};
+var _senderTypes = {"a system of records": "[a " + pri('System_of_Records')+ "]"};
+var _senderContexts = {"Has A Court Order": pri("court_order")};
+var _actions = {"change": pri('Change'), "do something with": pri('Event'), "file": pri('File'), "request information": pri('Info_Request'),
+		"notify": pri('Notify'), "request": pri('Request'), "request a change to": pri('Request_Change'), "review": pri('Review'),
+		"revise": pri('Revision_or_Establish'), "establish": pri('Revision_or_Establish'), "share": pri('Share'), "give": pri('Share')};
+var _dataCats = {"US Persons": pri('US_Person')};
+var _specialDataCats = {"PII": pri('PII'), "Personally Identifiable Information": pri('PII')};
+var _dataContexts = {"in a system of records": pri('contained_in') + " [a " + pri('System_of_Records')+ "]"};
+var _aMatches = {};
+var _reqs = {"Massachusetts State Police Department": pri('MSP'), "The Massachusetts State Police Department": pri('MSP')};
+var _reqProps = {};
+var _reqTypes = {};
+var _reqContexts = {};
 
 function editDistance(s, target){
 	d = {};
@@ -38,18 +55,79 @@ function editDistance(s, target){
 	}
 	return d[s.length+","+target.length];
 };
+function getX(e) {
+	var x = 0;
+	while (e) {
+		x+=e.offsetLeft;
+		e = e.offsetParent;
+	}
+	return x;
+}
+function getY(e) {
+	var y = 0;
+	while (e) {
+		y+= e.offsetTop;
+		e = e.offsetParent;
+	}
+	return y;
+}
 function dropdown(ele, doc) {
-	var possibles;
+	function makePossibles(a) {
+		var pos = new Array();
+		for (var p in a) {
+			pos[pos.length] = p;
+		}
+		return pos;
+	}
+	var possibles = new Array();
 	var boxType = ele.id;
+	current = ele.value;
 	switch(boxType) {
 	case "sender":
-		possibles = _senders;
+		possibles = makePossibles(_senders);
+		break;
+	case "sProp":
+		possibles = makePossibles(_senderProps);
+		break;
+	case "sType":
+		possibles = makePossibles(_senderTypes);
+		break;
+	case "sContext":
+		possibles = makePossibles(_senderContexts);
+		break;
+	case "action":
+		possibles = makePossibles(_actions);
+		break;
+	case "dCat":
+		possibles = makePossibles(_dataCats);
+		break;
+	case "sDCat":
+		possibles = makePossibles(_specialDataCats);
+		break;
+	case "dCon":
+		possibles = makePossibles(_dataContexts);
+		break;
+	case "aMatch":
+		possibles = makePossibles(_aMatches);
+		break;
+	case "requester":
+		possibles = makePossibles(_reqs);
+		break;
+	case "rProp":
+		possibles = makePossibles(_reqProps);
+		break;
+	case "rType":
+		possibles = makePossibles(_reqTypes);
+		break;
+	case "rContext":
+		possibles = makePossibles(_reqContexts);
 		break;
 	default:
 		possibles = new Array();
 	}
 	var choiceDiv = doc.createElement("div");
-	choiceDiv.setAttribute("style", "position: absolute; top: 100px; left: 100px; display: block; height: 50px; width: 200px; background-color: white");
+	choiceDiv.setAttribute("class", "suggest");
+	choiceDiv.setAttribute("style", "top: " + (getY(ele)+65) + "px; left: "+(getX(ele))+"px");
 	choiceDiv.setAttribute("cellPadding", "0");
 	choiceDiv.setAttribute("cellPadding", "0");
 	
@@ -58,7 +136,7 @@ function dropdown(ele, doc) {
 	var closeMatches = new Array();
 	for (var i = 0; i < possibles.length; i++) {
 		var text = ele.value.toLowerCase();
-		if (possibles[i].slice(0,ele.value.length) == text || editDistance(possibles[i], text) <= 1) {
+		if (possibles[i].slice(0,ele.value.length).toLowerCase() == text || editDistance(possibles[i].toLowerCase(), text) <= 1) {
 			closeMatches[closeMatches.length] = possibles[i];
 		}
 	}
@@ -66,7 +144,16 @@ function dropdown(ele, doc) {
 	for (var i = 0; i < closeMatches.length; i++) {
 		var tr = doc.createElement("tr");
 		var td = doc.createElement("td");
+		td.setAttribute('id', 'item'+(i+1));
 		td.appendChild(doc.createTextNode(closeMatches[i]));
+		td.addEventListener("mouseover", function(e){
+			this.setAttribute("class", "selected");
+			current = this.firstChild.nodeValue;
+		}, false);
+		td.addEventListener("mouseout", function(e){
+			this.setAttribute("class", "");
+			current = doc.getElementById(boxType).value;
+		}, false);
 		tr.appendChild(td);
 		cBod.appendChild(tr);
 	}
@@ -101,7 +188,7 @@ policyPane = {
     		wdiv.setAttribute('id', 'noWebId');
     		
     		var noid = doc.createElement("p");
-    		noid.setAttribute("style", "width:500px");
+    		noid.setAttribute("class", "webIDText");
     		noid.appendChild(doc.createTextNode("You need a Web ID to use this feature and you do not appear to have one.  " +
     				"Once you have selected a Web ID you will be able to save your scenario files to your server and run them " +
     				"against the current policy."));
@@ -133,7 +220,7 @@ policyPane = {
     				var webIDBox = doc.createElement("input");
     				webIDBox.setAttribute('type', 'text');
     				webIDBox.setAttribute('size', '80');
-    				webIDBox.setAttribute('value', 'http://');
+    				webIDBox.setAttribute('value', 'http://dig.csail.mit.edu/2008/webdav/mjsweig/');
     				webIDBox.setAttribute('id', 'webidField');
     				
     				var webIDText = doc.createElement("p");
@@ -183,7 +270,7 @@ policyPane = {
     				initials.setAttribute('size', '10');
     				
     				var urlPrompt = doc.createElement("p");
-    				urlPrompt.setAttribute("style", "width:500px");
+    				urlPrompt.setAttribute("class", "webIDText");
     				urlPrompt.appendChild(doc.createTextNode("You need the URI of a file which you can write to on the web. " +
     						"(The general public should be able to read it but not change it. The server should support the WebDAV protocol.)" +
     						"It will typcially look something like: http://www.example.com/users/gates/foaf.rdf"));
@@ -284,12 +371,11 @@ policyPane = {
 		    
 		    var fieldset = doc.createElement("fieldset");
 		    
-		    var head = doc.createElement("p");
-		    head.setAttribute("style", "font-variant:small-caps; font-weight:bolder");
+		    var head = doc.createElement("h6");
 		    head.appendChild(doc.createTextNode("Ask Your Question Here:"));
 		    
 		    var inputDiv = doc.createElement("div");
-		    inputDiv.setAttribute("style","margin:10px; width:900px");
+		    inputDiv.setAttribute("class", "input");
 		    
 		    var txtinput = doc.createElement("p");
 		    txtinput.setAttribute('id', 'question');
@@ -298,96 +384,237 @@ policyPane = {
 		    sender.setAttribute("type", "text");
 		    sender.setAttribute("id", "sender");
 		    sender.addEventListener("keyup", function(e){
-		    	if (sender.value != "") {
-		    		dropdown(sender, doc);
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
 		    	}else{
-		    		
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    sender.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
 		    
-		    var senderProperties = new Array();
+		    
 		    var senderProperty = doc.createElement("input");
 		    senderProperty.setAttribute("type", "text");
 		    senderProperty.setAttribute("id", "sProp");
-		    senderProperty.addEventListener("change", function(e){
+		    senderProperty.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
-		    senderProperties[0] = senderProperty;
+		    senderProperty.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
 		    
-		    var senderTypes = new Array();
+		    
 		    var senderType = doc.createElement("input");
 		    senderType.setAttribute("type", "text");
 		    senderType.setAttribute("id", "sType");
-		    senderType.addEventListener("change", function(e){
+		    senderType.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
-		    senderTypes[0] = senderType;
+		    senderType.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
 		    
-		    var senderContexts = new Array();
 		    var senderContext = doc.createElement("input");
 		    senderContext.setAttribute("type", "text");
 		    senderContext.setAttribute("id", "sContext");
-		    senderContext.addEventListener("change", function(e){
+		    senderContext.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
-		    senderContexts[0] = senderContext;
+		    senderContext.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
 		    
 		    var action = doc.createElement("input");
 		    action.setAttribute("type", "text");
 		    action.setAttribute("id", "action");
-		    action.addEventListener("change", function(e){
+		    action.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    action.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
 		    
 		    var dataCategory = doc.createElement("input");
 		    dataCategory.setAttribute("type", "text");
 		    dataCategory.setAttribute("id", "dCat");
-		    dataCategory.addEventListener("change", function(e){
+		    dataCategory.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    dataCategory.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
 		    
 		    var specialDataCategory = doc.createElement("input");
 		    specialDataCategory.setAttribute("type", "text");
 		    specialDataCategory.setAttribute("id", "sDCat");
-		    specialDataCategory.addEventListener("change", function(e){
+		    specialDataCategory.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    specialDataCategory.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
 		    
 		    var dataContext = doc.createElement("input");
 		    dataContext.setAttribute("type", "text");
 		    dataContext.setAttribute("id", "dCon");
-		    dataContext.addEventListener("change", function(e){
+		    dataContext.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    dataContext.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
 		    
 		    var actionMatch = doc.createElement("input");
 		    actionMatch.setAttribute("type", "text");
 		    actionMatch.setAttribute("id", "aMatch");
-		    actionMatch.addEventListener("change", function(e){
+		    actionMatch.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    actionMatch.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
 		    
 		    var requester = doc.createElement("input");
 		    requester.setAttribute("type", "text");
 		    requester.setAttribute("id", "requester");
-		    requester.addEventListener("change", function(e){
+		    requester.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    requester.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
 		    
-		    var requesterProperties = new Array();
 		    var requesterProperty = doc.createElement("input");
 		    requesterProperty.setAttribute("type", "text");
 		    requesterProperty.setAttribute("id", "rProp");
-		    requesterProperty.addEventListener("change", function(e){
+		    requesterProperty.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
-		    requesterProperties[0] = requesterProperty;
+		    requesterProperty.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
 		    
-		    var requesterTypes = new Array();
 		    var requesterType = doc.createElement("input");
 		    requesterType.setAttribute("type", "text");
 		    requesterType.setAttribute("id", "rType");
-		    requesterType.addEventListener("change", function(e){
+		    requesterType.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
-		    requesterTypes[0] = requesterType;
+		    requesterType.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
 		    
-		    var requesterContexts = new Array();
 		    var requesterContext = doc.createElement("input");
 		    requesterContext.setAttribute("type", "text");
 		    requesterContext.setAttribute("id", "rContext");
-		    requesterContext.addEventListener("change", function(e){
+		    requesterContext.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    	}
 		    }, false);
-		    requesterContexts[0] = requesterContext;
+		    requesterContext.addEventListener("blur", function(e){
+				this.value = current;
+				current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
 		    
 		    
 		    txtinput.appendChild(doc.createTextNode("Is a person or system from "));
@@ -416,15 +643,6 @@ policyPane = {
 		    txtinput.appendChild(requesterContext);
 		    txtinput.appendChild(doc.createTextNode("?"));
 		    
-//		    var txtinput = doc.createElement("Textarea");
-//		    txtinput.setAttribute("id","log");
-//		    txtinput.setAttribute("rows","10");
-//		    txtinput.setAttribute("cols","70");
-//		    txtinput.defaultValue = "Is a person or system from ________________ with ___________________ who _____________________" +
-//		    		" permitted to ___________________data or a document about ______________ that is _______________ " +
-//		    		"and _____________________ if the other party (_________) is _______________ with ___________________ " +
-//		    		"who ___________________?";
-		    
 		    var buttondiv = doc.createElement("div");
 		    
 		    var btninput = doc.createElement("input");
@@ -432,7 +650,41 @@ policyPane = {
 		    btninput.setAttribute("value","Go");
 		    btninput.addEventListener("click", function(){
 		    	function constructLog() {
-		    		//TODO generate log from default sentence?
+		    		function makeTriple(s, v, o) {
+		    			return s + " " + v + " " + o + ".\n";
+		    		}
+		    		var log = "";
+		    		//TODO
+		    		if (_senders[doc.getElementById("sender").value]) {
+		    			log += makeTriple(_senders[doc.getElementById("sender").value], rdf('type'), pri('Federal_Agency'));
+		    		}
+		    		if (_actions[doc.getElementById("action").value]) {
+		    			log += makeTriple(facts('mainAction'), rdf('type'), _actions[doc.getElementById("action").value]);
+		    		}
+		    		if (_senders[doc.getElementById("sender").value]) {
+		    			log += makeTriple(facts('mainAction'), pri('by'), _senders[doc.getElementById("sender").value]);
+		    		}
+		    		if(_reqs[doc.getElementById("requester").value]) {
+		    			log += makeTriple(facts('mainAction'), pri('to'), _reqs[doc.getElementById("requester").value]);
+		    		}
+		    		log += facts('mainAction') + " " + pri('data') + " " + facts('data') + ".\n";
+		    		if(_specialDataCats[doc.getElementById("sDCat").value]) {
+		    			log += makeTriple(facts('data'), rdf('type'), _specialDataCats[doc.getElementById("sDCat").value]);
+		    		}
+		    		if(_dataCats[doc.getElementById('dCat').value]) {
+		    			log += makeTriple(facts('subject'), rdf('type'), _dataCats[doc.getElementById('dCat').value]);
+		    		}
+		    		log += makeTriple(facts('data'), pri('about'), facts('subject'));
+		    		if (_dataContexts[doc.getElementById("dCon").value]) {
+		    			log += facts('data') + _dataContexts[doc.getElementById("dCon").value] + ".\n";
+		    		}
+		    		if (_senderContexts[doc.getElementById("sContext").value]) {
+		    			log += makeTriple(facts('other'), rdf('type'), _senderContexts[doc.getElementById("sContext").value]);
+		    		}
+		    		if (_senders[doc.getElementById("sender").value] && _senderProps[doc.getElementById("sProp").value] && _senderTypes[doc.getElementById("sType").value]) {
+		    			log += makeTriple(_senders[doc.getElementById("sender").value], _senderProps[doc.getElementById("sProp").value], _senderTypes[doc.getElementById("sType").value])
+		    		}
+		    		return log;
 		    	};
 		    	var xhr = tabulator.util.XMLHTTPFactory();
 		    	xhr.open('PUT', uri, false);
@@ -445,7 +697,7 @@ policyPane = {
 		    }, false);
 		    
 		    var forgetDiv = doc.createElement("div");
-		    forgetDiv.setAttribute('style', 'width: 600px; border: medium dashed black; padding: 5px');
+		    forgetDiv.setAttribute('class', 'forget');
 		    
 		    var currentID = doc.createElement("p");
 		    currentID.appendChild(doc.createTextNode("Your current Web ID is "));
@@ -478,7 +730,7 @@ policyPane = {
 		    div.appendChild(form);
 		    div.appendChild(forgetDiv);
     	}
-	    div.setAttribute("style","border: 3px groove red");
+	    div.setAttribute("class", "policy");
 	    return div;
     }
 };

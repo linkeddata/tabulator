@@ -34,7 +34,7 @@ tabulator.panes.register ({
             kludge.add(s.subject, s.predicate, s.object);
         }
         */
-        var sz = Serializer();
+        var sz = tabulator.rdf.Serializer(kb);
         sz.suggestNamespaces(kb.namespaces);
         sz.setBase(subject.uri);
         var str = sz.statementsToXML(sts)

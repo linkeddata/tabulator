@@ -20,6 +20,7 @@ tabulator.panes.internalPane = {
     },
     
     render: function(subject, myDocument) {
+        var $r = tabulator.rdf;
         var kb = tabulator.kb;
         subject = kb.canon(subject);
         function filter(pred, inverse) {
@@ -31,8 +32,8 @@ tabulator.panes.internalPane = {
 //        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
-        if (subject.uri) plist.push(new RDFStatement(subject,
-                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, sf.appNode));
+        if (subject.uri) plist.push(new $r.Statement(subject,
+                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, tabulator.sf.appNode));
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, filter)    

@@ -46,7 +46,7 @@ airPane.label = function(subject) {
 			//Keep track of the subjects of the statements in the global variables above and return "Justify"
 			//which will be the tool-tip text of the label icon
 			if (sts[0].predicate.toString() == ap_compliant.toString()){
-                var compliantString = label(sts[0].subject) + " is compliant with " + label(sts[0].object);
+                var compliantString = tabulator.Util.label(sts[0].subject) + " is compliant with " + tabulator.Util.label(sts[0].object);
                 var compliantArr = [];
                 compliantArr.push(sts[0].object);
                 compliantArr.push(ap_compliant.toString());
@@ -54,7 +54,7 @@ airPane.label = function(subject) {
 				justificationsArr.push(compliantArr);
             }
 			if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
-                var nonCompliantString = label(sts[0].subject) + " is non compliant with " + label(sts[0].object);
+                var nonCompliantString = tabulator.Util.label(sts[0].subject) + " is non compliant with " + tabulator.Util.label(sts[0].object);
                 var nonCompliantArr = [];
                 nonCompliantArr.push(sts[0].object);
                 nonCompliantArr.push(ap_nonCompliant.toString());
@@ -173,7 +173,7 @@ airPane.render = function(subject, myDocument) {
                 var td_s = myDocument.createElement("td");
                 var a_s = myDocument.createElement('a')
                 a_s.setAttribute('href', stsFound.subject.uri)
-                a_s.appendChild(myDocument.createTextNode(label(stsFound.subject)));
+                a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
                 td_s.appendChild(a_s);
                 tr.appendChild(td_s);
 
@@ -184,14 +184,14 @@ airPane.render = function(subject, myDocument) {
                 var td_p = myDocument.createElement("td");
                 var a_p = myDocument.createElement('a');
                 a_p.setAttribute('href', stsFound.predicate.uri)
-                a_p.appendChild(myDocument.createTextNode(label(stsFound.predicate)));
+                a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
                 td_p.appendChild(a_p);
                 tr.appendChild(td_p);
 
                 var td_o = myDocument.createElement("td");
                 var a_o = myDocument.createElement('a')
                 a_o.setAttribute('href', stsFound.object.uri)
-                a_o.appendChild(myDocument.createTextNode(label(stsFound.object)));
+                a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
                 td_o.appendChild(a_o);
                 tr.appendChild(td_o);
 
@@ -247,7 +247,7 @@ airPane.render = function(subject, myDocument) {
                                 if (obj.elements[i].termType == 'symbol') {
                                     var anchor = myDocument.createElement('a');
                                     anchor.setAttribute('href', obj.elements[i].uri);
-                                    anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
+                                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj.elements[i])));
                                     //anchor.appendChild(myDocument.createTextNode(obj.elements[i]));
                                     divDescription.appendChild(anchor);
                                 }
@@ -553,7 +553,7 @@ airPane.render = function(subject, myDocument) {
 		var td_s = myDocument.createElement("td");
 		var a_s = myDocument.createElement('a')
 		a_s.setAttribute('href', stsFound.subject.uri)
-		a_s.appendChild(myDocument.createTextNode(label(stsFound.subject)));
+		a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
 		td_s.appendChild(a_s);
 		tr.appendChild(td_s);
 
@@ -564,14 +564,14 @@ airPane.render = function(subject, myDocument) {
 		var td_p = myDocument.createElement("td");
 		var a_p = myDocument.createElement('a');
 		a_p.setAttribute('href', stsFound.predicate.uri)
-		a_p.appendChild(myDocument.createTextNode(label(stsFound.predicate)));
+		a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
 		td_p.appendChild(a_p);
 		tr.appendChild(td_p);
 
 		var td_o = myDocument.createElement("td");
 		var a_o = myDocument.createElement('a')
 		a_o.setAttribute('href', stsFound.object.uri)
-		a_o.appendChild(myDocument.createTextNode(label(stsFound.object)));
+		a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
 		td_o.appendChild(a_o);
 		tr.appendChild(td_o);
 
@@ -648,7 +648,7 @@ airPane.render = function(subject, myDocument) {
 						case 'symbol':
 							var anchor = myDocument.createElement('a')
 							anchor.setAttribute('href', obj.elements[i].uri)
-							anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
+							anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj.elements[i])));
 							divDescription.appendChild(anchor);
 							
 						case 'literal':
@@ -926,7 +926,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         var td_s = myDocument.createElement("td");
         var a_s = myDocument.createElement('a')
         a_s.setAttribute('href', stsFound.subject.uri)
-        a_s.appendChild(myDocument.createTextNode(label(stsFound.subject)));
+        a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
         td_s.appendChild(a_s);
         tr.appendChild(td_s);
 
@@ -937,7 +937,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         var td_p = myDocument.createElement("td");
         var a_p = myDocument.createElement('a');
         a_p.setAttribute('href', stsFound.predicate.uri);
-        a_p.appendChild(myDocument.createTextNode(label(stsFound.predicate)));
+        a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
         td_p.appendChild(a_p);
         tr.appendChild(td_p);
 
@@ -948,7 +948,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	} else {
 	  var a_o = myDocument.createElement('a');
 	  a_o.setAttribute('href', stsFound.object.uri);
-	  a_o.appendChild(myDocument.createTextNode(label(stsFound.object)));
+	  a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
 	}
         td_o.appendChild(a_o);
         tr.appendChild(td_o);
@@ -1068,7 +1068,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		case 'symbol':
 		  var anchor = myDocument.createElement('a');
 		  anchor.setAttribute('href', element.uri);
-		  anchor.appendChild(myDocument.createTextNode(label(element)));
+		  anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(element)));
 		  p.appendChild(anchor);
 		  p.appendChild(myDocument.createTextNode(" "));
 		  break;
@@ -1081,7 +1081,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	      p.appendChild(myDocument.createTextNode(". "));
 	      if(firstLevel){
 		divDescription.appendChild(p);
-		var one_statement_formula = new RDFIndexedFormula();
+		var one_statement_formula = new tabulator.rdf.IndexedFormula();
 		one_statement_formula.statements.push(st)
 		p.AJAR_formula = one_statement_formula;
 		function make_callback(st, p, divDescription){

@@ -57,6 +57,7 @@ var tOpenOutliner = function(e) {
 //Delete the main handler for application/rdf+xml, so that our stuff works instead.
 var tabExtension = {
     init: function() {
+        
         var appcontent = document.getElementById("appcontent");   // browser
         if(appcontent) {
             var catman = Components.classes["@mozilla.org/categorymanager;1"]
@@ -76,9 +77,4 @@ var tabExtension = {
         }
     },
     
-    externalQueryRequestListener: function(e) {
-        
-    }
 };
-    
-document.addEventListener("TabulatorQueryRequest", function(e) {tabExtension.externalQueryRequestListener(e);},false,true);

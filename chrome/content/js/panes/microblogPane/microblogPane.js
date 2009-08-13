@@ -2,7 +2,6 @@
  Microblog pane
  Charles McKenzie <charles2@mit.edu>
 */
-dump("whatever");
 tabulator.panes.register(tabulator.panes.microblogPane = {
 
     icon: tabulator.Icon.src.icon_mb,
@@ -177,6 +176,36 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                     kb.add(the_user, FOAF('holdsAccount'), the_account, the_user.uri.split("#")[0]);
                 }
             }
+        };
+        Microblog.prototype.getUser = function(uri){
+            User = new Object();
+            User.name = (kb.any(uri, SIOC("name")))? kb.any(uri, SIOC("name")):"";
+            User.avatar = (kb.any(uri, SIOC("avatar"))) ?  kb.any(uri, SIOC("avatar")) :"";
+            User.id = kb.any(uri, SIOC("id"));
+            return User;
+        };
+
+        Microblog.prototype.getPost =  function(uri){
+            Post = new Object();
+            // date ----------
+            var postLink = new Date();
+                postLink = postLink.parseISOdate(String(kb.any(uri, terms('created'))));
+            var h = postLink.getHours();
+            var a = (h > 12) ? " PM": " AM";
+            h = (h > 12) ? (h - 12) : h;
+            var m = postLink.getMinutes();
+            m = (m < 10) ? "0" + m: m;
+            var mo = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var da = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            var ds = da[postLink.getDay()] + " " + postLink.getDate() + " " + mo[postLink.getMonth()] + " " + postLink.getFullYear();
+            postLink = h + ":" + m + a + " on " + ds;
+            Post.date = postLink;
+            //---------
+            Post.mentions =""; 
+            Post.message = String(kb.any(uri, SIOC("content")));
+            Post.creator = kb.any(uri, SIOC('has_creator'));
+            Post.uri = "";
+            return Post;
         };
         Microblog.prototype.gen_random_uri = function(base) {
             //generate random uri
@@ -629,26 +658,24 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 }
             }
             if (this.creator) {
+                var creator = mb.getUser(this.creator);
                 //---display avatar, if available ---
-                var mb_avatar = (kb.any(this.creator, SIOC("avatar"))) ? kb.any(this.creator, SIOC("avatar")) : "";
-                if (mb_avatar !== "") {
+                if (creator.avatar !== "") {
                     var avatar = doc.createElement('img');
-                    avatar.src = mb_avatar.uri;
+                        avatar.src = creator.avatar.uri;
                     subheaderContainer.appendChild(avatar);
                 }
                 //---generate name ---
                 var userName = doc.createElement('h1');
-                userName.className = "fn";
-                var username = kb.any(this.creator, SIOC("name"));
-                var uid = kb.any(this.creator, SIOC("id"));
-                userName.appendChild(doc.createTextNode(username + " (" + uid + ")"));
+                    userName.className = "fn";
+                    userName.appendChild(doc.createTextNode(creator.name + " (" + creator.id + ")"));
                 subheaderContainer.appendChild(userName);
                 //---display follow button---
                 if (!this.thisIsMe && mb.getMyURI()) {
                     var xfollowButton = doc.createElement('input');
                     xfollowButton.setAttribute("type", "button");
                     followButtonLabel = (this.Ifollow) ? "Unfollow ": "Follow ";
-                    xfollowButton.value = followButtonLabel + username;
+                    xfollowButton.value = followButtonLabel + creator.name;
                     xfollowButton.addEventListener('click', lsFollowUser, false);
                     subheaderContainer.appendChild(xfollowButton);
                 }
@@ -684,24 +711,24 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             };
             //container for post
             var xpost = doc.createElement('li');
-            xpost.className = "post";
-            xpost.setAttribute("id", String(post.uri).split("#")[1]);
+                xpost.className = "post";
+                xpost.setAttribute("id", String(post.uri).split("#")[1]);
+            var Post = mb.getPost(post);
             //username text
             var uname = kb.any(kb.any(post, SIOC('has_creator')), SIOC('id'));
             var uholdsaccount = kb.any(undefined, FOAF('holdsAccount'), kb.any(post, SIOC('has_creator')));
             var xuname = doc.createElement('a');
             xuname.href = uholdsaccount.uri;
             xuname.className = "userLink";
-            var xunameText = doc.createTextNode(uname);
+            var xunameText = doc.createTextNode(mb.getUser(Post.creator).id);
             xuname.appendChild(xunameText);
             //user image
-            var uavatar = kb.any(kb.any(post, SIOC('has_creator')), SIOC('avatar'));
             var xuavatar = doc.createElement('img');
-            xuavatar.src = uavatar.uri;
-            xuavatar.className = "postAvatar";
+                xuavatar.src = mb.getUser(Post.creator).avatar.uri;
+                xuavatar.className = "postAvatar";
             //post content
             var xpostContent = doc.createElement('blockquote');
-            var postText = String(kb.any(post, SIOC("content")));
+            var postText = Post.message;
             //post date
             var xpostLink = doc.createElement("a");
             xpostLink.className = "postLink";
@@ -713,18 +740,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             xpostLink.id = "post_" + String(post.uri).split("#")[1];
             xpostLink.setAttribute("content", post.uri);
             xpostLink.setAttribute("property", "permalink");
-            var postLink = new Date();
-            postLink = postLink.parseISOdate(String(kb.any(post, terms('created'))));
-            var h = postLink.getHours();
-            var a = (h > 12) ? " PM": " AM";
-            h = (h > 12) ? (h - 12) : h;
-            var m = postLink.getMinutes();
-            m = (m < 10) ? "0" + m: m;
-            var mo = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            var da = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-            var ds = da[postLink.getDay()] + " " + postLink.getDate() + " " + mo[postLink.getMonth()] + " " + postLink.getFullYear();
-            postLink = h + ":" + m + a + " on " + ds;
-            postLink = doc.createTextNode((postLink) ? postLink: "post date unknown");
+            postLink = doc.createTextNode((Post.date) ? Post.date: "post date unknown");
             xpostLink.appendChild(postLink);
 
 
@@ -774,7 +790,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             //END LINK META DATA
             //add the reply to and delete buttons to the interface
             var mbReplyTo = function() {
-                var id = kb.any(kb.any(post, SIOC('has_creator')), SIOC("id"));
+                var id = mb.getUser(Post.creator).id;
                 xupdateStatus.value = "@" + id + " ";
                 xupdateStatus.focus();
                 xinReplyToContainer.value = post.uri;
@@ -915,7 +931,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             /*
             generatePostList - Generate the posts and 
             display their results on the interface.
-        */
+            */
             var post_list = doc.createElement('ul');
             var postlist = new Object();
             var datelist = new Array();
@@ -1072,4 +1088,3 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
     }
 },
 true);
-dump("bork");

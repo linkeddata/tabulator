@@ -228,26 +228,26 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
 
             //generate new post
             var batch = [
-            new RDFStatement(newPost, RDF('type'), SIOCt('MicroblogPost'), myUser),
-            new RDFStatement(newPost, SIOC('has_creator'), kb.sym(myUserURI), myUser),
-            new RDFStatement(newPost, SIOC('content'), statusMsg, myUser),
-            new RDFStatement(newPost, terms('created'), String(new Date().getISOdate()), myUser),
-            new RDFStatement(micro, SIOC('container_of'), newPost, myUser)
+            new tabulator.rdf.Statement(newPost, RDF('type'), SIOCt('MicroblogPost'), myUser),
+            new tabulator.rdf.Statement(newPost, SIOC('has_creator'), kb.sym(myUserURI), myUser),
+            new tabulator.rdf.Statement(newPost, SIOC('content'), statusMsg, myUser),
+            new tabulator.rdf.Statement(newPost, terms('created'), String(new Date().getISOdate()), myUser),
+            new tabulator.rdf.Statement(micro, SIOC('container_of'), newPost, myUser)
             ];
 
             // message replies
             if (replyTo) {
-                batch.push(new RDFStatement(newPost, SIOC('reply_of'), kb.sym(replyTo), myUser));
+                batch.push(new tabulator.rdf.Statement(newPost, SIOC('reply_of'), kb.sym(replyTo), myUser));
             }
 
             // @replies, #hashtags, !groupReplies
             for (var r in meta.recipients) {
-                batch.push(new RDFStatement(newPost, SIOC('topic'), kb.sym(meta.recipients[r]), myUser));
-                batch.push(new RDFStatement(kb.any(), SIOC("container_of"), newPost, myUser));
+                batch.push(new tabulator.rdf.Statement(newPost, SIOC('topic'), kb.sym(meta.recipients[r]), myUser));
+                batch.push(new tabulator.rdf.Statement(kb.any(), SIOC("container_of"), newPost, myUser));
                 var mblogs = kb.each(kb.sym(meta.recipients[r]), SIOC('creator_of'));
                 for (var mbl in mblogs) {
                     if (kb.whether(mblogs[mbl], SIOC('topic'), kb.sym(meta.recipients[r]))) {
-                        var replyBatch = new RDFStatement(
+                        var replyBatch = new tabulator.rdf.Statement(
                         mblogs[mbl],
                         SIOC("container_of"),
                         newPost,
@@ -289,28 +289,28 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
 
             var genUserMB = [
             //user
-            new RDFStatement(kb.sym(host + "#" + id), RDF('type'), SIOC('User'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + "#" + id), SIOC('creator_of'), kb.sym(host + '#mb'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + "#" + id), SIOC('creator_of'), kb.sym(host + '#mbn'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + "#" + id), SIOC('creator_of'), kb.sym(host + '#fav'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + "#" + id), SIOC('name'), name, kb.sym(host)),
-            new RDFStatement(kb.sym(host + "#" + id), SIOC('id'), id, kb.sym(host)),
-            new RDFStatement(kb.sym(host + "#" + id), RDF('label'), id, kb.sym(host)),
-            new RDFStatement(s, FOAF('holdsAccount'), kb.sym(host + "#" + id), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), RDF('type'), SIOC('User'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('creator_of'), kb.sym(host + '#mb'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('creator_of'), kb.sym(host + '#mbn'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('creator_of'), kb.sym(host + '#fav'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('name'), name, kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('id'), id, kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + "#" + id), RDF('label'), id, kb.sym(host)),
+            new tabulator.rdf.Statement(s, FOAF('holdsAccount'), kb.sym(host + "#" + id), kb.sym(host)),
             //microblog
-            new RDFStatement(kb.sym(host + '#mb'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + '#mb'), SIOC('has_creator'), kb.sym(host + "#" + id), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + '#mb'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + '#mb'), SIOC('has_creator'), kb.sym(host + "#" + id), kb.sym(host)),
             //notification microblog
-            new RDFStatement(kb.sym(host + '#mbn'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + '#mbn'), SIOC('topic'), kb.sym(host + "#" + id), kb.sym(host)),
-            new RDFStatement(kb.sym(host + '#mbn'), SIOC('has_creator'), kb.sym(host + "#" + id), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + '#mbn'), RDF('type'), SIOCt('Microblog'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + '#mbn'), SIOC('topic'), kb.sym(host + "#" + id), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + '#mbn'), SIOC('has_creator'), kb.sym(host + "#" + id), kb.sym(host)),
             //favorites container
-            new RDFStatement(kb.sym(host + '#fav'), RDF('type'), SIOCt('FavouriteThings'), kb.sym(host)),
-            new RDFStatement(kb.sym(host + '#fav'), SIOC('has_creator'), kb.sym(host + '#' + id), kb.sym(host))
+            new tabulator.rdf.Statement(kb.sym(host + '#fav'), RDF('type'), SIOCt('FavouriteThings'), kb.sym(host)),
+            new tabulator.rdf.Statement(kb.sym(host + '#fav'), SIOC('has_creator'), kb.sym(host + '#' + id), kb.sym(host))
             ];
             if (avatar) {
                 //avatar optional
-                genUserMB.push(new RDFStatement(kb.sym(host + "#" + id), SIOC('avatar'), kb.sym(avatar), kb.sym(host)));
+                genUserMB.push(new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('avatar'), kb.sym(avatar), kb.sym(host)));
             }
             this.sparqlUpdater.insert_statement(genUserMB, cbgenUserMB);
 
@@ -417,7 +417,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                         notify("You " + doFollow + username + ".");
                     }
                 };
-                followMe = new RDFStatement(myUser, SIOC('follows'), creator, myUser);
+                followMe = new tabulator.rdf.Statement(myUser, SIOC('follows'), creator, myUser);
                 xfollowButton.disabled = true;
                 xfollowButton.value = "Updating...";
                 if (!Ifollow) {

@@ -394,7 +394,20 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             this.xfollows = this.followsView()
             
             
-        }     
+        } 
+        
+        Pane.prototype.notify = function(messageString) {
+            var xmsg = doc.createElement('li');
+            xmsg.className = "notify";
+            xmsg.innerHTML = messageString;
+            doc.getElementById("notify-container").appendChild(xmsg);
+            setTimeout(function() {
+                doc.getElementById('notify-container').removeChild(xmsg);
+                delete xmsg;
+            },
+            4000);
+        };
+
         Pane.prototype.header = function(s,doc){
             postNotificationContainer = this.postNotificationContainer;
             lsFollowUser = function() {
@@ -692,6 +705,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             generatePost - Creates and formats microblog posts 
                 post - symbol of the uri the post in question
         */
+            var that=this;
             var viewPost = function(uris) {
                 for (var n in xviewReply.childNodes) {
                     xviewReply.removeChild(xviewReply.childNodes[0]);
@@ -836,13 +850,13 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                     //callback after deletion
                     var mbconfirmDeletePost = function(a, success) {
                         if (success) {
-                            notify("Post deleted.");
+                            that.notify("Post deleted.");
                             //update the ui to reflect model changes.
                             var deleteThisNode = evt.target.parentNode;
                             deleteThisNode.parentNode.removeChild(deleteThisNode);
                             kb.removeMany(deleteMe);
                         } else {
-                            notify("Oops, there was a problem, please try again");
+                            that.notify("Oops, there was a problem, please try again");
                             evt.target.disabled = true;
                         }
                     };
@@ -854,7 +868,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                             "post_" + evt.target.parentNode.id).getAttribute("content")));
                             sparqlUpdater.batch_delete_statement(deleteContainer, mbconfirmDeletePost);
                         } else {
-                            notify("Oops, there was a problem, please try again");
+                            that.notify("Oops, there was a problem, please try again");
                             evt.target.disabled = false;
                         }
                     };

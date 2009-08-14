@@ -27,6 +27,7 @@
     
     // namespace and shorthand for concepts in the tag ontology
     var RDF = tabulator.rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    var RDFS = tabulator.rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
     var TAGS = tabulator.rdf.Namespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
     var PAC = tabulator.rdf.Namespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
     

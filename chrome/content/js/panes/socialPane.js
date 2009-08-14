@@ -22,6 +22,8 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
     render: function(s, myDocument) {
 
+        var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+
 	    var common = function(x,y) { // Find common members of two lists
     //            var dict = [];
             var both = [];
@@ -86,14 +88,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert("Error occurs while inserting "+statement+'\n\n'+error_body);
+                                prompts.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
                                 input.checked = false; //rollback UI
                                 return;
                             }
                             kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
                         })
                     }catch(e){
-                        alert("Data write fails:" + e);
+                        prompts.alert(null,"Message","Data write fails:" + e);
                         input.checked = false; //rollback UI
                         tx.className = 'question';
                     }
@@ -102,14 +104,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert("Error occurs while deleting "+statement+'\n\n'+error_body);
+                                prompts.alert(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
                                 this.checked = true; // Rollback UI
                             } else {
                                 kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
                             }
                         })
                     }catch(e){
-                        alert("Delete fails:" + e);
+                        prompts.alert(null,"Message","Delete fails:" + e);
                         this.checked = true; // Rollback UI
                         return;
                     }
@@ -168,7 +170,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         gotOne = function(ele) {
             var webid = myDocument.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
-            alert("You ID has been set to "+webid);
+            prompts.alert(null,"Message","You ID has been set to "+webid);
             ele.parentNode.removeChild(ele);
         }
 
@@ -401,7 +403,7 @@ web ID</a>?<br/>\
             but.setAttribute('value', 'Forget my Web ID');
             var zapIt = function() {
                 tabulator.preferences.set('me','');
-                alert('Your Web ID was '+me_uri+'. It has been forgotten.');
+                prompts.alert(null,"Message",'Your Web ID was '+me_uri+'. It has been forgotten.');
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             but.addEventListener('click', zapIt, false);
@@ -421,7 +423,7 @@ web ID</a>?<br/>\
             var myHandler = function(e) {
                 var uri = this.checked? s.uri : '';
                 tabulator.preferences.set('me', uri);
-                alert('Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
+                prompts.alert(null,"Message",'Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             input.setAttribute('type', 'checkbox');
@@ -520,7 +522,7 @@ web ID</a>?<br/>\
 
                 if (editable) {
                     var f = buildCheckboxForm("You know " + familiar,
-                            new RDFStatement(me, knows, s, profile), outgoing)
+                            new tabulator.rdf.Statement(me, knows, s, profile), outgoing)
                     tools.appendChild(f);
                 } // editable
                  

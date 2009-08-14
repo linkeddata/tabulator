@@ -520,7 +520,7 @@ web ID</a>?<br/>\
 
                 if (editable) {
                     var f = buildCheckboxForm("You know " + familiar,
-                            new RDFStatement(me, knows, s, profile), outgoing)
+                            new tabulator.rdf.Statement(me, knows, s, profile), outgoing)
                     tools.appendChild(f);
                 } // editable
                  

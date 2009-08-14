@@ -58,7 +58,7 @@ YAHOO.util.Event=function(){
 YAHOO.util.DDExternalProxy =
 function DDExternalProxy(el){
     this.initTarget(el);
-    YAHOO.util.Event.on(this.el, "mousedown", this.handleMouseDown, this, 'dragMouseDown'/*, true*/);       
+    //YAHOO.util.Event.on(this.el, "mousedown", this.handleMouseDown, this, 'dragMouseDown'/*, true*/);       
 }
 //YAHOO.util.DDExternalProxy extends YAHOO.utilDDProxy
 YAHOO.util.DDExternalProxy.prototype={
@@ -169,8 +169,8 @@ YAHOO.util.DDM=function DDM(){
             //            DDM.startDrag(DDM.startX, DDM.startY); 
             //        }, 
             //        this.clickTimeThresh );
-            YAHOO.util.Event.on(el,'mousemove',this.handleMouseMove,this,'dragMouseMove');
-            YAHOO.util.Event.on(el,'mouseup'  ,this.handleMouseUp  ,this,'dragMouseUp');
+            //YAHOO.util.Event.on(el,'mousemove',this.handleMouseMove,this,'dragMouseMove');
+            //YAHOO.util.Event.on(el,'mouseup'  ,this.handleMouseUp  ,this,'dragMouseUp');
         },
         
         handleMouseMove: function(e) {
@@ -280,7 +280,7 @@ onDragEnter: function(e,dragSession){ //enter or exit something
                 YAHOO.util.Event.off(targetTd,'mouseup','dragMouseUp');
             }
             targetTd.tabulatorSelect();
-            YAHOO.util.Event.on(targetTd,'mouseup',this.DDM.handleMouseUp,this.DDM,'dragMouseUp');
+            //YAHOO.util.Event.on(targetTd,'mouseup',this.DDM.handleMouseUp,this.DDM,'dragMouseUp');
             break;
         }
     }

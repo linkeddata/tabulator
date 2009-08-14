@@ -71,9 +71,9 @@ var tabExtension = {
             if (!isFirefox3())  sf.requestURI("chrome://tabulator/content/internalKnowledge.n3",ThisSession);
             
             //gBrowser.setAttribute('ondraggesture', 'nsDragAndDrop.startDrag(event, TabulatorOutlinerObserver)');
-            gBrowser.setAttribute('ondragdrop' ,'nsDragAndDrop.drop(event,TabulatorOutlinerObserver)');
-            gBrowser.setAttribute('ondragenter','nsDragAndDrop.dragEnter(event,TabulatorOutlinerObserver)');
-            gBrowser.setAttribute('ondragexit' ,'nsDragAndDrop.dragExit(event,TabulatorOutlinerObserver)');
+            //gBrowser.setAttribute('ondragdrop' ,'nsDragAndDrop.drop(event,TabulatorOutlinerObserver)');
+            //gBrowser.setAttribute('ondragenter','nsDragAndDrop.dragEnter(event,TabulatorOutlinerObserver)');
+            //gBrowser.setAttribute('ondragexit' ,'nsDragAndDrop.dragExit(event,TabulatorOutlinerObserver)');
         }
     },
     

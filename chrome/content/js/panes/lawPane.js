@@ -51,7 +51,7 @@ LawPane.display = function(myDocument,obj){
             case 'symbol':
                 var anchor = myDocument.createElement('a')
                 anchor.setAttribute('href', obj.elements[i].uri)
-                anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
+                anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj.elements[i])));
                 div.appendChild(anchor);
                 
             case 'literal':
@@ -93,7 +93,7 @@ LawPane.render = function(subject, myDocument) {
     var log = uris.pop();
     
     //Retrieve policy file to get the description of the policy
-	var xmlhttp = Util.XMLHTTPFactory();
+	var xmlhttp = tabulator.rdf.Util.XMLHTTPFactory();
 	xmlhttp.onreadystatechange=state_Change;
 	xmlhttp.open("GET",policy,true);
 	xmlhttp.send(null);
@@ -194,7 +194,7 @@ LawPane.render = function(subject, myDocument) {
     td_issue_data.appendChild(myDocument.createTextNode(' comply with '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
-    a_policy.appendChild(myDocument.createTextNode(label(stsFound[0].object)));
+    a_policy.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[0].object)));
     td_issue_data.appendChild(a_policy);
     tr_issue_data.appendChild(td_issue_data);
     table_issue_data.appendChild(tr_issue_data);
@@ -389,7 +389,7 @@ LawPane.render = function(subject, myDocument) {
             var td_s = myDocument.createElement("td");
             var a_s = myDocument.createElement('a')
             a_s.setAttribute('href', stsFound[i].subject.uri)
-            a_s.appendChild(myDocument.createTextNode(label(stsFound[i].subject)));
+            a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[i].subject)));
             td_s.appendChild(a_s);
             tr.appendChild(td_s);
 
@@ -398,13 +398,13 @@ LawPane.render = function(subject, myDocument) {
             tr.appendChild(td_is);
 
             var td_p = myDocument.createElement("td");
-            td_p.appendChild(myDocument.createTextNode(label(stsFound[i].predicate)));
+            td_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[i].predicate)));
 			tr.appendChild(td_p);
 			
             var td_o = myDocument.createElement("td");
             var a_o = myDocument.createElement('a')
             a_o.setAttribute('href', stsFound[i].object.uri)
-            a_o.appendChild(myDocument.createTextNode(label(stsFound[i].object)));
+            a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[i].object)));
             td_o.appendChild(a_o);
             tr.appendChild(td_o);
             table_inner.appendChild(tr);

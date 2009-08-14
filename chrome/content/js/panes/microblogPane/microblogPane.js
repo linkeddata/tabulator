@@ -182,6 +182,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             User.name = (kb.any(uri, SIOC("name")))? kb.any(uri, SIOC("name")):"";
             User.avatar = (kb.any(uri, SIOC("avatar"))) ?  kb.any(uri, SIOC("avatar")) :"";
             User.id = kb.any(uri, SIOC("id"));
+            User.sym = uri;
             return User;
         };
 
@@ -410,10 +411,13 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
 
         Pane.prototype.header = function(s,doc){
             postNotificationContainer = this.postNotificationContainer;
+            var that = this;
             lsFollowUser = function() {
                 var myUser = kb.sym(mb.getMyURI());
-                var mbconfirmFollow = function(uri, stat, msg) {
-                    if (stat === true) {
+                var Ifollow = that.Ifollow;
+                var username = that.creator.name;
+                var mbconfirmFollow = function(uri,success, msg) {
+                    if (success=== true) {
                         if (!Ifollow) {
                             //prevent duplicate entries from being added to kb (because that was happening)
                             if (!kb.whether(followMe.subject, followMe.predicate, followMe.object, followMe.why)) {
@@ -427,13 +431,13 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                         followButtonLabel = (Ifollow) ? "Unfollow ": "Follow ";
                         var doFollow = (Ifollow) ? "now follow ": "no longer follow ";
                         xfollowButton.value = followButtonLabel + username;
-                        notify("You " + doFollow + username + ".");
+                        that.notify("You " + doFollow + username + ".");
                     }
                 };
-                followMe = new tabulator.rdf.Statement(myUser, SIOC('follows'), creator, myUser);
+                var followMe = new tabulator.rdf.Statement(myUser, SIOC('follows'), that.creator.sym, myUser);
                 xfollowButton.disabled = true;
                 xfollowButton.value = "Updating...";
-                if (!Ifollow) {
+                if (!that.Ifollow) {
                     sparqlUpdater.insert_statement(followMe, mbconfirmFollow);
                 } else {
                     sparqlUpdater.delete_statement(followMe, mbconfirmFollow);
@@ -663,32 +667,32 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             for (var c in creators) {
                 if (kb.whether(creators[c], RDF('type'), SIOC('User')) &&
                 kb.whether(kb.any(creators[c], SIOC('creator_of')), RDF('type'), SIOCt('Microblog'))) {
-                    this.creator = creators[c];
+                    var creator = creators[c];
                     // var mb = kb.sym(creator.uri.split("#")[0]);
                     //tabulator.sf.refresh(mb);
                     break;
                     //TODO add support for more than one microblog in same foaf
                 }
             }
-            if (this.creator) {
-                var creator = mb.getUser(this.creator);
+            if (creator) {
+                this.creator = mb.getUser(creator);
                 //---display avatar, if available ---
-                if (creator.avatar !== "") {
+                if (this.creator.avatar !== "") {
                     var avatar = doc.createElement('img');
-                        avatar.src = creator.avatar.uri;
+                        avatar.src = this.creator.avatar.uri;
                     subheaderContainer.appendChild(avatar);
                 }
                 //---generate name ---
                 var userName = doc.createElement('h1');
                     userName.className = "fn";
-                    userName.appendChild(doc.createTextNode(creator.name + " (" + creator.id + ")"));
+                    userName.appendChild(doc.createTextNode(this.creator.name + " (" + this.creator.id + ")"));
                 subheaderContainer.appendChild(userName);
                 //---display follow button---
                 if (!this.thisIsMe && mb.getMyURI()) {
                     var xfollowButton = doc.createElement('input');
                     xfollowButton.setAttribute("type", "button");
                     followButtonLabel = (this.Ifollow) ? "Unfollow ": "Follow ";
-                    xfollowButton.value = followButtonLabel + creator.name;
+                    xfollowButton.value = followButtonLabel + this.creator.name;
                     xfollowButton.addEventListener('click', lsFollowUser, false);
                     subheaderContainer.appendChild(xfollowButton);
                 }
@@ -977,8 +981,8 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             var xfollows = doc.createElement('div');
                 xfollows.id =  "xfollows";
             xfollows.className = "followlist-container view-container";
-            if (kb.whether(this.creator, SIOC('follows'))) {
-                var creatorFollows = kb.each(this.creator, SIOC('follows'));
+            if (kb.whether(this.creator.sym, SIOC('follows'))) {
+                var creatorFollows = kb.each(this.creator.sym, SIOC('follows'));
                 var xfollowsList = doc.createElement('ul');
                 for (var thisPerson in creatorFollows) {
                     xfollowsList.appendChild(getFollowed(creatorFollows[thisPerson]));
@@ -1078,7 +1082,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 follows.count -=1;
             }
             if (follows.count==0){
-                alert("done")
+                dump("done")
             }
         }
         var makePane = function(uri){

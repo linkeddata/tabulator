@@ -625,24 +625,27 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             xupdateContainer.innerHTML = "<h3>What are you up to?</h3>";
             if (mb.getMyURI()) {
                 var xinReplyToContainer = doc.createElement('input');
-                xinReplyToContainer.type = "hidden";
+                    xinReplyToContainer.id = "xinReplyToContainer";
+                    xinReplyToContainer.type = "hidden";
 
                 var xupdateStatus = doc.createElement('textarea');
+                    xupdateStatus.id ="xupdateStatus";
 
                 var xupdateStatusCounter = doc.createElement('span');
-                xupdateStatusCounter.appendChild(doc.createTextNode(charCount));
-                xupdateStatus.cols = 30;
+                    xupdateStatusCounter.appendChild(doc.createTextNode(charCount));
+                    xupdateStatus.cols = 30;
+                    xupdateStatus.addEventListener('keyup', mbLetterCount, false);
 
                 var xupdateSubmit = doc.createElement('input');
-                xupdateSubmit.type = "submit";
-                xupdateSubmit.value = "Send";
+                    xupdateSubmit.id="xupdateSubmit";
+                    xupdateSubmit.type = "submit";
+                    xupdateSubmit.value = "Send";
 
                 xupdateContainer.appendChild(xinReplyToContainer);
                 xupdateContainer.appendChild(xupdateStatusCounter);
                 xupdateContainer.appendChild(xupdateStatus);
                 xupdateContainer.appendChild(xupdateSubmit);
                 xupdateContainer.addEventListener('submit', mbSubmitPost, false);
-                xupdateStatus.addEventListener('keyup', mbLetterCount, false);
             } else {
                 var xnewUser = doc.createTextNode("\
                     Hi, it looks like you don't have a microblog,\
@@ -809,6 +812,9 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             //add the reply to and delete buttons to the interface
             var mbReplyTo = function() {
                 var id = mb.getUser(Post.creator).id;
+                var xupdateStatus = doc.getElementById("xupdateStatus");
+                var xinReplyToContainer = doc.getElementById("xinReplyToContainer");
+                var xupdateSubmit = doc.getElementById("xupdateSubmit");
                 xupdateStatus.value = "@" + id + " ";
                 xupdateStatus.focus();
                 xinReplyToContainer.value = post.uri;

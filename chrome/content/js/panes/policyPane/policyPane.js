@@ -11,11 +11,6 @@ var rdf = tabulator.ns.rdf;
 var rdfs = tabulator.ns.rdfs;
 var owl = tabulator.ns.owl;
 var pri = RDFNamespace("http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy#");
-var facts;
-var uri;
-var priURI = "http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy.n3";
-var c = 0;
-var current = "";
 var _senders = {"The CIA": pri('CIA'), "CIA": pri('CIA'), "Central Intelligence Agency": pri('CIA'), "The Central Intelligence Agency": pri('CIA'),
 		"The Department of Homeland Security": pri('DHS'), "Department of Homeland Security": pri('DHS'), "DHS": pri('DHS'), "The DHS": pri('DHS'), 
                 "FBI": pri('FBI'), "The FBI": pri('FBI'), "Federal Bureau of Investigation": pri('FBI'), "The Federal Bureau of Investigation": pri('FBI'),
@@ -35,136 +30,150 @@ var _reqProps = {};
 var _reqTypes = {};
 var _reqContexts = {};
 
-function editDistance(s, target){
-	d = {};
-	for(var i = 0; i <= s.length; i++) {
-		d[i+",0"] = i;
-	}
-	for(var j = 0; j <= target.length; j++) {
-		d["0,"+j] = j;
-	}
-	for(i = 1; i <= s.length; i++) {
-		for(j = 1; j <= target.length; j++) {
-			if (s.charAt(i-1) == target.charAt(j-1)) {
-				c = 0;
-			}else{
-				c = 1;
+var policyUtils = {
+		prefixes: {
+			air: RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#"),
+			rdf: tabulator.ns.rdf,
+			rdfs: tabulator.ns.rdfs,
+			owl: tabulator.ns.owl,
+			pri: RDFNamespace("http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy#")
+		},
+		options: {
+		},
+		current: "",
+		dropdown: function(ele, doc) {
+			function getX(e) {
+				var x = 0;
+				while (e) {
+					x+=e.offsetLeft;
+					e = e.offsetParent;
+				}
+				return x;
 			}
-			d[i+","+j] = Math.min(d[(i-1)+","+j]+1, Math.min(d[i+","+(j-1)]+1, d[(i-1)+","+(j-1)]+c));
+			function getY(e) {
+				var y = 0;
+				while (e) {
+					y+= e.offsetTop;
+					e = e.offsetParent;
+				}
+				return y;
+			}
+			function makePossibles(a) {
+				var pos = new Array();
+				for (var p in a) {
+					pos[pos.length] = p;
+				}
+				return pos;
+			}
+			function editDistance(s, target){
+				var c;
+				d = {};
+				for(var i = 0; i <= s.length; i++) {
+					d[i+",0"] = i;
+				}
+				for(var j = 0; j <= target.length; j++) {
+					d["0,"+j] = j;
+				}
+				for(i = 1; i <= s.length; i++) {
+					for(j = 1; j <= target.length; j++) {
+						if (s.charAt(i-1) == target.charAt(j-1)) {
+							c = 0;
+						}else{
+							c = 1;
+						}
+						d[i+","+j] = Math.min(d[(i-1)+","+j]+1, Math.min(d[i+","+(j-1)]+1, d[(i-1)+","+(j-1)]+c));
+					}
+				}
+				return d[s.length+","+target.length];
+			};
+			var possibles = new Array();
+			var boxType = ele.id;
+			policyUtils.current = ele.value;
+			switch(boxType) {
+			case "sender":
+				possibles = makePossibles(_senders);
+				break;
+			case "sProp":
+				possibles = makePossibles(_senderProps);
+				break;
+			case "sType":
+				possibles = makePossibles(_senderTypes);
+				break;
+			case "sContext":
+				possibles = makePossibles(_senderContexts);
+				break;
+			case "action":
+				possibles = makePossibles(_actions);
+				break;
+			case "dCat":
+				possibles = makePossibles(_dataCats);
+				break;
+			case "sDCat":
+				possibles = makePossibles(_specialDataCats);
+				break;
+			case "dCon":
+				possibles = makePossibles(_dataContexts);
+				break;
+			case "aMatch":
+				possibles = makePossibles(_aMatches);
+				break;
+			case "requester":
+				possibles = makePossibles(_reqs);
+				break;
+			case "rProp":
+				possibles = makePossibles(_reqProps);
+				break;
+			case "rType":
+				possibles = makePossibles(_reqTypes);
+				break;
+			case "rContext":
+				possibles = makePossibles(_reqContexts);
+				break;
+			default:
+				possibles = makePossibles({"":""});
+			}
+			var choiceDiv = doc.createElement("div");
+			choiceDiv.setAttribute("class", "suggest");
+			choiceDiv.setAttribute("style", "top: " + (getY(ele)+65) + "px; left: "+(getX(ele))+"px");
+			choiceDiv.setAttribute("cellPadding", "0");
+			choiceDiv.setAttribute("cellPadding", "0");
+			
+			var choices = doc.createElement("table");
+			var cBod = doc.createElement("tbody");
+			var closeMatches = new Array();
+			for (var i = 0; i < possibles.length; i++) {
+				var text = ele.value.toLowerCase();
+				if (possibles[i].slice(0,ele.value.length).toLowerCase() == text || editDistance(possibles[i].toLowerCase(), text) <= 1) {
+					closeMatches[closeMatches.length] = possibles[i];
+				}
+			}
+			closeMatches.sort();
+			for (var i = 0; i < closeMatches.length; i++) {
+				var tr = doc.createElement("tr");
+				var td = doc.createElement("td");
+				td.setAttribute('id', 'item'+(i+1));
+				td.appendChild(doc.createTextNode(closeMatches[i]));
+				td.addEventListener("mouseover", function(e){
+					this.setAttribute("class", "selected");
+					policyUtils.current = this.firstChild.nodeValue;
+				}, false);
+				td.addEventListener("mouseout", function(e){
+					this.setAttribute("class", "");
+					policyUtils.current = doc.getElementById(boxType).value;
+				}, false);
+				tr.appendChild(td);
+				cBod.appendChild(tr);
+			}
+			ele = doc.getElementById("Policy Runner Pane");
+			if (doc.getElementById("choices")) ele.removeChild(doc.getElementById("choices"));
+			choiceDiv.setAttribute('id', 'choices');
+			choices.appendChild(cBod);
+			choiceDiv.appendChild(choices);
+			ele.appendChild(choiceDiv);
 		}
-	}
-	return d[s.length+","+target.length];
-};
-function getX(e) {
-	var x = 0;
-	while (e) {
-		x+=e.offsetLeft;
-		e = e.offsetParent;
-	}
-	return x;
-}
-function getY(e) {
-	var y = 0;
-	while (e) {
-		y+= e.offsetTop;
-		e = e.offsetParent;
-	}
-	return y;
-}
-function dropdown(ele, doc) {
-	function makePossibles(a) {
-		var pos = new Array();
-		for (var p in a) {
-			pos[pos.length] = p;
-		}
-		return pos;
-	}
-	var possibles = new Array();
-	var boxType = ele.id;
-	current = ele.value;
-	switch(boxType) {
-	case "sender":
-		possibles = makePossibles(_senders);
-		break;
-	case "sProp":
-		possibles = makePossibles(_senderProps);
-		break;
-	case "sType":
-		possibles = makePossibles(_senderTypes);
-		break;
-	case "sContext":
-		possibles = makePossibles(_senderContexts);
-		break;
-	case "action":
-		possibles = makePossibles(_actions);
-		break;
-	case "dCat":
-		possibles = makePossibles(_dataCats);
-		break;
-	case "sDCat":
-		possibles = makePossibles(_specialDataCats);
-		break;
-	case "dCon":
-		possibles = makePossibles(_dataContexts);
-		break;
-	case "aMatch":
-		possibles = makePossibles(_aMatches);
-		break;
-	case "requester":
-		possibles = makePossibles(_reqs);
-		break;
-	case "rProp":
-		possibles = makePossibles(_reqProps);
-		break;
-	case "rType":
-		possibles = makePossibles(_reqTypes);
-		break;
-	case "rContext":
-		possibles = makePossibles(_reqContexts);
-		break;
-	default:
-		possibles = new Array();
-	}
-	var choiceDiv = doc.createElement("div");
-	choiceDiv.setAttribute("class", "suggest");
-	choiceDiv.setAttribute("style", "top: " + (getY(ele)+65) + "px; left: "+(getX(ele))+"px");
-	choiceDiv.setAttribute("cellPadding", "0");
-	choiceDiv.setAttribute("cellPadding", "0");
-	
-	var choices = doc.createElement("table");
-	var cBod = doc.createElement("tbody");
-	var closeMatches = new Array();
-	for (var i = 0; i < possibles.length; i++) {
-		var text = ele.value.toLowerCase();
-		if (possibles[i].slice(0,ele.value.length).toLowerCase() == text || editDistance(possibles[i].toLowerCase(), text) <= 1) {
-			closeMatches[closeMatches.length] = possibles[i];
-		}
-	}
-	closeMatches.sort();
-	for (var i = 0; i < closeMatches.length; i++) {
-		var tr = doc.createElement("tr");
-		var td = doc.createElement("td");
-		td.setAttribute('id', 'item'+(i+1));
-		td.appendChild(doc.createTextNode(closeMatches[i]));
-		td.addEventListener("mouseover", function(e){
-			this.setAttribute("class", "selected");
-			current = this.firstChild.nodeValue;
-		}, false);
-		td.addEventListener("mouseout", function(e){
-			this.setAttribute("class", "");
-			current = doc.getElementById(boxType).value;
-		}, false);
-		tr.appendChild(td);
-		cBod.appendChild(tr);
-	}
-	ele = doc.getElementById("Policy Runner Pane");
-	if (doc.getElementById("choices")) ele.removeChild(doc.getElementById("choices"));
-	choiceDiv.setAttribute('id', 'choices');
-	choices.appendChild(cBod);
-	choiceDiv.appendChild(choices);
-	ele.appendChild(choiceDiv);
 }
 policyPane = {
+	
     icon: Icon.src.icon_policyPane,
     //TODO make this pane open upon loading the file, without clicking on it
     label: function(subject) {
@@ -362,9 +371,19 @@ policyPane = {
     		wdiv.appendChild(makeset);
     		div.appendChild(wdiv);
     	}else {
+    		/* TODO
+    		 * Is $PERSON allowed to $ACTION $DATATYPE data contained in $SYSREC that is to be used for $PURPOSE 
+    		 * and is $DPROPi $DOBJi to $PERSON
+    		 * 
+    		 * if ($PERSON $ACTION $PERSON)
+    		 * 
+    		 * and ($PERSON $ACTION $PERSON)
+    		 * 
+    		 * (additional events will need to be added somehow?)
+    		 */
 			var uriPrefix = myURI.slice(0,myURI.lastIndexOf("/")+1);
-			uri = uriPrefix+"log.n3";
-			facts = RDFNamespace(uriPrefix+"log#");
+			var uri = uriPrefix+"log.n3";
+			var facts = RDFNamespace(uriPrefix+"log#");
 		    var form = doc.createElement("form");
 		    form.setAttribute("id","logForm");
 		    form.setAttribute("action","");
@@ -385,14 +404,15 @@ policyPane = {
 		    sender.setAttribute("id", "sender");
 		    sender.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    sender.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -404,14 +424,15 @@ policyPane = {
 		    senderProperty.setAttribute("id", "sProp");
 		    senderProperty.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    senderProperty.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -423,14 +444,15 @@ policyPane = {
 		    senderType.setAttribute("id", "sType");
 		    senderType.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    senderType.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -441,14 +463,15 @@ policyPane = {
 		    senderContext.setAttribute("id", "sContext");
 		    senderContext.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    senderContext.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -459,14 +482,15 @@ policyPane = {
 		    action.setAttribute("id", "action");
 		    action.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    action.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -477,14 +501,15 @@ policyPane = {
 		    dataCategory.setAttribute("id", "dCat");
 		    dataCategory.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    dataCategory.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -495,14 +520,15 @@ policyPane = {
 		    specialDataCategory.setAttribute("id", "sDCat");
 		    specialDataCategory.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    specialDataCategory.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -513,14 +539,15 @@ policyPane = {
 		    dataContext.setAttribute("id", "dCon");
 		    dataContext.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    dataContext.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -531,14 +558,15 @@ policyPane = {
 		    actionMatch.setAttribute("id", "aMatch");
 		    actionMatch.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    actionMatch.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -549,14 +577,15 @@ policyPane = {
 		    requester.setAttribute("id", "requester");
 		    requester.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    requester.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -567,14 +596,15 @@ policyPane = {
 		    requesterProperty.setAttribute("id", "rProp");
 		    requesterProperty.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    requesterProperty.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -585,14 +615,15 @@ policyPane = {
 		    requesterType.setAttribute("id", "rType");
 		    requesterType.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    requesterType.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -603,14 +634,15 @@ policyPane = {
 		    requesterContext.setAttribute("id", "rContext");
 		    requesterContext.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
-		    		dropdown(this, doc);
+		    		policyUtils.dropdown(this, doc);
 		    	}else{
 		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
 		    	}
 		    }, false);
 		    requesterContext.addEventListener("blur", function(e){
-				this.value = current;
-				current = "";
+				this.value = policyUtils.current;
+				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
@@ -645,6 +677,8 @@ policyPane = {
 		    
 		    var buttondiv = doc.createElement("div");
 		    
+		    var c = 0;
+		    var priURI = "http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy.n3";
 		    var btninput = doc.createElement("input");
 		    btninput.setAttribute("type","button");
 		    btninput.setAttribute("value","Go");

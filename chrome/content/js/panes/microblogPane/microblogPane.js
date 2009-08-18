@@ -635,6 +635,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                     xupdateStatusCounter.appendChild(doc.createTextNode(charCount));
                     xupdateStatus.cols = 30;
                     xupdateStatus.addEventListener('keyup', mbLetterCount, false);
+                    xupdateStatus.addEventListener('focus', mbLetterCount, false);
 
                 var xupdateSubmit = doc.createElement('input');
                     xupdateSubmit.id="xupdateSubmit";
@@ -819,7 +820,6 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 xupdateStatus.focus();
                 xinReplyToContainer.value = post.uri;
                 xupdateSubmit.value = "Reply";
-                mbLetterCount();
             };
             var mbDeletePost = function(evt) {
                 var lsconfirmNo = function() {

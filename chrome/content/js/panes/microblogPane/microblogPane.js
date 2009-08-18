@@ -393,8 +393,6 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             this.postContainer = this.streamView(s,doc)
             this.notificationsView(s,doc)
             this.xfollows = this.followsView()
-            
-            
         } 
         
         Pane.prototype.notify = function(messageString) {
@@ -530,8 +528,8 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                             xupdateStatus.value = "";
                             mbLetterCount();
                             notify("Microblog Updated.");
-                            if (this.thisIsMe) {
-                                doc.getElementById('postNotificationList').insertBefore(generatePost(d[0].subject, this.thisIsMe), doc.getElementById('postNotificationList').childNodes[0]);
+                            if (that.thisIsMe) {
+                                doc.getElementById('postNotificationList').insertBefore(that.generatePost(d[0].subject), doc.getElementById('postNotificationList').childNodes[0]);
                             }
                         } else {
                             notify("There was a problem submitting your post.");

@@ -5,63 +5,76 @@
  * 
  * mjsweig@mit.edu
  */
-
-var air = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
-var rdf = tabulator.ns.rdf;
-var rdfs = tabulator.ns.rdfs;
-var owl = tabulator.ns.owl;
-var pri = RDFNamespace("http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy#");
-var _senders = {"The CIA": pri('CIA'), "CIA": pri('CIA'), "Central Intelligence Agency": pri('CIA'), "The Central Intelligence Agency": pri('CIA'),
-		"The Department of Homeland Security": pri('DHS'), "Department of Homeland Security": pri('DHS'), "DHS": pri('DHS'), "The DHS": pri('DHS'), 
-                "FBI": pri('FBI'), "The FBI": pri('FBI'), "Federal Bureau of Investigation": pri('FBI'), "The Federal Bureau of Investigation": pri('FBI'),
-                "Massachusetts State Police Department": pri('MSP'), "The Massachusetts State Police Department": pri('MSP')};
-var _senderProps = {"maintains": pri('maintains')};
-var _senderTypes = {"a system of records": "[a " + pri('System_of_Records')+ "]"};
-var _senderContexts = {"Has A Court Order": pri("court_order")};
-var _actions = {"change": pri('Change'), "do something with": pri('Event'), "file": pri('File'), "request information": pri('Info_Request'),
-		"notify": pri('Notify'), "request": pri('Request'), "request a change to": pri('Request_Change'), "review": pri('Review'),
-		"revise": pri('Revision_or_Establish'), "establish": pri('Revision_or_Establish'), "share": pri('Share'), "give": pri('Share')};
-var _dataCats = {"US Persons": pri('US_Person')};
-var _specialDataCats = {"PII": pri('PII'), "Personally Identifiable Information": pri('PII')};
-var _dataContexts = {"in a system of records": pri('contained_in') + " [a " + pri('System_of_Records')+ "]"};
-var _aMatches = {};
-var _reqs = {"Massachusetts State Police Department": pri('MSP'), "The Massachusetts State Police Department": pri('MSP')};
-var _reqProps = {};
-var _reqTypes = {};
-var _reqContexts = {};
-
+var prefixes = {
+	air: RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#"),
+	rdf: tabulator.ns.rdf,
+	rdfs: tabulator.ns.rdfs,
+	owl: tabulator.ns.owl,
+	pri: RDFNamespace("http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy#")
+};
+function Person(name) {
+	this.name = name.replace(/\s+/, "_");
+	this.output = "";
+}
 var policyUtils = {
-		prefixes: {
-			air: RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#"),
-			rdf: tabulator.ns.rdf,
-			rdfs: tabulator.ns.rdfs,
-			owl: tabulator.ns.owl,
-			pri: RDFNamespace("http://dig.csail.mit.edu/2009/DHS-fusion/PrivacyAct/Privacy#")
-		},
 		options: {
+			actions: {"change": prefixes.pri('Change'), "do something with": prefixes.pri('Event'), "file": prefixes.pri('File'), "request information": prefixes.pri('Info_Request'),
+				"notify": prefixes.pri('Notify'), "request": prefixes.pri('Request'), "request a change to": prefixes.pri('Request_Change'), "review": prefixes.pri('Review'),
+				"revise": prefixes.pri('Revision_or_Establish'), "establish": prefixes.pri('Revision_or_Establish'), "share": prefixes.pri('Share'), "give": prefixes.pri('Share')},
+			agencies: {"The CIA": prefixes.pri('CIA'), "CIA": prefixes.pri('CIA'), "Central Intelligence Agency": prefixes.pri('CIA'), "The Central Intelligence Agency": prefixes.pri('CIA'),
+				"The Department of Homeland Security": prefixes.pri('DHS'), "Department of Homeland Security": prefixes.pri('DHS'), "DHS": prefixes.pri('DHS'), "The DHS": prefixes.pri('DHS'), 
+				"FBI": prefixes.pri('FBI'), "The FBI": prefixes.pri('FBI'), "Federal Bureau of Investigation": prefixes.pri('FBI'), "The Federal Bureau of Investigation": prefixes.pri('FBI'),
+				"Massachusetts State Police Department": prefixes.pri('MSP'), "The Massachusetts State Police Department": prefixes.pri('MSP')},
+			citizenships: {"United States": prefixes.pri("US_Person"), "Other": prefixes.pri("Person")},
+			employerTypes: {"Federal Agency": prefixes.pri("Federal_Agency"), "Government Agency": prefixes.pri("Government_Agency"), "State Agency": prefixes.pri("State_Agency"),
+				"Local Agency": prefixes.pri("Local_Agency"), "Tribal Agency": prefixes.pri("Tribal_Agency"), "Foreign Government": prefixes.pri("Foreign_Government"),
+				"Census Bureau": prefixes.pri("Census_Bureau"), "National Archives and Records Administration": prefixes.pri("National_Archives_Records_Admin"),
+				"United States Legislative Body": prefixes.pri("US_Legislative_Body"), "Legislative Body": prefixes.pri("Legislative_Body"), 
+				"Consumer Reporting Agency": prefixes.pri("Consumer_Reporting_Agency"), "Federal Register": prefixes.pri("Federal_Register"), "Private Sector": prefixes.pri("Private_Sector")},
+			titles: {"Employee": prefixes.pri("employedBy"), "Head Of": prefixes.pri("headOf"), "Archivist": prefixes.pri("Archivist_or_designee"), "Archivist's Designee": prefixes.pri("Archivist_or_designee"),
+				"Comptroller General": prefixes.pri("Comptroller_General_or_designee"), "Comptroller General's Designee": prefixes.pri("Comptroller_General_or_designee")},
+			uses: {"Need to Know": prefixes.pri("Need_to_Know"), "required by the Freedom of Information Act": prefixes.pri("FOIA_5_USC_552"), "A routine Use": prefixes.pri("routine_use"),
+				"Census": prefixes.pri("Census"), "Statistics Research": prefixes.pri("Stats_Research"), "Historical Record": prefixes.pri("Historical_Record"), "Archivists Evaluation": prefixes.pri("Archivists_Evaluation"),
+				"Law Enforcement": prefixes.pri("law_enforcement"), "Health and Safety": prefixes.pri("health_safety"), "Title 31": prefixes.pri("31_USC_3711e"), "Acknowledgement": prefixes.pri("Acknowledgment"),
+				"Compulsory Legal Process": prefixes.pri("compulsory_legal_process"), "Refusal": prefixes.pri("Refusal"), "44 U.S.C. Section 3103": prefixes.pri("44_USC_3103")},
+			data: {"Personally Identifiable Information": prefixes.pri("PII"), "An Accounting of a disclosure": prefixes.pri("Accounting"), "Consent": prefixes.pri("Consent"), "Written Consent": prefixes.pri("Written_Consent"),
+				"Law Enforcement Data": prefixes.pri("law_enforcement"), "Not Individually Identifiable": prefixes.pri("Not_II"), "A Written Request": prefixes.pri("Written_Request"), "Court Order": prefixes.pri("Court_Order"),
+				"Statement": prefixes.pri("statement"), "Statistics Only Assertion": prefixes.pri("Stats_Only"), "System of Records": prefixes.pri("System_of_Records"), "Written Assurrance": prefixes.pri("Written_Assurrance")},
+			dataProps: {"about": prefixes.pri("about"), "authorized": prefixes.pri("authorized"), "disagrees with": prefixes.pri("disagrees_with"), "fair to": prefixes.pri("fair_to"), "of": prefixes.pri("of"),
+				"purpose": prefixes.pri("purpose"), "record of": prefixes.pri("record_of"), "source": prefixes.pri("source"), "used in": prefixes.pri("used_in"), "a": prefixes.rdf("type"), "contains": prefixes.pri("contains")},
+			dataLocs: {"A System of Records": "[a "+ prefixes.pri("System_of_Records")+"]"},
+			aMatches: {},
+			dataVals: {}
 		},
+		people: {},
 		current: "",
-		dropdown: function(ele, doc) {
-			function getX(e) {
-				var x = 0;
-				while (e) {
-					x+=e.offsetLeft;
-					e = e.offsetParent;
-				}
-				return x;
+		getX: function(e) {
+			var x = 0;
+			while (e) {
+				x+=e.offsetLeft;
+				e = e.offsetParent;
 			}
-			function getY(e) {
-				var y = 0;
-				while (e) {
-					y+= e.offsetTop;
-					e = e.offsetParent;
-				}
-				return y;
+			return x;
+		},
+		getY: function(e) {
+			var y = 0;
+			while (e) {
+				y+= e.offsetTop;
+				e = e.offsetParent;
 			}
+			return y;
+		},
+		dropdown: function(ele, doc, person) {
 			function makePossibles(a) {
 				var pos = new Array();
-				for (var p in a) {
-					pos[pos.length] = p;
+				if (a instanceof Array) {
+					for (var i = 0; i < a.length; i++) {
+						pos[pos.length] = a[i].name.replace("_", " ");
+					}
+				}else {
+					for (var p in a) {
+						pos[pos.length] = p;
+					}
 				}
 				return pos;
 			}
@@ -91,50 +104,54 @@ var policyUtils = {
 			policyUtils.current = ele.value;
 			switch(boxType) {
 			case "sender":
-				possibles = makePossibles(_senders);
-				break;
-			case "sProp":
-				possibles = makePossibles(_senderProps);
-				break;
-			case "sType":
-				possibles = makePossibles(_senderTypes);
-				break;
-			case "sContext":
-				possibles = makePossibles(_senderContexts);
+				possibles = makePossibles(policyUtils.people);
 				break;
 			case "action":
-				possibles = makePossibles(_actions);
+				possibles = makePossibles(policyUtils.options.actions);
 				break;
-			case "dCat":
-				possibles = makePossibles(_dataCats);
+			case "dType":
+				possibles = makePossibles(policyUtils.options.data);
 				break;
-			case "sDCat":
-				possibles = makePossibles(_specialDataCats);
+			case "dLoc":
+				possibles = makePossibles(policyUtils.options.dataLocs);
 				break;
-			case "dCon":
-				possibles = makePossibles(_dataContexts);
+			case "dPurp":
+				possibles = makePossibles(policyUtils.options.uses);
+				break;
+			case "dProp":
+				possibles = makePossibles(policyUtils.options.dataProps);
+				break;
+			case "dVal":
+				possibles = makePossibles(policyUtils.options.dataVals);
 				break;
 			case "aMatch":
-				possibles = makePossibles(_aMatches);
+				possibles = makePossibles(policyUtils.options.aMatches);
 				break;
 			case "requester":
-				possibles = makePossibles(_reqs);
+				possibles = makePossibles(policyUtils.people);
 				break;
-			case "rProp":
-				possibles = makePossibles(_reqProps);
+			case "citizenship":
+				possibles = makePossibles(policyUtils.options.citizenships);
 				break;
-			case "rType":
-				possibles = makePossibles(_reqTypes);
+			case "employerName":
+				possibles = makePossibles(policyUtils.options.agencies);
 				break;
-			case "rContext":
-				possibles = makePossibles(_reqContexts);
+			case "employerType":
+				possibles = makePossibles(policyUtils.options.employerTypes);
+				break;
+			case "jobName":
+				possibles = makePossibles(policyUtils.options.titles);
 				break;
 			default:
 				possibles = makePossibles({"":""});
 			}
 			var choiceDiv = doc.createElement("div");
 			choiceDiv.setAttribute("class", "suggest");
-			choiceDiv.setAttribute("style", "top: " + (getY(ele)+65) + "px; left: "+(getX(ele))+"px");
+			if (!person) {
+				choiceDiv.setAttribute("style", "top: " + (policyUtils.getY(ele)+65) + "px; left: "+(policyUtils.getX(ele))+"px");
+			}else {
+				choiceDiv.setAttribute("style", "top: " + (policyUtils.getY(ele)+25) + "px; left: "+(policyUtils.getX(ele))+"px");
+			}
 			choiceDiv.setAttribute("cellPadding", "0");
 			choiceDiv.setAttribute("cellPadding", "0");
 			
@@ -153,11 +170,11 @@ var policyUtils = {
 				var td = doc.createElement("td");
 				td.setAttribute('id', 'item'+(i+1));
 				td.appendChild(doc.createTextNode(closeMatches[i]));
-				td.addEventListener("mouseover", function(e){
+				tr.addEventListener("mouseover", function(e){
 					this.setAttribute("class", "selected");
-					policyUtils.current = this.firstChild.nodeValue;
+					policyUtils.current = this.firstChild.firstChild.nodeValue;
 				}, false);
-				td.addEventListener("mouseout", function(e){
+				tr.addEventListener("mouseout", function(e){
 					this.setAttribute("class", "");
 					policyUtils.current = doc.getElementById(boxType).value;
 				}, false);
@@ -171,13 +188,13 @@ var policyUtils = {
 			choiceDiv.appendChild(choices);
 			ele.appendChild(choiceDiv);
 		}
-}
+};
 policyPane = {
 	
     icon: Icon.src.icon_policyPane,
     //TODO make this pane open upon loading the file, without clicking on it
     label: function(subject) {
-		var policy = air('Policy');
+		var policy = prefixes.air('Policy');
 		//only display this pane if the document contains an air:Policy that can be reasoned over
 		var pol = tabulator.kb.statementsMatching(undefined, undefined, policy, subject).length;
 		if (pol > 0){
@@ -188,6 +205,7 @@ policyPane = {
     },
     
     render: function(subject, doc) {
+    	policyUtils.people = {};
     	var myURI = tabulator.preferences.get('me');
     	var me = myURI ? tabulator.kb.sym(myURI) : null;
     	var div = doc.createElement("div");
@@ -371,19 +389,9 @@ policyPane = {
     		wdiv.appendChild(makeset);
     		div.appendChild(wdiv);
     	}else {
-    		/* TODO
-    		 * Is $PERSON allowed to $ACTION $DATATYPE data contained in $SYSREC that is to be used for $PURPOSE 
-    		 * and is $DPROPi $DOBJi to $PERSON
-    		 * 
-    		 * if ($PERSON $ACTION $PERSON)
-    		 * 
-    		 * and ($PERSON $ACTION $PERSON)
-    		 * 
-    		 * (additional events will need to be added somehow?)
-    		 */
 			var uriPrefix = myURI.slice(0,myURI.lastIndexOf("/")+1);
 			var uri = uriPrefix+"log.n3";
-			var facts = RDFNamespace(uriPrefix+"log#");
+			prefixes.facts = RDFNamespace(uriPrefix+"log#");
 		    var form = doc.createElement("form");
 		    form.setAttribute("id","logForm");
 		    form.setAttribute("action","");
@@ -417,64 +425,8 @@ policyPane = {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
-		    
-		    
-		    var senderProperty = doc.createElement("input");
-		    senderProperty.setAttribute("type", "text");
-		    senderProperty.setAttribute("id", "sProp");
-		    senderProperty.addEventListener("keyup", function(e){
-		    	if (this.value != "") {
-		    		policyUtils.dropdown(this, doc);
-		    	}else{
-		    		div.removeChild(doc.getElementById("choices"));
-		    		policyUtils.current = "";
-		    	}
-		    }, false);
-		    senderProperty.addEventListener("blur", function(e){
-				this.value = policyUtils.current;
-				policyUtils.current = "";
-		    	if (doc.getElementById("choices")) {
-		    		div.removeChild(doc.getElementById("choices"));
-		    	}
-		    }, false);
-		    
-		    
-		    var senderType = doc.createElement("input");
-		    senderType.setAttribute("type", "text");
-		    senderType.setAttribute("id", "sType");
-		    senderType.addEventListener("keyup", function(e){
-		    	if (this.value != "") {
-		    		policyUtils.dropdown(this, doc);
-		    	}else{
-		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
-		    		policyUtils.current = "";
-		    	}
-		    }, false);
-		    senderType.addEventListener("blur", function(e){
-				this.value = policyUtils.current;
-				policyUtils.current = "";
-		    	if (doc.getElementById("choices")) {
-		    		div.removeChild(doc.getElementById("choices"));
-		    	}
-		    }, false);
-		    
-		    var senderContext = doc.createElement("input");
-		    senderContext.setAttribute("type", "text");
-		    senderContext.setAttribute("id", "sContext");
-		    senderContext.addEventListener("keyup", function(e){
-		    	if (this.value != "") {
-		    		policyUtils.dropdown(this, doc);
-		    	}else{
-		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
-		    		policyUtils.current = "";
-		    	}
-		    }, false);
-		    senderContext.addEventListener("blur", function(e){
-				this.value = policyUtils.current;
-				policyUtils.current = "";
-		    	if (doc.getElementById("choices")) {
-		    		div.removeChild(doc.getElementById("choices"));
-		    	}
+		    sender.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
 		    }, false);
 		    
 		    var action = doc.createElement("input");
@@ -495,11 +447,14 @@ policyPane = {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
+		    action.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
+		    }, false);
 		    
-		    var dataCategory = doc.createElement("input");
-		    dataCategory.setAttribute("type", "text");
-		    dataCategory.setAttribute("id", "dCat");
-		    dataCategory.addEventListener("keyup", function(e){
+		    var dataType = doc.createElement("input");
+		    dataType.setAttribute("type", "text");
+		    dataType.setAttribute("id", "dType");
+		    dataType.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
 		    		policyUtils.dropdown(this, doc);
 		    	}else{
@@ -507,18 +462,21 @@ policyPane = {
 		    		policyUtils.current = "";
 		    	}
 		    }, false);
-		    dataCategory.addEventListener("blur", function(e){
+		    dataType.addEventListener("blur", function(e){
 				this.value = policyUtils.current;
 				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
+		    dataType.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
+		    }, false);
 		    
-		    var specialDataCategory = doc.createElement("input");
-		    specialDataCategory.setAttribute("type", "text");
-		    specialDataCategory.setAttribute("id", "sDCat");
-		    specialDataCategory.addEventListener("keyup", function(e){
+		    var dataLocation = doc.createElement("input");
+		    dataLocation.setAttribute("type", "text");
+		    dataLocation.setAttribute("id", "dLoc");
+		    dataLocation.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
 		    		policyUtils.dropdown(this, doc);
 		    	}else{
@@ -526,18 +484,21 @@ policyPane = {
 		    		policyUtils.current = "";
 		    	}
 		    }, false);
-		    specialDataCategory.addEventListener("blur", function(e){
+		    dataLocation.addEventListener("blur", function(e){
 				this.value = policyUtils.current;
 				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
+		    dataLocation.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
+		    }, false);
 		    
-		    var dataContext = doc.createElement("input");
-		    dataContext.setAttribute("type", "text");
-		    dataContext.setAttribute("id", "dCon");
-		    dataContext.addEventListener("keyup", function(e){
+		    var dataPurpose = doc.createElement("input");
+		    dataPurpose.setAttribute("type", "text");
+		    dataPurpose.setAttribute("id", "dPurp");
+		    dataPurpose.addEventListener("keyup", function(e){
 		    	if (this.value != "") {
 		    		policyUtils.dropdown(this, doc);
 		    	}else{
@@ -545,12 +506,59 @@ policyPane = {
 		    		policyUtils.current = "";
 		    	}
 		    }, false);
-		    dataContext.addEventListener("blur", function(e){
+		    dataPurpose.addEventListener("blur", function(e){
 				this.value = policyUtils.current;
 				policyUtils.current = "";
 		    	if (doc.getElementById("choices")) {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
+		    }, false);
+		    dataPurpose.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
+		    }, false);
+		    
+		    var dataProperty = doc.createElement("input");
+		    dataProperty.setAttribute("type", "text");
+		    dataProperty.setAttribute("id", "dProp");
+		    dataProperty.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		policyUtils.dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
+		    	}
+		    }, false);
+		    dataProperty.addEventListener("blur", function(e){
+				this.value = policyUtils.current;
+				policyUtils.current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    dataProperty.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
+		    }, false);
+		    
+		    var dataValue = doc.createElement("input");
+		    dataValue.setAttribute("type", "text");
+		    dataValue.setAttribute("id", "dVal");
+		    dataValue.addEventListener("keyup", function(e){
+		    	if (this.value != "") {
+		    		policyUtils.dropdown(this, doc);
+		    	}else{
+		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+		    		policyUtils.current = "";
+		    	}
+		    }, false);
+		    dataValue.addEventListener("blur", function(e){
+				this.value = policyUtils.current;
+				policyUtils.current = "";
+		    	if (doc.getElementById("choices")) {
+		    		div.removeChild(doc.getElementById("choices"));
+		    	}
+		    }, false);
+		    dataValue.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
 		    }, false);
 		    
 		    var actionMatch = doc.createElement("input");
@@ -571,6 +579,9 @@ policyPane = {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
+		    actionMatch.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
+		    }, false);
 		    
 		    var requester = doc.createElement("input");
 		    requester.setAttribute("type", "text");
@@ -590,90 +601,366 @@ policyPane = {
 		    		div.removeChild(doc.getElementById("choices"));
 		    	}
 		    }, false);
-		    
-		    var requesterProperty = doc.createElement("input");
-		    requesterProperty.setAttribute("type", "text");
-		    requesterProperty.setAttribute("id", "rProp");
-		    requesterProperty.addEventListener("keyup", function(e){
-		    	if (this.value != "") {
-		    		policyUtils.dropdown(this, doc);
-		    	}else{
-		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
-		    		policyUtils.current = "";
-		    	}
-		    }, false);
-		    requesterProperty.addEventListener("blur", function(e){
-				this.value = policyUtils.current;
-				policyUtils.current = "";
-		    	if (doc.getElementById("choices")) {
-		    		div.removeChild(doc.getElementById("choices"));
-		    	}
-		    }, false);
-		    
-		    var requesterType = doc.createElement("input");
-		    requesterType.setAttribute("type", "text");
-		    requesterType.setAttribute("id", "rType");
-		    requesterType.addEventListener("keyup", function(e){
-		    	if (this.value != "") {
-		    		policyUtils.dropdown(this, doc);
-		    	}else{
-		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
-		    		policyUtils.current = "";
-		    	}
-		    }, false);
-		    requesterType.addEventListener("blur", function(e){
-				this.value = policyUtils.current;
-				policyUtils.current = "";
-		    	if (doc.getElementById("choices")) {
-		    		div.removeChild(doc.getElementById("choices"));
-		    	}
-		    }, false);
-		    
-		    var requesterContext = doc.createElement("input");
-		    requesterContext.setAttribute("type", "text");
-		    requesterContext.setAttribute("id", "rContext");
-		    requesterContext.addEventListener("keyup", function(e){
-		    	if (this.value != "") {
-		    		policyUtils.dropdown(this, doc);
-		    	}else{
-		    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
-		    		policyUtils.current = "";
-		    	}
-		    }, false);
-		    requesterContext.addEventListener("blur", function(e){
-				this.value = policyUtils.current;
-				policyUtils.current = "";
-		    	if (doc.getElementById("choices")) {
-		    		div.removeChild(doc.getElementById("choices"));
-		    	}
+		    requester.addEventListener("focus", function(e){
+		    	policyUtils.current = this.value;
 		    }, false);
 		    
 		    
-		    txtinput.appendChild(doc.createTextNode("Is a person or system from "));
+		    txtinput.appendChild(doc.createTextNode("Is "));
 		    txtinput.appendChild(sender);
-		    txtinput.appendChild(doc.createTextNode(" with "));
-		    txtinput.appendChild(senderProperty);
-		    txtinput.appendChild(senderType);
-		    txtinput.appendChild(doc.createTextNode(" who "));
-		    txtinput.appendChild(senderContext);
 		    txtinput.appendChild(doc.createTextNode(" permitted to "));
 		    txtinput.appendChild(action);
-		    txtinput.appendChild(doc.createTextNode(" data or a document about "));
-		    txtinput.appendChild(dataCategory);
-		    txtinput.appendChild(doc.createTextNode(" that is "));
-		    txtinput.appendChild(specialDataCategory);
-		    txtinput.appendChild(doc.createTextNode(" and "));
-		    txtinput.appendChild(dataContext);
+		    txtinput.appendChild(doc.createTextNode(" data that is "));
+		    txtinput.appendChild(dataType);
+		    txtinput.appendChild(doc.createTextNode(" and contained in "));
+		    txtinput.appendChild(dataLocation);
+		    txtinput.appendChild(doc.createTextNode(" that is to be used for "));
+		    txtinput.appendChild(dataPurpose);
+		    txtinput.appendChild(doc.createTextNode(" and is "));
+		    txtinput.appendChild(dataProperty);
+		    txtinput.appendChild(dataValue);
 		    txtinput.appendChild(doc.createTextNode(" if the other party ("));
 		    txtinput.appendChild(actionMatch);
 		    txtinput.appendChild(doc.createTextNode(") is "));
 		    txtinput.appendChild(requester);
-		    txtinput.appendChild(doc.createTextNode(" with "));
-		    txtinput.appendChild(requesterProperty);
-		    txtinput.appendChild(requesterType);
-		    txtinput.appendChild(doc.createTextNode(" who "));
-		    txtinput.appendChild(requesterContext);
 		    txtinput.appendChild(doc.createTextNode("?"));
+		    
+		    var peopleDiv = doc.createElement("div");
+		    peopleDiv.setAttribute('id', 'peopleDiv');
+		    
+		    var addPerson = doc.createElement("input");
+		    addPerson.setAttribute('type', "button");
+		    addPerson.setAttribute('value', 'Add Person');
+		    addPerson.setAttribute('id','addPerson');
+		    addPerson.addEventListener("click", function(){
+		    	var newPersonDiv = doc.createElement("div");
+		    	newPersonDiv.setAttribute('class', "newPerson");
+		    	
+		    	var personTable = doc.createElement("table");
+		    	personTable.setAttribute('class', 'personInput');
+		    	var personTBody = doc.createElement("tbody");
+		    	personTable.appendChild(personTBody);
+		    	
+		    	var nameRow = doc.createElement("tr");
+		    	var nameLabel = doc.createElement("td");
+		    	nameLabel.appendChild(doc.createTextNode("Name:"));
+		    	var nameTD = doc.createElement("td");
+		    	var name = doc.createElement("input");
+		    	name.setAttribute("type", "text");
+		    	name.setAttribute('id', 'personName');
+		    	nameTD.appendChild(name);
+		    	nameRow.appendChild(nameLabel);
+		    	nameRow.appendChild(nameTD);
+		    	
+		    	var citizenshipLabel = doc.createElement("td");
+		    	citizenshipLabel.appendChild(doc.createTextNode("Citizenship:"));
+		    	var citizenshipTD = doc.createElement("td");
+		    	var citizenship = doc.createElement("input");
+		    	citizenship.setAttribute("type","text");
+		    	citizenship.setAttribute('id', "citizenship");
+		    	citizenship.addEventListener("keyup", function(e){
+			    	if (this.value != "") {
+			    		policyUtils.dropdown(this, doc, true);
+			    	}else{
+			    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+			    		policyUtils.current = "";
+			    	}
+			    }, false);
+			    citizenship.addEventListener("blur", function(e){
+					this.value = policyUtils.current;
+					policyUtils.current = "";
+			    	if (doc.getElementById("choices")) {
+			    		div.removeChild(doc.getElementById("choices"));
+			    	}
+			    }, false);
+			    citizenship.addEventListener("focus", function(e){
+			    	policyUtils.current = this.value;
+			    }, false);
+		    	citizenshipTD.appendChild(citizenship);
+		    	nameRow.appendChild(citizenshipLabel);
+		    	nameRow.appendChild(citizenshipTD);
+		    	personTBody.appendChild(nameRow);
+		    	
+		    	var employerRow = doc.createElement("tr");
+		    	var employerNameLabel = doc.createElement("td");
+		    	employerNameLabel.appendChild(doc.createTextNode("Employer:"));
+		    	var employerNameTD = doc.createElement("td");
+		    	var employerName = doc.createElement("input");
+		    	employerName.setAttribute('type', 'text');
+		    	employerName.setAttribute('id', 'employerName');
+		    	employerName.addEventListener("keyup", function(e){
+			    	if (this.value != "") {
+			    		policyUtils.dropdown(this, doc, true);
+			    	}else{
+			    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+			    		policyUtils.current = "";
+			    	}
+			    }, false);
+			    employerName.addEventListener("blur", function(e){
+					this.value = policyUtils.current;
+					policyUtils.current = "";
+			    	if (doc.getElementById("choices")) {
+			    		div.removeChild(doc.getElementById("choices"));
+			    	}
+			    }, false);
+			    employerName.addEventListener("focus", function(e){
+			    	policyUtils.current = this.value;
+			    }, false);
+		    	employerNameTD.appendChild(employerName);
+		    	employerRow.appendChild(employerNameLabel);
+		    	employerRow.appendChild(employerNameTD);
+		    	
+		    	var employerTypeLabel = doc.createElement("td");
+		    	employerTypeLabel.appendChild(doc.createTextNode("Employer Type:"));
+		    	var employerTypeTD = doc.createElement("td");
+		    	var employerType = doc.createElement("input");
+		    	employerType.setAttribute('type', 'text');
+		    	employerType.setAttribute('id', 'employerType');
+		    	employerType.addEventListener("keyup", function(e){
+			    	if (this.value != "") {
+			    		policyUtils.dropdown(this, doc, true);
+			    	}else{
+			    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+			    		policyUtils.current = "";
+			    	}
+			    }, false);
+			    employerType.addEventListener("blur", function(e){
+					this.value = policyUtils.current;
+					policyUtils.current = "";
+			    	if (doc.getElementById("choices")) {
+			    		div.removeChild(doc.getElementById("choices"));
+			    	}
+			    }, false);
+			    employerType.addEventListener("focus", function(e){
+			    	policyUtils.current = this.value;
+			    }, false);
+		    	employerTypeTD.appendChild(employerType);
+		    	employerRow.appendChild(employerTypeLabel);
+		    	employerRow.appendChild(employerTypeTD);
+		    	
+//		    	var employerSubGroupLabel = doc.createElement("td");
+//		    	employerSubGroupLabel.appendChild(doc.createTextNode("Employer Sub Group:"));
+//		    	var employerSubGroupTD = doc.createElement("td");
+//		    	var employerSubGroup = doc.createElement("input");
+//		    	employerSubGroup.setAttribute('type', 'text');
+//		    	employerSubGroupTD.appendChild(employerSubGroup);
+//		    	employerRow.appendChild(employerSubGroupLabel);
+//		    	employerRow.appendChild(employerSubGroupTD);
+//		    	
+//		    	var employmentTypeLabel = doc.createElement("td");
+//		    	employmentTypeLabel.appendChild(doc.createTextNode("Employment Type:"));
+//		    	var employmentTypeTD = doc.createElement("td");
+//		    	var employmentType = doc.createElement("input");
+//		    	employmentType.setAttribute('type', 'text');
+//		    	employmentTypeTD.appendChild(employmentType);
+//		    	employerRow.appendChild(employmentTypeLabel);
+//		    	employerRow.appendChild(employmentTypeTD);
+		    	personTBody.appendChild(employerRow);
+		    	
+		    	var employmentActivitiesRow = doc.createElement("tr");
+		    	var jobNameLabel = doc.createElement("td");
+		    	jobNameLabel.appendChild(doc.createTextNode("Job:"));
+		    	var jobNameTD = doc.createElement("td");
+		    	var jobName = doc.createElement("input");
+		    	jobName.setAttribute('type', 'text');
+		    	jobName.setAttribute('id', 'jobName');
+		    	jobName.addEventListener("keyup", function(e){
+			    	if (this.value != "") {
+			    		policyUtils.dropdown(this, doc, true);
+			    	}else{
+			    		if (doc.getElementById("choices")) div.removeChild(doc.getElementById("choices"));
+			    		policyUtils.current = "";
+			    	}
+			    }, false);
+			    jobName.addEventListener("blur", function(e){
+					this.value = policyUtils.current;
+					policyUtils.current = "";
+			    	if (doc.getElementById("choices")) {
+			    		div.removeChild(doc.getElementById("choices"));
+			    	}
+			    }, false);
+			    jobName.addEventListener("focus", function(e){
+			    	policyUtils.current = this.value;
+			    }, false);
+		    	jobNameTD.appendChild(jobName);
+		    	employmentActivitiesRow.appendChild(jobNameLabel);
+		    	employmentActivitiesRow.appendChild(jobNameTD);
+		    	
+//		    	var jobLocationLabel = doc.createElement("td");
+//		    	jobLocationLabel.appendChild(doc.createTextNode("Location:"));
+//		    	var jobLocationTD = doc.createElement("td");
+//		    	var jobLocation = doc.createElement("input");
+//		    	jobLocation.setAttribute('type', 'text');
+//		    	jobLocationTD.appendChild(jobLocation);
+//		    	employmentActivitiesRow.appendChild(jobLocationLabel);
+//		    	employmentActivitiesRow.appendChild(jobLocationTD);
+//		    	
+//		    	var jobLocationTypeLabel = doc.createElement("td");
+//		    	jobLocationTypeLabel.appendChild(doc.createTextNode("Location Type:"));
+//		    	var jobLocationTypeTD = doc.createElement("td");
+//		    	var jobLocationType = doc.createElement("input");
+//		    	jobLocationType.setAttribute('type', 'text');
+//		    	jobLocationTypeTD.appendChild(jobLocationType);
+//		    	employmentActivitiesRow.appendChild(jobLocationTypeLabel);
+//		    	employmentActivitiesRow.appendChild(jobLocationTypeTD);
+		    	personTBody.appendChild(employmentActivitiesRow);
+		    	
+		    	var sysRecRow = doc.createElement("tr");
+		    	var sysRecLabel = doc.createElement("td");
+		    	sysRecLabel.appendChild(doc.createTextNode("Maintains a System of Records"));
+		    	var sysRecTD = doc.createElement("td");
+		    	var sysRec = doc.createElement("input");
+		    	sysRec.setAttribute('type', 'checkbox');
+		    	sysRec.setAttribute('id', 'sysRec');
+		    	sysRecTD.appendChild(sysRec);
+		    	sysRecRow.appendChild(sysRecLabel);
+		    	sysRecRow.appendChild(sysRecTD);
+		    	personTBody.appendChild(sysRecRow);
+		    	
+		    	
+		    	var done = doc.createElement("input");
+		    	done.setAttribute("type", "button");
+		    	done.setAttribute("value", "OK");
+		    	done.addEventListener("click", function(){
+		    		if (name.value.search(/\w/) == -1) {
+		    			alert("You must enter a name");
+		    		}else {
+			    		var facts = prefixes.facts;
+			    		var pri = prefixes.pri;
+			    		var rdf = prefixes.rdf;
+			    		var person = new Person(name.value);
+			    		if (citizenship.value.search(/\w/)!= -1) {
+			    			person.citizenship = citizenship.value;
+			    		}
+			    		if (employerName.value.search(/\w/)!= -1) {
+			    			person.employerName = employerName.value;
+			    		}
+			    		if (employerType.value.search(/\w/)!= -1) {
+			    			person.employerType = employerType.value;
+			    		}
+			    		if (jobName.value.search(/\w/)!= -1) {
+			    			person.jobName = jobName.value;
+			    		}
+			    		if (policyUtils.options.citizenships[citizenship.value]) {
+			    			person.output += facts(person.name) + " " + rdf('type') + " " + policyUtils.options.citizenships[citizenship.value] + ".\n";
+			    		}else {
+			    			person.output += facts(person.name) + " " + rdf('type') + " " + pri("Person") + ".\n";
+			    		}
+			    		if (employerName.value.search(/\w/)!= -1) {
+			    			if(jobName.value == "Head Of") {
+			    				person.output += facts(person.name) + " " + pri("headOf") + " " + (policyUtils.options.agencies[employerName.value]||facts(employerName.value.replace(/\s+/, "_"))) + ".\n";
+			    			}else {
+			    				person.output += facts(person.name) + " " + pri("employedBy") + " " + (policyUtils.options.agencies[employerName.value]||facts(employerName.value.replace(/\s+/, "_"))) + ".\n";
+			    			}
+			    			if(jobName.value != "Head Of" && jobName.value != "Employee" && policyUtils.options.titles[jobName.value]) {
+			    				person.output += facts(person.name) + " " + rdf('type') + " " + policyUtils.options.titles[jobName.value] + ".\n";
+			    			}
+			    			if (policyUtils.options.employerTypes[employerType.value]) {
+			    				person.output += (policyUtils.options.agencies[employerName.value]||facts(employerName.value.replace(/\s+/, "_"))) + " " + rdf('type') + " " + policyUtils.options.employerTypes[employerType.value] + ".\n";
+			    			}
+			    		}
+			    		if (sysRec.checked && person.employerName) {
+			    			person.sysRec = facts(person.employerName + "_SR");
+			    			policyUtils.options.dataLocs[person.employerName + "'s System"] = person.sysRec;
+			    			person.output += (policyUtils.options.agencies[employerName.value]||facts(employerName.value.replace(/\s+/, "_"))) + " " + pri("maintains") + " " + person.sysRec + ".\n";
+			    		}
+			    		if (doc.getElementById(person.name)) {
+			    			doc.getElementById(person.name).setAttribute('id', 'sldkjf');
+			    		}
+			    		policyUtils.people[person.name.replace("_", " ")] = person;
+						doc.getElementById('peopleDiv').appendChild(createPeopleList());
+			    		doc.getElementById("logForm").setAttribute('style', 'visibility: visible');
+			    		var personInfo = doc.createElement("table");
+			    		personInfo.setAttribute('id', person.name);
+			    		personInfo.setAttribute('class', 'personView');
+			    		if (citizenship.value.search(/\w/)!= -1) {
+			    			var citRow = doc.createElement("tr");
+			    			citRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode("Citizenship: ")));
+			    			citRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode(citizenship.value)));
+			    			personInfo.appendChild(citRow);
+			    		} 
+			    		if (employerName.value.search(/\w/)!= -1) {
+			    			var enRow = doc.createElement("tr");
+			    			enRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode("Employer: ")));
+			    			enRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode(employerName.value)));
+			    			personInfo.appendChild(enRow);
+			    		}
+			    		if (employerType.value.search(/\w/)!= -1) {
+			    			var etRow = doc.createElement("tr");
+			    			etRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode("Employer Type: ")));
+			    			etRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode(employerType.value)));
+			    			personInfo.appendChild(etRow);
+			    		}
+			    		if (jobName.value.search(/\w/)!= -1) {
+			    			var jnRow = doc.createElement("tr");
+			    			jnRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode("Title: ")));
+			    			jnRow.appendChild(doc.createElement('td').appendChild(doc.createTextNode(jobName.value)));
+			    			personInfo.appendChild(jnRow);
+			    		}
+			    		if (sysRec.checked) {
+			    			var srRow = doc.createElement("tr");
+			    			srRow.appendChild(doc.createTextNode("Maintains a System of Records"));
+			    			personInfo.appendChild(srRow);
+			    		}
+			    		doc.getElementById("Policy Runner Pane").appendChild(personInfo);
+				    	this.parentNode.parentNode.removeChild(this.parentNode);
+		    		}
+		    	}, false);
+		    	var cancel = doc.createElement("input");
+		    	cancel.setAttribute("type", "button");
+		    	cancel.setAttribute("value", "Cancel");
+		    	cancel.addEventListener("click", function(){
+			    	doc.getElementById("logForm").setAttribute('style', 'visibility: visible');
+			    	this.parentNode.parentNode.removeChild(this.parentNode);
+		    	}, false);
+		    	
+		    	newPersonDiv.appendChild(personTable);
+		    	newPersonDiv.appendChild(done);
+		    	newPersonDiv.appendChild(cancel);
+		    	doc.getElementById("Policy Runner Pane").appendChild(newPersonDiv);
+		    	doc.getElementById("logForm").setAttribute('style', 'visibility: hidden');
+		    }, false);
+			function createPeopleList() {
+				var peopleDiv = doc.getElementById('peopleDiv');
+				if (peopleDiv && doc.getElementById("peopleList")) peopleDiv.removeChild(doc.getElementById("peopleList"));
+		    	var peopleList = doc.createElement("table");
+			    peopleList.setAttribute("id", "peopleList");
+			    var peopleRow = doc.createElement("tr");
+			    var peopleHeading = doc.createElement("th");
+			    peopleHeading.appendChild(doc.createTextNode("PEOPLE:"));
+			    peopleRow.appendChild(peopleHeading);
+			    for (var p in policyUtils.people) {
+			    	var td = doc.createElement("td");
+			    	td.addEventListener("mouseover", function(){
+			    		doc.getElementById(this.firstChild.nodeValue.replace(" ", "_")).setAttribute('style', 'visibility: visible; top: ' + (policyUtils.getY(this) + 65) + 'px; left: '+ policyUtils.getX(this) + 'px;');
+			    	}, false);
+			    	td.addEventListener("mouseout", function(){
+			    		doc.getElementById(this.firstChild.nodeValue.replace(" ", "_")).setAttribute('style', 'visibility: hidden');
+			    	}, false);
+			    	td.appendChild(doc.createTextNode(p));
+			    	peopleRow.appendChild(td);
+			    }
+			    peopleList.appendChild(peopleRow);
+			    peopleList.setAttribute("class", 'peopleList');
+			    return peopleList;
+			}
+		    peopleDiv.appendChild(addPerson);
+			peopleDiv.appendChild(createPeopleList());
+		    
+		    /*TODO*/
+		    var moreDiv = doc.createElement("div");
+		    moreDiv.setAttribute('id', 'moreEvents');
+		    
+		    var ifButton = doc.createElement("input");
+		    ifButton.setAttribute('type', 'button');
+		    ifButton.setAttribute("value", "IF...");
+		    ifButton.addEventListener("click", function(){
+		    	this.parentNode.removeChild(this);
+		    	var ifInput = doc.createElement("p");
+		    	
+		    	ifInput.appendChild(doc.createTextNode("If "));
+		    }, false);
+		    
 		    
 		    var buttondiv = doc.createElement("div");
 		    
@@ -688,35 +975,8 @@ policyPane = {
 		    			return s + " " + v + " " + o + ".\n";
 		    		}
 		    		var log = "";
-		    		//TODO
-		    		if (_senders[doc.getElementById("sender").value]) {
-		    			log += makeTriple(_senders[doc.getElementById("sender").value], rdf('type'), pri('Federal_Agency'));
-		    		}
-		    		if (_actions[doc.getElementById("action").value]) {
-		    			log += makeTriple(facts('mainAction'), rdf('type'), _actions[doc.getElementById("action").value]);
-		    		}
-		    		if (_senders[doc.getElementById("sender").value]) {
-		    			log += makeTriple(facts('mainAction'), pri('by'), _senders[doc.getElementById("sender").value]);
-		    		}
-		    		if(_reqs[doc.getElementById("requester").value]) {
-		    			log += makeTriple(facts('mainAction'), pri('to'), _reqs[doc.getElementById("requester").value]);
-		    		}
-		    		log += facts('mainAction') + " " + pri('data') + " " + facts('data') + ".\n";
-		    		if(_specialDataCats[doc.getElementById("sDCat").value]) {
-		    			log += makeTriple(facts('data'), rdf('type'), _specialDataCats[doc.getElementById("sDCat").value]);
-		    		}
-		    		if(_dataCats[doc.getElementById('dCat').value]) {
-		    			log += makeTriple(facts('subject'), rdf('type'), _dataCats[doc.getElementById('dCat').value]);
-		    		}
-		    		log += makeTriple(facts('data'), pri('about'), facts('subject'));
-		    		if (_dataContexts[doc.getElementById("dCon").value]) {
-		    			log += facts('data') + _dataContexts[doc.getElementById("dCon").value] + ".\n";
-		    		}
-		    		if (_senderContexts[doc.getElementById("sContext").value]) {
-		    			log += makeTriple(facts('other'), rdf('type'), _senderContexts[doc.getElementById("sContext").value]);
-		    		}
-		    		if (_senders[doc.getElementById("sender").value] && _senderProps[doc.getElementById("sProp").value] && _senderTypes[doc.getElementById("sType").value]) {
-		    			log += makeTriple(_senders[doc.getElementById("sender").value], _senderProps[doc.getElementById("sProp").value], _senderTypes[doc.getElementById("sType").value])
+		    		for (var p in policyUtils.people) {
+		    			log += policyUtils.people[p].output;
 		    		}
 		    		return log;
 		    	};
@@ -727,7 +987,7 @@ policyPane = {
 		    	browser.selectedTab = browser.addTab("http://mr-burns.w3.org/cgi-bin/air_2_0.py?" +
 		    			"logFile=" + uri + "&logFile=" + priURI +"&rulesFile=" + doc.URL);
 		    	uri = uriPrefix + "log" + c + ".n3";
-		    	facts = RDFNamespace(uriPrefix + "log" + c++ + "#");
+		    	prefixes.facts = RDFNamespace(uriPrefix + "log" + c++ + "#");
 		    }, false);
 		    
 		    var forgetDiv = doc.createElement("div");
@@ -755,10 +1015,13 @@ policyPane = {
 		    
 		    forgetDiv.appendChild(currentID);
 		    forgetDiv.appendChild(forget);
+		    moreDiv.appendChild(ifButton);
 		    buttondiv.appendChild(btninput);
 		    inputDiv.appendChild(txtinput);
 		    fieldset.appendChild(head);
+		    fieldset.appendChild(peopleDiv);
 		    fieldset.appendChild(inputDiv);
+		    fieldset.appendChild(moreDiv);
 		    fieldset.appendChild(buttondiv);
 		    form.appendChild(fieldset);
 		    div.appendChild(form);

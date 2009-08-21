@@ -32,3 +32,20 @@
 .policy div.suggest .selected {
 	background-color: #00FF00;
 }
+.policy div.newPerson {
+	position: fixed;
+	background-color: #989898;
+	border-style: inset;
+	top: 4.5em;
+	left: 1em;
+}
+.policy .peopleList td{
+	border: 1px solid black;
+	padding: 3px;
+}
+.policy .personView{
+	position: absolute;
+	border-style: outset;
+	background-color: #808080;
+	visibility: hidden;
+}

@@ -270,13 +270,14 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
         };
         Microblog.prototype.generateNewMB = function(id, name, avatar, loc) {
             var host = loc + "/" + id;
-
             var rememberMicroblog = function() {
                 tabulator.preferences.set("acct", host + "#" + id);
             };
             var cbgenUserMB = function(a, success, c, d) {
+                throw "your face";
                 if (success) {
-                    notify('Microblog generated at ' + host + '#' + id);
+                    notify('Microblog generated at ' + host + '#' + id
+                            +'please add <b>'+host+'</b> to your foaf.');
                     mbCancelNewMB();
                     //assume the foaf is not writable and store the microblog to the
                     //preferences for later retrieval.
@@ -314,7 +315,6 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 genUserMB.push(new tabulator.rdf.Statement(kb.sym(host + "#" + id), SIOC('avatar'), kb.sym(avatar), kb.sym(host)));
             }
             this.sparqlUpdater.insert_statement(genUserMB, cbgenUserMB);
-
         };
         var mb = new Microblog(kb);
         var Favorites = new Favorites(mb.getMyURI());
@@ -328,7 +328,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
         // PANE
         // User Interface for the Microblog Pane
         //----------------------------------------------        
-        var Pane = function(s, doc){
+        var Pane = function(s, doc, microblogPane){
             var TabManager = function(doc){
                 this.tablist =  {};
                 this.doc = doc;
@@ -363,10 +363,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                     }
                 }
             }
-
-
-
-
+            this.microblogPane =  microblogPane; 
             var accounts = kb.each(s, FOAF('holdsAccount'))
             for (var a in accounts) {
                 if (kb.whether(accounts[a], RDF('type'), SIOC('User')) &&
@@ -389,10 +386,6 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             }
 
             this.Tab = new TabManager(doc);
-            this.headerContainer = this.header(s,doc);
-            this.postContainer = this.streamView(s,doc)
-            this.notificationsView(s,doc)
-            this.xfollows = this.followsView()
         } 
         
         Pane.prototype.notify = function(messageString) {
@@ -412,11 +405,10 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             var that = this;
             lsFollowUser = function() {
                 var myUser = kb.sym(mb.getMyURI());
-                var Ifollow = that.Ifollow;
                 var username = that.creator.name;
                 var mbconfirmFollow = function(uri,success, msg) {
                     if (success=== true) {
-                        if (!Ifollow) {
+                        if (!that.Ifollow) {
                             //prevent duplicate entries from being added to kb (because that was happening)
                             if (!kb.whether(followMe.subject, followMe.predicate, followMe.object, followMe.why)) {
                                 kb.add(followMe.subject, followMe.predicate, followMe.object, followMe.why);
@@ -424,10 +416,12 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                         } else {
                             kb.removeMany(followMe.subject, followMe.predicate, followMe.object, followMe.why);
                         }
-                        Ifollow = !Ifollow;
+                        dump("\n"+ that.Ifollow);
+                        that.Ifollow = !that.Ifollow;
                         xfollowButton.disabled = false;
-                        followButtonLabel = (Ifollow) ? "Unfollow ": "Follow ";
-                        var doFollow = (Ifollow) ? "now follow ": "no longer follow ";
+                        dump(that.Ifollow);
+                        followButtonLabel = (that.Ifollow) ? "Unfollow ": "Follow ";
+                        var doFollow = (that.Ifollow) ? "now follow ": "no longer follow ";
                         xfollowButton.value = followButtonLabel + username;
                         that.notify("You " + doFollow + username + ".");
                     }
@@ -713,6 +707,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
         */
             var that=this;
             var viewPost = function(uris) {
+                xviewReply = that.xviewReply;
                 for (var n in xviewReply.childNodes) {
                     xviewReply.removeChild(xviewReply.childNodes[0]);
                 }
@@ -724,10 +719,10 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 xcloseContainer.appendChild(xcloseButton);
                 xviewReply.appendChild(xcloseContainer);
                 for (var uri in uris) {
-                    xviewReply.appendChild(generatePost(kb.sym(uris[uri]), this.thisIsMe, "view"));
+                    xviewReply.appendChild(that.generatePost(kb.sym(uris[uri]), this.thisIsMe, "view"));
                 }
                 xviewReply.className = "replyView-active";
-                microblogPane.appendChild(xviewReply);
+                that.microblogPane.appendChild(xviewReply);
             };
             //container for post
             var xpost = doc.createElement('li');
@@ -1067,7 +1062,11 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             this.Tab.create("tab-at-user","@"+user,postMentionContainer,false);
         };
         Pane.prototype.build = function(){
-            var microblogPane  = doc.createElement("div");
+            var microblogPane = this.microblogPane;
+            this.headerContainer = this.header(s,doc);
+            this.postContainer = this.streamView(s,doc)
+            this.notificationsView(s,doc)
+            this.xfollows = this.followsView()
                 microblogPane.className = "ppane";
                 microblogPane.appendChild(this.xviewReply);
                 microblogPane.appendChild(this.xnotify);
@@ -1076,36 +1075,43 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 microblogPane.appendChild(this.postContainer);
                 microblogPane.appendChild(this.postNotificationContainer);
                 microblogPane.appendChild(this.postMentionContainer);
-                return microblogPane;
         };
-        var ppane = new Pane(s,doc)
-        var microblogpane = ppane.build()
-        var follows ={"count":0};
-        var loadMicroblog = function(uri){
-            if (uri in follows){
-                follows.count -=1;
-            }
-            if (follows.count==0){
-                dump("done")
-            }
-        }
-        var makePane = function(uri){
-            var accts = kb.each(s, FOAF('holdsAccount'));
-            for (var acct in accts){
-                if(uri == accts[acct].uri.split("#")[0]){
-                    var followlist= kb.each(accts[acct], SIOC('follows'))
-                    for(var f in followlist){
-                        follows[followlist[f].uri.split("#")[0]]=null;
-                        follows.count+=1;
-                        sf.lookUpThing(followlist[f]);
-                    }
-                    sf.addCallback('done',loadMicroblog);
-                    break;
-                }
-            }
-        }
-        sf.addCallback('done', makePane);
-        sf.addCallback('fail', makePane)
+
+        var microblogpane  = doc.createElement("div");
+//      var getusersfollows = function(uri){
+//          var follows = new Object();
+//          var followsa = {follows:0, matches:0}; 
+//          var accounts = kb.each(s, FOAF("holdsAccount"));
+//          //get all of the accounts that a person holds
+//          for (var acct in accounts){
+//              var account  = accounts[acct].uri;
+//              var act = kb.each(kb.sym(account),SIOC("follows"));
+//              for (var a in act){
+//                  var thisuri = act[a].uri.split("#")[0];
+//                  if (!follows[thisuri]){followsa.follows+=1;}
+//                  follows[thisuri] =true;
+//              }
+//          }
+//
+//          var buildPaneUI = function(uri){
+//              followsa.matches = (follows[uri]) ? followsa.matches+1: followsa.matches;
+//              dump(follows.toSource());
+//              if(followsa.follows == followsa.matches ){
+                    var ppane = new Pane(s,doc,microblogpane)
+                    ppane.build();
+//                  return false;
+//              }
+//              else{
+//                  return true;
+//              }
+//          }
+//          sf.addCallback('done',buildPaneUI);
+//          sf.addCallback('fail',buildPaneUI);
+//          //fetch each of the followers
+//          for (var f in follows){
+//              sf.refresh(kb.sym(f));
+//          }
+//      }(s);
         return microblogpane;
     }
 },

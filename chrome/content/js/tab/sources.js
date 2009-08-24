@@ -592,7 +592,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
     */
     this.requestURI = function (uri, rterm, force) { //sources_request_new
         if (uri.indexOf('#') >= 0) { // hash
-	    return alert("requestURI should notbe called with fragid: "+uri)
+	    throw("requestURI should notbe called with fragid: "+uri)
 	}
 
  
@@ -726,7 +726,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     if (xhr.status-0 == 200) {
                         //addType(tabulator.ns.link('Document'));
                         var ct = xhr.headers['content-type'];
-                        if (!ct) alert('No content-type on 200 response for '+xhr.uri)
+                        if (!ct) throw('No content-type on 200 response for '+xhr.uri)
                         else {
                             if (ct.indexOf('image/') == 0)
                                 addType(kb.sym('http://purl.org/dc/terms/Image'));
@@ -817,7 +817,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             try {
                 tabulator.rdf.Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
             } catch(e) {
-                alert("Failed to get privileges: " + e)
+                throw("Failed to get privileges: " + e)
             }
         }
 	
@@ -922,7 +922,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 		    }
 		}
 	    } catch (err) {
-		alert("Couldn't set callback for redirects: "+err)
+		throw("Couldn't set callback for redirects: "+err)
 	    }
 
 	    try {
@@ -942,7 +942,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 		// See http://dig.csail.mit.edu/issues/tabulator/issue65
 		//if (requester) { xhr.setRequestHeader('Referer',requester) }
 	    } catch (err) {
-		alert("Can't set Accept header: "+err)
+		throw("Can't set Accept header: "+err)
 	    }
 	}
 
@@ -959,7 +959,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    try {
 	        tabulator.rdf.Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
 	    } catch (e) {
-	        alert("Can't drop privilege: " + e)
+	        throw("Can't drop privilege: " + e)
 	    }
         }
 

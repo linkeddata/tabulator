@@ -103,8 +103,8 @@ function showAcceptedUseOfImage(uses, txt){
 	       if (licenseEl.getAttribute('rel') == "license"){
             //Check if the image in question is under a license which allows the use specified by the parameter
             for (var j=0; j<uses.length; j++){
-                if ((uses[j]=="publicdomain" && licenseEl.toString().substring(27,39) == uses[j]) || licenseEl.toString().substring(36,36+uses[j].length) == uses[j]){
-                    //@@There's a bug here FIX ME
+		if (licenseEl.toString() == uses[j]){
+
                     //Content under public domain or CC-Zero have a license like this:
                     //http://creativecommons.org/publicdomain/zero/1.0/
                     //Otherwise - The OR part
@@ -121,23 +121,37 @@ function showAcceptedUseOfImage(uses, txt){
 	   });
 }
 
+
 /**
 * Give visual cues to the user as to what images can be used for what purpose
 */
 function toggleSemClip(event){
   var whichOption = event.target;
-  
   //Different Use Restrictions
-  var anyUse = ["publicdomain"];
-  var commercialUse = [ "publicdomain","by-nd", "by-nd-sa", "by-sa", "by"];
-  var allowModifications = [ "publicdomain", "by-nc-sa", "by-sa", "by-nc", "by" ];
-  var sameLicense = ["by-nc-nd-sa", "by-nd-sa", "by-nc-sa", "by-sa"];
-  var nonCommercialUse = ["by-nc-nd", "by-nc", "by-nc-sa","by-nc-nd-sa"];
+  var anyUse = ["http://creativecommons.org/publicdomain/zero/1.0/"];
+  var commercialUse = [ "http://creativecommons.org/licenses/publicdomain/3.0/",
+			"http://creativecommons.org/licenses/by-nd/3.0/", 
+			"http://creativecommons.org/licenses/by-nd-sa/3.0/", 
+			"http://creativecommons.org/licenses/by-sa/3.0/", 
+			"http://creativecommons.org/licenses/by/3.0/"];
+  var allowModifications = [ "http://creativecommons.org/publicdomain/zero/1.0/", 
+			     "http://creativecommons.org/licenses/by-nc-sa/3.0/", 
+			     "http://creativecommons.org/licenses/by-sa/3.0/", 
+			     "http://creativecommons.org/licenses/by-n/3.0/v", 
+			     "http://creativecommons.org/licenses/by/3.0/" ];
+  var sameLicense = ["http://creativecommons.org/licenses/by-nc-nd-sa/3.0/", 
+		     "http://creativecommons.org/licenses/by-nd-sa/3.0/", 
+		     "http://creativecommons.org/licenses/by-nc-sa/3.0/", 
+		     "http://creativecommons.org/licenses/by-sa/3.0/"];
+  var nonCommercialUse = ["http://creativecommons.org/licenses/by-nc-nd/3.0/", 
+			  "http://creativecommons.org/licenses/by-nc/3.0/", 
+			  "http://creativecommons.org/licenses/by-nc-sa/3.0/",
+			  "http://creativecommons.org/licenses/by-nc-nd-sa/3.0/"];
   
   if (whichOption.getAttribute('checked') == 'true'){
       switch(whichOption.id.toString()){
             case "any_use":
-                showAcceptedUseOfImage(anyUse, "No restrictions");
+	        showAcceptedUseOfImage(anyUse, "No restrictions. Can be used for any purpose.");
                 break;
             case "commercial_use":
                 showAcceptedUseOfImage(commercialUse, "Can be used for<br/> Commercial Purposes");
@@ -199,7 +213,7 @@ function toggleSemClip(event){
 */
 function copyImageWithLicense(){
 
-    //findImagesThatCanBeCopied();
+    findImagesThatCanBeCopied();
 
     //This is the image element we are using
     var element = document.popupNode;

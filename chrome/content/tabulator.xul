@@ -395,7 +395,24 @@
                  oncommand="toggleSidebar('viewPOLICYSidebar');" />
   </broadcasterset>
 
+  <menupopup id="viewSidebarMenu">
+    <menuitem key="key_openHighlightSidebar" observes="viewHighlightSidebar"  />
+  </menupopup>
 
+  <keyset id="mainKeyset">
+    <key id="key_openHighlightSidebar" command="viewHighlightSidebar"
+         key="&openHighlightSidebar.commandkey;"
+         modifiers="&openHighlightSidebar.modifierskey;" />
+  </keyset>
+
+  <broadcasterset id="mainBroadcasterSet">
+    <broadcaster id="viewHighlightSidebar"
+                 label="&highlightsidebar.title;"
+                 autoCheck="false"
+                 type="checkbox"
+                 group="sidebar"
+                 sidebarurl="chrome://tabulator/content/highlightsidebar.xul"
+                 sidebartitle="&highlightsidebar.title;"
+                 oncommand="toggleSidebar('viewHighlightSidebar');" />
+  </broadcasterset>
 </overlay>
-
-

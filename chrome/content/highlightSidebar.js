@@ -104,16 +104,15 @@ function highlightSidebar(doc) {
 				txtLabel.setAttribute('value', policyLabelArray[count]);
 				txtDiv.appendChild(txtLabel);
 
-				var colorInput = doc.createElement("input");
+				/*var colorInput = doc.createElement("input");
 				colorInput.setAttribute('type', 'text');
 				colorInput.setAttribute('name', 'colorInput');
 				colorInput.setAttribute('id', 'colorInput');
 				//colorInput.setAttribute('class', 'color');
 				//colorInput.setAttribute('value', '66CC00');
 				txtDiv.appendChild(colorInput);
-				newDiv.appendChild(txtDiv);					 
+				newDiv.appendChild(txtDiv);*/
 
-				/*
 				var colMenu = doc.createElement("menulist");
 				colMenu.setAttribute('id', 'colMenu ');
 				colMenu.setAttribute('onmousedown', '"show()"');
@@ -129,7 +128,7 @@ function highlightSidebar(doc) {
 				}
 				colMenu.appendChild(colMenuhelper);
 				txtDiv.appendChild(colMenu);
-				newDiv.appendChild(txtDiv); */
+				newDiv.appendChild(txtDiv); 
 			}	
 		}
 
@@ -149,23 +148,12 @@ function highlightSidebar(doc) {
 
 				txtDiv.appendChild(txtLabel);
 
-				var colorInput = doc.createElement("input");
-                                colorInput.setAttribute('type', 'text');
-                                colorInput.setAttribute('name', 'colorInput');
-                                colorInput.setAttribute('id', 'colorInput');
-                                //colorInput.setAttribute('class', 'color');
-                                //colorInput.setAttribute('value', '66CC00');
-                                txtDiv.appendChild(colorInput);
-                                newDiv.appendChild(txtDiv);
-
-				/*
 				var colMenu = doc.createElement("menulist");
 				colMenu.setAttribute('id', 'colMenu ');
 				colMenu.setAttribute('onmousedown', '"show()"');
 
 				var colMenuhelper = doc.createElement("menupopup");
-				for (var i = 0; i < colorList.length; i++)
-				{
+				for (var i = 0; i < colorList.length; i++) {
 					var colOption = doc.createElement("menuitem");
 					colOption.setAttribute('value', colorList[i]);
 					colOption.setAttribute('label', colorList[i]);	
@@ -173,7 +161,7 @@ function highlightSidebar(doc) {
 				}
 				colMenu.appendChild(colMenuhelper);
 				txtDiv.appendChild(colMenu);
-				newDiv.appendChild(txtDiv);	*/
+				newDiv.appendChild(txtDiv);	
 			}
 		}
 		
@@ -197,23 +185,12 @@ function highlightSidebar(doc) {
 
 				txtDiv.appendChild(txtLabel);
 
-				var colorInput = doc.createElement("input");
-                                colorInput.setAttribute('type', 'text');
-                                colorInput.setAttribute('name', 'colorInput');
-                                colorInput.setAttribute('id', 'colorInput');
-                                //colorInput.setAttribute('class', 'color');
-                                //colorInput.setAttribute('value', '66CC00');
-                                txtDiv.appendChild(colorInput);
-                                newDiv.appendChild(txtDiv);
-
-				/*
 				var colMenu = doc.createElement("menulist");
 				colMenu.setAttribute('id', 'colMenu ');
 				colMenu.setAttribute('onmousedown', '"show()"');
 
 				var colMenuhelper = doc.createElement("menupopup");
-				for (var i = 0; i < colorList.length; i++)
-				{
+				for (var i = 0; i < colorList.length; i++) {
 					var colOption = doc.createElement("menuitem");
 					colOption.setAttribute('value', colorList[i]);
 					colOption.setAttribute('label', colorList[i]);	
@@ -221,7 +198,7 @@ function highlightSidebar(doc) {
 				}
 				colMenu.appendChild(colMenuhelper);
 				txtDiv.appendChild(colMenu);
-				newDiv.appendChild(txtDiv);*/
+				newDiv.appendChild(txtDiv);
 			}
 		}		
 
@@ -248,16 +225,6 @@ function highlightSidebar(doc) {
 				txtLabel.setAttribute('value', policyLabelArray[count]);
 				txtDiv.appendChild(txtLabel);
 
-				var colorInput = doc.createElement("input");
-                                colorInput.setAttribute('type', 'text');
-                                colorInput.setAttribute('name', 'colorInput');
-                                colorInput.setAttribute('id', 'colorInput');
-                                //colorInput.setAttribute('class', 'color');
-                                //colorInput.setAttribute('value', '66CC00');
-                                txtDiv.appendChild(colorInput);
-				loadDiv.appendChild(txtDiv); 
-				
-				/*
 				var colMenu = doc.createElement("menulist");
 				colMenu.setAttribute('id', 'colMenu ');
 				colMenu.setAttribute('onmousedown', '"show()"');
@@ -271,7 +238,7 @@ function highlightSidebar(doc) {
 				colMenu.appendChild(colMenuhelper);
 				txtDiv.appendChild(colMenu);
 				alert('preload');
-				loadDiv.appendChild(txtDiv);		*/
+				loadDiv.appendChild(txtDiv);
 			}
 			alert('here'); 
 		}
@@ -414,23 +381,12 @@ function highlightSidebar(doc) {
 		txtLabel.setAttribute('value', 'no-financial: ');
 		txtDiv.appendChild(txtLabel);
 	
-		var colorInput = doc.createElement("input");
-                colorInput.setAttribute('type', 'text');
-                colorInput.setAttribute('name', 'colorInput');
-                colorInput.setAttribute('id', 'colorInput');
-                //colorInput.setAttribute('class', 'color');
-                //colorInput.setAttribute('value', '66CC00');
-                txtDiv.appendChild(colorInput);
-                newDiv.appendChild(txtDiv);
-
-		/*	
 		colMenu = doc.createElement("menulist");
 		colMenu.setAttribute('id', 'colMenu ');
 		colMenu.setAttribute('onmousedown', '"show()"');
 		
 		colMenuhelper = doc.createElement("menupopup");
-		for (var i = 0; i < colorList.length; i++)
-		{
+		for (var i = 0; i < colorList.length; i++) {
 			var colOption = doc.createElement("menuitem");
 			colOption.setAttribute('value', colorList[i]);
 			colOption.setAttribute('label', colorList[i]);	
@@ -438,7 +394,7 @@ function highlightSidebar(doc) {
 		}
 		colMenu.appendChild(colMenuhelper);
 		txtDiv.appendChild(colMenu);
-		newDiv.appendChild(txtDiv); */
+		newDiv.appendChild(txtDiv); 
 		
 		//no-med
 		

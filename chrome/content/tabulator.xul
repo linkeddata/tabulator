@@ -17,6 +17,8 @@
   <script type="application/x-javascript" src="js/rdf/sources.js"/>
   <script type="application/x-javascript" src="js/rdf/serialize.js"/>
 
+
+
   <script type="application/x-javascript" src="outlineinit.js"/>
   <script type="application/x-javascript" src="js/userinput.js"/>
   <script type="application/x-javascript" src="test.js"/>
@@ -374,6 +376,7 @@
 
 	<!-- New Addition -->
 
+
   <menupopup id="viewSidebarMenu">
     <menuitem key="key_openPOLICYSidebar" observes="viewPOLICYSidebar"  />
   </menupopup>
@@ -395,6 +398,8 @@
                  oncommand="toggleSidebar('viewPOLICYSidebar');" />
   </broadcasterset>
 
+<!-- Highlighting Sidebar -->
+<script type="application/x-javascript" src="http://dig.csail.mit.edu/2009/12/jscolor/jscolor.js"/>
   <menupopup id="viewSidebarMenu">
     <menuitem key="key_openHighlightSidebar" observes="viewHighlightSidebar"  />
   </menupopup>

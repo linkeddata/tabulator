@@ -54,8 +54,8 @@
 <!ENTITY openPOLICYSidebar.modifierskey "shift accel">
 
 <!ENTITY highlightsidebar.title "License/Restriction Highlighter">
-<!ENTITY highlightsidebar.accesskey "L">
-<!ENTITY openHighlightSidebar.commandkey "L">
+<!ENTITY highlightsidebar.accesskey "A">
+<!ENTITY openHighlightSidebar.commandkey "A">
 <!ENTITY openHighlightSidebar.modifierskey "shift accel">
 
 

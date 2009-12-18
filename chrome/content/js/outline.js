@@ -645,14 +645,17 @@ function Outline(doc) {
     
     this.outline_getPolicyColor = function outline_getPolicyColor(s) {
     	var licType = s.object.uri;
+        //alert(s.object + " " + licType);
     	
     	var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
     	
     	var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
-    	
+
+        // Highlighting happens here
     	if (policyURIArray.indexOf(licType) > -1)
 	{
 		return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+                //return "Blue";
 	}    
 	return '';
     }
@@ -684,7 +687,8 @@ function Outline(doc) {
 	var rmpArray = this.rmpArray;
         
         
-        var docArray = [];
+        //var docArray = [];
+	var docArray = new Array();
         var highlights = [];
         var sideBar = 0;
         
@@ -711,19 +715,33 @@ function Outline(doc) {
 	
 	//this.outline_loadHighlightSettings();
 
-	
-	for (var count = 0; count < max; count++)
-	{
-		if ((plist[count].predicate.sameTerm(tabulator.ns.cc('license'))) || (plist[count].predicate.sameTerm(kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'))))
-		{
-			if (plist[count].subject.sameTerm(plist[count].why))
-			{
-				//docArray has why then color
-				docArray.push(plist[count].why);
-				docArray.push(this.outline_getPolicyColor(plist[count]));
-			}
+
+	// commented out by LK 12/17/09
+	//for (var count = 0; count < max; count++) {
+		//if ((plist[count].predicate.sameTerm(tabulator.ns.cc('license'))) || (plist[count].predicate.sameTerm(kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts')))) {
+			//docArray has why then color
+			// why is the source 
+			//docArray.push(plist[count].why);
+			//docArray.push(this.outline_getPolicyColor(plist[count]));
+		//}
+	//}
+	// modified by LK 12/17/09
+	// if source of statement has a license/restriction attached then push the source and its color into docArray
+	for (var count = 0; count < max; count++) {
+		var restrictSt = kb.statementsMatching(plist[count].why,kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'));
+		if (restrictSt.length) {
+			dump("statement: " + plist[count] + " src:" + plist[count].why + " restriction:" + restrictSt + "\n");
+			dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(restrictSt[0]));
+			docArray[plist[count].why]=this.outline_getPolicyColor(restrictSt[0]);
 		}
-	}
+		var licSt = kb.statementsMatching(plist[count].why,tabulator.ns.cc('license'),plist[count].why);
+                if (licSt.length) {
+		        dump("statement: " + plist[count] + " src:" + plist[count].why + " license:" + licSt + "\n");
+                	dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(licSt[0]));
+                        docArray[plist[count].why]=this.outline_getPolicyColor(restrictSt[0]);
+
+        	}
+	} // end of for
 	
 	
         for (j=0; j<max; j++) { //squishing together equivalent properties I think
@@ -755,12 +773,16 @@ function Outline(doc) {
 
             var tr = propertyTR(myDocument, s, inverse);
             
-            if (docArray.indexOf(s.why) > -1)
+            //if (docArray.indexOf(s.why) > -1)
+	    if (docArray[s.why] != -1)
             {
-            	tr.setAttribute('bgcolor', docArray[docArray.indexOf(s.why) + 1]);
+            	//tr.setAttribute('bgcolor', docArray[docArray.indexOf(s.why) + 1]);
+            	tr.setAttribute('bgcolor', docArray[s.why]);
+		dump("\n color:" + s.why + docArray[s.why] + "\n" );
             }
             else
             {
+		dump("\n policy"+s.why + "\n");
 	    	tr.setAttribute('bgcolor', this.outline_getPolicyColor(s));
 	    }
             
@@ -789,9 +811,11 @@ function Outline(doc) {
                 continue;
             }
             
-            if (docArray.indexOf(s.why) > -1)
+            //if (docArray.indexOf(s.why) > -1)
+	    if (docArray[s.why] != -1)
             {
-               	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));              	
+          //     	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));              	
+               	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[s.why]));              	
             }
             else
             {
@@ -822,10 +846,13 @@ function Outline(doc) {
                             defaultpropview = views.defaults[s.predicate.uri];
                             var trObj=myDocument.createElement('tr');
                             trObj.style.colspan='1';
-			    if (docArray.indexOf(s.why) > -1)
+			    //if (docArray.indexOf(s.why) > -1)
+ 			   if (docArray[s.why] != -1)
 			    {
+			    	//trObj.appendChild(thisOutline.outline_objectTD(
+                                //sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));            	
 			    	trObj.appendChild(thisOutline.outline_objectTD(
-                                sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));            	
+                                sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[s.why]));            	
 			    }
 			    else
 			    {
@@ -1750,11 +1777,23 @@ function Outline(doc) {
                 newTable = propertyTable(subject, newTable, pane)
             }
             already = true
-            if (ancestor(p, 'TABLE') && ancestor(p, 'TABLE').style.backgroundColor=='white') {
+             
+  	    // highlighting code added by LK 12/3/09 
+            //alert(subject + " ");
+ 	    //if (policycolor(subject)) then set table to policycolor 
+		//	outline_getPolicyColor(s.why)
+            //if((subject.why) && (outline_getPolicyColor(subject.why)) {
+            //    newTable.style.backgroundColor=outline_getPolicyColor(subject.why);
+           // }
+	    //else {
+              if (ancestor(p, 'TABLE') && ancestor(p, 'TABLE').style.backgroundColor=='white') {
                 newTable.style.backgroundColor='#eee'
-            } else {
+              } 
+	      else {
                 newTable.style.backgroundColor='white'
-            }
+              }
+           //}
+            
             try{if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');}catch(e){dump("YAHOO")}
             emptyNode(p).appendChild(newTable)
             thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...

@@ -102,7 +102,11 @@ tabulator.preferences.set = function(key, val) {
     tabulator.preferences.PREF.setCharPref('tabulator.'+key, val);
 }
 
-
+// added by LK for highlightsidebar 12/02/09 
+// https://developer.mozilla.org/en/NsIPrefBranch
+tabulator.preferences.clear = function(key) {
+    tabulator.preferences.PREF.clearUserPref('tabulator.'+key);
+}
 // ends
 
 

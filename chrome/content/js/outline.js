@@ -38,7 +38,6 @@ function Outline(doc) {
     this.kb = kb;
     myDocument.outline = this;
     
-    
     //people like shortcuts for sure
     var tabont = tabulator.ns.tabont;
     var foaf = tabulator.ns.foaf;
@@ -52,6 +51,12 @@ function Outline(doc) {
     var mo = tabulator.ns.mo;
     var link = tabulator.ns.link;
     
+    // LK 12/19/09
+    // toggling HighLightPane
+    dump("\n toggling viewHighlightSidebar in main outline");
+    toggleSidebar("viewHighlightSidebar");
+    toggleSidebar("viewHighlightSidebar");
+
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
     this.UserInput=new UserInput(this);
@@ -383,6 +388,11 @@ function Outline(doc) {
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
          tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", ")); 
+    	 // LK 12/19/09
+         // toggling HighLightPane
+         dump("\n toggling viewHighlightSidebar in main outline");
+         toggleSidebar("viewHighlightSidebar");
+         toggleSidebar("viewHighlightSidebar");
          
          if (color != null)
          {
@@ -652,18 +662,21 @@ function Outline(doc) {
     	var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
 
         // Highlighting happens here
-    	if (policyURIArray.indexOf(licType) > -1)
-	{
+    	if (policyURIArray.indexOf(licType) > -1) {
 		return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
                 //return "Blue";
 	}    
 	return '';
     }
-    
-
+  
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
         tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+
                            "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
+    	 // LK 12/19/09
+         // toggling HighLightPane
+         dump("\n toggling viewHighlightSidebar in appendPropertyTRs");
+         toggleSidebar("viewHighlightSidebar");
+         toggleSidebar("viewHighlightSidebar");
         //tabulator.log.info("@appendPropertyTRs, myDocument is now " + this.document.location);
         //tabulator.log.info("@appendPropertyTRs, myDocument is now " + thisOutline.document.location);            
         tabulator.log.debug("Property list length = " + plist.length)
@@ -756,7 +769,11 @@ function Outline(doc) {
                 }
 
 	} // end of for
-	
+    	// LK 12/19/09
+    	// toggling HighLightPane
+    	dump("\n toggling viewHighlightSidebar in outline_expand");
+    	toggleSidebar("viewHighlightSidebar");
+    	toggleSidebar("viewHighlightSidebar");
 	
         for (j=0; j<max; j++) { //squishing together equivalent properties I think
             var s = plist[j]
@@ -1757,6 +1774,11 @@ function Outline(doc) {
 
     function outline_expand(p, subject1, pane, already) {
         tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
+    			// LK 12/19/09
+    			// toggling HighLightPane
+    			//dump("\n toggling viewHighlightSidebar in outline_expand");
+    			//toggleSidebar("viewHighlightSidebar");
+    			//toggleSidebar("viewHighlightSidebar");
 
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
@@ -1774,6 +1796,12 @@ function Outline(doc) {
     
             var newTable
             tabulator.log.info('@@ REPAINTING ')
+    	    // LK 12/19/09
+            // toggling HighLightPane
+            dump("\n toggling viewHighlightSidebar in main outline");
+            toggleSidebar("viewHighlightSidebar");
+            toggleSidebar("viewHighlightSidebar");
+	
             if (!already) { // first expand
                 newTable = propertyTable(subject, undefined, pane)
             } else {
@@ -2008,11 +2036,6 @@ function Outline(doc) {
             outline_expand(td, subject, pane);
             myDocument.title = label(subject);  // "Tabulator: "+  No need to advertize
             tr=td.parentNode;
-            // LK 12/19/09
-            // toggling HighLightPane
-            //dump("\n toggling viewHighlightSidebar");
-            //toggleSidebar("viewHighlightSidebar");
-            //toggleSidebar("viewHighlightSidebar", true);
             getEyeFocus(tr,false);//instantly: false
         }
         if (solo) {

@@ -89,7 +89,7 @@ function highlightSidebar(doc) {
 		for (var count = 0; count < policySaveArray.length; count++) {
 			var loadColor = tabulator.preferences.get(policySaveArray[count]);
 			var inKB = kb.statementsMatching(undefined, undefined, kb.sym(policyURIArray[count]));
-			dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
+			//dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
 
 			// clearing color setting for license/restriction not in KB
 			// added by LK 12/3/09

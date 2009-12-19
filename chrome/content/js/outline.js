@@ -668,7 +668,45 @@ function Outline(doc) {
 	}    
 	return '';
     }
-  
+ 
+    function outline_getPolicyColor(s) {
+        var licType = s.object.uri;
+        //alert(s.object + " " + licType);
+
+        var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
+
+        var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
+
+        // Highlighting happens here
+        if (policyURIArray.indexOf(licType) > -1) {
+                return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+                //return "Blue";
+        }
+        return '';
+    }
+ 
+       
+    // if polStatement of statement has a license/restriction attached then return the color
+   function getPolicyColorofStatement(statement, polStatement) {
+        //dump("\n statement: " + statement + " wherePol:" + polStatement + "\n");
+        tabulator.ns.cc = cc = RDFNamespace("http://creativecommons.org/ns#");
+        tabulator.ns.rmp = rmp = RDFNamespace("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#");
+        var restrictSt = kb.statementsMatching(polStatement,tabulator.ns.rmp('restricts'));
+        if (restrictSt.length) {
+                var color = outline_getPolicyColor(restrictSt[0]);
+                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + restrictSt);
+                return color;
+       }
+       var licSt = kb.statementsMatching(polStatement,tabulator.ns.cc('license'));
+       if (licSt.length) {
+                var color = outline_getPolicyColor(licSt[0]);
+                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + licSt);
+                return color;
+       }
+       return null;
+   }
+
+
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
         tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+
                            "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
@@ -739,6 +777,30 @@ function Outline(doc) {
 			//docArray.push(this.outline_getPolicyColor(plist[count]));
 		//}
 	//}
+
+	for (var count = 0; count < max; count++) {
+                // modified by LK 12/19/09
+                // check if source of statement has a license/restriction attached
+                // then push the source and its color into docArray
+                dump("\n starting getPolicyColor with why");
+                var color1 = getPolicyColorofStatement(plist[count], plist[count].why);
+                if (color1!=null) {
+                        docArray[plist[count].why] = color1;
+                }
+
+                // check if subject of statement has a license/restriction attached
+                // then push the subject and its color into docArray
+                dump("\n starting getPolicyColor with subject");
+                var color2 = getPolicyColorofStatement(plist[count], plist[count].subject);
+                if (color2!=null) {
+                        docArray[plist[count].subject] = color2;
+                }
+                dump("\n getPolicyColor with " + plist[count] + " and color is " + color1 + " or " + color2);
+
+        } // end for
+
+
+	/*
 	// modified by LK 12/17/09
 	for (var count = 0; count < max; count++) {
 	        // if source of statement has a license/restriction attached then push the source and its color into docArray
@@ -769,6 +831,8 @@ function Outline(doc) {
                 }
 
 	} // end of for
+	*/
+
     	// LK 12/19/09
     	// toggling HighLightPane
     	dump("\n toggling viewHighlightSidebar in outline_expand");

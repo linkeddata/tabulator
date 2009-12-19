@@ -694,13 +694,13 @@ function Outline(doc) {
         var restrictSt = kb.statementsMatching(polStatement,tabulator.ns.rmp('restricts'));
         if (restrictSt.length) {
                 var color = outline_getPolicyColor(restrictSt[0]);
-                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + restrictSt);
+                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + restrictSt[0] + " color:" + color);
                 return color;
        }
        var licSt = kb.statementsMatching(polStatement,tabulator.ns.cc('license'));
        if (licSt.length) {
                 var color = outline_getPolicyColor(licSt[0]);
-                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + licSt);
+                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + licSt[0] + "color:" + color);
                 return color;
        }
        return null;

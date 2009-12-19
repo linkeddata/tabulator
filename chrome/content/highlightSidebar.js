@@ -11,9 +11,18 @@ function highlightSidebar(doc) {
 	
 	var ccLicenses = kb.statementsMatching(undefined, kb.sym("http://creativecommons.org/ns#license"), undefined);
 	var rmpLicenses = kb.statementsMatching(undefined, kb.sym("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts"), undefined);
-	var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 
-	'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial',
-	'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
+
+	var policyURIArray =   ['http://creativecommons.org/licenses/by-sa/3.0/', 
+				'http://creativecommons.org/licenses/by/3.0/', 
+				'http://creativecommons.org/licenses/by-nd/3.0/', 
+				'http://creativecommons.org/licenses/by-nc-nd/3.0/', 
+				'http://creativecommons.org/licenses/by-nc/3.0/', 
+				'http://creativecommons.org/licenses/by-nc-sa/3.0/', 
+				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 
+				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 
+				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 
+				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial',
+				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
 	
 	var policyLabelArray = ['CC:Attribution-ShareAlike: ', 'CC:Attribution: ', 'CC:Attribution-NoDerivs: ', 'CC:Attribution-NonCommercial-NoDerivs: ', 'CC:Attribution-NonCommercial: ', 'CC:Attribution-NonCommercial-ShareAlike: ', 'RMP:No-Commercial: ', 'RMP:No-Depiction: ', 'RMP:No-Employment: ', 'RMP:No-Financial: ', 'RMP:No-Medical: ' ];
 	
@@ -85,17 +94,17 @@ function highlightSidebar(doc) {
 		for (var count = 0; count < policySaveArray.length; count++) {
 			var loadColor = tabulator.preferences.get(policySaveArray[count]);
 			var inKB = kb.statementsMatching(undefined, undefined, kb.sym(policyURIArray[count]));
-			//dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
 
 			// clearing color setting for license/restriction not in KB
 			// added by LK 12/3/09
 			if ((loadColor!=null)&&(inKB.length==0)) { 
 			    tabulator.preferences.clear(policySaveArray[count]);
           		}
-			if (loadColor == null) {
+			if ((loadColor == null)&&(inKB.length > 0)) {
 				loadColor=getRandomColor();
 				tabulator.preferences.set(policySaveArray[count], loadColor);
 			}
+			dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
 			if (inKB.length > 0) { 
 				inUseArray[count] = 1;
 				var txtDiv = doc.createElement("div");
@@ -119,7 +128,9 @@ function highlightSidebar(doc) {
 			}	
 		}
 
-		
+	
+		/******* Add same functionality for CC licenses *******/
+		/*
 		for (var count = 0; count < ccLicenses.length; count++) {
 			if (inUseArray[policyURIArray.indexOf(ccLicenses[count].object.uri)] == 0) {
 				// unsetting inUseArray added by LK 12/3/09
@@ -146,9 +157,10 @@ function highlightSidebar(doc) {
                                 newDiv.appendChild(txtDiv);
 
 			}
-		}
+		} */
 		
-		/******* Add same functionality for RMP licesnes *******/
+		/******* Add same functionality for RMP restrictions *******/
+		/*
 		for (var count = 0; count < rmpLicenses.length; count++) {
 			if (inUseArray[policyURIArray.indexOf(rmpLicenses[count].object.uri)] == 0) {		
 				// unsetting inUseArray added by LK 12/3/09
@@ -175,7 +187,7 @@ function highlightSidebar(doc) {
                                 newDiv.appendChild(txtDiv);
 	
 			}
-		}		
+		}*/	
 
 		
 

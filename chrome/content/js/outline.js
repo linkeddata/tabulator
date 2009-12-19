@@ -730,27 +730,27 @@ function Outline(doc) {
 	        // if source of statement has a license/restriction attached then push the source and its color into docArray
 		var restrictSt = kb.statementsMatching(plist[count].why,kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'));
 		if (restrictSt.length) {
-			dump("statement: " + plist[count] + " src:" + plist[count].why + " restriction:" + restrictSt + "\n");
-			dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(restrictSt[0]));
+			//dump("statement: " + plist[count] + " src:" + plist[count].why + " restriction:" + restrictSt + "\n");
+			//dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(restrictSt[0]));
 			docArray[plist[count].why]=this.outline_getPolicyColor(restrictSt[0]);
 		}
 		var licSt = kb.statementsMatching(plist[count].why,tabulator.ns.cc('license'));
                 if (licSt.length) {
-		        dump("statement: " + plist[count] + " src:" + plist[count].why + " license:" + licSt + "\n");
-                	dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(licSt[0]));
+		        //dump("statement: " + plist[count] + " src:" + plist[count].why + " license:" + licSt + "\n");
+                	//dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(licSt[0]));
                         docArray[plist[count].why]=this.outline_getPolicyColor(licSt[0]);
         	}
                 // if subject of statement has a license/restriction attached then push the subject and its color into docArray
                 var restrictSt = kb.statementsMatching(plist[count].subject,kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'));
                 if (restrictSt.length) {
-                        dump("statement: " + plist[count] + " src:" + plist[count].subject + " restriction:" + restrictSt + "\n");
-                        dump("inserted into docArray src:" + plist[count].subject + " color: " + this.outline_getPolicyColor(restrictSt[0]));
+                        //dump("statement: " + plist[count] + " src:" + plist[count].subject + " restriction:" + restrictSt + "\n");
+                        //dump("inserted into docArray src:" + plist[count].subject + " color: " + this.outline_getPolicyColor(restrictSt[0]));
                         docArray[plist[count].subject]=this.outline_getPolicyColor(restrictSt[0]);
                 }
                 var licSt = kb.statementsMatching(plist[count].subject,tabulator.ns.cc('license'));
                 if (licSt.length) {
-                        dump("statement: " + plist[count] + " src:" + plist[count].subject + " license:" + licSt + "\n");
-                        dump("inserted into docArray src:" + plist[count].subject + " color: " + this.outline_getPolicyColor(licSt[0]));
+                        //dump("statement: " + plist[count] + " src:" + plist[count].subject + " license:" + licSt + "\n");
+                        //dump("inserted into docArray src:" + plist[count].subject + " color: " + this.outline_getPolicyColor(licSt[0]));
                         docArray[plist[count].subject]=this.outline_getPolicyColor(licSt[0]);
                 }
 
@@ -790,13 +790,13 @@ function Outline(doc) {
             //if (docArray.indexOf(s.why) > -1)
 	    if (docArray[s.subject] != undefined) {
             	tr.setAttribute('bgcolor', docArray[s.subject]);
-		dump("\n subject color:" + s.subject + docArray[s.subject] + "\n" );
+		//dump("\n subject color:" + s.subject + docArray[s.subject] + "\n" );
             } else if (docArray[s.why] != undefined) {
             	//tr.setAttribute('bgcolor', docArray[docArray.indexOf(s.why) + 1]);
             	tr.setAttribute('bgcolor', docArray[s.why]);
-		dump("\n source color:" + s.why + docArray[s.why] + "\n" );
+		//dump("\n source color:" + s.why + docArray[s.why] + "\n" );
             } else {
-		dump("\n no color"+s.why + "\n");
+		//dump("\n no color"+s.why + "\n");
 	    	tr.setAttribute('bgcolor', this.outline_getPolicyColor(s));
 	    }
             
@@ -830,10 +830,10 @@ function Outline(doc) {
           //     tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));              	
 	    if (docArray[s.subject] != undefined) {
                	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[s.subject]));
-		dump("\n subject color defaultpropview:" + s.why + docArray[s.subject] + "\n" );
+		//dump("\n subject color defaultpropview:" + s.why + docArray[s.subject] + "\n" );
             } else if (docArray[s.why] != undefined) {
                	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[s.why]));
-		dump("\n source color defaultpropview:" + s.why + docArray[s.why] + "\n" );
+		//dump("\n source color defaultpropview:" + s.why + docArray[s.why] + "\n" );
             } else {
     	    	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, this.outline_getPolicyColor(s)));
 	    }
@@ -868,13 +868,13 @@ function Outline(doc) {
  			   if (docArray[s.subject] != undefined) {
 			    	trObj.appendChild(thisOutline.outline_objectTD(
                                 sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[s.subject]));
-				dump("\n subject trObj color:" + s.subject + docArray[s.subject] + " for statement:" + s + "\n" );
+				//dump("\n subject trObj color:" + s.subject + docArray[s.subject] + " for statement:" + s + "\n" );
 			   } else if (docArray[s.why] != undefined) {
 			    	//trObj.appendChild(thisOutline.outline_objectTD(
                                 //sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));            	
 			    	trObj.appendChild(thisOutline.outline_objectTD(
                                 sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[s.why]));            	
-				dump("\n source trObj color:" + s.why + docArray[s.why] + "\n" );
+				//dump("\n source trObj color:" + s.why + docArray[s.why] + "\n" );
 			    } else {
 			      trObj.appendChild(thisOutline.outline_objectTD(
                                 sel(plist[j+l]),defaultpropview, undefined, s.why, thisOutline.outline_getPolicyColor(s)));	    	

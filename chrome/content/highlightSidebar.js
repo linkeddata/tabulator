@@ -8,13 +8,9 @@ function highlightSidebar(doc) {
 	var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
 	
 	var kb = tabulator.kb;		
-		
+	
 	var ccLicenses = kb.statementsMatching(undefined, kb.sym("http://creativecommons.org/ns#license"), undefined);
-
-	/**** Try to add the rmp ontology to codebase later ***/
-	//tabulator.ns.rmp = rmp = RDFNamespace("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#");
 	var rmpLicenses = kb.statementsMatching(undefined, kb.sym("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts"), undefined);
-		
 	var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 
 	'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial',
 	'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
@@ -23,7 +19,7 @@ function highlightSidebar(doc) {
 	
 	var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
 	
-	var colorList = ['None', 'Gray', 'Blue', 'Red', 'Green', 'Magenta', 'Yellow', 'Purple', 'Teal', 'Aquamarine', 'Beige', 'Coral'];
+	//var colorList = ['None', 'Gray', 'Blue', 'Red', 'Green', 'Magenta', 'Yellow', 'Purple', 'Teal', 'Aquamarine', 'Beige', 'Coral'];
 	
 	var inUseArray = new Array(policySaveArray.length);
 	for (var count = 0; count < inUseArray.length; count++) {
@@ -65,7 +61,7 @@ function highlightSidebar(doc) {
 		
 	}	
 	
-	function get_random_color() {
+	function getRandomColor() {
     		var letters = '0123456789ABCDEF'.split('');
     		var color = '#';
     		for (var i = 0; i < 6; i++ ) {
@@ -97,7 +93,7 @@ function highlightSidebar(doc) {
 			    tabulator.preferences.clear(policySaveArray[count]);
           		}
 			if (loadColor == null) {
-				loadColor=get_random_color();
+				loadColor=getRandomColor();
 				tabulator.preferences.set(policySaveArray[count], loadColor);
 			}
 			if (inKB.length > 0) { 
@@ -153,12 +149,8 @@ function highlightSidebar(doc) {
 		}
 		
 		/******* Add same functionality for RMP licesnes *******/
-		
-		
-		for (var count = 0; count < rmpLicenses.length; count++)
-		{
-			if (inUseArray[policyURIArray.indexOf(rmpLicenses[count].object.uri)] == 0)
-			{		
+		for (var count = 0; count < rmpLicenses.length; count++) {
+			if (inUseArray[policyURIArray.indexOf(rmpLicenses[count].object.uri)] == 0) {		
 				// unsetting inUseArray added by LK 12/3/09
                                 inUseArray[policyURIArray.indexOf(rmpLicenses[count].object.uri)] = -1;
 				var txtDiv = doc.createElement("div");
@@ -194,8 +186,7 @@ function highlightSidebar(doc) {
 	function loadSettings() {
 		var loadDiv = doc.getElementById('kbHighlighter');
 	
-		for (var count = 0; count < policySaveArray.length; count++)
-		{
+		for (var count = 0; count < policySaveArray.length; count++) {
 			var loadColor = tabulator.preferences.get(policySaveArray[count]);
 
 			if (loadColor) {			
@@ -246,6 +237,6 @@ function highlightSidebar(doc) {
 		
 	createKBHighlighter(mainBox);
 	
-	mainBox.appendChild(buttonDiv);
+	//mainBox.appendChild(buttonDiv);
 }
 

@@ -703,7 +703,8 @@ function Outline(doc) {
 		sideBar = 1;
 	
 	tabulator.ns.cc = cc = RDFNamespace("http://creativecommons.org/ns#");
-	tabulator.ns.rmp = rmp = RDFNamespace("http://web.mit.edu/tkang/www/rmp/rmp-schema.n3");
+	//tabulator.ns.rmp = rmp = RDFNamespace("http://web.mit.edu/tkang/www/rmp/rmp-schema.n3");
+	tabulator.ns.rmp = rmp = RDFNamespace("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#");
 	
 	//toggleSidebar("viewHighlightSidebar", true);
 	
@@ -728,7 +729,7 @@ function Outline(doc) {
 	// modified by LK 12/17/09
 	for (var count = 0; count < max; count++) {
 	        // if source of statement has a license/restriction attached then push the source and its color into docArray
-		var restrictSt = kb.statementsMatching(plist[count].why,kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'));
+		var restrictSt = kb.statementsMatching(plist[count].why,tabulator.ns.rmp('restricts'));
 		if (restrictSt.length) {
 			//dump("statement: " + plist[count] + " src:" + plist[count].why + " restriction:" + restrictSt + "\n");
 			//dump("inserted into docArray src:" + plist[count].why + " color: " + this.outline_getPolicyColor(restrictSt[0]));
@@ -741,7 +742,7 @@ function Outline(doc) {
                         docArray[plist[count].why]=this.outline_getPolicyColor(licSt[0]);
         	}
                 // if subject of statement has a license/restriction attached then push the subject and its color into docArray
-                var restrictSt = kb.statementsMatching(plist[count].subject,kb.sym('http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts'));
+                var restrictSt = kb.statementsMatching(plist[count].subject,tabulator.ns.rmp('restricts'));
                 if (restrictSt.length) {
                         //dump("statement: " + plist[count] + " src:" + plist[count].subject + " restriction:" + restrictSt + "\n");
                         //dump("inserted into docArray src:" + plist[count].subject + " color: " + this.outline_getPolicyColor(restrictSt[0]));
@@ -1756,10 +1757,12 @@ function Outline(doc) {
 
     function outline_expand(p, subject1, pane, already) {
         tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
+
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
         sf.removeCallback('fail','expand');
-        
+       
+ 
         var subject = kb.canon(subject1)
         var requTerm = subject.uri?kb.sym(Util.uri.docpart(subject.uri)):subject
         var subj_uri = subject.uri
@@ -1785,21 +1788,12 @@ function Outline(doc) {
             }
             already = true
              
-  	    // highlighting code added by LK 12/3/09 
-            //alert(subject + " ");
- 	    //if (policycolor(subject)) then set table to policycolor 
-		//	outline_getPolicyColor(s.why)
-            //if((subject.why) && (outline_getPolicyColor(subject.why)) {
-            //    newTable.style.backgroundColor=outline_getPolicyColor(subject.why);
-           // }
-	    //else {
-              if (ancestor(p, 'TABLE') && ancestor(p, 'TABLE').style.backgroundColor=='white') {
+            if (ancestor(p, 'TABLE') && ancestor(p, 'TABLE').style.backgroundColor=='white') {
                 newTable.style.backgroundColor='#eee'
-              } 
-	      else {
+            } 
+	    else {
                 newTable.style.backgroundColor='white'
-              }
-           //}
+            }
             
             try{if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');}catch(e){dump("YAHOO")}
             emptyNode(p).appendChild(newTable)
@@ -2014,6 +2008,11 @@ function Outline(doc) {
             outline_expand(td, subject, pane);
             myDocument.title = label(subject);  // "Tabulator: "+  No need to advertize
             tr=td.parentNode;
+            // LK 12/19/09
+            // toggling HighLightPane
+            //dump("\n toggling viewHighlightSidebar");
+            //toggleSidebar("viewHighlightSidebar");
+            //toggleSidebar("viewHighlightSidebar", true);
             getEyeFocus(tr,false);//instantly: false
         }
         if (solo) {

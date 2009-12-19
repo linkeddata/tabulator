@@ -41,17 +41,10 @@ function highlightSidebar(doc) {
 		div.removeChild(newDiv);
 	}
 	
-	/*
-	function applyHighlightOptions(div) {
-		var mainWindow = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsIWebNavigation)		                   .QueryInterface(Components.interfaces.nsIDocShellTreeItem).rootTreeItem.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsIDOMWindow); 
-		
-		mainWindow.reload();
-	}*/
 	
 	function saveSettings() {
 		var saveDiv = doc.getElementById('kbHighlighter');
-		for (var count = 1; count < saveDiv.childNodes.length; count++)
-		{
+		for (var count = 1; count < saveDiv.childNodes.length; count++) {
 			var policyDiv = saveDiv.childNodes[count];
 			var saveName = policySaveArray[policyLabelArray.indexOf(policyDiv.childNodes[0].getAttribute('value'))];
 			var color = policyDiv.childNodes[1].getAttribute('value');
@@ -62,8 +55,7 @@ function highlightSidebar(doc) {
 
 	function removeSettings() {
 		var saveDiv = doc.getElementById('kbHighlighter');
-		for (var count = 1; count < saveDiv.childNodes.length; count++)
-		{
+		for (var count = 1; count < saveDiv.childNodes.length; count++) {
 			var policyDiv = saveDiv.childNodes[count];
 			var saveName = policySaveArray[policyLabelArray.indexOf(policyDiv.childNodes[0].getAttribute('value'))];
 			tabulator.preferences.clear(saveName);	
@@ -101,14 +93,11 @@ function highlightSidebar(doc) {
 				txtLabel.setAttribute('value', policyLabelArray[count]);
 				txtDiv.appendChild(txtLabel);
 
-				/*var colorInput = doc.createElement("input");
-				colorInput.setAttribute('type', 'text');
-				colorInput.setAttribute('name', 'colorInput');
-				colorInput.setAttribute('id', 'colorInput');
-				//colorInput.setAttribute('class', 'color');
-				//colorInput.setAttribute('value', '66CC00');
+				var colorInput = doc.createElement("colorpicker");
+				colorInput.setAttribute('type', 'button');
+				colorInput.setAttribute('color', loadColor);
 				txtDiv.appendChild(colorInput);
-				newDiv.appendChild(txtDiv);*/
+				newDiv.appendChild(txtDiv);
 
 				var colMenu = doc.createElement("menulist");
 				colMenu.setAttribute('id', 'colMenu ');

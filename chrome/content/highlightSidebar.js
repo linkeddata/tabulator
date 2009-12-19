@@ -64,7 +64,16 @@ function highlightSidebar(doc) {
 		}
 		
 	}	
-		
+	
+	function get_random_color() {
+    		var letters = '0123456789ABCDEF'.split('');
+    		var color = '#';
+    		for (var i = 0; i < 6; i++ ) {
+        		color += letters[Math.round(Math.random() * 15)];
+    		}
+    		return color;
+	}		
+
 	function createKBHighlighter(div) {
 		var newDiv = doc.createElement("groupbox");
 		newDiv.setAttribute('orient', 'vertical');
@@ -88,7 +97,8 @@ function highlightSidebar(doc) {
 			    tabulator.preferences.clear(policySaveArray[count]);
           		}
 			if (loadColor == null) {
-				loadColor="Black";
+				loadColor=get_random_color();
+				tabulator.preferences.set(policySaveArray[count], loadColor);
 			}
 			if (inKB.length > 0) { 
 				inUseArray[count] = 1;

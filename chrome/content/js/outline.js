@@ -663,7 +663,8 @@ function Outline(doc) {
 
         // Highlighting happens here
     	if (policyURIArray.indexOf(licType) > -1) {
-		return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+		//return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+		return tabulator.preferences.get(licType);
                 //return "Blue";
 	}    
 	return '';
@@ -679,7 +680,8 @@ function Outline(doc) {
 
         // Highlighting happens here
         if (policyURIArray.indexOf(licType) > -1) {
-                return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+                //return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
+		return tabulator.preferences.get(licType);
                 //return "Blue";
         }
         return '';

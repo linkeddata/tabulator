@@ -420,4 +420,5 @@
                  sidebartitle="&highlightsidebar.title;"
                  oncommand="toggleSidebar('viewHighlightSidebar');" />
   </broadcasterset>
+
 </overlay>

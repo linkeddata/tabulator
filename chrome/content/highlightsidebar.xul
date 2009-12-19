@@ -7,7 +7,6 @@
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" >
   <div id="hlightdiv"></div>
   <script type="application/x-javascript" src="highlightSidebar.js"/>
-  <script type="application/x-javascript" src="http://dig.csail.mit.edu/2009/12/jscolor/jscolor.js"/>
   <script type="application/x-javascript">
   var hsb = new highlightSidebar(document);
   </script>

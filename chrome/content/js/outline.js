@@ -792,7 +792,7 @@ function Outline(doc) {
                 if (color2!=null) {
                         docArray[plist[count].subject] = color2;
                 }
-                dump("\n getPolicyColor with " + plist[count] + " and color is " + color1 + " or " + color2);
+                //dump("\n getPolicyColor with " + plist[count] + " and color is " + color1 + " or " + color2);
 
         } // end for
 	} // end if highlight sidebar is open
@@ -868,7 +868,6 @@ function Outline(doc) {
            
 	    // modified by LK 12/17/09
             var highlightsidebar = document.getElementById("viewHighlightSidebar");
-            //dump("\n HighLightSidebar: " + highlightsidebar.getAttribute("checked"));
 
             //if (docArray.indexOf(s.why) > -1)
 	    if ((docArray[s.subject] != undefined)&&(highlightsidebar.getAttribute("checked") == "true")) {

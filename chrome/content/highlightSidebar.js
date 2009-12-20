@@ -75,7 +75,7 @@ function highlightSidebar(doc) {
 		//dump("\n\n\n RMP: " + rmpLicenses);
 		//dump("\n CC: " + ccLicenses);
 		var license = rmpLicenses.concat(ccLicenses);
-		dump("\n RMP + CC: " + license);
+		//dump("\n RMP + CC: " + license);
 		var processedLicense = new Array();
 
 		// loading all licenses or restrictions found
@@ -83,7 +83,7 @@ function highlightSidebar(doc) {
 		for (var count = 0; count < license.length; count++) {
 
 			var curLicense = license[count].object.uri;
-			dump("\n License: " + curLicense);
+			//dump("\n License: " + curLicense);
 
 			if (processedLicense[curLicense] != null) { continue }
 			//var loadColor = tabulator.preferences.get(policyURIArray[count]);
@@ -107,24 +107,23 @@ function highlightSidebar(doc) {
 				//tabulator.preferences.set(policyURIArray[count], loadColor);
 				setPref(curLicense, loadColor);
 			}
-			dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
+			//dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
 
 			if (inKB.length > 0) { 
 				// setting processedLicense	
 				processedLicense[curLicense] = "done";
 
-				dump("\n adding colorpicker for " + curLicense);
 			        //var policyLabel = kb.statementsMatching(kb.sym(policyURIArray[count]), kb.sym("http://www.w3.org/2000/01/rdf-schema#label"));
 			        var policyLabel = kb.statementsMatching(kb.sym(curLicense), kb.sym("http://www.w3.org/2000/01/rdf-schema#label"));
 				//dump("\n Policy label: " + policyLabel);
-				//inUseArray[count] = 1;
 				var txtDiv = doc.createElement("div");
 				txtDiv.setAttribute('class', 'colorTab');
 				var txtLabel = doc.createElement("label");
 
 				//txtLabel.setAttribute('value', policyLabelArray[count]);
-				txtLabel.setAttribute('value', policyLabel[0].object);
 				//txtLabel.setAttribute('href', policyURIArray[count]);
+
+				txtLabel.setAttribute('value', policyLabel[0].object);
 				txtLabel.setAttribute('href', curLicense);
 				txtDiv.appendChild(txtLabel);
 
@@ -140,7 +139,6 @@ function highlightSidebar(doc) {
                 		} , false);
 				txtDiv.appendChild(colorInput);
 				newDiv.appendChild(txtDiv);
-
 			}	
 		}
 

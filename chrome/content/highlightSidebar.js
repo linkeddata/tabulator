@@ -9,55 +9,44 @@ function highlightSidebar(doc) {
 	
 	var kb = tabulator.kb;		
 	
-
-	//var policyURIArray =   ['http://creativecommons.org/licenses/by-sa/3.0/', 
-				//'http://creativecommons.org/licenses/by/3.0/', 
-				//'http://creativecommons.org/licenses/by-nd/3.0/', 
-				//'http://creativecommons.org/licenses/by-nc-nd/3.0/', 
-				//'http://creativecommons.org/licenses/by-nc/3.0/', 
-				//'http://creativecommons.org/licenses/by-nc-sa/3.0/', 
-				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 
-				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 
-				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 
-				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial',
-				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
-	
 	var mainDiv = doc.getElementById('hlightdiv');
 	var mainBox = doc.createElement("groupbox");
 	mainBox.setAttribute('orient', 'vertical');
 	mainBox.setAttribute('id', 'mainBox');
 	mainDiv.appendChild(mainBox);
-	
-	
+
 	function removeHighlightOption(div, newDiv) {
 		div.removeChild(newDiv);
 	}
 	
+
+        function getPref(licSt) {
+        	return tabulator.preferences.get("color."+licSt);
+        }
+
+        function setPref(licSt, pref) {
+                tabulator.preferences.set("color."+licSt, pref);
+        }
+
+        function clearPref(licSt) {
+        	tabulator.preferences.clear("color."+licSt);
+        }
 	
 	function saveSettings() {
 		var saveDiv = doc.getElementById('kbHighlighter');
 		for (var count = 1; count < saveDiv.childNodes.length; count++) {
 			var policyDiv = saveDiv.childNodes[count];
-			//var saveName = policySaveArray[policyLabelArray.indexOf(policyDiv.childNodes[0].getAttribute('value'))];
-			// modified by LK 12/18/09
-			//var color = policyDiv.childNodes[1].getAttribute('value');
 			var color = policyDiv.childNodes[1].getAttribute('color');
 			var saveName = policyDiv.childNodes[0].getAttribute('href');
-			tabulator.preferences.set(saveName, color);	
+			setPref(saveName, color);
+			//tabulator.preferences.set(saveName, color);	
 		}
-		
 	}	
 
-	function removeSettings() {
-		var saveDiv = doc.getElementById('kbHighlighter');
-		for (var count = 1; count < saveDiv.childNodes.length; count++) {
-			var policyDiv = saveDiv.childNodes[count];
-			var color = policyDiv.childNodes[1].getAttribute('color');
-			var saveName = policyDiv.childNodes[0].getAttribute('href');
-			tabulator.preferences.clear(saveName);	
-		}
-		
-	}	
+	function removeAllSettings() {
+		tabulator.preferences.clearBranch("color");	
+	}
+
 	
 	function getRandomColor() {
     		var letters = '0123456789ABCDEF'.split('');
@@ -86,7 +75,7 @@ function highlightSidebar(doc) {
 		//dump("\n\n\n RMP: " + rmpLicenses);
 		//dump("\n CC: " + ccLicenses);
 		var license = rmpLicenses.concat(ccLicenses);
-		dump("\n RMP + CC: " + license);
+		//dump("\n RMP + CC: " + license);
 		var processedLicense = new Array();
 
 		// loading all licenses or restrictions found
@@ -94,14 +83,14 @@ function highlightSidebar(doc) {
 		for (var count = 0; count < license.length; count++) {
 
 			var curLicense = license[count].object.uri;
-			dump("\n License: " + curLicense);
+			//dump("\n License: " + curLicense);
 
 			if (processedLicense[curLicense] != null) { continue }
 			//var loadColor = tabulator.preferences.get(policyURIArray[count]);
 
-			var loadColor = tabulator.preferences.get(curLicense);
+			var loadColor = getPref(curLicense);
 			var inKB = kb.statementsMatching(undefined, undefined, kb.sym(curLicense));
-			dump("\n inKB: " + inKB);
+			//dump("\n inKB: " + inKB);
 
 			//var inKB = kb.statementsMatching(undefined, undefined, kb.sym(policyURIArray[count]));
 			//var rmpKB = kb.statementsMatching(undefined, kb.sym("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts"), kb.sym(policyURIArray[count]));
@@ -112,12 +101,12 @@ function highlightSidebar(doc) {
 			// added by LK 12/3/09
 			if ((loadColor!=null)&&(inKB.length==0)) { 
 			    //tabulator.preferences.clear(policyURIArray[count]);
-			    tabulator.preferences.clear(curLicense);
+			    clearPref(curLicense);
           		}
 			if ((loadColor == null)&&(inKB.length > 0)) {
 				loadColor=getRandomColor();
 				//tabulator.preferences.set(policyURIArray[count], loadColor);
-				tabulator.preferences.set(curLicense, loadColor);
+				setPref(curLicense, loadColor);
 			}
 			dump("\n preloaded color:" + loadColor + " count: " + count + " KB match:" + inKB);
 
@@ -127,7 +116,7 @@ function highlightSidebar(doc) {
 
 			        //var policyLabel = kb.statementsMatching(kb.sym(policyURIArray[count]), kb.sym("http://www.w3.org/2000/01/rdf-schema#label"));
 			        var policyLabel = kb.statementsMatching(kb.sym(curLicense), kb.sym("http://www.w3.org/2000/01/rdf-schema#label"));
-				dump("\n Policy label: " + policyLabel);
+				//dump("\n Policy label: " + policyLabel);
 				//inUseArray[count] = 1;
 				var txtDiv = doc.createElement("div");
 				txtDiv.setAttribute('class', 'colorTab');
@@ -144,8 +133,9 @@ function highlightSidebar(doc) {
 				var colorInput = doc.createElement("colorpicker");
 				colorInput.setAttribute('type', 'button');
 				colorInput.setAttribute('color', loadColor);
+				colorInput.setAttribute('href', curLicense);
 				colorInput.addEventListener("click", function() {
-                			saveSettings();
+                			setPref(curLicense, loadColor);
                 		} , false);
 				txtDiv.appendChild(colorInput);
 				newDiv.appendChild(txtDiv);

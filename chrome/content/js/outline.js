@@ -50,7 +50,15 @@ function Outline(doc) {
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
     var link = tabulator.ns.link;
-    
+ 
+    var highlightsidebar = document.getElementById("viewHighlightSidebar");
+    dump("\n HighLightSidebar: " + highlightsidebar.getAttribute("checked"));
+	
+    if (highlightsidebar.getAttribute("checked") == "false") {
+    	dump("\n Clearing HighLightSidebar settings");
+	tabulator.preferences.clearBranch("color");
+    }
+
     // LK 12/19/09
     // toggling HighLightPane
     dump("\n toggling viewHighlightSidebar in main outline");
@@ -394,8 +402,7 @@ function Outline(doc) {
          toggleSidebar("viewHighlightSidebar");
          toggleSidebar("viewHighlightSidebar");
          
-         if (color != null)
-         {
+         if (color != null) {
          	td.setAttribute('bgcolor', color);
          }
          
@@ -657,34 +664,30 @@ function Outline(doc) {
     	var licType = s.object.uri;
         //alert(s.object + " " + licType);
     	
-    	var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
+    	//var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
     	
-    	var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
+    	//var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
 
         // Highlighting happens here
-    	if (policyURIArray.indexOf(licType) > -1) {
+    	//if (policyURIArray.indexOf(licType) > -1) {
 		//return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
-		return tabulator.preferences.get(licType);
+		//return tabulator.preferences.get("color."+licType);
                 //return "Blue";
-	}    
+	//}    
+	var color = tabulator.preferences.get("color."+licType);
+	if ((color != null)|| (color != undefined)) {
+		return color;
+        }
 	return '';
     }
  
     function outline_getPolicyColor(s) {
         var licType = s.object.uri;
-        //alert(s.object + " " + licType);
-
-        var policySaveArray = ['ccBySa', 'ccBy', 'ccByNd', 'ccByNcNd', 'ccByNc', 'ccByNcSa', 'rmpCom', 'rmpDep', 'rmpEmp', 'rmpFin', 'rmpMed'];
-
-        var policyURIArray = ['http://creativecommons.org/licenses/by-sa/3.0/', 'http://creativecommons.org/licenses/by/3.0/', 'http://creativecommons.org/licenses/by-nd/3.0/', 'http://creativecommons.org/licenses/by-nc-nd/3.0/', 'http://creativecommons.org/licenses/by-nc/3.0/', 'http://creativecommons.org/licenses/by-nc-sa/3.0/', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial', 'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
-
-        // Highlighting happens here
-        if (policyURIArray.indexOf(licType) > -1) {
-                //return tabulator.preferences.get(policySaveArray[policyURIArray.indexOf(licType)]);
-		return tabulator.preferences.get(licType);
-                //return "Blue";
+	var color = tabulator.preferences.get("color."+licType);
+	if ((color != null)|| (color != undefined)) {
+		return color;
         }
-        return '';
+	return '';
     }
  
        
@@ -780,6 +783,10 @@ function Outline(doc) {
 		//}
 	//}
 
+	//var highlightsidebar = document.getElementById("viewHighlightSidebar");
+	//dump("\n HighLightSidebar: " + highlightsidebar.getAttribute("checked"));
+	
+	//if (highlightsidebar.getAttribute("checked") == "true") {
 	for (var count = 0; count < max; count++) {
                 // modified by LK 12/19/09
                 // check if source of statement has a license/restriction attached
@@ -800,6 +807,7 @@ function Outline(doc) {
                 dump("\n getPolicyColor with " + plist[count] + " and color is " + color1 + " or " + color2);
 
         } // end for
+	//} // end if highlight sidebar is open
 
 
 	/*
@@ -871,17 +879,21 @@ function Outline(doc) {
             var tr = propertyTR(myDocument, s, inverse);
            
 	    // modified by LK 12/17/09
+            var highlightsidebar = document.getElementById("viewHighlightSidebar");
+            //dump("\n HighLightSidebar: " + highlightsidebar.getAttribute("checked"));
+
             //if (docArray.indexOf(s.why) > -1)
-	    if (docArray[s.subject] != undefined) {
+	    if ((docArray[s.subject] != undefined)&&(highlightsidebar.getAttribute("checked") == "true")) {
             	tr.setAttribute('bgcolor', docArray[s.subject]);
 		//dump("\n subject color:" + s.subject + docArray[s.subject] + "\n" );
-            } else if (docArray[s.why] != undefined) {
+            } else if ((highlightsidebar.getAttribute("checked") == "true")&&(docArray[s.why] != undefined)) {
             	//tr.setAttribute('bgcolor', docArray[docArray.indexOf(s.why) + 1]);
             	tr.setAttribute('bgcolor', docArray[s.why]);
 		//dump("\n source color:" + s.why + docArray[s.why] + "\n" );
             } else {
 		//dump("\n no color"+s.why + "\n");
-	    	tr.setAttribute('bgcolor', this.outline_getPolicyColor(s));
+	    	//tr.setAttribute('bgcolor', this.outline_getPolicyColor(s));
+	    	tr.setAttribute('bgcolor', "");
 	    }
             
 	            	
@@ -912,6 +924,10 @@ function Outline(doc) {
             // modified by LK 12/17/09
             //if (docArray.indexOf(s.why) > -1)
           //     tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[docArray.indexOf(s.why) + 1]));              	
+            // modified by LK 12/17/09
+            var highlightsidebar = document.getElementById("viewHighlightSidebar");
+
+           if (highlightsidebar.getAttribute("checked") == "true") {
 	    if (docArray[s.subject] != undefined) {
                	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, docArray[s.subject]));
 		//dump("\n subject color defaultpropview:" + s.why + docArray[s.subject] + "\n" );
@@ -921,6 +937,8 @@ function Outline(doc) {
             } else {
     	    	tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, this.outline_getPolicyColor(s)));
 	    }
+	    } else { tr.appendChild(thisOutline.outline_objectTD(sel(s), defaultpropview, undefined, s.why, ""));}
+		
     
             /* Note: showNobj shows between n to 2n objects.
              * This is to prevent the case where you have a long list of objects
@@ -949,6 +967,11 @@ function Outline(doc) {
 
 			    // modified by LK 12/17/09
 			    //if (docArray.indexOf(s.why) > -1)
+		            // modified by LK 12/17/09
+       			     var highlightsidebar = document.getElementById("viewHighlightSidebar");
+
+           		   if (highlightsidebar.getAttribute("checked") == "true") {
+
  			   if (docArray[s.subject] != undefined) {
 			    	trObj.appendChild(thisOutline.outline_objectTD(
                                 sel(plist[j+l]),defaultpropview, undefined, s.why, docArray[s.subject]));
@@ -963,6 +986,10 @@ function Outline(doc) {
 			      trObj.appendChild(thisOutline.outline_objectTD(
                                 sel(plist[j+l]),defaultpropview, undefined, s.why, thisOutline.outline_getPolicyColor(s)));	    	
 			    }                            
+			    } // if highlightsidebar is open
+			    else {  trObj.appendChild(thisOutline.outline_objectTD(
+                                sel(plist[j+l]),defaultpropview, undefined, s.why, ""));   }
+
                             trObj.AJAR_statement=s;
                             trObj.AJAR_inverse=inverse;
                             

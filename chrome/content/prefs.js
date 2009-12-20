@@ -104,6 +104,9 @@ tabulator.preferences.set = function(key, val) {
 
 // added by LK for highlightsidebar 12/02/09 
 // https://developer.mozilla.org/en/NsIPrefBranch
+tabulator.preferences.clearBranch = function(branch) {
+    tabulator.preferences.PREF.deleteBranch('tabulator.'+branch);
+}
 tabulator.preferences.clear = function(key) {
     tabulator.preferences.PREF.clearUserPref('tabulator.'+key);
 }

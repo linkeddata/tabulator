@@ -75,7 +75,7 @@ function highlightSidebar(doc) {
 		//dump("\n\n\n RMP: " + rmpLicenses);
 		//dump("\n CC: " + ccLicenses);
 		var license = rmpLicenses.concat(ccLicenses);
-		//dump("\n RMP + CC: " + license);
+		dump("\n RMP + CC: " + license);
 		var processedLicense = new Array();
 
 		// loading all licenses or restrictions found
@@ -83,14 +83,13 @@ function highlightSidebar(doc) {
 		for (var count = 0; count < license.length; count++) {
 
 			var curLicense = license[count].object.uri;
-			//dump("\n License: " + curLicense);
+			dump("\n License: " + curLicense);
 
 			if (processedLicense[curLicense] != null) { continue }
 			//var loadColor = tabulator.preferences.get(policyURIArray[count]);
 
 			var loadColor = getPref(curLicense);
 			var inKB = kb.statementsMatching(undefined, undefined, kb.sym(curLicense));
-			//dump("\n inKB: " + inKB);
 
 			//var inKB = kb.statementsMatching(undefined, undefined, kb.sym(policyURIArray[count]));
 			//var rmpKB = kb.statementsMatching(undefined, kb.sym("http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#restricts"), kb.sym(policyURIArray[count]));
@@ -114,6 +113,7 @@ function highlightSidebar(doc) {
 				// setting processedLicense	
 				processedLicense[curLicense] = "done";
 
+				dump("\n adding colorpicker for " + curLicense);
 			        //var policyLabel = kb.statementsMatching(kb.sym(policyURIArray[count]), kb.sym("http://www.w3.org/2000/01/rdf-schema#label"));
 			        var policyLabel = kb.statementsMatching(kb.sym(curLicense), kb.sym("http://www.w3.org/2000/01/rdf-schema#label"));
 				//dump("\n Policy label: " + policyLabel);
@@ -135,7 +135,8 @@ function highlightSidebar(doc) {
 				colorInput.setAttribute('color', loadColor);
 				colorInput.setAttribute('href', curLicense);
 				colorInput.addEventListener("click", function() {
-                			setPref(curLicense, loadColor);
+                			//setPref(curLicense, loadColor);
+					saveSettings()
                 		} , false);
 				txtDiv.appendChild(colorInput);
 				newDiv.appendChild(txtDiv);

@@ -52,16 +52,15 @@ function Outline(doc) {
     var link = tabulator.ns.link;
  
     var highlightsidebar = document.getElementById("viewHighlightSidebar");
-    dump("\n HighLightSidebar: " + highlightsidebar.getAttribute("checked"));
 	
     if (highlightsidebar.getAttribute("checked") == "false") {
-    	dump("\n Clearing HighLightSidebar settings");
+    	//dump("\n Clearing HighLightSidebar settings");
 	tabulator.preferences.clearBranch("color");
     }
 
     // LK 12/19/09
     // toggling HighLightPane
-    dump("\n toggling viewHighlightSidebar in main outline");
+    //dump("\n toggling viewHighlightSidebar in main outline");
     toggleSidebar("viewHighlightSidebar");
     toggleSidebar("viewHighlightSidebar");
 
@@ -396,11 +395,6 @@ function Outline(doc) {
          var check = td.getAttribute('class')
          tabulator.log.info('td has class:' + check)
          tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", ")); 
-    	 // LK 12/19/09
-         // toggling HighLightPane
-         dump("\n toggling viewHighlightSidebar in main outline");
-         toggleSidebar("viewHighlightSidebar");
-         toggleSidebar("viewHighlightSidebar");
          
          if (color != null) {
          	td.setAttribute('bgcolor', color);
@@ -699,13 +693,13 @@ function Outline(doc) {
         var restrictSt = kb.statementsMatching(polStatement,tabulator.ns.rmp('restricts'));
         if (restrictSt.length) {
                 var color = outline_getPolicyColor(restrictSt[0]);
-                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + restrictSt[0] + " color:" + color);
+                //dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + restrictSt[0] + " color:" + color);
                 return color;
        }
        var licSt = kb.statementsMatching(polStatement,tabulator.ns.cc('license'));
        if (licSt.length) {
                 var color = outline_getPolicyColor(licSt[0]);
-                dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + licSt[0] + "color:" + color);
+                //dump("\n statement: " + statement + " wherePol:" + polStatement + " restriction:" + licSt[0] + "color:" + color);
                 return color;
        }
        return null;
@@ -715,11 +709,6 @@ function Outline(doc) {
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
         tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+
                            "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
-    	 // LK 12/19/09
-         // toggling HighLightPane
-         dump("\n toggling viewHighlightSidebar in appendPropertyTRs");
-         toggleSidebar("viewHighlightSidebar");
-         toggleSidebar("viewHighlightSidebar");
         //tabulator.log.info("@appendPropertyTRs, myDocument is now " + this.document.location);
         //tabulator.log.info("@appendPropertyTRs, myDocument is now " + thisOutline.document.location);            
         tabulator.log.debug("Property list length = " + plist.length)
@@ -783,15 +772,14 @@ function Outline(doc) {
 		//}
 	//}
 
-	//var highlightsidebar = document.getElementById("viewHighlightSidebar");
-	//dump("\n HighLightSidebar: " + highlightsidebar.getAttribute("checked"));
+	var highlightsidebar = document.getElementById("viewHighlightSidebar");
 	
-	//if (highlightsidebar.getAttribute("checked") == "true") {
+	if (highlightsidebar.getAttribute("checked") == "true") {
 	for (var count = 0; count < max; count++) {
                 // modified by LK 12/19/09
                 // check if source of statement has a license/restriction attached
                 // then push the source and its color into docArray
-                dump("\n starting getPolicyColor with why");
+                //dump("\n starting getPolicyColor with why");
                 var color1 = getPolicyColorofStatement(plist[count], plist[count].why);
                 if (color1!=null) {
                         docArray[plist[count].why] = color1;
@@ -799,7 +787,7 @@ function Outline(doc) {
 
                 // check if subject of statement has a license/restriction attached
                 // then push the subject and its color into docArray
-                dump("\n starting getPolicyColor with subject");
+                //dump("\n starting getPolicyColor with subject");
                 var color2 = getPolicyColorofStatement(plist[count], plist[count].subject);
                 if (color2!=null) {
                         docArray[plist[count].subject] = color2;
@@ -807,7 +795,7 @@ function Outline(doc) {
                 dump("\n getPolicyColor with " + plist[count] + " and color is " + color1 + " or " + color2);
 
         } // end for
-	//} // end if highlight sidebar is open
+	} // end if highlight sidebar is open
 
 
 	/*
@@ -845,7 +833,7 @@ function Outline(doc) {
 
     	// LK 12/19/09
     	// toggling HighLightPane
-    	dump("\n toggling viewHighlightSidebar in outline_expand");
+    	//dump("\n toggling viewHighlightSidebar in outline_expand");
     	toggleSidebar("viewHighlightSidebar");
     	toggleSidebar("viewHighlightSidebar");
 	
@@ -1867,11 +1855,6 @@ function Outline(doc) {
 
     function outline_expand(p, subject1, pane, already) {
         tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
-    			// LK 12/19/09
-    			// toggling HighLightPane
-    			//dump("\n toggling viewHighlightSidebar in outline_expand");
-    			//toggleSidebar("viewHighlightSidebar");
-    			//toggleSidebar("viewHighlightSidebar");
 
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
@@ -1891,7 +1874,7 @@ function Outline(doc) {
             tabulator.log.info('@@ REPAINTING ')
     	    // LK 12/19/09
             // toggling HighLightPane
-            dump("\n toggling viewHighlightSidebar in main outline");
+            //dump("\n toggling viewHighlightSidebar in render");
             toggleSidebar("viewHighlightSidebar");
             toggleSidebar("viewHighlightSidebar");
 	

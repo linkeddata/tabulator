@@ -10,17 +10,17 @@ function highlightSidebar(doc) {
 	var kb = tabulator.kb;		
 	
 
-	var policyURIArray =   ['http://creativecommons.org/licenses/by-sa/3.0/', 
-				'http://creativecommons.org/licenses/by/3.0/', 
-				'http://creativecommons.org/licenses/by-nd/3.0/', 
-				'http://creativecommons.org/licenses/by-nc-nd/3.0/', 
-				'http://creativecommons.org/licenses/by-nc/3.0/', 
-				'http://creativecommons.org/licenses/by-nc-sa/3.0/', 
-				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 
-				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 
-				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 
-				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial',
-				'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
+	//var policyURIArray =   ['http://creativecommons.org/licenses/by-sa/3.0/', 
+				//'http://creativecommons.org/licenses/by/3.0/', 
+				//'http://creativecommons.org/licenses/by-nd/3.0/', 
+				//'http://creativecommons.org/licenses/by-nc-nd/3.0/', 
+				//'http://creativecommons.org/licenses/by-nc/3.0/', 
+				//'http://creativecommons.org/licenses/by-nc-sa/3.0/', 
+				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Commercial', 
+				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Depiction', 
+				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Employment', 
+				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Financial',
+				//'http://dig.csail.mit.edu/2008/02/rmp/rmp-schema#No-Medical'];
 	
 	var mainDiv = doc.getElementById('hlightdiv');
 	var mainBox = doc.createElement("groupbox");

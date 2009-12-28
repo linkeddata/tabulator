@@ -90,13 +90,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
         FollowList.prototype.selectUser = function(user) {
             // check if a user is in the follows list.
             if (this.userlist[user]) {
-                if (this.userlist[user].length == 1) {
-                    //user follows only one user with nick
-                    return [true, this.userlist[user]];
-                } else if (this.userlist[user].length > 1) {
-                    //user follows multiple users with this nick.
-                    return [false, this.userlist[user]];
-                }
+                return [(this.userlist[user].length == 1), this.userlist[user]];
             } else {
                 //user does not follow any users with this nick
                 return [false, []];
@@ -110,7 +104,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
         var Favorites = function(user) {
             this.favorites = {};
             this.favoritesURI = "";
-            if (!user) {
+            if (!user) { //TODO is this even useful?
                 return;
             }
             this.user = user.split("#")[0];
@@ -265,7 +259,9 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
         };
         Microblog.prototype.getMyURI = function() {
             var me = tabulator.preferences.get('me');
+            dump(me);
             var myMicroblog = kb.any(kb.sym(me), FOAF('holdsAccount'));
+            dump ("\n\n"+myMicroblog);
             return (myMicroblog) ? myMicroblog.uri: false;
         };
         Microblog.prototype.generateNewMB = function(id, name, avatar, loc) {
@@ -274,7 +270,6 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 tabulator.preferences.set("acct", host + "#" + id);
             };
             var cbgenUserMB = function(a, success, c, d) {
-                throw "your face";
                 if (success) {
                     notify('Microblog generated at ' + host + '#' + id
                             +'please add <b>'+host+'</b> to your foaf.');
@@ -405,6 +400,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             var that = this;
             lsFollowUser = function() {
                 var myUser = kb.sym(mb.getMyURI());
+                var Ifollow = that.Ifollow;
                 var username = that.creator.name;
                 var mbconfirmFollow = function(uri,success, msg) {
                     if (success=== true) {
@@ -656,7 +652,6 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             var subheaderContainer = doc.createElement('div');
             subheaderContainer.className = "subheader-container";
 
-
             //user header
             this.creator;
             var creators = kb.each(s, FOAF('holdsAccount'));
@@ -883,7 +878,8 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 };
             };
             if (mb.getMyURI()) {
-                //generate buttons if the uri is not set.
+                // If the microblog in question does not belong to the user, 
+                // display the delete post and reply to post buttons. 
                 var themaker = kb.any(post, SIOC('has_creator'));
                 if (mb.getMyURI() != themaker.uri) {
                     var xreplyButton = doc.createElement('input');
@@ -980,7 +976,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
             var xfollows = doc.createElement('div');
                 xfollows.id =  "xfollows";
             xfollows.className = "followlist-container view-container";
-            if (kb.whether(this.creator.sym, SIOC('follows'))) {
+            if (this.creator && kb.whether(this.creator.sym, SIOC('follows'))) {
                 var creatorFollows = kb.each(this.creator.sym, SIOC('follows'));
                 var xfollowsList = doc.createElement('ul');
                 for (var thisPerson in creatorFollows) {

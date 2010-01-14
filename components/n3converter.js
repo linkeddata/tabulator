@@ -41,7 +41,10 @@ N3Converter.prototype = {
     var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     var displayURI = tabulator.rc.getDisplayURI(request);
 
-    displayURI = decodeURIComponent(displayURI); //if this thing of interest has URI containing foreign characters, etc.
+    //@@ Commented this out, to fix a problem of the transaction UI
+    //this prevents the URI from being unescaped 
+    //displayURI = decodeURIComponent(displayURI); //if this thing of interest has URI containing foreign characters, etc.
+    
     var outlineHTML = 
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
         "<html id='docHTML'>"+

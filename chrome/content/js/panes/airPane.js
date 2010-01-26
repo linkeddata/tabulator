@@ -75,6 +75,13 @@ airPane.label = function(subject) {
 // View the justification trace in an exploratory manner
 airPane.render = function(subject, myDocument) {
 
+    //Extract the log and policy files
+    var uris = extractFileURIs(myDocument.location.toString()); //this method is defined in the airPane
+    var policy_file = uris.pop();
+    var log_file = uris.pop();
+    sf.lookUpThing(kb.sym(policy_file));
+    sf.lookUpThing(kb.sym(log_file));
+    
 	//Variables specific to the UI
 	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
 	var divClass;
@@ -1066,7 +1073,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		  p.appendChild(myDocument.createTextNode(" }"));
 		  break;
 		case 'symbol':
-		  var anchor = myDocument.createElement('a');
+          var anchor = myDocument.createElement('a');
 		  anchor.setAttribute('href', element.uri);
 		  anchor.appendChild(myDocument.createTextNode(label(element)));
 		  p.appendChild(anchor);

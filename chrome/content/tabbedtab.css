@@ -133,6 +133,21 @@ div.premises {
     left:0% /*May be we could shift the left margin a bit?*/
 }
 
+div.title {
+    background-color: #B8B8B8; 
+    border-top: solid 1px #545454;
+    border-bottom: solid 1px #545454;
+    padding: 0.5em;
+}
+
+div.irfac {
+    padding: 0.7em;
+}
+
+li.irfac_li{ 
+    margin-bottom: 10px; 
+}
+
 /* ***************** Social Pane **********/
 
 div.socialPane {

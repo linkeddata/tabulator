@@ -66,6 +66,16 @@ LawPane.render = function(subject, myDocument) {
 
 	var collapse_icon = Icon.src.icon_collapse;
 	var expand_icon = Icon.src.icon_expand;
+
+    //Extract the log and policy files
+    var uris = extractFileURIs(myDocument.location.toString()); 
+    var policy = uris.pop();
+    var log = uris.pop();
+
+    //And fetch the things from the files, so that the labels will be displayed properly
+    sf.lookUpThing(kb.sym(policy));
+    sf.lookUpThing(kb.sym(log));
+
 	
 	LawPane.render.show = function(evt){
 		evt["target"].src = collapse_icon;
@@ -86,11 +96,6 @@ LawPane.render = function(subject, myDocument) {
 	
     var div = myDocument.createElement("div");
    div.setAttribute('class', 'instancePane');
-    
-    //Extract the log and policy files
-    var uris = extractFileURIs(myDocument.location.toString()); 
-    var policy = uris.pop();
-    var log = uris.pop();
     
     //Retrieve policy file to get the description of the policy
 	var xmlhttp = Util.XMLHTTPFactory();
@@ -127,7 +132,11 @@ LawPane.render = function(subject, myDocument) {
 	    if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
 	    	    stsAnalysisAll.push(LawPane.display(myDocument, stsDesc[j].object));
 		}
+	    if (stsDesc[j].subject.termType == 'bnode' && stsDesc[j].object.termType == 'collection'){
+	    	    stsDescAll.push(LawPane.display(myDocument, stsDesc[j].object));
+		}
 	}
+    
 	var stsFound = [];
 	for (var j=0; j<stsJust.length; j++){
 	    if (stsJust[j].subject.termType == 'formula'){
@@ -287,6 +296,7 @@ LawPane.render = function(subject, myDocument) {
 	var list = myDocument.createElement("ul");
     for (var i=stsDescAll.length-1; i>=0; i--){
     	var li = myDocument.createElement("li");
+        li.setAttribute('class', 'irfac_li');
     	li.appendChild(stsDescAll[i]);
     	list.appendChild(li);
     }

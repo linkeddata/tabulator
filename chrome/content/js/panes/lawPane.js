@@ -138,12 +138,17 @@ LawPane.render = function(subject, myDocument) {
 	}
     
 	var stsFound = [];
-	for (var j=0; j<stsJust.length; j++){
+    compliant_str = "";
+    for (var j=0; j<stsJust.length; j++){
 	    if (stsJust[j].subject.termType == 'formula'){
 	        var sts = stsJust[j].subject.statements;
 	        for (var k=0; k<sts.length; k++){
-	            if (sts[k].predicate.toString() == ap_compliant.toString() ||
-	            	sts[k].predicate.toString() == ap_nonCompliant.toString()){
+	            if (sts[k].predicate.toString() == ap_compliant.toString()){
+                    compliant_str = "Compliant";
+	                stsFound.push(sts[k]);
+                }
+                else if (sts[k].predicate.toString() == ap_nonCompliant.toString()){
+                    compliant_str = "Non-compliant";
 	                stsFound.push(sts[k]);
 	            } 
 	        }
@@ -339,7 +344,7 @@ LawPane.render = function(subject, myDocument) {
     var table_analysis_data = myDocument.createElement("table");
 	var tr_analysis_data = myDocument.createElement('tr');
     var td_analysis_dummy = myDocument.createElement('td');
-    td_analysis_dummy.appendChild(myDocument.createTextNode(' '));
+    td_analysis_dummy.appendChild(myDocument.createTextNode(' '+compliant_str+' '));
     tr_analysis_data.appendChild(td_analysis_dummy);
     var td_analysis_data = myDocument.createElement('td');
     var table_inner = myDocument.createElement("table");

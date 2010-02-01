@@ -7,15 +7,10 @@ LawPane = {};
 LawPane.icon = Icon.src.icon_LawPane;
 LawPane.name = 'Law';
 
-LawPane.label = function(subject) {
+var policy = '';
+var log = '';
 
-    //Extract the log and policy files
-    var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
-    var policy_file = uris.pop();
-    var log_file = uris.pop();
-    sf.lookUpThing(kb.sym(policy_file));
-    sf.lookUpThing(kb.sym(log_file));
-    
+LawPane.label = function(subject) {
 
     stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
 
@@ -72,6 +67,11 @@ LawPane.display = function(myDocument,obj){
 	
 LawPane.render = function(subject, myDocument) {
 
+    //Extract the log and policy files
+    var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
+    var policy = uris.pop();
+    var log = uris.pop();
+ 
 	var collapse_icon = Icon.src.icon_collapse;
 	var expand_icon = Icon.src.icon_expand;
 

@@ -26,6 +26,14 @@ var justificationsArr = [];
 
 airPane.label = function(subject) {
   
+    //Extract the log and policy files
+    var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
+    var policy_file = uris.pop();
+    var log_file = uris.pop();
+    sf.lookUpThing(kb.sym(policy_file));
+    sf.lookUpThing(kb.sym(log_file));
+    
+
     //Flush all the justification statements already found
     justificationsArr = [];
     
@@ -75,13 +83,6 @@ airPane.label = function(subject) {
 // View the justification trace in an exploratory manner
 airPane.render = function(subject, myDocument) {
 
-    //Extract the log and policy files
-    var uris = extractFileURIs(myDocument.location.toString()); //this method is defined in the airPane
-    var policy_file = uris.pop();
-    var log_file = uris.pop();
-    sf.lookUpThing(kb.sym(policy_file));
-    sf.lookUpThing(kb.sym(log_file));
-    
 	//Variables specific to the UI
 	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
 	var divClass;

@@ -9,6 +9,14 @@ LawPane.name = 'Law';
 
 LawPane.label = function(subject) {
 
+    //Extract the log and policy files
+    var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
+    var policy_file = uris.pop();
+    var log_file = uris.pop();
+    sf.lookUpThing(kb.sym(policy_file));
+    sf.lookUpThing(kb.sym(log_file));
+    
+
     stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
 
         for (var j=0; j<stsJust.length; j++){
@@ -67,16 +75,6 @@ LawPane.render = function(subject, myDocument) {
 	var collapse_icon = Icon.src.icon_collapse;
 	var expand_icon = Icon.src.icon_expand;
 
-    //Extract the log and policy files
-    var uris = extractFileURIs(myDocument.location.toString()); 
-    var policy = uris.pop();
-    var log = uris.pop();
-
-    //And fetch the things from the files, so that the labels will be displayed properly
-    sf.lookUpThing(kb.sym(policy));
-    sf.lookUpThing(kb.sym(log));
-
-	
 	LawPane.render.show = function(evt){
 		evt["target"].src = collapse_icon;
 		evt["target"].removeEventListener('click',LawPane.render.show, false);

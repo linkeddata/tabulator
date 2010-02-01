@@ -211,12 +211,12 @@ LawPane.render = function(subject, myDocument) {
     td_issue_dummy.appendChild(myDocument.createTextNode(' '));
     tr_issue_data.appendChild(td_issue_dummy);
 	var td_issue_data = myDocument.createElement('td');
-    td_issue_data.appendChild(myDocument.createTextNode('Whether the transactions in '));
+    td_issue_data.appendChild(myDocument.createTextNode('Whether the '));
     var a_log = myDocument.createElement('a')
     a_log.setAttribute('href', log)
-    a_log.appendChild(myDocument.createTextNode("log"));
+    a_log.appendChild(myDocument.createTextNode("transactions "));
     td_issue_data.appendChild(a_log);
-    td_issue_data.appendChild(myDocument.createTextNode(' comply with '));
+    td_issue_data.appendChild(myDocument.createTextNode('comply with '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
     a_policy.appendChild(myDocument.createTextNode(label(stsFound[0].object)));

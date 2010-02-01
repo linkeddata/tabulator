@@ -312,9 +312,16 @@ airPane.render = function(subject, myDocument) {
                                 }
                             }
 
+                            //This is a hack to fix the rule appearing instead of the bnode containing the description
+                            correctCurrentRule = "";
+                            for (var i=0; i< currentRule.length; i++){
+                                if (currentRule[i].subject.termType == 'bnode'){
+                                    correctCurrentRule = currentRule[i].subject;
+                                    break;
+                                }
+                            }
                             
-                            var currentRuleSts = kb.statementsMatching(currentRule[0].subject, ap_just, undefined, subject);
-                            
+                            var currentRuleSts = kb.statementsMatching(correctCurrentRule, ap_just, undefined, subject);
                             var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
                             ruleNameFound = nextRuleSts[0].object;
 

@@ -345,7 +345,7 @@ airPane.render = function(subject, myDocument) {
                             
                             if (bnodeFound){
                                 divPremises.appendChild(myDocument.createElement("br"));
-                                divPremises.appendChild(myDocument.createTextNode(" &nbsp;&nbsp;&nbsp;No premises applicable."));
+                                divPremises.appendChild(myDocument.createTextNode("  No premises applicable."));
                                 divPremises.appendChild(myDocument.createElement("br"));
                                 divPremises.appendChild(myDocument.createElement("br"));
                             }

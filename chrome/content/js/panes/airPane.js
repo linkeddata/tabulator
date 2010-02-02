@@ -329,12 +329,27 @@ airPane.render = function(subject, myDocument) {
                             var currentRuleAntc = kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
                             
                             var currentRuleSubExpr = kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined, subject);
-
+    
+                            var formulaFound = false;
+                            var bnodeFound = false;
                             for (var i=0; i<currentRuleSubExpr.length; i++){
-                                if(currentRuleSubExpr[i].object.termType == 'formula')
+                                if(currentRuleSubExpr[i].object.termType == 'formula'){
                                     divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                                    formulaFound = true;
+                                }
+                                else if (currentRuleSubExpr[i].object.termType == 'bnode'){
+                                    bnodeFound = true;
+                            
+                                }
                             }
-
+                            
+                            if (bnodeFound){
+                                divPremises.appendChild(myDocument.createElement("br"));
+                                divPremises.appendChild(myDocument.createTextNode(" &nbsp;&nbsp;&nbsp;No premises applicable."));
+                                divPremises.appendChild(myDocument.createElement("br"));
+                                divPremises.appendChild(myDocument.createElement("br"));
+                            }
+                            
                         }
                     }
                     //End of airPane.render.showSelected.because.moreInfo
@@ -428,6 +443,7 @@ airPane.render = function(subject, myDocument) {
 
                     //Closed World Assumption
                     if (noPremises){
+                        alert("no premises");
                         divPremises.appendChild(myDocument.createElement('br'));
                         divPremises.appendChild(myDocument.createElement('br'));
                         divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in the "));

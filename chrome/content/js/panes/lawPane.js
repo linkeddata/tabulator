@@ -34,19 +34,6 @@ LawPane.label = function(subject) {
    return null;
 };
 
-//TODO handle more than one log file and policy file
-//This is a very clumsy method and should be changed
-//this returns the log and the policy file URIs from the full URI
-//Fails when there are multiple logs and policy files
-extractFileURIs = function(fullURI){
-	var uris = [];
-	var logPos = fullURI.search(/logFile=/);
-	var rulPos = fullURI.search(/&rulesFile=/);
-	uris.push(fullURI.substring(logPos+8, rulPos));
-	uris.push(fullURI.substring(rulPos+11, fullURI.length));
-	return uris; 			
-}
-
 LawPane.display = function(myDocument,obj){
 	var div = myDocument.createElement("div");
 	for (var i=0; i<obj.elements.length; i++) {
@@ -69,8 +56,8 @@ LawPane.render = function(subject, myDocument) {
 
     //Extract the log and policy files
     var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
-    var policy = uris.pop();
-    var log = uris.pop();
+    var policy = uris.rulesFile;
+    var log = "";
  
 	var collapse_icon = Icon.src.icon_collapse;
 	var expand_icon = Icon.src.icon_expand;
@@ -96,25 +83,25 @@ LawPane.render = function(subject, myDocument) {
    div.setAttribute('class', 'instancePane');
     
     //Retrieve policy file to get the description of the policy
-	var xmlhttp = Util.XMLHTTPFactory();
-	xmlhttp.onreadystatechange=state_Change;
-	xmlhttp.open("GET",policy,true);
-	xmlhttp.send(null);
-	function state_Change(){
-		if (xmlhttp.readyState==4 && xmlhttp.status==200){
-			var policy_text = xmlhttp.responseText.toString();
-			var start_index = policy_text.search("rdfs:comment");
-			var end_index = 0;
-			if (start_index > -1){
-				var newStr = policy_text;
-				end_index = newStr.slice(start_index).search(/";/); //"
-			}
-			var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
-			if (myDocument.getElementById('td_2') != null)
-				myDocument.getElementById('td_2').innerHTML = rule_statement;
-		  }
-	}
-
+    if (policy != ""){
+        var xmlhttp = Util.XMLHTTPFactory();
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState==4 && xmlhttp.status==200){
+                var policy_text = xmlhttp.responseText.toString();
+                var start_index = policy_text.search("rdfs:comment");
+                var end_index = 0;
+                if (start_index > -1){
+                    var newStr = policy_text;
+                    end_index = newStr.slice(start_index).search(/";/); //"
+                }
+                var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
+                if (myDocument.getElementById('td_2') != null)
+                    myDocument.getElementById('td_2').innerHTML = rule_statement;
+            }
+        };
+        xmlhttp.open("GET",policy,true);
+        xmlhttp.send(null);
+    }
 		
     var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
  	

@@ -24,16 +24,59 @@ var ap_prem = ap_tms('premise');
 var ap_instanceOf = ap_air('instanceOf');
 var justificationsArr = [];
 
+//TODO handle more than one log file and policy file
+//This is a very clumsy method and should be changed
+//this returns the log and the policy file URIs from the full URI
+//Fails when there are multiple logs and policy files
+extractFileURIs = function(fullURI){
+
+    fullURI = unescape(fullURI); //Otherwise we have to account for the escaped characters -- ugly!
+	var uris = { 
+                sender : "",
+                reciever : "",
+                dataFile : "",
+                data : "",
+                rulesFile : "",
+                logFile : ""
+               };
+	var logPos = fullURI.search(/logFile=/);
+    //This is a hack to work with Rafael's transaction UI. We have to assume that the parameters are in this particular order: logFile, sender, receiver, data, dataParsed, rulesFile
+    var senderPos = fullURI.search(/sender=/);
+    var receiverPos = fullURI.search(/&receiver=/);
+	var dataPos = fullURI.search(/&data=/);
+	var dataParsedPos = fullURI.search(/&dataParsed=/);
+    var rulPos = null;
+    if (senderPos != -1 && receiverPos != -1 && dataParsedPos != -1 ){
+        rulPos = fullURI.search(/&rulesFile=/);
+        uris.sender = fullURI.substring(senderPos+7, receiverPos);
+        uris.receiver = fullURI.substring(receiverPos+10, dataPos);
+        uris.dataFile = fullURI.substring(dataPos+6, dataParsedPos); 
+        uris.data = fullURI.substring(dataParsedPos+12, rulPos);
+        uris.rulesFile = fullURI.substring(rulPos+11, fullURI.length);
+    }
+    else{
+        rulPos = fullURI.search(/&rulesFile=/);
+        uris.logFile = fullURI.substring(logPos+8, rulPos);
+        uris.rulesFile = fullURI.substring(rulPos+11, fullURI.length);
+    }
+	return uris; 			
+}
+
 airPane.label = function(subject) {
   
-    //Extract the log and policy files
-    var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
-    var policy_file = uris.pop();
-    var log_file = uris.pop();
-    sf.lookUpThing(kb.sym(policy_file));
-    sf.lookUpThing(kb.sym(log_file));
+    //Extract and lookup all the files, so that the labels appear properly
+    var uris = extractFileURIs(window.content.location.toString()); //this method is defined above
+    if (uris.logFile != ""){
+        sf.lookUpThing(kb.sym(unescape(uris.logFile)));
+        sf.lookUpThing(kb.sym(unescape(uris.rulesFile)));
+    }
+    else{
+        sf.lookUpThing(kb.sym(unescape(uris.sender)));
+        sf.lookUpThing(kb.sym(unescape(uris.receiver)));
+        sf.lookUpThing(kb.sym(unescape(uris.data)));
+        sf.lookUpThing(kb.sym(unescape(uris.rulesFile)));
+    }
     
-
     //Flush all the justification statements already found
     justificationsArr = [];
     

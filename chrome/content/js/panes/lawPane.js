@@ -248,11 +248,12 @@ LawPane.render = function(subject, myDocument) {
     tr_rule_data.appendChild(td_rule_dummy);
 	var td_rule_data = myDocument.createElement('td');
     td_rule_data.id = 'td_2';
-    td_rule_data.appendChild(myDocument.createTextNode('Rule(s) is/are specified in '));
+    td_rule_data.appendChild(myDocument.createTextNode('Rule(s) is/are specified in the '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
-    a_policy.appendChild(myDocument.createTextNode(policy));
+    a_policy.appendChild(myDocument.createTextNode("policy file"));
     td_rule_data.appendChild(a_policy);
+    td_rule_data.appendChild(myDocument.createTextNode("."));
     tr_rule_data.appendChild(td_rule_data);
 	table_rule_data.appendChild(tr_rule_data);
     div_rule_data.appendChild(table_rule_data);

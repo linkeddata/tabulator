@@ -54,11 +54,14 @@ LawPane.display = function(myDocument,obj){
 	
 LawPane.render = function(subject, myDocument) {
 
-    //Extract the log and policy files
-    var uris = extractFileURIs(window.content.location.toString()); //this method is defined in the airPane
-    var policy = uris.rulesFile;
     var log = "";
  
+    //We are making the assumption that the rulesFile is the last parameter in the URI query string
+    var re = "/\s*(?:[&?]rulesFile=)\s*/";
+    var fullURI = window.content.location.toString();
+    var tokens = fullURI.split(re);
+    var policy = tokens[tokens.length-1]; //Could be incorrect if there are more than 1 policy file
+    
 	var collapse_icon = Icon.src.icon_collapse;
 	var expand_icon = Icon.src.icon_expand;
 
@@ -129,11 +132,11 @@ LawPane.render = function(subject, myDocument) {
 	        var sts = stsJust[j].subject.statements;
 	        for (var k=0; k<sts.length; k++){
 	            if (sts[k].predicate.toString() == ap_compliant.toString()){
-                    compliant_str = "Compliant";
+                    compliant_str = "Compliant ";
 	                stsFound.push(sts[k]);
                 }
                 else if (sts[k].predicate.toString() == ap_nonCompliant.toString()){
-                    compliant_str = "Non-compliant";
+                    compliant_str = "Non-compliant ";
 	                stsFound.push(sts[k]);
 	            } 
 	        }
@@ -342,6 +345,7 @@ LawPane.render = function(subject, myDocument) {
 	var tr_analysis_data = myDocument.createElement('tr');
     var td_analysis_dummy = myDocument.createElement('td');
     td_analysis_dummy.appendChild(myDocument.createTextNode(' '+compliant_str+' '));
+    td_analysis_dummy.appendChild(myDocument.createElement("br"));
     tr_analysis_data.appendChild(td_analysis_dummy);
     var td_analysis_data = myDocument.createElement('td');
     var table_inner = myDocument.createElement("table");

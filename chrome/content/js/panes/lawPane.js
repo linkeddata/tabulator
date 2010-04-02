@@ -345,7 +345,7 @@ LawPane.render = function(subject, myDocument) {
 	var tr_analysis_data = myDocument.createElement('tr');
     var td_analysis_dummy = myDocument.createElement('td');
     td_analysis_dummy.appendChild(myDocument.createTextNode(' '+compliant_str+' '));
-    td_analysis_dummy.appendChild(myDocument.createElement("br"));
+    td_analysis_dummy.appendChild(myDocument.createElement('br'));
     tr_analysis_data.appendChild(td_analysis_dummy);
     var td_analysis_data = myDocument.createElement('td');
     var table_inner = myDocument.createElement("table");

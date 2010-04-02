@@ -55,7 +55,7 @@
   <script type="application/x-javascript" src="js/panes/humanReadablePane.js"/>
   <script type="application/x-javascript" src="js/panes/tableViewPane.js"/>
   <script type="application/x-javascript" src="js/panes/socialPane.js"/>
-  <script type="application/x-javascript" src="js/panes/airPane.js"/>
+  <script type="application/x-javascript" src="js/panes/justificationPane.js"/>
   <script type="application/x-javascript" src="js/panes/lawPane.js"/>
   <script type="application/x-javascript" src="js/panes/paneUtils.js"/>
   <script type="application/x-javascript" src="js/panes/pushbackPane.js"/>
@@ -148,7 +148,7 @@
   <script type="application/x-javascript"><![CDATA[
     var myCheckbox;
 
-    var rdfaData;
+    var rdfaData = [];
 
     var tabulator_init = {
 
@@ -256,6 +256,7 @@
         
 	//RDFa without the DOCType
 	
+
 	if (rdfaData.length >0){
 	   for (i = 0; i < rdfaData.length; i += 1) {
 	      t = rdfaData[i];

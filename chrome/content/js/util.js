@@ -495,9 +495,26 @@ function addLoadEvent(func) {
 //////////////////////////////////View Utility
 function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
     var myDocument=obj.ownerDocument;
-    var DocBox=myDocument.getBoxObjectFor(myDocument.documentElement);
-    var box=myDocument.getBoxObjectFor(obj);
-    return [box.screenX-DocBox.screenX,box.screenY-DocBox.screenY];
+    if (myDocument.getBoxObjectFor){
+        var DocBox=myDocument.getBoxObjectFor(myDocument.documentElement);
+        var box=myDocument.getBoxObjectFor(obj);
+        return [box.screenX-DocBox.screenX,box.screenY-DocBox.screenY];
+    }
+    // getBoxObjectFor does not seem to work for FF 3.6
+    // see: http://community.infragistics.com/forums/p/36753/212788.aspx
+    else if (!(obj instanceof HTMLElement)) {
+        return;
+    }
+    else {
+        var b = obj.getBoundingClientRect(), c = obj.offsetParent instanceof HTMLTableElement, p = obj,
+        x = sx = b.left - (c ? 0 : obj.offsetLeft), y = sy = b.top - (c ? 0 : obj.offsetTop), w = window;
+        while (!(p instanceof HTMLHtmlElement)) {
+            sx += p.scrollLeft;
+            sy += p.scrollTop;
+            p = p.parentNode;
+        }
+        return { x: sx, y: sy, width: Math.round(b.width), height: Math.round(b.height), element: obj, firstChild: obj, lastChild: obj, previousSibling: null, nextSibling: null, parentBox: obj.parentNode, screenX: x + w.screenX + (w.outerWidth - w.innerWidth) / 2, screenY: y + w.screenY + (w.outerHeight - w.innerHeight) / 2};
+    }
 	/*
 	var curleft = curtop = 0;
 	if (obj.offsetParent) {

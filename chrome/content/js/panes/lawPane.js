@@ -57,7 +57,7 @@ LawPane.render = function(subject, myDocument) {
     var log = "";
  
     //We are making the assumption that the rulesFile is the last parameter in the URI query string
-    var re = "/\s*(?:[&?]rulesFile=)\s*/";
+    var re = /\s*(?:[&?]by=)|(?:[&?]to=)|(?:[&?]data=)|(?:[&?]policy=)|(?:[&?]rulesFile=)\s*/;
     var fullURI = window.content.location.toString();
     var tokens = fullURI.split(re);
     var policy = tokens[tokens.length-1]; //Could be incorrect if there are more than 1 policy file
@@ -85,6 +85,7 @@ LawPane.render = function(subject, myDocument) {
     var div = myDocument.createElement("div");
    div.setAttribute('class', 'instancePane');
     
+    /* @@ this was giving the @prefix bug in the lawyer pane
     //Retrieve policy file to get the description of the policy
     if (policy != ""){
         var xmlhttp = Util.XMLHTTPFactory();
@@ -105,6 +106,7 @@ LawPane.render = function(subject, myDocument) {
         xmlhttp.open("GET",policy,true);
         xmlhttp.send(null);
     }
+    */
 		
     var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
  	
@@ -264,9 +266,11 @@ LawPane.render = function(subject, myDocument) {
     
     //End of Rules
 
+
+
     //Create the Facts div
 
-    var div_facts = myDocument.createElement("div");
+/*    var div_facts = myDocument.createElement("div");
     div_facts.setAttribute('id', 'div_facts');
     div_facts.setAttribute('class', 'title');
     var table_facts = myDocument.createElement("table");
@@ -315,6 +319,8 @@ LawPane.render = function(subject, myDocument) {
 	div.appendChild(div_facts_data);
     
     //End of Facts
+*/
+
 
     //Create the Analysis div
 
@@ -337,6 +343,43 @@ LawPane.render = function(subject, myDocument) {
 	div_analysis.appendChild(table_analysis);
 	div.appendChild(div_analysis);
 	
+    var div_facts_data = myDocument.createElement("div");
+    div_facts_data.id = 'td_3';
+    div_facts_data.setAttribute('class', 'irfac');
+//   div_facts_data.setAttribute('style','display:none');
+    var table_facts_data = myDocument.createElement("table");
+	var tr_facts_data = myDocument.createElement('tr');
+    var td_facts_dummy = myDocument.createElement('td');
+    td_facts_dummy.appendChild(myDocument.createTextNode(' '));
+    tr_facts_data.appendChild(td_facts_dummy);
+    var td_facts_data = myDocument.createElement('td');
+	var table_inner = myDocument.createElement("table");
+    var tr = myDocument.createElement("tr");
+    var td = myDocument.createElement("td");
+	var list = myDocument.createElement("ul");
+    for (var i=stsDescAll.length-1; i>=0; i--){
+    	var li = myDocument.createElement("li");
+        li.setAttribute('class', 'irfac_li');
+    	li.appendChild(stsDescAll[i]);
+    	list.appendChild(li);
+    }
+    for (var i=0; i<stsAnalysisAll.length; i++){
+    	var li = myDocument.createElement("li");
+        li.setAttribute('class', 'irfac_li');
+    	li.appendChild(stsAnalysisAll[i]);
+    	list.appendChild(li);
+    }
+
+    td.appendChild(list);
+    tr.appendChild(td);       
+	table_inner.appendChild(tr);
+	td_facts_data.appendChild(table_inner);
+	tr_facts_data.appendChild(td_facts_data);
+    table_facts_data.appendChild(tr_facts_data);
+    div_facts_data.appendChild(table_facts_data);
+	div.appendChild(div_facts_data);
+  
+  /*
 	var div_analysis_data = myDocument.createElement("div");
     div_analysis_data.id = 'td_4';
    	div_analysis_data.setAttribute('class', 'irfac');
@@ -363,6 +406,8 @@ LawPane.render = function(subject, myDocument) {
     div.appendChild(div_analysis_data);
 
     //End of Analysis
+    
+    */
     
     //Create the Conclusion div
     

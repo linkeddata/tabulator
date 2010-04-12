@@ -5,6 +5,7 @@
 
 paneUtils = {};
 
+
 //These are horrible global vars. To minimize the chance of an unintended name collision
 //these are prefixed with 'ap_' (short for air pane) 
 var ap_air = RDFNamespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
@@ -58,4 +59,16 @@ paneUtils.preFetchDocs = function(uri){
         }
     }
 }
+
+/**
+ExtractFileURIs method was changed to extract all the URIs and load from the source fetcher. So, instead of the object that has several properties including the 'rulesFile', 'sender', 'receiver', etc. Now we just spit out all the individual components of the URI */
+extractFileURIs = function(fullURI){
+
+    fullURI = unescape(fullURI); //Otherwise we have to account for the escaped characters -- ugly!
+    
+    var re = /\s*(?:[&?]logFile=)|(?:[&?]rulesFile=)|(?:[&?]sender=)|(?:[&?]receiver=)|(?:[&?]data=)|(?:[&?]dataParsed=)\s*/;
+    uris=fullURI.split(re);
+	return uris; 			
+}
+
     

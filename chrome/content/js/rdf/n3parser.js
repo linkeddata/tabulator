@@ -1104,10 +1104,25 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
         return -1;
     }
 };
+
+
+/*
+
+From Jambo:
+
+A quick profile on an N3 parse showed that whitespace trim (no seriously,
+whitespace trim) was taking about 97% of the time that it takes for a document
+to parse.  I have tried to mitigate this by rewriting the whitespace function
+so that (believe it or not) it does not use regexps anymore, because most
+wildcard regexps like the ones that were used in the whitespace trim function
+are notoriously slow in most browsers.
+
+The function below replaces this function
+
 __SinkParser.prototype.skipSpace = function(str, i) {
-    /*
-    Skip white space, newlines and comments.
-    return -1 if EOF, else position of first non-ws character*/
+    
+    //Skip white space, newlines and comments.
+    //return -1 if EOF, else position of first non-ws character
     
     while (1) {
         eol.lastIndex = 0;
@@ -1131,6 +1146,31 @@ __SinkParser.prototype.skipSpace = function(str, i) {
     }
     return i;
 };
+*/
+
+__SinkParser.prototype.skipSpace = function(str, i) {
+    /*
+    Skip white space, newlines and comments.
+    return -1 if EOF, else position of first non-ws character*/
+    var tmp = str;
+    var whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
+    for (var j = (i ? i : 0); j < str.length; j++) {
+        if (whitespace.indexOf(str.charAt(j)) === -1) {
+            if( str.charAt(j)==='#' ) {
+                str = str.slice(i).replace(/^[^\n]*\n/,"");
+                j=-1;
+            } else {
+                break;
+            }
+        }
+    }
+    val = (tmp.length - str.length) + j;
+    if( val === tmp.length ) {
+        return -1;
+    }
+    return val;
+};
+
 __SinkParser.prototype.variable = function(str, i, res) {
     /*
     ?abc -> variable(:abc)

@@ -30,7 +30,7 @@ extractFileURIs = function(fullURI){
 
     fullURI = unescape(fullURI); //Otherwise we have to account for the escaped characters -- ugly!
     
-    var re = /\s*(?:[&?]logFile=)|(?:[&?]rulesFile=)|(?:[&?]sender=)|(?:[&?]receiver=)|(?:[&?]data=)|(?:[&?]dataParsed=)\s*/;
+    var re = /\s*(?:[&?]by=)|(?:[&?]to=)|(?:[&?]data=)|(?:[&?]policy=)|(?:[&?]rulesFile=)\s*/;
     uris=fullURI.split(re);
 	return uris; 			
 }
@@ -38,10 +38,16 @@ extractFileURIs = function(fullURI){
 justPane.label = function(subject) {
   
     //Extract and lookup all the files, so that the labels appear properly
-    var uris = extractFileURIs(window.content.location.toString());
+    var re = /\s*(?:[&?]by=)|(?:[&?]to=)|(?:[&?]data=)|(?:[&?]policy=)|(?:[&?]rulesFile=)\s*/;
+    var uris = window.content.location.toString().split(re);
     if (uris.length > 0){
-        for (var i=1; i< uris.length; i++){ //Start from 1 because we don't want to lookup the URI for the reasoner.
-            sf.lookUpThing(kb.sym(unescape(uris[i])));
+        for (var i=1; i< uris.length; i++){ //Start from 1 because we don't want to lookup the URI for the reasoner, and do not load the policy or the rulesFile.
+            if (uris[i].search('.pdf') != -1){
+                sf.lookUpThing(kb.sym("http://dig.csail.mit.edu/2009/DHS-fusion/Mass/cgi-files/xmpparser.py?uri="+unescape(uris[i])));
+            }
+            else{
+                sf.lookUpThing(kb.sym(unescape(uris[i])));
+            }
         }
     }
     

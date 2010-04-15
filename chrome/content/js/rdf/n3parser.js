@@ -1159,6 +1159,7 @@ __SinkParser.prototype.skipSpace = function(str, i) {
             if( str.charAt(j)==='#' ) {
                 str = str.slice(i).replace(/^[^\n]*\n/,"");
                 j=-1;
+                i=0;
             } else {
                 break;
             }

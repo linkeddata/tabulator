@@ -35,6 +35,7 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/RDFXMLPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/humanReadablePane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/tableViewPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/socialPane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/social/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/lawPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");

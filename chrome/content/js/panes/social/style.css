@@ -1,0 +1,97 @@
+#social{
+  width: 700px;
+  background: #fff;
+  padding: 2em;
+  overflow: hidden;
+}
+
+#social>h1{
+  font-size: 110%;
+}
+
+#social ul{
+  list-style:none;
+  margin: 0;
+  padding:0;
+}
+#social div#contact{
+  border: solid 1px #ccc;
+  background-color: #eee;
+  width: 200px;
+  padding: 10px;
+  float:left;
+  margin-right: 10px;
+}
+#social div#contact p{
+  margin:0;
+}
+#social div#contact h4{
+  margin-bottom:.5em;
+}
+#social div#contact ul{
+  padding-left: 1em;
+}
+#social img#profile_img {
+  max-height: 200px;
+  max-width: 200px;
+  margin:auto;
+  border: solid 1px #333;
+}
+#social #rightpanel{
+  float:left;
+  width:430px;
+  padding: 10px;
+  clear: right;
+  overflow: hidden;
+}
+#social #rightpanel #viewtabs{
+  list-style: none;
+  margin:4px;
+  padding:0;
+}
+#social #rightpanel #viewtabs>li{
+  display:inline;
+  margin-left: .5em;
+  border: solid 1px #aaa;
+  background-color: #eee;
+  padding: 4px;
+}
+#social #rightpanel #viewtabs>li.active{
+  border-bottom: solid 1px #fff;
+  background-color: #fff;
+}
+#rightpanel div{
+  display: none;
+}
+#rightpanel div.active{
+  display: block;
+}
+#social #rightpanel>div{
+border-top: solid 1px #aaa;
+padding-top: 5px;
+}
+
+#social div#status form{
+  font-family: Georgia, "Deja Vu Serif", Serif;
+}
+
+#social div#status textarea{
+  width:100%;
+  display:block;
+}
+#social div#status ol{
+  list-style:none;
+  margin: 0;
+  padding: 0;
+}
+#social div#status ol>li{
+  border: solid 1px #444;
+  padding: 10px;
+  margin-bottom: 5px;
+}
+#social #new_account_button{
+  float:right;
+}
+#social #knows_list{
+  clear: both;
+}

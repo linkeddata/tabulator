@@ -8,6 +8,7 @@
 ** 
 */
 @import url("chrome://tabulator/content/js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
+@import url("chrome://tabulator/content/js/panes/social/style.css"); /*social pane*/
 
 body {background-color: white ; font-size: 80%; font-family: sans-serif}
 

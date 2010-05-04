@@ -60,7 +60,7 @@ LawPane.render = function(subject, myDocument) {
     var re = /\s*(?:[&?]by=)|(?:[&?]to=)|(?:[&?]data=)|(?:[&?]policy=)|(?:[&?]rulesFile=)\s*/;
     var fullURI = window.content.location.toString();
     var tokens = fullURI.split(re);
-    var policy = tokens[tokens.length-1]; //Could be incorrect if there are more than 1 policy file
+    var policy = unescape(tokens[tokens.length-1]); //Could be incorrect if there are more than 1 policy file
     
 	var collapse_icon = Icon.src.icon_collapse;
 	var expand_icon = Icon.src.icon_expand;

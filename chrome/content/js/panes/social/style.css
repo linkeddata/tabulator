@@ -14,6 +14,26 @@
   margin: 0;
   padding:0;
 }
+#social #newaccountform{
+  display:none;
+  border: solid 1px #E6C854;
+  background-color: #F4F7B0;
+  width:100%;
+  padding: 10px;
+  overflow:hidden;
+}
+
+#social #newaccountform.active{
+ display:block !important;
+}
+#social #helptext{
+  float:left;
+  width: 55%;
+  margin: 1em;
+}
+#social #newaccountform>dl{
+  float:left;
+}
 #social div#contact{
   border: solid 1px #ccc;
   background-color: #eee;
@@ -37,6 +57,10 @@
   margin:auto;
   border: solid 1px #333;
 }
+#social .editable:hover{
+  background-color: #F4F7B0;
+  border: solid 1px #E6C854;
+}
 #social #rightpanel{
   float:left;
   width:430px;
@@ -55,6 +79,7 @@
   border: solid 1px #aaa;
   background-color: #eee;
   padding: 4px;
+  cursor: default;
 }
 #social #rightpanel #viewtabs>li.active{
   border-bottom: solid 1px #fff;
@@ -70,9 +95,11 @@
 border-top: solid 1px #aaa;
 padding-top: 5px;
 }
-
+#social #plan{
+  margin: 2em auto;
+  border: solid 1px #eee;
+}
 #social div#status form{
-  font-family: Georgia, "Deja Vu Serif", Serif;
 }
 
 #social div#status textarea{
@@ -85,7 +112,7 @@ padding-top: 5px;
   padding: 0;
 }
 #social div#status ol>li{
-  border: solid 1px #444;
+  border-bottom: solid 1px #aaa;
   padding: 10px;
   margin-bottom: 5px;
 }
@@ -94,4 +121,23 @@ padding-top: 5px;
 }
 #social #knows_list{
   clear: both;
+}
+#social #addfriend, #social #post_button{
+  float:right;
+  border:solid 1px #aaa;
+  background-color: #eee;
+}
+
+#social #post_button{
+}
+#social #postbox{
+  margin-bottom: 3em;
+}
+#social .hidden{
+  display:none;
+}
+#social #photos img{
+  max-width:100px;
+  max-height:100px;
+  margin: .5em;
 }

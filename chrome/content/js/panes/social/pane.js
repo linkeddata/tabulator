@@ -26,7 +26,6 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         e[en].push(evt);
       }
       CustomEvents.prototype.raiseEvent = function(en, args, context){
-        dump("\n"+en+" event raised");        
         e = this._events;
         //throw an exception if there is no event en registered
         if (!e[en]){ throw("No event \""+en+"\" registered.")}
@@ -69,6 +68,7 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
 
       //NAMESPACES
       var foaf = tabulator.rdf.Namespace("http://xmlns.com/foaf/0.1/");
+      var cloud = tabulator.rdf.Namespace("http://www.w3.org/ns/cloud#");
       var sioc = tabulator.rdf.Namespace("http://rdfs.org/sioc/ns#");
       var sioct = tabulator.rdf.Namespace('http://rdfs.org/sioc/types#');
       var rdf= tabulator.ns.rdf;
@@ -79,6 +79,8 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
       var Events = new CustomEvents();
 
+      var workspace =kb.statementsMatching(null,cloud('contains'),s);
+      workspace = (workspace.length > 0 )? workspace[0].subject.uri:false;
       var socialpane = doc.createElement('div');
       socialpane.id = "social";
       
@@ -163,14 +165,17 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
 
 
       //DISPLAY MICROBLOG POSTS FROM IDENTICA/PERSONAL MICROBLOG
-      function getStatusUpdates(post){
+      function getStatusUpdates(post, date){
         var content = kb.any(post,rss('modules/content/encoded')) || kb.any(post,sioc('content'));
         var theDate = kb.statementsMatching(post,dc('date'));
-        return "<p>"+content+"</p><div>"+theDate +"</div>";
+        var postDate  =(theDate.length > 0 )? theDate[0].object :"permalink" ;
+        return "<p>"+content+"</p><p><a href='"+post.uri +"'> "+String(postDate)+"</a></p>";
       }
-
+      function editable(uri){
+        return tabulator.outline.sparql.prototype.editable(uri,tabulator.kb);
+      }
       //LISTENERS-----------------------------------------------
-      var friendListUpdate = function(that) //TODO  update users friends, send friend change event
+      function updateFriends(that) //TODO  update users friends, send friend change event
       { 
         var batch =[
             
@@ -181,24 +186,39 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
             sparqlUpdater.insert_statement(
               [new tabulator.rdf.Statement(I, foaf('knows'),s, s)],
               function(a,b,c){
-                Events.raiseEvent("statusUpdate",[acc,statusMsg,person],this);
-                Events.raiseEvent("friendListUpdate",[], that);
+                Events.raiseEvent("evtStatusUpdate",[acc,statusMsg,person],this);
+                Events.raiseEvent("evtUpdateFriendState",[], that);
                 callback(a, b, c, batch);              
             });
         });
       }
-      var changeStatusList = function() //TODO update the status list in the ui
+      function changeStatusList() //TODO update the status list in the ui
       {}
       var changeFriendList = function() //TODO update user's friends in the ui 
       {}
+      function updatePhotos(photo, comment, writableSpace){
+        var photo = photo.replace(/^\s+|\s+$/g, '');
+        batch = [ 
+          new tabulator.rdf.Statement(I, foaf('made'), kb.sym(photo), I),
+          new tabulator.rdf.Statement(kb.sym(photo), dc('description'),comment, I),
+        ]
+        sparqlUpdater.insert_statement(batch, function(a,b,c){
+            //kb.add
+            updatePhotoPane()
+        });
+      } //TODO update the photos
       var changeFriendButton= function()//TODO update the text of the friend button
       {
+        var I =kb.sym( tabulator.preferences.get('me'));
+        var myProfile = kb.sameThings(I,s);
+
         if (kb.whether(I, foaf('knows'),s)){
           ui.addFriend.value = "Unlink "+(profile['nick'][0]||profile.name);
         }else{
           ui.addFriend.value = "I know "+(profile['nick'][0]||profile.name);
         }
         if(myProfile){ ui.addFriend.className = "hidden"}
+        else{ui.addFriend.className=""}
 
       }
       function activateView(view, evt){ // click on a tab to show a view
@@ -216,50 +236,50 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       }
       function showNewAccForm(){ // allow user to generate new webid
         var req =tabulator.rdf.Util.XMLHTTPFactory();
-        req.open("POST","https://localhost/config/register.php",false);
+        //req.open("POST","https://localhost/config/register.php",false);
         var nac =  doc.getElementById('newaccountform');
-        req.send(null); 
-        if(req.status == 200)  
-          nac.innerHTML=req.responseText; 
+        //req.send(null); 
+        //if(req.status == 200)  
+       //   nac.innerHTML=req.responseText; 
         nac.className = (nac.className =="")? "active":"";
       }
-      function statusUpdate(acc, statusMsg, person, su, callback){ //post a new status update to the server
+      function statusUpdate(workspace, statusMsg, person, su, callback){ //post a new status update to the server
         var date = String(new Date().getISOdate())
-        var micro =  acc+"/status";
+        var micro =  workspace+"/status";
         var newPost =kb.sym( micro+"#"+date.replace(/:/g,''));
         var batch = [
           new tabulator.rdf.Statement(newPost, rdf('type'), sioct('MicroblogPost'),kb.sym(micro)),
           new tabulator.rdf.Statement(newPost, sioc('content'), statusMsg,kb.sym(micro)),
-          new tabulator.rdf.Statement(newPost, dc('date'), statusMsg,kb.sym(micro)),
+          new tabulator.rdf.Statement(newPost, dc('date'), date,kb.sym(micro)),
           new tabulator.rdf.Statement(kb.sym(micro), sioc('container_of'), newPost,kb.sym(micro)),
           new tabulator.rdf.Statement(newPost,foaf('maker'),person,kb.sym(micro))
           ];
         su.insert_statement(batch,
             function(a, b, c) {
-              Events.raiseEvent("statusUpdate",[acc,statusMsg,person],this);
+              Events.raiseEvent("evtStatusUpdate",[acc,statusMsg,person],this);
               callback(a, b, c, batch);
             });
       }
-      function requestWebID(){
-        var req =tabulator.rdf.Util.XMLHTTPFactory();
-        req.open("POST","https://localhost/config/register.php",false);
-        return false;
+      function requestWebID(target){
       }
+      function changeMyProfile(){
+        return [(tabulator.preferences.get('me') == p), tabulator.preferences.get('me')];
+      }
+
+      Events.addEventListener("evtUpdateFriendList", changeFriendList); //update the friends list 
+      Events.addEventListener("evtUpdateFriendState",changeFriendButton); //update the state of the add friend button
       //END LISTENERS-----------------------------------------
 
       var p=s.uri;
-      var myProfile = (tabulator.preferences.get('me') == p);
       var I = kb.sym(tabulator.preferences.get('me'));
+      var myProfile = kb.sameThings(I,s);
       var profile = getProfileData(p);
       var ui={};
-      sf.addCallback('done',function(){Events.raiseEvent("friendListUpdate",[],this);
+      sf.addCallback('done',function(){Events.raiseEvent("evtUpdateFriendState",[],this);
           tabulator.panes.newsocialpane.render(s,doc);
           })
       if (!(kb.whether(I, rdf('type'),foaf('Person')))){
           sf.lookUpThing(I);
-      }
-      for (i in Iterator(kb.each(s, foaf('weblog')))){
-          sf.lookUpThing(i);
       }
       ui.newacc = newElement('input');
         ui.newacc.type='button';
@@ -268,21 +288,16 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         ui.newacc.id= 'new_account_button';
       ui.newaccForm = newElement('form');
         ui.newaccForm.action= "#";
-        ui.newaccForm.addEventListener("submit",function(){return requestWebID()},false);
         ui.newaccForm.id = "newaccountform";
+        ui.newaccForm.method ="POST";
+        ui.newaccForm.addEventListener("submit", function(evt){showNewAccForm()}, false);
         ui.acc= newElement('dl',ui.newaccForm);
-        /*newElement('dt',ui.acc).innerHTML="Nickname/Username:";
-        ui.accemail = newElement('dd', ui.acc).child('input');
-          ui.accemail.name="username";
-        newElement('dt',ui.acc).innerHTML="Name:";
-        ui.accname = newElement('dd', ui.acc).child('input');
-          ui.accname.name="name";
-        newElement('dt',ui.acc).innerHTML="Email:";
-        ui.accemail = newElement('dd', ui.acc).child('input');
-          ui.accemail.value ="email";
+        newElement('dt',ui.acc).innerHTML="Nickname/Username:";
+        ui.accusername = newElement('dd', ui.acc).child('input');
+          ui.accusername.name="username";
         newElement('dt',ui.acc).innerHTML="WebID Provider";
         ui.accprovider = newElement('dd',ui.acc).child('input');
-          ui.accprovider.value ="default";
+          ui.accprovider.value ="http://";
         ui.newacchelp = newElement('p',ui.newaccForm);
         ui.newacchelp.id="helptext"
         ui.newacchelp.innerHTML = "\
@@ -295,10 +310,20 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
                                    social networking site. All you need is some place on the web\
                                    where you can save a file to."
                                    
+      ui.keygen= newElement ("p", ui.acc);
+        ui.keygen.innerHTML = "<keygen keytype='RSA'id='keygen' name='keygen' challenge='antisocial' />";
       ui.makenewacc= newElement('input',ui.acc);
       ui.makenewacc.type='submit';
+      ui.newaccForm.addEventListener("change",function(){ 
+          ui.newaccForm.action=ui.accprovider.value;
+//          dump(ui.accprovider.value)
+//        var req =tabulator.rdf.Util.XMLHTTPFactory();
+//        req.open("POST",ui.accprovider.value,false);
+//        req.send({username:ui.accusername, keygen:keygen.getElementById('keygen').value}); 
+//        return false;
+        },false);
       ui.makenewacc.value='Create my WebID';
-      */
+      
 
       newElement('h1').innerHTML = profile.name;
        
@@ -313,15 +338,40 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
      
       ui.meform = newElement('form',ui.contact);
         ui.me = newElement('input',ui.meform);
-        newElement('span',ui.meform).innerHTML ="This is me.";
-        
+        newElement('span',ui.meform).innerHTML ="This is me."
         ui.me.type='checkbox';
         ui.me.checked = myProfile;
         ui.me.addEventListener('click', function(evt){
-            if (evt.target.checked) tabulator.preferences.set('me',s.uri);
-            else tabulator.preferences.set('me','');
+            if (evt.target.checked){
+              if (!kb.whether(s,foaf("weblog"),kb.sym(workspace+"/status"))){
+                sparqlUpdater.insert_statement([ new tabulator.rdf.Statement(s, foaf('weblog'), kb.sym(workspace+"/status"), s)], function(){});
+              }
+              tabulator.preferences.set('me',s.uri);
+            }
+            else {
+              tabulator.preferences.set('me','');
+            }
+            this.I = (evt.target.checked)? s.uri: '';
+            this.myProfile = ( I == s.uri); 
+            Events.raiseEvent("evtUpdateFriendState",[],this);
         },false);
 
+      //display if the profile is editable
+      //check for documents whose primarytopic is the person
+      // then check if those are personalprofiledocuments.
+      ui.editable = newElement('p',ui.contact);
+      var aboutme = kb.each(null, foaf('primaryTopic'), I);
+      var editableProfile = false;
+      /*
+      for (var docAboutMe in Iterator(aboutme)) {
+        dump (docAboutMe);
+        dump(kb.statementsMatching(docAboutMe))
+        if( kb.whether( docAboutMe, rdf('type'), foaf('PersonalProfileDocument')) && editable(docAboutMe.uri)){
+            editableProfile = true;
+            break;
+          }
+      }*/
+      ui.editable.innerHTML = editableProfile ? "This profile is not writable":"";
 
       ui.plan = newElement('div',ui.contact);
         ui.plan.id= "plan";
@@ -393,9 +443,9 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       ui.addFriend = newElement('input', ui.rp);
         ui.addFriend.type="button";
         ui.addFriend.id='addfriend';
-        ui.addFriend.addEventListener("click",function(evt){friendListUpdate(this)}, false);
-        Events.addEventListener("friendListUpdate",changeFriendButton); //TODO need to dispatch friendlistupdate event
-        Events.raiseEvent("friendListUpdate",[],this);
+        ui.addFriend.addEventListener("click",function(evt){updateFriends(this)}, false);
+        Events.raiseEvent("evtUpdateFriendState",[],this); //call it to put the interface in the proper initial state
+
 
         //tabs 
         ui.views = newElement('ol',ui.rp);
@@ -424,17 +474,38 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
           ui.post.type = "submit";
           ui.post.value = "Send";
           ui.postbox.addEventListener("submit",function(){
-              statusUpdate("http://localhost/charles2",doc.getElementById("status_text").value,I,sparqlUpdater);
+              //perform a status update
+              statusUpdate(workspace, doc.getElementById("status_text").value,I,sparqlUpdater);
               },false)
           ui.post.id = "post_button";
       ui.statuses = newElement('ol',ui.statusbox);
       for (var status in Iterator(profile['status'])){
-        newElement('li', ui.statuses).innerHTML =getStatusUpdates(status[1]);
+        newElement('li', ui.statuses).innerHTML =getStatusUpdates(status[1],new Date);
       }
       
       //PHOTOS
       ui.photobox = newElement('div', ui.rp);
         ui.photobox.id ='photos';
+
+        if (myProfile){
+          //-- add photo ui --
+          ui.addnewphoto = newElement('form',ui.photobox);
+          ui.addnewphoto.id = "addnewphoto";
+          ui.addnewphoto.addEventListener("submit", function(evt){
+              updatePhotos(ui.addphotouri.value, ui.photocomment, I);
+              return false;
+          }, false); //TODO post photo
+          newElement('p' , ui.addnewphoto).innerHTML ="Photo URL: ";
+          ui.addphotouri = newElement('input', ui.addnewphoto); //input box for the photo uri
+          ui.addphotouri.type= 'text';
+          ui.submitphoto = newElement('input', ui.addnewphoto); //add the photo
+          ui.submitphoto.type ='submit';
+          ui.submitphoto.value = "Post";
+          newElement('p', ui.addnewphoto).innerHTML = "Comment:";
+          ui.photocomment = newElement('textarea', ui.addnewphoto);
+        }
+       
+
         var photoStore ={}
         for (var img in Iterator(profile['images'])){
             img = img[1];
@@ -459,7 +530,6 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         ui.knows.friend=newElement('li',ui.knows).child('a');
         ui.knows.friend.innerHTML = tabulator.Util.label(friend[1]);
         ui.knows.friend.href= friend[1].uri;
-        Events.addEventListener("updateFriendsList", updateFriendsList); //TODO need to dispatch updateFriendsList
       }
       newElement('h3',ui.knowsbox).innerHTML="Knows";
       ui.unconf = newElement('ul', ui.knowsbox);

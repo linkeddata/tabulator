@@ -73,12 +73,15 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       var sioct = tabulator.rdf.Namespace('http://rdfs.org/sioc/types#');
       var rdf= tabulator.ns.rdf;
       var dc = tabulator.rdf.Namespace('http://purl.org/dc/elements/1.1/');
+      var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
       var rss = tabulator.rdf.Namespace("http://purl.org/rss/1.0/");
       var kb = tabulator.kb;
       var sf = tabulator.sf;
       var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
       var Events = new CustomEvents();
 
+      
+      sf.lookUpThing(kb.sym('http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri)));
       var workspace =kb.statementsMatching(null,cloud('contains'),s);
       workspace = (workspace.length > 0 )? workspace[0].subject.uri:false;
       var socialpane = doc.createElement('div');
@@ -119,7 +122,10 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         var profile = {};
         var cperson = kb.canon(kb.sym(person));
         var person = kb.sym(person);
-        profile['name'] =(kb.whether(cperson, foaf('name'))) ?  kb.any(person, foaf('name')): kb.any(person, foaf('givenname'))+' '+ kb.any(person, foaf('family_name'));
+        var fn =  kb.any(person, foaf('givenname'));
+        var ln =  kb.any(person, foaf('family_name'));
+        profile['name'] =(kb.whether(cperson, foaf('name'))) ?  kb.any(person, foaf('name')): fn+" "+ln;
+        if (!fn && !ln) profile['name'] = (kb.whether(cperson, foaf('nick')))? kb.any(cperson,foaf('nick')): "No name specified";
         profile['phone'] = kb.each(cperson, foaf('phone'));
         profile['email'] = kb.each(cperson, foaf('mbox'));
         profile['websites'] = kb.each(cperson, foaf('homepage')).concat(kb.each(cperson,foaf('weblog')));
@@ -132,7 +138,7 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         profile['icq'] = kb.each(cperson,foaf('icqChatID'));
         profile['yahoo'] = kb.each(cperson,foaf('yahooChatID'));
         profile['status']= new Array();
-        profile['images'] = kb.each(cperson, foaf('img')).concat(kb.each(cperson, foaf('depiction')));
+        profile['images'] = kb.each(cperson, foaf('img'));//.concat(kb.each(cperson, foaf('depiction')));
         var posts = Iterator(kb.statementsMatching(null,rdf('type'),sioct('MicroblogPost')));
         for(var post in posts){ profile['status'].push(post[1].subject); }
         //identica hack
@@ -167,8 +173,8 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       //DISPLAY MICROBLOG POSTS FROM IDENTICA/PERSONAL MICROBLOG
       function getStatusUpdates(post, date){
         var content = kb.any(post,rss('modules/content/encoded')) || kb.any(post,sioc('content'));
-        var theDate = kb.statementsMatching(post,dc('date'));
-        var postDate  =(theDate.length > 0 )? theDate[0].object :"permalink" ;
+        var theDate = kb.statementsMatching(post,dc('date')) ;
+        var postDate  =(theDate.length > 0 )? theDate[0].object : (kb.any(post, dcterms('created')) || "permalink");
         return "<p>"+content+"</p><p><a href='"+post.uri +"'> "+String(postDate)+"</a></p>";
       }
       function editable(uri){
@@ -453,13 +459,18 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         ui.statusView = newElement('li', ui.views);
           ui.statusView.innerHTML = "Status";
           ui.statusView.className = "active";
-          ui.statusView.addEventListener("click", function(evt){activateView("status",evt);},false)
+          ui.statusView.addEventListener("click", function(evt){activateView("status",evt);},false);
         ui.photoView  = newElement('li', ui.views);
           ui.photoView.innerHTML = "Photos";
-          ui.photoView.addEventListener("click", function(evt){activateView("photos",evt);},false)
+          ui.photoView.addEventListener("click", function(evt){activateView("photos",evt);},false);
         ui.friendView = newElement('li', ui.views);
           ui.friendView.innerHTML = "Friends";
-          ui.friendView.addEventListener("click", function(evt){activateView("friends",evt);},false)
+          ui.friendView.addEventListener("click", function(evt){activateView("friends",evt);},false);
+        if (myProfile){
+          ui.editProfile = newElement('li', ui.views);
+            ui.editProfile.innerHTML = "Edit Profile";
+            ui.editProfile.addEventListener('click', function(evt){activateView("editprofile",evt);},false);
+        }
 
       //STATUSES
       ui.statusbox = newElement('div', ui.rp);
@@ -549,6 +560,14 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         ui.knowsof.friend.innerHTML = tabulator.Util.label(request[1]);
         ui.knowsof.friend.href= request[1].uri;
       }
+      //EDIT PROFILE 
+      ui.editprofilebox = newElement('div',ui.rp);
+      ui.editprofilebox.id = "editprofile";
+      ui.editprofilebox.innerHTML = '<form action="" method="POST">\
+        <dt>Name:</dt><dd> <input value=""></dd>\
+        <dt>Profile Picture:</dt><dd> <input></dd>\
+        <dt>Website:</dt> <dd><input value=""></dd>\
+        <dt>Phone Number:</dt><dd><input value=""></dd>';
       return socialpane;
     }
 }, true);

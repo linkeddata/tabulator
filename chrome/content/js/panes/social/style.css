@@ -148,3 +148,12 @@ padding-top: 5px;
   max-height:100px;
   margin: .5em;
 }
+#social form dt{
+  float:left;
+  margin: .5em;
+  margin-right:1em;
+  width: 10em;
+}
+#social form dd{
+  margin: .5em 0;
+}

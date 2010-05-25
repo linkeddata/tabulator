@@ -20,6 +20,7 @@ $rdf.Empty.prototype.toNT = function () { return "@@" };
 
 $rdf.Symbol = function( uri ) {
     this.uri = uri;
+    this.value = uri;
     return this;
 }
 
@@ -41,6 +42,7 @@ $rdf.BlankNode = function ( id ) {
     	this.id = id;
     else*/
     this.id = $rdf.NextId++
+    this.value = id ? id : this.id.toString();
     return this
 };
 

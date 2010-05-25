@@ -60,9 +60,9 @@ var tabExtension = {
         
         var appcontent = document.getElementById("appcontent");   // browser
         if(appcontent) {
-            var catman = Components.classes["@mozilla.org/categorymanager;1"]
-                .getService(Components.interfaces.nsICategoryManager);
-            catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
+            //var catman = Components.classes["@mozilla.org/categorymanager;1"]
+            //    .getService(Components.interfaces.nsICategoryManager);
+            //catman.deleteCategoryEntry("Gecko-Content-Viewers","application/rdf+xml",false);
             var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
             gBrowser.addEventListener('load',tOpenOutliner,true);
             var ThisSession=tabulator.kb.the(undefined,tabulator.ns.rdfs('label'),tabulator.kb.literal("This Session"));

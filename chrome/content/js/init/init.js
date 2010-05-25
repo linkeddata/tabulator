@@ -22,7 +22,7 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/log-ext.js");
 tabulator.log = new TabulatorLogger();
 
 //Load the RDF Library, which defines itself in the namespace $rdf.
-loader.loadSubScript("chrome://tabulator/content/js/rdf/util.js");
+/*loader.loadSubScript("chrome://tabulator/content/js/rdf/util.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/uri.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/term.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/match.js");
@@ -32,7 +32,8 @@ loader.loadSubScript("chrome://tabulator/content/js/rdf/identity.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/serialize.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/sparqlUpdate.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js");
+loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js");*/
+loader.loadSubScript("chrome://tabulator/content/js/rdf/rdflib.js");
 tabulator.rdf = $rdf;
 
 //Load the icons namespace onto tabulator.
@@ -59,3 +60,138 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
 
 //Oh, and the views!
 loader.loadSubScript("chrome://tabulator/content/js/init/views.js");
+
+
+//TODO: SEPARATE.
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+
+function CCIN(cName, ifaceName) {
+    return Cc[cName].createInstance(Ci[ifaceName]);
+}
+
+function TracingListener() {
+}
+TracingListener.prototype =
+{
+    originalListener: null,
+    receivedData: [],   // array for incoming data.
+
+    onDataAvailable: function(request, context, inputStream, offset, count)
+    {
+        var binaryInputStream = CCIN("@mozilla.org/binaryinputstream;1",
+                "nsIBinaryInputStream");
+        var storageStream = CCIN("@mozilla.org/storagestream;1", "nsIStorageStream");
+        var binaryOutputStream = CCIN("@mozilla.org/binaryoutputstream;1",
+                "nsIBinaryOutputStream");
+
+        binaryInputStream.setInputStream(inputStream);
+        storageStream.init(8192, count, null);
+        binaryOutputStream.setOutputStream(storageStream.getOutputStream(0));
+
+        // Copy received data as they come.
+        var data = binaryInputStream.readBytes(count);
+        this.receivedData.push(data);
+
+        binaryOutputStream.writeBytes(data, count);
+
+        //this.originalListener.onDataAvailable(request, context,
+        //storageStream.newInputStream(0), offset, count);
+    },
+
+    onStartRequest: function(request, context) {
+        this.receivedData = [];
+        //this.originalListener.onStartRequest(request, context);
+    },
+
+    onStopRequest: function(request, context, statusCode)
+    {
+        dump("fff");
+        var responseSource = this.receivedData.join(); //entire file in responseSource
+        //parse responseSource through tabulator
+
+
+        //send html file to originalListener
+        var storageStream = CCIN("@mozilla.org/storagestream;1", "nsIStorageStream");
+        var binaryOutputStream = CCIN("@mozilla.org/binaryoutputstream;1",
+                "nsIBinaryOutputStream");
+
+        var data = 
+        "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
+        "<html id='docHTML'>"+
+        "    <head>"+
+        "        <title>Tabulator: Async Javascript And Semantic Web</title>"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
+        "    </head>"+
+        "    <body>"+
+        "        <div class=\"TabulatorOutline\" id=\""+request.name+"\">"+
+        "            <table id=\"outline\"></table>"+
+        "        </div>"+
+        "    </body>"+
+        "</html>";
+
+        storageStream.init(8192, data.length, null);
+        binaryOutputStream.setOutputStream(storageStream.getOutputStream(0));
+        binaryOutputStream.writeBytes(data, data.length);
+        this.originalListener.onStartRequest(request, context);
+        this.originalListener.onDataAvailable(request, context,
+               storageStream.newInputStream(0), 0, data.length);
+        this.originalListener.onStopRequest(request, context, statusCode);
+    },
+
+    QueryInterface: function (aIID) {
+        if (aIID.equals(Ci.nsIStreamListener) ||
+            aIID.equals(Ci.nsISupports)) {
+            return this;
+        }
+        throw Components.results.NS_NOINTERFACE;
+    }
+}
+
+var httpRequestObserver =
+{
+    observe : function(aSubject, aTopic, aData)
+    {
+        var chan = aSubject.QueryInterface(Ci.nsIChannel);
+        var isBrowserLoad = chan.loadFlags & chan.LOAD_INITIAL_DOCUMENT_URI;
+
+        if (isBrowserLoad && (aTopic == "http-on-examine-response" ||
+                        aTopic == "http-on-examine-merged-response" ||
+                        aTopic == "http-on-examine-cached-response"))
+        {
+            dump(chan.URI.spec+aSubject.QueryInterface(Ci.nsIHttpChannel).responseStatus+"\n");
+            var newListener = new TracingListener();
+            aSubject.QueryInterface(Ci.nsIHttpChannel);
+            if( aSubject.QueryInterface(Components.interfaces.nsIChannel)
+                .contentType.indexOf("application/rdf+xml") === 0 ) {
+                aSubject.QueryInterface(Components.interfaces.nsIChannel)
+                    .contentType = "text/html";
+                aSubject.QueryInterface(Ci.nsITraceableChannel);
+                newListener.originalListener = 
+                    aSubject.setNewListener(newListener);
+            }
+        }
+    },
+
+    QueryInterface : function (aIID)
+    {
+        if (aIID.equals(Ci.nsIObserver) ||
+            aIID.equals(Ci.nsISupports))
+        {
+            return this;
+        }
+
+        throw Components.results.NS_NOINTERFACE;
+
+    }
+};
+
+var observerService = Cc["@mozilla.org/observer-service;1"]
+    .getService(Ci.nsIObserverService);
+
+observerService.addObserver(httpRequestObserver,
+    "http-on-examine-response", false);
+observerService.addObserver(httpRequestObserver,
+    "http-on-examine-merged-response", false);
+observerService.addObserver(httpRequestObserver,
+    "http-on-examine-cached-response", false);

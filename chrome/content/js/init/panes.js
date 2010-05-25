@@ -26,6 +26,7 @@ var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
 
 loader.loadSubScript("chrome://tabulator/content/js/panes/classInstancePane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
+//loader.loadSubScript("chrome://tabulator/content/js/panes/newOutline.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/microblogPane/microblogPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/imagePane.js");

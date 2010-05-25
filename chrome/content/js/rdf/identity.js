@@ -145,14 +145,17 @@ We replace the bigger with the smaller.
 */
 $rdf.IndexedFormula.prototype.equate = function(u1, u2) {
     //$rdf.log.info("Equating "+u1+" and "+u2)
-    
+    //@@JAMBO Must canonicalize the uris to prevent errors from a=b=c
+    //03-21-2010
+    u1 = this.canon( u1 );
+    u2 = this.canon( u2 );
     var d = u1.compareTerm(u2);
     if (!d) return true; // No information in {a = a}
     var big, small;
     if (d < 0)  {  // u1 less than u2
-	return this.replaceWith(u2, u1);
+	    return this.replaceWith(u2, u1);
     } else {
-	return this.replaceWith(u1, u2);
+	    return this.replaceWith(u1, u2);
     }
 }
 
@@ -168,7 +171,7 @@ $rdf.IndexedFormula.prototype.replaceWith = function(big, small) {
         if (oldlist == undefined) return; // none to move
         var newlist = ix[newhash];
         if (newlist == undefined) {
-            ix[newhash] = newlist;
+            ix[newhash] = oldlist;
         } else {
             ix[newhash] = oldlist.concat(newlist);
         }
@@ -182,17 +185,24 @@ $rdf.IndexedFormula.prototype.replaceWith = function(big, small) {
 
     this.redirections[oldhash] = small;
     if (big.uri) {
-	if (this.aliases[newhash] == undefined)
-	     this.aliases[newhash] = [];
-	this.aliases[newhash].push(big); // Back link
-
-	this.add(small, this.sym('http://www.w3.org/2006/link#uri'), big.uri)
-
-	// If two things are equal, and one is requested, we should request the other.
-	if (this.sf) {
-	    this.sf.nowKnownAs(big, small)
-	}
-    
+        //@@JAMBO: must update redirections,aliases from sub-items, too.
+	    if (this.aliases[newhash] == undefined)
+	        this.aliases[newhash] = [];
+	    this.aliases[newhash].push(big); // Back link
+        
+        if( this.aliases[oldhash] ) {
+            for( var i = 0; i < this.aliases[oldhash].length; i++ ) {
+                this.redirections[this.aliases[oldhash][i].hashString()] = small;
+                this.aliases[newhash].push(this.aliases[oldhash][i]);
+            }            
+        }
+        
+	    this.add(small, this.sym('http://www.w3.org/2006/link#uri'), big.uri)
+        
+	    // If two things are equal, and one is requested, we should request the other.
+	    if (this.sf) {
+	        this.sf.nowKnownAs(big, small)
+	    }    
     }
     
     moveIndex(this.classActions);
@@ -240,19 +250,19 @@ $rdf.IndexedFormula.prototype.uris = function(term) {
 // 
 function RDFMakeTerm(formula,val, canonicalize) {
     if (typeof val != 'object') {   
-	if (typeof val == 'string')
-	    return new $rdf.Literal(val);
+	    if (typeof val == 'string')
+	        return new $rdf.Literal(val);
         if (typeof val == 'number')
             return new $rdf.Literal(val); // @@ differet types
         if (typeof val == 'boolean')
             return new $rdf.Literal(val?"1":"0", undefined, 
-                                            $rdf.Symbol.prototype.XSDboolean);
-	else if (typeof val == 'number')
-	    return new $rdf.Literal(''+val);   // @@ datatypes
-	else if (typeof val == 'undefined')
-	    return undefined;
-	else    // @@ add converting of dates and numbers
-	    throw "Can't make Term from " + val + " of type " + typeof val; 
+                                    $rdf.Symbol.prototype.XSDboolean);
+	    else if (typeof val == 'number')
+	        return new $rdf.Literal(''+val);   // @@ datatypes
+	    else if (typeof val == 'undefined')
+	        return undefined;
+	    else    // @@ add converting of dates and numbers
+	        throw "Can't make Term from " + val + " of type " + typeof val; 
     }
     return val;
 }
@@ -344,7 +354,9 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
             hash[p] = pattern[p].hashString();
         }
     }
-    if (given.length == 0) return this.statements; // Easy
+    if (given.length == 0) {
+        return this.statements;
+    }
     if (given.length == 1) {  // Easy too, we have an index for that
         var p = given[0];
         var list = this.index[p][hash[p]];
@@ -388,13 +400,13 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
         }
         if (st != null) results.push(st);
     }
+
     if(justOne) {
         if(results.length>1)
             results = results.slice(0,1);
     }
     return results;
 }; // statementsMatching
-
 
 /** remove a particular statement from the bank **/
 $rdf.IndexedFormula.prototype.remove = function (st) {

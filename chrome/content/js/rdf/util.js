@@ -18,7 +18,7 @@ $rdf.log = {
     'info':function(x) {return;},
     'error':function(x) {return;},
     'success':function(x) {return;},
-    'msg':function(x) {return;},
+    'msg':function(x) {return;}
 }
 
 $rdf.Util = {
@@ -177,12 +177,11 @@ $rdf.Util = {
     'RDFArrayRemove': function(a, x) {  //removes all elements equal to x from a
         for(var i=0; i<a.length; i++) {
             //TODO: This used to be the following, which didnt always work..why
-            if(a[i] == x) {
-                //if (x && a[i] && 
-                //a[i].subject && a[i].subject.sameTerm( x.subject ) && 
-                //a[i].predicate && a[i].predicate.sameTerm( x.predicate ) && 
-                //a[i].object && a[i].object.sameTerm( x.object ) &&
-                //a[i].why && a[i].why.sameTerm( x.why )) {
+            //if(a[i] == x)
+            if (a[i].subject.sameTerm( x.subject ) && 
+                a[i].predicate.sameTerm( x.predicate ) && 
+                a[i].object.sameTerm( x.object ) &&
+                a[i].why.sameTerm( x.why )) {
                 a.splice(i,1);
                 return;
             }

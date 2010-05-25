@@ -134,6 +134,7 @@
       //This is called every time a page finishes loading
       onDOMContentLoaded : function(event) {
          var doc = event.originalTarget;
+
 	 dump("\npage " + gURLBar.value +" has finished loading");
 
 	 //Parse RDFa from a document which does not have a DOCType
@@ -281,7 +282,6 @@
 
             
         outline.GotoSubject(kb.sym(uri),true);
-
 
     }
     

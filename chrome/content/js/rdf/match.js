@@ -85,7 +85,7 @@ $rdf.Collection.prototype.compareTerm = $rdf.BlankNode.prototype.compareTerm
 // Only one of s p o can be undefined, and w is optional.
 $rdf.Formula.prototype.each = function(s,p,o,w) {
     var results = []
-    var st, sts = this.statementsMatching(s,p,o,w)
+    var st, sts = this.statementsMatching(s,p,o,w,false)
     var i, n=sts.length
     if (typeof s == 'undefined') {
 	for (i=0; i<n; i++) {st=sts[i]; results.push(st.subject)}
@@ -119,5 +119,5 @@ $rdf.Formula.prototype.the = function(s,p,o,w) {
 }
 
 $rdf.Formula.prototype.whether = function(s,p,o,w) {
-    return this.statementsMatching(s,p,o,w).length;
+    return this.statementsMatching(s,p,o,w,false).length;
 }

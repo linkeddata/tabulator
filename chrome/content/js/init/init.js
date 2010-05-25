@@ -106,7 +106,6 @@ TracingListener.prototype =
 
     onStopRequest: function(request, context, statusCode)
     {
-        dump("fff");
         var responseSource = this.receivedData.join(); //entire file in responseSource
         //parse responseSource through tabulator
 
@@ -162,8 +161,12 @@ var httpRequestObserver =
             dump(chan.URI.spec+aSubject.QueryInterface(Ci.nsIHttpChannel).responseStatus+"\n");
             var newListener = new TracingListener();
             aSubject.QueryInterface(Ci.nsIHttpChannel);
-            if( aSubject.QueryInterface(Components.interfaces.nsIChannel)
-                .contentType.indexOf("application/rdf+xml") === 0 ) {
+            var ct = aSubject.QueryInterface(Components.interfaces.nsIChannel)
+                .contentType
+            if( ct.indexOf("application/rdf+xml") === 0 ||
+                ct.indexOf("text/n3") === 0 ||
+                ct.indexOf("text/rdf+n3") === 0 ||
+                ct.indexOf("text/turtle") === 0 ) {
                 aSubject.QueryInterface(Components.interfaces.nsIChannel)
                     .contentType = "text/html";
                 aSubject.QueryInterface(Ci.nsITraceableChannel);

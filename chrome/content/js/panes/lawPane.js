@@ -332,7 +332,7 @@ LawPane.render = function(subject, myDocument) {
     var td_img_analysis = myDocument.createElement("td");
     var img_analysis = myDocument.createElement("img");
     img_analysis.setAttribute("src", collapse_icon);
-    img_analysis.id = "img_4";
+    img_analysis.id = "img_3";
     img_analysis.addEventListener('click',LawPane.render.hide, false);
     td_img_analysis.appendChild(img_analysis);
     tr_analysis.appendChild(td_img_analysis);

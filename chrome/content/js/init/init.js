@@ -59,7 +59,8 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/userinput.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
 
 //Oh, and the views!
-loader.loadSubScript("chrome://tabulator/content/js/init/views.js");
+//@@ jambo commented this out to pare things down temporarily.
+//loader.loadSubScript("chrome://tabulator/content/js/init/views.js");
 
 
 //TODO: SEPARATE.
@@ -79,6 +80,7 @@ TracingListener.prototype =
 
     onDataAvailable: function(request, context, inputStream, offset, count)
     {
+
         var binaryInputStream = CCIN("@mozilla.org/binaryinputstream;1",
                 "nsIBinaryInputStream");
         var storageStream = CCIN("@mozilla.org/storagestream;1", "nsIStorageStream");
@@ -106,7 +108,7 @@ TracingListener.prototype =
 
     onStopRequest: function(request, context, statusCode)
     {
-        var responseSource = this.receivedData.join(); //entire file in responseSource
+        //var responseSource = this.receivedData.join(); //entire file in responseSource
         //parse responseSource through tabulator
 
 
@@ -158,7 +160,6 @@ var httpRequestObserver =
                         aTopic == "http-on-examine-merged-response" ||
                         aTopic == "http-on-examine-cached-response"))
         {
-            dump(chan.URI.spec+aSubject.QueryInterface(Ci.nsIHttpChannel).responseStatus+"\n");
             var newListener = new TracingListener();
             aSubject.QueryInterface(Ci.nsIHttpChannel);
             var ct = aSubject.QueryInterface(Components.interfaces.nsIChannel)

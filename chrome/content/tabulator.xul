@@ -98,6 +98,20 @@
   </statusbar>
 
   <script type="application/x-javascript"><![CDATA[
+
+function openTool(url, type, width, height)
+{
+  width = width || 500;
+  height = height || 400;
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Components.interfaces.nsIWindowMediator);
+  var toolWindow = wm.getMostRecentWindow(type);
+  if(!toolWindow)
+    var w = window.openDialog(url, "_blank", "all=no,width="+width+",height="+height+",scrollbars=yes,resizable=yes,dialog=no");
+  else
+     toolWindow.focus();
+}
+
     var myCheckbox;
 
     var rdfaData;
@@ -128,7 +142,8 @@
           new StatusWidget();
 
           var appcontent = window.document.getElementById('appcontent');
-          appcontent.addEventListener('DOMContentLoaded', tabulator_init.onDOMContentLoaded, false);
+          //@@ jambo try to speed up by eliminating the preproc..
+          //appcontent.addEventListener('DOMContentLoaded', tabulator_init.onDOMContentLoaded, false);
        },
 
       //This is called every time a page finishes loading
@@ -248,7 +263,8 @@
         semanticIcon.removeAttribute('metadata');
     }        
 
-    getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);
+    //@@ jambo try to speedup by eliminating the icon.
+    //getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);
     
     pumpRDFa = function(e){
      

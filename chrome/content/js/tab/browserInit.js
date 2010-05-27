@@ -11,7 +11,8 @@ function isFirefox3(){ //from http://developer.mozilla.org/en/docs/Using_nsIXULA
 
 window.addEventListener("load", function() { tabExtension.init(); }, false);
 
-tabulator.kb.registerFormula("knowledge base");
+//@@ jambo commented out this line on 2010-05-27 to prevent 
+//tabulator.kb.registerFormula("knowledge base");
 
 var tOpenOutliner = function(e) {
     tabulatorDetectMetadata();//defined in tabulator.xul
@@ -68,8 +69,8 @@ var tabExtension = {
             var ThisSession=tabulator.kb.the(undefined,tabulator.ns.rdfs('label'),tabulator.kb.literal("This Session"));
             
             //deal with this later
-            if (!isFirefox3())  sf.requestURI("chrome://tabulator/content/internalKnowledge.n3",ThisSession);
-            
+            //@@ jambo removed JUST THE FOLLOWING LINE on 2010-05-27 to speed up browser load.
+            //if (!isFirefox3())  sf.requestURI("chrome://tabulator/content/internalKnowledge.n3",ThisSession);
             //gBrowser.setAttribute('ondraggesture', 'nsDragAndDrop.startDrag(event, TabulatorOutlinerObserver)');
             //gBrowser.setAttribute('ondragdrop' ,'nsDragAndDrop.drop(event,TabulatorOutlinerObserver)');
             //gBrowser.setAttribute('ondragenter','nsDragAndDrop.dragEnter(event,TabulatorOutlinerObserver)');

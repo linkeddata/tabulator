@@ -35,7 +35,6 @@ function Tabulator() {
     var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
                        .getService(Components.interfaces.mozIJSSubScriptLoader);
     loader.loadSubScript("chrome://tabulator/content/js/init/init.js");
-
     this.kb = new tabulator.rdf.IndexedFormula();
     this.sf = new tabulator.SourceFetcher(this.kb);
     this.kb.sf = this.sf;
@@ -68,7 +67,6 @@ function Tabulator() {
     this.lb = new Labeler(this.kb,LanguagePreference);
     this.kb.predicateCallback = tabulator.Util.AJAR_handleNewTerm;
     this.kb.typeCallback = tabulator.Util.AJAR_handleNewTerm;
-
 }//Tabulator
 
 

@@ -1074,7 +1074,9 @@ tabulator.OutlineObject = function(doc) {
             if (cla.indexOf('pred') >= 0 || cla.indexOf('obj') >=0 ) setSelectedParent(node,-1)
             if (cla.indexOf('pred') >=0)
                 termWidget.removeIcon(node,tabulator.Icon.termWidgets.addTri);
-            tabulator.rdf.Util.RDFArrayRemove(selection, node)
+
+            selection = selection.filter( function(x) { return x==node } );
+
             tabulator.log.info("Deselecting "+node.textContent);
             tabulator.log.debug("cla=$"+cla+"$");
             if (node.AJAR_statement) source=node.AJAR_statement.why;

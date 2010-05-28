@@ -12,6 +12,7 @@ tabulator.Icon.src.icon_collapse = iconPrefix + 'icons/tbl-collapse.png';
 tabulator.Icon.src.icon_internals = iconPrefix + 'icons/tango/22-emblem-system.png'
 tabulator.Icon.src.icon_instances = iconPrefix + 'icons/tango/22-folder-open.png'
 tabulator.Icon.src.icon_foaf = iconPrefix + 'icons/foaf/foafTiny.gif';
+tabulator.Icon.src.icon_social = iconPrefix + 'icons/social/social.gif';
 tabulator.Icon.src.icon_mb = iconPrefix + 'icons/microblog/microblog.png';
 tabulator.Icon.src.icon_shrink = iconPrefix + 'icons/tbl-shrink.png';  // shrink list back up
 tabulator.Icon.src.icon_rows = iconPrefix + 'icons/tbl-rows.png';

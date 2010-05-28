@@ -29,8 +29,12 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
 //loader.loadSubScript("chrome://tabulator/content/js/panes/newOutline.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
+
 //@@ jambo commented these things out to pare things down temporarily.
 /*
+loader.loadSubScript("chrome://tabulator/content/js/panes/lawPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/n3Pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/RDFXMLPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/humanReadablePane.js");
@@ -40,7 +44,6 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/tableViewPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/socialPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/lawPane.js");
-loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/pushbackPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/CVPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/photoPane.js");

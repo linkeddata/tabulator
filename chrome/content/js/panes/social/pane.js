@@ -89,8 +89,8 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       
 
       //GET RELATIONSHIP DATA
-      var fin = kb.statementsMatching(null,foaf('knows'), s);
-      var fout = kb.each(s, foaf('knows'));
+      var fin = kb.statementsMatching(null,foaf('knows'), kb.canon(s));
+      var fout = kb.each(kb.canon(s), foaf('knows'));
       var acq ={
         "friends":[],
         "unconfirmed":[],

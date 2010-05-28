@@ -20,9 +20,10 @@ var tOpenOutliner = function(e) {
     var divs = doc.getElementsByTagName('div');
     for(var i=0;i<divs.length;i++) {
         if(divs[i].className.search("TabulatorOutline")!=-1) {
-            //Inject an outline here!!
-            //I believe this approach is buggy when loading a HTML with this className...
-            var uri = divs[i].getAttribute('id');
+            var uri = tabulator.requestUUIDs[divs[i].getAttribute('id')];
+            if( !uri ) {
+                continue;
+            }
             var table = doc.createElement('table');
             table.setAttribute('id','outline');
             divs[i].appendChild(table);

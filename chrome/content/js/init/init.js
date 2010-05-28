@@ -64,6 +64,14 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
 
 
 //TODO: SEPARATE.
+
+//generate a UID for each thing to be drawn in tabulator, so that
+//tabulator only renders in a page if the extension explicitly
+//decided to do so.. (before it just relied on the existence of
+//the class "TabulatorOutline" on a div, and had data exposure
+//issues.
+tabulator.requestUUIDs = {};
+
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 
@@ -110,7 +118,13 @@ TracingListener.prototype =
     {
         //var responseSource = this.receivedData.join(); //entire file in responseSource
         //parse responseSource through tabulator
-
+        var uuidGenerator = 
+            Components.classes["@mozilla.org/uuid-generator;1"]
+            .getService(Components.interfaces.nsIUUIDGenerator);
+        var uuid = uuidGenerator.generateUUID();
+        var uuidString = uuid.toString();
+        
+        tabulator.requestUUIDs[uuidString] = request.name;
 
         //send html file to originalListener
         var storageStream = CCIN("@mozilla.org/storagestream;1", "nsIStorageStream");
@@ -125,7 +139,7 @@ TracingListener.prototype =
         "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
         "    </head>"+
         "    <body>"+
-        "        <div class=\"TabulatorOutline\" id=\""+request.name+"\">"+
+        "        <div class=\"TabulatorOutline\" id=\""+uuidString+"\">"+
         "            <table id=\"outline\"></table>"+
         "        </div>"+
         "    </body>"+

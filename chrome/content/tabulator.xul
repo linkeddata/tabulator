@@ -156,7 +156,6 @@ function openTool(url, type, width, height)
 	try{
 	   //Glean all the RDFa out of the page, and cache it (so you don't have to parse the page on each tab switch)
 	   rdfaData = $jq('body', window.content.document).rdf().databank.triples();
-	   dump(rdfaData.length);
 	}
 	catch(e){/*no rdfa or some error*/}
 
@@ -224,7 +223,7 @@ function openTool(url, type, width, height)
         
 	//RDFa without the DOCType
 	
-	if (rdfaData.length >0){
+	if (rdfaData && rdfaData.length >0){
 	   for (i = 0; i < rdfaData.length; i += 1) {
 	      t = rdfaData[i];
 	      s = t.subject.value.toString();

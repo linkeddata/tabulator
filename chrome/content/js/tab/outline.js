@@ -187,8 +187,7 @@ tabulator.OutlineObject = function(doc) {
             break;
         } //switch
         var img = tabulator.Util.AJARImage(icon, alt, 
-                            tabulator.Icon.tooltips[icon].replace(/[Tt]his resource/
-                                                                  ),myDocument)
+                                           tabulator.Icon.tooltips[icon].replace(/[Tt]his resource/, docuri),myDocument)
         img.setAttribute('uri', uri);
         addButtonCallbacks(img, docuri) 
         node.appendChild(img)

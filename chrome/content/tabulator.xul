@@ -6,7 +6,7 @@
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <script type="application/x-javascript" src="js/tab/browserInit.js"/>
-  <script type="application/x-javascript" src="js/jquery/jquery-1.3.2.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery-1.4.2.min.js"/>
   <script type="application/x-javascript" src="js/jquery/jquery.json-1.3.min.js"/> <!-- not used at the moment-->
   <script type="application/x-javascript" src="js/jquery/jquery.uri.js"/>
   <script type="application/x-javascript" src="js/jquery/jquery.xmlns.js"/>
@@ -275,6 +275,14 @@ function openTool(url, type, width, height)
 	var uri = gURLBar.value;
 	
 	
+
+    //@@ from jambo, WARNING ! the way that this code operates HAS BEEN CHANGED
+    // a UUID nonce is now used to identify the document to display..
+    // I am not sure if this will affect the execution of this code when
+    // it gets re-enabled.  If you experience issues, feel free to email
+    // me and I will help resolve it.
+    // For refs on how to do this, see init/init.js, where
+    // tabulator.requestUUIDs is used.
 	$jq('head', doc).append('<link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css"/>');
 	$jq('body', doc).append('<div class="TabulatorOutline"><table id="outline"/></div>');
 	

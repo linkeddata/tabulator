@@ -1,0 +1,5 @@
+#!/bin/sh
+rm rdfwidgets.js
+
+cat ../jquery/jquery-1.4.2.min.js ../jquery/jquery-ui-1.8rc1.custom.min.js ../rdf/rdflib.js jquery.rdf.widgets.js >> rdfwidgets.js
+

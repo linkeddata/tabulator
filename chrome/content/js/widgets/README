@@ -1,0 +1,9 @@
+This file used to or still does reside in http://dig.csail.mit.edu/hg/tabulator/chrome/content/js/widgets/README
+
+FOR THOSE USING THE LIBRARY ON AN EXTERNAL WEB PAGE:
+
+Include rdfwidgets.js and style.css, located in this folder, on your website.  That's it!
+
+FOR THOSE USING THE LIBRARY WITHIN THE TABULATOR EXTENSION:
+
+The widget library is already included in pages where the outline is rendered.  You should be able to access it freely from there for use when developing.

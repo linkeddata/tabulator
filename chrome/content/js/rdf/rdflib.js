@@ -2522,28 +2522,24 @@ __SinkParser.prototype.skipSpace = function(str, i) {
     /*
     Skip white space, newlines and comments.
     return -1 if EOF, else position of first non-ws character*/
-    
-    while (1) {
-        eol.lastIndex = 0;
-        var m = eol.exec(str.slice(i));
-        if ((m == null)) {
-            break;
+    var tmp = str;
+    var whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
+    for (var j = (i ? i : 0); j < str.length; j++) {
+        if (whitespace.indexOf(str.charAt(j)) === -1) {
+            if( str.charAt(j)==='#' ) {
+                str = str.slice(i).replace(/^[^\n]*\n/,"");
+                i=0;
+                j=-1;
+            } else {
+                break;
+            }
         }
-        this.lines =  ( this.lines + 1 ) ;
-        i += eol.lastIndex;
-        this.previousLine = this.startOfLine;
-        this.startOfLine = i;
-        //$rdf.log.debug( (  (  ( "N3 line " + this.lines )  + " " )  + str.slice(this.previousLine, this.startOfLine) ) );
     }
-    ws.lastIndex = 0;
-    var m = ws.exec(str.slice(i));
-    if ((m != null) && (m[0] != "")) {
-        i += ws.lastIndex;
-    }
-    if ((i == pyjslib_len(str))) {
+    val = (tmp.length - str.length) + j;
+    if( val === tmp.length ) {
         return -1;
     }
-    return i;
+    return val;
 };
 __SinkParser.prototype.variable = function(str, i, res) {
     /*

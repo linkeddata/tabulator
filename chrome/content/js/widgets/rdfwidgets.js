@@ -6190,7 +6190,7 @@ jQuery.rdfwidgets = function($) {
      */
     var Matcher = function( element, opts, norefresh ) {
         var bindings = [{}]; // {"varname":somesymbol, "varname2":someliteral}
-        var elt = $(element);
+        var elt = $(element, document);
         var history = [];
         var cstring = "";
         var wstring = "";
@@ -6284,7 +6284,7 @@ jQuery.rdfwidgets = function($) {
             },
             
             draw: function( template, element, justOne ) {
-                var target = element ? $(element) : elt;
+                var target = element ? $(element, document) : elt;
                 var output = "";
                 var temp;
                 for( var i = 0; i < bindings.length && (!justOne || (justOne && i < 1 ) ); i++ ) {
@@ -6305,13 +6305,13 @@ jQuery.rdfwidgets = function($) {
                 //split bindings into ceil(bindings.length/perPage) pages.
                 if( !perPage ) { perPage = 10 }
                 //draw the first page, put listeners.
-                var target = element ? $(element) : elt;
+                var target = element ? $(element, document) : elt;
                 var currentPage = 0;
-                var area = $('<div class="rdfpagearea"></div>');
-                var page = $('<div class="rdfpage"></div>');
-                var left = $('<div style="float:left"><a href="#">&lt; Previous</a></div>');
-                var center = $('<div style="clear:both"> </div>');
-                var right = $('<div style="float:right"><a href="#">Next &gt;</a></div>');
+                var area = $('<div class="rdfpagearea"></div>', document);
+                var page = $('<div class="rdfpage"></div>', document);
+                var left = $('<div style="float:left"><a href="#">&lt; Previous</a></div>', document);
+                var center = $('<div style="clear:both"> </div>', document);
+                var right = $('<div style="float:right"><a href="#">Next &gt;</a></div>', document);
                 
                 left.click( function( e ) {
                     e.preventDefault();
@@ -6468,7 +6468,7 @@ jQuery.rdfwidgets = function($) {
             //w holds two fields:
             //w.s, a jquery selector for the widget, eg ":ui-rdflabel"
             //w.n, the name of the widget, eg "rdflabel"
-            $(w.s)[w.n]("deleteData", trips);
+            $(w.s, document)[w.n]("deleteData", trips);
         }
         for( var i = 0; i < matchers.length; i++ ) {
             matchers[i].replay();
@@ -6482,7 +6482,7 @@ jQuery.rdfwidgets = function($) {
         for( x in widgets ) {
             w = widgets[x];
             //the following line is explained in deleteData, above.
-            $(w.s)[w.n]("insertData", trips);
+            $(w.s, document)[w.n]("insertData", trips);
         }
         for( var i = 0; i < matchers.length; i++ ) {
             matchers[i].replay();
@@ -6495,7 +6495,7 @@ jQuery.rdfwidgets = function($) {
         var w;
         for( x in widgets ) {
             w = widgets[x];
-            $(w.s)[w.n]("refresh");
+            $(w.s, document)[w.n]("refresh");
         }
         for( var i = 0; i < matchers.length; i++ ) {
             matchers[i].replay();
@@ -6546,7 +6546,7 @@ jQuery.rdfwidgets = function($) {
             return element !== uri;
         });
         if( pendingSources.length === 0 ) {
-            $(document).trigger('rdfloaded');
+            $(document, document).trigger('rdfloaded');
         }
     }
 
@@ -6681,7 +6681,7 @@ jQuery.rdfwidgets = function($) {
     }
 
     function loadDataSources() {
-        $('link').each( function() {
+        $('link', document).each( function() {
             if(this.href && "sw:data" === this.getAttribute("rel") ) {
                 var uri = docpart( this.href );
                 var name = this.getAttribute("name");
@@ -7044,7 +7044,7 @@ jQuery.rdfwidgets = function($) {
                         for( var j = 0; j < sp.childNodes.length; j++ ) {
                             var d = sp.childNodes[j];
                             if( d.nodeName === "inserted" ) {
-                                var val =$(d).text();
+                                var val =$(d, document).text();
                                 for( var t = 0; t < triples.length; t++ ) {
                                     db.add( triples[t].subject, triples[t].predicate, triples[t].object, triples[t].why );
                                 }
@@ -7117,7 +7117,7 @@ jQuery.rdfwidgets = function($) {
                         for( var j = 0; j < sp.childNodes.length; j++ ) {
                             var d = sp.childNodes[j];
                             if( d.nodeName === "deleted" ) {
-                                var val =$(d).text();
+                                var val =$(d, document).text();
                                 for( var t = 0; t < triples.length; t++ ) {
                                     db.remove( triples[t] );
                                 }
@@ -7333,7 +7333,7 @@ jQuery.rdfwidgets = function($) {
                               jq.data( "uri", null );
                               jq.data( "val", evt.input );
                           }
-                          $(this).trigger( evt ); 
+                          $(this, document).trigger( evt ); 
                       }
                     },
                     focus: function( e, ui ) {
@@ -7353,7 +7353,7 @@ jQuery.rdfwidgets = function($) {
                             jq.data( "uri", null );
                             jq.data( "val", evt.input );
                         }
-                        $(this).trigger( evt ); 
+                        $(this, document).trigger( evt ); 
                     } else {
                         passedUp = true; 
                     } 
@@ -7521,9 +7521,9 @@ jQuery.rdfwidgets = function($) {
                 function insertAC( e ) {
                     if( !inputbox ) {
                         if( o.usetextarea ) {
-                            inputbox = $("<textarea class='rdfedit'></textarea>");
+                            inputbox = $("<textarea class='rdfedit'></textarea>", document);
                         } else {
-                            inputbox = $("<input style='margin:0; padding:0; border: 1px solid black;' class='rdfedit' type='text'></input>");
+                            inputbox = $("<input style='margin:0; padding:0; border: 1px solid black;' class='rdfedit' type='text'></input>", document);
                         }
                     }
                     if( !acdone ) {
@@ -7623,36 +7623,36 @@ jQuery.rdfwidgets = function($) {
         disable: function() {
             var o = this.options;
             if( o.subjectElement ) {
-                $(o.subjectElement).edit('disable');
+                $(o.subjectElement, document).edit('disable');
             }
             if( o.predicateElement ) {
-                $(o.predicateElement).edit('disable');
+                $(o.predicateElement, document).edit('disable');
             }
             if( o.objectElement ) {
-                $(o.objectElement).edit('disable');
+                $(o.objectElement, document).edit('disable');
             }
         },
 
         enable: function() {
             var o = this.options;
             if( o.subjectElement ) {
-                $(o.subjectElement).edit('enable');
+                $(o.subjectElement, document).edit('enable');
             }
             if( o.predicateElement ) {
-                $(o.predicateElement).edit('enable');
+                $(o.predicateElement, document).edit('enable');
             }
             if( o.objectElement ) {
-                $(o.objectElement).edit('enable');
+                $(o.objectElement, document).edit('enable');
             }
         },
         getTriple: function() {
             var o = this.options;
             if( o.subjectElement ) {
-                return $(o.subjectElement).edit('getTriple');
+                return $(o.subjectElement, document).edit('getTriple');
             } else if( o.predicateElement ) {
-                return $(o.predicateElement).edit('getTriple');
+                return $(o.predicateElement, document).edit('getTriple');
             } else if( o.objectElement) {
-                return $(o.objectElement).edit('getTriple');                
+                return $(o.objectElement, document).edit('getTriple');                
             }
             return null;
         },
@@ -7688,7 +7688,7 @@ jQuery.rdfwidgets = function($) {
             var newopts = {editTerm:'subject',beforeSubmit:beforeSubmit, afterSubmit:afterSubmit}
             $.extend( subjectopts, o, newopts );
             if( o.subjectElement === undefined ) {
-                element.tripleedit('option','subjectElement',$('<div class="rdftripleedit"></div>'));
+                element.tripleedit('option','subjectElement',$('<div class="rdftripleedit"></div>', document));
                 element.append( o.subjectElement );
             }
 
@@ -7696,24 +7696,24 @@ jQuery.rdfwidgets = function($) {
             newopts = {editTerm:'predicate',beforeSubmit:beforeSubmit, afterSubmit:afterSubmit}
             $.extend( predopts, o, newopts );
             if( o.predicateElement === undefined ) {
-                element.tripleedit('option','predicateElement',$('<div class="rdftripleedit"></div>'));
+                element.tripleedit('option','predicateElement',$('<div class="rdftripleedit"></div>', document));
                 element.append( o.predicateElement );
             }
             var objectopts = {};
             newopts = {editTerm:'object',beforeSubmit:beforeSubmit, afterSubmit:afterSubmit}
             $.extend( objectopts, o, newopts );
             if( o.objectElement === undefined ) {
-                element.tripleedit('option','objectElement',$('<div class="rdftripleedit"></div>'));
+                element.tripleedit('option','objectElement',$('<div class="rdftripleedit"></div>', document));
                 element.append( o.objectElement );
             }
             if( o.subjectElement ) {
-                $(o.subjectElement).edit(subjectopts);
+                $(o.subjectElement, document).edit(subjectopts);
             }
             if( o.predicateElement ) {
-                $(o.predicateElement).edit(predopts);
+                $(o.predicateElement, document).edit(predopts);
             }
             if( o.objectElement ) {
-                $(o.objectElement).edit(objectopts);
+                $(o.objectElement, document).edit(objectopts);
             }
 
         }
@@ -7907,13 +7907,13 @@ jQuery.rdfwidgets = function($) {
             }
             html+= "</tbody></table>";
             element.bind( "rdfdelete", function( e ) {
-                var triple = $(e.target).edit("getTriple");
+                var triple = $(e.target, document).edit("getTriple");
                 
                 if( triple ) {
                     doDelete( [ triple ] , function( success, foobar, xhr ) { 
                         if( success ) {
-                            var parent = $(e.target).parent();
-                            $(e.target).remove();
+                            var parent = $(e.target, document).parent();
+                            $(e.target, document).remove();
                             if( parent.children().size() == 0 ) {
                                 if( !o.requireall ) {
                                             id = randomID();
@@ -7922,8 +7922,8 @@ jQuery.rdfwidgets = function($) {
                                     tripopts = {subject: triple.subject, predicate:triple.predicate};
                                     $.extend( cellopts, o, tripopts );
                                     optsArray[id] = cellopts;
-                                    $(parent).append(cell);
-                                    $('#'+id).edit( cellopts );
+                                    $(parent, document).append(cell);
+                                    $('#'+id, document).edit( cellopts );
                                 } else {
                                     parent.parent().remove();
                                 }
@@ -7938,13 +7938,13 @@ jQuery.rdfwidgets = function($) {
             });
             element.html(html);
             
-            $(element).find('div').each( function() {
+            $(element, document).find('div').each( function() {
                     var p = optsArray[this.id]
                         if( p ) {
                             if( p.editable ) {
-                                $(this).edit( optsArray[this.id] );
+                                $(this, document).edit( optsArray[this.id] );
                             } else {
-                                $(this).label( optsArray[this.id] );
+                                $(this, document).label( optsArray[this.id] );
                             }
                         }
                 });           
@@ -7983,7 +7983,7 @@ jQuery.rdfwidgets = function($) {
             if( o.filterduplicates ) {
                 this.triples = filterDuplicates( this.triples );
             }
-            var input = $("<input type='text'></input>");
+            var input = $("<input type='text'></input>", document);
             doAutocomplete( input, {menuOptions: getMenuUsedOptions( { type: o.type, sources:o.sources } ) } );
             input.bind( "autocompletechoice", function(e) {
                 if( e.uri ) {
@@ -8044,7 +8044,7 @@ jQuery.rdfwidgets = function($) {
                 opts = {};
                 tripopts = {subject: that.triples[i].subject, selectable:true};
                 $.extend( opts, o, tripopts );
-                $('#'+ids[i]).label(opts);
+                $('#'+ids[i], document).label(opts);
             }
         }
     });
@@ -8093,7 +8093,7 @@ jQuery.rdfwidgets = function($) {
             var choices = [];
             var used = {};
             var useda = [];
-            var span = $('<span class="rdfcheckbox"></span>');
+            var span = $('<span class="rdfcheckbox"></span>', document);
             if( o.editTerm === "object" ) {
                 for( var i = 0; i < o.choices.length; i++ ) { choices.push( processObject( o.choices[i], o ) ); }
             } else {
@@ -8105,8 +8105,8 @@ jQuery.rdfwidgets = function($) {
             }
             function handleCheck(e) {
                 e.preventDefault();
-                var t = $(e.target);
-                var selection = choices[Number($(this).val())];
+                var t = $(e.target, document);
+                var selection = choices[Number($(this, document).val())];
                 t.attr("disabled","disabled");
                 var update = {insert_triples:[],delete_triples:[]};
                 if( !t.attr("checked") ) {
@@ -8139,9 +8139,9 @@ jQuery.rdfwidgets = function($) {
             for( var i = 0; i < choices.length; i++ ) {
                 if( !used[choices[i].value] ) {
                     var id = randomID();
-                    var div = $('<div class="rdfcheckbox" ></div>');
-                    var cb = $('<input type="checkbox" name="'+this.groupname+'" id="'+id+'" value="'+useda.length+'"></input>');
-                    var label = $('<label for="'+id+'">'+doLabel(choices[i],o)+'</label>');
+                    var div = $('<div class="rdfcheckbox" ></div>', document);
+                    var cb = $('<input type="checkbox" name="'+this.groupname+'" id="'+id+'" value="'+useda.length+'"></input>', document);
+                    var label = $('<label for="'+id+'">'+doLabel(choices[i],o)+'</label>', document);
                     span.append(div);
                     div.append(cb);
                     div.append(label);
@@ -8209,7 +8209,7 @@ jQuery.rdfwidgets = function($) {
             var choices = [];
             var used = {};
             var useda = [];
-            var span = $('<span class="rdfradio"></span>');
+            var span = $('<span class="rdfradio"></span>', document);
             var temp = $.rdfwidgets.each( o.subject ? processResource( o.subject,o ) : undefined,
                                           o.predicate ? processResource( o.predicate,o ) : undefined,
                                           o.object ? processObject( o.object,o ) : undefined, undefined, o );
@@ -8233,7 +8233,7 @@ jQuery.rdfwidgets = function($) {
 
             function handleCheck(e) {
                 e.preventDefault();
-                var selection = choices[Number($(this).val())];
+                var selection = choices[Number($(this, document).val())];
                 if( that.currentChoice && selection.value === that.currentChoice.value ) {
                     return;
                 }
@@ -8255,7 +8255,7 @@ jQuery.rdfwidgets = function($) {
                 update.insert_triples.push( st );
                 doUpdate( update, function( success, foobar, xhr ) {
                         if( success ) {
-                            $(e.target).attr("checked","checked");
+                            $(e.target, document).attr("checked","checked");
                             that.currentChoice = selection;
                             element.find( "input" ).attr("disabled",false);
                         } else {
@@ -8269,9 +8269,9 @@ jQuery.rdfwidgets = function($) {
             for( var i = 0; i < choices.length; i++ ) {
                 if( !used[choices[i].value]) {
                     var id = randomID();
-                    var div = $('<div class="rdfradio"></div>');
-                    var radio = $('<input class="rdfradio" type="radio" name="'+this.groupname+'" id="'+id+'" value="'+useda.length+'"></input>');
-                    var label = $('<label for="'+id+'">'+doLabel(choices[i],o)+'</label>');
+                    var div = $('<div class="rdfradio"></div>', document);
+                    var radio = $('<input class="rdfradio" type="radio" name="'+this.groupname+'" id="'+id+'" value="'+useda.length+'"></input>', document);
+                    var label = $('<label for="'+id+'">'+doLabel(choices[i],o)+'</label>', document);
                     span.append(div);
                     div.append(radio);
                     div.append(label);
@@ -8354,7 +8354,7 @@ jQuery.rdfwidgets = function($) {
             var ids = {};
             var opt, term, id;
             var process = (o.editTerm === "object") ? processObject : processResource;
-            var combo = $('<select class="rdfcombobox"></select>');
+            var combo = $('<select class="rdfcombobox"></select>', document);
             this.combo = combo;
             var initial = null;
             this.current = null;
@@ -8364,7 +8364,7 @@ jQuery.rdfwidgets = function($) {
                 if( !hidden ) {
                     ids[id] = term;
                 }
-                opt = $('<option value="'+id+'" title="'+term.value.toString()+'"'+(hidden?' style="display:none"':'')+'>'+doLabel(term, o)+'</option>');
+                opt = $('<option value="'+id+'" title="'+term.value.toString()+'"'+(hidden?' style="display:none"':'')+'>'+doLabel(term, o)+'</option>', document);
                 combo.append( opt );
                 return opt;
             }
@@ -8407,7 +8407,7 @@ jQuery.rdfwidgets = function($) {
                 combo.attr("disabled","disabled");
                 doUpdate( d, function( success, foobar, xhr ) {
                     if( success ) {
-                        that.current = $(e.target).find(":selected");
+                        that.current = $(e.target, document).find(":selected");
                     } else {
                         alert( "Sorry, the server responded to your request with an error: " + (xhr ? (xhr.status + " " + xhr.responseText) : "" ) );
                         that.current.attr("selected","selected");
@@ -8453,9 +8453,9 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var element = this.element;
             var that = this;
-            var table = $('<table class="triplelist"></table>');
+            var table = $('<table class="triplelist"></table>', document);
             table.bind( "rdfdelete", function( e ) {
-                var row = $(e.target).parent();
+                var row = $(e.target, document).parent();
                 var triple = row.tripleedit( "getTriple" );
                 if( triple ) {
                     doDelete( [ triple ] , function( success, foobar, xhr ) { 
@@ -8505,7 +8505,7 @@ jQuery.rdfwidgets = function($) {
             table.append( html );
 
             for( var i = 0; i < rows.length; i++ ) {
-                $('#'+rows[i].r).tripleedit(rows[i].o);
+                $('#'+rows[i].r, document).tripleedit(rows[i].o);
             }
         }
     });
@@ -8529,13 +8529,13 @@ jQuery.rdfwidgets = function($) {
 
         disable: function() {
             element.find( "td" ).each( function() { 
-                $(this).image("disable");
+                $(this, document).image("disable");
             });
         },
 
         enable: function() {
             element.find( "td" ).each( function() { 
-                $(this).image("enable");
+                $(this, document).image("enable");
             });
         },
 
@@ -8565,7 +8565,7 @@ jQuery.rdfwidgets = function($) {
                     var opts = {};
                     var tripopts = {subject: actual[i], selectable:true};
                     $.extend( opts, o, tripopts );
-                    $(this).image(opts);
+                    $(this, document).image(opts);
                 });
         }
     });
@@ -8605,10 +8605,10 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var element = this.element;
             var that = this;
-            var div = $('<div></div>');
-            var table = $('<table class="rdfresourceedit"></table>');
+            var div = $('<div></div>', document);
+            var table = $('<table class="rdfresourceedit"></table>', document);
             table.bind( "rdfdelete", function( e ) {
-                var row = $(e.target).parent();
+                var row = $(e.target, document).parent();
                 var triple = row.tripleedit( "getTriple" );
                 if( triple ) {
                     doDelete( [ triple ] , function( success, foobar, xhr ) { 
@@ -8629,7 +8629,7 @@ jQuery.rdfwidgets = function($) {
             var hid = randomID();
             var thead = "<thead><tr class='rdfeditheader'><td id='"+hid+"' colspan=2></td></tr></thead>";
             table.append(thead);
-            $('#'+hid).label( {showlinks:o.showlinks,subject:o.subject, selectable:true } );
+            $('#'+hid, document).label( {showlinks:o.showlinks,subject:o.subject, selectable:true } );
             var tbody = "<tbody>";
             var id, ids = [], opts, tripopts;
             var sopts = [];
@@ -8647,19 +8647,19 @@ jQuery.rdfwidgets = function($) {
             table.append( tbody );
             
             for( var i = 0; i < this.triples.length; i++ ) {
-                $('#'+ids[i].r).tripleedit( sopts[i] );
+                $('#'+ids[i].r, document).tripleedit( sopts[i] );
             }
-            var addButton = $('<input type="button" value="Add..."></input>');
+            var addButton = $('<input type="button" value="Add..."></input>', document);
             div.append(addButton);
             addButton.click( function() {
-                var addTable = $('<table class="rdfaddtriple"></table');
+                var addTable = $('<table class="rdfaddtriple"></table>', document);
                 addTable.append('<tr><th colspan="2">Add Data</th></tr>');
                 var rowid1 = randomID();
                 var rowid2 = randomID();
-                var firstRow = $('<tr><td><label for="'+rowid1+'">Property: </label></td></tr>');
-                var secondRow = $('<tr><td><label for="'+rowid2+'">Value: </label></td></tr>');
-                var firstInput = $('<input name="'+rowid1+'" type="text"></input>');
-                var secondInput = $('<input name="'+rowid2+'" type="text"></input>');
+                var firstRow = $('<tr><td><label for="'+rowid1+'">Property: </label></td></tr>', document);
+                var secondRow = $('<tr><td><label for="'+rowid2+'">Value: </label></td></tr>', document);
+                var firstInput = $('<input name="'+rowid1+'" type="text"></input>', document);
+                var secondInput = $('<input name="'+rowid2+'" type="text"></input>', document);
                 
                 doAutocomplete( firstInput, { menuOptions:getMenuPredicateOptions( {} ) } );
                 doAutocomplete( secondInput, { menuOptions:getMenuInstanceOptions( {} ) } );
@@ -8681,9 +8681,9 @@ jQuery.rdfwidgets = function($) {
                 firstRow.append(firstInput);
                 secondRow.append(secondInput);
                 addTable.append(firstRow).append(secondRow);
-                var addPopup = $('<div style="position:absolute; display:none" class="rdfaddpropertypopup"></div>');
-                var closeButton = $('<a style="position:absolute" href="#">X</a>');
-                var submitButton = $('<input type="button" value="Submit"></input>');
+                var addPopup = $('<div style="position:absolute; display:none" class="rdfaddpropertypopup"></div>', document);
+                var closeButton = $('<a style="position:absolute" href="#">X</a>', document);
+                var submitButton = $('<input type="button" value="Submit"></input>', document);
                 submitButton.click( function() {
                     if( !lastPred ) {
                         alert( "You must enter a valid property.");
@@ -8703,9 +8703,9 @@ jQuery.rdfwidgets = function($) {
                         if( !$.rdfwidgets.anyStatementMatching( subject, pred, obj,undefined, o ) ) {
                             doInsert( [ triple ], function( success, foobar, xhr ) {
                                 if( success ) {
-                                    var predicateTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>');
-                                    var objectTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>');
-                                    var TR = $('<tr class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></tr>');
+                                    var predicateTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>', document);
+                                    var objectTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>', document);
+                                    var TR = $('<tr class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></tr>', document);
                                     
                                     table.append(TR);
                                     TR.append(predicateTD);
@@ -8776,8 +8776,8 @@ jQuery.rdfwidgets = function($) {
             var items = o.items;
             var itemIDs = [];
             var map = {};
-            var form = $('<form class="rdfcreateinstance"></form>');
-            var table = $('<table class="rdfcreateinstance"></table>');
+            var form = $('<form class="rdfcreateinstance"></form>', document);
+            var table = $('<table class="rdfcreateinstance"></table>', document);
             var staticTriples = [];
             var why = db.sym(getEndpoint( null, o ));
             o.editTerm="object";
@@ -8798,12 +8798,12 @@ jQuery.rdfwidgets = function($) {
                     }
                     itemIDs.push( id );
                     map[id] = item;
-                    var row = $("<tr></tr>");
+                    var row = $("<tr></tr>", document);
                     var p = processResource( item.predicate, o );
                     if( !item.type || item.type == "text" ) {
-                        var td = $("<td></td>");
-                        var label = $("<td><label for='"+id+"'>"+doLabel( p, o )+"</label></td>");
-                        var input = $("<input id='"+id+"' name='"+id+"' type='text'></input>");
+                        var td = $("<td></td>", document);
+                        var label = $("<td><label for='"+id+"'>"+doLabel( p, o )+"</label></td>", document);
+                        var input = $("<input id='"+id+"' name='"+id+"' type='text'></input>", document);
                         td.append(input);
                         row.append(label).append(td);
                         var opts = {};
@@ -8813,9 +8813,9 @@ jQuery.rdfwidgets = function($) {
                         doAutocomplete( input, opts );
                         table.append(row);
                     } else if ( item.type == "textarea" ) {
-                        var td = $("<td></td>");
-                        var label = $("<td><label for='"+id+"'>"+doLabel( p, o )+"</label></td>");
-                        var input = $("<textarea id='"+id+"' name='"+id+"' ></textarea>");
+                        var td = $("<td></td>", document);
+                        var label = $("<td><label for='"+id+"'>"+doLabel( p, o )+"</label></td>", document);
+                        var input = $("<textarea id='"+id+"' name='"+id+"' ></textarea>", document);
                         td.append(input);
                         row.append(label).append(td);
                         var opts = {};
@@ -8828,14 +8828,14 @@ jQuery.rdfwidgets = function($) {
             }
 
             form.append(table);
-            var submit = $('<input type="submit" value="Submit"></input>');
+            var submit = $('<input type="submit" value="Submit"></input>', document);
             form.append(submit);
             var disableAll = function() {
-                for( var i=0; i<itemIDs.length; i++ ) { $('#'+itemIDs[i]).attr("disabled","disabled"); }
+                for( var i=0; i<itemIDs.length; i++ ) { $('#'+itemIDs[i], document).attr("disabled","disabled"); }
                 submit.attr("disabled","disabled");
             };
             var enableAll = function() {
-                for( var i=0; i<itemIDs.length; i++ ) { $('#'+itemIDs[i]).attr("disabled",false); }
+                for( var i=0; i<itemIDs.length; i++ ) { $('#'+itemIDs[i], document).attr("disabled",false); }
                 submit.attr("disabled",false);
             };
             form.submit( function(e) { 
@@ -8846,7 +8846,7 @@ jQuery.rdfwidgets = function($) {
                 for( var i=0; i<itemIDs.length; i++ ) {
                     var id = itemIDs[i];
                     var item = map[id];
-                    var elt = $('#'+id);
+                    var elt = $('#'+id, document);
                     var uri = elt.data("uri");
                     var lastAC = elt.data("val");
                     var val = elt.val();
@@ -8900,7 +8900,7 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var element = this.element;
             element.empty();
-            var span = $('<span class="rdfsourcelist"></span>');
+            var span = $('<span class="rdfsourcelist"></span>', document);
 
             var html = "<div class='rdfsourcelisttitle'>Sources</div>";
             for( var x in loadedSources ) {
@@ -8921,7 +8921,7 @@ jQuery.rdfwidgets = function($) {
 
 
     getNodeSubject = function( node ) {
-        var current = $(node);
+        var current = $(node, document);
         var subject;
         while( current.length > 0 ) {
             about = current.attr("about");
@@ -8988,9 +8988,9 @@ jQuery.rdfwidgets = function($) {
             var annotator;
             var o = this.options;
             if( o.displayElement ) {
-                annotator = $("<div class='rdfannotator'></div>");
+                annotator = $("<div class='rdfannotator'></div>", document);
             } else {
-                annotator = $("<div class='rdfannotator' style='display:none; position:absolute'></div>");
+                annotator = $("<div class='rdfannotator' style='display:none; position:absolute'></div>", document);
             }
             var that=this;
             function doCommentBox( e ) {
@@ -9001,12 +9001,12 @@ jQuery.rdfwidgets = function($) {
                     e.stopPropagation();
                     e.preventDefault();
                 }
-                var current = $(e.target);
+                var current = $(e.target, document);
                 that.current = current;
                 var about;
                 var subject = that._findSubject( current );
                 annotator.empty();
-                var listdiv = $("<div class='rdfannotatorlist'></div>");
+                var listdiv = $("<div class='rdfannotatorlist'></div>", document);
                 that.listdiv = listdiv;
                 that._matcher( listdiv )
                     .match( "?comment", "http://rdfs.org/sioc/ns#topic", processResource( subject ) )
@@ -9019,8 +9019,8 @@ jQuery.rdfwidgets = function($) {
                 annotator.append(listdiv);
                 var lid = randomID();
                 annotator.append( "<div class='rdfannotatortitle'>Add a comment about <span id='"+lid+"' title='"+subject+"'>"+subject+"</span></div>" );
-                $('#'+lid).label({subject: db.sym(subject), selectable:false})
-                var formdiv = $("<div class='rdfannotatorform'></div>");
+                $('#'+lid, document).label({subject: db.sym(subject), selectable:false})
+                var formdiv = $("<div class='rdfannotatorform'></div>", document);
                 var opts = $.extend({},that.options,{afterSubmit:function(s) { if(s && !o.displayElement) { annotator.hide("fast"); } },
                                                      items:[{type:"textarea",
                                                              predicate:"http://rdfs.org/sioc/ns#content",
@@ -9043,7 +9043,7 @@ jQuery.rdfwidgets = function($) {
                 formdiv.createinstance(opts);
                 annotator.append(formdiv);
                 if( !o.displayElement ) {
-                    var closeButton = $('<a style="position:absolute" href="#">X</a>');
+                    var closeButton = $('<a style="position:absolute" href="#">X</a>', document);
                     annotator.css({left:e.pageX+"px", top:e.pageY+"px"});
                     closeButton.click( function() {
                         annotator.hide("fast");
@@ -9056,10 +9056,10 @@ jQuery.rdfwidgets = function($) {
 
             this.element.bind( "click", doCommentBox );
             if( o.displayElement ) {
-                $(o.displayElement).append( annotator );
+                $(o.displayElement, document).append( annotator );
                 doCommentBox({target:this.element, shiftKey:true});
             } else {
-                $(document.body).append(annotator);
+                $(document.body, document).append(annotator);
             }
         },
 
@@ -9103,7 +9103,7 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var element = this.element;
             element.empty();
-            var pre = $('<pre class="rdfsourceview"></pre>');
+            var pre = $('<pre class="rdfsourceview"></pre>', document);
             var s = $rdf.Serializer( data );
 
             var text;
@@ -9217,8 +9217,8 @@ jQuery.rdfwidgets = function($) {
             if( imageuri ) {
                 output = "<span class='rdfimage'><img class='rdfimage' style='display:none' "+"src='"+imageuri+"' title='"+doLabel(output,o)+" "+output.value+"'></img></span>";
                 this.element.empty().html(output);
-                $(element).find( "img" ).one( "load", function() { 
-                    var im = $(this).show(0);
+                $(element, document).find( "img" ).one( "load", function() { 
+                    var im = $(this, document).show(0);
                     var width = im.width();    // Current image width
                     var height = im.height();  // Current image height
 
@@ -9391,12 +9391,12 @@ jQuery.rdfwidgets = function($) {
 
     $.ui.label.getter = "getRDFValue getTriple";
 
-    $(document).ready( function() {
+    $(document, document).ready( function() {
         loadDataSources();
-        $(document).click( function(e) {
+        $(document, document).click( function(e) {
             setUnselected( selectedElement );
         });
-        $(document).keyup( function( e ) {
+        $(document, document).keyup( function( e ) {
             if( (!e.originalTarget || (e.originalTarget && e.originalTarget.nodeName.toLowerCase() !== "input" && e.originalTarget.nodeName.toLowerCase() !== "textarea") )
                 && e.which === 46 ) {
                 if( selectedElement ) {
@@ -9408,8 +9408,8 @@ jQuery.rdfwidgets = function($) {
     });
 
     function processHTMLWidgets ( element ) {
-        element = element ? $(element).get(0) : document.body;
-        $("[sw\\:widget]").closest( "*", element ).each( function( i, elt ) {
+        element = element ? $(element, document).get(0) : document.body;
+        $("[sw\\:widget]", document).closest( "*", element ).each( function( i, elt ) {
             var widget = null;
             var opts = {};
             for( var i = 0; i < this.attributes.length; i++ ) {
@@ -9431,7 +9431,7 @@ jQuery.rdfwidgets = function($) {
                     widget = a.nodeValue;
                 }
             }
-            $(this)[widget](opts);
+            $(this, document)[widget](opts);
         });
     }
 
@@ -9479,6 +9479,11 @@ jQuery.rdfwidgets = function($) {
 
         setStore: function( newdb ) {
             db = newdb;
+            refreshAll();
+        },
+
+        refreshAll: function( ) {
+            refreshAll();
         },
 
         /**

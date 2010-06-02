@@ -13,6 +13,44 @@ tabulator.OutlineObject = function(doc) {
     var gBrowser = window.getBrowser();
 
     var myDocument=doc;
+
+    //@@ jambo
+    var jq = function() {
+        //var win = window.content.wrappedJSObject;
+        var win = doc.wrappedJSObject.defaultView;
+        //this.document = doc.wrappedJSObject;
+        //this.location = window.location;
+        //dump( this.window );
+        //dump( window.jQuery );
+        /*this.window = win;
+        this.document = win.document;
+        this.navigator = win.navigator;
+        this.location = win.location;*/
+
+
+        this.window = win;
+        this.document = win.document;
+        this.navigator = win.navigator;
+        this.location = win.location;
+        this.jQuery = window.jQuery;
+        /*var $rdf = tabulator.rdf;
+        var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
+            .getService(Components.interfaces.mozIJSSubScriptLoader);
+        loader.loadSubScript("chrome://tabulator/content/js/jquery/jquery-1.4.2.min.js");
+        this.jQuery = this.window.jQuery;
+        //dump( this.window.jQuery );
+        //dump( "fofofof" );
+        //this.jQuery = win.jQuery;
+        var jQuery = window.jQuery;
+        loader.loadSubScript("chrome://tabulator/content/js/jquery/jquery-ui-1.8rc1.custom.min.js");
+
+        this.jQuery = window.jQuery;*/
+        loader.loadSubScript("chrome://tabulator/content/js/rdf/rdflib.js");
+        loader.loadSubScript("chrome://tabulator/content/js/widgets/jquery.rdf.widgets.js");
+        return jQuery;
+    }();
+    jq.rdfwidgets.setStore( tabulator.kb );
+
     tabulator.outline = this; // Allow panes to access outline.register()
     this.document=doc;
     var outline = this; //Kenny: do we need this?
@@ -577,7 +615,7 @@ tabulator.OutlineObject = function(doc) {
 //            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
                 if (typeof tabulator == 'undefined') alert('tabulator undefined')
-                var paneDiv = tr1.firstPane.render(subject, myDocument);
+                var paneDiv = tr1.firstPane.render(subject, myDocument, jq);
                 if (tr1.firstPane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');
                 table.appendChild(paneDiv);
                 paneDiv.pane = tr1.firstPane;
@@ -1599,7 +1637,7 @@ tabulator.OutlineObject = function(doc) {
                 }
                 // If the view does not exist, create it
                 if (state == 'paneShown') {
-                    var paneDiv = pane.render(subject, myDocument);
+                    var paneDiv = pane.render(subject, myDocument, jq);
                     if (pane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');                    
                     var second = t.firstChild.nextSibling;
                     if (second) t.insertBefore(paneDiv, second);

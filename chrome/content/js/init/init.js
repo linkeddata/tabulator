@@ -137,6 +137,7 @@ TracingListener.prototype =
         "    <head>"+
         "        <title>Tabulator: Async Javascript And Semantic Web</title>"+
         "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />"+
         "    </head>"+
         "    <body>"+
         "        <div class=\"TabulatorOutline\" id=\""+uuidString+"\">"+

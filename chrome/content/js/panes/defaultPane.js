@@ -19,13 +19,13 @@ tabulator.panes.defaultPane = {
     },
     
     render: function(subject, myDocument, jq) {
-        var doc = myDocument.wrappedJSObject;
-        dump( doc );
+        //var doc = myDocument.wrappedJSObject;   Jim? why-tim
+        // dump( doc );
         var kb = tabulator.kb;
         var outline = tabulator.outline; //@@
         tabulator.log.info("@defaultPane.render, myDocument is now " + myDocument.location);    
         subject = kb.canon(subject);
-        var div = doc.createElement('div')
+        var div = myDocument.createElement('div')
         //var f = jq("<div></div>", doc);
         //jq(div, doc).append(f);
         //f.resource({subject:"http://web.mit.edu/jambo/www/foaf.rdf#jambo", predicate:"http://xmlns.com/foaf/0.1/knows"});

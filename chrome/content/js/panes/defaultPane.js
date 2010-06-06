@@ -4,7 +4,7 @@
 **  normaly displayed to the user. See also: innternalPane
 */
 tabulator.panes.defaultPane = {
-    icon:  tabulator.Icon.prefix + 'icons/about.png', //tabulator.Icon.src.icon_defaultPane,
+    icon:  'chrome://tabulator/content/icons/about.png', // was tabulator.Icon.src.icon_defaultPane,
     
     name: 'default',
     

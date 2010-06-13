@@ -716,7 +716,7 @@ tabulator.OutlineObject = function(doc) {
                 if (k>0 && (sel(plist[j+k]).sameTerm(sel(plist[j+k-1])))) dups++;
                 if (sel(plist[j+k]).lang) {
                     langTagged +=1;
-                    if (sel(plist[j+k]).lang.indexOf(LanguagePreference) >=0) myLang ++; 
+                    if (sel(plist[j+k]).lang.indexOf(tabulator.lb.LanguagePreference) >=0) myLang ++; 
                 }
             }
     
@@ -734,7 +734,7 @@ tabulator.OutlineObject = function(doc) {
             
             if (myLang > 0 && langTagged == dups+1) {
                 for (k=j; k <= j+dups; k++) {
-                    if (sel(plist[k]).lang.indexOf(LanguagePreference) >=0) {
+                    if (sel(plist[k]).lang.indexOf(tabulator.lb.LanguagePreference) >=0) {
                         tr.appendChild(thisOutline.outline_objectTD(sel(plist[k]), defaultpropview, undefined, s))
                         break;
                     }

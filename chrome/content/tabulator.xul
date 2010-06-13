@@ -76,7 +76,8 @@
 </menupopup>
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
-        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorDetectMetadata(event)"/> 
+        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorShowMetadata(event)"/> 
+        <!-- This should show metdata (was DetectMetdata) timbl-->
   </menupopup>
 
   <hbox id="urlbar-icons">
@@ -168,7 +169,6 @@ function openTool(url, type, width, height)
 
     //This gets called when you switch tabs 
     function tabulatorDetectMetadata(e){
-
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
 	
@@ -244,7 +244,7 @@ function openTool(url, type, width, height)
 	   return;            
 	}
 	
-        //This I consider non-standard
+        //This I(who?) consider non-standard
         try{
 		    var links = doc.getElementsByTagName('link');
 		    for (var x=0;x < links.length; x++) {
@@ -285,7 +285,8 @@ function openTool(url, type, width, height)
 	$jq('body', doc).append('<div class="TabulatorOutline"><table id="outline"/></div>');
 	
 	//Add the Tabulator outliner
-	var outline = new Outline(doc);
+	// var outline = new Outline(doc);  @@ Outline undefined
+        var outline = new tabulator.OutlineObject(doc)
 
 	var a =$jq('.TabulatorOutline', doc);
 	outline.init();
@@ -302,19 +303,23 @@ function openTool(url, type, width, height)
 	queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
 
             
-        outline.GotoSubject(kb.sym(uri),true);
+        outline.GotoSubject(tabulator.kb.sym(uri),true);
 
     }
     
+    // Whatever the thing is, show the tabulator outine view of it.
+    // Even if it is a web page which didn't load, show it in outline view
     function tabulatorShowMetadata(e){
+    
         //canonizeUrl(e,{});
         tabulator.metadataURI = gURLBar.value;
         /*
         //before I know more about how cache works in Firefox, cache the DOM        
         tabulator.cacheDOM = content.document;
-		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM);
+		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM); // @@why? timbl
 		*/        
         //handleURLBarCommand(e);
+        pumpRDFa(e);
     }
     
     function tabulatorCopyURI() {

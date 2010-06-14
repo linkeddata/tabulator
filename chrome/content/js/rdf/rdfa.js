@@ -6,12 +6,14 @@
  * Copyright (c) 2008,2009 Jeni Tennison
  * Licensed under the MIT (MIT-LICENSE.txt)
  * 2010-06-11 Taken from http://code.google.com/p/rdfquery/source/checkout TBL
+ * Callbacks for new triples removed -- should more logically be on the store
+ * so as to 
  *
  * Depends:
- *  jquery.uri.js
- *  jquery.xmlns.js
- *  jquery.curie.js
- *  jquery.datatype.js
+ *  uri.js
+ *  term.js
+ *  identity.js
+ *  
  *  jquery.rdf.js
  */
 /**
@@ -44,6 +46,7 @@ $rdf.RDFaParser = function (kb, docUri) {
     },
 
     rdfXMLLiteral = ns.rdf + 'XMLLiteral',
+    rdfXMLLiteralSym = kb.sym(rdfXMLLiteral),
 
     rdfaCurieDefaults = $.fn.curie.defaults,
     relReserved = [
@@ -59,6 +62,8 @@ $rdf.RDFaParser = function (kb, docUri) {
     ncNameRegex = new RegExp('^' + ncNameStartChar + ncNameChar + '*$'),
 
     docResource = kb.sym(docUri),
+    bnodeMap = {},
+    type = kb.sym("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 
     why = docResource,
 
@@ -169,7 +174,7 @@ $rdf.RDFaParser = function (kb, docUri) {
         if (bn) return bn;
         var bn = kb.bnode();
         bnodeMap[curie] = bn
-        return $.rdf.blank(curie);
+        return bn;
       } else {
         try {
           return resourceFromUri($.curie(curie, options));
@@ -199,6 +204,7 @@ $rdf.RDFaParser = function (kb, docUri) {
       return resources;
     },
 
+    /* @@ suppressed for now as we only read not change them -- timbl
     removeCurie = function (curies, resource, options) {
       var i, r, newCuries = [];
       resource = resource.type === 'uri' ? resource : $.rdf.resource(resource, options);
@@ -213,6 +219,7 @@ $rdf.RDFaParser = function (kb, docUri) {
       }
       return newCuries.reverse().join(' ');
     },
+    */
 
     getObjectResource = function (elem, context, relation) {
       var r, resource, atts, curieOptions;
@@ -404,7 +411,7 @@ $rdf.RDFaParser = function (kb, docUri) {
         resource = getObjectResource(this, context);
         types = resourcesFromCuries(atts['typeof'], this, false, context.curieOptions);
         for (i = 0; i < types.length; i += 1) {
-          kb.add(subject, $.rdf.type, types[i], why);
+          kb.add(subject, type, types[i], why);
           //triple = callback.call(triple, this.get(0), triple);
           //if (triple !== undefined && triple !== null) {
           //  triples = triples.concat(triple);
@@ -418,17 +425,17 @@ $rdf.RDFaParser = function (kb, docUri) {
           if (datatype !== undefined && datatype !== '') {
             datatype = $.curie(datatype, context.curieOptions);
             if (datatype.toString() === rdfXMLLiteral) {
-              object = $.rdf.literal(serialize(this), { datatype: rdfXMLLiteral });
+              object = kb.literal(serialize(this), undefined, rdfXMLLiteralSym );
             } else if (content !== undefined) {
-              object = $.rdf.literal(content, { datatype: datatype });
+              object = kb.literal(content, kb.sym(datatype) });
             } else {
-              object = $.rdf.literal(text, { datatype: datatype });
+              object = kb.literal(text, kb.sym(datatype) });
             }
           } else if (content !== undefined) {
             if (lang === undefined) {
-              object = $.rdf.literal('"' + content + '"');
+              object = $.rdf.literal(content);
             } else {
-              object = $.rdf.literal(content, { lang: lang });
+              object = kb.literal(content, lang);
             }
           } else if (children.length === 0 ||
                      datatype === '') {
@@ -455,20 +462,14 @@ $rdf.RDFaParser = function (kb, docUri) {
           // make the triples immediately
           if (rels !== undefined) {
             for (i = 0; i < rels.length; i += 1) {
-              @@@@triple = $.rdf.triple(subject, rels[i], resource, why);
-              triple = callback.call(triple, this.get(0), triple);
-              if (triple !== undefined && triple !== null) {
-                triples = triples.concat(triple);
+              kb.add(subject, rels[i], resource, why);
               }
             }
           }
           rels = [];
           if (revs !== undefined) {
             for (i = 0; i < revs.length; i += 1) {
-              triple = $.rdf.triple(resource, revs[i], subject, why);
-              triple = callback.call(triple, this.get(0), triple);
-              if (triple !== undefined && triple !== null) {
-                triples = triples.concat(triple);
+              kb.add(resource, revs[i], subject, why);
               }
             }
           }

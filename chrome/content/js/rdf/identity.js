@@ -441,7 +441,7 @@ $rdf.IndexedFormula.prototype.removeMany = function (subj, pred, obj, why, limit
 /** Utility**/
 
 /*  @method: copyTo
-    @discription: replace @template with @target and add appropriate triples (no triple removed)
+    @description: replace @template with @target and add appropriate triples (no triple removed)
                   one-direction replication 
 */ 
 $rdf.IndexedFormula.prototype.copyTo = function(template,target,flags){

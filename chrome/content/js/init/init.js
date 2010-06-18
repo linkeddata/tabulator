@@ -132,19 +132,19 @@ TracingListener.prototype =
                 "nsIBinaryOutputStream");
 
         var data = 
-        "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">"+
-        "<html id='docHTML'>"+
-        "    <head>"+
-        "        <title>Tabulator: Async Javascript And Semantic Web</title>"+
-        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />"+
-        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />"+
-        "    </head>"+
-        "    <body>"+
-        "        <div class=\"TabulatorOutline\" id=\""+uuidString+"\">"+
-        "            <table id=\"outline\"></table>"+
-        "        </div>"+
-        "    </body>"+
-        "</html>";
+        "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
+        "<html id='docHTML'>\n"+
+        "    <head>\n"+
+        "        <title>Tabulator: Data Browser</title>\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"+
+        "    </head>\n"+
+        "    <body>\n"+
+        "        <div class=\"TabulatorOutline\" id=\""+uuidString+"\">\n"+
+        "            <table id=\"outline\"></table>\n"+
+        "        </div>\n"+
+        "    </body>\n"+
+        "</html>\n";
 
         storageStream.init(8192, data.length, null);
         binaryOutputStream.setOutputStream(storageStream.getOutputStream(0));

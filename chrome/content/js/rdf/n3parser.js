@@ -1296,13 +1296,13 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
             var j =  ( i + number_syntax.lastIndex ) ;
             var val = pyjslib_slice(str, i, j);
             if ((val.indexOf("e") >= 0)) {
-                res.push(this._store.literal(parseFloat(val), undefined, kb.sym(FLOAT_DATATYPE)));
+                res.push(this._store.literal(parseFloat(val), undefined, this._store.sym(FLOAT_DATATYPE)));
             }
             else if ((pyjslib_slice(str, i, j).indexOf(".") >= 0)) {
-                res.push(this._store.literal(parseFloat(val), undefined, kb.sym(DECIMAL_DATATYPE)));
+                res.push(this._store.literal(parseFloat(val), undefined, this._store.sym(DECIMAL_DATATYPE)));
             }
             else {
-                res.push(this._store.literal(parseInt(val), undefined, kb.sym(INTEGER_DATATYPE)));
+                res.push(this._store.literal(parseInt(val), undefined, this._store.sym(INTEGER_DATATYPE)));
             }
             return j;
         }

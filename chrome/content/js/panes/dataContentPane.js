@@ -105,6 +105,10 @@ tabulator.panes.dataContentPane = {
                     var res = tabulator.panes.dataContentPane.statementsAsTables(obj.statements, myDocument);
                     res.setAttribute('class', 'nestedFormula')
                     return res;
+                case 'variable':
+                    var res = myDocument.createTextNode('?' + obj.uri);
+                    return res;
+                    
             }
             throw "Unhandled node type: "+obj.termType
         }

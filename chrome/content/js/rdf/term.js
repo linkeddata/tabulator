@@ -279,7 +279,11 @@ $rdf.Formula.prototype.fromNT = function(str) {
 	$rdf.NextId--
 	return x
     }
-    throw "Can't convert from NT"+str;
+    if (ch == '?') {
+        var x = new $rdf.Variable(str.slice(1));
+        return x;
+    }
+    throw "Can't convert from NT: "+str;
     
 }
 

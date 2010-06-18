@@ -46,7 +46,7 @@ function Tabulator() {
     this.requestCache = [];
     this.cacheEntry = {};
     this.getOutlinerHTML = function (displayURI, partial) {
-        var result = "<head><title>Tabulator: Async Javascript And Semantic Web</title><link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" /></head><body><div class=\"TabulatorOutline\" id=\""+displayURI+"\"><table id=\"outline\"></table></div></body>"
+        var result = "<head><title>Tabulator: Data browser</title><link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" /></head><body><div class=\"TabulatorOutline\" id=\""+displayURI+"\"><table id=\"outline\"></table></div></body>"
         //"</html>";
         return result;    
     }

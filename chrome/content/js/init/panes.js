@@ -31,6 +31,8 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/n3Pane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/RDFXMLPane.js");
 
 //@@ jambo commented these things out to pare things down temporarily.
 /*

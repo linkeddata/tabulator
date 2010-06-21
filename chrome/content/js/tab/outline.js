@@ -589,7 +589,7 @@ tabulator.OutlineObject = function(doc) {
     function propertyTable(subject, table, pane) {
         tabulator.log.debug("Property table for: "+ subject)
         subject = kb.canon(subject)
-        if (!pane) pane = tabulator.panes.defaultPane;
+        // if (!pane) pane = tabulator.panes.defaultPane;
         
         if (!table) { // Create a new property table
             var table = myDocument.createElement('table')
@@ -1506,7 +1506,7 @@ tabulator.OutlineObject = function(doc) {
             switch (tsrc) {
             case tabulator.Icon.src.icon_expand:
             case tabulator.Icon.src.icon_collapse:
-                var pane = e.altKey? tabulator.panes.internalPane : tabulator.panes.defaultPane;
+                var pane = e.altKey? tabulator.panes.internalPane : undefined; // set later: was tabulator.panes.defaultPane
                 var mode = e.shiftKey ? outline_refocus :
                     (tsrc == tabulator.Icon.src.icon_expand ? outline_expand : outline_collapse);
                 mode(p, subject, pane);

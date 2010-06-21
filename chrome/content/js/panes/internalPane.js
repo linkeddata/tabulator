@@ -10,14 +10,16 @@ tabulator.panes.internalPane = {
     name: 'internal',
 
     label: function(subject) {
-        var sts = tabulator.kb.statementsMatching(subject);
+        return "under the hood";  // There is orften a URI even of no statements
+/*        var sts = tabulator.kb.statementsMatching(subject);
         sts = sts.concat(tabulator.kb.statementsMatching(undefined, undefined, subject));
         for (var i=0; i<sts.length; i++) {
             if (tabulator.panes.internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
                 return "under the hood";
         }
         return null
-    },
+*/
+      },
     
     render: function(subject, myDocument) {
         var $r = tabulator.rdf;

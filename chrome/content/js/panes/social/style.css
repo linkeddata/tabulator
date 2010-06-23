@@ -80,10 +80,12 @@
   background-color: #eee;
   padding: 4px;
   cursor: default;
+  border-bottom: none;
 }
 #social #rightpanel #viewtabs>li.active{
-  border-bottom: solid 1px #fff;
+  border-bottom: solid 2px #fff;
   background-color: #fff;
+  margin-bottom: -2px;
 }
 #rightpanel div{
   display: none;

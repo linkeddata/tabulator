@@ -411,17 +411,17 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         }
       }
       if(profile.phone){
-      newElement('h4',ui.contact).innerHTML = "Phone";
-      ui.phone = newElement('ul',ui.contact);
-      var phone = {}
-      for (i=0; i< profile['phone'].length; i++){
-        if (!(profile.phone[i] in phone)){
-          ui.phonenumber = newElement('li',ui.phone).child('a');
-          ui.phonenumber.innerHTML = profile['phone'][i].uri.replace(/tel:\+?/,'');
-          ui.phonenumber.href = profile['phone'][i].uri;
-          phone[profile.phone[i]]=true;
+        newElement('h4',ui.contact).innerHTML = "Phone";
+        ui.phone = newElement('ul',ui.contact);
+        var phone = {}
+        for (i=0; i< profile['phone'].length; i++){
+          if (!(profile.phone[i] in phone)){
+            ui.phonenumber = newElement('li',ui.phone).child('a');
+            ui.phonenumber.innerHTML = profile['phone'][i].uri.replace(/tel:\+?/,'');
+            ui.phonenumber.href = profile['phone'][i].uri;
+            phone[profile.phone[i]]=true;
+          }
         }
-      }
       }
       if (profile.email){
         newElement('h4',ui.contact).innerHTML = "Email";
@@ -495,7 +495,7 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       }
       
       //PHOTOS
-      ui.photobox = newElement('div', ui.rp);
+      ui.photobox = newElement('div', ui.rp); //containers for the photos. 
         ui.photobox.id ='photos';
 
         if (myProfile){
@@ -517,6 +517,8 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         }
        
 
+        // photoStore holds the images that are to be displayed in the photo view
+        // on the interface.
         var photoStore ={}
         for (var img in Iterator(profile['images'])){
             img = img[1];
@@ -537,7 +539,6 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
         ui.knows.id="knows_list";
       ui.knows.friend = new Array();
       for (var friend in Iterator(acq.friends)){
-
         ui.knows.friend=newElement('li',ui.knows).child('a');
         ui.knows.friend.innerHTML = tabulator.Util.label(friend[1]);
         ui.knows.friend.href= friend[1].uri;

@@ -1,7 +1,5 @@
 /*  Some style for the tabulator
 **
-** NOTE: Development team - This MUST be edited in the 2005/ajar/ahaw directory
-**   and copied into the 2007/tab/ext/chrome/content directory and then checked in.
 **
 **  Do NOT use physical measures, but font-relative measures.
 **  2006-10-21  timbl  cconverted px to em at approx 1em = 12px
@@ -225,6 +223,27 @@ div.social_linkButton {
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 
   
+/******************* Category Pane *********/
+
+.categoryPane a      { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a:link { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
+.categoryPane a:active { color: #888; text-decoration: none; }
+
+.categoryTable { padding-left: 2em;}
+.categoryPane { background-color: #f8fff8; padding: 0.5em;
+    border-width: 0.1em; border-color: #777777; 
+ -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
+
+.categoryPane a.categoryWhy      { color: #ddd}
+.categoryPane a.categoryWhy:link { color: #ddd; text-decoration: none; font-weight: bold}
+.categoryPane a.categoryWhy:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a.categoryWhy:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
+.categoryPane a.categoryWhy:active { color: #888; text-decoration: none; }
+
+.categoryPane a.categoryWhy { color:grey }
+/* a.categoryWhy:hover { color: #3B5998 } */
 
 /******************* CV Pane *****************/
 
@@ -257,7 +276,9 @@ div.dataContentPane td {
                 padding-top: 0.1em;
                 padding-right: 0.2em;
                 padding-bottom: 0.05em;
-	        vertical-align: middle; /*@@ Lalana's request*/
+/*	        vertical-align: middle; /*@@ Lalana's request*/
+	        vertical-align: top; /*@@ Tims's request*/
+                /* With middel, you can't tell what is with what */
                 /* background-color: white; */
                  }
 
@@ -268,7 +289,13 @@ div.dataContentPane tr {
     
 }
 
-div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
+.dataContentPane a      { color: #3B5998; text-decoration: none; font-weight: bold}
+.dataContentPane a:link { color: #3B5998; text-decoration: none; font-weight: bold}
+.dataContentPane a:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.dataContentPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
+.dataContentPane a:active { color: #888; text-decoration: none; }
+
+/* div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
 div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */ 
 div.dataContentPane td.pred a { color: #444 } /* Greyish as form field names have less info value */
 

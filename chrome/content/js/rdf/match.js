@@ -110,6 +110,12 @@ $rdf.Formula.prototype.any = function(s,p,o,w) {
     return undefined
 }
 
+$rdf.Formula.prototype.holds = function(s,p,o,w) {
+    var st = this.anyStatementMatching(s,p,o,w)
+    if (typeof st == 'undefined') return false;
+    return true;
+}
+
 $rdf.Formula.prototype.the = function(s,p,o,w) {
     // the() should contain a check there is only one
     var x = this.any(s,p,o,w)

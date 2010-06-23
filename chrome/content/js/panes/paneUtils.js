@@ -40,3 +40,62 @@ var ap_prem = ap_tms('premise');
 var ap_instanceOf = ap_air('instanceOf');
 var justificationsArr = [];
 	
+/*  Build a checkbox from a given statement
+** 
+**  If the source document is ediable, make it editable
+** originally in socialPane
+*/
+paneUtils.buildCheckboxForm = function(doc, kb, lab, statement, state) {
+    var f = doc.createElement('form');
+    var input = doc.createElement('input');
+    f.appendChild(input);
+    var tx = doc.createTextNode(lab);
+    var editable = outline.UserInput.updateService.editMethod(
+        kb.sym(tabulator.rdf.Util.uri.docpart(statement.why.uri)), kb);
+    tx.className = 'question';
+    f.appendChild(tx);
+    input.setAttribute('type', 'checkbox');
+    input.checked = state;
+    if (!editable) return f;
+    
+    var boxHandler = function(e) {
+        tx.className = 'pendingedit';
+        // alert('Should be greyed out')
+        if (this.checked) { // Add link
+            try {
+                outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
+                    tx.className = 'question';
+                    if (!success){
+                        prompts.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
+                        input.checked = false; //rollback UI
+                        return;
+                    }
+                    kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
+                })
+            }catch(e){
+                prompts.alert(null,"Message","Data write fails:" + e);
+                input.checked = false; //rollback UI
+                tx.className = 'question';
+            }
+        } else { // Remove link
+            try {
+                outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
+                    tx.className = 'question';
+                    if (!success){
+                        prompts.alert(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
+                        this.checked = true; // Rollback UI
+                    } else {
+                        kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
+                    }
+                })
+            }catch(e){
+                prompts.alert(null,"Message","Delete fails:" + e);
+                this.checked = true; // Rollback UI
+                return;
+            }
+        }
+    }
+    input.addEventListener('click', boxHandler, false);
+    return f;
+}
+  

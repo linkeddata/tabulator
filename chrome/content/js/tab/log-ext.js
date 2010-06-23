@@ -46,9 +46,9 @@ function TabulatorLogger () {
     this.success = function(msg) { this.msg(msg, this.TSUCCESS, 'good', arguments) };
 
     this.clear = function(){
-        //x.innerHTML = "";
-        //TODO: Is emptyNode out of scope? I dunno.
-        emptyNode(this.container);
+        //TODO: Is emptyNode out of scope? I dunno. Yes.
+        // emptyNode(this.container);
+        this.container.innerHTML="";
     } //clearStatus
 
     this.setLevel = function(x) {

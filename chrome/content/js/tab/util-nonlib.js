@@ -288,6 +288,7 @@ tabulator.Util.label = function(x, trimSlash) { // x is an object
         return '(' + x.elements.length + ')';
     }
     var s = x.uri;
+    if (typeof s == 'undefined') return x.toString(); // can't be a symbol
     if (s.slice(-5) == '#this') s = s.slice(0,-5)
     else if (s.slice(-3) == '#me') s = s.slice(0,-3);
     

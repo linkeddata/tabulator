@@ -23,16 +23,24 @@ tabulator.panes.register = function(p, whether) {
 
 var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
     .getService(Components.interfaces.mozIJSSubScriptLoader);
-
-loader.loadSubScript("chrome://tabulator/content/js/panes/classInstancePane.js");
-loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
-//loader.loadSubScript("chrome://tabulator/content/js/panes/newOutline.js");
-loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
+/*
+The panes are loaded in a particular order. The early ones
+take precedence. Typically, the more specific pane takes precedence,
+as it gives a higher quality view than the generic pane.
+The default pane take little precedence, except the internals pane
+is lower as normally it is just for diagnostics.
+Also lower could be optional tools for various classes.
+*/
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
-loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/n3Pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/RDFXMLPane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/classInstancePane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
+//loader.loadSubScript("chrome://tabulator/content/js/panes/newOutline.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/categoryPane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 
 //@@ jambo commented these things out to pare things down temporarily.
 /*

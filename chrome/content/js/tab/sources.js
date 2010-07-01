@@ -67,14 +67,14 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    }
     }
     tabulator.SourceFetcher.RDFXMLHandler.term = this.store.sym(this.thisURI
-						                                        +".RDFXMLHandler")
+						       +".RDFXMLHandler")
     tabulator.SourceFetcher.RDFXMLHandler.toString=function () { return "RDFXMLHandler" }
     tabulator.SourceFetcher.RDFXMLHandler.register = function (sf) {
 	    sf.mediatypes['application/rdf+xml'] = {}
     }
     tabulator.SourceFetcher.RDFXMLHandler.pattern = new RegExp("application/rdf\\+xml");
     
-    // This would much better use on-board XSLT engine.
+    // This would much better use on-board XSLT engine. @@
     tabulator.SourceFetcher.doGRDDL = function(kb, doc, xslturi, xmluri) {
         sf.requestURI('http://www.w3.org/2005/08/'
                       + 'online_xslt/xslt?'
@@ -373,12 +373,12 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    }
     }
     tabulator.SourceFetcher.N3Handler.term = this.store.sym(this.thisURI
-						                                    +".N3Handler")
+						           +".N3Handler")
     tabulator.SourceFetcher.N3Handler.toString = function () { return "N3Handler" }
     tabulator.SourceFetcher.N3Handler.register = function (sf) {
 	    sf.mediatypes['text/n3'] = {'q': '1.0'} // as per 2008 spec
-	    sf.mediatypes['text/rdf+n3'] = {'q': 0.5} // pre 2008 spec
-	    sf.mediatypes['application/x-turtle'] = {'q': 0.2} // pre 2008
+	    sf.mediatypes['text/rdf+n3'] = {'q': 1.0} // pre 2008 spec
+	    sf.mediatypes['application/x-turtle'] = {'q': 1.0} // pre 2008
 	    sf.mediatypes['text/turtle'] = {'q': 1.0} // pre 2008
     }
     tabulator.SourceFetcher.N3Handler.pattern = new RegExp("(application|text)/(rdf\\+)?(n3|turtle)")
@@ -489,7 +489,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    if (uri.indexOf('#') >=0) alert('addcallBack '+uri)
 	    var kb = sf.store
 	    var term = kb.sym(uri)
-	    var udoc=term.uri?kb.sym(tabulator.rdf.Util.uri.docpart(uri)):uri
+	    var udoc = term.uri?kb.sym(tabulator.rdf.Util.uri.docpart(uri)):uri
         
         /*
 	      var seeAlso = tabulator.ns.rdfs('seeAlso')
@@ -508,13 +508,13 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    var linkUri = sf.store.sym('http://www.w3.org/2006/link#obsoletes')
 	    var refs = sf.store.each(uri,linkUri)
             
-	        refs.map(function (y) {
-			    var obj = sf.store.sym(y.value)
-			    if (!sf.requested[tabulator.rdf.Util.uri.docpart(obj.uri)]) {
-			        alert('Requesting '+ obj)
-			        sf.requestURI(obj.uri, uri)
-			    }
-		    })
+            refs.map(function (y) {
+                var obj = sf.store.sym(y.value)
+                if (!sf.requested[tabulator.rdf.Util.uri.docpart(obj.uri)]) {
+                    alert('Requesting '+ obj)
+                    sf.requestURI(obj.uri, uri)
+                }
+            })
 		
         
         /*				  
@@ -630,12 +630,10 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         
 	    if (rterm) {
 	        if (rterm.uri) {
-		        kb.add(docterm, tabulator.ns.link("requestedBy"),
-		               kb.sym(tabulator.rdf.Util.uri.docpart(rterm.uri)), this.appNode)
-                /*	    } else {   // this shouldn't happen, as the rterm should be a doc not a bnode
-		                kb.add(docterm, tabulator.ns.link("requestedBy"),
-		                rterm, this.appNode)
-                */
+		        kb.add(docterm.uri, tabulator.ns.link("requestedBy"),
+		               rterm.uri, this.appNode)
+//		        kb.add(docterm, tabulator.ns.link("requestedBy"),
+//		               kb.sym(tabulator.rdf.Util.uri.docpart(rterm.uri)), this.appNode)
 	        }
 	    }
         

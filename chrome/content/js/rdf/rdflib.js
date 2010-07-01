@@ -676,6 +676,7 @@ $rdf.Formula.prototype.fromNT = function(str) {
     var len = str.length
     var ch = str.slice(0,1)
     if (ch == '<') return this.sym(str.slice(1,len-1))
+    if (ch == '"') return this.literal(str.slice(1,len-1)) // @@ does not lang ot datatype or encoding -- used for URIs
     if (ch == '_') {
 	var x = new $rdf.BlankNode();
 	x.id = parseInt(str.slice(3));
@@ -801,6 +802,12 @@ $rdf.Formula.prototype.any = function(s,p,o,w) {
     if (typeof o == 'undefined') return st.object;
 
     return undefined
+}
+
+$rdf.Formula.prototype.holds = function(s,p,o,w) {
+    var st = this.anyStatementMatching(s,p,o,w)
+    if (typeof st == 'undefined') return false;
+    return true;
 }
 
 $rdf.Formula.prototype.the = function(s,p,o,w) {

@@ -382,40 +382,42 @@ tabulator.OutlineObject = function(doc) {
         var td = myDocument.createElement('td');
         var theClass = "obj";
                 
-        // check the IPR on the data
+        // check the IPR on the data.  Ok if there is any checked license which is one the document has.
 	if (statement){
-        var licenses = kb.each(statement.why, kb.sym('http://creativecommons.org/ns#license'));
-        tabulator.log.info('licenses:'+ statement.why+': '+ licenses)
-        for (i=0; i< licenses.length; i++) {
-            if((tabulator.options.checkedLicenses[0] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-nd/3.0/') || 
-               (tabulator.options.checkedLicenses[1] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc-sa/3.0/') ||
-               (tabulator.options.checkedLicenses[2] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nc/3.0/') ||
-               (tabulator.options.checkedLicenses[3] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-nd/3.0/') ||
-               (tabulator.options.checkedLicenses[4] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by-sa/3.0/') ||
-               (tabulator.options.checkedLicenses[5] == true && licenses[i].uri == 'http://creativecommons.org/licenses/by/3.0/'))
-            {
-                theClass += ' licOkay';
-                break;
+            var licenses = kb.each(statement.why, kb.sym('http://creativecommons.org/ns#license'));
+            tabulator.log.info('licenses:'+ statement.why+': '+ licenses)
+            var licenseURI = ['http://creativecommons.org/licenses/by-nc-nd/3.0/',
+                        'http://creativecommons.org/licenses/by-nc-sa/3.0/',
+                        'http://creativecommons.org/licenses/by-nc/3.0/',
+                        'http://creativecommons.org/licenses/by-nd/3.0/',
+                        'http://creativecommons.org/licenses/by-sa/3.0/',
+                        'http://creativecommons.org/licenses/by/3.0/' ];
+            for (i=0; i< licenses.length; i++) {
+                for (j=0; j<tabulator.options.checkedLicenses.length; j++) {
+                    if (tabulator.options.checkedLicenses[j] && (licenses[i].uri == licenseURI[j])) {                
+                        theClass += ' licOkay';
+                        break;
+                    }
+                }
             }
-            
-        }
         }
               
-        //set about
-        if ((obj.termType == 'symbol') || (obj.termType == 'bnode'))
+        //set about and put 'expand' icon
+        if ((obj.termType == 'symbol') || (obj.termType == 'bnode') ||
+                (obj.termType == 'literal' && obj.value.slice(0,7) == 'http://')) {
             td.setAttribute('about', obj.toNT());
-            
-         td.setAttribute('class', theClass);      //this is how you find an object
-         tabulator.log.info('class on '+td)
-         var check = td.getAttribute('class')
-         tabulator.log.info('td has class:' + check)
-         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
+            td.appendChild(tabulator.Util.AJARImage(
+                tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));
+        }
+        td.setAttribute('class', theClass);      //this is how you find an object
+        tabulator.log.info('class on '+td)
+        var check = td.getAttribute('class')
+        tabulator.log.info('td has class:' + check)
+        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl
-        if ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
-            td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));
-        } //expandable
+            
         if (!view) // view should be a function pointer
             view = VIEWAS_boring_default;
         td.appendChild( view(obj) );    
@@ -1415,7 +1417,7 @@ tabulator.OutlineObject = function(doc) {
     // select
     // visit/open a page    
     function TabulatorMousedown(e) {
-        tabulator.log.info("@TabulatorMousedown, myDocument is now " + myDocument.location);
+        tabulator.log.info("@TabulatorMousedown, myDocument.location is now " + myDocument.location);
         var target = thisOutline.targetOf(e);
         if (!target) return;
         var tname = target.tagName;
@@ -1493,6 +1495,7 @@ tabulator.OutlineObject = function(doc) {
             //TODO: This check could definitely be made cleaner.
             if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
+            tabulator.log.debug("\nEvent: about=" + about)
 									   
 										//@@ What's the reason for the following check?	  
             if (!about && tsrc!=tabulator.Icon.src.icon_add_new_triple
@@ -2005,27 +2008,6 @@ tabulator.OutlineObject = function(doc) {
             } else {  // bnode
                 rep.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
             }
-
-  /*          
-            if ((obj.termType == 'symbol') &&
-                (obj.uri.indexOf("#") < 0) &&
-                (Util.uri.protocol(obj.uri)=='http'
-                 || Util.uri.protocol(obj.uri)=='https')) {
-                // a web page @@ file, ftp;
-                    var linkButton = myDocument.createElement('input');
-                    linkButton.type='image';
-                    linkButton.src='icons/document.png';
-                    linkButton.alt='Open in new window';
-                    linkButton.onclick= function () {
-                        return window.open(''+obj.uri,
-                                           ''+obj.uri,
-                                           'width=500,height=500,resizable=1,scrollbars=1')
-                    }  ///TODO: Reimplement this.  See humanReadablePane
-                    linkButton.title='View in a new window';
-                    rep.appendChild(linkButton);
-    
-            }
-            */
         } else if (obj.termType=='collection'){
             // obj.elements is an array of the elements in the collection
             rep = myDocument.createElement('table');

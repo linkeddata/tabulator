@@ -238,9 +238,9 @@ div.social_linkButton {
 
 .categoryPane a.categoryWhy      { color: #ddd}
 .categoryPane a.categoryWhy:link { color: #ddd; text-decoration: none; font-weight: bold}
-.categoryPane a.categoryWhy:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a.categoryWhy:visited { color: #ddd; text-decoration: none; font-weight: bold}
 .categoryPane a.categoryWhy:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
-.categoryPane a.categoryWhy:active { color: #888; text-decoration: none; }
+.categoryPane a.categoryWhy:active { color: #ddd; text-decoration: none; }
 
 .categoryPane a.categoryWhy { color:grey }
 /* a.categoryWhy:hover { color: #3B5998 } */

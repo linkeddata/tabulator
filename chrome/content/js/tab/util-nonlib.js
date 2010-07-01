@@ -96,14 +96,18 @@ tabulator.Util.ancestor = function(target, tagName) {
 tabulator.Util.getAbout = function(kb, target) {
     var level, aa
     for (level=target; level && (level.nodeType==1); level=level.parentNode) {
-        tabulator.log.debug("Level "+level + ' '+level.nodeType)
+        tabulator.log.debug("Level "+level + ' '+level.nodeType + ': '+level.tagName)
         aa = level.getAttribute('about')
-        if (aa) 
-            return kb.fromNT(aa)
-                else if (level.tagName=='TR') //this is to prevent literals passing through
-                    return undefined
+        if (aa) {
+            tabulator.log.debug("kb.fromNT(aa) = " + kb.fromNT(aa));
+            return kb.fromNT(aa);
+//        } else {
+//            if (level.tagName=='TR') return undefined;//this is to prevent literals passing through
+                    
+        }
     }
-        return undefined
+    tabulator.log.debug("getAbout: No about found");
+    return undefined;
 }
 
 

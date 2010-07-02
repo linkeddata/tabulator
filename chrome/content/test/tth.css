@@ -1,0 +1,98 @@
+body {
+  font-family: Trebuchet MS, Palatino, sans-serif;
+  color: black;
+  background: white;
+}
+
+p , ul, ol { text-indent : 1em ;
+     margin-left: 3em  ; /* a bit of white space */ }
+
+pre { margin-left: 5em; }
+
+li { text-indent: 0; }
+
+h1 { text-align: center }
+h3 { font-style: italic; 
+     margin-left: 1em; }   /* distinguish from h2 */
+
+address { text-align: right }
+
+a:link, a:active {
+  color: #00e;
+  background: transparent;
+  text-decoration: none;
+}
+
+a:visited {
+  color: #529;
+  background: transparent;
+}
+
+div.intro {
+  margin-left: 5%;
+  margin-right: 5%;
+  font-style: italic
+}
+
+.navside { float:left }
+.navside td { background-color: #eee; font-size: 70%; }
+
+pre {
+  font-family: monospace;
+}
+
+.key {font-size: 50%}
+
+a:link img, a:visited img {
+   border-style: none;
+}
+
+a img {
+  color: white;	
+  border 0px solid white;
+}
+
+ul.toc {
+  list-style: disc;
+  list-style: none;
+}
+
+div.issue {
+  padding: 0.5em;
+  border: none;
+  margin-right: 5%;
+}
+
+.hideme { display: none; }
+
+.testcase h2 {
+	cursor: pointer;
+}
+
+
+#main {
+	
+}
+
+#cmd {
+	
+}
+
+#tests {
+	
+}
+
+
+#about {
+	margin: 40px 1px 5px 1px;
+	font-style: italic;
+	color: #303030;
+	font-size: 80%;
+}
+
+#status {
+	margin: 10px 1px 5px 1px;
+	border-top: 1px solid #909090;
+	color: #909090;
+	font-size: 80%;
+}

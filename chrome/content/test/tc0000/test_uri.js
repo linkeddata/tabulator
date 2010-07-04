@@ -1,8 +1,6 @@
-var tc0000HasSucceded = true;
+var tc0000Passed = true;
 
-test();
-
-function test(showDetails) {
+function testTC0000(showDetails) {
     var testCases = [
 			["foo:xyz", "bar:abc", "bar:abc"],
 			['http://example/x/y/z', 'http://example/x/abc', '../abc'],
@@ -55,7 +53,7 @@ function test(showDetails) {
 
     var str ="<div><strong>Detailed Results:</strong></div><div style='border: 1px dotted black; padding: 5px; margin-top: 10px'><a href='#T1'>T1 = join(rel, base)</a> | <a href='#T2'>T2 = refTo(base, abs)</a> | <a href='#T3'>T3 = join(T2, base)</a></div>";
 	str += "<div style='font-size: 90%'>";
-	str += "<a name='T1'></a><h2>T1 = join(rel, base)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
+	str += "<a id='T1'></a><h2>T1 = join(rel, base)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
 	str += "<table border='1' cellpadding='2' width='100%' style='font-size: 90%'><tr><th>#</th><th>IN: base URI</th><th>IN: relative URI</th><th>EXPECTED: absolute URI</th><th>RESULT: join(relative URI, base URI)</th></tr>\n";
     for(i=0; i<n; i++) {
 		var c = testCases[i];
@@ -66,7 +64,7 @@ function test(showDetails) {
 		var styleAbs =  "";
 		
 		if(absGenerated != abs) {
-			tc0000HasSucceded = false;
+			tc0000Passed = false;
 			styleAbs =  failStyle;
 		}
 		else {
@@ -78,7 +76,7 @@ function test(showDetails) {
 	str += "</table>\n";
 	
 	
-	str += "<a name='T2'></a><h2>T2 = refTo(base, abs)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
+	str += "<a id='T2'></a><h2>T2 = refTo(base, abs)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
 	str += "<table border='1' cellpadding='2' width='100%' style='font-size: 90%'><tr><th>#</th><th>IN: base URI</th><th>IN: absolute URI</th><th>EXPECTED: relative URI</th><th>RESULT: refTo(base URI, absolute URI)</th></tr>\n";
     for(i=0; i<n; i++) {
 		var c = testCases[i];
@@ -89,7 +87,7 @@ function test(showDetails) {
 		var styleRel =  "";
 		
 		if(relGenerated != rel) {
-			tc0000HasSucceded = false;
+			tc0000Passed = false;
 			styleRel =  failStyle;
 		}
 		else {
@@ -102,7 +100,7 @@ function test(showDetails) {
     }
 	str += "</table>\n";
 
-	str += "<a name='T3'></a><h2>T3 = join(T2, base)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
+	str += "<a id='T3'></a><h2>T3 = join(T2, base)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
 	str += "<table border='1' cellpadding='2' width='100%' style='font-size: 90%'><tr><th>#</th><th>IN: base URI</th><th>IN: relative URI</th><th>EXPECTED: absolute URI</th><th>RESULT: join(T2, base)</th></tr>\n";
     for(i=0; i<n; i++) {
 		var c = testCases[i];
@@ -114,7 +112,7 @@ function test(showDetails) {
 		var styleAbsFromRel =  "";
 		
 		if(absGeneratedFromRel != abs) {
-			tc0000HasSucceded = false;
+			tc0000Passed = false;
 			styleAbsFromRel =  failStyle;
 		}
 		else {
@@ -129,9 +127,5 @@ function test(showDetails) {
 	str += "</div>\n";
 	
 	if(showDetails) return str;
-	else return tc0000HasSucceded;
-}
-
-function cleanUp() {
-	test = undefined;
+	else return tc0000Passed;
 }

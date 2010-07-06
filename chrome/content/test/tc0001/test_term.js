@@ -83,7 +83,3 @@ function test4(){
 	kb.add(s, p, o);
 	return kb.toNT();
 }
-
-function escapeEntities(text){
-	return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}

@@ -68,7 +68,6 @@ div.issue {
 .testcase {
 	-moz-box-shadow:0 0 6px rgba(0, 0, 0, 0.5);
 	-moz-border-radius: 2px;
-	-webkit-border-radius: 2px;
 	padding: 0.1em;
 	margin: 1em 0 2em 0;
 }
@@ -105,7 +104,6 @@ div.issue {
 	width: 4em;
 	padding: 0.2em;
 	-moz-border-radius: 2px;
-	-webkit-border-radius: 2px;
 }
 
 #cmd {

@@ -8,10 +8,12 @@ function testTC0002(showDetails) {
 	var allResults = "<div><strong>Detailed Results:</strong></div>";
 	var testTitles = [	"any()",
 						"any() with wrong subject",
+						"holds()",
 						"statementsMatching()"
 					 ];
 	var expected =   [	'foo',
 						undefined,
+						true,
 						'&lt;http://example.com/&gt; &lt;example:name&gt; "foo" .'
 					 ];
 	var n = expected.length;
@@ -48,6 +50,12 @@ function test1(){
 function test2(){
 	var kb = new $rdf.IndexedFormula();
 	kb.add(kb.sym("http://example.com/"), kb.sym("example:name"), kb.literal("foo"));
+	return kb.holds(kb.sym("http://example.com/"), kb.sym("example:name"), kb.literal("foo"));
+}
+
+function test3(){
+	var kb = new $rdf.IndexedFormula();
+	kb.add(kb.sym("http://example.com/"), kb.sym("example:name"), kb.literal("foo"));
 	var tmpStmts = kb.statementsMatching(kb.sym("http://example.com/"));
 	var returnValue = "";
 	var n = tmpStmts.length;
@@ -58,20 +66,4 @@ function test2(){
 	} 
 	return escapeEntities(returnValue);
 }
-
-/*
-function test3(){
-    kb.add(kb.sym("http://example.com/"), kb.sym("example:name"), "foo")
-    var y = kb.any(kb.sym("http://example.com/"), kb.sym("example:name"))
-    fyi("Found y=" + y)
-
-    y = kb.any(kb.sym("http://example.com/kajsdfh"), kb.sym("example:name"))
-    fyi("Looked for wrong thing, should be undefined Found y=" + y)
-
-    y = kb.statementsMatching(kb.sym("http://example.com/"))
-    fyi("Statements matching subject:")
-    for (st in y) fyi("   "+st);
-
-}
-*/
 

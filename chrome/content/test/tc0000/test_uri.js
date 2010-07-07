@@ -51,7 +51,7 @@ function testTC0000(showDetails) {
 	var failStyle = 'style="border: solid 2px red;"';
 	var passStyle = 'style="border: solid 2px green;"';
 
-    var str ="<div><strong>Detailed Results:</strong></div><div style='border: 1px dotted black; padding: 5px; margin-top: 10px'><a href='#T1'>T1 = join(rel, base)</a> | <a href='#T2'>T2 = refTo(base, abs)</a> | <a href='#T3'>T3 = join(T2, base)</a></div>";
+    var str ="<div><strong>Detailed results:</strong></div><div style='border: 1px dotted black; padding: 5px; margin-top: 10px'><a href='#T1'>T1 = join(rel, base)</a> | <a href='#T2'>T2 = refTo(base, abs)</a> | <a href='#T3'>T3 = join(T2, base)</a></div>";
 	str += "<div style='font-size: 90%'>";
 	str += "<a id='T1'></a><h2>T1 = join(rel, base)</h2><div style='margin: 0px 0px 20px 0px;'><a href='#header'>back to menu ...</a></div>";
 	str += "<table border='1' cellpadding='2' width='100%' style='font-size: 90%'><tr><th>#</th><th>IN: base URI</th><th>IN: relative URI</th><th>EXPECTED: absolute URI</th><th>RESULT: join(relative URI, base URI)</th></tr>\n";

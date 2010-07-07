@@ -5,7 +5,7 @@ function testTC0003(showDetails) {
 	var expected = "";
 	var failStyle = 'style="border: solid 2px red; padding: 1px 2px;"';
 	var passStyle = 'style="border: solid 2px green; padding: 1px 2px;"';
-	var allResults = "<div><strong>Detailed Results:</strong></div>";
+	var allResults = "<div><strong>Detailed results:</strong></div>";
 	var testTitles = [	"owl:sameAs",
 						"inverse functional property",
 						"inverse functional property 2",

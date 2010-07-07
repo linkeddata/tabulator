@@ -24,3 +24,11 @@ function hideSource(){
 function escapeEntities(text){
 	return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+function startBusy(){
+	$("#header").after("<div id='busy'><img src='../img/busy.gif' width='32px' alt='busy /></div>");	
+}
+
+function stopBusy(){
+	$("#busy").remove();
+}

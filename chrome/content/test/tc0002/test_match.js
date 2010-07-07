@@ -5,7 +5,7 @@ function testTC0002(showDetails) {
 	var expected = "";
 	var failStyle = 'style="border: solid 2px red; padding: 1px 2px;"';
 	var passStyle = 'style="border: solid 2px green; padding: 1px 2px;"';
-	var allResults = "<div><strong>Detailed Results:</strong></div>";
+	var allResults = "<div><strong>Detailed results:</strong></div>";
 	var testTitles = [	"any()",
 						"any() with wrong subject",
 						"holds()",

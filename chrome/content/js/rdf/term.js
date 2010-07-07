@@ -54,10 +54,12 @@ $rdf.BlankNode.prototype.toString = $rdf.BlankNode.prototype.toNT;
 
 //	Literal
 
-$rdf.Literal= function (value, lang, datatype) {
+$rdf.Literal = function (value, lang, datatype) {
     this.value = value
-    this.lang=lang;	  // string
-    this.datatype=datatype;  // term
+    if (lang == "" || lang == null) this.lang = undefined;
+    else this.lang = lang;	  // string
+    if (datatype == null) this.datatype = undefined;
+    else this.datatype = datatype;  // term
     return this;
 }
 

@@ -78,7 +78,7 @@ $rdf.Literal.prototype.toNT = function() {
     str = '"' + str + '"'  //';
 
     if (this.datatype){
-        str = str + '^^' + this.datatype;//.toNT()
+        str = str + '^^' + this.datatype.uri;//.toNT()
     }
     if (this.lang) {
         str = str + "@" + this.lang;
@@ -275,7 +275,7 @@ $rdf.Formula.prototype.fromNT = function(str) {
     var len = str.length
     var ch = str.slice(0,1)
     if (ch == '<') return this.sym(str.slice(1,len-1))
-    if (ch == '"') return this.literal(str.slice(1,len-1)) // @@ does not lang ot datatype or encoding -- used for URIs
+    if (ch == '"') return this.literal(str.slice(1,len-1)) // @@ does not lang ot datatype or encoding -- used for URIs ONLY
     if (ch == '_') {
 	var x = new $rdf.BlankNode();
 	x.id = parseInt(str.slice(3));

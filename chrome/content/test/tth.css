@@ -92,6 +92,16 @@ div.issue {
 	font-size: 80%;
 }
 
+.detailstoc {
+	position: fixed;
+	top: 0.48em;
+	right: 0.48em;
+	border: 1px solid #dfdfdf;
+	background: #fafafa;
+	padding: 0.2em;
+	-moz-border-radius: 2px;
+}
+
 #main {
 }
 

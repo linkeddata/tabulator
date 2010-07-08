@@ -14,21 +14,35 @@
 	<script type="text/javascript" src="test_rdfparser.js" ></script>
 	<script type="text/javascript">
 	$(document).ready(function() {
+		$("#globalresult").html("<div style='margin: 0.2em; font-style: italic'>Note: this test can take up several minutes to complete!</div>");
 		$("#viewSourceCode").click(function () {
 			viewSource("test_rdfparser.js");
 		});
 		$('#closeSourceView').live('click', function(){
 			hideSource();
 		});
-		$("#detailedresults").html(testTC0004(true));
-		if(tc0004Passed) $("#globalresult").html("<div><strong>Overall result</strong>: <span style='border: solid 2px green; padding: 1px 5px;'>PASSED</span></div>");
-		else $("#globalresult").html("<div><strong>Overall result</strong>: <span style='border: solid 2px red; padding: 1px 5px;'>FAILED</span></div>");
-	});
+		$("#reset").click(function () {
+			location.reload(true);
+		});
+		$('#runTests').click(function () {
+			$('#tocTC0004').html("");
+			$("#detailedresults").html(testTC0004(true));
+			if(tc0004Passed) $("#globalresult").html("<div><strong>Overall result</strong>: <span style='border: solid 2px green; padding: 1px 5px;'>PASSED</span></div>");
+				else $("#globalresult").html("<div><strong>Overall result</strong>: <span style='border: solid 2px red; padding: 1px 5px;'>FAILED</span></div>");
+			});
+		});
+	
 	</script>
 </head>
 <body>
 	<a href="../index.html">back to Tabulator Test Harness ...</a> | <button id="viewSourceCode" title="View the source code of the test ...">View Source</button>
 	<h1 id="header">TC0004: RDF/XML parsing</h1>
+	<div id="tocTC0004" class="detailstoc"></div>
+	<div style="margin-left: 0em;">
+		<button id="reset" title="Reset all tests ...">Reset</button> |
+		<button id="runTests" title="Run the tests!">Run!</button> 
+		(restrict test case range from <input type='text' id="fromTC" value="0" size="1" /> to <input type='text' id="toTC" value="23" size="1" />)
+	</div> 
 	<div id="globalresult" style="margin-bottom: 10px"></div>
 	<div id="detailedresults"></div>
 </body>

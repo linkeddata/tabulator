@@ -651,7 +651,12 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         // The list of sources is kept in the source widget
 	    // kb.add(this.appNode, tabulator.ns.link("source"), docterm, this.appNode)
 	    kb.add(docterm, tabulator.ns.link("request"), req, this.appNode)
-	    kb.add(req, tabulator.ns.rdfs("label"), kb.literal('Access of '+docuri),
+            var now = new Date();
+            var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
+
+	    kb.add(req, tabulator.ns.rdfs("label"), kb.literal(timeNow + ' Request for '+docuri),
+	           this.appNode)
+	    kb.add(req, tabulator.ns.link("requestedURI"), kb.literal(docuri),
 	           this.appNode)
         
 	    // This request will have handlers probably
@@ -674,17 +679,17 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    // Set up callbacks
 	    xhr.onreadystatechange = function () {
 	        switch (xhr.readyState) {
-	        case 3:
+	        case 3:   // Intermediate states
 		        if (!xhr.recv) {
 		            xhr.recv = true
 		            var handler = null
-		            
 		            sf.fireCallbacks('recv',args)
-		            
-		            kb.add(req, tabulator.ns.http('status'),kb.literal(xhr.status),
-			               req)
-		            kb.add(req, tabulator.ns.http('statusText'),
-			               kb.literal(xhr.statusText), req)
+		            var response = kb.bnode();
+		            kb.add(req, tabulator.ns.link('response'), response);
+		            kb.add(response, tabulator.ns.http('status'),kb.literal(xhr.status),
+			               response)
+		            kb.add(response, tabulator.ns.http('statusText'),
+			               kb.literal(xhr.statusText), response)
 		            
 		            if (xhr.status >= 400) {
 			            sf.failFetch(xhr,"HTTP error "+xhr.status+ ' '+
@@ -697,40 +702,40 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 		                || tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
 			            xhr.headers = tabulator.rdf.Util.getHTTPHeaders(xhr)
 			            for (var h in xhr.headers) {
-			                kb.add(req, tabulator.ns.httph(h), xhr.headers[h],
-				                   req)
+			                kb.add(response, tabulator.ns.httph(h), xhr.headers[h],
+				                   response)
 			            }
 		            }
                     
-                    // deduce some things from the HTTP transaction
-                    var addType = function(cla) { // add type to all redirected resources too
-                        var prev = req;
-                        for (;;) {
-                            var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
-                            kb.add(doc, tabulator.ns.rdf('type'), cla,
-                                   sf.appNode);
-                            prev = kb.any(undefined,
-                                          kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
-                                          prev);
-                            if (!prev) break;
-                            var redirection = kb.any(prev, 
-                                                     kb.sym('http://www.w3.org/2007/ont/http#status'));
-                            tabulator.log.info('redirection :'+redirection+' for '+prev);
-                            if (!redirection) break;
-                            if ( redirection != '301' &&  redirection != '302') break; 
-                        }
-                    }
-                    if (xhr.status-0 == 200) {
-                        //addType(tabulator.ns.link('Document'));
-                        var ct = xhr.headers['content-type'];
-                        if (!ct) throw('No content-type on 200 response for '+xhr.uri)
-                        else {
-                            if (ct.indexOf('image/') == 0)
-                                addType(kb.sym('http://purl.org/dc/terms/Image'));
-                            //if (ct.indexOf('text/') == 0)
-                            //    addType(tabulator.ns.link('TextDocument'));
-                        }
-                    }
+                            // deduce some things from the HTTP transaction
+                            var addType = function(cla) { // add type to all redirected resources too
+                                var prev = req;
+                                for (;;) {
+                                    var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
+                                    kb.add(doc, tabulator.ns.rdf('type'), cla,
+                                           sf.appNode);
+                                    prev = kb.any(undefined,
+                                                  kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
+                                                  prev);
+                                    if (!prev) break;
+                                    var redirection = kb.any(prev, 
+                                                             kb.sym('http://www.w3.org/2007/ont/http#status'));
+                                    tabulator.log.info('redirection :'+redirection+' for '+prev);
+                                    if (!redirection) break;
+                                    if ( redirection != '301' &&  redirection != '302') break; 
+                                }
+                            }
+                            if (xhr.status-0 == 200) {
+                                //addType(tabulator.ns.link('Document'));
+                                var ct = xhr.headers['content-type'];
+                                if (!ct) throw('No content-type on 200 response for '+xhr.uri)
+                                else {
+                                    if (ct.indexOf('image/') == 0)
+                                        addType(kb.sym('http://purl.org/dc/terms/Image'));
+                                    //if (ct.indexOf('text/') == 0)
+                                    //    addType(tabulator.ns.link('TextDocument'));
+                                }
+                            }
                     
 		            if (tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'file' || tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'chrome') {
 			            //tabulator.log.info("Assuming local file is some flavor of XML.")
@@ -797,7 +802,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 		            }
 		        }
 		        break
-	        case 4:
+	        case 4:  // Final state
 		        // Now handle
 		        if (xhr.handle) {
                     if( sf.requested[xhr.uri.uri] === 'redirected' ) { 
@@ -841,40 +846,43 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    if (tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'http'
 	        || tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
 	        try {
-		        xhr.channel.notificationCallbacks = {
-		            getInterface: 
-		            function (iid) {
-                        if(!isExtension){
-			                tabulator.rdf.Util.enablePrivilege("UniversalXPConnect")
-                        }
-			            if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
-			                return {
-				                onChannelRedirect: function (oldC,newC,flags) {
-                                    if(!isExtension) {
-                                        tabulator.rdf.Util.enablePrivilege("UniversalXPConnect")
-                                    }
-				                    if (xhr.aborted) return
-				                    var kb = sf.store;
-                                    var newURI = newC.URI.spec;
-				                    sf.addStatus(xhr,"Redirected: "+ 
+                    xhr.channel.notificationCallbacks = {
+                        getInterface: 
+                        function (iid) {
+                            if(!isExtension){
+                                            tabulator.rdf.Util.enablePrivilege("UniversalXPConnect")
+                            }
+                            if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
+                                return {
+                                
+                                    onChannelRedirect: function (oldC,newC,flags) {
+                                        if(!isExtension) {
+                                            tabulator.rdf.Util.enablePrivilege("UniversalXPConnect")
+                                        }
+                                        if (xhr.aborted) return;
+                                        var kb = sf.store;
+                                        var newURI = newC.URI.spec;
+                                        sf.addStatus(xhr,"Redirected: "+ 
 					                             xhr.status + " to <" + newURI + ">");
-                                    tabulator.log.warn('@@ sources onChannelRedirect'+
+                                        tabulator.log.warn('@@ sources onChannelRedirect'+
                                                        "Redirected: "+ 
-					                                   xhr.status + " to <" + newURI + ">"); //@@
+                                                       xhr.status + " to <" + newURI + ">"); //@@
                                         
-				                    kb.add(xhr.req, tabulator.ns.http('status'), kb.literal(xhr.status),
-					                       xhr.req);
-				                    if (xhr.statusText) kb.add(xhr.req, tabulator.ns.http('statusText'),
-					                                           kb.literal(xhr.statusText), xhr.req)
-                                    
-				                    kb.add(xhr.req,
-					                       tabulator.ns.http('location'),
-					                       newURI, xhr.req);
-					                
-				                    kb.add(xhr.req,
-					                       tabulator.ns.http('redirectedTo'),
-					                       kb.sym(newURI), xhr.req);
-					                
+                                        var response = kb.bnode();
+                                        kb.add(xhr.req, tabulator.ns.link('response'), response);
+                                        kb.add(response, tabulator.ns.http('status'), kb.literal(xhr.status),
+                                                   response);
+                                        if (xhr.statusText) kb.add(response, tabulator.ns.http('statusText'),
+                                                                       kb.literal(xhr.statusText), response)
+                        
+                                        kb.add(response,
+                                                   tabulator.ns.http('location'),
+                                                   newURI, response);
+                                            
+                                        kb.add(xhr.req,
+                                                   tabulator.ns.http('redirectedTo'),
+                                                   kb.sym(newURI), xhr.req);
+                                            
                                     //delete the entry caused by the Tabulator. See test.js. tabExtension not defined, why?
                                     /*		    
 		            if (isExtension && xhr.status == 303){
@@ -882,45 +890,45 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 		            //tabExtension.inverseRedirectDirectory[newURI]=undefined;
 		            }*/
                                     
-				                    kb.HTTPRedirects[xhr.uri.uri] = newURI;
-				                    if (xhr.status == 301 && rterm) { // 301 Moved
-                                        var badDoc = tabulator.rdf.Util.uri.docpart(rterm.uri);
-					                    var msg ='Warning: '+xhr.uri +
+                                        kb.HTTPRedirects[xhr.uri.uri] = newURI;
+                                        if (xhr.status == 301 && rterm) { // 301 Moved
+                                            var badDoc = tabulator.rdf.Util.uri.docpart(rterm.uri);
+                                            var msg ='Warning: '+xhr.uri +
 					                        ' has moved to <'+newURI + '>.';
-                                        if (rterm) {
-                                            msg += ' Link in '+
-                                                badDoc + 'should be changed';
-                                            kb.add(badDoc,
+                                            if (rterm) {
+                                                msg += ' Link in '+
+                                                    badDoc + 'should be changed';
+                                                kb.add(badDoc,
                                                    kb.sym('http://www.w3.org/2006/link#warning'),
                                                    msg, sf.appNode);	
+                                            }
+                                            tabulator.log.warn(msg);
                                         }
-					                    tabulator.log.warn(msg);
-				                    }
-				                    xhr.abort()
-				                    xhr.aborted = true
-                                    
-				                    sf.addStatus(xhr,'done') // why
-				                    sf.fireCallbacks('done',args)
-				                    sf.requested[xhr.uri.uri] = 'redirected';
-                                    
-                                    var hash = newURI.indexOf('#');
-                                    if (hash >= 0) {
-                                        var msg = ('Warning: '+xhr.uri+' HTTP redirects to'
-                                                   + newURI + ' which should not contain a "#" sign');
-                                        tabulator.log.warn(msg);
-                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2006/link#warning'), msg)
-                                        newURI = newURI.slice(0,hash);
+                                        xhr.abort()
+                                        xhr.aborted = true
+                        
+                                        sf.addStatus(xhr,'done') // why
+                                        sf.fireCallbacks('done',args)
+                                        sf.requested[xhr.uri.uri] = 'redirected';
+                        
+                                        var hash = newURI.indexOf('#');
+                                        if (hash >= 0) {
+                                            var msg = ('Warning: '+xhr.uri+' HTTP redirects to'
+                                                       + newURI + ' which should not contain a "#" sign');
+                                            tabulator.log.warn(msg);
+                                            kb.add(xhr.uri, kb.sym('http://www.w3.org/2006/link#warning'), msg)
+                                            newURI = newURI.slice(0,hash);
+                                        }
+                                        xhr2 = sf.requestURI(newURI, xhr.uri)
+                                        if (xhr2 && xhr2.req) kb.add(xhr.req, 
+                                             kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
+                                             xhr2.req, sf.appNode);
                                     }
-				                    xhr2 = sf.requestURI(newURI, xhr.uri)
-				                    if (xhr2 && xhr2.req) kb.add(xhr.req, 
-					                                             kb.sym('http://www.w3.org/2006/link#redirectedRequest'),
-					                                             xhr2.req, sf.appNode);
-				                }
-			                }
-			            }
-			            return Components.results.NS_NOINTERFACE
-		            }
-		        }
+                                }
+                            }
+                            return Components.results.NS_NOINTERFACE
+                        }
+                    }
 	        } catch (err) {
 		        throw("Couldn't set callback for redirects: "+err)
 	        }

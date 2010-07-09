@@ -1,6 +1,5 @@
 var tc0004Passed = true;
 
-
 var rdfxmlTestCaseBaseURI = "http://www.w3.org/2000/10/rdf-tests/rdfcore/";
 var rdfxmlTestCaseDirs = [	"amp-in-url",
 							"datatypes",
@@ -40,20 +39,29 @@ function testTC0004(showDetails) {
 						true, true, true, true, true, true, true, true,
 					 	true, true, true, true, true, true, true, true
 					 ];
-	var n = expected.length;
+	var n = expected.length - 1;
 	var i = 0;
 	var from = $("#fromTC").val();
 	var to = $("#toTC").val();
 	
-	if((from < 0) || from == '' || from == undefined || from == null) from = 0;
-	if((to > 23) || to == '' || to == undefined || to == null) to = 23;
+	// check specified range and make sure it stays within the allowed space
+	from = parseInt(from);
+	to = parseInt(to);	
+	if(isNaN(from) || from == undefined || from == null || from < 0) from = 0;
+	if(isNaN(to) || to == undefined || to == null || to > n) to = n;
+	if(from > to) from = 0;
 	$("#fromTC").val(from);
 	$("#toTC").val(to);
 
 	startBusy();
 	$("#tocTC0004").append("<div style='font-size: 80%; border-bottom: 1px solid #e6e6e6; margin-bottom: 5px'><a href='#header'>Overview</a></div>"); // init TOC
+	if(isOffline()) { // we're in off-line mode
+		 rdfxmlTestCaseBaseURI = "chrome://tabulator/content/test/tc0004/rdfcore/"; // use the local mirror of the test case
+	}
+
 	for(i=from; i < to; i++) {
 		var dirParam = new String(testTitles[i]);
+		
 		result = eval("test" + i + "()");
 		if(result != expected[i]) {
 			tc0004Passed = false;
@@ -255,13 +263,13 @@ function runSingleParseTest(dir, test){
 			var o = kbNT.statements[k].object;
 			var thisStatementHolds =  kbRDFXML.holds(s, p, o, undefined); // NOTE: this doesn't seem to work due to the why-part being different
 			if(!thisStatementHolds) {
-				rdfxmlTestCaseMsg[dir] = testCaseURI + " failed concerning: <pre>" + escapeEntities(kbNT.statements[k].toString()) + "</pre>"; 
+				rdfxmlTestCaseMsg[dir] = "<a href='" + testCaseURI + ".rdf' target='_new'>" + testCaseURI + ".rdf</a> failed concerning: <pre>" + escapeEntities(kbNT.statements[k].toString()) + "</pre>"; 
 				allHold = false;	
 			} 
 		}
 	}
 	else {
-		rdfxmlTestCaseMsg[dir] = "TC " + testCaseURI + " failed"; 
+		rdfxmlTestCaseMsg[dir] = "<a href='" + testCaseURI + ".rdf'>" + testCaseURI + ".rdf</a> failed."; 
 		return false;
 	}
 	return allHold;

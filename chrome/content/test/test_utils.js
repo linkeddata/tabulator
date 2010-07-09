@@ -1,5 +1,5 @@
 // some utility functions used throughout the test cases detailed view
-function viewSource(fileName){
+function viewSource(fileName, offlineMode){
 	$("#viewSourceCode").attr("disabled","disabled");
 	$.ajax({
 		url: fileName,
@@ -9,7 +9,8 @@ function viewSource(fileName){
 			var sourceStyle = "position: static; top: 1em; left: 4em; -moz-box-shadow:0 0 6px rgba(0, 0, 0, 0.5); -moz-border-radius: 2px; padding: 0.1em; background: white; width:90%";
 			var sourceCmd = "<div style='" + cmdStyle + "'><button id='closeSourceView'>close</button> "+ fileName + "</div>";
 			var sourceContent ="<div id='sourceView' style='" + sourceStyle + "'>"+ sourceCmd +"<pre style='margin-left: 0.5em;'>" + escapeEntities(data) + "</pre></div>";
-			$("#header").before(sourceContent);
+			if(offlineMode) $("#header").after(sourceContent);
+			else $("#header").before(sourceContent);
 		},
 		error: function(msg) {
 			alert("Can't display " + fileName);
@@ -19,6 +20,7 @@ function viewSource(fileName){
 
 function hideSource(){
 	$("#sourceView").remove();
+	$("#viewSourceCode").removeAttr("disabled");
 }
 	
 function escapeEntities(text){

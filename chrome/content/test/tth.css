@@ -102,7 +102,33 @@ div.issue {
 	-moz-border-radius: 2px;
 }
 
+.offlinemodeswitch:before {
+	font-size: 80%;
+	content: "OFF-LINE mode: ";
+	margin-bottom: 1em;
+}
+
+.offlinemodeswitch {
+	margin-bottom: 1em;
+}
+
+
+#header {
+	margin-bottom: 2em;
+}
+
 #main {
+}
+
+#tcDetailMenu {
+	position: fixed;
+	top: 0.48em;
+	left: 0.48em;
+	border: 1px solid #dfdfdf;
+	background: #fafafa;
+	width: 25em;
+	padding: 0.2em;
+	-moz-border-radius: 2px;
 }
 
 #toc {

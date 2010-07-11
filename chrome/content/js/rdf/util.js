@@ -205,7 +205,7 @@ $rdf.Util = {
         var fixuri;
         if (p.uri.indexOf('#') < 0) { // No hash
             
-            // @@ major hack for dbpedia Categories, which spred indefinitely
+            // @@ major hack for dbpedia Categories, which spread indefinitely
             if ($rdf.Util.string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
             
             /*

@@ -502,9 +502,9 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 		  }
 		  })
         */
-        
-	    var sameAs = tabulator.ns.owl('sameAs') // @@ neaten up
-        
+        /*  Commented out -- Tim  Don't know what thi swas intended to do.
+                 "obsoletes" between symbols is bad modelling, and only ocurs here.
+                 (should be between strings if about terms obsoleting each other)
 	    var linkUri = sf.store.sym('http://www.w3.org/2006/link#obsoletes')
 	    var refs = sf.store.each(uri,linkUri)
             
@@ -515,23 +515,8 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     sf.requestURI(obj.uri, uri)
                 }
             })
-		
+	  */	
         
-        /*				  
-	                      var refs = sf.store.statementsMatching(uri,sameAs)
-	                      refs.map(function (x) {
-			              if (!sf.requested[Util.uri.docpart(x.object.uri)]) {
-			              sf.requestURI(x.object.uri, uri)
-			              }
-		                  })
-		                  
-	                      var refs = sf.store.statementsMatching(undefined, sameAs, uri)
-	                      refs.map(function (x) {
-			  if (!sf.requested[Util.uri.docpart(x.subject.uri)]) {
-			  sf.requestURI(x.subject.uri,uri)
-			  }
-		      })
-        */				  
 	    var refs = sf.store.statementsMatching(undefined,
 						                       tabulator.ns.rdf('type'),
 						                       undefined,
@@ -864,9 +849,9 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                                         var newURI = newC.URI.spec;
                                         sf.addStatus(xhr,"Redirected: "+ 
 					                             xhr.status + " to <" + newURI + ">");
-                                        tabulator.log.warn('@@ sources onChannelRedirect'+
-                                                       "Redirected: "+ 
-                                                       xhr.status + " to <" + newURI + ">"); //@@
+                                        //tabulator.log.info('@@ sources onChannelRedirect'+
+                                        //               "Redirected: "+ 
+                                        //               xhr.status + " to <" + newURI + ">"); //@@
                                         
                                         var response = kb.bnode();
                                         kb.add(xhr.req, tabulator.ns.link('response'), response);

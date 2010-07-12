@@ -36,6 +36,9 @@ loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js");*/
 loader.loadSubScript("chrome://tabulator/content/js/rdf/rdflib.js");
 tabulator.rdf = $rdf;
 
+// Overwrite the default dummy logger in rdf/Utils.js with a real one
+// $rdf.log2 = tabulator.log;    @@ Doesn't work :-( tbl
+
 //Load the icons namespace onto tabulator.
 loader.loadSubScript("chrome://tabulator/content/js/init/icons.js");
 //And Namespaces..

@@ -20,7 +20,7 @@ $rdf.Empty.prototype.toNT = function () { return "@@" };
 
 $rdf.Symbol = function( uri ) {
     this.uri = uri;
-    this.value = uri;
+    this.value = uri;   // -- why? -tim
     return this;
 }
 
@@ -34,7 +34,11 @@ $rdf.Symbol.prototype.integer = new $rdf.Symbol('http://www.w3.org/2001/XMLSchem
 
 //	Blank Node
 
-$rdf.NextId = 0;  // Global genid
+if (typeof $rdf.NextId != 'undefined') {
+    $rdf.log.error('Attempt to re-zero existing blank node id counter at '+$rdf.NextId);
+} else {
+    $rdf.NextId = 0;  // Global genid
+}
 $rdf.NTAnonymousNodePrefix = "_:n";
 
 $rdf.BlankNode = function ( id ) {
@@ -78,7 +82,7 @@ $rdf.Literal.prototype.toNT = function() {
     str = '"' + str + '"'  //';
 
     if (this.datatype){
-        str = str + '^^' + this.datatype.uri;//.toNT()
+        str = str + '^^' + this.datatype.toNT()
     }
     if (this.lang) {
         str = str + "@" + this.lang;

@@ -10,7 +10,10 @@ if( typeof $rdf == 'undefined' ) {
 }
 
 /**
-* @class A utility class
+ * @class a dummy logger
+ 
+ Note to implement this using the Firefox error console see
+  https://developer.mozilla.org/en/nsIConsoleService
  */
 
 $rdf.log = {
@@ -21,6 +24,12 @@ $rdf.log = {
     'success':function(x) {return;},
     'msg':function(x) {return;}
 }
+
+ 
+/**
+* @class A utility class
+ */
+
 
 $rdf.Util = {
     /** A simple debugging function */         
@@ -206,7 +215,7 @@ $rdf.Util = {
         var fixuri;
         if (p.uri.indexOf('#') < 0) { // No hash
             
-            // @@ major hack for dbpedia Categories, which spred indefinitely
+            // @@ major hack for dbpedia Categories, which spread indefinitely
             if ($rdf.Util.string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
             
             /*
@@ -423,7 +432,7 @@ $rdf.Empty.prototype.toNT = function () { return "@@" };
 
 $rdf.Symbol = function( uri ) {
     this.uri = uri;
-    this.value = uri;
+    this.value = uri;   // -- why? -tim
     return this;
 }
 
@@ -437,7 +446,11 @@ $rdf.Symbol.prototype.integer = new $rdf.Symbol('http://www.w3.org/2001/XMLSchem
 
 //	Blank Node
 
-$rdf.NextId = 0;  // Global genid
+if (typeof $rdf.NextId != 'undefined') {
+    $rdf.log.error('Attempt to re-zero existing blank node id counter at '+$rdf.NextId);
+} else {
+    $rdf.NextId = 0;  // Global genid
+}
 $rdf.NTAnonymousNodePrefix = "_:n";
 
 $rdf.BlankNode = function ( id ) {
@@ -457,10 +470,12 @@ $rdf.BlankNode.prototype.toString = $rdf.BlankNode.prototype.toNT;
 
 //	Literal
 
-$rdf.Literal= function (value, lang, datatype) {
+$rdf.Literal = function (value, lang, datatype) {
     this.value = value
-    this.lang=lang;	  // string
-    this.datatype=datatype;  // term
+    if (lang == "" || lang == null) this.lang = undefined;
+    else this.lang = lang;	  // string
+    if (datatype == null) this.datatype = undefined;
+    else this.datatype = datatype;  // term
     return this;
 }
 
@@ -479,7 +494,7 @@ $rdf.Literal.prototype.toNT = function() {
     str = '"' + str + '"'  //';
 
     if (this.datatype){
-        str = str + '^^' + this.datatype;//.toNT()
+        str = str + '^^' + this.datatype.toNT()
     }
     if (this.lang) {
         str = str + "@" + this.lang;
@@ -676,7 +691,7 @@ $rdf.Formula.prototype.fromNT = function(str) {
     var len = str.length
     var ch = str.slice(0,1)
     if (ch == '<') return this.sym(str.slice(1,len-1))
-    if (ch == '"') return this.literal(str.slice(1,len-1)) // @@ does not lang ot datatype or encoding -- used for URIs
+    if (ch == '"') return this.literal(str.slice(1,len-1)) // @@ does not lang ot datatype or encoding -- used for URIs ONLY
     if (ch == '_') {
 	var x = new $rdf.BlankNode();
 	x.id = parseInt(str.slice(3));
@@ -3021,6 +3036,7 @@ $rdf.IndexedFormula = function(features) {
     if ($rdf.Util.ArrayIndexOf(features,"sameAs") >= 0)
         this.propertyActions['<http://www.w3.org/2002/07/owl#sameAs>'] = [
 	function(formula, subj, pred, obj, why) {
+            // tabulator.log.warn("Equating "+subj.uri+" sameAs "+obj.uri);  //@@
             formula.equate(subj,obj);
             return true; // true if statement given is NOT needed in the store
 	}]; //sameAs -> equate & don't add to index
@@ -3040,6 +3056,7 @@ $rdf.IndexedFormula = function(features) {
     function handle_IFP(formula, subj, pred, obj)  {
         var s1 = formula.any(undefined, pred, obj);
         if (s1 == undefined) return false; // First time with this value
+        // tabulator.log.warn("Equating "+s1.uri+" and "+subj.uri + " because IFP "+pred.uri);  //@@
         formula.equate(s1, subj);
         return true;
     } //handle_IFP
@@ -3047,6 +3064,7 @@ $rdf.IndexedFormula = function(features) {
     function handle_FP(formula, subj, pred, obj)  {
         var o1 = formula.any(subj, pred, undefined);
         if (o1 == undefined) return false; // First time with this value
+        // tabulator.log.warn("Equating "+o1.uri+" and "+obj.uri + " because FP "+pred.uri);  //@@
         formula.equate(o1, obj);
         return true ;
     } //handle_FP
@@ -3087,13 +3105,13 @@ $rdf.IndexedFormula.prototype.register = function(prefix, nsuri) {
 }
 
 
-/** simplify graph in store when we realize two identifiers are equal
+/** simplify graph in store when we realize two identifiers are equivalent
 
 We replace the bigger with the smaller.
 
 */
 $rdf.IndexedFormula.prototype.equate = function(u1, u2) {
-    //$rdf.log.info("Equating "+u1+" and "+u2)
+    // tabulator.log.warn("Equating "+u1+" and "+u2); // @@
     //@@JAMBO Must canonicalize the uris to prevent errors from a=b=c
     //03-21-2010
     u1 = this.canon( u1 );

@@ -9,7 +9,10 @@ if( typeof $rdf == 'undefined' ) {
 }
 
 /**
-* @class A utility class
+ * @class a dummy logger
+ 
+ Note to implement this using the Firefox error console see
+  https://developer.mozilla.org/en/nsIConsoleService
  */
 
 $rdf.log = {
@@ -20,6 +23,12 @@ $rdf.log = {
     'success':function(x) {return;},
     'msg':function(x) {return;}
 }
+
+ 
+/**
+* @class A utility class
+ */
+
 
 $rdf.Util = {
     /** A simple debugging function */         

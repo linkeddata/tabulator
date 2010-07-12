@@ -72,6 +72,7 @@ $rdf.IndexedFormula = function(features) {
     if ($rdf.Util.ArrayIndexOf(features,"sameAs") >= 0)
         this.propertyActions['<http://www.w3.org/2002/07/owl#sameAs>'] = [
 	function(formula, subj, pred, obj, why) {
+            // tabulator.log.warn("Equating "+subj.uri+" sameAs "+obj.uri);  //@@
             formula.equate(subj,obj);
             return true; // true if statement given is NOT needed in the store
 	}]; //sameAs -> equate & don't add to index
@@ -91,6 +92,7 @@ $rdf.IndexedFormula = function(features) {
     function handle_IFP(formula, subj, pred, obj)  {
         var s1 = formula.any(undefined, pred, obj);
         if (s1 == undefined) return false; // First time with this value
+        // tabulator.log.warn("Equating "+s1.uri+" and "+subj.uri + " because IFP "+pred.uri);  //@@
         formula.equate(s1, subj);
         return true;
     } //handle_IFP
@@ -98,6 +100,7 @@ $rdf.IndexedFormula = function(features) {
     function handle_FP(formula, subj, pred, obj)  {
         var o1 = formula.any(subj, pred, undefined);
         if (o1 == undefined) return false; // First time with this value
+        // tabulator.log.warn("Equating "+o1.uri+" and "+obj.uri + " because FP "+pred.uri);  //@@
         formula.equate(o1, obj);
         return true ;
     } //handle_FP
@@ -138,13 +141,13 @@ $rdf.IndexedFormula.prototype.register = function(prefix, nsuri) {
 }
 
 
-/** simplify graph in store when we realize two identifiers are equal
+/** simplify graph in store when we realize two identifiers are equivalent
 
 We replace the bigger with the smaller.
 
 */
 $rdf.IndexedFormula.prototype.equate = function(u1, u2) {
-    //$rdf.log.info("Equating "+u1+" and "+u2)
+    // tabulator.log.warn("Equating "+u1+" and "+u2); // @@
     //@@JAMBO Must canonicalize the uris to prevent errors from a=b=c
     //03-21-2010
     u1 = this.canon( u1 );

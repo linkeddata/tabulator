@@ -24,6 +24,7 @@
 	<script type="text/javascript" src="../js/jquery/jquery.rdfa.js"></script>
 	<script type="text/javascript" src="test_utils.js" ></script>
 	<script type="text/javascript" src="tth-manager.js"></script>
+	<script type="text/javascript" src="ext/jquery.iphone-switch.js"></script>
 	<script type="text/javascript" src="../js/rdf/util.js"></script>
 	<script type="text/javascript" src="../js/rdf/uri.js"></script>
 	<script type="text/javascript" src="../js/rdf/term.js"></script>
@@ -44,6 +45,19 @@
 		$("#reset").click(function () {
 			location.reload(true); // need to this so that the dynamically loaded test scripts don't screw up the rendering
 		});
+		
+		$('#goOffline').iphoneSwitch("off", 
+			function() {
+				goOffline();
+			},
+			function() {
+				goOnline();
+			},
+			{ 	switch_path: 'img/iphone_switch.png',
+				switch_on_container_path: 'img/iphone_switch_container_on.png',
+				switch_off_container_path: 'img/iphone_switch_container_off.png'
+			}
+		);
 		
 		
 		$("#showAllTestDetails").click(function () {
@@ -70,6 +84,7 @@
 </head>
 <body>
 	<div id="status">Idle</div>
+	<div id="goOffline" title="OFF-LINE mode" class="offlinemodeswitch"></div>
 	<div id="main">
 		<h1>Tabulator Test Harness</h1>
 		<div id="toc"></div>
@@ -153,7 +168,7 @@
 				</div>
 			</div>
 		</div>
-		<div id="about">Tabulator Test Harness maintained by <a rel="doap:maintainer" href="http://sw-app.org/mic.xhtml#i">Michael Hausenblas</a>; last update: <span property="dcterms:date" datatype="xsd:date">2010-07-07</span>.</div>
+		<div id="about">Tabulator Test Harness maintained by <a rel="doap:maintainer" href="http://sw-app.org/mic.xhtml#i">Michael Hausenblas</a>; last update: <span property="dcterms:date" datatype="xsd:date">2010-07-14</span>.</div>
 	</div>
 </body>
 </html>

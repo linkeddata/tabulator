@@ -16,7 +16,7 @@ function testTC0001(showDetails) {
 						'{<http://example.com/btb> <http://xmlns.com/foaf/0.1/name> "Builder" .}',
 						'{_:n0 <http://xmlns.com/foaf/0.1/firstname> "Bob" .}',
 						'{<http://example.com/btb> <http://xmlns.com/foaf/0.1/lastname> "Builder"@en .}',
-						'{<http://example.com/btb> <http://example.org/vocab#shoeSize> "30"^^xsd:integer .}'
+						'{<http://example.com/btb> <http://example.org/vocab#shoeSize> "30"^^<http://www.w3.org/2001/XMLSchema#integer> .}'
 					 ];
 	var n = expected.length;
 	var i=0;
@@ -77,9 +77,13 @@ function test3(){
 
 function test4(){
 	var kb = new $rdf.Formula();
+	XSD = new $rdf.Namespace("http://www.w3.org/2001/XMLSchema#");
+	var xsdint = XSD('integer');
+	
 	var s =  new $rdf.Symbol("http://example.com/btb");
 	var p = new $rdf.Symbol("http://example.org/vocab#shoeSize");
-	var o =  new $rdf.Literal("30", null, "xsd:integer");
+	var o =  new $rdf.Literal("30", undefined, xsdint);
+	//	var o =  new $rdf.Literal("30", undefined, "xsd:integer"); // this causes a this.datatype.toNT in term.js line 85 
 	kb.add(s, p, o);
 	return kb.toNT();
 }

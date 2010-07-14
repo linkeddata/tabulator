@@ -77,7 +77,7 @@ function test3(){
 
 function test4(){
 	var kb = new $rdf.Formula();
-	XSD = new $rdf.Namespace("http://www.w3.org/2001/XMLSchema#");
+	var XSD = new $rdf.Namespace("http://www.w3.org/2001/XMLSchema#");
 	var xsdint = XSD('integer');
 	
 	var s =  new $rdf.Symbol("http://example.com/btb");

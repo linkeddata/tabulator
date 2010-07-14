@@ -39,27 +39,28 @@ function testTC0004(showDetails) {
 						true, true, true, true, true, true, true, true,
 					 	true, true, true, true, true, true, true, true
 					 ];
-	var n = expected.length - 1;
+	var n = expected.length + 1;
 	var i = 0;
 	var from = $("#fromTC").val();
 	var to = $("#toTC").val();
 	
 	// check specified range and make sure it stays within the allowed space
 	from = parseInt(from);
-	to = parseInt(to);	
+	to = parseInt(to) + 1;
 	if(isNaN(from) || from == undefined || from == null || from < 0) from = 0;
-	if(isNaN(to) || to == undefined || to == null || to > n) to = n;
+	if(isNaN(to) || to == undefined || to == null || to > n) to = n - 1;
 	if(from > to) from = 0;
 	$("#fromTC").val(from);
-	$("#toTC").val(to);
+	$("#toTC").val(to - 1);
 
-	startBusy();
+
 	$("#tocTC0004").append("<div style='font-size: 80%; border-bottom: 1px solid #e6e6e6; margin-bottom: 5px'><a href='#header'>Overview</a></div>"); // init TOC
 	if(isOffline()) { // we're in off-line mode
 		 rdfxmlTestCaseBaseURI = "chrome://tabulator/content/test/tc0004/rdfcore/"; // use the local mirror of the test case
 	}
 
 	for(i=from; i < to; i++) {
+		startBusy();
 		var dirParam = new String(testTitles[i]);
 		
 		result = eval("test" + i + "()");
@@ -75,10 +76,10 @@ function testTC0004(showDetails) {
 		if(rdfxmlTestCaseMsg[testTitles[i]]) { // we have a detailed fail message
 			allResults += "<p><em>Reason: " + rdfxmlTestCaseMsg[testTitles[i]]  + "</em></p>";
 		}
-		$("#tocTC0004").append("<div " +  styleResult + "><span style='font-size: 80%;'><a href='#sec" + testTitles[i] + "'>" + testTitles[i] + "</a></span></div>"); // update TOC
-	
+		$("#tocTC0004").append("<div " +  styleResult + "><span style='font-size: 80%;'>" + i +". <a href='#sec" + testTitles[i] + "'>" + testTitles[i] + "</a></span></div>"); // update TOC
+		stopBusy();
 	}
-	stopBusy();
+
 	if(showDetails) return allResults;
 	else return tc0004Passed;
 }
@@ -261,7 +262,7 @@ function runSingleParseTest(dir, test){
 			var s = kbNT.statements[k].subject;
 			var p = kbNT.statements[k].predicate;
 			var o = kbNT.statements[k].object;
-			var thisStatementHolds =  kbRDFXML.holds(s, p, o, undefined); // NOTE: this doesn't seem to work due to the why-part being different
+			var thisStatementHolds =  kbRDFXML.holds(s, p, o, undefined);
 			if(!thisStatementHolds) {
 				rdfxmlTestCaseMsg[dir] = "<a href='" + testCaseURI + ".rdf' target='_new'>" + testCaseURI + ".rdf</a> failed concerning: <pre>" + escapeEntities(kbNT.statements[k].toString()) + "</pre>"; 
 				allHold = false;	
@@ -315,13 +316,4 @@ function getTestCaseData(testCaseURI, format){
 function parseN3FromString(docURI, data, kb, why){
 	var n3Parser = new $rdf.N3Parser(kb, kb, docURI, rdfxmlTestCaseBaseURI, undefined, undefined, undefined, why);
 	n3Parser.loadBuf(data);
-}
-
-function fillTOC(){
-	$("#tocTC0004").append("<div style='font-size: 80%; border-bottom: 1px solid #e6e6e6; margin-bottom: 5px'><a href='#main'>Overview</a></div>");
-	$("h2").each(function () {
-		var buffer = $(this).text();
-		//buffer = buffer.substring(0, buffer.indexOf(":"));
-		$("#tocTC0004").append("<div style='font-size: 80%;'><a href='#sec" + buffer + "'>" + buffer + "</a></div>");
-	});
 }

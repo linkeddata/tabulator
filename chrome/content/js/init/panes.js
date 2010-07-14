@@ -41,6 +41,7 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/categoryPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/pubsPane.js");
 
 //@@ jambo commented these things out to pare things down temporarily.
 /*

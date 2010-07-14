@@ -245,6 +245,67 @@ div.social_linkButton {
 .categoryPane a.categoryWhy { color:grey }
 /* a.categoryWhy:hover { color: #3B5998 } */
 
+
+/******************* PubsPane *********/
+
+.pubsPane { 
+    background-color: #F2F6DA; 
+    border-width: 0.1em; 
+    border-color: #777777;
+    -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ 
+    padding: 1em;
+
+    text-decoration: none; 
+    font-weight: bold;
+}
+
+.pubsPane a, 
+.pubsPane a:link, 
+.pubsPane a:visited { 
+    color: #3B5998; 
+    text-decoration: none; 
+    font-weight: bold;
+}
+
+.pubsPane a:hover { 
+    color: #3B5998; 
+    text-decoration: underline; 
+    font-weight: bold;
+}
+
+.pubsPane a:active { 
+    color: #888; 
+    text-decoration: none; 
+}
+
+.pubsPane h2 {
+    margin: 0;
+    padding: 0;
+}
+
+.pubsRow {
+    padding: 1em;
+}
+
+.pubsRow input,
+.pubsRow textarea {
+    float: right;
+    margin-right: 3em;
+    width: 20em;
+}
+
+.pubsRow button {
+    clear: both;
+    width: 7em;
+    height: 4em;
+}
+
+#abstract {
+    height: 8em;
+    width: 17em;
+}
+
+
 /******************* CV Pane *****************/
 
 .CVclass {

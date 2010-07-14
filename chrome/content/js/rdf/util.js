@@ -257,6 +257,9 @@ $rdf.Util = {
 };
 
 //////////////////////String Utility
+// substitutes given terms for occurrnces of %s
+// not well named. Used??? - tim
+//
 $rdf.Util.string = {
     //C++, python style %s -> subs
     'template': function(base, subs){

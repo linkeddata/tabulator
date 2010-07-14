@@ -44,7 +44,7 @@ function UserInput(outline){
     if (!UserInputFormula){
         UserInputFormula=new tabulator.rdf.Formula();
         UserInputFormula.superFormula=kb;
-        UserInputFormula.registerFormula("Your Work"); 
+        // UserInputFormula.registerFormula("Your Work"); 
     }
     if (!TempFormula) TempFormula=new tabulator.rdf.IndexedFormula(); 
                                       //Use RDFIndexedFormula so add returns the statement

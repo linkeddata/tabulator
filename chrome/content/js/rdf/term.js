@@ -91,7 +91,7 @@ $rdf.Literal.prototype.toNT = function() {
 };
 
 $rdf.Collection = function() {
-    this.id = $rdf.NextId++;
+    this.id = $rdf.NextId++;  // Why need an id? For hashstring.
     this.elements = [];
     this.closed = false;
 };
@@ -215,6 +215,8 @@ $rdf.Formula.prototype.list = function (values) {
     }
     return li;
 }
+/*  I'm not sure where this came from but I'm taking it out
+as it isn't something we need in the library. Suspect unused. - tim
 
 $rdf.Formula.instances={};
 $rdf.Formula.prototype.registerFormula = function(accesskey){
@@ -225,7 +227,7 @@ $rdf.Formula.prototype.registerFormula = function(accesskey){
     superFormula.add(formulaTerm, this.sym("http://xmlns.com/foaf/0.1/name"), superFormula.literal(accesskey));
     superFormula.add(formulaTerm, this.sym("http://www.w3.org/2007/ont/link#accesskey"), superFormula.literal(accesskey));
 }
-
+*/
 
 /*  Variable
 **

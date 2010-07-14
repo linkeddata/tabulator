@@ -381,7 +381,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    sf.mediatypes['application/x-turtle'] = {'q': 1.0} // pre 2008
 	    sf.mediatypes['text/turtle'] = {'q': 1.0} // pre 2008
     }
-    tabulator.SourceFetcher.N3Handler.pattern = new RegExp("(application|text)/(rdf\\+)?(n3|turtle)")
+    tabulator.SourceFetcher.N3Handler.pattern = new RegExp("(application|text)/(x-)?(rdf\\+)?(n3|turtle)")
     
     
     /***********************************************/

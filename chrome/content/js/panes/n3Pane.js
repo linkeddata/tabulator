@@ -12,6 +12,7 @@ tabulator.panes.register ({
     name: 'n3',
     
     label: function(subject) {
+        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
         var n = tabulator.kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;

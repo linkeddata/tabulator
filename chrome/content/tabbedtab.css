@@ -222,6 +222,16 @@ div.social_linkButton {
   div.unknown { display:none } 
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 
+
+/******************* Exception Pane ********
+**
+** A pane created when the loading of a pane 
+** throws an exception
+**/
+
+div.exceptionPane pre { background-color: #fee; }
+
+
   
 /******************* Category Pane *********/
 
@@ -230,6 +240,8 @@ div.social_linkButton {
 .categoryPane a:visited { color: #3B5998; text-decoration: none; font-weight: bold}
 .categoryPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
 .categoryPane a:active { color: #888; text-decoration: none; }
+
+.categoryBottomClass { background-color: #efe ; margin: solid green 0.1em; }
 
 .categoryTable { padding-left: 2em;}
 .categoryPane { background-color: #f8fff8; padding: 0.5em;

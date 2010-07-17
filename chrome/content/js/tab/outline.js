@@ -1640,7 +1640,17 @@ tabulator.OutlineObject = function(doc) {
                 }
                 // If the view does not exist, create it
                 if (state == 'paneShown') {
-                    var paneDiv = pane.render(subject, myDocument, jq);
+                    var paneDiv;
+                    try {
+                        paneDiv = pane.render(subject, myDocument, jq);
+                    }
+                    catch(e) { // Easier debugging for pane developers
+                        paneDiv = myDocument.createElement("div")
+                        paneDiv.setAttribute('class', 'exceptionPane');
+                        var pre = myDocument.createElement("pre")
+                        paneDiv.appendChild(pre);
+                        pre.appendChild(myDocument.createTextNode(tabulator.Util.stackString(e)));
+                    }
                     if (pane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');                    
                     var second = t.firstChild.nextSibling;
                     if (second) t.insertBefore(paneDiv, second);

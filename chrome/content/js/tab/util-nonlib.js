@@ -1,12 +1,53 @@
-tabulator.Util = {};
 
-tabulator.Util.nextVariable = 0;
+if (typeof tabulator.Util == "undefined") tabulator.Util = {};
+
+if (typeof tabulator.Util.nextVariable == "undefined") tabulator.Util.nextVariable = 0;
 tabulator.Util.newVariableName = function() {
     return 'v' + tabulator.Util.nextVariable++;
 }
 tabulator.Util.clearVariableNames = function() { 
     tabulator.Util.nextVariable = 0;
 }
+
+
+/* Error stack to string for better diagnotsics
+**
+** See  http://snippets.dzone.com/posts/show/6632
+*/
+
+tabulator.Util.stackString = function(e){
+	
+    function print(msg) {
+            console.log(msg);
+    }
+    
+    var str = "" + e + "\n";
+    
+    if (!e.stack) {
+            return str + 'No stack available.\n'
+    };
+    var lines = e.stack.toString().split('\n');
+    var toprint = [];
+    for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (line.indexOf('ecmaunit.js') > -1) {
+                    // remove useless bit of traceback
+                    break;
+            };
+            if (line.charAt(0) == '(') {
+                    line = 'function' + line;
+            };
+            var chunks = line.split('@');
+            toprint.push(chunks);
+    };
+    toprint.reverse();
+    
+    for (var i = 0; i < toprint.length; i++) {
+            str += '  ' + toprint[i][1] + '\n    '+ toprint[i][0];
+    };
+    return str;
+}
+
 
 tabulator.Util.AJAR_handleNewTerm = function(kb, p, requestedBy) {
     var sf = tabulator.sf;

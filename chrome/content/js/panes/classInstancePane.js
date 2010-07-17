@@ -22,7 +22,7 @@ tabulator.panes.register( {
         if (sts.length > 10) {
             var tr = myDocument.createElement('TR');
             tr.appendChild(myDocument.createTextNode(''+sts.length));
-            tr.AJAR_statement=sts[i];
+            //tr.AJAR_statement=sts[i];
             div.appendChild(tr);
         }
 

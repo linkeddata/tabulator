@@ -169,6 +169,7 @@ function openTool(url, type, width, height)
 
     //This gets called when you switch tabs 
     function tabulatorDetectMetadata(e){
+        if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
 	
@@ -312,6 +313,7 @@ function openTool(url, type, width, height)
     function tabulatorShowMetadata(e){
     
         //canonizeUrl(e,{});
+        if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
         tabulator.metadataURI = gURLBar.value;
         /*
         //before I know more about how cache works in Firefox, cache the DOM        

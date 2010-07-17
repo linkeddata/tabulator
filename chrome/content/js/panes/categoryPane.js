@@ -11,10 +11,11 @@
 // @@ These RDFS bits should clearly be moved to a js/rdf/rdfs.js file but the last one of
 // those was removed so I am keep this here for now! tim
 
-$rdf.Formula.prototype.rdfsTypes = function (subject) {
+$rdf.Formula.prototype.findTypeURIs = function (subject) {
     // Get all the Classes of which we can RDFS-infer the subject is a member
     // ** @@ This will loop is there is a class subclass loop which is actually valid
-    // Returns a hash table where key is URI of type and value is statement why we think so. 
+    // Returns a hash table where key is URI of type and value is statement why we think so.
+    // Does NOT return terms, returns URI strings.
 
     var sts = this.statementsMatching(subject, undefined, undefined); // fast
     var rdftype = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
@@ -39,14 +40,35 @@ $rdf.Formula.prototype.rdfsTypes = function (subject) {
             types[domains[j].uri] = st;
         }
     }
+    
+    var done = {}; // Classes we have looked up
+    var go = true;
+    for(;go;) {
+        go = false;
+        var agenda = {};
+        for (var t in types) agenda[t] = types[t]; // Take a copy
+        for (var t in agenda) {
+            var sups = this.each(this.sym(t), this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'));
+            for (var i=0; i<sups.length; i++) {
+                var s = sups[i].uri;
+                if (s in done) continue;
+                if (s in agenda) continue;
+                types[s] = types[t];
+                go = true;
+            }
+            done[t] = agenda[t];
+            delete types[t];
+        }
+        
+    }
     // $rdf.log.warn('Types: ' + types.length); 
-    return types;
+    return done;
 };
         
 /* Find the types in the list which have no *stored* supertypes
 ** We exclude the universal class, owl:Things and rdf:Resource, as it is not information-free.*/
         
-$rdf.Formula.prototype.rdfsTopTypes = function(types) {
+$rdf.Formula.prototype.topTypeURIs = function(types) {
     var tops = [];
     for (var u in types) {
         var sups = this.each(this.sym(u), this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'));
@@ -71,14 +93,22 @@ $rdf.Formula.prototype.rdfsTopTypes = function(types) {
 ** know the class DAG.
 */
     
-$rdf.Formula.prototype.rdfsBottomTypes = function(types) {
+$rdf.Formula.prototype.bottomTypeURIs = function(types) {
     var bots = [];
     for (var u in types) {
-        var sub = this.any(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'),this.sym(u));
-        if (typeof sub == 'undefined') bots[u] = types[u];
+        var subs = this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'),this.sym(u));
+        var bottom = true;
+        for (var i=0; i<subs.length; i++) {
+            if (subs[i].uri in types) {
+                bottom = false;
+                break;
+            }
+        }
+        if (bottom) bots[u] = types[u];
     }
     return bots;
 }
+    
     
 // These used to be in js/init/icons.js but are better in the pane.
 tabulator.Icon.src.icon_categorize = iconPrefix + 'icons/22-categorize.png';
@@ -93,15 +123,17 @@ tabulator.panes.register( {
     // Does the subject deserve a categorizing pane?
     label: function(subject) {
         var kb = tabulator.kb
-        var t = kb.rdfsTypes(subject);
-        var classes = "";
-        for (u in t) classes += u;
-        if (classes == "") return null ;  // None, suppress pane
+        var t = kb.findTypeURIs(subject);
+        //@@@ t = kb.topTypeURIs(t);
+        var classes = 0;
+        for (var u in t) classes++;
+        //@@@@  if (classes==0) return null ;  // None, suppress pane
+        
         // Not if a class itself (maybe need a different pane for that):
         if (t['http://www.w3.org/2000/01/rdf-schema#Class']) return null; 
         if (t['http://www.w3.org/2002/07/owl#Class']) return null;
         
-        return "Categorize"; // Yes under other circumstances (while testing at least!)
+        return "Categorize "+classes; // Yes under other circumstances (while testing at least!)
 
     },
 
@@ -111,53 +143,101 @@ tabulator.panes.register( {
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'categoryPane');
         
-        var types = kb.rdfsTypes(subject);
-        var tops = kb.rdfsTopTypes(types);
+        var types = kb.findTypeURIs(subject);
+        var tops = kb.topTypeURIs(types);
+        var bots = kb.bottomTypeURIs(types);
+
+        /////////////// debug 
+        /*
+        var str = "";
+        for (var t in types) str = str + t + ",  ";
+        var debug = div.appendChild(myDocument.createTextNode('Types: '+str)) // @@@
         
-        function domForClass(c) {
+        var str = "";
+        for (var t in bots) str = str + t + ",  ";
+        var debug = div.appendChild(myDocument.createTextNode('. Bots: '+str)) // @@@
+        */
+        
+        function domForClass(c, force) {
             var tr = myDocument.createElement('TR');
             tr.setAttribute('class', 'categoryClass');
             var anchor = myDocument.createElement('A');
             if (c.uri) anchor.setAttribute('href', c.uri);
+            anchor.setAttribute('class', c.uri in types ? 'categoryIn' : 'categoryOut')
+            if (c.uri in bots) anchor.setAttribute('class', 'categoryBottom');
             var lab = tabulator.Util.label(c);
             lab = lab.slice(0,1).toUpperCase() + lab.slice(1);
+            if (c.uri in types) lab += " *";
             anchor.appendChild(myDocument.createTextNode(lab));
             tr.appendChild(anchor);
             
             if (c.uri) {
                 var st = types[c.uri];
-                if (st.why) {//
-                    var anchor = myDocument.createElement('A');
-                    anchor.appendChild(myDocument.createTextNode(
-                        "  ("+
-                        tabulator.Util.label(st.subject)+" "+
-                        tabulator.Util.label(st.predicate)+" "+
-                        tabulator.Util.label(st.object)+")"));
-                    if (st.why.uri) anchor.setAttribute('href', st.why.uri)
-                    anchor.setAttribute('class', 'categoryWhy')
-                    tr.appendChild(anchor);
-                    
+                if (st) {
+                    if (st.uri) { // just a subsumption
+                        /* nothing */
+                    } else if (st.why) {// specific statement
+                        var anchor = myDocument.createElement('A');
+                        anchor.appendChild(myDocument.createTextNode(
+                            "  ("+
+                            tabulator.Util.label(st.subject)+" "+
+                            tabulator.Util.label(st.predicate)+" "+
+                            tabulator.Util.label(st.object)+")"));
+                        if (st.why.uri) anchor.setAttribute('href', st.why.uri)
+                        anchor.setAttribute('class', 'categoryWhy')
+                        tr.appendChild(anchor);
+                    }
                 }
             }
             var subs = kb.each(undefined, kb.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), c);
+            var categorizables = { 'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true ,
+                                    'http://www.w3.org/2000/10/swap/pim/qif#Classified': true };
             if (subs) {
                 var table = myDocument.createElement('TABLE')
                 table.setAttribute('class', 'categoryTable');
                 tr.appendChild(table);
+                
+                var uris = {}; // remove duplicates (why dups?) and count
+                var n = 0;
                 for (var i=0; i < subs.length; i++) {
-                    if (subs[i].uri in types) {
-                        table.appendChild(domForClass(subs[i]))
+                    var sub = subs[i];
+                    if (sub.uri in uris) continue;
+                    uris[sub.uri] = true; n++;
+                }
+
+                if (n>0) {
+                    var select = myDocument.createElement('select');
+                    // select.setAttribute('multiple', 'true'); //@@ Later, check whether classes are disjoint.
+                    select.innerHTML = "<option>-- classify --</option>";
+                    for (var uri in uris) {
+                        var option = myDocument.createElement('option');
+                        option.appendChild(myDocument.createTextNode(tabulator.Util.label(kb.sym(uri))));
+                        option.setAttribute('name', uri);
+                        if (uri in types) option.setAttribute('selected', 'true')
+                        select.appendChild(option);
+                    }
+                    table.appendChild(select);
+                    
+                    for (uri in uris) {
+                        if (uri in types) {
+                            table.appendChild(domForClass(kb.sym(uri), force))
+                        } else if (c.uri && ((c.uri in bots) || (c.uri in categorizables))) {
+                            table.appendChild(domForClass(kb.sym(uri), true))
+                        }
                     }
                 }
             }
+
             return tr;
         }
         
-        for (u in tops) {
+        for (var u in tops) {
             var c = kb.sym(u);
             var tr = domForClass(c);
             div.appendChild(tr);
         }
+        
+        
         
         return div;
     }

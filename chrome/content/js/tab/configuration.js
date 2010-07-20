@@ -91,12 +91,14 @@ function getFunctionBody(func){
 var HCIoptions=new OptionCollection();
 
 //right click to switch mode
+/*
 function temp_RCTSM0(){
     //temporary key ctrl+s or q for swiching mode
     window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false);
     window.addEventListener('mousedown',UserInput.Mousedown,false);
     document.getElementById('outline').oncontextmenu=function(){return false;};
 }
+/* 
 HCIoptions.addOption("right click to switch mode",temp_RCTSM0);
 delete temp_RCTSM0;
 
@@ -109,9 +111,10 @@ function temp_RCTSM1(e){
         }
     }
 }
+
 HCIoptions["right click to switch mode"].addMoreCode(temp_RCTSM1);
 delete temp_RCTSM1;
-
+*/
 function temp_RCTSM2(){
     function thoseRadios(){
         var menuDiv=document.getElementById('MenuBar');

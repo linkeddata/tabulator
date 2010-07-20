@@ -672,7 +672,7 @@ function UserInput(outline){
                 var paneDiv=tabulator.Util.ancestor(selectedTd,'TABLE').lastChild;
                 var newTr=paneDiv.insertBefore(myDocument.createElement('tr'),paneDiv.lastChild);
                 //var titleTerm=tabulator.Util.getAbout(kb,tabulator.Util.ancestor(newTr,'TD'));
-                if (HCIoptions["bottom insert highlights"].enabled)
+                if (false)
                     var preStat=newTr.previousSibling.previousSibling.AJAR_statement;
                 else
                     var preStat=newTr.previousSibling.AJAR_statement;
@@ -966,8 +966,12 @@ function UserInput(outline){
     },
 
     Mousedown: function(e){
-        HCIoptions["right click to switch mode"][1].setupHere([e],"UserInput.Mousedown");
-        /*
+    //temporary key ctrl+s or q for swiching mode
+        // This was in HCIOptions "right click to switch mode":
+        window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false);
+        window.addEventListener('mousedown',UserInput.Mousedown,false);
+        document.getElementById('outline').oncontextmenu=function(){return false;};
+
         if (e.button==2){ //right click
             UserInput.switchMode();
             if(e){
@@ -975,12 +979,11 @@ function UserInput(outline){
                 e.stopPropagation();
             }
         }
-        */
     },
     
 
     Mouseover: function Mouseover(e){
-        if (HCIoptions["bottom insert highlights"].enabled) if (e.layerX-tabulator.Util.findPos(this)[0]>30) return;
+        // if (HCIoptions["bottom insert highlights"].enabled) if (e.layerX-tabulator.Util.findPos(this)[0]>30) return;
         this.className='bottom-border-active';
     /*
     if (getTarget(e).tagName=='SPAN'){
@@ -1167,7 +1170,7 @@ function UserInput(outline){
             //number of nodes as condition, also beware of toggle Trs that don't have AJAR_statement
             trIterator=trIterator.nextSibling){}
         }catch(e){isEnd=true;}
-        if(!isEnd && HCIoptions["bottom insert highlights"].enabled) trIterator=trIterator.previousSibling;
+        // if(!isEnd && HCIoptions["bottom insert highlights"].enabled) trIterator=trIterator.previousSibling;
        
         var insertTr=myDocument.createElement('tr');
         //style stuff, I'll have to investigate appendPropertyTRs() somehow
@@ -1183,15 +1186,13 @@ function UserInput(outline){
         
         if (!isEnd)
             trIterator.parentNode.insertBefore(insertTr,trIterator);
-        else if (!HCIoptions["bottom insert highlights"].enabled){
+        else {
             var table=predicateTd.parentNode.parentNode;
             if (table.className=='defaultPane')
                 table.insertBefore(insertTr,table.lastChild);
             else
                 table.appendChild(insertTr);
         }
-        else; //anyway, this is buggy
-            //predicateTd.parentNode.parentNode.insertBefore(
             
         return insertTr;
     },

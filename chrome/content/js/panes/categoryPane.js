@@ -108,7 +108,10 @@ $rdf.Formula.prototype.bottomTypeURIs = function(types) {
     }
     return bots;
 }
-    
+   
+//            var categorizables = { 'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true ,
+//                                    'http://www.w3.org/2000/10/swap/pim/qif#Classified': true };
+
     
 // These used to be in js/init/icons.js but are better in the pane.
 tabulator.Icon.src.icon_categorize = iconPrefix + 'icons/22-categorize.png';
@@ -189,25 +192,18 @@ tabulator.panes.register( {
                     }
                 }
             }
-            var subs = kb.each(undefined, kb.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), c);
-            var categorizables = { 'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true ,
-                                    'http://www.w3.org/2000/10/swap/pim/qif#Classified': true };
-            if (subs) {
-                var table = myDocument.createElement('TABLE')
-                table.setAttribute('class', 'categoryTable');
-                tr.appendChild(table);
-                
-                var uris = {}; // remove duplicates (why dups?) and count
-                var n = 0;
+            var table = null;
+            
+            var makeSelectForSubs = function(subs, multiple) {
+                var n = 0; uris ={};
                 for (var i=0; i < subs.length; i++) {
                     var sub = subs[i];
                     if (sub.uri in uris) continue;
                     uris[sub.uri] = true; n++;
                 }
-
                 if (n>0) {
                     var select = myDocument.createElement('select');
-                    // select.setAttribute('multiple', 'true'); //@@ Later, check whether classes are disjoint.
+                    if (multiple) select.setAttribute('multiple', 'true'); //@@ Later, check whether classes are disjoint.
                     select.innerHTML = "<option>-- classify --</option>";
                     for (var uri in uris) {
                         var option = myDocument.createElement('option');
@@ -216,14 +212,48 @@ tabulator.panes.register( {
                         if (uri in types) option.setAttribute('selected', 'true')
                         select.appendChild(option);
                     }
-                    table.appendChild(select);
-                    
-                    for (uri in uris) {
-                        if (uri in types) {
-                            table.appendChild(domForClass(kb.sym(uri), force))
-                        } else if (c.uri && ((c.uri in bots) || (c.uri in categorizables))) {
-                            table.appendChild(domForClass(kb.sym(uri), true))
-                        }
+                    return select;
+                }
+                return null;
+            
+            } // makeSelectForSubs
+            
+            var subClassesAsNT = {};
+            var disjointSubclassLists = kb.each(c, kb.sym('http://www.w3.org/2002/07/owl#disjointUnionOf'));
+            if (disjointSubclassLists) {
+                for (j=0; j<disjointSubclassLists.length; j++) {
+                    td.appendChild(myDocument.createTextNode('subs:'+subs));
+                    var subs = disjointSubclassLists[j].elements;
+                    var sel = makeSelectForSubs(subs, false); // Not multiple
+                    if (sel) tr.appendChild(sel); 
+                    for (var i=0; i<subs.length; i++) {
+                        subClassesAsNT[subs[i].toNT()] = true; // Could be blank node
+                    }
+                }
+            }
+            
+            
+            var subs = kb.each(undefined, kb.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), c);
+            if (subs) {
+                if (!table) {
+                    table = myDocument.createElement('TABLE')
+                    table.setAttribute('class', 'categoryTable');
+                    tr.appendChild(table);
+                }
+                
+                var uris = {}; // remove duplicates (why dups?) and count
+                var n = 0;
+                for (var i=0; i < subs.length; i++) {
+                    var sub = subs[i];
+                    if (sub.uri in uris) continue;
+                    uris[sub.uri] = true; n++;
+                }
+//@@
+                for (uri in uris) {
+                    if (uri in types) {
+                        table.appendChild(domForClass(kb.sym(uri), false))
+//                    } else if (c.uri && ((c.uri in bots) || (c.uri in categorizables))) {
+//                        table.appendChild(domForClass(kb.sym(uri), false))
                     }
                 }
             }

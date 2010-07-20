@@ -64,7 +64,7 @@ function updateCenter(kb){
                         var documentString;
                         var request = kb.any(doc, tabulator.ns.link("request"));
                         if (!request) throw "No record of our HTTP GET request for document: "+doc; //should not happen
-                        var response =  kb.any(request, tabulator.ns.link("request"));
+                        var response =  kb.any(request, tabulator.ns.link("response"));
                         if (!response) throw "No record HTTP GET response for document: "+doc; //should not happen
 
                         //prepare contents

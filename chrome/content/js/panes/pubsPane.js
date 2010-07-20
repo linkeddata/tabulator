@@ -10,18 +10,38 @@ tabulator.panes.pubsPane = {
     label: function(subject) {  // Subject is the source of the document
         //criteria for display satisfied: return string that would be title for icon, else return null
         // only displays if it is a person, copied from social/pane.js
-        if (tabulator.kb.whether(
+       /* if (tabulator.kb.whether(
             subject, tabulator.ns.rdf('type'),
             tabulator.ns.foaf('Person'))){
-                return 'pubs';
-            } else {
+              */  return 'pubs';
+            /*} else {
                 return null;
-            }
+            }*/
 
     },
 
     render: function(subject, myDocument) { //Subject is source of doc, document is HTML doc element we are attaching elements to
 
+        function CustomEvents(){
+            this._events ={};
+        } 
+        CustomEvents.prototype.addEventListener = function(en,evt){
+            e= this._events;
+            e[en] = e[en]||[];
+            e[en].push(evt);
+        }
+        
+        //NAMESPACES
+        var foaf = tabulator.rdf.Namespace("http://xmlns.com/foaf/0.1/");
+        var rdf= tabulator.ns.rdf;
+        var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
+        var kb = tabulator.kb;
+        var sf = tabulator.sf;
+        var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
+        var Events = new CustomEvents();
+        var I =kb.sym( tabulator.preferences.get('me'));
+
+       
         //copied from social/pane.js
         function newElement(tag, p){
             x = myDocument.createElement(tag);
@@ -42,8 +62,16 @@ tabulator.panes.pubsPane = {
             w_bx.id = theWord;
         }
 
+        function myUpdate(msg, su, callback){
+            var batch = new tabulator.rdf.Statement(msg, dcterms('abstract'), I, kb.sym('http://dig.csail.mit.edu/2007/wiki/knappy'));
+            su.insert_statement(batch,
+                function(a, b, c){
+                    callback(a, b, c, batch);
+                }
+            );
+        }
     
-    
+        //////////////////////////////
         var pubsPane = myDocument.createElement('div');
         pubsPane.setAttribute('class', 'pubsPane');
         
@@ -67,6 +95,7 @@ tabulator.panes.pubsPane = {
         newFormRow(theForm, 'journal', 'input');
         newFormRow(theForm, 'URL', 'input');
         newFormRow(theForm, 'abstract', 'textarea');
+
         
 
         var r_submit = newElement('div', theForm);
@@ -74,6 +103,10 @@ tabulator.panes.pubsPane = {
         var b_submit = newElement('button', r_submit);
         b_submit.type = "button";
         b_submit.innerHTML = "Submit";
+        /*
+        theForm.addEventListener("submit", function(){
+            myUpdate(doc.getELementById("abstract").value,  sparqlUpdater);
+        }, false);*/
         
         return pubsPane;
     }

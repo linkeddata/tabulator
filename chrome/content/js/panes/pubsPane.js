@@ -76,9 +76,9 @@ tabulator.panes.pubsPane = {
         pubsPane.setAttribute('class', 'pubsPane');
         
 
-        /*var title_h1 = myDocument.createElement('h1');
+        var title_h1 = myDocument.createElement('h1');
         title_h1.appendChild(myDocument.createTextNode('Publications (Pubs) Pane'));
-        pubsPane.appendChild(title_h1);*/
+        pubsPane.appendChild(title_h1);
 
         var caption_h2 = myDocument.createElement('h2');
         caption_h2.appendChild(myDocument.createTextNode('Add your new publication'));
@@ -103,10 +103,10 @@ tabulator.panes.pubsPane = {
         var b_submit = newElement('button', r_submit);
         b_submit.type = "button";
         b_submit.innerHTML = "Submit";
-        /*
+        
         theForm.addEventListener("submit", function(){
             myUpdate(doc.getELementById("abstract").value,  sparqlUpdater);
-        }, false);*/
+        }, false);
         
         return pubsPane;
     }

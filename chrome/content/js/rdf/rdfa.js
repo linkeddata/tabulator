@@ -405,7 +405,7 @@ $rdf.RDFaParser = function (kb, docUri) {
             //triple = callback.call(triple, this.get(0), triple);
             //if (triple !== undefined && triple !== null) {
             //  triples = triples.concat(triple);
-            }
+            //}
           }
         }
         resource = getObjectResource(this, context);
@@ -415,7 +415,7 @@ $rdf.RDFaParser = function (kb, docUri) {
           //triple = callback.call(triple, this.get(0), triple);
           //if (triple !== undefined && triple !== null) {
           //  triples = triples.concat(triple);
-          }
+          //}
         }
         properties = resourcesFromCuries(atts.property, this, true, context.curieOptions);
         if (properties.length > 0) {
@@ -427,9 +427,9 @@ $rdf.RDFaParser = function (kb, docUri) {
             if (datatype.toString() === rdfXMLLiteral) {
               object = kb.literal(serialize(this), undefined, rdfXMLLiteralSym );
             } else if (content !== undefined) {
-              object = kb.literal(content, kb.sym(datatype) });
+              object = kb.literal(content, kb.sym(datatype));
             } else {
-              object = kb.literal(text, kb.sym(datatype) });
+              object = kb.literal(text, kb.sym(datatype));
             }
           } else if (content !== undefined) {
             if (lang === undefined) {
@@ -443,17 +443,13 @@ $rdf.RDFaParser = function (kb, docUri) {
             if (lang === undefined) {
               object = $.rdf.literal('"' + text + '"');
             } else {
-              object = $.rdf.literal(text, { lang: lang });
+              object = $.rdf.literal(text, undefined, lang);
             }
           } else {
-            object = $.rdf.literal(serialize(this), { datatype: rdfXMLLiteral });
+            object = $.rdf.literal(serialize(this), kb.sym(rdfXMLLiteral));
           }
           for (i = 0; i < properties.length; i += 1) {
             kb.add(subject, properties[i], object, why);
-            //triple = callback.call(triple, this.get(0), triple);
-            //if (triple !== undefined && triple !== null) {
-            //  triples = triples.concat(triple);
-            }
           }
         }
         rels = resourcesFromCuries(atts.rel, this, true, relCurieOptions);
@@ -463,14 +459,12 @@ $rdf.RDFaParser = function (kb, docUri) {
           if (rels !== undefined) {
             for (i = 0; i < rels.length; i += 1) {
               kb.add(subject, rels[i], resource, why);
-              }
             }
           }
           rels = [];
           if (revs !== undefined) {
             for (i = 0; i < revs.length; i += 1) {
               kb.add(resource, revs[i], subject, why);
-              }
             }
           }
           revs = [];

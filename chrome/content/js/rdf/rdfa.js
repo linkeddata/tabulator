@@ -7,7 +7,7 @@
  * Licensed under the MIT (MIT-LICENSE.txt)
  * 2010-06-11 Taken from http://code.google.com/p/rdfquery/source/checkout TBL
  * Callbacks for new triples removed -- should more logically be on the store
- * so as to 
+ * so as to make common for all sources
  *
  * Depends:
  *  uri.js

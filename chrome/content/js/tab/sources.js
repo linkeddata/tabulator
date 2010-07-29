@@ -138,7 +138,9 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 			            tabulator.log.info("GRDDL: No GRDDL profile in "+xhr.uri)
 		            }
 		        }
-                kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('WebPage'),sf.appNode);	
+                        kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('WebPage'),sf.appNode);
+                        // @@ Do RDFa here
+                        var p = $rdf.RDFaParser(kb, xhr.uri.uri);	
 		        cb()
 	        }
 	    }

@@ -27,6 +27,7 @@ loader.loadSubScript("chrome://tabulator/content/js/rdf/uri.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/term.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/match.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfparser.js");
+loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfa.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/n3parser.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/identity.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js");

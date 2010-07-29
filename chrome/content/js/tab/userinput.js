@@ -16,7 +16,7 @@ function UserInput(outline){
     var kb = tabulator.kb;
     
     var myDocument=outline.document; //is this ok?
-    //alert("myDocument when it's set is "+myDocument.location);
+    //prompts.alert("myDocument when it's set is "+myDocument.location);
     this.menuId='predicateMenu1';
 
     /* //namespace information, as a subgraph of the knowledge base, is built in showMenu
@@ -69,7 +69,7 @@ function UserInput(outline){
         var This=outline.UserInput;
         var target=tabulator.Util.getTarget(e);//Remark: have to use getTarget instead of 'this'
             
-        //alert(ancestor(target,'TABLE').textContent);    
+        //prompts.alert(ancestor(target,'TABLE').textContent);    
         var insertTr=myDocument.createElement('tr');
         tabulator.Util.ancestor(target,'DIV').insertBefore(insertTr,tabulator.Util.ancestor(target,'TR'));
         var tempTr=myDocument.createElement('tr');
@@ -144,7 +144,7 @@ function UserInput(outline){
             function theCollection(from){return kb.the(kb.sym(address),tabulator.ns.link(from));}
             var term=theCollection(fromCode).shift();
             if (term==null){
-                 alert("no more element in clipboard!");
+                 prompts.alert("no more element in clipboard!");
                  return;
             }
             switch (fromCode){
@@ -231,7 +231,7 @@ function UserInput(outline){
         tabulator.log.debug("entering literal Modification with "+selectedTd+selectedTd.textContent);
         //var This=outline.UserInput;
         if(selectedTd.className.indexOf(" pendingedit")!=-1) {
-            alert("The node you attempted to edit has a request still pending.\n"+
+            prompts.alert("The node you attempted to edit has a request still pending.\n"+
                   "Please wait for the request to finish (the text will turn black)\n"+
                   "before editing this node again.");
             return true;
@@ -244,7 +244,7 @@ function UserInput(outline){
             var obj = getTerm(target);
             var trNode=tabulator.Util.ancestor(target,'TR');
         }catch(e){
-            alert('userinput.js: '+e+tabulator.Util.getAbout(kb,selectedTd));
+            prompts.alert('userinput.js: '+e+tabulator.Util.getAbout(kb,selectedTd));
             tabulator.log.error(target+" getStatement Error:"+e);
         }
                 
@@ -339,17 +339,17 @@ function UserInput(outline){
                 var trCache=tabulator.Util.ancestor(this.lastModified,'TR');
                 try{updateService.insert_statement(s, function(uri,success,error_body){
                     if (!success){
-                        alert("Error occurs while inserting "+s+'\n\n'+error_body);
+                        prompts.alert("Error occurs while inserting "+s+'\n\n'+error_body);
                         outline.UserInput.deleteTriple(trCache.lastChild,true);
                     }                    
                 })}catch(e){
-                    alert("Error inserting fact "+s+':\n\t'+e);
+                    prompts.alert("Error inserting fact "+s+':\n\t'+e);
                     return;
                 }
                 s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
             }else{
                 if (this.statIsInverse){
-                    alert("Invalid Input: a literal can't be a subject in RDF/XML");
+                    prompts.alert("Invalid Input: a literal can't be a subject in RDF/XML");
                     this.backOut();
                     return;
                 }
@@ -367,13 +367,13 @@ function UserInput(outline){
                                 obj.value=valueCache;                                
                             }else{
                                 //obj.value=oldValue;
-                                alert("Error occurs while editing "+s+'\n\n'+error_body);
+                                prompts.alert("Error occurs while editing "+s+'\n\n'+error_body);
                                 trCache.lastChild.textContent=oldValue;
                             }
                             trCache.lastChild.className=trCache.lastChild.className.replace(/ pendingedit/g,"");                                   
                             },kb.literal(this.lastModified.value));                            
                         }catch(e){
-                             alert("Error occurs while editing "+s+':\n\t' + e);
+                             prompts.alert("Error occurs while editing "+s+':\n\t' + e);
                              return;
                         }
                         //obj.value=this.lastModified.value;
@@ -404,11 +404,11 @@ function UserInput(outline){
                                 try{updateService.insert_statement([s1,s2,s3], function(uri,success,error_body){
                                     if (!success){
                                         kb.remove(s2);kb.remove(s3);
-                                        alert("Error occurs while editing "+s1+'\n\n'+error_body);
+                                        prompts.alert("Error occurs while editing "+s1+'\n\n'+error_body);
                                         outline.UserInput.deleteTriple(trCache.lastChild,true);
                                     }
                                 })}catch(e){
-                                    alert("Error occurs while editing "+s1+':\n\t'+e);
+                                    prompts.alert("Error occurs while editing "+s1+':\n\t'+e);
                                     return;
                                 }
                                 kb.remove(s);
@@ -428,11 +428,11 @@ function UserInput(outline){
                             var trCache=tabulator.Util.ancestor(this.lastModified,'TR');
                             try{updateService.insert_statement(st, function(uri,success,error_body){
                                 if (!success){           
-                                    alert("Error occurs while inserting "+st+'\n\n'+error_body);
+                                    prompts.alert("Error occurs while inserting "+st+'\n\n'+error_body);
                                     outline.UserInput.deleteTriple(trCache.lastChild,true);
                                 }
                             })}catch(e){
-                                alert("You can not edit statement about this blank node object "+
+                                prompts.alert("You can not edit statement about this blank node object "+
                                       "becuase it is not identifiable. (Known Tabulator Issue)");
                                 return;
                             }
@@ -453,7 +453,7 @@ function UserInput(outline){
             //this why being the same as the previous statement
             this.lastModified=null;
             
-            //alert("test .isNew)");
+            //prompts.alert("test .isNew)");
             return;        
         }else if(s.predicate.termType=='collection'){
             kb.removeMany(s.subject);
@@ -495,7 +495,7 @@ function UserInput(outline){
 
         //allow a pending node to be deleted if it's a backout sent by SPARQL update callback
         if(!isBackOut&&selectedTd.className.indexOf(" pendingedit")!=-1) {
-            alert("The node you attempted to edit has a request still pending.\n"+
+            prompts.alert("The node you attempted to edit has a request still pending.\n"+
                   "Please wait for the request to finish (the text will turn black)\n"+
                   "before editing this node again.");
             outline.walk('up');
@@ -518,7 +518,7 @@ function UserInput(outline){
                 }
                 else{                
                     //removedTr.AJAR_statement=kb.add(s.subject,s.predicate,s.object,s.why);
-                    alert("Error occurs while deleting "+s+'\n\n'+error_body);
+                    prompts.alert("Error occurs while deleting "+s+'\n\n'+error_body);
                     selectedTd.className=selectedTd.className.replace(/ pendingedit/g,"");
                     /*
                     afterTr.parentNode.insertBefore(removedTr,afterTr);
@@ -540,7 +540,7 @@ function UserInput(outline){
                 selectedTd.className+=' pendingedit';
             }catch(e){
                 tabulator.log.error(e);
-                alert("Error deleting statement "+s+":\n\t"+e);
+                prompts.alert("Error deleting statement "+s+":\n\t"+e);
                 return;
             }
             
@@ -589,8 +589,8 @@ function UserInput(outline){
         kb.add(kb.sym(address),tabulator.ns.link('objects'),kb.collection())
         kb.add(kb.sym(address),tabulator.ns.link('predicates'),kb.collection())
         kb.add(kb.sym(address),tabulator.ns.link('all'),kb.collection())
-        //alert('clipboardInit');
-        //alert(kb instanceof RDFIndexedFormula); this returns false for some reason...
+        //prompts.alert('clipboardInit');
+        //prompts.alert(kb instanceof RDFIndexedFormula); this returns false for some reason...
     },
 
     copyToClipboard: function copyToClipboard(address,selectedTd){
@@ -656,12 +656,12 @@ function UserInput(outline){
                     
                 try{updateService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
                     if (!success){
-                        alert("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
+                        prompts.alert("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
                         outline.UserInput.deleteTriple(insertTr.lastChild,true);
                     }                    
                 })}catch(e){
                     tabulator.log.error(e);
-                    alert("Error trying to insert statement "+insertTr.AJAR_statement+": "+e);
+                    prompts.alert("Error trying to insert statement "+insertTr.AJAR_statement+": "+e);
                     outline.UserInput.deleteTriple(insertTr.lastChild,true);
                     return;
                 }            
@@ -902,7 +902,7 @@ function UserInput(outline){
                         newText+=String.fromCharCode(enterEvent.charCode)
                 }
             }
-            //alert(InputBox.choices.length);
+            //prompts.alert(InputBox.choices.length);
             //for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
             if (mode=='all') {
                 outline.UserInput.clearMenu();
@@ -1043,7 +1043,7 @@ function UserInput(outline){
 
     inputInformationAbout: function inputInformationAbout(selectedTd){
         if (selectedTd.nextSibling) return 'predicate';
-        var predicateTerm=this.getStatementAbout(selectedTd).predicate;
+        var predicateTerm = this.getStatementAbout(selectedTd).predicate;
         //var predicateTerm=selectedTd.parentNode.AJAR_statement.predicate; 
         if(kb.whether(predicateTerm,tabulator.ns.rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
            kb.whether(predicateTerm,tabulator.ns.rdfs('range'),tabulator.ns.rdfs('Literal'))||
@@ -1057,12 +1057,13 @@ function UserInput(outline){
      
     getStatementAbout: function getStatementAbout(something){
         //var trNode=something.parentNode;
-        var trNode=tabulator.Util.ancestor(something,'TR');
+        var trNode = tabulator.Util.ancestor(something,'TR');
+        if (!trNode) throw ("No ancestor TR for the TD we clicked on:" + something)
         try{
-            var statement=trNode.AJAR_statement;
+            var statement = trNode.AJAR_statement;
         }catch(e){
-            /*alert(something+something.textContent+" has ancestor "+trNode);
-            throw "TR not a statement TR";*/
+            throw ("No AJAR_statement!" + something+something.textContent+" has ancestor "+trNode); // was commented out @@
+            throw "TR not a statement TR"; // was commented out @@
             return;
         }
         //Set last modified here, I am not sure this will be ok.
@@ -1479,7 +1480,7 @@ function UserInput(outline){
                     for(var i=0;i<inputQuery.length;i++) kb.query(inputQuery[i],addPredicateChoice(inputQuery[i]),nullFetcher);
                     break;
                 case 'undefined':
-                    alert("query is not defined");
+                    throw ("addPredicateChoice: query is not defined");
                     break;
                 default:
                     kb.query(inputQuery,addPredicateChoice(inputQuery),nullFetcher);
@@ -1516,11 +1517,11 @@ function UserInput(outline){
                         newTd.className=newTd.className.replace(/ pendingedit/g,"")
                     }else{
                         outline.UserInput.deleteTriple(newTd,true);
-                        alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
+                        prompts.alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                     }
                 })}catch(e){
                     tabulator.log.error(e);
-                    alert("Errorwhen insert (#2) of statement "+s+':\n\t'+e);
+                    prompts.alert("Errorwhen insert (#2) of statement "+s+':\n\t'+e);
                     return;
                 }
               //</SPARQLUpdate>
@@ -1552,13 +1553,13 @@ function UserInput(outline){
                         tr.AJAR_statement=newStat;
                         newTd.className=newTd.className.replace(/ pendingedit/g,"");                                                
                     }else{
-                        alert("Error occurs while inserting "+s+'\n\n'+error_body);
+                        prompts.alert("Error occurs while inserting "+s+'\n\n'+error_body);
                         outline.UserInput.deleteTriple(newTd,true);
                     } 
                 })}catch(e){
                     tabulator.log.error(e);
                     outline.UserInput.deleteTriple(newTd,true);
-                    alert("Error trying to insert statement "+s+":\n"+e);
+                    prompts.alert("Error trying to insert statement "+s+":\n"+e);
                     return;
                 }
               //</SPARQLUpdate>
@@ -1590,8 +1591,8 @@ function UserInput(outline){
     /** ABANDONED APPROACH
     //determine whether the event happens at around the bottom border of the element
     aroundBorderBottom: function(event,element){
-        //alert(event.pageY);
-        //alert(findPos(element)[1]);
+        //prompts.alert(event.pageY);
+        //prompts.alert(findPos(element)[1]);
         var elementPageY=findPos(element)[1]+38; //I'll figure out what this 38 is...
         
         function findPos(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
@@ -1607,7 +1608,7 @@ function UserInput(outline){
         return [curleft,curtop];
         }
         
-        //alert(elementPageY+element.offsetHeight-event.pageY);
+        //prompts.alert(elementPageY+element.offsetHeight-event.pageY);
         //I'm totally confused by these numbers...
         if(event.pageY-4==elementPageY+element.offsetHeight||event.pageY-5==elementPageY+element.offsetHeight) 
             return true;

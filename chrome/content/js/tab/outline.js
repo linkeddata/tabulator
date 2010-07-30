@@ -835,7 +835,7 @@ tabulator.OutlineObject = function(doc) {
             //tr.showAllobj();
             /*DisplayOptions["display:block on"].setupHere(
                     [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
-                    "appendPropertyTRs()");*/ 
+                    "appendPropertyTRs()");*/
             tr.showNobj(10);
 
             /*if (HCIoptions["bottom insert highlights"].enabled){
@@ -847,7 +847,7 @@ tabulator.OutlineObject = function(doc) {
                 holdingTd.setAttribute('notSelectable','true');
                 bottomDiv.addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
                 bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
-                bottomDiv.addEventListener('click',thisOutline.UserInput.borderClick,false);
+                bottomDiv.addEventListener('click',thisOutline.UserInput.addNewPredicateObject,false);
                 parent.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
                 }*/
         
@@ -1072,6 +1072,10 @@ tabulator.OutlineObject = function(doc) {
         for each (var sourceRow in sourceWidget.sources)
             sourceRow.setAttribute('class', ''); //.class doesn't work. Be careful!
         for (var i=0;i<selection.length;i++){
+            if (!selection[i].parentNode) {
+                dump("showSource: EH? no parentNode? "+selection[i]+"\n");
+                continue;
+            }
             var st = selection[i].parentNode.AJAR_statement;
             if (!st) continue; //for root TD
             var source = st.why;
@@ -1080,6 +1084,10 @@ tabulator.OutlineObject = function(doc) {
             else if (isExtension && source.termType == 'bnode')
                 sourceWidget.highlight(kb.sym(tabulator.sourceURI), true);
         }
+    };
+    
+    this.getSelection = function getSelection() {
+        return selection;
     };
     
     function setSelected(node, newValue) {
@@ -1572,7 +1580,7 @@ tabulator.OutlineObject = function(doc) {
                     viewAndSaveQuery();
                 break;
             case tabulator.Icon.src.icon_add_triple:
-                var returnSignal=thisOutline.UserInput.addTriple(e);
+                var returnSignal=thisOutline.UserInput.addNewObject(e);
                 if (returnSignal){ //when expand signal returned
                     outline_expand(returnSignal[0],returnSignal[1],internalPane);
                     for (var trIterator=returnSignal[0].firstChild.childNodes[1].firstChild;
@@ -1590,7 +1598,7 @@ tabulator.OutlineObject = function(doc) {
                 return;
                 break;
             case tabulator.Icon.src.icon_add_new_triple:
-                thisOutline.UserInput.borderClick(e);
+                thisOutline.UserInput.addNewPredicateObject(e);
                 e.stopPropagation();
                 e.preventDefault();
                 return;
@@ -2195,7 +2203,7 @@ tabulator.OutlineObject = function(doc) {
     this.outline_expand=outline_expand;
     
     if(isExtension) {
-        dump('myDocument.getElementById("tabulator-display") = '+myDocument.getElementById("tabulator-display"));
+        // dump('myDocument.getElementById("tabulator-display") = '+myDocument.getElementById("tabulator-display")+"\n");
         window.addEventListener('unload',function() {
                 var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
                 tabStatusBar.label=="";

@@ -49,7 +49,7 @@ tabulator.panes.defaultPane = {
             var img = myDocument.createElement('img');
             img.src = tabulator.Icon.src.icon_add_new_triple;
             img.className='bottom-border-active'
-            //img.addEventListener('click', thisOutline.UserInput.borderClick,false);
+            //img.addEventListener('click', thisOutline.UserInput.addNewPredicateObject,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    

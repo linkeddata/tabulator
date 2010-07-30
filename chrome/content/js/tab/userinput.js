@@ -1,8 +1,10 @@
-//places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()->insertTermTo();
-//                                  undetermined statement generated formUndetStat()
-//                                                                 ->fillInRequest()
-
-/*ontological issues
+// Original author: kennyluck
+//
+// Kenny's Notes:
+/* places to generate SPARQL update: clearInputAndSave() pasteFromClipboard()->insertTermTo();
+                                  undetermined statement generated formUndetStat()
+                                                                 ->fillInRequest()
+   ontological issues
     temporarily using the tabont namespace
     clipboard: 'predicates' 'objects' 'all'(internal)
     request: 'from' 'to' 'message' 'Request'
@@ -132,7 +134,7 @@ function UserInput(outline){
     //  Called when a selected cell is clicked again
     Click: function Click(e){
         var target=tabulator.Util.getTarget(e);
-        if (getTerm(target).termType != 'literal') return;
+        if (tabulator.Util.getTerm(target).termType != 'literal') return;
         this.literalModification(target);
         //this prevents the generated inputbox to be clicked again
         e.preventDefault();
@@ -241,7 +243,7 @@ function UserInput(outline){
         var about = this.getStatementAbout(target); // timbl - to avoid alert from random clicks
         if (!about) return;
         try{
-            var obj = getTerm(target);
+            var obj = tabulator.Util.getTerm(target);
             var trNode=tabulator.Util.ancestor(target,'TR');
         }catch(e){
             prompts.alert('userinput.js: '+e+tabulator.Util.getAbout(kb,selectedTd));
@@ -570,8 +572,8 @@ function UserInput(outline){
             }
             removedTr.parentNode.removeChild(removedTr);
         }
-        else if (!DisplayOptions["display:block on"].enabled){
-            var predicateTd=trIterator.firstChild;
+        else if (true) { // !DisplayOptions["display:block on"].enabled){
+            var predicateTd = trIterator.firstChild;
             predicateTd.setAttribute('rowspan',parseInt(predicateTd.getAttribute('rowspan'))-1);
             removedTr.parentNode.removeChild(removedTr);
         }
@@ -616,7 +618,7 @@ function UserInput(outline){
         clip.setData(trans, null, clipid.kGlobalClipboard);
         */
         
-        var term=getTerm(selectedTd);
+        var term=tabulator.Util.getTerm(selectedTd);
         switch (selectedTd.className){
             case 'selected': //table header
             case 'obj selected':
@@ -1178,7 +1180,7 @@ function UserInput(outline){
         insertTr.style.colspan='1';
         insertTr.style.display='block';
         
-        if (!DisplayOptions["display:block on"].enabled){
+        if (true) { // !DisplayOptions["display:block on"].enabled){ // What was this option Kenny?
             insertTr.style.display='';
             if (predicateTd.hasAttribute('rowspan'))
                 predicateTd.setAttribute('rowspan',parseInt(predicateTd.getAttribute('rowspan'))+1);
@@ -1202,7 +1204,7 @@ function UserInput(outline){
         kb.copyTo(bnode,symbol,['two-direction','delete']);
     },
     
-    generateRequest: function generateRequest(tipText,trNew,isPredicate,notShow){
+    generateRequest: function generateRequest(tipText, trNew, isPredicate, notShow){
         var trNode;
         if(!notShow){
             if (trNew)
@@ -1220,7 +1222,7 @@ function UserInput(outline){
         //Agreed. Kenny wonders whether there is RDF/XML representation of a variable.
         //labelPriority[tabulator.ns.link('message').uri] = 20;
         
-        // We must get rid of this clutter in the stroe. "OK, will be stroed in a seperate formula to avoid bugs", Kenny says
+        // We must get rid of this clutter in the store. "OK, will be stroed in a seperate formula to avoid bugs", Kenny says
         var tp=TempFormula;
         var reqTerm=tp.bnode();
         tp.add(reqTerm,tabulator.ns.rdf('type'),tabulator.ns.link("Request"));
@@ -1235,11 +1237,11 @@ function UserInput(outline){
         if (!notShow){
             var newNode;
             if(isPredicate)
-                newNode=trNode.appendChild(outline.outline_predicateTD(reqTerm,trNode,false,false));
+                newNode = trNode.appendChild(outline.outline_predicateTD(reqTerm, trNode, false, false));
             else
-                newNode=trNode.appendChild(outline.outline_objectTD(reqTerm));
+                newNode = trNode.appendChild(outline.outline_objectTD(reqTerm));
             newNode.className='undetermined';
-            newNode.textContent=tipText;
+            newNode.textContent = tipText;
         }
         
         return reqTerm;
@@ -1517,11 +1519,13 @@ function UserInput(outline){
                         newTd.className=newTd.className.replace(/ pendingedit/g,"")
                     }else{
                         outline.UserInput.deleteTriple(newTd,true);
+                        // Warn the user that the write has failed.
                         prompts.alert("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                     }
                 })}catch(e){
                     tabulator.log.error(e);
-                    prompts.alert("Errorwhen insert (#2) of statement "+s+':\n\t'+e);
+                    // Warn the user that the write has failed.
+                    prompts.alert("Error when insert (#2) of statement "+s+':\n\t'+e);
                     return;
                 }
               //</SPARQLUpdate>

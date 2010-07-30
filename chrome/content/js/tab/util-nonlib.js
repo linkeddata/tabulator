@@ -140,7 +140,7 @@ tabulator.Util.getAbout = function(kb, target) {
         tabulator.log.debug("Level "+level + ' '+level.nodeType + ': '+level.tagName)
         aa = level.getAttribute('about')
         if (aa) {
-            tabulator.log.debug("kb.fromNT(aa) = " + kb.fromNT(aa));
+            // tabulator.log.debug("kb.fromNT(aa) = " + kb.fromNT(aa));
             return kb.fromNT(aa);
 //        } else {
 //            if (level.tagName=='TR') return undefined;//this is to prevent literals passing through

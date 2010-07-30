@@ -611,7 +611,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
           }
         */  
         this.fireCallbacks('request',args); //Kenny: fire 'request' callbacks here
-        dump( "Tabulator requesting uri: " + uri + "\n" );
+        // dump( "Tabulator requesting uri: " + uri + "\n" );
                 
 	    this.requested[docuri] = true
         

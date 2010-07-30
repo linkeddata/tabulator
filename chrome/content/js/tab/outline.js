@@ -378,7 +378,7 @@ tabulator.OutlineObject = function(doc) {
         
             
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, statement) {
-        tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
+        // tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
         var td = myDocument.createElement('td');
         var theClass = "obj";
                 
@@ -410,9 +410,9 @@ tabulator.OutlineObject = function(doc) {
                 tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));
         }
         td.setAttribute('class', theClass);      //this is how you find an object
-        tabulator.log.info('class on '+td)
+        // tabulator.log.info('class on '+td)
         var check = td.getAttribute('class')
-        tabulator.log.info('td has class:' + check)
+        // tabulator.log.info('td has class:' + check)
         tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
@@ -427,6 +427,7 @@ tabulator.OutlineObject = function(doc) {
 
         try{var DDtd = new YAHOO.util.DDExternalProxy(td);}
         catch(e){tabulator.log.error("YAHOO Drag and drop not supported:\n"+e);}
+        
         //set DOM methods
         td.tabulatorSelect = function (){setSelected(this,true);};
         td.tabulatorDeselect = function(){setSelected(this,false);};            
@@ -1034,6 +1035,19 @@ tabulator.OutlineObject = function(doc) {
             }
         }
     }
+    
+    this.statusBarClick = function(event) {
+        var target = tabulator.Util.getTarget(event);
+        dump("statusBarClick: label = "+target.label+"\n");
+        if (target.label) {
+            dump("statusBarClick: window location is "+window.location+"\n");
+            dump("statusBarClick: window.content.location is "+window.content.location+"\n");
+            window.content.location = target.label;
+            // var s = tabulator.kb.sym(target.label);
+            // tabulator.outline.GotoSubject(s, true);
+        }
+    };
+
     this.showURI = function showURI(about){
         if(about && myDocument.getElementById('UserURI')) { 
              myDocument.getElementById('UserURI').value = 
@@ -1044,11 +1058,14 @@ tabulator.OutlineObject = function(doc) {
              tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
              if(tabStatusBar.label=="") {
                  tabStatusBar.setAttribute('style','display:none');
+             } else {
+                 tabStatusBar.addEventListener('click', this.statusBarClick, false);
              }
          }    
     };
 
-    //show sources based on selection    
+
+
     this.showSource = function showSource(){
         //deselect all before going on, this is necessary because you would switch tab,
         //close tab or so on...
@@ -1131,7 +1148,9 @@ tabulator.OutlineObject = function(doc) {
     function deselectAll() {
         var i, n=selection.length
         for (i=n-1; i>=0; i--) setSelected(selection[i], false);
+        selection = [];
     }
+    
     /////////  Hiding
 
     this.AJAR_hideNext = function(event) {
@@ -1475,7 +1494,7 @@ tabulator.OutlineObject = function(doc) {
                 if (!st) return; // For example in the title TD of an expanded pane
                 var target = st.why;
                 var editable = outline.UserInput.updateService.editMethod(target, kb);
-                if (sel&editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
+                if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
                 // var text="TabulatorMouseDown@Outline()";
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
             }
@@ -2176,7 +2195,7 @@ tabulator.OutlineObject = function(doc) {
     this.outline_expand=outline_expand;
     
     if(isExtension) {
-        dump( myDocument.getElementById("tabulator-display"));
+        dump('myDocument.getElementById("tabulator-display") = '+myDocument.getElementById("tabulator-display"));
         window.addEventListener('unload',function() {
                 var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
                 tabStatusBar.label=="";

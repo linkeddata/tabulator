@@ -21,7 +21,10 @@ var sparql = function(store) {
     this.fps = {};
 }
 
+// Returns true or false if known, undefined if not known.
+//
 sparql.prototype.editable = function(uri, kb) {
+    // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
     var link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
     var httph = $rdf.Namespace("http://www.w3.org/2007/ont/httph#");
     var http = $rdf.Namespace("http://www.w3.org/2007/ont/http#");
@@ -29,19 +32,32 @@ sparql.prototype.editable = function(uri, kb) {
     if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
     var request = kb.any(kb.sym($rdf.Util.uri.docpart(uri)), link("request"));
     if (request !== undefined) {
-        var author_via = kb.each(request, httph("ms-author-via"));
-        if (author_via.length)
-            for (var i = 0; i < author_via.length; i++) {
-                if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
-                    return true;
+        var response = kb.any(request, link("response"));
+        if (request !== undefined) {
+            var author_via = kb.each(response, httph("ms-author-via"));
+            if (author_via.length) {
+                for (var i = 0; i < author_via.length; i++) {
+                    if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
+                        dump("sparql.prototype.editable: Success for "+uri+": "+author_via[i] +"\n");
+                        return true;
+                }
             }
-        var status = kb.each(request, http("status"));
-        if (status.length)
-            for (var i = 0; i < status.length; i++) {
-                if (status[i] == 200)
-                    return false;
+            var status = kb.each(response, http("status"));
+            if (status.length) {
+                for (var i = 0; i < status.length; i++) {
+                    if (status[i] == 200) {
+                        dump("sparql.prototype.editable: 200 status, not editable for "+uri+"\n");
+                        return false;
+                    }
+                }
             }
+        } else {
+            dump("sparql.prototype.editable: No response for "+uri+"\n");
+        }
+    } else {
+        dump("sparql.prototype.editable: No request for "+uri+"\n");
     }
+    dump("sparql.prototype.editable: inconclusive for "+uri+"\n");
 }
 
 ///////////  The identification of bnodes

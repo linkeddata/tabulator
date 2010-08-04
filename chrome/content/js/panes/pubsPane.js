@@ -32,6 +32,8 @@ tabulator.panes.pubsPane = {
         var foaf = tabulator.rdf.Namespace("http://xmlns.com/foaf/0.1/");
         var rdf= tabulator.ns.rdf;
         var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
+        var dcelems = tabulator.rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var soics = tabulator.rdf.Namespace('http://rdfs.org/sioc/spec/');
         var kb = tabulator.kb;
         var sf = tabulator.sf;
         var updateService = new updateCenter(kb);
@@ -75,18 +77,12 @@ tabulator.panes.pubsPane = {
             w_n.innerHTML = theWord.charAt(0).toUpperCase() + theWord.slice(1) + ': ';
             var w_bx = newElement(type, r_n);
             w_bx.id = theWord;
+            return w_bx;
         }
-/*
-    // Sparql Update Doesn't work :(
-  function myUpdate(msg, su, callback){
-            var batch = new tabulator.rdf.Statement(msg, dcterms('abstract'), <>, kb.sym('http://dig.csail.mit.edu/2007/wiki/knappy'));
-            su.insert_statement(batch,
-                function(a, b, c){
-                    callback(a, b, c, batch);
-                }
-            );
+        
+        function removeSpaces(str){
+            return str.split(' ').join('');
         }
-        */
 
 
     
@@ -103,7 +99,60 @@ tabulator.panes.pubsPane = {
         var theForm = newElement('form', pubsPane);
         theForm.id = "the_form_id";
 
-        newFormRow(theForm, 'title', 'input');
+        var title_input = newFormRow(theForm, 'title', 'input');
+        title_input.addEventListener("keypress", function(e){
+            dump("In title, 1 pressing a key \n");
+            if (e.keyCode == 13 ){
+                dump("In title, 2 Enter PRESSED\n");
+                
+                var returnFunc = function(uri, success, error){
+                  //  dump('In title, 4 in update Service \n');
+                    if (success){
+                        dump("In title, editing successful! :D\n");
+                    } else {
+                        dump("In title, Error when editing\n");
+                    }
+                };
+                var title_id = myDocument.getElementById("title");
+                var title_value = title_id.value;
+                var title_trim = removeSpaces(title_value);
+                
+                dump("trimmed = " + title_trim + "\n");
+                
+                /////////// TIM CHECK HERE ////////////
+                // README: Directions:
+                // 1. In any pubsPane's Title box, put in a title, say "Example Title 1"
+                // 2. Press enter
+                // 3. Navigate to the no-spaces-version of your title: http://dig.csail.mit.edu/2007/wiki/docs/ExampleTitle1
+                // 4. Want: B1 adds a "title" to this URI, B2 adds a "creator" Joe Lambda to this URI
+                //    Output: Running from console shows the dump of both B1 and B2 successful, 
+                //     BUT TITLE IS NOT ADDED FOR SOME REASON on the real page
+                
+                // B1. Make a URI directly for articles
+                
+                var uri_title = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('title'), title_value, kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
+                      
+                dump('B1 \n');
+                
+                updateService.insert_statement(uri_title, returnFunc);
+                
+                dump('DONE B1\n');
+                
+                
+                // B2. Testing inserting 2 things
+                
+                var uri2 = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('creator'), kb.sym('http://dig.csail.mit.edu/2007/wiki/people/JoeLambda#JL'), kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
+                
+                dump('B2\n');
+                
+                updateService.insert_statement(uri2, returnFunc);
+                
+                dump('DONE B2\n');
+                //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                
+            }
+        }, false);
+    
         newFormRow(theForm, 'year', 'input');
 
         // Co-author parts
@@ -169,7 +218,7 @@ tabulator.panes.pubsPane = {
         b_submit.innerHTML = "Submit";
         b_submit.className = "active";
         
-               
+        // See/Hide Button test       
         var c_submit = newElement('button', r_submit);
         c_submit.id = "cid";
         c_submit.type = "button";
@@ -196,13 +245,13 @@ tabulator.panes.pubsPane = {
         var me = me_uri? kb.sym(me_uri) : null;
         dump("IS THIS ME? " + me);
         
-        
+        // Testing stuff with b_submit
         b_submit.addEventListener("click", function(){
             dump('one: start\n');
-            var myst = new tabulator.rdf.Statement("<s>", "<p>", "<o>", kb.sym('http://dig.csail.mit.edu/2007/wiki/knappy'));
-            dump('two:' + myst + ' || before SU ||\n');
-            var kb = new $rdf.IndexedFormula();
-            kb.add(myst,
+            //var myst = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/people/JoeLambda'), foaf('made'), "This_is_a_test");
+            var myst = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/people/JoeLambda'), foaf('made'), "This_is_a_test", kb.sym('http://dig.csail.mit.edu/2007/wiki/people/JoeLambda'));
+            dump('two:' + myst + ' ||\n');
+            updateService.insert_statement(myst,
                 function(uri, success, error){
                     dump('three: in SU\n');
                     if (success){
@@ -214,6 +263,8 @@ tabulator.panes.pubsPane = {
             );
             dump('four: end\n');
         }, false);
+        
+        
         
         return pubsPane;
     }

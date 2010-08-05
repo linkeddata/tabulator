@@ -16,13 +16,14 @@ tabulator.panes.pubsPane = {
     label: function(subject) {  // Subject is the source of the document
         //criteria for display satisfied: return string that would be title for icon, else return null
         // only displays if it is a person, copied from social/pane.js
-       /* if (tabulator.kb.whether(
+        if (tabulator.kb.whether(
             subject, tabulator.ns.rdf('type'),
             tabulator.ns.foaf('Person'))){
-              */  return 'pubs';
-            /*} else {
+            dump("the subjet is: "+subject);
+                return 'pubs';
+            } else {
                 return null;
-            }*/
+            }
 
     },
 
@@ -85,6 +86,10 @@ tabulator.panes.pubsPane = {
         }
 
 
+        
+        function test3(){
+            dump("HELLO WORLD");
+        }
     
         // Building the HTML of the Pane, top to bottom ------------
         /// Titles
@@ -113,6 +118,7 @@ tabulator.panes.pubsPane = {
                         dump("In title, Error when editing\n");
                     }
                 };
+
                 var title_id = myDocument.getElementById("title");
                 var title_value = title_id.value;
                 var title_trim = removeSpaces(title_value);
@@ -125,11 +131,46 @@ tabulator.panes.pubsPane = {
                 // 2. Press enter
                 // 3. Navigate to the no-spaces-version of your title: http://dig.csail.mit.edu/2007/wiki/docs/ExampleTitle1
                 // 4. Want: B1 adds a "title" to this URI, B2 adds a "creator" Joe Lambda to this URI
-                //    Output: Running from console shows the dump of both B1 and B2 successful, 
-                //     BUT TITLE IS NOT ADDED FOR SOME REASON on the real page
+                //    Previous Error Output: Running from console shows the dump of both B1 and B2 successful, 
+                //     BUT TITLE IS NOT ADDED FOR SOME REASON on the real page.
+                //  Hypothesis: returnFunc cannot be called simultaneously, if it is isoltaed inside a setTimeout, it works
+                /*
+                
+                Current (correct) Dump Output
+                
+                    -----------------
+                    B1 
+                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo> <http://purl.org/dc/elements/1.1/title> "Whales Want Wails Two" .}, mode=INSERT
+                    It's SPARQL
+                    DONE B1
+                    B2
+                    DONE B2
+                    In title, editing successful! :D
+                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo> <http://purl.org/dc/elements/1.1/creator> <http://foaf.me/SchnappiFey#me> .}, mode=INSERT
+                    It's SPARQL
+                    In title, editing successful! :D
+                    Debugger() was called!
+                    -----------------
+                
+                ================
+                Dump Output in a failed (last commit) case, notice the output from returnFunc: "editing successful! :D" is displayed last 
+                
+                    ---------------------
+                    B1 
+                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails> <http://purl.org/dc/elements/1.1/title> "Whales Want Wails" .}, mode=INSERT
+                    DONE B1
+                    B2
+                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails> <http://purl.org/dc/elements/1.1/creator> <http://foaf.me/SchnappiFey#me> .}, mode=INSERT
+                    DONE B2
+                    In title, editing successful! :D
+                    In title, editing successful! :D
+                    ----------------------
+                    
+                
+                */
+                
                 
                 // B1. Make a URI directly for articles
-                
                 var uri_title = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('title'), title_value, kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
                       
                 dump('B1 \n');
@@ -138,17 +179,21 @@ tabulator.panes.pubsPane = {
                 
                 dump('DONE B1\n');
                 
+
                 
                 // B2. Testing inserting 2 things
                 
-                var uri2 = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('creator'), kb.sym('http://dig.csail.mit.edu/2007/wiki/people/JoeLambda#JL'), kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
+                var uri2 = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('creator'), subject, kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
                 
                 dump('B2\n');
                 
-                updateService.insert_statement(uri2, returnFunc);
+               //updateService.insert_statement(uri2, returnFunc);
+                setTimeout( function(){updateService.insert_statement(uri2, returnFunc);} , 3000);
                 
                 dump('DONE B2\n');
                 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                
+                
                 
             }
         }, false);

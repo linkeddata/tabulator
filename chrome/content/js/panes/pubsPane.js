@@ -1,4 +1,5 @@
 /*
+This commit: Use sparqlUpdater instead of updateService for insert_statement
     Summer 2010
     haoqili@mit.edu
     Partially copied from social/pane.js
@@ -38,7 +39,7 @@ tabulator.panes.pubsPane = {
         var kb = tabulator.kb;
         var sf = tabulator.sf;
         var updateService = new updateCenter(kb);
-        //var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
+        var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
        // var Events = new CustomEvents();
 //        var I =kb.sym( tabulator.preferences.get('me'));
 
@@ -84,12 +85,6 @@ tabulator.panes.pubsPane = {
         function removeSpaces(str){
             return str.split(' ').join('');
         }
-
-
-        
-        function test3(){
-            dump("HELLO WORLD");
-        }
     
         // Building the HTML of the Pane, top to bottom ------------
         /// Titles
@@ -125,104 +120,27 @@ tabulator.panes.pubsPane = {
                 
                 dump("trimmed = " + title_trim + "\n");
                 
-                /////////// TIM CHECK HERE ////////////
                 // README: Directions:
                 // 1. In any pubsPane's Title box, put in a title, say "Example Title 1"
                 // 2. Press enter
                 // 3. Navigate to the no-spaces-version of your title: http://dig.csail.mit.edu/2007/wiki/docs/ExampleTitle1
-                // 4. Want: B1 adds a "title" to this URI, B2 adds a "creator" Joe Lambda to this URI
-                //    Previous Error Output: Running from console shows the dump of both B1 and B2 successful, 
-                //     BUT TITLE IS NOT ADDED FOR SOME REASON on the real page.
-                //  Hypothesis: returnFunc cannot be called simultaneously, if it is isoltaed inside a setTimeout, it works
-                /*
-                
-                Current (correct) Dump Output
-                
-                    -----------------
-                    B1 
-                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo> <http://purl.org/dc/elements/1.1/title> "Whales Want Wails Two" .}, mode=INSERT
-                    It's SPARQL
-                    DONE B1
-                    B2
-                    DONE B2
-                    In title, editing successful! :D
-                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo> <http://purl.org/dc/elements/1.1/creator> <http://foaf.me/SchnappiFey#me> .}, mode=INSERT
-                    It's SPARQL
-                    In title, editing successful! :D
-                    Debugger() was called!
-                    -----------------
-                    
-                    In wiki-log/post_2010_08_05.log:
-                    
-                     78 ------------------------------------------------
-                     79 18.111.36.78 dig.csail.mit.edu - [05/Aug/2010:02:27:35 -0400] "POST /2007/wiki/docs/WhalesWantWailsTwo HTTP/1.1" "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.1.1) Gecko/20090715 Firefox/3.5.1"
-                     80 INSERT { <http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo> <http://purl.org/dc/elements/1.1/title> "Whales Want Wails Two"  . }
-                     81   -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-                     82 /afs/csail.mit.edu/group/dig/www/bin/algae -b 'http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo' -f /tmp/.sparql9me9XH --sClass rdfxml --dump-default >/tmp/.sparqlvf11xw 2>/tmp/.sparqlVS5U7k
-                     83 
-                     84 ------------------------------------------------
-                     85 18.111.36.78 dig.csail.mit.edu - [05/Aug/2010:02:27:38 -0400] "POST /2007/wiki/docs/WhalesWantWailsTwo HTTP/1.1" "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.1.1) Gecko/20090715 Firefox/3.5.1"
-                     86 INSERT { <http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo> <http://purl.org/dc/elements/1.1/creator> <http://foaf.me/SchnappiFey#me>  . }
-                     87   -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-                     88 /afs/csail.mit.edu/group/dig/www/bin/algae -b 'http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWailsTwo' -d /afs/csail.mit.edu/group/dig/www/wiki-data/docs/whaleswantwailstwo -f /tmp/.sparql1PvTMO --sClass rdfxml --dump-default >/tmp/.sparql0AJxUL 2>/tmp/.sparqlpAnc2I
-                                                       
-                
-                ================
-                Dump Output in a failed (last commit) case, notice the output from returnFunc: "editing successful! :D" is displayed last 
-                
-                    ---------------------
-                    B1 
-                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails> <http://purl.org/dc/elements/1.1/title> "Whales Want Wails" .}, mode=INSERT
-                    DONE B1
-                    B2
-                    mutate_statement: st = {<http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails> <http://purl.org/dc/elements/1.1/creator> <http://foaf.me/SchnappiFey#me> .}, mode=INSERT
-                    DONE B2
-                    In title, editing successful! :D
-                    In title, editing successful! :D
-                    ----------------------
-                    
-                     In wiki-log/post_2010_08_05.log:
-                     
-                      66 ------------------------------------------------ 
-                      67 18.111.36.78 dig.csail.mit.edu - [05/Aug/2010:02:22:17 -0400] "POST /2007/wiki/docs/WhalesWantWails HTTP/1.1" "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.1.1) Gecko/20090715 Firefox/3.5.1"
-                      68 INSERT { <http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails> <http://purl.org/dc/elements/1.1/title> "Whales Want Wails"  . } 
-                      69   -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-                      70 18.111.36.78 dig.csail.mit.edu - [05/Aug/2010:02:22:17 -0400] "POST /2007/wiki/docs/WhalesWantWails HTTP/1.1" "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.1.1) Gecko/20090715 Firefox/3.5.1" 
-                      71 INSERT { <http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails> <http://purl.org/dc/elements    /1.1/creator> <http://foaf.me/SchnappiFey#me>  . }
-                      72   -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-                      73 /afs/csail.mit.edu/group/dig/www/bin/algae -b 'http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails' -f /tmp/.sparql6A2Vj4 --sClass rdfxml --dump-default >/tmp/.sparqlnN8gpZ 2>/tmp/.sparqlwFHCuU
-                      74 
-                      75 ------------------------------------------------ 
-                      76 /afs/csail.mit.edu/group/dig/www/bin/algae -b 'http://dig.csail.mit.edu/2007/wiki/docs/WhalesWantWails' -f /tmp/.sparql5NObeJ --sClass rdfxml --dump-default >/tmp/.sparql1JYTjE 2>/tmp/.sparqlj9hCpz
-                    
-                
-                */
-                
+                // 4. B1 adds a "title" to this URI, B2 adds a "creator" Joe Lambda to this URI
+                          
                 
                 // B1. Make a URI directly for articles
                 var uri_title = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('title'), title_value, kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
-                      
-                dump('B1 \n');
-                
-                updateService.insert_statement(uri_title, returnFunc);
-                
-                dump('DONE B1\n');
-                
-
                 
                 // B2. Testing inserting 2 things
-                
                 var uri2 = new tabulator.rdf.Statement(kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim), dcelems('creator'), subject, kb.sym('http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim));
                 
-                dump('B2\n');
+                var totalst = [uri_title, uri2];
                 
-               //updateService.insert_statement(uri2, returnFunc);
-                setTimeout( function(){updateService.insert_statement(uri2, returnFunc);} , 3000);
+                dump('Start SU\n');
+                sparqlUpdater.insert_statement(totalst, returnFunc);
                 
-                dump('DONE B2\n');
+                dump('DONE SU\n');
                 //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-                
-                
+
                 
             }
         }, false);

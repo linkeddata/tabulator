@@ -157,8 +157,10 @@ sparql.prototype._fire = function(uri, query, callback) {
     var xhr = $rdf.Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {
+        dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
         if (xhr.readyState == 4) {
             var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+            dump("SPARQL update complete for <"+uri+"> status="+xhr.status+", text="+xhr.responseText+"\n");
             callback(uri, success, xhr.responseText);
         }
     }
@@ -171,7 +173,7 @@ sparql.prototype._fire = function(uri, query, callback) {
         }
     }
     
-    xhr.open('POST', uri);
+    xhr.open('POST', uri, true);  // async=true
     xhr.setRequestHeader('Content-type', 'application/sparql-query');
     xhr.send(query);
 }

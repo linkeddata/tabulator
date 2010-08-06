@@ -31,6 +31,7 @@ The default pane take little precedence, except the internals pane
 is lower as normally it is just for diagnostics.
 Also lower could be optional tools for various classes.
 */
+loader.loadSubScript("chrome://tabulator/content/js/panes/issue/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/n3Pane.js");

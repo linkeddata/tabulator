@@ -30,6 +30,7 @@ tabulator.panes.register( {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
         var WF = $rdf.Namespace("http://www.w3.org/2005/01/wf/flow#");
+        var DC = $rdf.Namespace("http://purl.org/dc/elements/1.1/");
     
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'issuePane');
@@ -61,6 +62,7 @@ tabulator.panes.register( {
             }
             var onChange = function(e) {
                 select.setAttribute('class', 'pending');
+                select.setAttribute('disabled','true');
             }
             if (n>0) {
                 var select = myDocument.createElement('select');
@@ -80,6 +82,35 @@ tabulator.panes.register( {
             return null;
         
         } // makeSelectForCategory
+        
+        // Too low level but takes multiple statements - should upgrade updateService
+        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+
+        // Claim the next sequential number
+        var usingNextID = function usingNextID(thing, kb, callback) {
+            var docuri = tabulator.rdf.Util.uri.docpart(thing.uri);
+            if (doc == object.uri) throw 'usingNextID - must have a hash in uri:'+thing.uri;
+            var sts = kb.statementsMatching(thing, tabulator.ns.link('nextID'));
+            if (sts.length == 0) {
+                sparqlService.insertStatement(new $rdf.Statement(
+                        thing, tabulator.ns.link('nextID'), 1,kb.sym(doc)),
+                        function(uri, success, body){
+                            if (!success) throw "Error setting first ID for "+thing;
+                })
+            } else {
+                var id = 0 + sts[0].object.value;
+                var updater = sparqlService.update_statement(sts[0]);
+                updater.setObject(id+1, function(uri, success, body){
+                    if (success) {
+                        callback(id);
+                    } else {
+                        dump("Failed to get new ID, asssume clash, retrying:"+body+"\n");
+                        usingNextID(thing, kb, callback);
+                    }
+                });
+            }
+        }
+        
 
         var plist = kb.statementsMatching(subject)
 
@@ -93,6 +124,26 @@ tabulator.panes.register( {
                         "http://www.w3.org/2000/01/rdf-schema#comment") return true;
                     return false
                 });
+
+            var types = kb.findTypeURIs(subject);
+
+
+            
+            var tracker = kb.any(subject, WF('tracker'));
+            if (!tracker) throw 'This issue has no tracker';
+            var states = kb.any(tracker, WF('issueClass'));
+            if (!states) throw 'This tracker has no issueClass';
+            var stateStore = kb.any(tracker, WF('stateStore'));
+            if (!stateStore) throw 'This tracker has no stateStore';
+            var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+            var select = makeSelectForCategory(states, types, false)
+            div.appendChild(select);
+            for (var i=0; i<cats.length; i++) {
+                div.appendChild(makeSelectForCategory(cats[i], types, false));
+            }
+
+
+
 
             // var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -134,26 +185,57 @@ tabulator.panes.register( {
         // Render a Tracker instance
         } else if (t["http://www.w3.org/2005/01/wf/flow#Tracker"]) {
             var p = myDocument.createElement("p");
-            var types = kb.findTypeURIs(subject);
             div.appendChild(p);
             p.innerHTML = "This is a Tracker @@";
             
             var states = kb.any(subject, WF('issueClass'));
             if (!states) throw 'This tracker has no issueClass';
+            var stateStore = kb.any(subject, WF('stateStore'));
+            if (!stateStore) throw 'This tracker has no stateStore';
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
-            
+
             var newIssueForm = function(e) {
-                var form = myDocument.createElement("form");
-                form.setAttribute('onsubmit', "function(){return false;}");
-                div.appendChild(form);
-                form.innerHTML = "<h2>Add new issue</h2><p>Title of new issue:<p>\
-                <input type='text' width='80' name='title'/>";
-                var select = makeSelectForCategory(states, types, false)
-                form.appendChild(select);
-                for (var i=0; i<cats.length; i++) {
-                    form.appendChild(makeSelectForCategory(cats[i], types, false));
+                var form = myDocument.createElement('form');
+                var sendNewIssue = function() {
+                    titlefield.setAttribute('class',"pendingedit");
+                    titlefield.setAttribute('disabled', 'true');
+                    sts = [];
+                    
+                    var issue = kb.sym(stateStore.uri + '#' + 'foobar'); //@@@@@@@@@@ !!
+
+                    var link = new $rdf.Statement(issue, WF('tracker'), subject, stateStore)
+                    sts.push(link);
+
+                    var title = kb.literal(titlefield.value);
+                    sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
+
+                    var initialState = kb.any(subject, WF('initialState'));
+                    if (!initialState) complain('This tracker has no initialState');
+                    sts.push(new $rdf.Statement(issue, WF('state'), initialState, stateStore))
+                    
+                    var sendComplete = function(uri, success, body) {
+                        if (!success) {
+                            dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
+                        } else {
+                            dump('Tabulator issue pane: saved new issue\n')
+                            div.removeChild(form);
+                            var plist = [ link ]; // Show the form
+                            tabulator.outline.appendPropertyTRs(div, plist, true,
+                                function(pred, inverse) {return true;});
+                        }
+                    }
+                    sparqlService.insert_statement(sts, sendComplete);
                 }
+                form.addEventListener('submit', sendNewIssue, false)
+                form.setAttribute('onsubmit', "function xx(){return false;}");
+                div.appendChild(form);
+                form.innerHTML = "<h2>Add new issue</h2><p>Title of new issue:<p>";
+                var titlefield = myDocument.createElement('input')
+                titlefield.setAttribute('type','text');
+                titlefield.setAttribute('size','100');
+                titlefield.setAttribute('maxLength','2048');// No arbitrary limits
+                form.appendChild(titlefield);
 
             }
             var b = myDocument.createElement("button");

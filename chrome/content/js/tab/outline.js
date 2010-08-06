@@ -1038,11 +1038,9 @@ tabulator.OutlineObject = function(doc) {
     
     this.statusBarClick = function(event) {
         var target = tabulator.Util.getTarget(event);
-        dump("statusBarClick: label = "+target.label+"\n");
         if (target.label) {
-            dump("statusBarClick: window location is "+window.location+"\n");
-            dump("statusBarClick: window.content.location is "+window.content.location+"\n");
             window.content.location = target.label;
+            // The following alternative does not work in the extension.
             // var s = tabulator.kb.sym(target.label);
             // tabulator.outline.GotoSubject(s, true);
         }
@@ -1125,12 +1123,6 @@ tabulator.OutlineObject = function(doc) {
                 termWidget.addIcon(node,tabulator.Icon.termWidgets.addTri); // Add blue plus
             }
             
-/*       was:     var source;
-            try{node.parentNode.AJAR_statement}catch(e){alert('setSelected: '+node.textContent)}
-            if (node.AJAR_statement) source = node.AJAR_statement.why
-            else if (node.parentNode.AJAR_statement) source = node.parentNode.AJAR_statement.why
- */
-            if (sourceWidget) thisOutline.showSource();
         } else {
             tabulator.log.debug("cla=$"+cla+"$")
             if (cla=='selected') cla=''; // for header <TD>
@@ -1142,13 +1134,9 @@ tabulator.OutlineObject = function(doc) {
             selection = selection.filter( function(x) { return x==node } );
 
             tabulator.log.info("Deselecting "+node.textContent);
-            tabulator.log.debug("cla=$"+cla+"$");
-            if (node.AJAR_statement) source=node.AJAR_statement.why;
-            else if (node.parentNode.AJAR_statement) source=node.parentNode.AJAR_statement.why;
-            
-            if (sourceWidget) thisOutline.showSource();
         }
-        tabulator.log.info("selection becomes " +selection.map(function(item){return item.textContent;}).join(", "));
+        if (sourceWidget) thisOutline.showSource(); // Update the data sources display
+        tabulator.log.info("selection becomes [" +selection.map(function(item){return item.textContent;}).join(", ")+"]");
         //tabulator.log.info("Setting className " + cla);
         node.setAttribute('class', cla)
     }

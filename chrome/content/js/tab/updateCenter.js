@@ -15,7 +15,11 @@ function updateCenter(kb){
         **      ?request httph:ms-author-via ?protocol}
         **                              => {?doc :editable true}.
         */
-        
+        if (doc.uri == undefined) {
+            dump("editMethod: Weird -- called with: "+doc+"\n");
+            return false;  // Not a symbol  - some other provenance
+        }
+        if (doc.uri.indexOf('#') >= 0) throw "Document URI for writing to can't have a # in it:"+doc;
         var request = kb.any(doc, tabulator.ns.link("request"));
         if (request !== undefined) {
             var response =  kb.any(request, tabulator.ns.link("response"));

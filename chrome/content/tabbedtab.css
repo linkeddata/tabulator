@@ -295,21 +295,60 @@ div.exceptionPane pre { background-color: #fee; }
     padding: 0;
 }
 
-.pubsRow {
-    padding: 1em;
+.pubsPane form {
+    padding-left: 1em;
+}
+
+.pubsRow,
+#r_coAuthor1, #r_coAuthor2, #r_coAuthor3,
+#r_journal, #r_book, #r_URL,
+#r_abstract {
+    margin: 0.5em 3em 0.5em 0em;
+    clear: both;
 }
 
 .pubsRow input,
-.pubsRow textarea {
+#r_coAuthor1 input, #r_coAuthor2 input, #r_coAuthor3 input,
+#r_journal input, #r_book input, #r_URL input,
+#abstract {
     float: right;
-    margin-right: 3em;
     width: 20em;
+    height: 1em;
 }
 
 .pubsRow button {
+    float: left;
+    height: 2em;
+    padding: 0.5em;
+    margin: 0.5em;
+}
+
+#r_coAuthor2.hideit, #r_coAuthor3.hideit,
+#r_journal.hideit, #r_book.hideit {
+    display: none;
+}
+
+#r_coAuthor2.active, #r_coAuthor3.active,
+#r_journal.active, #r_book.active {
+    display: true;
+}
+
+.submitRow {
     clear: both;
+    height: 5em;
+}
+
+.submitRow button {
     width: 7em;
-    height: 4em;
+    height: 100%;
+}
+
+#buttonid {
+    display: none;
+}
+
+#buttonid.active{
+    display: inline;
 }
 
 #abstract {

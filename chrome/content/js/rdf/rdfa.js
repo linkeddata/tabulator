@@ -45,7 +45,8 @@ $rdf.RDFaParser = function (kb, docUri) {
       xml: 'http://www.w3.org/XML/1998/namespace',
       xmlns: 'http://www.w3.org/2000/xmlns/'
     },
-
+    if (tabulator && tabulator.jq) $ = tabulator.jq;
+    
     rdfXMLLiteral = ns.rdf + 'XMLLiteral',
     rdfXMLLiteralSym = kb.sym(rdfXMLLiteral),
 

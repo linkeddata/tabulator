@@ -154,13 +154,14 @@ sparql.prototype._context_where = function(context) {
 
 sparql.prototype._fire = function(uri, query, callback) {
     if (!uri) throw "No URI given for remote editing operation: "+query;
+    dump("SPARQL update request for <"+uri+">\n   query="+query+"\n");
     var xhr = $rdf.Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {
-        dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
+        //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
         if (xhr.readyState == 4) {
             var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-            dump("SPARQL update complete for <"+uri+"> status="+xhr.status+", text="+xhr.responseText+"\n");
+            dump("SPARQL update complete for <"+uri+"> status="+xhr.status+", text.length="+xhr.responseText.length+"\n");
             callback(uri, success, xhr.responseText);
         }
     }
@@ -178,6 +179,10 @@ sparql.prototype._fire = function(uri, query, callback) {
     xhr.send(query);
 }
 
+// This does NOT update the statement.
+// It returns an object whcih includes
+//  function which can be used to change the object of the statement.
+//
 sparql.prototype.update_statement = function(statement) {
     if (statement && statement.why == undefined) return;
 

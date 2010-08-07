@@ -50,19 +50,79 @@ tabulator.panes.register( {
         } 
 
         // Make Select
-        var makeSelectForCategory = function(category, types, multiple) {
+        var makeSelectForCategory = function(subject, category, storeDoc) {
+            var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+            var types = kb.findTypeURIs(subject);
             var du = kb.any(category, OWL('disjointUnionOf'));
-            if (!du) throw 'select class has no disjoint union.'+category;
-            var subs = du.elements
+            var subs;
+            var multiple = false;
+            if (!du) {
+                // throw 'select class has no disjoint union.'+category;
+                subs = kb.each(undefined, ns.rdfs('subClassOf'), category);
+                multiple = true;
+            } else {
+                subs = du.elements            
+            }
             var n = 0; var uris ={}; // Count them
             for (var i=0; i < subs.length; i++) {
                 var sub = subs[i];
                 if (sub.uri in uris) continue;
                 uris[sub.uri] = true; n++;
-            }
+            } // uris is now the set of possible options
+            
             var onChange = function(e) {
-                select.setAttribute('class', 'pending');
-                select.setAttribute('disabled','true');
+                // select.setAttribute('class', 'pending');
+                select.disabled = true; // until data written back
+                if (multiple) {
+                    throw "Multiple selections not implemented @@";
+                    for (var i =0; i< select.options.length; i++) {
+                        var opt = select.options[i];
+                        var query = ""; // Build SPARQL update query
+                        if (opt.selected && !(opt.name in types)) {
+                            query += "INSERT {" + subject + ns.rdf('type')+'<'+opt.name+'>.'+"}\n"
+                        }
+                        if (!opt.selected && opt.name in types) {
+                            query += "DELETE {" + subject + ns.rdf('type')+'<'+opt.name+'>.'+"}\n"
+                        }
+                        sparqlService._fire(storeDoc.uri, query, function(u,s,b) {
+                            select.disabled = false; // data written back
+                            // @@@@ Must also update the kb and reset 'types' for next time
+                        });
+                        
+                    }
+                } else {
+                    dump('@@ select :'+select.selectedIndex+"; "+select.options[select.selectedIndex].AJAR_uri+'\n');
+                    var newObject = kb.sym(select.options[select.selectedIndex].AJAR_uri);
+                    if (select.oldURI) { // Change existing class
+                        var sts = kb.statementsMatching(
+                            subject, ns.rdf('type'), kb.sym(select.oldURI), storeDoc);
+                        if (sts.length != 1) throw ("Ooops should be one statement not "+sts.length);
+                        var updater = sparqlService.update_statement(sts[0]);
+                        updater.setObject(newObject,
+                            function() {
+                                kb.remove(subject, ns.rdf('type'), kb.sym(select.oldURI), storeDoc);
+                                kb.add(subject, ns.rdf('type'), newObject, storeDoc);
+                                types = kb.findTypeURIs(subject); // Review our list of types
+                                select.oldURI = newObject.uri;
+                                select.disabled = false; // data written back
+                            })
+                    } else {  // add new class
+                        sparqlService.insert_statement(
+                            new $rdf.Statement(subject, ns.rdf('type'), newObject, storeDoc),
+                            function(uri, success, body){
+                                dump('@@ select return:'+ uri+"; "+success+'\n');
+                                if (success) {
+                                    kb.add(subject, ns.rdf('type'), newObject, storeDoc);
+                                    select.disabled = false; // data written back
+                                    select.oldURI = newObject.uri;
+
+                                } else {
+                                    dump("makeSelectForCategory: Error setting new option:"+body+"\n");
+                                }
+                        })
+                    
+                    }
+                }
             }
             if (n>0) {
                 var select = myDocument.createElement('select');
@@ -72,9 +132,10 @@ tabulator.panes.register( {
                 for (var uri in uris) {
                     var option = myDocument.createElement('option');
                     option.appendChild(myDocument.createTextNode(tabulator.Util.label(kb.sym(uri))));
-                    option.setAttribute('name', uri);
+                    option.AJAR_uri = uri;
                     if (uri in types) option.setAttribute('selected', 'true')
                     select.appendChild(option);
+                    select.oldURI = uri;
                 }
                 select.addEventListener('change', onChange, false)
                 return select;
@@ -86,7 +147,7 @@ tabulator.panes.register( {
         // Too low level but takes multiple statements - should upgrade updateService
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
-        // Claim the next sequential number
+        // Claim the next sequential number -- unused?
         var usingNextID = function usingNextID(thing, kb, callback) {
             var docuri = tabulator.rdf.Util.uri.docpart(thing.uri);
             if (doc == object.uri) throw 'usingNextID - must have a hash in uri:'+thing.uri;
@@ -136,47 +197,12 @@ tabulator.panes.register( {
             var stateStore = kb.any(tracker, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
             var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-            var select = makeSelectForCategory(states, types, false)
+            var select = makeSelectForCategory(subject, states, stateStore)
             div.appendChild(select);
             for (var i=0; i<cats.length; i++) {
-                div.appendChild(makeSelectForCategory(cats[i], types, false));
+                div.appendChild(makeSelectForCategory(subject, cats[i], stateStore));
             }
 
-
-
-
-            // var qlist = kb.statementsMatching(undefined, undefined, subject)
-
-            // Find out whether we can write anywhere or this is just a view operation
-            /*
-            var pad = null;   // Where are we writing things?
-            var sts = kb.statementsMatching(subject, ns.rdf('type'));
-            for (var i=0; i<sts.length; i++) {
-                var editable = tabulator.outline.UserInput.updateService.editMethod(
-                    sts[i].why, kb);
-                if (!editable) continue;
-                pad = sts[i].why; // Found an editable file
-            }
-            
-            // Read state, or set to New if there is none.
-            var state = kb.any(subject, WF('state'));
-            var p = myDocument.createElement("p");
-            div.appendChild(p);
-            p.appendChild(myDocument.createTextNode('State: '));
-
-            if (state) {
-                p.appendChild(myDocument.createTextNode(tabulator.lb.label(state)));
-            } else {
-                tabulator.outline.UserInput.updateService.insert_statement(
-                    new $rdf.Statement(subject, WF('state'), WF('New'), pad),
-                    function(uri, success, body) {
-                        p.appendChild(myDocument.createTextNode('New *'))
-                    dump("issue pane: Done create a state for "+subject+"\n");
-
-                    });
-                dump("issue pane: Had to create a state for "+subject+"\n");
-            }
-            */
 
 
 
@@ -192,6 +218,7 @@ tabulator.panes.register( {
             if (!states) throw 'This tracker has no issueClass';
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
+            tabulator.sf.requestURI(stateStore.uri, subject, false); // Pull in issues
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
 
@@ -199,10 +226,13 @@ tabulator.panes.register( {
                 var form = myDocument.createElement('form');
                 var sendNewIssue = function() {
                     titlefield.setAttribute('class',"pendingedit");
-                    titlefield.setAttribute('disabled', 'true');
+                    titlefield.disabled = true;
                     sts = [];
                     
-                    var issue = kb.sym(stateStore.uri + '#' + 'foobar'); //@@@@@@@@@@ !!
+                    var now = new Date();
+                    var timestamp = ''+ now.getTime();
+                    // http://www.w3schools.com/jsref/jsref_obj_date.asp
+                    var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestamp);
 
                     var link = new $rdf.Statement(issue, WF('tracker'), subject, stateStore)
                     sts.push(link);
@@ -210,15 +240,20 @@ tabulator.panes.register( {
                     var title = kb.literal(titlefield.value);
                     sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
 
+                    sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
+
                     var initialState = kb.any(subject, WF('initialState'));
                     if (!initialState) complain('This tracker has no initialState');
-                    sts.push(new $rdf.Statement(issue, WF('state'), initialState, stateStore))
+                    sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialState, stateStore))
                     
                     var sendComplete = function(uri, success, body) {
                         if (!success) {
                             dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                         } else {
                             dump('Tabulator issue pane: saved new issue\n')
+                            for (var i=0; i< sts.length; i++) {
+                                kb.add(sts[i].subject, sts[i].predicate, sts[i].object, sts[i].why);
+                            }
                             div.removeChild(form);
                             var plist = [ link ]; // Show the form
                             tabulator.outline.appendPropertyTRs(div, plist, true,

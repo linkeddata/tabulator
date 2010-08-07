@@ -618,7 +618,22 @@ tabulator.OutlineObject = function(doc) {
 //            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
                 if (typeof tabulator == 'undefined') alert('tabulator undefined')
-                var paneDiv = tr1.firstPane.render(subject, myDocument, jq);
+                var paneDiv;
+                try {
+                    paneDiv = tr1.firstPane.render(subject, myDocument, jq);
+                }
+                catch(e) { // Easier debugging for pane developers
+                    paneDiv = myDocument.createElement("div")
+                    paneDiv.setAttribute('class', 'exceptionPane');
+                    var pre = myDocument.createElement("pre")
+                    paneDiv.appendChild(pre);
+                    pre.appendChild(myDocument.createTextNode(tabulator.Util.stackString(e)));
+                }
+
+
+
+
+
                 if (tr1.firstPane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');
                 table.appendChild(paneDiv);
                 paneDiv.pane = tr1.firstPane;

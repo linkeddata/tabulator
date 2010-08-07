@@ -195,7 +195,7 @@ tabulator.panes.register( {
             var table = null;
             
             var makeSelectForSubs = function(subs, multiple) {
-                var n = 0; uris ={};
+                var n = 0; var uris ={}; // Count them
                 for (var i=0; i < subs.length; i++) {
                     var sub = subs[i];
                     if (sub.uri in uris) continue;
@@ -203,7 +203,8 @@ tabulator.panes.register( {
                 }
                 if (n>0) {
                     var select = myDocument.createElement('select');
-                    if (multiple) select.setAttribute('multiple', 'true'); //@@ Later, check whether classes are disjoint.
+                    if (multiple) select.setAttribute('multiple', 'true');
+                    //@@ Later, check whether classes are disjoint.
                     select.innerHTML = "<option>-- classify --</option>";
                     for (var uri in uris) {
                         var option = myDocument.createElement('option');

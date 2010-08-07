@@ -49,7 +49,7 @@ tabulator.panes.register( {
             p.appendChild(myDocument.createTextNode('Error: '+message));
         } 
 
-        // Make Select
+        // Make SELECT tag
         var makeSelectForCategory = function(subject, category, storeDoc) {
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             var types = kb.findTypeURIs(subject);
@@ -73,67 +73,40 @@ tabulator.panes.register( {
             var onChange = function(e) {
                 // select.setAttribute('class', 'pending');
                 select.disabled = true; // until data written back
-                if (multiple) {
-                    throw "Multiple selections not implemented @@";
+                if (true) {
+                    // throw "Multiple selections not implemented @@";
+                    var ds = [];
+                    var is = [];
                     for (var i =0; i< select.options.length; i++) {
                         var opt = select.options[i];
-                        var query = ""; // Build SPARQL update query
-                        if (opt.selected && !(opt.name in types)) {
-                            query += "INSERT {" + subject + ns.rdf('type')+'<'+opt.name+'>.'+"}\n"
+                        if (!opt.AJAR_uri) continue; // a prompt
+                        // dump('   option AJAR_uri='+opt.AJAR_uri+', selected='+opt.selected+'\n')
+                        if (opt.selected && !(opt.AJAR_uri in types)) {
+                            is.push(new $rdf.Statement(subject,
+                                ns.rdf('type'), kb.sym(opt.AJAR_uri),storeDoc ));
                         }
-                        if (!opt.selected && opt.name in types) {
-                            query += "DELETE {" + subject + ns.rdf('type')+'<'+opt.name+'>.'+"}\n"
-                        }
-                        sparqlService._fire(storeDoc.uri, query, function(u,s,b) {
-                            select.disabled = false; // data written back
-                            // @@@@ Must also update the kb and reset 'types' for next time
+                        if (!opt.selected && opt.AJAR_uri in types) {
+                            ds.push(new $rdf.Statement(subject,
+                                ns.rdf('type'), kb.sym(opt.AJAR_uri),storeDoc ));
+                        }                        
+                    }
+                    sparqlService.update(ds, is,
+                        function(uri, success, body) {
+                            types = kb.findTypeURIs(subject); // Review our list of types
+                            if (success) select.disabled = false; // data written back
+                            else dump("makeSelectForCategory: Error writing back:"+body+"\n");    
                         });
-                        
-                    }
-                } else {
-                    dump('@@ select :'+select.selectedIndex+"; "+select.options[select.selectedIndex].AJAR_uri+'\n');
-                    var newObject = kb.sym(select.options[select.selectedIndex].AJAR_uri);
-                    if (select.oldURI) { // Change existing class
-                        var sts = kb.statementsMatching(
-                            subject, ns.rdf('type'), kb.sym(select.oldURI), storeDoc);
-                        if (sts.length != 1) {
-                            throw("Ooops should be one statement not "+sts.length+"\n");
-                        }
-                        var updater = sparqlService.update_statement(sts[0]);
-                        updater.set_object(newObject,
-                            function() {
-                                kb.remove(sts[0]);
-                                kb.add(subject, ns.rdf('type'), newObject, storeDoc);
-                                types = kb.findTypeURIs(subject); // Review our list of types
-                                select.oldURI = newObject.uri;
-                                select.disabled = false; // data written back
-                            })
-                    } else {  // add new class
-                        sparqlService.insert_statement(
-                            new $rdf.Statement(subject, ns.rdf('type'), newObject, storeDoc),
-                            function(uri, success, body){
-                                dump('@@ select return:'+ uri+"; "+success+'\n');
-                                if (success) {
-                                    kb.add(subject, ns.rdf('type'), newObject, storeDoc);
-                                    select.disabled = false; // data written back
-                                    select.oldURI = newObject.uri;
-
-                                } else {
-                                    dump("makeSelectForCategory: Error setting new option:"+body+"\n");
-                                }
-                        })
-                    
-                    }
                 }
             }
             if (n>0) {
                 var select = myDocument.createElement('select');
                 if (multiple) select.setAttribute('multiple', 'true');
-                //@@ Later, check whether classes are disjoint.
-                select.innerHTML = "<option>-- classify --</option>";
                 for (var uri in uris) {
+                    var c = kb.sym(uri)
                     var option = myDocument.createElement('option');
-                    option.appendChild(myDocument.createTextNode(tabulator.Util.label(kb.sym(uri))));
+                    option.appendChild(myDocument.createTextNode(tabulator.Util.label(c)));
+                    var style = kb.any(c, kb.sym("http://www.w3.org/ns/ui#style"))
+                    if (style) option.firstChild.setAttribute('style', style.value)
                     option.AJAR_uri = uri;
                     if (uri in types) {
                         option.setAttribute('selected', 'true')
@@ -141,12 +114,59 @@ tabulator.panes.register( {
                     }
                     select.appendChild(option);
                 }
+                if (select.oldURI && !multiple) {
+                    var prompt = myDocument.createElement('option');
+                    prompt.appendChild(myDocument.createTextNode("--classify--"));
+                    select.insertBefore(prompt, select.firstChild)
+                }
                 select.addEventListener('change', onChange, false)
                 return select;
             }
             return null;
         
         } // makeSelectForCategory
+        
+        
+        
+        // Make a box to demand a description or display existing one
+        var makeDescription = function(myDocument, subject, storeDoc) {
+            var group = myDocument.createElement('div');
+            var sts = kb.statementsMatching(subject, WF('description')); // Only one please
+            var desc = sts? sts[0].object.value : "";
+            var field = myDocument.createElement('textarea');
+            group.appendChild(field);
+            field.rows = 10;
+            field.cols = 80;
+            field.setAttribute('style', "border: 0.1em; padding: 2em; left-margin: 3em;")
+            if (desc) field.value = desc;
+            else field.select(); // Select it ready for user input
+            var submit = null; // No submit button yet
+            var groupSubmit = function(e) {
+                submit.disabled = true;
+                field.disabled = true;
+                if (desc) { // Update
+                    
+                } else { // Add new
+                
+                }
+            }
+            var fieldChange = function fieldChange(e) {
+                if (!submit) {
+                    var br = myDocument.createElement('br');
+                    group.appendChild(br);
+                    submit = myDocument.createElement('input');
+                    submit.setAttribute('type', 'submit');
+                    group.appendChild(submit);
+                    submit.addEventListener('click', groupSubmit, false)
+                }
+            }
+            select.addEventListener('change', fieldChange, false);
+        }
+        
+        
+        
+        
+        
         
         // Too low level but takes multiple statements - should upgrade updateService
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
@@ -181,7 +201,8 @@ tabulator.panes.register( {
 
         var t = kb.findTypeURIs(subject);
 
-        // Render a single issue
+        //              Render a single issue
+        
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
             tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
@@ -195,11 +216,12 @@ tabulator.panes.register( {
 
             
             var tracker = kb.any(subject, WF('tracker'));
-            if (!tracker) throw 'This issue has no tracker';
+            if (!tracker) throw 'This issue '+subject+'has no tracker';
             var states = kb.any(tracker, WF('issueClass'));
-            if (!states) throw 'This tracker has no issueClass';
+            if (!states) throw 'This tracker '+tracker+' has no issueClass';
             var stateStore = kb.any(tracker, WF('stateStore'));
-            if (!stateStore) throw 'This tracker has no stateStore';
+            if (!stateStore) throw 'This tracker '+tracker+' has no stateStore';
+
             var cats = kb.each(tracker, WF('issueCategory')); // zero or more
             var select = makeSelectForCategory(subject, states, stateStore)
             div.appendChild(select);

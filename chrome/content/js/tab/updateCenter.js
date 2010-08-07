@@ -41,6 +41,28 @@ function updateCenter(kb){
         return false;        
     },
 
+    // This high-level function should be all you need.
+    // It updates the local store iff the web is changed successfully. 
+    //
+    //  - doc is the document on the web in which the changes will be made
+    //  - deletions, insertions may be single statements or lists or formulae.
+    //  - callback is called as callback(uri, success, errorbody)
+    //
+    update: function(doc, deletions, insertions, callback) {
+        var ds =  deletions instanceof $rdf.IndexedFormula ? deletions.statements
+                     : deletions instanceof Array ? deletions : [ deletions ];
+        var is =  insertions instanceof $rdf.IndexedFormula ? insertions.statements
+                     : insertions instanceof Array ? insertions : [ deletions ];
+        var protocol = this.editMethod(doc);
+        if (!protocol) throw "Can't make changes in uneditable "+doc;
+        if (protocol.indexOf('SPARQL') >=0) {
+        
+        } else if (protocol.indexOf('WEBDAV') >=0) {
+        
+        } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
+    },
+
+    
     //!! sts = [statement, new object]
     update_statement: function update_statement(st, callback, newObject) {
         this._mutate_statement(st, callback, 'UPDATE', newObject);
@@ -67,7 +89,7 @@ function updateCenter(kb){
                         var temp = sparqlService.update_statement(st);
                         temp.set_object(newObject, callback);
                     }
-                }catch(e){throw e;}
+                }catch(e){throw 'Error performing SPARQL operation in _mutateStatement: '+e;}
                 break;
             // Updating the whole document isn't as slick but often WEBDAV will be all that is available.
             case 'DAV':
@@ -106,11 +128,11 @@ function updateCenter(kb){
                         case 'application/rdf+xml': 
                             documentString = sz.statementsToXML(newSts);
                             break;
-                        case 'text/rdf+n3':
+                        case 'text/rdf+n3': // Legacy
                         case 'text/n3':
                         case 'text/turtle':
-                        case 'application/x-turtle':
-                        case 'application/n3': //I saw this on a SIMILE page, should we support?
+                        case 'application/x-turtle': // Legacy
+                        case 'application/n3': // Legacy
                             documentString = sz.statementsToN3(newSts);
                             break;
                         default:

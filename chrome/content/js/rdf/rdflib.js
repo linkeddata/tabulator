@@ -5462,6 +5462,7 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 }
 // Joe Presbrey <presbrey@mit.edu>
 // 2007-07-15
+// 2010-08-08 TimBL folded in Kenny's WEBDAV 
 
 $rdf.sparqlUpdate = function() {
 
@@ -5483,7 +5484,7 @@ var sparql = function(store) {
     this.fps = {};
 }
 
-// Returns true or false if known, undefined if not known.
+// Returns The method string SPARQL or WEBDAV or false if known, undefined if not known.
 //
 sparql.prototype.editable = function(uri, kb) {
     // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
@@ -5501,7 +5502,7 @@ sparql.prototype.editable = function(uri, kb) {
                 for (var i = 0; i < author_via.length; i++) {
                     if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
                         dump("sparql.prototype.editable: Success for "+uri+": "+author_via[i] +"\n");
-                        return true;
+                        return author_via[i].value;
                 }
             }
             var status = kb.each(response, http("status"));
@@ -5526,6 +5527,16 @@ sparql.prototype.editable = function(uri, kb) {
 
 sparql.prototype._statement_bnodes = function(st) {
     return [st.subject, st.predicate, st.object].filter(function(x){return x.isBlank});
+}
+
+sparql.prototype._statement_array_bnodes = function(sts) {
+    var bnodes = [];
+    for (var i=0; i<sts.length;i++) bnodes = bnodes.concat(this._statement_bnodes(sts[i]));
+    bnodes.sort(); // in place sort - result may have duplicates
+    bnodes2 = [];
+    for (var j=0; j<bnodes.length; j++)
+        if (j==0 || !bnodes[j].sameTermAs(bnodes[j-1])) bnodes2.push(bnodes[j]);
+    return bnodes2;
 }
 
 sparql.prototype._cache_ifps = function() {
@@ -5589,8 +5600,7 @@ sparql.prototype._bnode_context = function(x, source) {
     throw ('Unable to uniquely identify bnode: '+ x.toNT());
 }
 
-sparql.prototype._statement_context = function(st) {
-    var bnodes = this._statement_bnodes(st);
+sparql.prototype._bnode_context = function(bnodes) {
     var context = [];
     if (bnodes.length) {
         if (this.store.statementsMatching(st.subject.isBlank?undefined:st.subject,
@@ -5606,6 +5616,11 @@ sparql.prototype._statement_context = function(st) {
         }
     }
     return context;
+}
+
+sparql.prototype._statement_context = function(st) {
+    var bnodes = this._statement_bnodes(st);
+    return this._bnode_context(bnodes);
 }
 
 sparql.prototype._context_where = function(context) {
@@ -5696,6 +5711,124 @@ sparql.prototype.delete_statement = function(st, callback) {
     
     this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
 }
+
+// This high-level function updates the local store iff the web is changed successfully. 
+//
+//  - deletions, insertions may be undefined or single statements or lists or formulae.
+//
+//  - callback is called as callback(uri, success, errorbody)
+//
+sparql.prototype.update = function(deletions, insertions, callback) {
+    dump('Update deletions:'+deletions.length+' insertions:'+insertions.length+'\n')
+    var ds =  deletions == undefined ? []
+                : deletions instanceof $rdf.IndexedFormula ? deletions.statements
+                : deletions instanceof Array ? deletions : [ deletions ];
+    var is =  insertions == undefined? []
+                : insertions instanceof $rdf.IndexedFormula ? insertions.statements
+                : insertions instanceof Array ? insertions : [ deletions ];
+    var doc = ds ? ds[0].why : is[0].why;
+    dump('Update to '+doc+'\n'+ds.length+', insert: '+is.length+'\n')
+    var protocol = this.editable(doc.uri);
+    if (!protocol) throw "Can't make changes in uneditable "+doc;
+
+    var updateLocally = function(kb) {
+        for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
+        for (var i=0; i<is.length;i++)
+            kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
+    }
+    dump('Update protocol '+protocol+'\n')
+
+    if (protocol.indexOf('SPARQL') >=0) {
+        var bnodes = []
+        if (ds) bnodes = this._statement_array_bnodes(ds);
+        if (is) bnodes = bnodes.concat(this._statement_array_bnodes(is));
+        var context = this._bnode_context(bnodes);
+        query = this._context_where(context);
+        if (ds) {
+            query += "DELETE { ";
+            for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
+            query += " }\n";
+        }
+        if (is) {
+            query += "INSERT { ";
+            for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
+            query += " }\n";
+        }
+
+        dump('Update query: '+query+'\n')
+        var mykb = tabulator.kb;
+        this._fire(doc.uri, query,
+            function(uri, success, body) {
+                if (success) {
+                    for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
+                    for (var i=0; i<is.length;i++)
+                        mykb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                }
+                callback(uri, success, body);
+            });
+        
+    } else if (protocol.indexOf('WEBDAV') >=0) {
+
+        // The code below is derived from Kenny's UpdateCenter.js
+        var documentString;
+        var request = kb.any(doc, tabulator.ns.link("request"));
+        if (!request) throw "No record of our HTTP GET request for document: "+doc; //should not happen
+        var response =  kb.any(request, tabulator.ns.link("response"));
+        if (!response)  return null; // throw "No record HTTP GET response for document: "+doc;
+        var content_type = kb.the(response, tabulator.ns.httph("content-type")).value;            
+
+        //prepare contents of revised document
+        var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
+        for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
+        for (var i=0;i<ds.length;i++) RDFArrayRemove(newSts, ds[i]);
+        
+        //serialize to te appropriate format
+        var sz = $rdf.Serializer();
+        sz.suggestNamespaces(kb.namespaces);
+        sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
+        switch(content_type){
+            case 'application/rdf+xml': 
+                documentString = sz.statementsToXML(newSts);
+                break;
+            case 'text/rdf+n3': // Legacy
+            case 'text/n3':
+            case 'text/turtle':
+            case 'application/x-turtle': // Legacy
+            case 'application/n3': // Legacy
+                documentString = sz.statementsToN3(newSts);
+                break;
+            default:
+                throw "Content-type "+content_type +" not supported for data write";                                                                            
+        }
+        
+        // Write the new version back
+        var candidateTarget = kb.the(response, tabulator.ns.httph("content-location"));
+        if (candidateTarget) targetURI = Util.uri.join(candidateTarget.value, targetURI);
+        var xhr = Util.XMLHTTPFactory();
+        xhr.onreadystatechange = function (){
+            if (xhr.readyState == 4){
+                //formula from sparqlUpdate.js, what about redirects?
+                var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+                if (success) {
+                    for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
+                    for (var i=0; i<is.length;i++)
+                        kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
+                }
+                // updateLocally(kb);
+                callback(doc.uri, success, xhr.responseText);
+            }
+        };
+        xhr.open('PUT', targetURI, true);
+        //assume the server does PUT content-negotiation.
+        xhr.setRequestHeader('Content-type', content_type);//OK?
+        xhr.send(documentString);
+        // tabulator.log.info("sending "+sts+"["+documentString+"] to +"+targetURI);
+
+    
+    } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
+};
+
+
 
 return sparql;
 

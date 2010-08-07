@@ -96,11 +96,13 @@ tabulator.panes.register( {
                     if (select.oldURI) { // Change existing class
                         var sts = kb.statementsMatching(
                             subject, ns.rdf('type'), kb.sym(select.oldURI), storeDoc);
-                        if (sts.length != 1) throw ("Ooops should be one statement not "+sts.length);
+                        if (sts.length != 1) {
+                            throw("Ooops should be one statement not "+sts.length+"\n");
+                        }
                         var updater = sparqlService.update_statement(sts[0]);
-                        updater.setObject(newObject,
+                        updater.set_object(newObject,
                             function() {
-                                kb.remove(subject, ns.rdf('type'), kb.sym(select.oldURI), storeDoc);
+                                kb.remove(sts[0]);
                                 kb.add(subject, ns.rdf('type'), newObject, storeDoc);
                                 types = kb.findTypeURIs(subject); // Review our list of types
                                 select.oldURI = newObject.uri;
@@ -133,9 +135,11 @@ tabulator.panes.register( {
                     var option = myDocument.createElement('option');
                     option.appendChild(myDocument.createTextNode(tabulator.Util.label(kb.sym(uri))));
                     option.AJAR_uri = uri;
-                    if (uri in types) option.setAttribute('selected', 'true')
+                    if (uri in types) {
+                        option.setAttribute('selected', 'true')
+                        select.oldURI = uri;
+                    }
                     select.appendChild(option);
-                    select.oldURI = uri;
                 }
                 select.addEventListener('change', onChange, false)
                 return select;
@@ -161,7 +165,7 @@ tabulator.panes.register( {
             } else {
                 var id = 0 + sts[0].object.value;
                 var updater = sparqlService.update_statement(sts[0]);
-                updater.setObject(id+1, function(uri, success, body){
+                updater.set_object(id+1, function(uri, success, body){
                     if (success) {
                         callback(id);
                     } else {

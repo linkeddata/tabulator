@@ -1478,6 +1478,8 @@ $rdf.RDFaParser = function (kb, docUri) {
 //   docResource   (relies on database-wide document base)
 ////////////////////////////////////////////////////
 
+  //if ($ == undefined && tabulator && tabulator.jq) $ = tabulator.jq; // not sure hot this is upposed to be wired - tbl
+
   var
     ns = {
       rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
@@ -1485,7 +1487,6 @@ $rdf.RDFaParser = function (kb, docUri) {
       xml: 'http://www.w3.org/XML/1998/namespace',
       xmlns: 'http://www.w3.org/2000/xmlns/'
     },
-    if (tabulator && tabulator.jq) $ = tabulator.jq;
     
     rdfXMLLiteral = ns.rdf + 'XMLLiteral',
     rdfXMLLiteralSym = kb.sym(rdfXMLLiteral),

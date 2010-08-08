@@ -126,51 +126,58 @@ tabulator.panes.register( {
         
         } // makeSelectForCategory
         
-        
-        
+        //      Description text area
+        //
         // Make a box to demand a description or display existing one
-        var makeDescription = function(myDocument, subject, storeDoc) {
+        var makeDescription = function(myDocument, subject, predicate, storeDoc) {
             var group = myDocument.createElement('div');
-            var sts = kb.statementsMatching(subject, WF('description')); // Only one please
-            var desc = sts? sts[0].object.value : "";
+            var sts = kb.statementsMatching(subject, predicate); // Only one please
+            if (sts.length > 1) throw "Should not be more than one description of "+subject;
+            var desc = sts.length? sts[0].object.value : "";
             var field = myDocument.createElement('textarea');
             group.appendChild(field);
             field.rows = 10;
             field.cols = 80;
-            field.setAttribute('style', "border: 0.1em; padding: 2em; left-margin: 3em;")
-            if (desc) field.value = desc;
-            else field.select(); // Select it ready for user input
-            var submit = null; // No submit button yet
+            field.setAttribute('style', "background-color: white; border: 0.07em solid gray; padding: 1em; margin: 1em 2em;")
+            if (sts.length) field.value = desc 
+            else {
+                field.value = "Please enter a description here"
+                field.select(); // Select it ready for user input
+            }
+
+            var br = myDocument.createElement('br');
+            group.appendChild(br);
+            submit = myDocument.createElement('input');
+            submit.setAttribute('type', 'submit');
+            submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
+            group.appendChild(submit);
+
             var groupSubmit = function(e) {
                 submit.disabled = true;
                 field.disabled = true;
-                if (desc) { // Update
-                    
-                } else { // Add new
-                
-                }
+                var deletions = desc ? sts[0] : undefined; // If there was a desciption, remove it
+                insertions = new $rdf.Statement(subject, predicate, field.value, storeDoc);
+                sparqlService.update(deletions, insertions,function(uri,ok, body){
+                    if(ok) submit.disabled = field.disabled = false;
+                })
             }
-            var fieldChange = function fieldChange(e) {
-                if (!submit) {
-                    var br = myDocument.createElement('br');
-                    group.appendChild(br);
-                    submit = myDocument.createElement('input');
-                    submit.setAttribute('type', 'submit');
-                    group.appendChild(submit);
-                    submit.addEventListener('click', groupSubmit, false)
-                }
-            }
-            select.addEventListener('change', fieldChange, false);
+
+            submit.addEventListener('click', groupSubmit, false)
+
+            field.addEventListener('change', function(e) {
+                    submit.disabled = false;
+                }, false);
+            return group;
         }
         
         
-        
+ // //////////////////////////////////////////////////////////////////////////////       
         
         
         
         // Too low level but takes multiple statements - should upgrade updateService
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
-
+/*
         // Claim the next sequential number -- unused?
         var usingNextID = function usingNextID(thing, kb, callback) {
             var docuri = tabulator.rdf.Util.uri.docpart(thing.uri);
@@ -195,7 +202,7 @@ tabulator.panes.register( {
                 });
             }
         }
-        
+*/        
 
         var plist = kb.statementsMatching(subject)
 
@@ -204,12 +211,6 @@ tabulator.panes.register( {
         //              Render a single issue
         
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
-            tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {
-                    if (!inverse && pred.uri == 
-                        "http://www.w3.org/2000/01/rdf-schema#comment") return true;
-                    return false
-                });
 
             var types = kb.findTypeURIs(subject);
 
@@ -228,9 +229,24 @@ tabulator.panes.register( {
             for (var i=0; i<cats.length; i++) {
                 div.appendChild(makeSelectForCategory(subject, cats[i], stateStore));
             }
+            
+            div.appendChild(makeDescription(myDocument, subject, WF('description'), stateStore));
 
+            // Add in comments about the bug
+            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    if (!inverse && pred.uri == 
+                        "http://www.w3.org/2000/01/rdf-schema#comment") return true;
+                    return false
+                });
 
+            div.appendChild(myDocument.createElement('br'));
+            var a = myDocument.createElement('a');
+            a.setAttribute('href',tracker.uri);
+            div.appendChild(a);
+            a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
 
+            
 
 
 
@@ -284,6 +300,7 @@ tabulator.panes.register( {
                             var plist = [ link ]; // Show the form
                             tabulator.outline.appendPropertyTRs(div, plist, true,
                                 function(pred, inverse) {return true;});
+                            // @@ open it up automatically
                         }
                     }
                     sparqlService.insert_statement(sts, sendComplete);
@@ -299,6 +316,17 @@ tabulator.panes.register( {
                 form.appendChild(titlefield);
 
             }
+
+            var h = myDocument.createElement('h2');
+            h.setAttribute('style', 'font-size: 150%');
+            div.appendChild(h);
+            h.appendChild(myDocument.createTextNode(tabulator.Util.label(states))); // Use class label
+
+            // Make crude list of issues
+            var plist = kb.statementsMatching(undefined, WF('tracker'), subject);
+            tabulator.outline.appendPropertyTRs(div, plist, true,
+                function(pred, inverse) {return true;});
+            
             var b = myDocument.createElement("button");
             b.setAttribute("type", "button");
             div.appendChild(b)
@@ -307,30 +335,8 @@ tabulator.panes.register( {
             
             // @@ TBD
 
-        }
+        } // end of Tracker instance
 
-
-
-        // tabulator.outline.appendPropertyTRs(div, plist, true, tabulator.panes.defaultPane.filter)
-        /*
-        if ((subject.termType == 'symbol' && 
-             outline.UserInput.updateService.editMethod(kb.sym(tabulator.rdf.Util.uri.docpart(subject.uri)), kb))
-             || (subject.termType == 'bnode' && kb.anyStatementMatching(subject) &&
-             outline.UserInput.updateService.editMethod(kb.anyStatementMatching(subject).why)
-                //check the document containing something about of the bnode @@ what about as object?
-             )) {
-            var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
-            var holdingTd = myDocument.createElement('td'); //in userinput.js
-            holdingTd.setAttribute('colspan','2');
-            holdingTd.setAttribute('notSelectable','true');
-            var img = myDocument.createElement('img');
-            img.src = tabulator.Icon.src.icon_add_new_triple;
-            img.className='bottom-border-active'
-            //img.addEventListener('click', thisOutline.UserInput.addNewPredicateObject,false);
-            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
-        }
-        */       
-         
         return div;
     }
 }, true);

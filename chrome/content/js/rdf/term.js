@@ -30,6 +30,7 @@ $rdf.Symbol.prototype.toNT = $rdf.Symbol.prototype.toString;
 
 //  Some precalculated symbols
 $rdf.Symbol.prototype.XSDboolean = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#boolean');
+$rdf.Symbol.prototype.XSDdateTime = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#dateTime');
 $rdf.Symbol.prototype.integer = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#integer');
 
 //	Blank Node
@@ -118,6 +119,24 @@ $rdf.Collection.prototype.close = function () {
     this.closed = true
 }
 
+
+//      Convert Javascript representation to RDF term object
+//
+$rdf.term = function(val) {
+    if (typeof val == 'object')
+        if (val instanceof Date) return new $rdf.Literal(
+            ''+val.getUTCFullYear()+'-'+(val.getUTCMonth()+1)+'-'+val.getUTCDate()+
+            'T'+val.getUTCHours()+':'+val.getUTCMinutes()+':'+val.getUTCSeconds()+'Z',
+            undefined, $rdf.Symbol.prototype.XSDdateTime);
+        else return val;
+    if (typeof val == 'string') return new $rdf.Literal(val);
+    if (typeof val == 'number') return new $rdf.Literal(val); // @@ differet types
+    if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
+                                                       $rdf.Symbol.prototype.XSDboolean);
+    if (typeof val == 'undefined') return undefined;
+    throw ("Can't make term from " + val + " of type " + typeof val);
+}
+
 //	Statement
 //
 //  This is a triple with an optional reason.
@@ -126,22 +145,9 @@ $rdf.Collection.prototype.close = function () {
 //
 
 $rdf.Statement = function(subject, predicate, object, why) {
-
-//takes in an object and makes it an object if it's a literal
-    var makeTerm = function makeTerm(val) {
-        //  $rdf.log.debug("Making term from " + val)
-        if (typeof val == 'object') return val;
-        if (typeof val == 'string') return new $rdf.Literal(val);
-        if (typeof val == 'number') return new $rdf.Literal(val); // @@ differet types
-        if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
-                                                           $rdf.Symbol.prototype.XSDboolean);
-        if (typeof val == 'undefined') return undefined;
-        alert("Can't make term from " + val + " of type " + typeof val);
-    }
-
-    this.subject = makeTerm(subject)
-    this.predicate = makeTerm(predicate)
-    this.object = makeTerm(object)
+    this.subject = $rdf.term(subject)
+    this.predicate = $rdf.term(predicate)
+    this.object = $rdf.term(object)
     if (typeof why !='undefined') {
         this.why = why;
     }

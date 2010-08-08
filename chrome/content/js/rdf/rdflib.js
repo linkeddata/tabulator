@@ -445,6 +445,7 @@ $rdf.Symbol.prototype.toNT = $rdf.Symbol.prototype.toString;
 
 //  Some precalculated symbols
 $rdf.Symbol.prototype.XSDboolean = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#boolean');
+$rdf.Symbol.prototype.XSDdateTime = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#dateTime');
 $rdf.Symbol.prototype.integer = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#integer');
 
 //	Blank Node
@@ -533,6 +534,24 @@ $rdf.Collection.prototype.close = function () {
     this.closed = true
 }
 
+
+//      Convert Javascript representation to RDF term object
+//
+$rdf.term = function(val) {
+    if (typeof val == 'object')
+        if (val instanceof Date) return new $rdf.Literal(
+            ''+val.getUTCFullYear()+'-'+(val.getUTCMonth()+1)+'-'+val.getUTCDate()+
+            'T'+val.getUTCHours()+':'+val.getUTCMinutes()+':'+val.getUTCSeconds()+'Z',
+            undefined, $rdf.Symbol.prototype.XSDdateTime);
+        else return val;
+    if (typeof val == 'string') return new $rdf.Literal(val);
+    if (typeof val == 'number') return new $rdf.Literal(val); // @@ differet types
+    if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
+                                                       $rdf.Symbol.prototype.XSDboolean);
+    if (typeof val == 'undefined') return undefined;
+    throw ("Can't make term from " + val + " of type " + typeof val);
+}
+
 //	Statement
 //
 //  This is a triple with an optional reason.
@@ -541,22 +560,9 @@ $rdf.Collection.prototype.close = function () {
 //
 
 $rdf.Statement = function(subject, predicate, object, why) {
-
-//takes in an object and makes it an object if it's a literal
-    var makeTerm = function makeTerm(val) {
-        //  $rdf.log.debug("Making term from " + val)
-        if (typeof val == 'object') return val;
-        if (typeof val == 'string') return new $rdf.Literal(val);
-        if (typeof val == 'number') return new $rdf.Literal(val); // @@ differet types
-        if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
-                                                           $rdf.Symbol.prototype.XSDboolean);
-        if (typeof val == 'undefined') return undefined;
-        alert("Can't make term from " + val + " of type " + typeof val);
-    }
-
-    this.subject = makeTerm(subject)
-    this.predicate = makeTerm(predicate)
-    this.object = makeTerm(object)
+    this.subject = $rdf.term(subject)
+    this.predicate = $rdf.term(predicate)
+    this.object = $rdf.term(object)
     if (typeof why !='undefined') {
         this.why = why;
     }
@@ -5501,7 +5507,7 @@ sparql.prototype.editable = function(uri, kb) {
             if (author_via.length) {
                 for (var i = 0; i < author_via.length; i++) {
                     if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
-                        dump("sparql.prototype.editable: Success for "+uri+": "+author_via[i] +"\n");
+                        dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
                         return author_via[i].value;
                 }
             }
@@ -5509,18 +5515,18 @@ sparql.prototype.editable = function(uri, kb) {
             if (status.length) {
                 for (var i = 0; i < status.length; i++) {
                     if (status[i] == 200) {
-                        dump("sparql.prototype.editable: 200 status, not editable for "+uri+"\n");
+                        dump("sparql.editable: 200 status, not editable for "+uri+"\n");
                         return false;
                     }
                 }
             }
         } else {
-            dump("sparql.prototype.editable: No response for "+uri+"\n");
+            dump("sparql.editable: No response for "+uri+"\n");
         }
     } else {
-        dump("sparql.prototype.editable: No request for "+uri+"\n");
+        dump("sparql.editable: No request for "+uri+"\n");
     }
-    dump("sparql.prototype.editable: inconclusive for "+uri+"\n");
+    dump("sparql.editable: inconclusive for "+uri+"\n");
 }
 
 ///////////  The identification of bnodes
@@ -5631,14 +5637,14 @@ sparql.prototype._context_where = function(context) {
 
 sparql.prototype._fire = function(uri, query, callback) {
     if (!uri) throw "No URI given for remote editing operation: "+query;
-    dump("SPARQL update request for <"+uri+">\n   query="+query+"\n");
+    dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
     var xhr = $rdf.Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {
         //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
         if (xhr.readyState == 4) {
             var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-            dump("SPARQL update complete for <"+uri+"> status="+xhr.status+", text.length="+xhr.responseText.length+"\n");
+            dump("sparql: update complete for <"+uri+"> status="+xhr.status+", text.length="+xhr.responseText.length+"\n");
             callback(uri, success, xhr.responseText);
         }
     }
@@ -5719,43 +5725,35 @@ sparql.prototype.delete_statement = function(st, callback) {
 //  - callback is called as callback(uri, success, errorbody)
 //
 sparql.prototype.update = function(deletions, insertions, callback) {
-    dump('Update deletions:'+deletions.length+' insertions:'+insertions.length+'\n')
     var ds =  deletions == undefined ? []
                 : deletions instanceof $rdf.IndexedFormula ? deletions.statements
                 : deletions instanceof Array ? deletions : [ deletions ];
     var is =  insertions == undefined? []
                 : insertions instanceof $rdf.IndexedFormula ? insertions.statements
-                : insertions instanceof Array ? insertions : [ deletions ];
-    var doc = ds ? ds[0].why : is[0].why;
-    dump('Update to '+doc+'\n'+ds.length+', insert: '+is.length+'\n')
+                : insertions instanceof Array ? insertions : [ insertions ];
+    if (! (ds instanceof Array)) throw "Type Error "+(typeof ds)+": "+ds;
+    if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
+    var doc = ds.length ? ds[0].why : is[0].why;
+
     var protocol = this.editable(doc.uri);
     if (!protocol) throw "Can't make changes in uneditable "+doc;
 
-    var updateLocally = function(kb) {
-        for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
-        for (var i=0; i<is.length;i++)
-            kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
-    }
-    dump('Update protocol '+protocol+'\n')
-
     if (protocol.indexOf('SPARQL') >=0) {
         var bnodes = []
-        if (ds) bnodes = this._statement_array_bnodes(ds);
-        if (is) bnodes = bnodes.concat(this._statement_array_bnodes(is));
+        if (ds.length) bnodes = this._statement_array_bnodes(ds);
+        if (is.length) bnodes = bnodes.concat(this._statement_array_bnodes(is));
         var context = this._bnode_context(bnodes);
         query = this._context_where(context);
-        if (ds) {
+        if (ds.length) {
             query += "DELETE { ";
             for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
             query += " }\n";
         }
-        if (is) {
+        if (is.length) {
             query += "INSERT { ";
             for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
             query += " }\n";
         }
-
-        dump('Update query: '+query+'\n')
         var mykb = tabulator.kb;
         this._fire(doc.uri, query,
             function(uri, success, body) {
@@ -5814,7 +5812,6 @@ sparql.prototype.update = function(deletions, insertions, callback) {
                     for (var i=0; i<is.length;i++)
                         kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
                 }
-                // updateLocally(kb);
                 callback(doc.uri, success, xhr.responseText);
             }
         };

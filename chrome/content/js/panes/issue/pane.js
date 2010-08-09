@@ -287,8 +287,8 @@ tabulator.panes.register( {
 
                     var title = kb.literal(titlefield.value);
                     sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
-
                     sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
+                    sts.push($rdf.st(issue, DC('created'), new Date()));
 
                     var initialState = kb.any(subject, WF('initialState'));
                     if (!initialState) complain('This tracker has no initialState');

@@ -174,6 +174,10 @@ $rdf.Statement = function(subject, predicate, object, why) {
     return this;
 }
 
+$rdf.st= function(subject, predicate, object, why) {
+    return new $rdf.Statement(subject, predicate, object, why);
+};
+
 $rdf.Statement.prototype.toNT = function() {
     return (this.subject.toNT() + " "
             + this.predicate.toNT() + " "

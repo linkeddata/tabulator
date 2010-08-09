@@ -1,3 +1,9 @@
+//  Tag Pane
+//
+//   Pane for adding semantics to the sort of tags you tag a photo with.
+//
+// Written by: albert08, 2009
+//
      
     tagPane = {};
     tagPane.icon = tabulator.Icon.src.icon_tagPane;
@@ -56,7 +62,7 @@
         // Display the current semantics of the tag
         tagPane.render.DisplaySemantics = function() {
             sem_div.innerHTML = "";
-            var sem_sts = kb.each(subject, OWL("sameAs"), undefined, stWhy);
+            var sem_sts = kb.each(subject, OWL("sameAs"), undefined, stWhy); //  @@@ This will fail as tabulator does smushing - tim
             var bold1 = myDocument.createElement("b");
             if (sem_sts.length == 0) {
                 bold1.appendChild(myDocument.createTextNode("No owl:sameAs property found."));

@@ -589,6 +589,10 @@ $rdf.Statement = function(subject, predicate, object, why) {
     return this;
 }
 
+$rdf.st= function(subject, predicate, object, why) {
+    return new $rdf.Statement(subject, predicate, object, why);
+};
+
 $rdf.Statement.prototype.toNT = function() {
     return (this.subject.toNT() + " "
             + this.predicate.toNT() + " "
@@ -5666,14 +5670,15 @@ sparql.prototype._context_where = function(context) {
 
 sparql.prototype._fire = function(uri, query, callback) {
     if (!uri) throw "No URI given for remote editing operation: "+query;
-    dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+    // dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
     var xhr = $rdf.Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {
         //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
         if (xhr.readyState == 4) {
             var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-            dump("sparql: update complete for <"+uri+"> status="+xhr.status+", text.length="+xhr.responseText.length+"\n");
+            if (!success) dump("sparql: update failed for <"+uri+"> status="+
+                xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
             callback(uri, success, xhr.responseText);
         }
     }

@@ -2,6 +2,11 @@
 **
 **  This outline pane allows a user to interact with an issue,
 to change its state according to an ontology, comment on it, etc.
+**
+**
+** As an experiment, I am using in places single quotes strings like 'this'
+** where internationalizatio ("i18n") is not a problem, and double quoted
+** like "this" where th string is seen by the user and so I18n is an issue.
 */
 
     
@@ -19,8 +24,8 @@ tabulator.panes.register( {
     label: function(subject) {
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
-        if (t["http://www.w3.org/2005/01/wf/flow#Task"]) return "issue";
-        if (t["http://www.w3.org/2005/01/wf/flow#Tracker"]) return "tracker";
+        if (t['http://www.w3.org/2005/01/wf/flow#Task']) return "issue";
+        if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) return "tracker";
         // Later: Person. For a list of things assigned to them,
         // open bugs on projects they are developer on, etc
         return null; // No under other circumstances (while testing at least!)
@@ -29,8 +34,8 @@ tabulator.panes.register( {
     render: function(subject, myDocument) {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
-        var WF = $rdf.Namespace("http://www.w3.org/2005/01/wf/flow#");
-        var DC = $rdf.Namespace("http://purl.org/dc/elements/1.1/");
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
     
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'issuePane');
@@ -38,7 +43,7 @@ tabulator.panes.register( {
 
         var commentFlter = function(pred, inverse) {
             if (!inverse && pred.uri == 
-                "http://www.w3.org/2000/01/rdf-schema#comment") return true;
+                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
         
@@ -46,10 +51,14 @@ tabulator.panes.register( {
             var p = myDocument.createElement("p");
             p.setAttribute('style', 'color: red');
             div.appendChild(p);
-            p.appendChild(myDocument.createTextNode('Error: '+message));
+            p.appendChild(myDocument.createTextNode("Error: "+message));
         } 
 
-        // Make SELECT tag
+        // Make SELECT element to seelct subclasses
+        //
+        // If there is any disjoint union it will so a mutually exclusive dropdown
+        // Failing that it will do a multiple selection of subclasses.
+        
         var makeSelectForCategory = function(subject, category, storeDoc) {
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             var types = kb.findTypeURIs(subject);
@@ -57,7 +66,6 @@ tabulator.panes.register( {
             var subs;
             var multiple = false;
             if (!du) {
-                // throw 'select class has no disjoint union.'+category;
                 subs = kb.each(undefined, ns.rdfs('subClassOf'), category);
                 multiple = true;
             } else {
@@ -98,31 +106,29 @@ tabulator.panes.register( {
                         });
                 }
             }
-            if (n>0) {
-                var select = myDocument.createElement('select');
-                if (multiple) select.setAttribute('multiple', 'true');
-                for (var uri in uris) {
-                    var c = kb.sym(uri)
-                    var option = myDocument.createElement('option');
-                    option.appendChild(myDocument.createTextNode(tabulator.Util.label(c)));
-                    var style = kb.any(c, kb.sym("http://www.w3.org/ns/ui#style"))
-                    if (style) option.firstChild.setAttribute('style', style.value)
-                    option.AJAR_uri = uri;
-                    if (uri in types) {
-                        option.setAttribute('selected', 'true')
-                        select.oldURI = uri;
-                    }
-                    select.appendChild(option);
+            if (n==0) throw "Can't do selector with no subclasses "+subject
+            var select = myDocument.createElement('select');
+            if (multiple) select.setAttribute('multiple', 'true');
+            for (var uri in uris) {
+                var c = kb.sym(uri)
+                var option = myDocument.createElement('option');
+                option.appendChild(myDocument.createTextNode(tabulator.Util.label(c)));
+                var style = kb.any(c, kb.sym('http://www.w3.org/ns/ui#style'))
+                //if (style) option.firstChild.setAttribute('style', style.value)
+                option.AJAR_uri = uri;
+                if (uri in types) {
+                    option.setAttribute('selected', 'true')
+                    select.oldURI = uri;
                 }
-                if (select.oldURI && !multiple) {
-                    var prompt = myDocument.createElement('option');
-                    prompt.appendChild(myDocument.createTextNode("--classify--"));
-                    select.insertBefore(prompt, select.firstChild)
-                }
-                select.addEventListener('change', onChange, false)
-                return select;
+                select.appendChild(option);
             }
-            return null;
+            if (select.oldURI && !multiple) {
+                var prompt = myDocument.createElement('option');
+                prompt.appendChild(myDocument.createTextNode("--classify--"));
+                select.insertBefore(prompt, select.firstChild)
+            }
+            select.addEventListener('change', onChange, false)
+            return select;
         
         } // makeSelectForCategory
         
@@ -251,10 +257,10 @@ tabulator.panes.register( {
 
 
         // Render a Tracker instance
-        } else if (t["http://www.w3.org/2005/01/wf/flow#Tracker"]) {
+        } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
             var p = myDocument.createElement("p");
             div.appendChild(p);
-            p.innerHTML = "This is a Tracker @@";
+            p.innerHTML = "This is a Tracker";
             
             var states = kb.any(subject, WF('issueClass'));
             if (!states) throw 'This tracker has no issueClass';
@@ -267,7 +273,7 @@ tabulator.panes.register( {
             var newIssueForm = function(e) {
                 var form = myDocument.createElement('form');
                 var sendNewIssue = function() {
-                    titlefield.setAttribute('class',"pendingedit");
+                    titlefield.setAttribute('class','pendingedit');
                     titlefield.disabled = true;
                     sts = [];
                     
@@ -320,7 +326,7 @@ tabulator.panes.register( {
             var h = myDocument.createElement('h2');
             h.setAttribute('style', 'font-size: 150%');
             div.appendChild(h);
-            h.appendChild(myDocument.createTextNode(tabulator.Util.label(states))); // Use class label
+            h.appendChild(myDocument.createTextNode(tabulator.Util.label(states)+" list")); // Use class label @@I18n
 
             // Make crude list of issues
             var plist = kb.statementsMatching(undefined, WF('tracker'), subject);

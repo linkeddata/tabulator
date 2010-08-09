@@ -431,7 +431,7 @@ $rdf.Empty = function() {
 
 $rdf.Empty.prototype.termType = 'empty';
 $rdf.Empty.prototype.toString = function () { return "()" };
-$rdf.Empty.prototype.toNT = function () { return "@@" };
+$rdf.Empty.prototype.toNT = $rdf.Empty.prototype.toString;
 
 $rdf.Symbol = function( uri ) {
     this.uri = uri;
@@ -445,8 +445,11 @@ $rdf.Symbol.prototype.toNT = $rdf.Symbol.prototype.toString;
 
 //  Some precalculated symbols
 $rdf.Symbol.prototype.XSDboolean = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#boolean');
+$rdf.Symbol.prototype.XSDdecimal = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#decimal');
+$rdf.Symbol.prototype.XSDfloat = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#float');
+$rdf.Symbol.prototype.XSDinteger = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#integer');
 $rdf.Symbol.prototype.XSDdateTime = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#dateTime');
-$rdf.Symbol.prototype.integer = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#integer');
+$rdf.Symbol.prototype.integer = new $rdf.Symbol('http://www.w3.org/2001/XMLSchema#integer'); // Used?
 
 //	Blank Node
 
@@ -493,8 +496,9 @@ $rdf.Literal.prototype.toNT = function() {
         if (typeof str == 'number') return ''+str;
 	throw Error("Value of RDF literal is not string: "+str)
     }
-    str = str.replace(/\\/g, '\\\\');  // escape
-    str = str.replace(/\"/g, '\\"');
+    str = str.replace(/\\/g, '\\\\');  // escape backslashes
+    str = str.replace(/\"/g, '\\"');    // escape quotes
+    str = str.replace(/\n/g, '\\n');    // escape newlines
     str = '"' + str + '"'  //';
 
     if (this.datatype){
@@ -518,7 +522,12 @@ $rdf.Collection.prototype.toNT = function() {
     return $rdf.NTAnonymousNodePrefix + this.id
 };
 
-$rdf.Collection.prototype.toString = $rdf.Collection.prototype.toNT ;
+$rdf.Collection.prototype.toString = function() {
+    var str='(';
+    for (var i=0; i<this.elements.length; i++)
+        str+= this.elements[i] + ' ';
+    return str + ')';
+};
 
 $rdf.Collection.prototype.append = function (el) {
     this.elements.push(el)
@@ -543,9 +552,20 @@ $rdf.term = function(val) {
             ''+val.getUTCFullYear()+'-'+(val.getUTCMonth()+1)+'-'+val.getUTCDate()+
             'T'+val.getUTCHours()+':'+val.getUTCMinutes()+':'+val.getUTCSeconds()+'Z',
             undefined, $rdf.Symbol.prototype.XSDdateTime);
+        else if (val instanceof Array) {
+            var x = new $rdf.Collection();
+            for (var i=0; i<val.length; i++) x.append($rdf.term(val[i]));
+            return x;
+        }
         else return val;
     if (typeof val == 'string') return new $rdf.Literal(val);
-    if (typeof val == 'number') return new $rdf.Literal(val); // @@ differet types
+    if (typeof val == 'number') {
+        var dt;
+        if ((''+val).indexOf('e')>=0) dt = $rdf.Symbol.prototype.XSDfloat;
+        else if ((''+val).indexOf('.')>=0) dt = $rdf.Symbol.prototype.XSDdecimal;
+        else dt = $rdf.Symbol.prototype.XSDinteger;
+        return new $rdf.Literal(val, undefined, dt);
+    }
     if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
                                                        $rdf.Symbol.prototype.XSDboolean);
     if (typeof val == 'undefined') return undefined;
@@ -586,7 +606,6 @@ $rdf.Formula = function() {
     this.constraints = []
     this.initBindings = []
     this.optional = []
-    this.superFormula = null;
     return this;
 };
 
@@ -605,15 +624,19 @@ $rdf.Formula.prototype.add = function(subj, pred, obj, why) {
 
 $rdf.Formula.prototype.sym = function(uri,name) {
     if (name != null) {
+        throw "This feature (kb.sym with 2 args) is removed. Do not assume prefix mappings."
         if (!$rdf.ns[uri]) throw 'The prefix "'+uri+'" is not set in the API';
         uri = $rdf.ns[uri] + name
     }
     return new $rdf.Symbol(uri)
 }
 
+$rdf.sym = function(uri) { return new $rdf.Symbol(uri); };
+
 $rdf.Formula.prototype.literal = function(val, lang, dt) {
     return new $rdf.Literal(val.toString(), lang, dt)
 }
+$rdf.lit = $rdf.Formula.prototype.literal;
 
 $rdf.Formula.prototype.bnode = function(id) {
     return new $rdf.BlankNode(id)
@@ -636,19 +659,6 @@ $rdf.Formula.prototype.list = function (values) {
     }
     return li;
 }
-/*  I'm not sure where this came from but I'm taking it out
-as it isn't something we need in the library. Suspect unused. - tim
-
-$rdf.Formula.instances={};
-$rdf.Formula.prototype.registerFormula = function(accesskey){
-    var superFormula = this.superFormula || this;
-    $rdf.Formula.instances[accesskey] = this;
-    var formulaTerm = superFormula.bnode();
-    superFormula.add(formulaTerm, this.sym("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),superFormula.sym("http://www.w3.org/2000/10/swap/log#Formula"));
-    superFormula.add(formulaTerm, this.sym("http://xmlns.com/foaf/0.1/name"), superFormula.literal(accesskey));
-    superFormula.add(formulaTerm, this.sym("http://www.w3.org/2007/ont/link#accesskey"), superFormula.literal(accesskey));
-}
-*/
 
 /*  Variable
 **
@@ -696,13 +706,27 @@ $rdf.Formula.prototype.ns = function(nsuri) {
 //
 // The bnode bit should not be used on program-external values; designed
 // for internal work such as storing a bnode id in an HTML attribute.
-// Not coded for literals.
+// This will only parse the strings generated by the vaious toNT() methods.
 
 $rdf.Formula.prototype.fromNT = function(str) {
     var len = str.length
     var ch = str.slice(0,1)
-    if (ch == '<') return this.sym(str.slice(1,len-1))
-    if (ch == '"') return this.literal(str.slice(1,len-1)) // @@ does not lang ot datatype or encoding -- used for URIs ONLY
+    if (ch == '<') return $rdf.sym(str.slice(1,len-1))
+    if (ch == '"') {
+        var lang = undefined;
+        var dt = undefined;
+        var k = str.lastIndexOf('"');
+        if (k < len-1) {
+            if (str[k+1] == '@') lang = str.slice(k+2,len);
+            else if (str.slice(k+1,k+3) == '^^') dt = $rdf.fromNT(str.slice(k+3,len));
+            else throw "Can't convert string from NT: "+str
+        }
+        var str = (str.slice(1,k));
+        str = str.replace(/\\"/g, '"');    // unescape quotes '
+        str = str.replace(/\\n/g, '\n');    // unescape newlines
+        str = str.replace(/\\\\/g, '\\');  // unescape backslashes 
+        return $rdf.lit(str, lang, dt);
+    }
     if (ch == '_') {
 	var x = new $rdf.BlankNode();
 	x.id = parseInt(str.slice(3));
@@ -716,6 +740,11 @@ $rdf.Formula.prototype.fromNT = function(str) {
     throw "Can't convert from NT: "+str;
     
 }
+$rdf.fromNT = $rdf.Formula.prototype.fromNT; // Not for inexpert user
+
+// Convenience - and more conventional name:
+
+$rdf.graph = function(){return new $rdf.IndexedFormula();};
 
 // ends
 // Matching a statement against a formula

@@ -548,10 +548,16 @@ $rdf.Collection.prototype.close = function () {
 //
 $rdf.term = function(val) {
     if (typeof val == 'object')
-        if (val instanceof Date) return new $rdf.Literal(
-            ''+val.getUTCFullYear()+'-'+(val.getUTCMonth()+1)+'-'+val.getUTCDate()+
-            'T'+val.getUTCHours()+':'+val.getUTCMinutes()+':'+val.getUTCSeconds()+'Z',
+        if (val instanceof Date) {
+            var d2=function(x) {return(''+(100+x)).slice(1,3)};  // format as just two digits
+            return new $rdf.Literal(
+                    ''+ val.getUTCFullYear() + '-'+
+                    d2(val.getUTCMonth()+1) +'-'+d2(val.getUTCDate())+
+                    'T'+d2(val.getUTCHours())+':'+d2(val.getUTCMinutes())+
+                    ':'+d2(val.getUTCSeconds()+'Z'),
             undefined, $rdf.Symbol.prototype.XSDdateTime);
+
+        }
         else if (val instanceof Array) {
             var x = new $rdf.Collection();
             for (var i=0; i<val.length; i++) x.append($rdf.term(val[i]));

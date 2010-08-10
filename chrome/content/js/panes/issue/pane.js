@@ -36,7 +36,7 @@ tabulator.panes.register( {
         var ns = tabulator.ns;
         var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
         var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-    
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'issuePane');
         div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
@@ -47,6 +47,12 @@ tabulator.panes.register( {
             return false
         }
         
+        var setModifiedDate = function(subj, kb) {
+            var deletions = kb.statementsMatching(subject, DCT('modified'));
+            var insertions = kb.st(subject, DCT('modified'), new Date());
+            sparqlService.update(deletions, insertions, function(uri, ok, body){});
+        }
+
         var complain = function complain(message){
             var p = myDocument.createElement("p");
             p.setAttribute('style', 'color: red');
@@ -59,7 +65,7 @@ tabulator.panes.register( {
         // If there is any disjoint union it will so a mutually exclusive dropdown
         // Failing that it will do a multiple selection of subclasses.
         
-        var makeSelectForCategory = function(subject, category, storeDoc) {
+        var makeSelectForCategory = function(subject, category, storeDoc, modifiedDateTarget) {
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             var types = kb.findTypeURIs(subject);
             var du = kb.any(category, OWL('disjointUnionOf'));
@@ -83,8 +89,7 @@ tabulator.panes.register( {
                 select.disabled = true; // until data written back
                 if (true) {
                     // throw "Multiple selections not implemented @@";
-                    var ds = [];
-                    var is = [];
+                    var ds = [], is = [];
                     for (var i =0; i< select.options.length; i++) {
                         var opt = select.options[i];
                         if (!opt.AJAR_uri) continue; // a prompt
@@ -101,20 +106,24 @@ tabulator.panes.register( {
                     sparqlService.update(ds, is,
                         function(uri, success, body) {
                             types = kb.findTypeURIs(subject); // Review our list of types
-                            if (success) select.disabled = false; // data written back
+                            if (success) {
+                                select.disabled = false; // data written back
+                                if (modifiedDateTarget) setModifiedDate(modifiedDateTarget, kb);
+                            }
                             else dump("makeSelectForCategory: Error writing back:"+body+"\n");    
                         });
                 }
             }
             if (n==0) throw "Can't do selector with no subclasses "+subject
             var select = myDocument.createElement('select');
+            select.setAttribute('style', 'margin: 0.6em 1.5em;')
             if (multiple) select.setAttribute('multiple', 'true');
             for (var uri in uris) {
                 var c = kb.sym(uri)
                 var option = myDocument.createElement('option');
                 option.appendChild(myDocument.createTextNode(tabulator.Util.label(c)));
                 var style = kb.any(c, kb.sym('http://www.w3.org/ns/ui#style'))
-                //if (style) option.firstChild.setAttribute('style', style.value)
+                if (style) option.setAttribute('style', style.value)
                 option.AJAR_uri = uri;
                 if (uri in types) {
                     option.setAttribute('selected', 'true')
@@ -122,10 +131,11 @@ tabulator.panes.register( {
                 }
                 select.appendChild(option);
             }
-            if (select.oldURI && !multiple) {
+            if (!select.oldURI && !multiple) {
                 var prompt = myDocument.createElement('option');
                 prompt.appendChild(myDocument.createTextNode("--classify--"));
                 select.insertBefore(prompt, select.firstChild)
+                prompt.selected = true;
             }
             select.addEventListener('change', onChange, false)
             return select;
@@ -135,10 +145,10 @@ tabulator.panes.register( {
         //      Description text area
         //
         // Make a box to demand a description or display existing one
-        var makeDescription = function(myDocument, subject, predicate, storeDoc) {
+        var makeDescription = function(myDocument, subject, predicate, storeDoc, modifiedDateTarget) {
             var group = myDocument.createElement('div');
-            var sts = kb.statementsMatching(subject, predicate); // Only one please
-            if (sts.length > 1) throw "Should not be more than one description of "+subject;
+            var sts = kb.statementsMatching(subject, predicate,undefined,storeDoc); // Only one please
+            if (sts.length > 1) throw "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject;
             var desc = sts.length? sts[0].object.value : "";
             var field = myDocument.createElement('textarea');
             group.appendChild(field);
@@ -165,6 +175,7 @@ tabulator.panes.register( {
                 insertions = new $rdf.Statement(subject, predicate, field.value, storeDoc);
                 sparqlService.update(deletions, insertions,function(uri,ok, body){
                     if(ok) submit.disabled = field.disabled = false;
+                    if (modifiedDateTarget) setModifiedDate(modifiedDateTarget, kb);
                 })
             }
 
@@ -175,7 +186,7 @@ tabulator.panes.register( {
                 }, false);
             return group;
         }
-        
+
         
  // //////////////////////////////////////////////////////////////////////////////       
         
@@ -183,12 +194,12 @@ tabulator.panes.register( {
         
         // Too low level but takes multiple statements - should upgrade updateService
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
-/*
+
         // Claim the next sequential number -- unused?
         var usingNextID = function usingNextID(thing, kb, callback) {
             var docuri = tabulator.rdf.Util.uri.docpart(thing.uri);
             if (doc == object.uri) throw 'usingNextID - must have a hash in uri:'+thing.uri;
-            var sts = kb.statementsMatching(thing, tabulator.ns.link('nextID'));
+            var sts = kb.statementsMatching(thing, tabulator.ns.link('nextID'),undefined, doc);
             if (sts.length == 0) {
                 sparqlService.insertStatement(new $rdf.Statement(
                         thing, tabulator.ns.link('nextID'), 1,kb.sym(doc)),
@@ -208,7 +219,7 @@ tabulator.panes.register( {
                 });
             }
         }
-*/        
+        
 
         var plist = kb.statementsMatching(subject)
 
@@ -220,6 +231,12 @@ tabulator.panes.register( {
 
             var types = kb.findTypeURIs(subject);
 
+            var mystyle = null;
+            for (var uri in types) {
+                var style = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#style'))
+                if (style) mystyle = style.value;
+            }
+            if (mystyle) div.setAttribute('style', mystyle);
 
             
             var tracker = kb.any(subject, WF('tracker'));
@@ -236,7 +253,7 @@ tabulator.panes.register( {
                 div.appendChild(makeSelectForCategory(subject, cats[i], stateStore));
             }
             
-            div.appendChild(makeDescription(myDocument, subject, WF('description'), stateStore));
+            div.appendChild(makeDescription(myDocument, subject, WF('description'), stateStore, subject));
 
             // Add in comments about the bug
             tabulator.outline.appendPropertyTRs(div, plist, false,
@@ -288,7 +305,7 @@ tabulator.panes.register( {
                     var title = kb.literal(titlefield.value);
                     sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
                     sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
-                    sts.push($rdf.st(issue, DC('created'), new Date()));
+                    sts.push($rdf.st(issue, DCT('created'), new Date()));
 
                     var initialState = kb.any(subject, WF('initialState'));
                     if (!initialState) complain('This tracker has no initialState');

@@ -292,7 +292,7 @@ div.exceptionPane pre { background-color: #fee; }
     width: 20em;
     height: 1em;
 }
-#inpid_abstract {
+#inpid_book_description {
     float: right;
     height: 8em;
     width: 17em;
@@ -305,17 +305,11 @@ div.exceptionPane pre { background-color: #fee; }
     margin: 0.5em;
 }
 
-/*hideit*
-#divid_coAuthor2.hideit, #divid_coAuthor3.hideit,
-#divid_journal.hideit, #divid_book.hideit */
 .hideit
 {
     display: none;
 }
 
-/*active*
-#divid_coAuthor2.active, #divid_coAuthor3.active,
-#divid_journal.active, #divid_book.active */
 .active {
     display: true;
 }

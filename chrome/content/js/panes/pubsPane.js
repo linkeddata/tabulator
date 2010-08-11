@@ -1,5 +1,5 @@
 /*
-This commit: Got Journal's Basics Working, BOOK IS NOT WORKING YET
+This commit: Got Journal and Book's Basics Working 
     Summer 2010
     haoqili@mit.edu
     
@@ -7,6 +7,11 @@ This commit: Got Journal's Basics Working, BOOK IS NOT WORKING YET
     1 make autocomplete (kenny's search code)
     2 Enable Tab == Enter
     3 Disable typing in lines that depend on incompleted previous lines.
+    4 Show words fading after entered into wiki
+    
+    //small
+    5 make change to css id's so that it corresponds to book or journal
+    6 Add co-authors
  */
 
 tabulator.Icon.src.icon_pubs = 'chrome://tabulator/content/icons/publication/publicationPaneIcon.gif';
@@ -122,8 +127,10 @@ tabulator.panes.pubsPane = {
         // makes the document's URI, and
         // inserts the input title into the URI 
         // For "Book Title", puts creator into URI too 
-        var rootlistenRow = function(theForm, caption_title, inpid, typeofinp, storeURI, typeofdoc){
+        var rootlistenRow = function(theForm, caption_title, typeofinp, storeURI, typeofdoc){
+            // Makes the new row, with id: "inpid_"+sapcetoUline(caption_title)
             var doctitle = newFormRowID(theForm, caption_title, typeofinp);
+            // Add the listener
             doctitle.addEventListener("keypress", function(e){
                 dump("In " + caption_title + ", 1 pressing a key \n");
                 if (e.keyCode == 13 ){
@@ -145,7 +152,7 @@ tabulator.panes.pubsPane = {
                     var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
                     
                     // 2. Add the title for the journal
-                    var doctitle_id = myDocument.getElementById(inpid);
+                    var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
                     var doctitle_value = doctitle_id.value;
                     var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
 
@@ -168,6 +175,7 @@ tabulator.panes.pubsPane = {
         // this function makes a leaf level (knowing subjectURI) newFormRow
         // to put extracted info under the known subject URI
         var leaflistenRow = function(theForm, namestr, type, thesubject, thepredicate, storeURI){
+            // Makes the new row, with id: "inpid_"+sapcetoUline(namestr)
             var item = newFormRowID(theForm, namestr, type);
             item.addEventListener("keypress", function(e){
                 dump("In " + namestr + ", 1 pressing a key\n");
@@ -176,12 +184,16 @@ tabulator.panes.pubsPane = {
                     var item_id = myDocument.getElementById("inpid_"+ spacetoUline(namestr) );
                     var item_value = item_id.value;
                     var item_trim = removeSpaces(item_value);
+                    if (namestr == "Book Description") item_trim = item_value;
                     dump("2\n");
                     // Add to URI
                     var subjectURI = "undef";
                     if (thesubject == "journal") {
                         dump("journalURI=" + journalURI + "\n");
                         subjectURI = journalURI;
+                    } else if (thesubject == "jarticle") {
+                        dump("jarticleURI=" + jarticleURI + "\n");
+                        subjectURI = jarticleURI;
                     } else if (thesubject == "book") {
                         dump("book\n");
                         subjectURI = bookURI;
@@ -231,8 +243,8 @@ tabulator.panes.pubsPane = {
 
         /// === Dropdown ----------
         // NB: The names MUST be lowercase, ' '->_ names
-        var jnlist = ['journal_title', 'journal_url', 'journal_article_title'];
-        var bklist = ['book_title', 'book_url', 'abstract'];
+        var jnlist = ['journal_title', 'journal_url', 'journal_article_title', 'article_published_date'];
+        var bklist = ['book_title', 'book_url', 'book_published_date', 'book_description'];
         var dropdiv = newElement('div', theForm);
         dropdiv.setAttribute('class', 'pubsRow');
         var drop = newElement('select', dropdiv);
@@ -270,7 +282,7 @@ tabulator.panes.pubsPane = {
         // This is where the "journal" and "book" sections are created. Each id is "divid_" + 2ndarg
         //// ======== JOURNAL ===============================================================
         // J1. Make journal URI, with correct type (Journal), and title
-        rootlistenRow(theForm, 'Journal Title', 'inpid_journal_title', 'input', collections_URI, bibo('Journal'));
+        rootlistenRow(theForm, 'Journal Title', 'input', collections_URI, bibo('Journal'));
         
         // J2. Make journal url
         leaflistenRow(theForm, 'Journal URL', 'input', "journal", foaf('homepage'), collections_URI);
@@ -313,39 +325,23 @@ tabulator.panes.pubsPane = {
             }
         }, false);
         
+        // J4. Add Date 
+        leaflistenRow(theForm, 'Article Published Date', 'input', 'jarticle', dcterms('date'), works_URI);
+        
+        
         //// ======== BOOK ===============================================================
         // B1. Make "Book Title" row, with correct type (Journal), title, and creator
-        rootlistenRow(theForm, 'Book Title', 'inpid_book_title', 'input', works_URI, bibo('Book'));
+        rootlistenRow(theForm, 'Book Title', 'input', works_URI, bibo('Book'));
         
         // B2. Make book url
         leaflistenRow(theForm, 'Book URL', 'input', "book", foaf('homepage'), works_URI);
         
-        
+        // B3. Add Date 
+        leaflistenRow(theForm, 'Book Published Date', 'input', 'book', dcterms('date'), works_URI);
 
-//==============================
-        newFormRowID(theForm, 'abstract', 'textarea');
+        // B4. Make the abstract
+        leaflistenRow(theForm, 'Book Description', 'textarea', "book", dcterms('description'), works_URI);
 
-    
-        //// --- Year ----------
-        var year_input = newFormRowID(theForm, 'year', 'input');
-        year_input.addEventListener("keypress", function(e){
-            dump("In Year, 1 pressing a key \n");
-            if (e.keyCode == 13 ){
-                dump("In Year, 2 Enter PRESSED\n");
-
-                var year_id = myDocument.getElementById("inpid_year");
-                var year_value = year_id.value;
-
-                // Adds year of article to http://dig.csail.mit.edu/2007/wiki/docs/ExampleTitle1
-                var addyear = new tabulator.rdf.Statement(kb.sym(articleURI), dcterms('date'), year_value, kb.sym(articleURI));
-                
-                dump('Start SU year\n');
-                sparqlUpdater.insert_statement(addyear, returnFunc);
-                
-                dump('DONE SU year\n');
-                //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-            }
-        }, false);
         
         
         /* TODO Minor: empty row, but to make background stretch down below the abstract box

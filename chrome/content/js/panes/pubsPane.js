@@ -54,10 +54,7 @@ tabulator.panes.pubsPane = {
         var works_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/works'
         var jarticleURI = "";
         
-        var st_bookURI = "";
         var bookURI = "";
-        var articleURI = "";
-
        
         // Functions -------------------------------------------------------
         
@@ -120,7 +117,84 @@ tabulator.panes.pubsPane = {
             return word_box;
         }
 
+        // this function creates a new row in the form that
+        // asks for a document title,
+        // makes the document's URI, and
+        // inserts the input title into the URI 
+        // For "Book Title", puts creator into URI too 
+        var rootlistenRow = function(theForm, caption_title, inpid, typeofinp, storeURI, typeofdoc){
+            var doctitle = newFormRowID(theForm, caption_title, typeofinp);
+            doctitle.addEventListener("keypress", function(e){
+                dump("In " + caption_title + ", 1 pressing a key \n");
+                if (e.keyCode == 13 ){
+                    dump("In " + caption_title + ", 2 Enter PRESSED\n");
+                    
+                    // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
+                    var now = new Date();
+                    var docURI = storeURI + "#" + now.getTime();
+                    if (caption_title == "Journal Title"){
+                        journalURI = docURI;
+                        dump("journalURI="+journalURI+"\n");
+                    } else if (caption_title == "Book Title"){
+                        bookURI = docURI;
+                        dump("bookURI="+bookURI+"\n");
+                    }
+                    dump("docURI="+docURI+"\n");
+                    
+                    // 1. Make this doc URI type specified
+                    var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
+                    
+                    // 2. Add the title for the journal
+                    var doctitle_id = myDocument.getElementById(inpid);
+                    var doctitle_value = doctitle_id.value;
+                    var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
 
+                    var totalst = [doctype_addst, doctitle_addst];
+                                        
+                    // 3. Only for books, add creator:
+                    if (caption_title == "Book Title"){
+                        var creator_add = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('creator'), subject, kb.sym(storeURI));
+                        totalst.push(creator_add);
+                    }
+
+                    dump('Start SU' + caption_title + '\n');
+                    dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
+                    sparqlUpdater.insert_statement(totalst, returnFunc);
+                    dump('DONE SU' + caption_title + '\n');
+                }
+            }, false);
+        };
+
+        // this function makes a leaf level (knowing subjectURI) newFormRow
+        // to put extracted info under the known subject URI
+        var leaflistenRow = function(theForm, namestr, type, thesubject, thepredicate, storeURI){
+            var item = newFormRowID(theForm, namestr, type);
+            item.addEventListener("keypress", function(e){
+                dump("In " + namestr + ", 1 pressing a key\n");
+                if (e.keyCode == 13) {
+                    dump("1\n");
+                    var item_id = myDocument.getElementById("inpid_"+ spacetoUline(namestr) );
+                    var item_value = item_id.value;
+                    var item_trim = removeSpaces(item_value);
+                    dump("2\n");
+                    // Add to URI
+                    var subjectURI = "undef";
+                    if (thesubject == "journal") {
+                        dump("journalURI=" + journalURI + "\n");
+                        subjectURI = journalURI;
+                    } else if (thesubject == "book") {
+                        dump("book\n");
+                        subjectURI = bookURI;
+                    }
+                    dump("3\n");
+                    var item_st = new tabulator.rdf.Statement(kb.sym(subjectURI), thepredicate, item_trim, kb.sym(storeURI));
+                    dump('start SU for ' + namestr + "\n\n");
+                    dump('Inserting start:\n' + item_st + '\nInserting ///////\n');
+                    sparqlUpdater.insert_statement(item_st, returnFunc);
+                    dump("DONE SU for " + namestr + "\n");
+                }
+            }, false);
+        };
     
         // Building the HTML of the Pane, top to bottom ------------
         /// Headers
@@ -156,11 +230,9 @@ tabulator.panes.pubsPane = {
         
 
         /// === Dropdown ----------
-        //var jnlist = ['journal_title', 'year', 'title'];
-        //var bklist = ['book', 'url', 'abstract'];
         // NB: The names MUST be lowercase, ' '->_ names
         var jnlist = ['journal_title', 'journal_url', 'journal_article_title'];
-        var bklist = ['book', 'url', 'abstract'];
+        var bklist = ['book_title', 'book_url', 'abstract'];
         var dropdiv = newElement('div', theForm);
         dropdiv.setAttribute('class', 'pubsRow');
         var drop = newElement('select', dropdiv);
@@ -197,66 +269,13 @@ tabulator.panes.pubsPane = {
         
         // This is where the "journal" and "book" sections are created. Each id is "divid_" + 2ndarg
         //// ======== JOURNAL ===============================================================
-        var jtitle = newFormRowID(theForm, 'Journal Title', 'input');
-        jtitle.addEventListener("keypress", function(e){
-            dump("In Journal_title, 1 pressing a key \n");
-            if (e.keyCode == 13 ){
-                
-                dump("In Journal title, 2 Enter PRESSED\n");
-
-                var jtitle_id = myDocument.getElementById("inpid_journal_title");
-                var jtitle_value = jtitle_id.value;
-                
-                // 0. Make a URI for this Journal
-                // collections_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/collections';
-                var now = new Date();
-                journalURI = collections_URI + "#" + now.getTime();
-                dump("jURI="+journalURI+"\n");
-                
-                // 1. Make this journal URI type Journal
-                var journaltype_add = new tabulator.rdf.Statement(kb.sym(journalURI), tabulator.ns.rdf('type'), bibo('Journal'), kb.sym(collections_URI));     
-                
-                // 2. Add the title for the journal
-                var journal_add = new tabulator.rdf.Statement(kb.sym(journalURI), dcelems('title'), jtitle_value, kb.sym(collections_URI));
-                
-                var total = [journaltype_add, journal_add];
-
-                dump('Start SU journal\n');
-                sparqlUpdater.insert_statement(total, returnFunc);
-                dump('DONE SU journal\n');
-            }
-        }, false);
+        // J1. Make journal URI, with correct type (Journal), and title
+        rootlistenRow(theForm, 'Journal Title', 'inpid_journal_title', 'input', collections_URI, bibo('Journal'));
         
+        // J2. Make journal url
+        leaflistenRow(theForm, 'Journal URL', 'input', "journal", foaf('homepage'), collections_URI);
         
-        // this function makes a newFormRow and adds a listener to it
-        var listenRow = function(theForm, namestr, type, thesubject, thepredicate, storeURI){
-            var item = newFormRowID(theForm, namestr, type);
-            item.addEventListener("keypress", function(e){
-                dump("In " + namestr + ", 1pressing a key\n");
-                if (e.keyCode == 13) {
-                    var item_id = myDocument.getElementById("inpid_"+ spacetoUline(namestr) );
-                    var item_value = item_id.value;
-                    var item_trim = removeSpaces(item_value);
-                    
-                    // Add to URI
-                    var subjectURI = "undef";
-                    if (thesubject == "journal") {
-                        subjectURI = journalURI;
-                    }
-
-                    var item_st = new tabulator.rdf.Statement(kb.sym(subjectURI), thepredicate, item_trim, kb.sym(storeURI));
-                    dump('start SU inserting statement = ' + item_st + "\n\n");
-                    sparqlUpdater.insert_statement(item_st, returnFunc);
-                    dump("DONE SU for " + namestr + "\n");
-                }
-            }, false);
-        };
-        
-        
-        // Make journal url
-        listenRow(theForm, 'Journal URL', 'input', "journal", foaf('homepage'), collections_URI);
-        
-        // Journal Article title
+        // J3. Journal Article title, a new URI that links to the journal URI
         var jarttitle = newFormRowID(theForm, 'Journal Article Title', 'input');
         jarttitle.addEventListener("keypress", function(e){
             dump("In Journal_article_title, 1 pressing a key \n");
@@ -280,56 +299,32 @@ tabulator.panes.pubsPane = {
                 
                 dump("The SUBJECT = "+subject+"\n");
                 // 3. Add author to a creator of the journal article
-                var auth_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), dcterms('creator'), subject, kb.sym(articleURI));
-                
+                var auth_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), dcterms('creator'), subject, kb.sym(jarticleURI));
+                dump("1\n");
                 // 4. Connect this journal article to the journal before
                 var connect_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), dcterms('isPartOf'), kb.sym(journalURI), kb.sym(works_URI));
- 
-                var total = [jart_add, jarttype_add, auth_add, connect_add];
-                
+                dump("2\n");
+                var totalst = [jarttype_add, jart_add, auth_add, connect_add];
+                dump("3\n");
                 dump('Start SU journal article\n');
-                sparqlUpdater.insert_statement(total, returnFunc);
+                dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
+                sparqlUpdater.insert_statement(totalst, returnFunc);
                 dump('DONE SU journal article\n');
             }
         }, false);
         
-        //// ========== BOOK ========EVERYTHING BELOW IS NOT WORKING YET!!!!!!!!!========================
-        newFormRowID(theForm, 'book', 'input');
+        //// ======== BOOK ===============================================================
+        // B1. Make "Book Title" row, with correct type (Journal), title, and creator
+        rootlistenRow(theForm, 'Book Title', 'inpid_book_title', 'input', works_URI, bibo('Book'));
         
-        // Extra Information
-        newFormRowID(theForm, 'URL', 'input');
+        // B2. Make book url
+        leaflistenRow(theForm, 'Book URL', 'input', "book", foaf('homepage'), works_URI);
+        
+        
+
+//==============================
         newFormRowID(theForm, 'abstract', 'textarea');
 
-
-        //// BOOK STUFF --- Title ----------
-        var title_input = newFormRowID(theForm, 'title', 'input');
-        title_input.addEventListener("keypress", function(e){
-            dump("In title, 1 pressing a key \n");
-            if (e.keyCode == 13 ){
-                dump("In title, 2 Enter PRESSED\n");
-
-                var title_id = myDocument.getElementById("inpid_title");
-                var title_value = title_id.value;
-                var title_trim = removeSpaces(title_value);
-                
-                articleURI = 'http://dig.csail.mit.edu/2007/wiki/docs/' + title_trim;
-                          
-                
-                // B1. Make a URI for this title
-                var uri_title = new tabulator.rdf.Statement(kb.sym(articleURI), dcelems('title'), title_value, kb.sym(articleURI));
-                
-                // B2. Adds creator to the title
-                var uri2 = new tabulator.rdf.Statement(kb.sym(articleURI), dcelems('creator'), subject, kb.sym(articleURI));
-                
-                var totalst = [uri_title, uri2];
-                
-                dump('Start SU\n');
-                sparqlUpdater.insert_statement(totalst, returnFunc);
-                
-                dump('DONE SU\n');
-                //\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-            }
-        }, false);
     
         //// --- Year ----------
         var year_input = newFormRowID(theForm, 'year', 'input');

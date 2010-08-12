@@ -47,25 +47,32 @@ tabulator.panes.register( {
             return false
         }
         
-        var setModifiedDate = function(subj, kb) {
+        var setModifiedDate = function(subj, kb, doc) {
             var deletions = kb.statementsMatching(subject, DCT('modified'));
-            var insertions = kb.st(subject, DCT('modified'), new Date());
+            var insertions = $rdf.st(subject, DCT('modified'), new Date(), doc);
             sparqlService.update(deletions, insertions, function(uri, ok, body){});
         }
 
         var complain = function complain(message){
-            var p = myDocument.createElement("p");
-            p.setAttribute('style', 'color: red');
-            div.appendChild(p);
-            p.appendChild(myDocument.createTextNode("Error: "+message));
+            var pre = myDocument.createElement("pre");
+            pre.setAttribute('style', 'color: red');
+            div.appendChild(pre);
+            pre.appendChild(myDocument.createTextNode("Error: "+message));
         } 
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, myDocument);
+            parent.replaceChild(div2, div);
+        };
 
         // Make SELECT element to seelct subclasses
         //
         // If there is any disjoint union it will so a mutually exclusive dropdown
         // Failing that it will do a multiple selection of subclasses.
+        // Callback takes (ok, errorBody)
         
-        var makeSelectForCategory = function(subject, category, storeDoc, modifiedDateTarget) {
+        var makeSelectForCategory = function(subject, category, storeDoc, callback) {
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             var types = kb.findTypeURIs(subject);
             var du = kb.any(category, OWL('disjointUnionOf'));
@@ -104,13 +111,10 @@ tabulator.panes.register( {
                         }                        
                     }
                     sparqlService.update(ds, is,
-                        function(uri, success, body) {
+                        function(uri, ok, body) {
                             types = kb.findTypeURIs(subject); // Review our list of types
-                            if (success) {
-                                select.disabled = false; // data written back
-                                if (modifiedDateTarget) setModifiedDate(modifiedDateTarget, kb);
-                            }
-                            else dump("makeSelectForCategory: Error writing back:"+body+"\n");    
+                            if (ok) select.disabled = false; // data written back
+                            if (callback) callback(ok, body);
                         });
                 }
             }
@@ -145,7 +149,7 @@ tabulator.panes.register( {
         //      Description text area
         //
         // Make a box to demand a description or display existing one
-        var makeDescription = function(myDocument, subject, predicate, storeDoc, modifiedDateTarget) {
+        var makeDescription = function(myDocument, subject, predicate, storeDoc, callback) {
             var group = myDocument.createElement('div');
             var sts = kb.statementsMatching(subject, predicate,undefined,storeDoc); // Only one please
             if (sts.length > 1) throw "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject;
@@ -175,7 +179,7 @@ tabulator.panes.register( {
                 insertions = new $rdf.Statement(subject, predicate, field.value, storeDoc);
                 sparqlService.update(deletions, insertions,function(uri,ok, body){
                     if(ok) submit.disabled = field.disabled = false;
-                    if (modifiedDateTarget) setModifiedDate(modifiedDateTarget, kb);
+                    if (callback) callback(ok, body);
                 })
             }
 
@@ -229,15 +233,16 @@ tabulator.panes.register( {
         
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
 
-            var types = kb.findTypeURIs(subject);
-
-            var mystyle = null;
-            for (var uri in types) {
-                var style = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#style'))
-                if (style) mystyle = style.value;
+            var setPaneStyle = function() {
+                var types = kb.findTypeURIs(subject);
+                var mystyle = null;
+                for (var uri in types) {
+                    var style = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#style'))
+                    if (style) mystyle = style.value;
+                }
+                if (mystyle) div.setAttribute('style', mystyle);
             }
-            if (mystyle) div.setAttribute('style', mystyle);
-
+            setPaneStyle();
             
             var tracker = kb.any(subject, WF('tracker'));
             if (!tracker) throw 'This issue '+subject+'has no tracker';
@@ -247,13 +252,29 @@ tabulator.panes.register( {
             if (!stateStore) throw 'This tracker '+tracker+' has no stateStore';
 
             var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-            var select = makeSelectForCategory(subject, states, stateStore)
+            var select = makeSelectForCategory(subject, states, stateStore, function(ok,body){
+                    if (ok) {
+                        setModifiedDate(stateStore, kb, stateStore);
+                        rerender(div);
+                    }
+                    else complain("Failed to change state:\n"+body);
+                })
             div.appendChild(select);
             for (var i=0; i<cats.length; i++) {
-                div.appendChild(makeSelectForCategory(subject, cats[i], stateStore));
+                div.appendChild(makeSelectForCategory(subject, cats[i], stateStore, function(ok,body){
+                    if (ok) {
+                        setModifiedDate(stateStore, kb, stateStore);
+                        rerender(div);
+                    }
+                    else complain("Failed to change category:\n"+body);
+                }));
             }
             
-            div.appendChild(makeDescription(myDocument, subject, WF('description'), stateStore, subject));
+            div.appendChild(makeDescription(myDocument, subject, WF('description'),
+                stateStore, function(ok,body){
+                    if (ok) setModifiedDate(stateStore, kb, stateStore);
+                    else complain("Failed to description:\n"+body);
+                }));
 
             // Add in comments about the bug
             tabulator.outline.appendPropertyTRs(div, plist, false,
@@ -273,11 +294,12 @@ tabulator.panes.register( {
 
 
 
-        // Render a Tracker instance
+        //          Render a Tracker instance
+        
         } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
-            var p = myDocument.createElement("p");
-            div.appendChild(p);
-            p.innerHTML = "This is a Tracker";
+            // var p = myDocument.createElement("p");
+            // div.appendChild(p);
+            // p.innerHTML = "This is a Tracker";
             
             var states = kb.any(subject, WF('issueClass'));
             if (!states) throw 'This tracker has no issueClass';
@@ -320,9 +342,10 @@ tabulator.panes.register( {
                                 kb.add(sts[i].subject, sts[i].predicate, sts[i].object, sts[i].why);
                             }
                             div.removeChild(form);
-                            var plist = [ link ]; // Show the form
-                            tabulator.outline.appendPropertyTRs(div, plist, true,
-                                function(pred, inverse) {return true;});
+                            rerender(div);
+                            // var plist = [ link ]; // Show the form
+                            // tabulator.outline.appendPropertyTRs(div, plist, true,
+                            //    function(pred, inverse) {return true;});
                             // @@ open it up automatically
                         }
                     }
@@ -336,6 +359,7 @@ tabulator.panes.register( {
                 titlefield.setAttribute('type','text');
                 titlefield.setAttribute('size','100');
                 titlefield.setAttribute('maxLength','2048');// No arbitrary limits
+                titlefield.select() // focus next user input
                 form.appendChild(titlefield);
 
             }

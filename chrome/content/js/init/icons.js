@@ -79,7 +79,7 @@ tabulator.Icon.tooltips[tabulator.Icon.src.icon_display_reasons] = 'Display expl
 
 // Other tooltips
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_add_triple] = 'Add more'
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_add_new_triple] = 'Add new triple'
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_add_new_triple] = 'Add one'
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_remove_node] = 'Remove'
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_expand] = 'View details.'
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_collapse] = 'Hide details.'
@@ -89,10 +89,10 @@ tabulator.Icon.tooltips[tabulator.Icon.src.icon_instances] = 'List'
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_foaf] = 'Friends'
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_rows] = 'Make a table of data like this'
 // Note the string '[Tt]his resource' can be replaced with an actual URI by the code
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_unrequested] = 'Fetch this resource.'
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_fetched] = 'This resource was fetched successfully.'
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_failed] = 'This resource failed to load. Click to retry.'
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_requested] = 'This resource being fetched. Please wait...'
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_unrequested] = 'Fetch this.'
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_fetched] = 'Fetched successfully.'
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_failed] = 'Failed to load. Click to retry.'
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_requested] = 'This is being fetched. Please wait...'
 
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_visit] = 'View document'
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_retract] = 'Remove this source and all its data from tabulator.'
@@ -117,5 +117,6 @@ tabulator.Icon.OutlinerIcon= function (src, width, alt, tooltip, filter)
 tabulator.Icon.termWidgets = {}
 tabulator.Icon.termWidgets.optOn = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_opton,20,'opt on','Make this branch of your query mandatory.');
 tabulator.Icon.termWidgets.optOff = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
-tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_add_triple,18,"add tri","Add a triple to this predicate");
+tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_add_triple,18,"add tri","Add one");
+// Ideally: "New "+label(subject)
 

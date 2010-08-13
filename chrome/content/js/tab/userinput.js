@@ -387,8 +387,8 @@ function UserInput(outline){
                         var newStat;
                         var textTerm=kb.literal(this.lastModified.value,"");
                         //<Feature about="labelChoice">
-                        if (s.predicate.termType=='collection'){ //case: add triple
-                            var selectedPredicate=s.predicate.elements[0];
+                        if (s.predicate.termType=='collection'){ //case: add triple   ????????? Weird - tbl
+                            var selectedPredicate=s.predicate.elements[0];   //    @@ TBL elemenst is a list on the predicate??
                             if (kb.any(undefined,selectedPredicate,textTerm)){
                                 if (!e){ //keyboard
                                     var tdNode=this.lastModified.parentNode;
@@ -731,9 +731,9 @@ function UserInput(outline){
                    ?pred rdfs:domain ?subjectClass.
                 }
             */
-            var subject=tabulator.Util.getAbout(kb,tabulator.Util.ancestor(selectedTd,'TABLE').parentNode);
-            var subjectClass=kb.any(subject,rdf('type'));
-            var sparqlText=[];
+            var subject = tabulator.Util.getAbout(kb,tabulator.Util.ancestor(selectedTd,'TABLE').parentNode);
+            var subjectClass = kb.any(subject,rdf('type'));
+            var sparqlText = [];
             var endl='.\n';
             sparqlText[0]="SELECT ?pred WHERE{\n?pred "+rdf('type')+rdf('Property')+".\n"+
                           "?pred "+tabulator.ns.rdfs('domain')+subjectClass+".}"; // \n is required? SPARQL parser bug?
@@ -927,14 +927,17 @@ function UserInput(outline){
         }
         };//end of return function
     },
+    
+    // Add the buttons which allow the suer to craete a new object
+    // Or reference an exiting one with a URI.
+    //
     WildCardButtons: function WildCardButtons(){
         var menuDiv=myDocument.getElementById(outline.UserInput.menuID);
         var div=menuDiv.insertBefore(myDocument.createElement('div'),menuDiv.firstChild);
         var input1 = div.appendChild(myDocument.createElement('input'));
         var input2 = div.appendChild(myDocument.createElement('input'));
-        //var input3 = div.appendChild(myDocument.createElement('input'));
         input1.type = 'button';input1.value = "New...";
-        input2.type = 'button';input2.value = "GiveURI";
+        input2.type = 'button';input2.value = "Know its URI";
         
         function highlightInput(e){ //same as the one in newMenu()
             var menu=myDocument.getElementById(outline.UserInput.menuID);
@@ -946,13 +949,6 @@ function UserInput(outline){
         div.addEventListener('mouseover',highlightInput,false);
         input1.addEventListener('click',this.createNew,false);
         input2.addEventListener('click',this.inputURI,false);        
-        /*
-        var table=myDocument.getElementById(outline.UserInput.menuID).firstChild;
-        var h1=table.insertBefore(myDocument.createElement('tr'),table.firstChild);
-        var h1th=h1.appendChild(myDocument.createElement('th'));
-        h1th.appendChild(myDocument.createTextNode("New..."));
-        h1.setAttribute('about',tabulator.ns.tabont('createNew'));
-        */
     },
     //ToDo: shrink rows when \n+backspace
     Keypress: function(e){
@@ -987,47 +983,24 @@ function UserInput(outline){
     
 
     Mouseover: function Mouseover(e){
-        // if (HCIoptions["bottom insert highlights"].enabled) if (e.layerX-tabulator.Util.findPos(this)[0]>30) return;
         this.className='bottom-border-active';
-    /*
-    if (getTarget(e).tagName=='SPAN'){
-        var proxyDiv = document.createElement('DIV');
-        proxyDiv.id="proxyDiv";
-        proxyDiv.setAttribute('style',"position:absolute; visibility:hidden; top:630px; left:525px;height:50px;width:50px;background-color:#7E5B60;");
-        getTarget(e).appendChild(proxyDiv);
-        dragdropSpan=new YAHOO.util.DragDrop(getTarget(e),"outliner",{dragElId: "proxyDiv", centerFrame: true, resizeFrame: false});
-        //dragdropSpan.setXConstraint(0,0);
-        //dragdropSpan.setYConstraint(0,0);
-    }
-    */
-    if (this._tabulatorMode==1){
-        /**ABANDONED
-        switch (getTarget(e).tagName){
-            case 'TD':
-                var Td=tabulator.Util.ancestor(getTarget(e),'TD');
-                if(Td.className!="obj" || tabulator.Util.ancestor(Td,'TABLE').id=="outline") return;
-                //I'll think about the latter case
-                if(UserInput.aroundBorderBottom(e,Td))  //"this" not working, why? 
-                    Td.style.borderBottom='.1em solid rgb(100%,65%,0%)';
-                break;
-            default:
-        }**/
-        switch (tabulator.Util.getTarget(e).tagName){
-            case 'TD':
-                var preTd=tabulator.Util.getTarget(e);
-                if(preTd.className=="pred") preTd.style.cursor='copy';
-                break;
-            //Uh...I think I might have to give up this
-            case 'DIV':
-                var border=tabulator.Util.getTarget(e);
-                if (tabulator.Util.getTarget(e).className=="bottom-border"){
-                    border.style.borderColor='rgb(100%,65%,0%)';
-                    border.style.cursor='copy';
-                }
-                break;
-           default:
-       }
-    }
+        if (this._tabulatorMode==1){
+            switch (tabulator.Util.getTarget(e).tagName){
+                case 'TD':
+                    var preTd=tabulator.Util.getTarget(e);
+                    if(preTd.className=="pred") preTd.style.cursor='copy';
+                    break;
+                //Uh...I think I might have to give up this
+                case 'DIV':
+                    var border=tabulator.Util.getTarget(e);
+                    if (tabulator.Util.getTarget(e).className=="bottom-border"){
+                        border.style.borderColor='rgb(100%,65%,0%)';
+                        border.style.cursor='copy';
+                    }
+                    break;
+               default:
+           }
+        }
     },
 
     Mouseout: function(e){
@@ -1125,24 +1098,7 @@ function UserInput(outline){
                 case 9://tab
                     //this is input box
                     if (this.value!=tiptext){
-                        var newuri = this.value;
-                        if(isExtension){
-                            if (!gURIFixup)
-                                gURIFixup = Components.classes["@mozilla.org/docshell/urifixup;1"]
-                                            .getService(Components.interfaces.nsIURIFixup);
-                            //this might have unexpected behavior as I don't know what the
-                            //algorithm is.
-                            newuri=gURIFixup.createFixupURI(this.value,0).spec;                            
-                        }else{
-                            if (!tabulator.rdf.Util.uri.protocol(this.value)){
-                                if (newuri.indexOf('/') < 0) newuri+= '/';
-                                newuri = 'http://'+newuri;
-                            }
-                        }
-                        // even though selectedTd == this.parentNode
-                        //         [XPCNativeWrapper[HTMLCellElement]] [HTMLCellElement]
-                        // only selectedTd.parentNode.AJAR_statement exists.
-                        // this is also why you don't see AJAR_statement from firebug
+                        var newuri = this.value; // @@ Removed URI "fixup" code
                         This.fillInRequest('object',selectedTd,kb.sym(newuri));
                     }
             }

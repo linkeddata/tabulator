@@ -45,7 +45,7 @@ var tOpenOutliner = function(e) {
             queryButton.setAttribute('id','queryButton');
             queryButton.setAttribute('style','display:none;');
             queryButton.setAttribute('type','button');
-            queryButton.setAttribute('value','Find All');
+            queryButton.setAttribute('value',"Find All");
             //divs[i].appendChild(queryButton);
             doc.body.appendChild(queryButton);
             queryButton.addEventListener('click',outline.viewAndSaveQuery,false);

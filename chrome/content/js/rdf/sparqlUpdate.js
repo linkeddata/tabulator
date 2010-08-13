@@ -39,7 +39,7 @@ sparql.prototype.editable = function(uri, kb) {
             if (author_via.length) {
                 for (var i = 0; i < author_via.length; i++) {
                     if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
-                        dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
+                        // dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
                         return author_via[i].value;
                 }
             }
@@ -47,7 +47,7 @@ sparql.prototype.editable = function(uri, kb) {
             if (status.length) {
                 for (var i = 0; i < status.length; i++) {
                     if (status[i] == 200) {
-                        dump("sparql.editable: 200 status, not editable for "+uri+"\n");
+                        // dump("sparql.editable: 200 status, not editable for "+uri+"\n");
                         return false;
                     }
                 }
@@ -169,7 +169,7 @@ sparql.prototype._context_where = function(context) {
 
 sparql.prototype._fire = function(uri, query, callback) {
     if (!uri) throw "No URI given for remote editing operation: "+query;
-    // dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+    dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
     var xhr = $rdf.Util.XMLHTTPFactory();
 
     xhr.onreadystatechange = function() {
@@ -290,6 +290,7 @@ sparql.prototype.update = function(deletions, insertions, callback) {
         var mykb = tabulator.kb;
         this._fire(doc.uri, query,
             function(uri, success, body) {
+                dump("\t sparql: Return "+success+" for query "+query+"\n");
                 if (success) {
                     for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
                     for (var i=0; i<is.length;i++)

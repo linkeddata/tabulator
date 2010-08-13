@@ -191,12 +191,61 @@ tabulator.panes.register( {
             return group;
         }
 
-        
+        //  Form to gollect data about a new Issue
+        //
+        var newIssueForm = function(myDocument, kb, tracker, superIssue) {
+           var form = myDocument.createElement('form');
+            var sendNewIssue = function() {
+                titlefield.setAttribute('class','pendingedit');
+                titlefield.disabled = true;
+                sts = [];
+                
+                var now = new Date();
+                var timestamp = ''+ now.getTime();
+                // http://www.w3schools.com/jsref/jsref_obj_date.asp
+                var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestamp);
+                sts.push(new $rdf.Statement(issue, WF('tracker'), tracker, stateStore));
+                var title = kb.literal(titlefield.value);
+                sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
+                
+                // sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
+                sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
+
+                var initialState = kb.any(tracker, WF('initialState'));
+                if (!initialState) complain('This tracker has no initialState');
+                sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialState, stateStore))
+                if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
+                var sendComplete = function(uri, success, body) {
+                    if (!success) {
+                        dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
+                    } else {
+                        // dump('Tabulator issue pane: saved new issue\n')
+                        div.removeChild(form);
+                        rerender(div);
+                    }
+                }
+                dump("@@@ about to insert: "+sts.length+"\n")
+                for (var i =0; i<sts.length;i++) {dump("@@@ sts: "+sts[i]+"\n")}
+                sparqlService.update([], sts, sendComplete);
+            }
+            form.addEventListener('submit', sendNewIssue, false)
+            form.setAttribute('onsubmit', "function xx(){return false;}");
+            classLabel = tabulator.Util.label(states);
+            form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
+                    classLabel+"</h2><p>Title of new "+classLabel+":<p>";
+            var titlefield = myDocument.createElement('input')
+            titlefield.setAttribute('type','text');
+            titlefield.setAttribute('size','100');
+            titlefield.setAttribute('maxLength','2048');// No arbitrary limits
+            titlefield.select() // focus next user input
+            form.appendChild(titlefield);
+            return form;
+        };
+                             
  // //////////////////////////////////////////////////////////////////////////////       
         
         
         
-        // Too low level but takes multiple statements - should upgrade updateService
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
         // Claim the next sequential number -- unused?
@@ -205,7 +254,7 @@ tabulator.panes.register( {
             if (doc == object.uri) throw 'usingNextID - must have a hash in uri:'+thing.uri;
             var sts = kb.statementsMatching(thing, tabulator.ns.link('nextID'),undefined, doc);
             if (sts.length == 0) {
-                sparqlService.insertStatement(new $rdf.Statement(
+                sparqlService.update([], new $rdf.Statement(
                         thing, tabulator.ns.link('nextID'), 1,kb.sym(doc)),
                         function(uri, success, body){
                             if (!success) throw "Error setting first ID for "+thing;
@@ -226,6 +275,7 @@ tabulator.panes.register( {
         
 
         var plist = kb.statementsMatching(subject)
+        var qlist = kb.statementsMatching(undefined, undefined, subject)
 
         var t = kb.findTypeURIs(subject);
 
@@ -284,7 +334,31 @@ tabulator.panes.register( {
                     return false
                 });
 
+
+            // Sub issues
+            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                    return false
+                });
+
+            // Super issues
+            tabulator.outline.appendPropertyTRs(div, qlist, true,
+                function(pred, inverse) {
+                    if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                    return false
+                });
+
+
             div.appendChild(myDocument.createElement('br'));
+
+            var b = myDocument.createElement("button");
+            b.setAttribute("type", "button");
+            div.appendChild(b)
+            b.innerHTML = "New sub "+classLabel;
+            b.addEventListener('click', function(e) {
+                div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
+            
             var a = myDocument.createElement('a');
             a.setAttribute('href',tracker.uri);
             div.appendChild(a);
@@ -308,66 +382,11 @@ tabulator.panes.register( {
             tabulator.sf.requestURI(stateStore.uri, subject, false); // Pull in issues
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
-
-            var newIssueForm = function(e) {
-                var form = myDocument.createElement('form');
-                var sendNewIssue = function() {
-                    titlefield.setAttribute('class','pendingedit');
-                    titlefield.disabled = true;
-                    sts = [];
-                    
-                    var now = new Date();
-                    var timestamp = ''+ now.getTime();
-                    // http://www.w3schools.com/jsref/jsref_obj_date.asp
-                    var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestamp);
-
-                    var link = new $rdf.Statement(issue, WF('tracker'), subject, stateStore)
-                    sts.push(link);
-
-                    var title = kb.literal(titlefield.value);
-                    sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
-                    sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
-                    sts.push($rdf.st(issue, DCT('created'), new Date()));
-
-                    var initialState = kb.any(subject, WF('initialState'));
-                    if (!initialState) complain('This tracker has no initialState');
-                    sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialState, stateStore))
-                    
-                    var sendComplete = function(uri, success, body) {
-                        if (!success) {
-                            dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
-                        } else {
-                            dump('Tabulator issue pane: saved new issue\n')
-                            for (var i=0; i< sts.length; i++) {
-                                kb.add(sts[i].subject, sts[i].predicate, sts[i].object, sts[i].why);
-                            }
-                            div.removeChild(form);
-                            rerender(div);
-                            // var plist = [ link ]; // Show the form
-                            // tabulator.outline.appendPropertyTRs(div, plist, true,
-                            //    function(pred, inverse) {return true;});
-                            // @@ open it up automatically
-                        }
-                    }
-                    sparqlService.insert_statement(sts, sendComplete);
-                }
-                form.addEventListener('submit', sendNewIssue, false)
-                form.setAttribute('onsubmit', "function xx(){return false;}");
-                div.appendChild(form);
-                form.innerHTML = "<h2>Add new issue</h2><p>Title of new issue:<p>";
-                var titlefield = myDocument.createElement('input')
-                titlefield.setAttribute('type','text');
-                titlefield.setAttribute('size','100');
-                titlefield.setAttribute('maxLength','2048');// No arbitrary limits
-                titlefield.select() // focus next user input
-                form.appendChild(titlefield);
-
-            }
-
             var h = myDocument.createElement('h2');
             h.setAttribute('style', 'font-size: 150%');
             div.appendChild(h);
-            h.appendChild(myDocument.createTextNode(tabulator.Util.label(states)+" list")); // Use class label @@I18n
+            classLabel = tabulator.Util.label(states);
+            h.appendChild(myDocument.createTextNode(classLabel+" list")); // Use class label @@I18n
 
             // Make crude list of issues
             var plist = kb.statementsMatching(undefined, WF('tracker'), subject);
@@ -377,8 +396,10 @@ tabulator.panes.register( {
             var b = myDocument.createElement("button");
             b.setAttribute("type", "button");
             div.appendChild(b)
-            b.innerHTML = "New Issue";
-            b.addEventListener('click', newIssueForm, false);
+            b.innerHTML = "New "+classLabel;
+            b.addEventListener('click', function(e) {
+                    div.appendChild(newIssueForm(myDocument, kb, subject));
+                }, false);
             
             // @@ TBD
 

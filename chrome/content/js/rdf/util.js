@@ -142,6 +142,9 @@ $rdf.Util = {
 	},
     /**
     * Returns a hash of headers and values
+    **
+    ** @@ Bug: Assumes that each header only occurs once
+    ** Also note that a , in a header value is just the same as having two headers.
      */
 	'getHTTPHeaders': function (xhr) {
 	    var lines = xhr.getAllResponseHeaders().split("\n")
@@ -165,7 +168,7 @@ $rdf.Util = {
 	    var now = new Date();
 	    var year  = now.getYear() + 1900;
 	    var month = now.getMonth() + 1;
-	    var day  = now.getDate() + 1;
+	    var day  = now.getDate();
 	    var hour = now.getUTCHours();
 	    var minute = now.getUTCMinutes();
 	    var second = now.getSeconds();
@@ -183,7 +186,7 @@ $rdf.Util = {
 
 
 
-    'RDFArrayRemove': function(a, x) {  //removes all elements equal to x from a
+    'RDFArrayRemove': function(a, x) {  //removes all statements equal to x from a
         for(var i=0; i<a.length; i++) {
             //TODO: This used to be the following, which didnt always work..why
             //if(a[i] == x)

@@ -57,7 +57,7 @@ tabulator.panes.register( {
             var pre = myDocument.createElement("pre");
             pre.setAttribute('style', 'color: red');
             div.appendChild(pre);
-            pre.appendChild(myDocument.createTextNode("Error: "+message));
+            pre.appendChild(myDocument.createTextNode(message));
         } 
         var thisPane = this;
         var rerender = function(div) {
@@ -65,6 +65,17 @@ tabulator.panes.register( {
             var div2 = thisPane.render(subject, myDocument);
             parent.replaceChild(div2, div);
         };
+
+        var nowOrWhenFetched = function(uri, referringTerm, callback) {
+            var sta = tabulator.sf.getState(stateStore.uri);
+            if (sta == 'fetched') return callback();
+            tabulator.sf.addCallback('done', function(uri2){
+                if (uri2 == uri) callback();
+                return (uri2 != uri); // Call me again?
+            });
+            if (sta == 'unrequested') tabulator.sf.requestURI(
+                                stateStore.uri, referringTerm, false);
+        }
 
         // Make SELECT element to seelct subclasses
         //
@@ -156,9 +167,10 @@ tabulator.panes.register( {
             var desc = sts.length? sts[0].object.value : "";
             var field = myDocument.createElement('textarea');
             group.appendChild(field);
-            field.rows = 10;
-            field.cols = 80;
-            field.setAttribute('style', "background-color: white; border: 0.07em solid gray; padding: 1em; margin: 1em 2em;")
+            field.rows = desc? desc.split('\n').length + 3 : 3;
+            field.cols = 80
+            field.setAttribute('style', 'font-size:100%; \
+                    background-color: white; border: 0.07em solid gray; padding: 1em; margin: 1em 2em;')
             if (sts.length) field.value = desc 
             else {
                 field.value = "Please enter a description here"
@@ -169,7 +181,9 @@ tabulator.panes.register( {
             group.appendChild(br);
             submit = myDocument.createElement('input');
             submit.setAttribute('type', 'submit');
+            submit.disabled = true; // until the filled has been modified
             submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
+            submit.setAttribute('style', 'float: right;');
             group.appendChild(submit);
 
             var groupSubmit = function(e) {
@@ -178,14 +192,14 @@ tabulator.panes.register( {
                 var deletions = desc ? sts[0] : undefined; // If there was a desciption, remove it
                 insertions = new $rdf.Statement(subject, predicate, field.value, storeDoc);
                 sparqlService.update(deletions, insertions,function(uri,ok, body){
-                    if(ok) submit.disabled = field.disabled = false;
+                    if (ok) { desc = field.value; field.disabled = false;};
                     if (callback) callback(ok, body);
                 })
             }
 
             submit.addEventListener('click', groupSubmit, false)
 
-            field.addEventListener('change', function(e) {
+            field.addEventListener('keypress', function(e) {
                     submit.disabled = false;
                 }, false);
             return group;
@@ -285,12 +299,12 @@ tabulator.panes.register( {
 
             var setPaneStyle = function() {
                 var types = kb.findTypeURIs(subject);
-                var mystyle = null;
+                var mystyle = "padding: 0.5em 1.5em; ";
                 for (var uri in types) {
                     var style = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#style'))
-                    if (style) mystyle = style.value;
+                    if (style) mystyle += style.value;
                 }
-                if (mystyle) div.setAttribute('style', mystyle);
+                div.setAttribute('style', mystyle);
             }
             setPaneStyle();
             
@@ -356,6 +370,7 @@ tabulator.panes.register( {
             b.setAttribute("type", "button");
             div.appendChild(b)
             b.innerHTML = "New sub "+classLabel;
+            b.setAttribute('style', 'float: right;');
             b.addEventListener('click', function(e) {
                 div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
             
@@ -379,7 +394,6 @@ tabulator.panes.register( {
             if (!states) throw 'This tracker has no issueClass';
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
-            tabulator.sf.requestURI(stateStore.uri, subject, false); // Pull in issues
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
             var h = myDocument.createElement('h2');
@@ -388,11 +402,17 @@ tabulator.panes.register( {
             classLabel = tabulator.Util.label(states);
             h.appendChild(myDocument.createTextNode(classLabel+" list")); // Use class label @@I18n
 
-            // Make crude list of issues
-            var plist = kb.statementsMatching(undefined, WF('tracker'), subject);
-            tabulator.outline.appendPropertyTRs(div, plist, true,
-                function(pred, inverse) {return true;});
+
+            var listDiv = myDocument.createElement('div');
+            div.appendChild(listDiv);
+            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function() {
+                var plist = kb.statementsMatching(undefined, WF('tracker'), subject);
+                tabulator.outline.appendPropertyTRs(listDiv, plist, true,
+                    function(pred, inverse) {return true;});            
+            });
             
+
+            // New Issue button
             var b = myDocument.createElement("button");
             b.setAttribute("type", "button");
             div.appendChild(b)

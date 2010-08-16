@@ -548,6 +548,9 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 	    }
     }
     
+
+
+
     
     /** Looks up a thing.
      **	    Looks up all the URIs a things has.
@@ -556,17 +559,35 @@ tabulator.SourceFetcher = function(store, timeout, async) {
      **      rterm:  the resource which refered to this (for tracking bad links)
      */
     this.lookUpThing = function (term, rterm, force) {
-	    tabulator.log.debug("lookUpThing: looking up "+ term);
-	    var uris = kb.uris(term) // Get all URIs
-	    if (typeof uris != 'undefined') {
-	        for (var i=0; i< uris.length; i++) {
-		        this.lookedUp[uris[i]] = true;
-		        this.requestURI(tabulator.rdf.Util.uri.docpart(uris[i]), rterm, force)
-	        }
-	    }
-	    return uris.length
+        tabulator.log.debug("lookUpThing: looking up "+ term);
+        var uris = kb.uris(term) // Get all URIs
+        if (typeof uris != 'undefined') {
+            for (var i=0; i< uris.length; i++) {
+                    this.lookedUp[uris[i]] = true;
+                    this.requestURI(tabulator.rdf.Util.uri.docpart(uris[i]), rterm, force)
+            }
+        }
+        return uris.length
     }
-    
+
+
+    /*  Ask for a doc to be loaded if necessary then call back
+    **/
+    this.nowOrWhenFetched = function(uri, referringTerm, callback) {
+        var sta = this.getState(uri);
+        if (sta == 'fetched') return callback();
+        this.addCallback('done', function(uri2){
+            if (uri2 == uri) callback();
+            return (uri2 != uri); // Call me again?
+        });
+        if (sta == 'unrequested') this.requestURI(
+                            uri, referringTerm, false);
+    }
+
+
+
+
+
     /** Requests a document URI and arranges to load the document.
      ** Parameters:
      **	    term:  term for the thing whose URI is to be dereferenced

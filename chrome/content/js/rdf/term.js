@@ -139,7 +139,7 @@ $rdf.term = function(val) {
                     ''+ val.getUTCFullYear() + '-'+
                     d2(val.getUTCMonth()+1) +'-'+d2(val.getUTCDate())+
                     'T'+d2(val.getUTCHours())+':'+d2(val.getUTCMinutes())+
-                    ':'+d2(val.getUTCSeconds()+'Z'),
+                    ':'+d2(val.getUTCSeconds())+'Z',
             undefined, $rdf.Symbol.prototype.XSDdateTime);
 
         }

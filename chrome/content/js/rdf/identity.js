@@ -270,7 +270,10 @@ function RDFMakeTerm(formula,val, canonicalize) {
     return val;
 }
 
-// add a triple to the store
+// Add a triple to the store
+//
+//  Returns the statement added
+//
 $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
     if (why == undefined) why = this.fetcher ? this.fetcher.appNode: this.sym("chrome:theSession"); //system generated
@@ -305,7 +308,7 @@ $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
         var ix = this.index[i];
         var h = hash[i];
         if (ix[h] == undefined) ix[h] = [];
-        ix[h].push(st); // Set of things with this as subject
+        ix[h].push(st); // Set of things with this as subject, etc
     }
     
     //$rdf.log.debug("ADDING    {"+subj+" "+pred+" "+obj+"} "+why);

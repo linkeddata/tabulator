@@ -66,18 +66,8 @@ tabulator.panes.register( {
             parent.replaceChild(div2, div);
         };
 
-        var nowOrWhenFetched = function(uri, referringTerm, callback) {
-            var sta = tabulator.sf.getState(stateStore.uri);
-            if (sta == 'fetched') return callback();
-            tabulator.sf.addCallback('done', function(uri2){
-                if (uri2 == uri) callback();
-                return (uri2 != uri); // Call me again?
-            });
-            if (sta == 'unrequested') tabulator.sf.requestURI(
-                                stateStore.uri, referringTerm, false);
-        }
 
-        // Make SELECT element to seelct subclasses
+        // Make SELECT element to select subclasses
         //
         // If there is any disjoint union it will so a mutually exclusive dropdown
         // Failing that it will do a multiple selection of subclasses.
@@ -133,22 +123,25 @@ tabulator.panes.register( {
             var select = myDocument.createElement('select');
             select.setAttribute('style', 'margin: 0.6em 1.5em;')
             if (multiple) select.setAttribute('multiple', 'true');
+            var currentURI = undefined;
             for (var uri in uris) {
                 var c = kb.sym(uri)
                 var option = myDocument.createElement('option');
                 option.appendChild(myDocument.createTextNode(tabulator.Util.label(c)));
-                var style = kb.any(c, kb.sym('http://www.w3.org/ns/ui#style'))
-                if (style) option.setAttribute('style', style.value)
+                var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#background-color'));
+                if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
                 option.AJAR_uri = uri;
                 if (uri in types) {
                     option.setAttribute('selected', 'true')
-                    select.oldURI = uri;
+                    currentURI = uri;
+                    //dump("Already in class: "+ uri+"\n")
                 }
                 select.appendChild(option);
             }
-            if (!select.oldURI && !multiple) {
+            if ((currentURI == undefined) && !multiple) {
                 var prompt = myDocument.createElement('option');
                 prompt.appendChild(myDocument.createTextNode("--classify--"));
+                dump("prompt option:" + prompt + "\n")
                 select.insertBefore(prompt, select.firstChild)
                 prompt.selected = true;
             }
@@ -164,10 +157,10 @@ tabulator.panes.register( {
             var group = myDocument.createElement('div');
             var sts = kb.statementsMatching(subject, predicate,undefined,storeDoc); // Only one please
             if (sts.length > 1) throw "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject;
-            var desc = sts.length? sts[0].object.value : "";
+            var desc = sts.length? sts[0].object.value : undefined;
             var field = myDocument.createElement('textarea');
             group.appendChild(field);
-            field.rows = desc? desc.split('\n').length + 3 : 3;
+            field.rows = desc? desc.split('\n').length + 2 : 2;
             field.cols = 80
             field.setAttribute('style', 'font-size:100%; \
                     background-color: white; border: 0.07em solid gray; padding: 1em; margin: 1em 2em;')
@@ -190,7 +183,7 @@ tabulator.panes.register( {
                 submit.disabled = true;
                 field.disabled = true;
                 var deletions = desc ? sts[0] : undefined; // If there was a desciption, remove it
-                insertions = new $rdf.Statement(subject, predicate, field.value, storeDoc);
+                insertions = field.value.length? new $rdf.Statement(subject, predicate, field.value, storeDoc) : [];
                 sparqlService.update(deletions, insertions,function(uri,ok, body){
                     if (ok) { desc = field.value; field.disabled = false;};
                     if (callback) callback(ok, body);
@@ -205,7 +198,7 @@ tabulator.panes.register( {
             return group;
         }
 
-        //  Form to gollect data about a new Issue
+        //  Form to collect data about a New Issue
         //
         var newIssueForm = function(myDocument, kb, tracker, superIssue) {
            var form = myDocument.createElement('form');
@@ -301,8 +294,8 @@ tabulator.panes.register( {
                 var types = kb.findTypeURIs(subject);
                 var mystyle = "padding: 0.5em 1.5em; ";
                 for (var uri in types) {
-                    var style = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#style'))
-                    if (style) mystyle += style.value;
+                    var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#background-color'));
+                    if (backgroundColor) { mystyle += "background-color: "+backgroundColor.value+"; "; break;}
                 }
                 div.setAttribute('style', mystyle);
             }

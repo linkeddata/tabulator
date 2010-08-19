@@ -7,6 +7,8 @@
 // there would be too much data.)
 // When the tableClass is ot given, it looks for common  classes in the data,
 // and gibves the user the option.
+//
+// 2008 Written, Ilaria Liccardi
 
 function renderTableViewPane(doc, tableClass, sourceDocument) {
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -624,11 +626,11 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         // a subject).
 
         var subjects = {};
-        dump("discoverTypes - subjectList.length "+subjectList.length+
-                " tableClass:"+tableClass+", sourceDocument="+sourceDocument+"\n");
+        // dump("discoverTypes - subjectList.length "+subjectList.length+
+         //       " tableClass:"+tableClass+", sourceDocument="+sourceDocument+"\n");
         for (var i=0; i<subjectList.length; ++i) {
             var type = subjectList[i].object;
-            dump("discoverTypes - type "+type+"\n");
+            // dump("discoverTypes - type "+type+"\n");
 
             if (type.termType != "symbol") {   // @@ no bnodes?
                 continue;
@@ -650,7 +652,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
     // Get columns for the given subject.
 
     function getSubjectProperties(subject, columns) {
-        dump("getSubjectProperties: "+subject+"\n");
+        // dump("getSubjectProperties: "+subject+"\n");
 
         // Get a list of properties of this subject.
 
@@ -672,7 +674,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
             var column = getColumnForPredicate(columns, predicate);
             column.checkValue(properties[j].object);
-            dump("Found predicate: "+predicate+"\n");
+            // dump("Found predicate: "+predicate+"\n");
 
             result[predicate.uri] = column;
         }
@@ -683,7 +685,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
     // Identify the columns associated with a type.
 
     function identifyColumnsForType(type, subjects) {
-        dump("identifyColumnsForType\n");
+        // dump("identifyColumnsForType\n");
 
         var allColumns = {};
 
@@ -712,7 +714,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
     // Build table information from parsing RDF statements.
 
     function calculateTable() {
-        dump("calculateTable\n");
+        // dump("calculateTable\n");
 
         // Find the types that we will display in the dropdown
         // list box, and associated objects of those types.
@@ -722,7 +724,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         var s = discoverTypes(); subjects = s[0]; types = s[1]; // no [ ] on LHS
 
         for (var typeUrl in subjects) {
-            dump("calculateTable - typeUrl"+typeUrl+"\n");
+            // dump("calculateTable - typeUrl"+typeUrl+"\n");
             var subjectList = subjects[typeUrl];
             var type = types[typeUrl];
 
@@ -765,7 +767,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
     // Render the table header for the HTML table.
 
     function renderTableHeader(columns, type) {
-        dump(" renderTableHeader type = "+type+", columns.length = "+columns.length+"\n");
+        // dump(" renderTableHeader type = "+type+", columns.length = "+columns.length+"\n");
         var tr = doc.createElement("tr");
 
         /* Empty header for link column */
@@ -783,7 +785,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
             var column = columns[i];
 
             //alert(column.getRange());
-            dump(" label for columns "+i+" is <"+column.getLabel()+">\n");
+            // dump(" label for columns "+i+" is <"+column.getLabel()+">\n");
             th.appendChild(doc.createTextNode(column.getLabel()));
 
             // We can only add a delete button if we are using the

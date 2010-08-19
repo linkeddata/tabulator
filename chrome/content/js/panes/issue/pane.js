@@ -231,8 +231,6 @@ tabulator.panes.register( {
                         rerender(div);
                     }
                 }
-                dump("@@@ about to insert: "+sts.length+"\n")
-                for (var i =0; i<sts.length;i++) {dump("@@@ sts: "+sts[i]+"\n")}
                 sparqlService.update([], sts, sendComplete);
             }
             form.addEventListener('submit', sendNewIssue, false)
@@ -292,7 +290,7 @@ tabulator.panes.register( {
 
             var setPaneStyle = function() {
                 var types = kb.findTypeURIs(subject);
-                var mystyle = "padding: 0.5em 1.5em; ";
+                var mystyle = "padding: 0.5em 1.5em 1em 1.5m; ";
                 for (var uri in types) {
                     var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#background-color'));
                     if (backgroundColor) { mystyle += "background-color: "+backgroundColor.value+"; "; break;}

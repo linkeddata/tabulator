@@ -143,6 +143,9 @@ $rdf.Util = {
 	},
     /**
     * Returns a hash of headers and values
+    **
+    ** @@ Bug: Assumes that each header only occurs once
+    ** Also note that a , in a header value is just the same as having two headers.
      */
 	'getHTTPHeaders': function (xhr) {
 	    var lines = xhr.getAllResponseHeaders().split("\n")
@@ -166,7 +169,7 @@ $rdf.Util = {
 	    var now = new Date();
 	    var year  = now.getYear() + 1900;
 	    var month = now.getMonth() + 1;
-	    var day  = now.getDate() + 1;
+	    var day  = now.getDate();
 	    var hour = now.getUTCHours();
 	    var minute = now.getUTCMinutes();
 	    var second = now.getSeconds();
@@ -184,7 +187,7 @@ $rdf.Util = {
 
 
 
-    'RDFArrayRemove': function(a, x) {  //removes all elements equal to x from a
+    'RDFArrayRemove': function(a, x) {  //removes all statements equal to x from a
         for(var i=0; i<a.length; i++) {
             //TODO: This used to be the following, which didnt always work..why
             //if(a[i] == x)
@@ -554,7 +557,7 @@ $rdf.term = function(val) {
                     ''+ val.getUTCFullYear() + '-'+
                     d2(val.getUTCMonth()+1) +'-'+d2(val.getUTCDate())+
                     'T'+d2(val.getUTCHours())+':'+d2(val.getUTCMinutes())+
-                    ':'+d2(val.getUTCSeconds()+'Z'),
+                    ':'+d2(val.getUTCSeconds())+'Z',
             undefined, $rdf.Symbol.prototype.XSDdateTime);
 
         }
@@ -4130,7 +4133,10 @@ function RDFMakeTerm(formula,val, canonicalize) {
     return val;
 }
 
-// add a triple to the store
+// Add a triple to the store
+//
+//  Returns the statement added
+//
 $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
     if (why == undefined) why = this.fetcher ? this.fetcher.appNode: this.sym("chrome:theSession"); //system generated
@@ -4165,7 +4171,7 @@ $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
         var ix = this.index[i];
         var h = hash[i];
         if (ix[h] == undefined) ix[h] = [];
-        ix[h].push(st); // Set of things with this as subject
+        ix[h].push(st); // Set of things with this as subject, etc
     }
     
     //$rdf.log.debug("ADDING    {"+subj+" "+pred+" "+obj+"} "+why);
@@ -4370,6 +4376,113 @@ return $rdf.IndexedFormula;
 
 }();
 // ends
+
+// These RDFS bits were moved from panes/categoryPAne.js to a js/rdf/rdfs.js
+
+
+$rdf.Formula.prototype.findTypeURIs = function (subject) {
+    // Get all the Classes of which we can RDFS-infer the subject is a member
+    // ** @@ This will loop is there is a class subclass loop which is actually valid
+    // Returns a hash table where key is URI of type and value is statement why we think so.
+    // Does NOT return terms, returns URI strings.
+
+    var sts = this.statementsMatching(subject, undefined, undefined); // fast
+    var rdftype = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+    var types = [];
+    for (var i=0; i < sts.length; i++) {
+        st = sts[i];
+        if (st.predicate.uri == rdftype) {
+            types[st.object.uri] = st;
+        } else {
+            // $rdf.log.warn('types: checking predicate ' + st.predicate.uri);
+            var ranges = this.each(st.predicate, this.sym('http://www.w3.org/2000/01/rdf-schema#domain'))
+            for (var j=0; j<ranges.length; j++) {
+                types[ranges[j].uri] = st; // A pointer to one part of the inference only
+            }
+        }
+    }
+    var sts = this.statementsMatching(undefined, undefined, subject); // fast
+    for (var i=0; i < sts.length; i++) {
+        st = sts[i];
+        var domains = this.each(st.predicate, this.sym('http://www.w3.org/2000/01/rdf-schema#range'))
+        for (var j=0; j < domains.length; j++) {
+            types[domains[j].uri] = st;
+        }
+    }
+    
+    var done = {}; // Classes we have looked up
+    var go = true;
+    for(;go;) {
+        go = false;
+        var agenda = {};
+        for (var t in types) agenda[t] = types[t]; // Take a copy
+        for (var t in agenda) {
+            var sups = this.each(this.sym(t), this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'));
+            for (var i=0; i<sups.length; i++) {
+                var s = sups[i].uri;
+                if (s in done) continue;
+                if (s in agenda) continue;
+                types[s] = types[t];
+                go = true;
+            }
+            done[t] = agenda[t];
+            delete types[t];
+        }
+        
+    }
+    // $rdf.log.warn('Types: ' + types.length); 
+    return done;
+};
+        
+/* Find the types in the list which have no *stored* supertypes
+** We exclude the universal class, owl:Things and rdf:Resource, as it is not information-free.*/
+        
+$rdf.Formula.prototype.topTypeURIs = function(types) {
+    var tops = [];
+    for (var u in types) {
+        var sups = this.each(this.sym(u), this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'));
+        var k = 0
+        for (var j=0; j < sups.length; j++) {
+            if (sups[j].uri != 'http://www.w3.org/2000/01/rdf-schema#Resource') {
+                k++; break;
+            }
+        }
+        if (!k) tops[u] = types[u];
+    }
+    if (tops['http://www.w3.org/2000/01/rdf-schema#Resource'])
+        delete tops['http://www.w3.org/2000/01/rdf-schema#Resource'];
+    if (tops['http://www.w3.org/2002/07/owl#Thing'])
+        delete tops['http://www.w3.org/2002/07/owl#Thing'];
+    return tops;
+}
+
+/* Find the types in the list which have no *stored* subtypes
+** These are a set of classes which provide by themselves complete
+** information -- the other classes are redundant for those who
+** know the class DAG.
+*/
+    
+$rdf.Formula.prototype.bottomTypeURIs = function(types) {
+    var bots = [];
+    for (var u in types) {
+        var subs = this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'),this.sym(u));
+        var bottom = true;
+        for (var i=0; i<subs.length; i++) {
+            if (subs[i].uri in types) {
+                bottom = false;
+                break;
+            }
+        }
+        if (bottom) bots[u] = types[u];
+    }
+    return bots;
+}
+   
+    
+
+//ends
+
+
 // Matching a formula against another formula
 //
 //
@@ -5797,7 +5910,7 @@ sparql.prototype.update = function(deletions, insertions, callback) {
         var mykb = tabulator.kb;
         this._fire(doc.uri, query,
             function(uri, success, body) {
-                dump("\t sparql: Return for query "+query+"\n");
+                dump("\t sparql: Return "+success+" for query "+query+"\n");
                 if (success) {
                     for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
                     for (var i=0; i<is.length;i++)

@@ -1,7 +1,14 @@
 
 // Format an array of RDF statements as an HTML table.
+//
+// This can operate in one of two modes: when the class of object is given
+// or when the source document from whuch data is taken is givem.
+// (In principle it could operate with neither gievn but typically
+// there would be too much data.)
+// When the tableClass is ot given, it looks for common  classes in the data,
+// and gibves the user the option.
 
-function renderTableViewPane(doc, documentSubject) {
+function renderTableViewPane(doc, tableClass, sourceDocument) {
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
 
@@ -59,28 +66,41 @@ function renderTableViewPane(doc, documentSubject) {
     // The last SPARQL query used:
     var lastQuery = null;
 
-    [allType, types] = calculateTable();
-
     var resultDiv = doc.createElement("div");
     resultDiv.className = "tableViewPane";
 
-    resultDiv.appendChild(generateControlBar());
-    typeSelectorDiv.appendChild(generateTypeSelector(allType, types));
+    resultDiv.appendChild(generateControlBar()); // sets typeSelectorDiv
+
+    var s = calculateTable(); allType = s[0]; types = s[1];
+    if (!tableClass) typeSelectorDiv.appendChild(
+        generateTypeSelector(allType, types));
 
     var tableDiv = doc.createElement("div");
     resultDiv.appendChild(tableDiv);
 
-    // Find the most common type and select it by default
 
-    var mostCommonType = getMostCommonType(types);
-
-    if (mostCommonType != null) {
-        buildFilteredTable(mostCommonType);
+    // A specifically asked-for type
+    if (false) {
+    
+        buildFilteredTable(new SubjectType(tableClass));
+        
     } else {
-        buildFilteredTable(allType);
-    }
 
+        // Find the most common type and select it by default
+
+        var mostCommonType = getMostCommonType(types);
+
+        if (mostCommonType != null) {
+            buildFilteredTable(mostCommonType);
+        } else {
+            buildFilteredTable(allType);
+        }
+    }
     return resultDiv;
+    
+    
+    ///////////////////////////////////////////////////////////////////
+    
 
     function closeDialog(dialog) {
         dialog.parentNode.removeChild(dialog);
@@ -145,11 +165,12 @@ function renderTableViewPane(doc, documentSubject) {
         result.setAttribute("class", "toolbar");
 
         var tr = doc.createElement("tr");
-
+        
+/*             @@    Add in later -- not debugged yet 
         var sparqlButtonDiv = doc.createElement("td");
         sparqlButtonDiv.appendChild(generateSparqlButton());
         tr.appendChild(sparqlButtonDiv);
-
+*/
         typeSelectorDiv = doc.createElement("td");
         tr.appendChild(typeSelectorDiv);
 
@@ -594,20 +615,22 @@ function renderTableViewPane(doc, documentSubject) {
         // From this we can get a list of subjects and types.
 
         var subjectList = tabulator.kb.statementsMatching(undefined,
-                                                tabulator.ns.rdf("type"),
-                                                undefined,
-                                                documentSubject);
+                                                tabulator.ns.rdf('type'),
+                                                tableClass, // can be undefined OR
+                                                sourceDocument); // can be undefined
 
         // Subjects for later lookup.  This is a mapping of type URIs to
         // lists of subjects (it is necessary to record the type of
         // a subject).
 
         var subjects = {};
-
+        dump("discoverTypes - subjectList.length "+subjectList.length+
+                " tableClass:"+tableClass+", sourceDocument="+sourceDocument+"\n");
         for (var i=0; i<subjectList.length; ++i) {
             var type = subjectList[i].object;
+            dump("discoverTypes - type "+type+"\n");
 
-            if (type.termType != "symbol") {
+            if (type.termType != "symbol") {   // @@ no bnodes?
                 continue;
             }
 
@@ -627,13 +650,14 @@ function renderTableViewPane(doc, documentSubject) {
     // Get columns for the given subject.
 
     function getSubjectProperties(subject, columns) {
+        dump("getSubjectProperties: "+subject+"\n");
 
         // Get a list of properties of this subject.
 
         var properties = tabulator.kb.statementsMatching(subject,
                                                undefined,
                                                undefined,
-                                               documentSubject);
+                                               sourceDocument);
 
         var result = {};
 
@@ -648,6 +672,7 @@ function renderTableViewPane(doc, documentSubject) {
 
             var column = getColumnForPredicate(columns, predicate);
             column.checkValue(properties[j].object);
+            dump("Found predicate: "+predicate+"\n");
 
             result[predicate.uri] = column;
         }
@@ -658,6 +683,7 @@ function renderTableViewPane(doc, documentSubject) {
     // Identify the columns associated with a type.
 
     function identifyColumnsForType(type, subjects) {
+        dump("identifyColumnsForType\n");
 
         var allColumns = {};
 
@@ -686,15 +712,17 @@ function renderTableViewPane(doc, documentSubject) {
     // Build table information from parsing RDF statements.
 
     function calculateTable() {
+        dump("calculateTable\n");
 
         // Find the types that we will display in the dropdown
         // list box, and associated objects of those types.
 
         var subjects, types;
 
-        [subjects, types] = discoverTypes();
+        var s = discoverTypes(); subjects = s[0]; types = s[1]; // no [ ] on LHS
 
         for (var typeUrl in subjects) {
+            dump("calculateTable - typeUrl"+typeUrl+"\n");
             var subjectList = subjects[typeUrl];
             var type = types[typeUrl];
 
@@ -737,6 +765,7 @@ function renderTableViewPane(doc, documentSubject) {
     // Render the table header for the HTML table.
 
     function renderTableHeader(columns, type) {
+        dump(" renderTableHeader type = "+type+", columns.length = "+columns.length+"\n");
         var tr = doc.createElement("tr");
 
         /* Empty header for link column */
@@ -754,6 +783,7 @@ function renderTableViewPane(doc, documentSubject) {
             var column = columns[i];
 
             //alert(column.getRange());
+            dump(" label for columns "+i+" is <"+column.getLabel()+">\n");
             th.appendChild(doc.createTextNode(column.getLabel()));
 
             // We can only add a delete button if we are using the
@@ -1108,6 +1138,8 @@ function renderTableViewPane(doc, documentSubject) {
 
         // Is this an enumeration type?
 
+        // Also  ToDo: @@@ Handle membership of classes whcih are disjointUnions
+        
         var matches = tabulator.kb.statementsMatching(range,
                                             tabulator.ns.owl("oneOf"),
                                             undefined,
@@ -1231,6 +1263,7 @@ function renderTableViewPane(doc, documentSubject) {
 
                 for (var j=0; j<objects.length; ++j) {
                     var obj = objects[j];
+                    //dump("  column "+i+', object'+j+", obj= "+obj+"\n");
 
                     td.appendChild(renderValue(obj, column));
 
@@ -1390,7 +1423,7 @@ function renderTableViewPane(doc, documentSubject) {
 
     // Given a formula object, process all statements and infer predicates
     // for columns.
-
+/*
     function inferColumnsFromFormula(columns, formula) {
         tabulator.log.debug(">> processing formula");
 
@@ -1452,7 +1485,7 @@ function renderTableViewPane(doc, documentSubject) {
     }
 
     // Generate a table from a query.
-
+/*
     function renderTableForQuery(query, type) {
 
         // Columns list.  If we are rendering a table for a specific type,
@@ -1599,7 +1632,7 @@ function renderTableViewPane(doc, documentSubject) {
 
             var rowKey = values["?_row"];
 
-            if (rowKey == null) alert("rowKey is null!");
+            if (rowKey == null) throw ("rowKey is null!");
 
             var rowKeyUri = rowKey.uri;
 
@@ -1618,11 +1651,11 @@ function renderTableViewPane(doc, documentSubject) {
             }
 
             // Add the new values to this row.
-
+            
             updateRow(row, columns, values, columnLookup);
         })
     }
-
+*/
     // Generate a table from a query.
     // TODO: for the time being, this is still tied to rendering based on
     // a fixed type (rather than general queries).  This needs to be 
@@ -1644,7 +1677,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         var table = doc.createElement("table");
 
-        table.appendChild(renderTableHeader(type));
+        table.appendChild(renderTableHeader(columns, type));
         table.appendChild(renderTableSelectors(rows, columns));
 
         // Run query.  Note that this is perform asynchronously; the
@@ -1695,13 +1728,38 @@ function renderTableViewPane(doc, documentSubject) {
     }
 
 }
+/////////////////////////////////////////////////////////////////////
 
-/* Table view pane */
+/* Table view pane  -- view of a class*/
 
 tabulator.panes.register({
     icon: iconPrefix + "icons/table.png",
 
-    name: "table",
+    name: "tableOfClass",
+
+    label: function(subject) {
+            //if (!tabulator.kb.holds(subject, tabulator.ns.rdf('type'),tabulator.ns.rdfs('Class'))) return null;
+            if (!tabulator.kb.any(undefined, tabulator.ns.rdf('type'),subject)) return null;
+            return tabulator.Util.label(subject)+ " table";
+        },
+
+    render: function(subject, myDocument) {
+        var div = myDocument.createElement("div");
+        div.setAttribute('class', 'n3Pane'); // needs a proper class
+        div.appendChild(renderTableViewPane(myDocument, subject, undefined));
+        return div;
+    }
+});
+
+/* Table view pane -- as a view of a document 
+*/
+/*
+
+tabulator.panes.register({
+    icon: iconPrefix + "icons/table.png",   
+    @@@@@@  Needs to be different from other icons used eg above as eems to be used asto fire up the pane
+
+    name: "tableOfDocument",
 
     label: function(subject) {
 
@@ -1738,8 +1796,8 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        div.appendChild(renderTableViewPane(myDocument, subject));
+        div.appendChild(renderTableViewPane(myDocument, undefined, subject));
         return div;
     }
-})
-
+});
+*/

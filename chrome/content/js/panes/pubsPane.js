@@ -1,5 +1,8 @@
 /*
-This commit: Got Journal and Book's Basics Working 
+This commit: Got Journal Title Autocomplete Dropdown showing with dummy
+NOTE: Dropdown only shows if 
+1. you first visit http://dig.csail.mit.edu/2007/wiki/docs/collections
+2. refresh page
     Summer 2010
     haoqili@mit.edu
     
@@ -134,15 +137,17 @@ tabulator.panes.pubsPane = {
             var doctitle = newFormRowID(theForm, caption_title, typeofinp);
             // Add the listener
             doctitle.addEventListener("keypress", function(e){
+                var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
+                var doctitle_value = doctitle_id.value;
+            
                 dump("In " + caption_title + ", 1 pressing a key \n");
                 switch (caption_title) {
                     case 'Journal Title':
                         dump("yo journal\n");
-                        //tabulator.outline.UserInput.journalTitleAutoComplete(e);
-                        //dump(".\n\n\n");
-                        //tabulator.outline.UserInput.showMenu(e, "GeneralAutoComplete", undefined, "orderisuseless");
-                        //dump(".\n\n\n");
-                        //dump("========OVER=========\n");
+                        dump(".\n\n\n");
+                        tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
+                        dump(".\n\n\n");
+                        dump("========OVER=========\n");
                         break;
                     case 'Book Title':
                         dump("yo book\n");
@@ -169,8 +174,6 @@ tabulator.panes.pubsPane = {
                     var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
                     
                     // 2. Add the title for the journal
-                    var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
-                    var doctitle_value = doctitle_id.value;
                     var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
 
                     var totalst = [doctype_addst, doctitle_addst];

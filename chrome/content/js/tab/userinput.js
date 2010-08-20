@@ -41,6 +41,7 @@ function UserInput(outline){
     var xsd = tabulator.ns.xsd;
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
+    var bibo = tabulator.rdf.Namespace("http://purl.org/ontology/bibo/"); //hql for pubsPane
         
     var updateService=new updateCenter(kb);
     if (!UserInputFormula){
@@ -1216,6 +1217,49 @@ function UserInput(outline){
         //menu.addEventListener('click',false);
         menu.style.top=e.pageY+"px";
         menu.style.left=e.pageX+"px";
+        
+        /////////hql
+        // Get Offset of an HTML element
+        var getOffset = function getOffset( el ) {
+            var _lf = 0;
+            var _tp = 0;
+            var oldlf = 0;
+            var oldtp = 0;
+            var newlf = 0;
+            var newtp = 0;
+            
+            //only change if the new parent's offset is different
+            // TODO: STILL a small offset/bug 
+            while( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
+                newlf = el.offsetLeft;
+                newtp = el.offsetTop;
+                
+                if (newlf != oldlf) {
+                    _lf += el.offsetLeft - el.scrollLeft;
+                }
+                if (newtp != oldtp) {
+                    _tp += el.offsetTop - el.scrollTop;
+                }
+                
+                oldlf = newlf;
+                oldtp = newtp;
+                
+                el = el.parentNode;
+            }
+            // there is a constant offset
+            return { top: _tp+54, left: _lf-38 };
+        }
+        // because JournalTitleAutoComplete is called with a keypress, 
+        // and not mouse actions, which breaks other things
+        if (menuType == 'JournalTitleAutoComplete'){//hql 
+            var loc = getOffset(myDocument.getElementById("inpid_journal_title"));
+            loc.left -= myDocument.getElementById("inpid_journal_title").scrollTop;
+            menu.style.top = loc.top+"px";
+            menu.style.left = loc.left+"px";
+        }
+        dump("\nmenu at top="+menu.style.top+" left="+menu.style.left+"\n");//hql
+        //\\\\\\\hql
+        
         myDocument.body.appendChild(menu);
         var table=menu.appendChild(myDocument.createElement('table'));
            
@@ -1228,7 +1272,7 @@ function UserInput(outline){
         }
 
         table.addEventListener('mouseover',highlightTr,false);
-            
+        
         //setting for action after selecting item
         switch (menuType){
             case 'DidYouMeanDialog':            
@@ -1265,6 +1309,7 @@ function UserInput(outline){
             case 'PredicateAutoComplete':
             case 'GeneralAutoComplete':
             case 'GeneralPredicateChoice':
+            case 'JournalTitleAutoComplete'://hql
             case 'TypeChoice':
                 var isPredicate=extraInformation.isPredicate;
                 var selectedTd=extraInformation.selectedTd;
@@ -1413,6 +1458,20 @@ function UserInput(outline){
                 }
                 //alert(extraInformation.choices.length);
                 */
+                break;
+            case 'JournalTitleAutoComplete': //hql
+                dump("===start JournalTitleAutoComplete\n");
+                var entries=kb.each(undefined, rdf('type'), bibo('Journal'));
+                dump("the entries="+entries+"\n");
+                for (var i=0; i<entries.length && i<10; i++){
+                    var tr=table.appendChild(myDocument.createElement('tr'));
+                    tr.setAttribute('about', 'journalTitle');
+                    var th=tr.appendChild(myDocument.createElement('th'))
+                    // dummy stuff for testing
+                    th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode("test33"));//entries[i]
+                    tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('typeLabel?'))
+                }
+                dump("\\\\done\n");
                 break;
             case 'LimitedPredicateChoice':
                 var choiceTerm=tabulator.util.getAbout(kb,extraInformation.clickedTd);

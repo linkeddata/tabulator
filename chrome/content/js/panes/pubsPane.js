@@ -20,7 +20,7 @@ tabulator.panes.pubsPane = {
         if (tabulator.kb.whether(
             subject, tabulator.ns.rdf('type'),
             tabulator.ns.foaf('Person'))){
-            dump("the subjet is: "+subject);
+            dump("pubsPane: the subject is: "+subject);
                 return 'pubs';
             } else {
                 return null;

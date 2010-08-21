@@ -4376,9 +4376,58 @@ return $rdf.IndexedFormula;
 
 }();
 // ends
-
+// RDFS Inference
+//
+// These are hand-written implementations of a backward-chaining reasoner over the RDFS axioms
 // These RDFS bits were moved from panes/categoryPAne.js to a js/rdf/rdfs.js
 
+
+$rdf.Formula.prototype.transitiveClosure = function(seeds, predicate, inverse){
+    var done = {}; // Classes we have looked up
+    var agenda = {};
+    for (var t in seeds) agenda[t] = seeds[t]; // Take a copy
+    for(;;) {
+        var t = (function(){for (var pickOne in agenda) {return pickOne;} return undefined}());
+        if (t == undefined)  return done;
+        var sups = inverse  ? this.each(undefined, predicate, this.sym(t))
+                            : this.each(this.sym(t), predicate);
+        for (var i=0; i<sups.length; i++) {
+            var s = sups[i].uri;
+            if (s in done) continue;
+            if (s in agenda) continue;
+            agenda[s] = agenda[t];
+        }
+        done[t] = agenda[t];
+        delete agenda[t];
+    }
+};
+
+
+// Find members of classes
+//
+// For this class or any subclass, anything which has it is its type
+// or is the object of something which has the tpe as its range, or subject
+// of something which has the type as its domain
+// We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
+
+$rdf.Formula.prototype.findMemberURIs = function (subject) {
+    var types = {}, types2 = this.transitiveClosure(types,
+        this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), true);
+    var members = {};
+    for (t in types2) {
+        this.statementsMatching(undefined, this.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), this.sym(t))
+            .map(function(st){members[st.subject.toNT()] = st});
+        this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#domain'), this.sym(t))
+            .map(function(pred){
+                this.statementsMatching(undefined, pred).map(function(st){members[st.subject.toNT()] = st});
+            });
+        this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#range'), this.sym(t))
+            .map(function(pred){
+                this.statementsMatching(undefined, pred).map(function(st){members[st.object.toNT()] = st});
+            });
+    }
+    return members;
+};
 
 $rdf.Formula.prototype.findTypeURIs = function (subject) {
     // Get all the Classes of which we can RDFS-infer the subject is a member
@@ -4409,7 +4458,9 @@ $rdf.Formula.prototype.findTypeURIs = function (subject) {
             types[domains[j].uri] = st;
         }
     }
-    
+    return this.transitiveClosure(types,
+        this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), false);
+/*    
     var done = {}; // Classes we have looked up
     var go = true;
     for(;go;) {
@@ -4432,6 +4483,7 @@ $rdf.Formula.prototype.findTypeURIs = function (subject) {
     }
     // $rdf.log.warn('Types: ' + types.length); 
     return done;
+*/
 };
         
 /* Find the types in the list which have no *stored* supertypes

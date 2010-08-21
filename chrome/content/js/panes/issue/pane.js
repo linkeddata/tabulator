@@ -71,7 +71,7 @@ tabulator.panes.register( {
         //
         // If there is any disjoint union it will so a mutually exclusive dropdown
         // Failing that it will do a multiple selection of subclasses.
-        // Callback takes (ok, errorBody)
+        // Callback takes (boolean ok, string errorBody)
         
         var makeSelectForCategory = function(subject, category, storeDoc, callback) {
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
@@ -253,32 +253,7 @@ tabulator.panes.register( {
         
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
-        // Claim the next sequential number -- unused?
-        var usingNextID = function usingNextID(thing, kb, callback) {
-            var docuri = tabulator.rdf.Util.uri.docpart(thing.uri);
-            if (doc == object.uri) throw 'usingNextID - must have a hash in uri:'+thing.uri;
-            var sts = kb.statementsMatching(thing, tabulator.ns.link('nextID'),undefined, doc);
-            if (sts.length == 0) {
-                sparqlService.update([], new $rdf.Statement(
-                        thing, tabulator.ns.link('nextID'), 1,kb.sym(doc)),
-                        function(uri, success, body){
-                            if (!success) throw "Error setting first ID for "+thing;
-                })
-            } else {
-                var id = 0 + sts[0].object.value;
-                var updater = sparqlService.update_statement(sts[0]);
-                updater.set_object(id+1, function(uri, success, body){
-                    if (success) {
-                        callback(id);
-                    } else {
-                        dump("Failed to get new ID, asssume clash, retrying:"+body+"\n");
-                        usingNextID(thing, kb, callback);
-                    }
-                });
-            }
-        }
-        
-
+ 
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -287,6 +262,11 @@ tabulator.panes.register( {
         //              Render a single issue
         
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
+
+            var ns = tabulator.ns
+            var predicateURIsDone = {};
+            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+            donePredicate(ns.rdf('type'));
 
             var setPaneStyle = function() {
                 var types = kb.findTypeURIs(subject);
@@ -305,6 +285,7 @@ tabulator.panes.register( {
             if (!states) throw 'This tracker '+tracker+' has no issueClass';
             var stateStore = kb.any(tracker, WF('stateStore'));
             if (!stateStore) throw 'This tracker '+tracker+' has no stateStore';
+            donePredicate(WF('tracker'));
 
             var cats = kb.each(tracker, WF('issueCategory')); // zero or more
             var select = makeSelectForCategory(subject, states, stateStore, function(ok,body){
@@ -325,11 +306,19 @@ tabulator.panes.register( {
                 }));
             }
             
+            var a = myDocument.createElement('a');
+            a.setAttribute('href',tracker.uri);
+            a.setAttribute('style', 'float:right');
+            div.appendChild(a);
+            a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
+
             div.appendChild(makeDescription(myDocument, subject, WF('description'),
                 stateStore, function(ok,body){
                     if (ok) setModifiedDate(stateStore, kb, stateStore);
                     else complain("Failed to description:\n"+body);
                 }));
+            donePredicate(WF('description'));
+
 
             // Add in comments about the bug
             tabulator.outline.appendPropertyTRs(div, plist, false,
@@ -353,6 +342,7 @@ tabulator.panes.register( {
                     if (inverse && pred.sameTerm(WF('dependent'))) return true;
                     return false
                 });
+            donePredicate(WF('dependent'));
 
 
             div.appendChild(myDocument.createElement('br'));
@@ -365,11 +355,18 @@ tabulator.panes.register( {
             b.addEventListener('click', function(e) {
                 div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
             
-            var a = myDocument.createElement('a');
-            a.setAttribute('href',tracker.uri);
-            div.appendChild(a);
-            a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
-
+            div.appendChild(myDocument.createElement('tr'))
+                        .setAttribute('style','height: 1em'); // spacer
+            
+            // Remaining properties
+            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+            tabulator.outline.appendPropertyTRs(div, qlist, true,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
             
 
 

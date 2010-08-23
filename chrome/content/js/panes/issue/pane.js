@@ -263,111 +263,118 @@ tabulator.panes.register( {
         
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
 
-            var ns = tabulator.ns
-            var predicateURIsDone = {};
-            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
-            donePredicate(ns.rdf('type'));
-
-            var setPaneStyle = function() {
-                var types = kb.findTypeURIs(subject);
-                var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
-                for (var uri in types) {
-                    var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#background-color'));
-                    if (backgroundColor) { mystyle += "background-color: "+backgroundColor.value+"; "; break;}
-                }
-                div.setAttribute('style', mystyle);
-            }
-            setPaneStyle();
-            
             var tracker = kb.any(subject, WF('tracker'));
             if (!tracker) throw 'This issue '+subject+'has no tracker';
-            var states = kb.any(tracker, WF('issueClass'));
-            if (!states) throw 'This tracker '+tracker+' has no issueClass';
-            var stateStore = kb.any(tracker, WF('stateStore'));
-            if (!stateStore) throw 'This tracker '+tracker+' has no stateStore';
-            donePredicate(WF('tracker'));
+            var trackerURI = tracker.uri.split('#')[0];
+            // Much data is in the tracker instance, so wait for the data from it
+            tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane() {
+            
+                var ns = tabulator.ns
+                var predicateURIsDone = {};
+                var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+                donePredicate(ns.rdf('type'));
+                donePredicate(ns.dc('title'));
 
-            var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-            var select = makeSelectForCategory(subject, states, stateStore, function(ok,body){
-                    if (ok) {
-                        setModifiedDate(stateStore, kb, stateStore);
-                        rerender(div);
+                var setPaneStyle = function() {
+                    var types = kb.findTypeURIs(subject);
+                    var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                    for (var uri in types) {
+                        var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#background-color'));
+                        if (backgroundColor) { mystyle += "background-color: "+backgroundColor.value+"; "; break;}
                     }
-                    else complain("Failed to change state:\n"+body);
-                })
-            div.appendChild(select);
-            for (var i=0; i<cats.length; i++) {
-                div.appendChild(makeSelectForCategory(subject, cats[i], stateStore, function(ok,body){
-                    if (ok) {
-                        setModifiedDate(stateStore, kb, stateStore);
-                        rerender(div);
-                    }
-                    else complain("Failed to change category:\n"+body);
-                }));
-            }
-            
-            var a = myDocument.createElement('a');
-            a.setAttribute('href',tracker.uri);
-            a.setAttribute('style', 'float:right');
-            div.appendChild(a);
-            a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
+                    div.setAttribute('style', mystyle);
+                }
+                setPaneStyle();
+                
 
-            div.appendChild(makeDescription(myDocument, subject, WF('description'),
-                stateStore, function(ok,body){
-                    if (ok) setModifiedDate(stateStore, kb, stateStore);
-                    else complain("Failed to description:\n"+body);
-                }));
-            donePredicate(WF('description'));
+                var states = kb.any(tracker, WF('issueClass'));
+                if (!states) throw 'This tracker '+tracker+' has no issueClass';
+                var stateStore = kb.any(tracker, WF('stateStore'));
+                if (!stateStore) throw 'This tracker '+tracker+' has no stateStore';
+                donePredicate(WF('tracker'));
 
+                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+                var select = makeSelectForCategory(subject, states, stateStore, function(ok,body){
+                        if (ok) {
+                            setModifiedDate(stateStore, kb, stateStore);
+                            rerender(div);
+                        }
+                        else complain("Failed to change state:\n"+body);
+                    })
+                div.appendChild(select);
+                for (var i=0; i<cats.length; i++) {
+                    div.appendChild(makeSelectForCategory(subject, cats[i], stateStore, function(ok,body){
+                        if (ok) {
+                            setModifiedDate(stateStore, kb, stateStore);
+                            rerender(div);
+                        }
+                        else complain("Failed to change category:\n"+body);
+                    }));
+                }
+                
+                var a = myDocument.createElement('a');
+                a.setAttribute('href',tracker.uri);
+                a.setAttribute('style', 'float:right');
+                div.appendChild(a);
+                a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
 
-            // Add in comments about the bug
-            tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {
-                    if (!inverse && pred.uri == 
-                        "http://www.w3.org/2000/01/rdf-schema#comment") return true;
-                    return false
-                });
-
-
-            // Sub issues
-            tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {
-                    if (!inverse && pred.sameTerm(WF('dependent'))) return true;
-                    return false
-                });
-
-            // Super issues
-            tabulator.outline.appendPropertyTRs(div, qlist, true,
-                function(pred, inverse) {
-                    if (inverse && pred.sameTerm(WF('dependent'))) return true;
-                    return false
-                });
-            donePredicate(WF('dependent'));
+                div.appendChild(makeDescription(myDocument, subject, WF('description'),
+                    stateStore, function(ok,body){
+                        if (ok) setModifiedDate(stateStore, kb, stateStore);
+                        else complain("Failed to description:\n"+body);
+                    }));
+                donePredicate(WF('description'));
 
 
-            div.appendChild(myDocument.createElement('br'));
+                // Add in comments about the bug
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        if (!inverse && pred.uri == 
+                            "http://www.w3.org/2000/01/rdf-schema#comment") return true;
+                        return false
+                    });
 
-            var b = myDocument.createElement("button");
-            b.setAttribute("type", "button");
-            div.appendChild(b)
-            b.innerHTML = "New sub "+classLabel;
-            b.setAttribute('style', 'float: right;');
-            b.addEventListener('click', function(e) {
-                div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
-            
-            div.appendChild(myDocument.createElement('tr'))
-                        .setAttribute('style','height: 1em'); // spacer
-            
-            // Remaining properties
-            tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {
-                    return !(pred.uri in predicateURIsDone)
-                });
-            tabulator.outline.appendPropertyTRs(div, qlist, true,
-                function(pred, inverse) {
-                    return !(pred.uri in predicateURIsDone)
-                });
-            
+
+                // Sub issues
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                        return false
+                    });
+
+                // Super issues
+                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                    function(pred, inverse) {
+                        if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                        return false
+                    });
+                donePredicate(WF('dependent'));
+
+
+                div.appendChild(myDocument.createElement('br'));
+
+                var b = myDocument.createElement("button");
+                b.setAttribute("type", "button");
+                div.appendChild(b)
+                classLabel = tabulator.Util.label(states);
+                b.innerHTML = "New sub "+classLabel;
+                b.setAttribute('style', 'float: right;');
+                b.addEventListener('click', function(e) {
+                    div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
+                
+                div.appendChild(myDocument.createElement('tr'))
+                            .setAttribute('style','height: 1em'); // spacer
+                
+                // Remaining properties
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        return !(pred.uri in predicateURIsDone)
+                    });
+                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                    function(pred, inverse) {
+                        return !(pred.uri in predicateURIsDone)
+                    });
+            });  // End nowOrWhenFetched tracker
 
 
 

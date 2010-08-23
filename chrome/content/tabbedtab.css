@@ -271,25 +271,6 @@ div.exceptionPane pre { background-color: #fee; }
     font-weight: bold;
 }
 
-.pubsPane a, 
-.pubsPane a:link, 
-.pubsPane a:visited { 
-    color: #3B5998; 
-    text-decoration: none; 
-    font-weight: bold;
-}
-
-.pubsPane a:hover { 
-    color: #3B5998; 
-    text-decoration: underline; 
-    font-weight: bold;
-}
-
-.pubsPane a:active { 
-    color: #888; 
-    text-decoration: none; 
-}
-
 .pubsPane h2 {
     margin: 0;
     padding: 0;
@@ -299,21 +280,22 @@ div.exceptionPane pre { background-color: #fee; }
     padding-left: 1em;
 }
 
-.pubsRow,
-#r_coAuthor1, #r_coAuthor2, #r_coAuthor3,
-#r_journal, #r_book, #r_URL,
-#r_abstract {
+/*Clear both - start things on individula lines */
+.pubsRow {
     margin: 0.5em 3em 0.5em 0em;
     clear: both;
 }
 
-.pubsRow input,
-#r_coAuthor1 input, #r_coAuthor2 input, #r_coAuthor3 input,
-#r_journal input, #r_book input, #r_URL input,
-#abstract {
+/*inputs float right to line up */
+.pubsRow input {
     float: right;
     width: 20em;
     height: 1em;
+}
+#inpid_book_description {
+    float: right;
+    height: 8em;
+    width: 17em;
 }
 
 .pubsRow button {
@@ -323,13 +305,12 @@ div.exceptionPane pre { background-color: #fee; }
     margin: 0.5em;
 }
 
-#r_coAuthor2.hideit, #r_coAuthor3.hideit,
-#r_journal.hideit, #r_book.hideit {
+.hideit
+{
     display: none;
 }
 
-#r_coAuthor2.active, #r_coAuthor3.active,
-#r_journal.active, #r_book.active {
+.active {
     display: true;
 }
 
@@ -351,10 +332,7 @@ div.exceptionPane pre { background-color: #fee; }
     display: inline;
 }
 
-#abstract {
-    height: 8em;
-    width: 17em;
-}
+
 
 
 /******************* CV Pane *****************/

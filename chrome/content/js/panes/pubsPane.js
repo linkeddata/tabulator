@@ -1,10 +1,16 @@
 /*
-This commit: Got Journal Title Autocomplete Dropdown showing with dummy
+    Summer 2010
+    haoqili@mit.edu
+    
+This commit: Autocomplete, buggy basic version
 NOTE: Dropdown only shows if 
 1. you first visit http://dig.csail.mit.edu/2007/wiki/docs/collections
 2. refresh page
-    Summer 2010
-    haoqili@mit.edu
+
+Autocomplete TODO:
+1. Allow dropdown interactive (arrow up down, clicks) 
+... w/ userinput's autocomplete handler I think
+2. Fix backspace things break problem    
     
     //TODO:
     1 make autocomplete (kenny's search code)
@@ -65,6 +71,8 @@ tabulator.panes.pubsPane = {
         var jarticleURI = "";
         
         var bookURI = "";
+                
+        var doctitle_value ="";
        
         // Functions -------------------------------------------------------
         
@@ -137,27 +145,34 @@ tabulator.panes.pubsPane = {
             var doctitle = newFormRowID(theForm, caption_title, typeofinp);
             // Add the listener
             doctitle.addEventListener("keypress", function(e){
-                var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
-                var doctitle_value = doctitle_id.value;
-            
-                dump("In " + caption_title + ", 1 pressing a key \n");
-                switch (caption_title) {
-                    case 'Journal Title':
-                        dump("yo journal\n");
-                        dump(".\n\n\n");
-                        tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
-                        dump(".\n\n\n");
-                        dump("========OVER=========\n");
-                        break;
-                    case 'Book Title':
-                        dump("yo book\n");
-                        break;
-                    default:
-                        dump("neither\n");
-                }
-                if (e.keyCode == 13 ){
-                    dump("In " + caption_title + ", 2 Enter PRESSED\n");
-                                
+                // Only register legal chars
+                if (e.charCode != 0){
+                    //NB not using elementId.value because it's offbyone
+                    //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
+                    //var doctitle_value = doctitle_id.value;
+                    doctitle_value += String.fromCharCode(e.charCode);
+                    dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
+                    switch (caption_title) {
+                        case 'Journal Title':
+                            dump("yo journal\n");
+
+                            dump(".a.\n\n\n In Text=" + doctitle_value+"\n");
+                            tabulator.outline.UserInput.clearMenu();
+                            tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
+
+                            dump("========OVER=========\n");
+                            break;
+                        case 'Book Title':
+                            dump("yo book\n");
+                            break;
+                        default:
+                            dump("neither\n");
+                    }
+                } else if (e.keyCode == 13 ){
+                    dump("In " + caption_title + ", 2 Enter PRESSED title=" + doctitle_value+"\n");
+                    // clear dropdown menu (if any)
+                    tabulator.outline.UserInput.clearMenu();
+                    
                     // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
                     var now = new Date();
                     var docURI = storeURI + "#" + now.getTime();

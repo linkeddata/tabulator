@@ -42,6 +42,8 @@ function UserInput(outline){
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
     var bibo = tabulator.rdf.Namespace("http://purl.org/ontology/bibo/"); //hql for pubsPane
+    var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
+    var dcelems = tabulator.rdf.Namespace('http://purl.org/dc/elements/1.1/');
         
     var updateService=new updateCenter(kb);
     if (!UserInputFormula){
@@ -315,6 +317,7 @@ function UserInput(outline){
     },
 
     clearMenu: function clearMenu(){
+        dump("CLEARING MENU\n");//hq
         var menu=myDocument.getElementById(this.menuID);
         if (menu) {
             menu.parentNode.removeChild(menu);
@@ -861,6 +864,7 @@ function UserInput(outline){
                         }else{
                             var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight)
                             var fillInType=(mode=='predicate')?'predicate':'object';
+                            dump("ClearMenu) called in autocompleteHandler tab or enter\n");//hq
                             outline.UserInput.clearMenu();
                             outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
                             //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
@@ -897,6 +901,7 @@ function UserInput(outline){
                             outline.UserInput.backOut();
                             return;
                         }
+                        dump("ClearMenu) called in autocompleteHandeer escape\n");//hq
                         outline.UserInput.clearMenu();                   
                         //Not working? I don't know.
                         //InputBox.removeEventListener('keypress',outline.UserInput.Autocomplete,false);
@@ -905,6 +910,7 @@ function UserInput(outline){
                     default:
                         //we need this because it is keypress, seeAlso performAutoCompleteEdit
                         newText+=String.fromCharCode(enterEvent.charCode)
+                        dump("DEFAULTTTTTTTTTTTTTTTTTTTTTTTTTTTTtxtstr="+newText+"\n"); //hq                       
                 }
             }
             //tabulator.log.warn(InputBox.choices.length);
@@ -1074,6 +1080,7 @@ function UserInput(outline){
 
     //called when 'New...' is clicked(eventlistener) or enter is pressed while 'New...' is highlighted
     createNew: function createNew(e){
+        dump("clear menu in creating New\n");//hq
         outline.UserInput.clearMenu();
         var selectedTd=outline.getSelection()[0];
         var targetdoc=selectedTd.parentNode.AJAR_statement.why;
@@ -1085,7 +1092,8 @@ function UserInput(outline){
     
     
     inputURI: function inputURI(e){
-        var This = outline.UserInput;        
+        var This = outline.UserInput;   
+        dump("clear menu in inputURI\n");//hq     
         This.clearMenu();
         var selectedTd = outline.getSelection()[0];
         tabulator.Util.emptyNode(selectedTd);
@@ -1212,6 +1220,7 @@ function UserInput(outline){
         tabulator.log.info("outline.doucment is now " + outline.document.location);
         var This=this;
         var menu=myDocument.createElement('div');
+        dump("CREATED MENU\n");//hq
         menu.id=this.menuID;
         menu.className='outlineMenu';
         //menu.addEventListener('click',false);
@@ -1413,10 +1422,12 @@ function UserInput(outline){
                 */
                 var entries=results[0];
                 if (entries.length==0){
+                    dump("cm length 0\n");//hq
                     this.clearMenu();
                     return;
                 }
                 for (var i=0;i<entries.length&&i<10;i++) //do not show more than 30 items
+                    //dump("\nPRE ENTRIES["+i+"] = "+entries[i]+"\n add menu[i][1] = " + entries[i][1]+"\n");//hq
                     addMenuItem(entries[i][1]);
                 break;
             case 'GeneralAutoComplete':
@@ -1426,11 +1437,14 @@ function UserInput(outline){
                 var entries=results[0]; //[label, subject,priority]
                 var types=results[1];
                 if (entries.length==0){
+                    dump("cm length 0\n");//hq
                     this.clearMenu();
                     return;
                 }
                 for (var i=0;i<entries.length&&i<10;i++){ //do not show more than 30 items
+                    //dump("\nGEN ENTRIES["+i+"] = "+entries[i]+"\n");//hq
                     var thisNT=entries[i][1].toNT();
+                    //dump("thisNT="+thisNT+"\n");
                     var tr=table.appendChild(myDocument.createElement('tr'));
                     tr.setAttribute('about',thisNT);
                     var th=tr.appendChild(myDocument.createElement('th'))
@@ -1460,17 +1474,51 @@ function UserInput(outline){
                 */
                 break;
             case 'JournalTitleAutoComplete': //hql
+                            
+                var inputText = extraInformation.inputText;
+                dump("testing searching text= "+ inputText+" =====\n");
+                
+                
                 dump("===start JournalTitleAutoComplete\n");
-                var entries=kb.each(undefined, rdf('type'), bibo('Journal'));
-                dump("the entries="+entries+"\n");
-                for (var i=0; i<entries.length && i<10; i++){
-                    var tr=table.appendChild(myDocument.createElement('tr'));
-                    tr.setAttribute('about', 'journalTitle');
-                    var th=tr.appendChild(myDocument.createElement('th'))
-                    // dummy stuff for testing
-                    th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode("test33"));//entries[i]
-                    tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('typeLabel?'))
+                //TODO: Make smarter searches
+                var juris=kb.each(undefined, rdf('type'), bibo('Journal'));
+                //dump("juris: "+juris+"\n\n");
+                var tableJournals = [];
+                dump("1\n");
+                var matchedtitle = []; // For testing before inserts into menu
+                dump("2\n");
+                
+                for (var i=0; i<juris.length; i++){
+                    var juri = juris[i];
+                    var jtitle = kb.each(juri, dcelems('title'), undefined);
+
+                    tableJournals.push([jtitle, juri]); 
+                
+                    var jtstr = jtitle + "";
+                    
+                    var matchstr = inputText.toLowerCase();
+                    var jtitle_lc = jtstr.toLowerCase();
+                    
+                    // If there inputText as a whole is contained in a journal title
+                    if ( jtitle_lc.search(matchstr) != -1 ) {
+                        dump("matching: "+ jtitle_lc + " searching " + matchstr + " atloc " + jtitle_lc.search(matchstr) + "\n");
+                        matchedtitle.push(jtitle);
+                        var tr=table.appendChild(myDocument.createElement('tr'));
+                        tr.setAttribute('about', 'journalTitle');
+                        var th=tr.appendChild(myDocument.createElement('th'))
+                        // dummy stuff for testing
+                        th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(jtitle));//juris[i]
+                        tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('typeLabel?'))
+                    }
+                    
                 }
+
+                //dump("tableJournals="+tableJournals+"\n\n\n");
+                dump("matched: "+matchedtitle+"\n");
+
+//                var tresults = tabulator.lb.search(inputText);
+ //               dump("treslts: "+tresults +"\n-----------\n");
+
                 dump("\\\\done\n");
                 break;
             case 'LimitedPredicateChoice':

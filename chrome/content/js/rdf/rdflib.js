@@ -6871,7 +6871,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     throw new Error("Badly formed XML in " + xhr.uri.uri); //@@ Add details
                 }
                 var parser = new $rdf.RDFParser(kb);
-                sf.addStatus(xhr, 'parsing...');
+                sf.addStatus(xhr, 'parsing as RDF/XML...');
                 parser.parse(this.dom, xhr.uri.uri, xhr.uri)
                 kb.add(xhr.uri, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
                 cb();
@@ -7381,7 +7381,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
 
         this.fireCallbacks('request', args); //Kenny: fire 'request' callbacks here
-        // dump( "Tabulator requesting uri: " + uri + "\n" );
+        // dump( "web.js: Requesting uri: " + uri + "\n" );
         this.requested[docuri] = true
 
         if (rterm) {

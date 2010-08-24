@@ -35,7 +35,8 @@ loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfs.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/serialize.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/sparqlUpdate.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js");*/
+loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js");
+loader.loadSubScript("chrome://tabulator/content/js/rdf/web.js");*/
 loader.loadSubScript("chrome://tabulator/content/js/rdf/rdflib.js");
 tabulator.rdf = $rdf;
 
@@ -51,10 +52,10 @@ loader.loadSubScript("chrome://tabulator/content/js/init/panes.js");
 //And Preferences mechanisms.
 loader.loadSubScript("chrome://tabulator/content/js/init/prefs.js");
 
-//Now, load tabulator sources code..
+//Now, load tabulator sourceWidget code.. the sources.js became rdf/web.js
 loader.loadSubScript("chrome://tabulator/content/js/tab/util-nonlib.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/sources-ext.js");
-loader.loadSubScript("chrome://tabulator/content/js/tab/sources.js");
+//loader.loadSubScript("chrome://tabulator/content/js/tab/sources.js");
 
 //And, finally, all non-pane UI code.
 loader.loadSubScript("chrome://tabulator/content/js/tab/labeler.js");

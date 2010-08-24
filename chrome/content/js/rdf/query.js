@@ -247,16 +247,20 @@ function easiestQuery(self, other) {
 
 var match_index = 0; //index
 /** matches a pattern formula against the knowledge base, e.g. to find matches for table-view
+*
 * @param f - knowledge base formula
 * @param g - pattern formula (may have vars)
 * @param bindingsSoFar  - bindings accumulated in matching to date
 * @param level - spaces to indent stuff also lets you know what level of recursion you're at
 * @param fetcher - function (term, requestedBy) - myFetcher / AJAR_handleNewTerm / the sort
-* @returns nothing **/
+* @returns nothing 
+*
+* Will fetch linked data from the web iff the knowledge base an associated source fetcher (f.sf)
+***/
 function match(f, g, bindingsSoFar, level, fetcher, callback, branchCount) {
     var sf = null;
-    if( typeof tabulator != 'undefined' ) {
-        sf = tabulator.sf;
+    if( typeof f.sf != 'undefined' ) {
+        sf = f.sf;
     }
     $rdf.log.debug("match: f has "+f.statements.length+", g has "+g.statements.length)
     var pattern = g.statements;

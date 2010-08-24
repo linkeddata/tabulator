@@ -1,14 +1,22 @@
 /************************************************************
  * 
- * Project: AJAR/Tabulator
+ * Project: rdflib, part of Tabulator project
  * 
- * File: sources.js
+ * File: web.js
  * 
  * Description: contains functions for requesting/fetching/retracting
- *  'sources' -- meaning any document we are trying to get data out of
  *  This implements quite a lot of the web architecture
- * 
+ * A fetchers is bound to a specific knowledge base graph, into which
+ * it loads stuff and into which it writes its metadata
+ * @@ The metadata should be optionally a separate grah
  *
+ * - implements semantics of HTTP headers, Internet Content Types
+ * - selects parsers for rdf/xml, n3, rdfa, grddl
+ * 
+ * needs: util.js uri.js term.js match.js rdfparser.js rdfa.js n3parser.js
+ * identity.js rdfs.js sparql.js jsonparser.js
+ * 
+ *  Was: js/tab/sources.js
  ************************************************************/
 
 /**
@@ -16,9 +24,9 @@
  *   loading from HTTP, HTTPS, FTP, FILE, others?
  */
 
-tabulator.SourceFetcher = function(store, timeout, async) {
+$rdf.Fetcher = function(store, timeout, async) {
     this.store = store
-    this.thisURI = "http://dig.csail.mit.edu/2005/ajar/ajaw/rdf/sources.js" + "#SourceFetcher"
+    this.thisURI = "http://dig.csail.mit.edu/2005/ajar/ajaw/rdf/sources.js" + "#SourceFetcher" // -- Kenny
     this.timeout = timeout ? timeout : 30000
     this.async = async != null ? async : true
     this.appNode = this.store.bnode(); // Denoting this session
@@ -29,7 +37,19 @@ tabulator.SourceFetcher = function(store, timeout, async) {
     this.mediatypes = {}
     var sf = this
     var kb = this.store;
-    tabulator.SourceFetcher.RDFXMLHandler = function(args) {
+    var ns = {} // Convenience namespaces needed in this module:
+    // These are delibertely not exported as the user application should
+    // make its own list and not rely on the prefixes used here,
+    // and not be tempted to add to them, and them clash with those of another
+    // application.
+    ns.link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
+    ns.http = $rdf.Namespace("http://www.w3.org/2007/ont/http#");
+    ns.httph = $rdf.Namespace("http://www.w3.org/2007/ont/httph#");
+    ns.rdf = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
+    ns.dc = $rdf.Namespace("http://purl.org/dc/elements/1.1/");
+
+    $rdf.Fetcher.RDFXMLHandler = function(args) {
         if (args) {
             this.dom = args[0]
         }
@@ -49,34 +69,34 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 
                 var root = this.dom.documentElement;
                 //some simple syntax issue should be dealt here, I think
-                if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue 110
+                if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue/issue110
                     //            alert('Warning: Badly formed XML');
                     sf.failFetch(xhr, "Badly formed XML in " + xhr.uri.uri); //have to fail the request
                     throw new Error("Badly formed XML in " + xhr.uri.uri); //@@ Add details
                 }
-                var parser = new tabulator.rdf.RDFParser(kb);
+                var parser = new $rdf.RDFParser(kb);
                 sf.addStatus(xhr, 'parsing...');
                 parser.parse(this.dom, xhr.uri.uri, xhr.uri)
-                kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'), sf.appNode);
+                kb.add(xhr.uri, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
                 cb();
             }
         }
     }
-    tabulator.SourceFetcher.RDFXMLHandler.term = this.store.sym(this.thisURI + ".RDFXMLHandler")
-    tabulator.SourceFetcher.RDFXMLHandler.toString = function() {
+    $rdf.Fetcher.RDFXMLHandler.term = this.store.sym(this.thisURI + ".RDFXMLHandler")
+    $rdf.Fetcher.RDFXMLHandler.toString = function() {
         return "RDFXMLHandler"
     }
-    tabulator.SourceFetcher.RDFXMLHandler.register = function(sf) {
+    $rdf.Fetcher.RDFXMLHandler.register = function(sf) {
         sf.mediatypes['application/rdf+xml'] = {}
     }
-    tabulator.SourceFetcher.RDFXMLHandler.pattern = new RegExp("application/rdf\\+xml");
+    $rdf.Fetcher.RDFXMLHandler.pattern = new RegExp("application/rdf\\+xml");
 
     // This would much better use on-board XSLT engine. @@
-    tabulator.SourceFetcher.doGRDDL = function(kb, doc, xslturi, xmluri) {
+    $rdf.Fetcher.doGRDDL = function(kb, doc, xslturi, xmluri) {
         sf.requestURI('http://www.w3.org/2005/08/' + 'online_xslt/xslt?' + 'xslfile=' + escape(xslturi) + '&xmlfile=' + escape(xmluri), doc)
     }
 
-    tabulator.SourceFetcher.XHTMLHandler = function(args) {
+    $rdf.Fetcher.XHTMLHandler = function(args) {
         if (args) {
             this.dom = args[0]
         }
@@ -96,8 +116,8 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                 // dc:title
                 var title = this.dom.getElementsByTagName('title')
                 if (title.length > 0) {
-                    kb.add(xhr.uri, tabulator.ns.dc('title'), kb.literal(title[0].textContent), xhr.uri)
-                    tabulator.log.info("Inferring title of " + xhr.uri)
+                    kb.add(xhr.uri, ns.dc('title'), kb.literal(title[0].textContent), xhr.uri)
+                    // $rdf.log.info("Inferring title of " + xhr.uri)
                 }
 
                 // link rel
@@ -110,8 +130,8 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                 var head = this.dom.getElementsByTagName('head')[0]
                 if (head) {
                     var profile = head.getAttribute('profile');
-                    if (profile && tabulator.rdf.Util.uri.protocol(profile) == 'http') {
-                        tabulator.log.info("GRDDL: Using generic " + "2003/11/rdf-in-xhtml-processor.");
+                    if (profile && $rdf.Util.uri.protocol(profile) == 'http') {
+                        // $rdf.log.info("GRDDL: Using generic " + "2003/11/rdf-in-xhtml-processor.");
                         sf.doGRDDL(kb, xhr.uri, "http://www.w3.org/2003/11/rdf-in-xhtml-processor", xhr.uri.uri)
 /*			sf.requestURI('http://www.w3.org/2005/08/'
 					  + 'online_xslt/xslt?'
@@ -123,31 +143,31 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 				      xhr.uri)
                         */
                     } else {
-                        tabulator.log.info("GRDDL: No GRDDL profile in " + xhr.uri)
+                        // $rdf.log.info("GRDDL: No GRDDL profile in " + xhr.uri)
                     }
                 }
-                kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('WebPage'), sf.appNode);
+                kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                 // @@ Do RDFa here
                 var p = $rdf.RDFaParser(kb, xhr.uri.uri);
                 cb()
             }
         }
     }
-    tabulator.SourceFetcher.XHTMLHandler.term = this.store.sym(this.thisURI + ".XHTMLHandler")
-    tabulator.SourceFetcher.XHTMLHandler.toString = function() {
+    $rdf.Fetcher.XHTMLHandler.term = this.store.sym(this.thisURI + ".XHTMLHandler")
+    $rdf.Fetcher.XHTMLHandler.toString = function() {
         return "XHTMLHandler"
     }
-    tabulator.SourceFetcher.XHTMLHandler.register = function(sf) {
+    $rdf.Fetcher.XHTMLHandler.register = function(sf) {
         sf.mediatypes['application/xhtml+xml'] = {
             'q': 0.3
         }
     }
-    tabulator.SourceFetcher.XHTMLHandler.pattern = new RegExp("application/xhtml")
+    $rdf.Fetcher.XHTMLHandler.pattern = new RegExp("application/xhtml")
 
 
     /******************************************************/
 
-    tabulator.SourceFetcher.XMLHandler = function() {
+    $rdf.Fetcher.XMLHandler = function() {
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
                 var kb = sf.store
@@ -168,9 +188,10 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                         var ns = dom.childNodes[c].namespaceURI;
 
                         // Is it RDF/XML?
-                        if (ns == tabulator.ns['rdf']) {
-                            tabulator.log.info(xhr.uri + " seems to have a root element" + " in the RDF namespace. We'll assume " + "it's RDF/XML.")
-                            sf.switchHandler(tabulator.SourceFetcher.RDFXMLHandler, xhr, cb, [dom])
+                        if (ns == ns['rdf']) {
+                            dump(xhr.uri + " has a root element" + 
+                            " in the RDF namespace. We'll assume " + "it's RDF/XML.\n")
+                            sf.switchHandler(sf.RDFXMLHandler, xhr, cb, [dom])
                             return
                         }
                         // it isn't RDF/XML or we can't tell
@@ -179,7 +200,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                         var xforms = kb.each(kb.sym(ns), kb.sym("http://www.w3.org/2003/g/data-view#namespaceTransformation"));
                         for (var i = 0; i < xforms.length; i++) {
                             var xform = xforms[i];
-                            tabulator.log.info(xhr.uri.uri + " namespace " + ns + " has GRDDL ns transform" + xform.uri);
+                            // $rdf.log.info(xhr.uri.uri + " namespace " + ns + " has GRDDL ns transform" + xform.uri);
                             sf.doGRDDL(kb, xhr.uri, xform.uri, xhr.uri.uri);
                         }
                         break
@@ -189,10 +210,10 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                 // Or it could be XHTML?
                 // Maybe it has an XHTML DOCTYPE?
                 if (dom.doctype) {
-                    tabulator.log.info("We found a DOCTYPE in " + xhr.uri)
+                    // $rdf.log.info("We found a DOCTYPE in " + xhr.uri)
                     if (dom.doctype.name == 'html' && dom.doctype.publicId.match(/^-\/\/W3C\/\/DTD XHTML/) && dom.doctype.systemId.match(/http:\/\/www.w3.org\/TR\/xhtml/)) {
-                        tabulator.log.info(xhr.uri + " has XHTML DOCTYPE. Switching to " + "XHTML Handler.")
-                        sf.switchHandler(tabulator.SourceFetcher.XHTMLHandler, xhr, cb)
+                        dump(xhr.uri + " has XHTML DOCTYPE. Switching to " + "XHTML Handler.\n")
+                        sf.switchHandler(sf.XHTMLHandler, xhr, cb)
                         return
                     }
                 }
@@ -202,8 +223,8 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                 if (html) {
                     var xmlns = html.getAttribute('xmlns')
                     if (xmlns && xmlns.match(/^http:\/\/www.w3.org\/1999\/xhtml/)) {
-                        tabulator.log.info(xhr.uri + " has a default namespace for " + "XHTML. Switching to XHTMLHandler.")
-                        sf.switchHandler(tabulator.SourceFetcher.XHTMLHandler, xhr, cb)
+                        dump(xhr.uri + " has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
+                        sf.switchHandler(sf.XHTMLHandler, xhr, cb)
                         return
                     }
                 }
@@ -217,11 +238,11 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             }
         }
     }
-    tabulator.SourceFetcher.XMLHandler.term = this.store.sym(this.thisURI + ".XMLHandler")
-    tabulator.SourceFetcher.XMLHandler.toString = function() {
+    $rdf.Fetcher.XMLHandler.term = this.store.sym(this.thisURI + ".XMLHandler")
+    $rdf.Fetcher.XMLHandler.toString = function() {
         return "XMLHandler"
     }
-    tabulator.SourceFetcher.XMLHandler.register = function(sf) {
+    $rdf.Fetcher.XMLHandler.register = function(sf) {
         sf.mediatypes['text/xml'] = {
             'q': 0.2
         }
@@ -229,33 +250,34 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             'q': 0.2
         }
     }
-    tabulator.SourceFetcher.XMLHandler.pattern = new RegExp("(text|application)/(.*)xml")
+    $rdf.Fetcher.XMLHandler.pattern = new RegExp("(text|application)/(.*)xml")
 
-    tabulator.SourceFetcher.HTMLHandler = function() {
+    $rdf.Fetcher.HTMLHandler = function() {
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
                 var rt = xhr.responseText
                 // We only handle XHTML so we have to figure out if this is XML
-                tabulator.log.info("Sniffing HTML " + xhr.uri + " for XHTML.");
+                // $rdf.log.info("Sniffing HTML " + xhr.uri + " for XHTML.");
 
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    tabulator.log.info(xhr.uri + " has an XML declaration. We'll assume " + "it's XHTML as the content-type was text/html.")
-                    sf.switchHandler(tabulator.SourceFetcher.XHTMLHandler, xhr, cb)
+                    dump(xhr.uri + " has an XML declaration. We'll assume " +
+                        "it's XHTML as the content-type was text/html: "+sf.XHTMLHandler+"\n")
+                    sf.switchHandler(sf.XHTMLHandler, xhr, cb)
                     return
                 }
 
                 // DOCTYPE
                 // There is probably a smarter way to do this
                 if (rt.match(/.*<!DOCTYPE\s+html[^<]+-\/\/W3C\/\/DTD XHTML[^<]+http:\/\/www.w3.org\/TR\/xhtml[^<]+>/)) {
-                    tabulator.log.info(xhr.uri + " has XHTML DOCTYPE. Switching to XHTML" + "Handler.")
-                    sf.switchHandler(tabulator.SourceFetcher.XHTMLHandler, xhr, cb)
+                    dump(xhr.uri + " has XHTML DOCTYPE. Switching to XHTML" + "Handler.\n")
+                    sf.switchHandler(sf.XHTMLHandler, xhr, cb)
                     return
                 }
 
                 // xmlns
                 if (rt.match(/[^(<html)]*<html\s+[^<]*xmlns=['"]http:\/\/www.w3.org\/1999\/xhtml["'][^<]*>/)) {
-                    tabulator.log.info(xhr.uri + " has a default namespace for XHTML." + " Switching to XHTMLHandler.")
-                    sf.switchHandler(tabulator.SourceFetcher.XHTMLHandler, xhr, cb)
+                    dump(xhr.uri + " has a default namespace for XHTML." + " Switching to XHTMLHandler.\n")
+                    sf.switchHandler(sf.XHTMLHandler, xhr, cb)
                     return
                 }
 
@@ -264,30 +286,30 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                 var titleMatch = (new RegExp("<title>([\\s\\S]+?)</title>", 'im')).exec(rt);
                 if (titleMatch) {
                     var kb = sf.store;
-                    kb.add(xhr.uri, tabulator.ns.dc('title'), kb.literal(titleMatch[1]), xhr.uri); //think about xml:lang later
-                    kb.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('WebPage'), sf.appNode);
+                    kb.add(xhr.uri, ns.dc('title'), kb.literal(titleMatch[1]), xhr.uri); //think about xml:lang later
+                    kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                     cb(); //doneFetch, not failed
                     return;
                 }
 
-                sf.failFetch(xhr, "can't parse non-XML HTML")
+                sf.failFetch(xhr, "Sorry, can't yet parse non-XML HTML")
             }
         }
     }
-    tabulator.SourceFetcher.HTMLHandler.term = this.store.sym(this.thisURI + ".HTMLHandler")
-    tabulator.SourceFetcher.HTMLHandler.toString = function() {
+    $rdf.Fetcher.HTMLHandler.term = this.store.sym(this.thisURI + ".HTMLHandler")
+    $rdf.Fetcher.HTMLHandler.toString = function() {
         return "HTMLHandler"
     }
-    tabulator.SourceFetcher.HTMLHandler.register = function(sf) {
+    $rdf.Fetcher.HTMLHandler.register = function(sf) {
         sf.mediatypes['text/html'] = {
             'q': 0.3
         }
     }
-    tabulator.SourceFetcher.HTMLHandler.pattern = new RegExp("text/html")
+    $rdf.Fetcher.HTMLHandler.pattern = new RegExp("text/html")
 
     /***********************************************/
 
-    tabulator.SourceFetcher.TextHandler = function() {
+    $rdf.Fetcher.TextHandler = function() {
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
                 // We only speak dialects of XML right now. Is this XML?
@@ -295,67 +317,69 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    tabulator.log.warn(xhr.uri + " has an XML declaration. We'll assume " + "it's XML but its content-type wasn't XML.")
-                    sf.switchHandler(tabulator.SourceFetcher.XMLHandler, xhr, cb)
+                    dump("Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
+                        + "it's XML but its content-type wasn't XML.\n")
+                    sf.switchHandler(sf.XMLHandler, xhr, cb)
                     return
                 }
 
                 // Look for an XML declaration
                 if (rt.slice(0, 500).match(/xmlns:/)) {
-                    tabulator.log.warn(xhr.uri + " may have an XML namespace. We'll assume " + "it's XML but its content-type wasn't XML.")
-                    sf.switchHandler(tabulator.SourceFetcher.XMLHandler, xhr, cb)
+                    dump(xhr.uri + " may have an XML namespace. We'll assume "
+                            + "it's XML but its content-type wasn't XML.\n")
+                    sf.switchHandler(sf.XMLHandler, xhr, cb)
                     return
                 }
 
                 // We give up
                 sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
-                tabulator.log.warn(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500))
+                dump(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
 
             }
         }
     }
-    tabulator.SourceFetcher.TextHandler.term = this.store.sym(this.thisURI + ".TextHandler")
-    tabulator.SourceFetcher.TextHandler.toString = function() {
+    $rdf.Fetcher.TextHandler.term = this.store.sym(this.thisURI + ".TextHandler")
+    $rdf.Fetcher.TextHandler.toString = function() {
         return "TextHandler"
     }
-    tabulator.SourceFetcher.TextHandler.register = function(sf) {
+    $rdf.Fetcher.TextHandler.register = function(sf) {
         sf.mediatypes['text/plain'] = {
             'q': 0.1
         }
     }
-    tabulator.SourceFetcher.TextHandler.pattern = new RegExp("text/plain")
+    $rdf.Fetcher.TextHandler.pattern = new RegExp("text/plain")
 
     /***********************************************/
 
-    tabulator.SourceFetcher.N3Handler = function() {
+    $rdf.Fetcher.N3Handler = function() {
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
                 // Parse the text of this non-XML file
                 var rt = xhr.responseText
-                var p = tabulator.rdf.N3Parser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
+                var p = $rdf.N3Parser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
                 //                p.loadBuf(xhr.responseText)
                 try {
                     p.loadBuf(xhr.responseText)
 
                 } catch (e) {
                     var msg = ("Error trying to parse " + xhr.uri + ' as Notation3:\n' + e)
-                    tabulator.log.warn(msg)
+                    dump(msg+"\n")
                     sf.failFetch(xhr, msg)
                     return;
                 }
 
                 sf.addStatus(xhr, 'N3 parsed: ' + p.statementCount + ' statements in ' + p.lines + ' lines.')
-                sf.store.add(xhr.uri, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'), sf.appNode);
+                sf.store.add(xhr.uri, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
                 args = [xhr.uri.uri]; // Other args needed ever?
                 sf.doneFetch(xhr, args)
             }
         }
     }
-    tabulator.SourceFetcher.N3Handler.term = this.store.sym(this.thisURI + ".N3Handler")
-    tabulator.SourceFetcher.N3Handler.toString = function() {
+    $rdf.Fetcher.N3Handler.term = this.store.sym(this.thisURI + ".N3Handler")
+    $rdf.Fetcher.N3Handler.toString = function() {
         return "N3Handler"
     }
-    tabulator.SourceFetcher.N3Handler.register = function(sf) {
+    $rdf.Fetcher.N3Handler.register = function(sf) {
         sf.mediatypes['text/n3'] = {
             'q': '1.0'
         } // as per 2008 spec
@@ -369,7 +393,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             'q': 1.0
         } // pre 2008
     }
-    tabulator.SourceFetcher.N3Handler.pattern = new RegExp("(application|text)/(x-)?(rdf\\+)?(n3|turtle)")
+    $rdf.Fetcher.N3Handler.pattern = new RegExp("(application|text)/(x-)?(rdf\\+)?(n3|turtle)")
 
 
     /***********************************************/
@@ -378,9 +402,9 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 
 
 
-    tabulator.rdf.Util.callbackify(this, ['request', 'recv', 'load', 'fail', 'refresh', 'retract', 'done'])
+    $rdf.Util.callbackify(this, ['request', 'recv', 'load', 'fail', 'refresh', 'retract', 'done'])
 
-/* now see tabulator.ns
+/* now see ns
        this.store.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
        this.store.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
        this.store.setPrefixForURI('tab',"http://www.w3.org/2007/ont/link#")
@@ -391,7 +415,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
        
     */
     this.addProtocol = function(proto) {
-        sf.store.add(sf.appNode, tabulator.ns.link("protocol"), sf.store.literal(proto), this.appNode)
+        sf.store.add(sf.appNode, ns.link("protocol"), sf.store.literal(proto), this.appNode)
     }
 
     this.addHandler = function(handler) {
@@ -401,8 +425,13 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 
     this.switchHandler = function(handler, xhr, cb, args) {
         var kb = this.store;
+        if (handler == undefined) {
+            dump('switchHandler: switching to '+handler+'; sf='+sf+
+            '; typeof $rdf.Fetcher='+typeof $rdf.Fetcher+';\n\t $rdf.Fetcher.HTMLHandler='+$rdf.Fetcher.HTMLHandler+'\n')
+            dump('\n\tsf.handlers='+sf.handlers+'\n');
+        }
         (new handler(args)).recv(xhr);
-        kb.the(xhr.req, tabulator.ns.link('handler')).append(handler.term)
+        // kb.the(xhr.req, ns.link('handler')).append(handler.term)
         xhr.handle(cb)
     }
 
@@ -412,13 +441,13 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         status = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] " + status;
         //</Debug>
         var kb = this.store
-        kb.the(xhr.req, tabulator.ns.link('status')).append(kb.literal(status))
+        kb.the(xhr.req, ns.link('status')).append(kb.literal(status))
     }
 
     this.failFetch = function(xhr, status) {
         this.addStatus(xhr, status)
-        kb.add(xhr.uri, tabulator.ns.link('error'), status)
-        this.requested[tabulator.rdf.Util.uri.docpart(xhr.uri.uri)] = false
+        kb.add(xhr.uri, ns.link('error'), status)
+        this.requested[$rdf.Util.uri.docpart(xhr.uri.uri)] = false
         this.fireCallbacks('fail', [xhr.requestedURI])
         xhr.abort()
     }
@@ -428,11 +457,11 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         if (!uri) return;
         // See http://www.w3.org/TR/powder-dr/#httplink for describedby 2008-12-10
         if (rel == 'alternate' || rel == 'seeAlso' || rel == 'meta' || rel == 'describedby') {
-            var join = tabulator.rdf.Util.uri.join2;
+            var join = $rdf.Util.uri.join2;
             var obj = kb.sym(join(uri, xhr.uri.uri))
             if (obj.uri != xhr.uri) {
-                kb.add(xhr.uri, tabulator.ns.rdfs('seeAlso'), obj, xhr.uri);
-                tabulator.log.info("Loading " + obj + " from link rel in " + xhr.uri);
+                kb.add(xhr.uri, ns.rdfs('seeAlso'), obj, xhr.uri);
+                // $rdf.log.info("Loading " + obj + " from link rel in " + xhr.uri);
             }
         }
     };
@@ -440,24 +469,24 @@ tabulator.SourceFetcher = function(store, timeout, async) {
 
     this.doneFetch = function(xhr, args) {
         this.addStatus(xhr, 'done')
-        tabulator.log.info("Done with parse, firing 'done' callbacks for " + xhr.uri)
+        // $rdf.log.info("Done with parse, firing 'done' callbacks for " + xhr.uri)
         this.requested[xhr.uri.uri] = 'done'; //Kenny
         this.fireCallbacks('done', args)
     }
 
-    this.store.add(this.appNode, tabulator.ns.rdfs('label'), this.store.literal('This Session'), this.appNode);
+    this.store.add(this.appNode, ns.rdfs('label'), this.store.literal('This Session'), this.appNode);
 
     ['http', 'https', 'file', 'chrome'].map(this.addProtocol); // ftp?
-    [tabulator.SourceFetcher.RDFXMLHandler, tabulator.SourceFetcher.XHTMLHandler, tabulator.SourceFetcher.XMLHandler, tabulator.SourceFetcher.HTMLHandler, tabulator.SourceFetcher.TextHandler, tabulator.SourceFetcher.N3Handler, ].map(this.addHandler)
+    [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler, $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler, $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler, ].map(this.addHandler)
 
     this.addCallback('done', function(uri, r) {
         if (uri.indexOf('#') >= 0) throw ('addCallback: Document URI may not contain #: ' + uri);
         var kb = sf.store
         var term = kb.sym(uri)
-        var udoc = term.uri ? kb.sym(tabulator.rdf.Util.uri.docpart(uri)) : uri
-        var refs = sf.store.statementsMatching(undefined, tabulator.ns.rdf('type'), undefined, udoc)
+        var udoc = term.uri ? kb.sym($rdf.Util.uri.docpart(uri)) : uri
+        var refs = sf.store.statementsMatching(undefined, ns.rdf('type'), undefined, udoc)
         refs.map(function(x) {
-            sf.store.add(udoc, tabulator.ns.link('mentionsClass'), x.object, sf.appNode)
+            sf.store.add(udoc, ns.link('mentionsClass'), x.object, sf.appNode)
         })
         return true
     })
@@ -469,7 +498,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
      ** will make sure all the URIs are dereferenced
      */
     this.nowKnownAs = function(was, now) {
-        //tabulator.log.warn("entering nowKnowAs, %s lookedup: %s, %s lookedup: %s", 
+        //dump("entering nowKnowAs, %s lookedup: %s, %s lookedup: %s", 
         //                    was.uri, this.lookedUp[was.uri], now.uri, this.lookedUp[now.uri]);
         if (this.lookedUp[was.uri]) {
             if (!this.lookedUp[now.uri]) this.lookUpThing(now, was)
@@ -489,12 +518,12 @@ tabulator.SourceFetcher = function(store, timeout, async) {
      **      rterm:  the resource which refered to this (for tracking bad links)
      */
     this.lookUpThing = function(term, rterm, force) {
-        tabulator.log.debug("lookUpThing: looking up " + term);
+        // // dump("lookUpThing: looking up " + term);
         var uris = kb.uris(term) // Get all URIs
         if (typeof uris != 'undefined') {
             for (var i = 0; i < uris.length; i++) {
                 this.lookedUp[uris[i]] = true;
-                this.requestURI(tabulator.rdf.Util.uri.docpart(uris[i]), rterm, force)
+                this.requestURI($rdf.Util.uri.docpart(uris[i]), rterm, force)
             }
         }
         return uris.length
@@ -532,18 +561,18 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             throw ("requestURI should notbe called with fragid: " + uri)
         }
 
-        var pcol = tabulator.rdf.Util.uri.protocol(uri);
+        var pcol = $rdf.Util.uri.protocol(uri);
         if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn') return null; // No look-up operaion on these, but they are not errors
         var force = !! force
         var kb = this.store
         var args = arguments
         //	var term = kb.sym(uri)
-        var docuri = tabulator.rdf.Util.uri.docpart(uri)
+        var docuri = $rdf.Util.uri.docpart(uri)
         var docterm = kb.sym(docuri)
-        tabulator.log.debug("requestURI: dereferencing " + uri)
+        // dump("requestURI: dereferencing " + uri)
         //this.fireCallbacks('request',args)
         if (!force && typeof(this.requested[docuri]) != "undefined") {
-            tabulator.log.debug("We already have " + docuri + ". Skipping.")
+            // dump("We already have " + docuri + ". Skipping.")
             var newArgs = [];
             for (var i = 0; i < args.length; i++) newArgs.push(args[i]);
             newArgs.push(true); //extra information indicates this is a skipping done!
@@ -551,57 +580,48 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             return null
         }
 
-        //debug code, we might need this later
-/*
-          if (tabulator.statusWidget && tabulator.statusWidget.pend.length > 10){
-          tabulator.log.error("too many requests to "+uri+" from: "+this.requestURI.caller);
-          return
-          }
-        */
         this.fireCallbacks('request', args); //Kenny: fire 'request' callbacks here
         // dump( "Tabulator requesting uri: " + uri + "\n" );
         this.requested[docuri] = true
 
         if (rterm) {
             if (rterm.uri) {
-                kb.add(docterm.uri, tabulator.ns.link("requestedBy"), rterm.uri, this.appNode)
-                //		        kb.add(docterm, tabulator.ns.link("requestedBy"),
-                //		               kb.sym(tabulator.rdf.Util.uri.docpart(rterm.uri)), this.appNode)
+                kb.add(docterm.uri, ns.link("requestedBy"), rterm.uri, this.appNode)
             }
         }
 
         if (rterm) {
-            tabulator.log.info('SF.request: ' + docuri + ' refd by ' + rterm.uri)
+            // $rdf.log.info('SF.request: ' + docuri + ' refd by ' + rterm.uri)
         }
         else {
-            tabulator.log.info('SF.request: ' + docuri + ' no referring doc')
+            // $rdf.log.info('SF.request: ' + docuri + ' no referring doc')
         };
 
         var status = kb.collection()
-        var xhr = tabulator.rdf.Util.XMLHTTPFactory()
+        var xhr = $rdf.Util.XMLHTTPFactory()
         var req = xhr.req = kb.bnode()
         xhr.uri = docterm
         xhr.requestedURI = args[0]
-        var handlers = kb.collection()
+        var requestHandlers = kb.collection()
         var sf = this
 
         // The list of sources is kept in the source widget
-        // kb.add(this.appNode, tabulator.ns.link("source"), docterm, this.appNode)
-        kb.add(docterm, tabulator.ns.link("request"), req, this.appNode)
+        // kb.add(this.appNode, ns.link("source"), docterm, this.appNode)
+        kb.add(docterm, ns.link("request"), req, this.appNode)
         var now = new Date();
         var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
 
-        kb.add(req, tabulator.ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
-        kb.add(req, tabulator.ns.link("requestedURI"), kb.literal(docuri), this.appNode)
+        kb.add(req, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
+        kb.add(req, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
 
         // This request will have handlers probably
-        kb.add(req, tabulator.ns.link('handler'), handlers, sf.appNode)
+        kb.add(req, ns.link('handler'), requestHandlers, sf.appNode)
 
-        kb.add(req, tabulator.ns.link('status'), status, sf.req)
+        kb.add(req, ns.link('status'), status, sf.req)
 
-        if (typeof kb.anyStatementMatching(this.appNode, tabulator.ns.link("protocol"), tabulator.rdf.Util.uri.protocol(uri)) == "undefined") {
+        if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(uri)) == "undefined") {
             // update the status before we break out
-            if (tabulator.rdf.Util.uri.protocol(uri) == 'rdf') { // ??? eh? rdf: ?? -- tim
+            if ($rdf.Util.uri.protocol(uri) == 'rdf') { // ??? eh? rdf: ?? -- tim
                 xhr.abort();
             }
             this.failFetch(xhr, "Unsupported protocol")
@@ -618,9 +638,9 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     var handler = null
                     sf.fireCallbacks('recv', args)
                     var response = kb.bnode();
-                    kb.add(req, tabulator.ns.link('response'), response);
-                    kb.add(response, tabulator.ns.http('status'), kb.literal(xhr.status), response)
-                    kb.add(response, tabulator.ns.http('statusText'), kb.literal(xhr.statusText), response)
+                    kb.add(req, ns.link('response'), response);
+                    kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
+                    kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
                     if (xhr.status >= 400) {
                         sf.failFetch(xhr, "HTTP error " + xhr.status + ' ' + xhr.statusText)
@@ -628,10 +648,10 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     }
 
                     xhr.headers = {}
-                    if (tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
-                        xhr.headers = tabulator.rdf.Util.getHTTPHeaders(xhr)
+                    if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
+                        xhr.headers = $rdf.Util.getHTTPHeaders(xhr)
                         for (var h in xhr.headers) {
-                            kb.add(response, tabulator.ns.httph(h), xhr.headers[h], response)
+                            kb.add(response, ns.httph(h), xhr.headers[h], response)
                         }
                     }
 
@@ -639,29 +659,29 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     var addType = function(cla) { // add type to all redirected resources too
                         var prev = req;
                         for (;;) {
-                            var doc = kb.any(undefined, tabulator.ns.link('request'), prev)
-                            kb.add(doc, tabulator.ns.rdf('type'), cla, sf.appNode);
+                            var doc = kb.any(undefined, ns.link('request'), prev)
+                            kb.add(doc, ns.rdf('type'), cla, sf.appNode);
                             prev = kb.any(undefined, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), prev);
                             if (!prev) break;
                             var redirection = kb.any(prev, kb.sym('http://www.w3.org/2007/ont/http#status'));
-                            tabulator.log.info('redirection :' + redirection + ' for ' + prev);
+                            // $rdf.log.info('redirection :' + redirection + ' for ' + prev);
                             if (!redirection) break;
                             if (redirection != '301' && redirection != '302') break;
                         }
                     }
                     if (xhr.status - 0 == 200) {
-                        //addType(tabulator.ns.link('Document'));
+                        //addType(ns.link('Document'));
                         var ct = xhr.headers['content-type'];
                         if (!ct) throw ('No content-type on 200 response for ' + xhr.uri)
                         else {
                             if (ct.indexOf('image/') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
                             //if (ct.indexOf('text/') == 0)
-                            //    addType(tabulator.ns.link('TextDocument'));
+                            //    addType(ns.link('TextDocument'));
                         }
                     }
 
-                    if (tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'file' || tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'chrome') {
-                        //tabulator.log.info("Assuming local file is some flavor of XML.")
+                    if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'file' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'chrome') {
+                        //// $rdf.log.info("Assuming local file is some flavor of XML.")
                         //xhr.headers['content-type'] = 'text/xml' // @@ kludge 
                         //Kenny asks: why text/xml
                         // Timbl replies: I think so as to make it get parsed as XML
@@ -683,10 +703,10 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     var loc = xhr.headers['content-location']
 
                     if (loc) {
-                        var udoc = tabulator.rdf.Util.uri.join(xhr.uri.uri, loc)
+                        var udoc = $rdf.Util.uri.join(xhr.uri.uri, loc)
                         if (!force && udoc != xhr.uri.uri && sf.requested[udoc]) {
                             // should we smush too?
-                            tabulator.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.uri + " as " + udoc + ". Aborting.")
+                            // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.uri + " as " + udoc + ". Aborting.")
                             sf.doneFetch(xhr, args)
                             xhr.abort()
                             break
@@ -697,7 +717,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     for (var x = 0; x < sf.handlers.length; x++) {
                         if (xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
                             handler = new sf.handlers[x]()
-                            handlers.append(sf.handlers[x].term)
+                            requestHandlers.append(sf.handlers[x].term) // FYI
                             break
                         }
                     }
@@ -742,7 +762,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         // Get privileges for cross-domain XHR
         if (!isExtension) {
             try {
-                tabulator.rdf.Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
+                $rdf.Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
             } catch (e) {
                 throw ("Failed to get privileges: " + e)
             }
@@ -756,7 +776,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
             var here = '' + document.location
             if (here.slice(0, 17) == 'http://localhost/') {
                 uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
-                tabulator.log.debug("URI mapped to " + uri2)
+                // dump("URI mapped to " + uri2)
             }
         }
 
@@ -764,52 +784,52 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         xhr.open('GET', uri2, this.async)
         //webdav.manager.register(uri,function(uri,success){});
         // Set redirect callback and request headers
-        if (tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || tabulator.rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
+        if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
             try {
                 xhr.channel.notificationCallbacks = {
                     getInterface: function(iid) {
                         if (!isExtension) {
-                            tabulator.rdf.Util.enablePrivilege("UniversalXPConnect")
+                            $rdf.Util.enablePrivilege("UniversalXPConnect")
                         }
                         if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
                             return {
 
                                 onChannelRedirect: function(oldC, newC, flags) {
                                     if (!isExtension) {
-                                        tabulator.rdf.Util.enablePrivilege("UniversalXPConnect")
+                                        $rdf.Util.enablePrivilege("UniversalXPConnect")
                                     }
                                     if (xhr.aborted) return;
                                     var kb = sf.store;
                                     var newURI = newC.URI.spec;
                                     sf.addStatus(xhr, "Redirected: " + xhr.status + " to <" + newURI + ">");
-                                    //tabulator.log.info('@@ sources onChannelRedirect'+
+                                    //// $rdf.log.info('@@ sources onChannelRedirect'+
                                     //               "Redirected: "+ 
                                     //               xhr.status + " to <" + newURI + ">"); //@@
                                     var response = kb.bnode();
-                                    kb.add(xhr.req, tabulator.ns.link('response'), response);
-                                    kb.add(response, tabulator.ns.http('status'), kb.literal(xhr.status), response);
-                                    if (xhr.statusText) kb.add(response, tabulator.ns.http('statusText'), kb.literal(xhr.statusText), response)
+                                    kb.add(xhr.req, ns.link('response'), response);
+                                    kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
+                                    if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
-                                    kb.add(response, tabulator.ns.http('location'), newURI, response);
+                                    kb.add(response, ns.http('location'), newURI, response);
 
-                                    kb.add(xhr.req, tabulator.ns.http('redirectedTo'), kb.sym(newURI), xhr.req);
+                                    kb.add(xhr.req, ns.http('redirectedTo'), kb.sym(newURI), xhr.req);
 
                                     //delete the entry caused by the Tabulator. See test.js. tabExtension not defined, why?
 /*		    
 		            if (isExtension && xhr.status == 303){
-		            tabulator.log.warn('deleted entry:' +newURI+typeof tabExtension+typeof getTerm);
+		            dump('deleted entry:' +newURI+typeof tabExtension+typeof getTerm);
 		            //tabExtension.inverseRedirectDirectory[newURI]=undefined;
 		            }*/
 
                                     kb.HTTPRedirects[xhr.uri.uri] = newURI;
                                     if (xhr.status == 301 && rterm) { // 301 Moved
-                                        var badDoc = tabulator.rdf.Util.uri.docpart(rterm.uri);
+                                        var badDoc = $rdf.Util.uri.docpart(rterm.uri);
                                         var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
                                             msg += ' Link in ' + badDoc + 'should be changed';
                                             kb.add(badDoc, kb.sym('http://www.w3.org/2006/link#warning'), msg, sf.appNode);
                                         }
-                                        tabulator.log.warn(msg);
+                                        dump(msg+"\n");
                                     }
                                     xhr.abort()
                                     xhr.aborted = true
@@ -821,7 +841,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                                     var hash = newURI.indexOf('#');
                                     if (hash >= 0) {
                                         var msg = ('Warning: ' + xhr.uri + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
-                                        tabulator.log.warn(msg);
+                                        dump(msg+"\n");
                                         kb.add(xhr.uri, kb.sym('http://www.w3.org/2006/link#warning'), msg)
                                         newURI = newURI.slice(0, hash);
                                     }
@@ -850,7 +870,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
                     }
                 }
                 xhr.setRequestHeader('Accept', acceptstring)
-                tabulator.log.info('Accept: ' + acceptstring)
+                // $rdf.log.info('Accept: ' + acceptstring)
 
                 // See http://dig.csail.mit.edu/issues/tabulator/issue65
                 //if (requester) { xhr.setRequestHeader('Referer',requester) }
@@ -870,7 +890,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         // Drop privs
         if (!isExtension) {
             try {
-                tabulator.rdf.Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
+                $rdf.Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
             } catch (e) {
                 throw ("Can't drop privilege: " + e)
             }
@@ -888,7 +908,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
         var uris = kb.uris(term) // Get all URIs
         if (typeof uris != 'undefined') {
             for (var i = 0; i < uris.length; i++) {
-                this.refresh(this.store.sym(tabulator.rdf.Util.uri.docpart(uris[i])));
+                this.refresh(this.store.sym($rdf.Util.uri.docpart(uris[i])));
                 //what about rterm?
             }
         }
@@ -903,7 +923,7 @@ tabulator.SourceFetcher = function(store, timeout, async) {
     this.retract = function(term) { // sources_retract
         this.store.removeMany(undefined, undefined, undefined, term)
         if (term.uri) {
-            delete this.requested[tabulator.rdf.Util.uri.docpart(term.uri)]
+            delete this.requested[$rdf.Util.uri.docpart(term.uri)]
         }
         this.fireCallbacks('retract', arguments)
     }

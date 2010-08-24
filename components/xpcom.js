@@ -36,7 +36,7 @@ function Tabulator() {
                        .getService(Components.interfaces.mozIJSSubScriptLoader);
     loader.loadSubScript("chrome://tabulator/content/js/init/init.js");
     this.kb = new tabulator.rdf.IndexedFormula();
-    this.sf = new tabulator.SourceFetcher(this.kb);
+    this.sf = new tabulator.rdf.Fetcher(this.kb);
     this.kb.sf = this.sf;
     this.qs = new tabulator.rdf.QuerySource();
     this.sourceWidget = new SourceWidget();

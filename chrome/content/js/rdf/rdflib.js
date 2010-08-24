@@ -6985,9 +6985,8 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                         // Is it RDF/XML?
                         if (ns == ns['rdf']) {
-                            dump(xhr.uri + " has a root element" + 
-                            " in the RDF namespace. We'll assume " + "it's RDF/XML.\n")
-                            sf.switchHandler(sf.RDFXMLHandler, xhr, cb, [dom])
+                            this.addStatus(xhr, "Has XML root element in the RDF namespace, so assume RDF/XML.")
+                            sf.switchHandler('RDFXMLHandler', xhr, cb, [dom])
                             return
                         }
                         // it isn't RDF/XML or we can't tell
@@ -7008,8 +7007,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (dom.doctype) {
                     // $rdf.log.info("We found a DOCTYPE in " + xhr.uri)
                     if (dom.doctype.name == 'html' && dom.doctype.publicId.match(/^-\/\/W3C\/\/DTD XHTML/) && dom.doctype.systemId.match(/http:\/\/www.w3.org\/TR\/xhtml/)) {
-                        dump(xhr.uri + " has XHTML DOCTYPE. Switching to " + "XHTML Handler.\n")
-                        sf.switchHandler(sf.XHTMLHandler, xhr, cb)
+                        this.addStatus(xhr,"Has XHTML DOCTYPE. Switching to XHTML Handler.\n")
+                        sf.switchHandler('XHTMLHandler', xhr, cb)
                         return
                     }
                 }
@@ -7019,8 +7018,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (html) {
                     var xmlns = html.getAttribute('xmlns')
                     if (xmlns && xmlns.match(/^http:\/\/www.w3.org\/1999\/xhtml/)) {
-                        dump(xhr.uri + " has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
-                        sf.switchHandler(sf.XHTMLHandler, xhr, cb)
+                        this.addStatus(xhr, "Has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
+                        sf.switchHandler('XHTMLHandler', xhr, cb)
                         return
                     }
                 }
@@ -7056,24 +7055,24 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // $rdf.log.info("Sniffing HTML " + xhr.uri + " for XHTML.");
 
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    dump(xhr.uri + " has an XML declaration. We'll assume " +
-                        "it's XHTML as the content-type was text/html: "+sf.XHTMLHandler+"\n")
-                    sf.switchHandler(sf.XHTMLHandler, xhr, cb)
+                    this.addStatus(xhr, "Has an XML declaration. We'll assume " +
+                        "it's XHTML as the content-type was text/html.\n")
+                    sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
 
                 // DOCTYPE
                 // There is probably a smarter way to do this
                 if (rt.match(/.*<!DOCTYPE\s+html[^<]+-\/\/W3C\/\/DTD XHTML[^<]+http:\/\/www.w3.org\/TR\/xhtml[^<]+>/)) {
-                    dump(xhr.uri + " has XHTML DOCTYPE. Switching to XHTML" + "Handler.\n")
-                    sf.switchHandler(sf.XHTMLHandler, xhr, cb)
+                    this.addStatus(xhr, "Has XHTML DOCTYPE. Switching to XHTMLHandler.\n")
+                    sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
 
                 // xmlns
                 if (rt.match(/[^(<html)]*<html\s+[^<]*xmlns=['"]http:\/\/www.w3.org\/1999\/xhtml["'][^<]*>/)) {
-                    dump(xhr.uri + " has a default namespace for XHTML." + " Switching to XHTMLHandler.\n")
-                    sf.switchHandler(sf.XHTMLHandler, xhr, cb)
+                    this.addStatus(xhr, "Has default namespace for XHTML, so switching to XHTMLHandler.\n")
+                    sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
 
@@ -7113,23 +7112,25 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    dump("Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
+                    this.addStatus(xhr, "Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
                         + "it's XML but its content-type wasn't XML.\n")
-                    sf.switchHandler(sf.XMLHandler, xhr, cb)
+                    sf.switchHandler('XMLHandler', xhr, cb)
                     return
                 }
 
                 // Look for an XML declaration
                 if (rt.slice(0, 500).match(/xmlns:/)) {
-                    dump(xhr.uri + " may have an XML namespace. We'll assume "
+                    this.addStatus(xhr, "May have an XML namespace. We'll assume "
                             + "it's XML but its content-type wasn't XML.\n")
-                    sf.switchHandler(sf.XMLHandler, xhr, cb)
+                    sf.switchHandler('XMLHandler', xhr, cb)
                     return
                 }
 
-                // We give up
-                sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
-                dump(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
+                // We give up finding semantics - this is not an error, just no data
+                this.addStatus(xhr, "Plain text document, no known RDF semantics.");
+                this.doneFetch(xhr, [xhr.uri.uri]);
+//                sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
+//                dump(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
 
             }
         }
@@ -7219,9 +7220,15 @@ $rdf.Fetcher = function(store, timeout, async) {
         handler.register(sf)
     }
 
-    this.switchHandler = function(handler, xhr, cb, args) {
-        var kb = this.store;
+    this.switchHandler = function(name, xhr, cb, args) {
+        var kb = this.store; var handler = null;
+        for (var i=0; i<this.handlers.length; i++) {
+            if (''+this.handlers[i] == name) {
+                handler = this.handlers[i];
+            }
+        }
         if (handler == undefined) {
+            dump('\nswitchHandler: name='+name+' , this.handlers ='+this.handlers+'\n')
             dump('switchHandler: switching to '+handler+'; sf='+sf+
             '; typeof $rdf.Fetcher='+typeof $rdf.Fetcher+';\n\t $rdf.Fetcher.HTMLHandler='+$rdf.Fetcher.HTMLHandler+'\n')
             dump('\n\tsf.handlers='+sf.handlers+'\n');
@@ -7234,7 +7241,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.addStatus = function(xhr, status) {
         //<Debug about="parsePerformance">
         var now = new Date();
-        status = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] " + status;
+        status = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "." + now.getMilliseconds() + "] " + status;
         //</Debug>
         var kb = this.store
         kb.the(xhr.req, ns.link('status')).append(kb.literal(status))
@@ -7294,8 +7301,6 @@ $rdf.Fetcher = function(store, timeout, async) {
      ** will make sure all the URIs are dereferenced
      */
     this.nowKnownAs = function(was, now) {
-        //dump("entering nowKnowAs, %s lookedup: %s, %s lookedup: %s", 
-        //                    was.uri, this.lookedUp[was.uri], now.uri, this.lookedUp[now.uri]);
         if (this.lookedUp[was.uri]) {
             if (!this.lookedUp[now.uri]) this.lookUpThing(now, was)
         } else if (this.lookedUp[now.uri]) {
@@ -7314,7 +7319,6 @@ $rdf.Fetcher = function(store, timeout, async) {
      **      rterm:  the resource which refered to this (for tracking bad links)
      */
     this.lookUpThing = function(term, rterm, force) {
-        // // dump("lookUpThing: looking up " + term);
         var uris = kb.uris(term) // Get all URIs
         if (typeof uris != 'undefined') {
             for (var i = 0; i < uris.length; i++) {
@@ -7682,6 +7686,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             this.failFetch(xhr, "sendFailed")
             return xhr
         }
+        this.addStatus(xhr, "HTTP Request sent.");
 
         // Drop privs
         if (!isExtension) {

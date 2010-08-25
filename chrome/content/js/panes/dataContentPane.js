@@ -33,6 +33,19 @@ tabulator.panes.dataContentPane = {
         var pair = sz.rootSubjects(sts);
         var roots = pair[0];
         var subjects = pair[1];
+        var outline = tabulator.outline;
+        
+        var clickOnLink = function(e) {
+            var target = tabulator.Util.getTarget(e);
+            dump('click on link:' +target+'\n')
+            var uri = target.getAttribute('href');
+            if (!uri) dump("No href found \n")
+            // subject term, expand, pane, solo, referrer
+            dump('click on link to:' +uri+'\n')
+            tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
         // The property tree for a single subject or anonymos node
         function propertyTree(subject) {
@@ -56,6 +69,7 @@ tabulator.panes.dataContentPane = {
                     td_p.setAttribute('class', 'pred');
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', st.predicate.uri)
+                    anchor.addEventListener('click', clickOnLink, false);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.predicateLabelForXML(st.predicate)));
                     td_p.appendChild(anchor);
                     tr.appendChild(td_p);
@@ -78,6 +92,7 @@ tabulator.panes.dataContentPane = {
                 case 'symbol':
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', obj.uri)
+                    anchor.addEventListener('click', clickOnLink, false);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
                     return anchor;
                     

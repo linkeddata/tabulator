@@ -151,14 +151,16 @@ tabulator.panes.pubsPane = {
                     //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
                     //var doctitle_value = doctitle_id.value;
                     doctitle_value += String.fromCharCode(e.charCode);
+                    dump("\n\n\n=========start in pubsPane ==========\n");
                     dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
                     switch (caption_title) {
                         case 'Journal Title':
                             dump("yo journal\n");
+                            dump("In Text=" + doctitle_value+"\n");
+                            //tabulator.outline.UserInput.clearMenu();
+                            //tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
 
-                            dump(".a.\n\n\n In Text=" + doctitle_value+"\n");
-                            tabulator.outline.UserInput.clearMenu();
-                            tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
+                            tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(1);
 
                             dump("========OVER=========\n");
                             break;

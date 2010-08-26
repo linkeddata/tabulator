@@ -7362,7 +7362,7 @@ $rdf.Fetcher = function(store, timeout, async) {
      **              or URI has already been loaded
      */
     this.requestURI = function(docuri, rterm, force) { //sources_request_new
-        if (uri.indexOf('#') >= 0) { // hash
+        if (docuri.indexOf('#') >= 0) { // hash
             throw ("requestURI should not be called with fragid: " + uri)
         }
 
@@ -7371,9 +7371,9 @@ $rdf.Fetcher = function(store, timeout, async) {
         var force = !! force
         var kb = this.store
         var args = arguments
-        //	var term = kb.sym(uri)
+        //	var term = kb.sym(docuri)
         var docterm = kb.sym(docuri)
-        // dump("requestURI: dereferencing " + uri)
+        // dump("requestURI: dereferencing " + docuri)
         //this.fireCallbacks('request',args)
         if (!force && typeof(this.requested[docuri]) != "undefined") {
             dump("We already have requested " + docuri + ". Skipping.\n")
@@ -7381,11 +7381,11 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
 
         this.fireCallbacks('request', args); //Kenny: fire 'request' callbacks here
-        // dump( "web.js: Requesting uri: " + uri + "\n" );
+        // dump( "web.js: Requesting uri: " + docuri + "\n" );
         this.requested[docuri] = true
 
         if (rterm) {
-            if (rterm.uri) {
+            if (rterm.uri) { // A link betwen URIs not terms
                 kb.add(docterm.uri, ns.link("requestedBy"), rterm.uri, this.appNode)
             }
         }
@@ -7419,7 +7419,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         kb.add(req, ns.link('status'), status, sf.req)
 
-        if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(uri)) == "undefined") {
+        if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(docuri)) == "undefined") {
             // update the status before we break out
             this.failFetch(xhr, "Unsupported protocol")
             return xhr
@@ -7568,8 +7568,9 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         // Map the URI to a localhot proxy if we are running on localhost
         // This is used for working offline and on planes.
+        // Is the script istelf is running in localhost, then access all data in a localhost mirror.
         // Do not remove without checking with TimBL :)
-        var uri2 = uri;
+        var uri2 = docuri;
         if (!isExtension) {
             var here = '' + document.location
             if (here.slice(0, 17) == 'http://localhost/') {
@@ -7580,7 +7581,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         // Setup the request
         xhr.open('GET', uri2, this.async)
-        //webdav.manager.register(uri,function(uri,success){});
+        //webdav.manager.register(docuri,function(docuri,success){});
         // Set redirect callback and request headers
         if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
             try {

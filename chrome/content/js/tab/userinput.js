@@ -30,6 +30,12 @@ function UserInput(outline){
     var NameSpaces=this.namespaces;
     */
     
+    //hq
+    var qp = function qp(str){
+        dump(str+"\n");
+    }
+    //\\
+    
     //people like shortcuts for sure
     var tabont = tabulator.ns.tabont;
     var foaf = tabulator.ns.foaf;
@@ -309,6 +315,7 @@ function UserInput(outline){
            I shall write something about this but not now.        
         */            
         //this pops up the autocomplete menu
+        //1 is a dummy variable, it's for the "enterEvent"
         this.getAutoCompleteHandler(menu)(1);
     },
     backOut: function backOut(){
@@ -815,13 +822,24 @@ function UserInput(outline){
     getAutoCompleteHandler: function getAutoCompleteHandler(mode){
         if (mode=='PredicateAutoComplete')
             mode = 'predicate';
-        else
+        //else 
+        else if (mode!="JournalTAC") //hq
             mode = 'all'; 
+        qp("MODE="+mode+"\n");//hq
+        qp("hi");//hq
         var InputBox=this.lastModified||outline.getSelection()[0].firstChild;
+        if (mode=="JournalTAC"){//hq
+            dump("INH>R>\n");
+            InputBox = myDocument.getElementById("inpid_journal_title");
+        }
+        qp("InputBox="+InputBox);//hq
+        qp("IB_val="+InputBox.value);//hq
         return function (enterEvent) {
+        qp("ENTER EVENT="+enterEvent);
         //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
         //                                           but not [wrapped ...]
         //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
+        qp("1");
         var e={};
         var tdNode=InputBox.parentNode;
         if (!mode) mode=tdNode.nextSibling?'predicate':'all';
@@ -837,6 +855,7 @@ function UserInput(outline){
             outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));            
         }
         if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
+            qp("3");
             var newText=InputBox.value;
 
             if (typeof enterEvent=='object'){
@@ -861,6 +880,8 @@ function UserInput(outline){
                                     outline.UserInput.inputURI();
                                     break;
                             }
+                        //} else if (mode == "JournalTAC") { //hq
+                            // adding stuff from 
                         }else{
                             var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight)
                             var fillInType=(mode=='predicate')?'predicate':'object';
@@ -924,6 +945,10 @@ function UserInput(outline){
             }else if(mode=='predicate'){
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
+            }else if(mode=="JournalTAC"){//hq
+                dump("NEXTXT="+newText);
+                outline.UserInput.clearMenu();
+                outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':newText},"orderisuseless");
             }
             var menu=myDocument.getElementById(outline.UserInput.menuID); 
             if (!menu) return; //no matches

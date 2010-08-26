@@ -116,12 +116,12 @@ tabulator.Util.emptyNode = function(node) {
 tabulator.Util.getTarget = function(e) {
     var target
     if (!e) var e = window.event
-        if (e.target) target = e.target
-            else if (e.srcElement) target = e.srcElement
-                if (target.nodeType == 3) // defeat Safari bug [sic]
-                    target = target.parentNode
-                        tabulator.log.debug("Click on: " + target.tagName)
-                        return target
+    if (e.target) target = e.target
+    else if (e.srcElement) target = e.srcElement
+    if (target.nodeType == 3) // defeat Safari bug [sic]
+        target = target.parentNode
+    tabulator.log.debug("Click on: " + target.tagName)
+    return target
 }
 
 tabulator.Util.ancestor = function(target, tagName) {

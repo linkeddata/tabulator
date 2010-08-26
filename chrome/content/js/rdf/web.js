@@ -70,7 +70,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var root = this.dom.documentElement;
                 //some simple syntax issue should be dealt here, I think
                 if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue/issue110
-                    //            alert('Warning: Badly formed XML');
                     sf.failFetch(xhr, "Badly formed XML in " + xhr.uri.uri); //have to fail the request
                     throw new Error("Badly formed XML in " + xhr.uri.uri); //@@ Add details
                 }
@@ -189,7 +188,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                         // Is it RDF/XML?
                         if (ns == ns['rdf']) {
-                            this.addStatus(xhr, "Has XML root element in the RDF namespace, so assume RDF/XML.")
+                            sf.addStatus(xhr, "Has XML root element in the RDF namespace, so assume RDF/XML.")
                             sf.switchHandler('RDFXMLHandler', xhr, cb, [dom])
                             return
                         }
@@ -211,7 +210,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (dom.doctype) {
                     // $rdf.log.info("We found a DOCTYPE in " + xhr.uri)
                     if (dom.doctype.name == 'html' && dom.doctype.publicId.match(/^-\/\/W3C\/\/DTD XHTML/) && dom.doctype.systemId.match(/http:\/\/www.w3.org\/TR\/xhtml/)) {
-                        this.addStatus(xhr,"Has XHTML DOCTYPE. Switching to XHTML Handler.\n")
+                        sf.addStatus(xhr,"Has XHTML DOCTYPE. Switching to XHTML Handler.\n")
                         sf.switchHandler('XHTMLHandler', xhr, cb)
                         return
                     }
@@ -222,7 +221,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (html) {
                     var xmlns = html.getAttribute('xmlns')
                     if (xmlns && xmlns.match(/^http:\/\/www.w3.org\/1999\/xhtml/)) {
-                        this.addStatus(xhr, "Has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
+                        sf.addStatus(xhr, "Has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
                         sf.switchHandler('XHTMLHandler', xhr, cb)
                         return
                     }
@@ -259,7 +258,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // $rdf.log.info("Sniffing HTML " + xhr.uri + " for XHTML.");
 
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    this.addStatus(xhr, "Has an XML declaration. We'll assume " +
+                    sf.addStatus(xhr, "Has an XML declaration. We'll assume " +
                         "it's XHTML as the content-type was text/html.\n")
                     sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
@@ -268,14 +267,14 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // DOCTYPE
                 // There is probably a smarter way to do this
                 if (rt.match(/.*<!DOCTYPE\s+html[^<]+-\/\/W3C\/\/DTD XHTML[^<]+http:\/\/www.w3.org\/TR\/xhtml[^<]+>/)) {
-                    this.addStatus(xhr, "Has XHTML DOCTYPE. Switching to XHTMLHandler.\n")
+                    sf.addStatus(xhr, "Has XHTML DOCTYPE. Switching to XHTMLHandler.\n")
                     sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
 
                 // xmlns
                 if (rt.match(/[^(<html)]*<html\s+[^<]*xmlns=['"]http:\/\/www.w3.org\/1999\/xhtml["'][^<]*>/)) {
-                    this.addStatus(xhr, "Has default namespace for XHTML, so switching to XHTMLHandler.\n")
+                    sf.addStatus(xhr, "Has default namespace for XHTML, so switching to XHTMLHandler.\n")
                     sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
@@ -316,7 +315,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    this.addStatus(xhr, "Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
+                    sf.addStatus(xhr, "Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
                         + "it's XML but its content-type wasn't XML.\n")
                     sf.switchHandler('XMLHandler', xhr, cb)
                     return
@@ -324,15 +323,15 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.slice(0, 500).match(/xmlns:/)) {
-                    this.addStatus(xhr, "May have an XML namespace. We'll assume "
+                    sf.addStatus(xhr, "May have an XML namespace. We'll assume "
                             + "it's XML but its content-type wasn't XML.\n")
                     sf.switchHandler('XMLHandler', xhr, cb)
                     return
                 }
 
                 // We give up finding semantics - this is not an error, just no data
-                this.addStatus(xhr, "Plain text document, no known RDF semantics.");
-                this.doneFetch(xhr, [xhr.uri.uri]);
+                sf.addStatus(xhr, "Plain text document, no known RDF semantics.");
+                sf.doneFetch(xhr, [xhr.uri.uri]);
 //                sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
 //                dump(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
 
@@ -486,6 +485,8 @@ $rdf.Fetcher = function(store, timeout, async) {
     ['http', 'https', 'file', 'chrome'].map(this.addProtocol); // ftp?
     [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler, $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler, $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler, ].map(this.addHandler)
 
+
+    /* This was a hack to allow browsing to a doc's contents before we had the dataContentsPane.
     this.addCallback('done', function(uri, r) {
         if (uri.indexOf('#') >= 0) throw ('addCallback: Document URI may not contain #: ' + uri);
         var kb = sf.store
@@ -497,6 +498,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         })
         return true
     })
+    */
 
     /** Note two nodes are now smushed
      **
@@ -560,27 +562,22 @@ $rdf.Fetcher = function(store, timeout, async) {
      **      null if the protocol is not a look-up protocol,
      **              or URI has already been loaded
      */
-    this.requestURI = function(uri, rterm, force) { //sources_request_new
+    this.requestURI = function(docuri, rterm, force) { //sources_request_new
         if (uri.indexOf('#') >= 0) { // hash
-            throw ("requestURI should notbe called with fragid: " + uri)
+            throw ("requestURI should not be called with fragid: " + uri)
         }
 
-        var pcol = $rdf.Util.uri.protocol(uri);
+        var pcol = $rdf.Util.uri.protocol(docuri);
         if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn') return null; // No look-up operaion on these, but they are not errors
         var force = !! force
         var kb = this.store
         var args = arguments
         //	var term = kb.sym(uri)
-        var docuri = $rdf.Util.uri.docpart(uri)
         var docterm = kb.sym(docuri)
         // dump("requestURI: dereferencing " + uri)
         //this.fireCallbacks('request',args)
         if (!force && typeof(this.requested[docuri]) != "undefined") {
-            // dump("We already have " + docuri + ". Skipping.")
-            var newArgs = [];
-            for (var i = 0; i < args.length; i++) newArgs.push(args[i]);
-            newArgs.push(true); //extra information indicates this is a skipping done!
-            //this.fireCallbacks('done',newArgs) //comment out here
+            dump("We already have requested " + docuri + ". Skipping.\n")
             return null
         }
 
@@ -625,9 +622,6 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(uri)) == "undefined") {
             // update the status before we break out
-            if ($rdf.Util.uri.protocol(uri) == 'rdf') { // ??? eh? rdf: ?? -- tim
-                xhr.abort();
-            }
             this.failFetch(xhr, "Unsupported protocol")
             return xhr
         }
@@ -647,7 +641,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                     kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
                     if (xhr.status >= 400) {
-                        sf.failFetch(xhr, "HTTP error " + xhr.status + ' ' + xhr.statusText)
+                        sf.failFetch(xhr, "HTTP error " + xhr.status + ' ' + xhr.statusText);
+                        // @@ Here we should also make available the body of the error message.
                         break
                     }
 
@@ -830,7 +825,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         var badDoc = $rdf.Util.uri.docpart(rterm.uri);
                                         var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
-                                            msg += ' Link in ' + badDoc + 'should be changed';
+                                            msg += ' Link in <' + badDoc + ' >should be changed';
                                             kb.add(badDoc, kb.sym('http://www.w3.org/2006/link#warning'), msg, sf.appNode);
                                         }
                                         dump(msg+"\n");
@@ -851,6 +846,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     }
                                     xhr2 = sf.requestURI(newURI, xhr.uri)
                                     if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), xhr2.req, sf.appNode);
+                                    else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
                                 }
                             }
                         }

@@ -5680,364 +5680,367 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 
 $rdf.sparqlUpdate = function() {
 
-var anonymize = function (obj) {
-    return (obj.toNT().substr(0,2) == "_:")
-    ? "?" + obj.toNT().substr(2)
-    : obj.toNT();
-}
+    var anonymize = function (obj) {
+        return (obj.toNT().substr(0,2) == "_:")
+        ? "?" + obj.toNT().substr(2)
+        : obj.toNT();
+    }
 
-var anonymizeNT = function(stmt) {
-    return anonymize(stmt.subject) + " " +
-    anonymize(stmt.predicate) + " " +
-    anonymize(stmt.object) + " .";
-}
+    var anonymizeNT = function(stmt) {
+        return anonymize(stmt.subject) + " " +
+        anonymize(stmt.predicate) + " " +
+        anonymize(stmt.object) + " .";
+    }
 
-var sparql = function(store) {
-    this.store = store;
-    this.ifps = {};
-    this.fps = {};
-}
+    var sparql = function(store) {
+        this.store = store;
+        this.ifps = {};
+        this.fps = {};
+        this.ns = {};
+        this.ns.link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
+        this.ns.http = $rdf.Namespace("http://www.w3.org/2007/ont/http#");
+        this.ns.httph = $rdf.Namespace("http://www.w3.org/2007/ont/httph#");
+        this.ns.rdf =  $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+        this.ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
+        this.ns.rdf = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+        this.ns.owl = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
+    }
 
-// Returns The method string SPARQL or WEBDAV or false if known, undefined if not known.
-//
-sparql.prototype.editable = function(uri, kb) {
-    // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
-    var link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
-    var httph = $rdf.Namespace("http://www.w3.org/2007/ont/httph#");
-    var http = $rdf.Namespace("http://www.w3.org/2007/ont/http#");
-    if (!kb) kb = this.store;
-    if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
-    var request = kb.any(kb.sym($rdf.Util.uri.docpart(uri)), link("request"));
-    if (request !== undefined) {
-        var response = kb.any(request, link("response"));
+
+    // Returns The method string SPARQL or WEBDAV or false if known, undefined if not known.
+    //
+    sparql.prototype.editable = function(uri, kb) {
+        // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
+        if (!kb) kb = this.store;
+        if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
+        var request = kb.any(kb.sym($rdf.Util.uri.docpart(uri)), this.ns.link("request"));
         if (request !== undefined) {
-            var author_via = kb.each(response, httph("ms-author-via"));
-            if (author_via.length) {
-                for (var i = 0; i < author_via.length; i++) {
-                    if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
-                        // dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
-                        return author_via[i].value;
-                }
-            }
-            var status = kb.each(response, http("status"));
-            if (status.length) {
-                for (var i = 0; i < status.length; i++) {
-                    if (status[i] == 200) {
-                        // dump("sparql.editable: 200 status, not editable for "+uri+"\n");
-                        return false;
+            var response = kb.any(request, this.ns.link("response"));
+            if (request !== undefined) {
+                var author_via = kb.each(response, this.ns.httph("ms-author-via"));
+                if (author_via.length) {
+                    for (var i = 0; i < author_via.length; i++) {
+                        if (author_via[i] == "SPARQL" || author_via[i] == "DAV")
+                            // dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
+                            return author_via[i].value;
                     }
                 }
-            }
-        } else {
-            dump("sparql.editable: No response for "+uri+"\n");
-        }
-    } else {
-        dump("sparql.editable: No request for "+uri+"\n");
-    }
-    dump("sparql.editable: inconclusive for "+uri+"\n");
-}
-
-///////////  The identification of bnodes
-
-sparql.prototype._statement_bnodes = function(st) {
-    return [st.subject, st.predicate, st.object].filter(function(x){return x.isBlank});
-}
-
-sparql.prototype._statement_array_bnodes = function(sts) {
-    var bnodes = [];
-    for (var i=0; i<sts.length;i++) bnodes = bnodes.concat(this._statement_bnodes(sts[i]));
-    bnodes.sort(); // in place sort - result may have duplicates
-    bnodes2 = [];
-    for (var j=0; j<bnodes.length; j++)
-        if (j==0 || !bnodes[j].sameTermAs(bnodes[j-1])) bnodes2.push(bnodes[j]);
-    return bnodes2;
-}
-
-sparql.prototype._cache_ifps = function() {
-    // Make a cached list of [Inverse-]Functional properties
-    // Call this once before calling context_statements
-    var rdf = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    var owl = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
-    this.ifps = {};
-    var a = this.store.each(undefined, rdf('type'), owl('InverseFunctionalProperty'))
-    for (var i=0; i<a.length; i++) {
-        this.ifps[a[i].uri] = true;
-    }
-    this.fps = {};
-    var a = this.store.each(undefined, rdf('type'), owl('FunctionalProperty'))
-    for (var i=0; i<a.length; i++) {
-        this.fps[a[i].uri] = true;
-    }
-}
-
-sparql.prototype._bnode_context2 = function(x, source, depth) {
-    // Return a list of statements which indirectly identify a node
-    //  Depth > 1 if try further indirection.
-    //  Return array of statements (possibly empty), or null if failure
-    var sts = this.store.statementsMatching(undefined, undefined, x, source); // incoming links
-    for (var i=0; i<sts.length; i++) {
-        if (this.fps[sts[i].predicate.uri]) {
-            var y = sts[i].subject;
-            if (!y.isBlank)
-                return [ sts[i] ];
-            if (depth) {
-                var res = this._bnode_context2(y, source, depth-1);
-                if (res != null)
-                    return res.concat([ sts[i] ]);
-            }
-        }        
-    }
-    var sts = this.store.statementsMatching(x, undefined, undefined, source); // outgoing links
-    for (var i=0; i<sts.length; i++) {
-        if (this.ifps[sts[i].predicate.uri]) {
-            var y = sts[i].object;
-            if (!y.isBlank)
-                return [ sts[i] ];
-            if (depth) {
-                var res = this._bnode_context2(y, source, depth-1);
-                if (res != undefined)
-                    return res.concat([ sts[i] ]);
-            }
-        }        
-    }
-    return null; // Failure
-}
-
-
-sparql.prototype._bnode_context = function(x, source) {
-    // Return a list of statements which indirectly identify a node
-    //   Breadth-first
-    for (var depth = 0; depth < 3; depth++) { // Try simple first 
-        var con = this._bnode_context2(x, source, depth);
-        if (con != null) return con;
-    }
-    throw ('Unable to uniquely identify bnode: '+ x.toNT());
-}
-
-sparql.prototype._bnode_context = function(bnodes) {
-    var context = [];
-    if (bnodes.length) {
-        if (this.store.statementsMatching(st.subject.isBlank?undefined:st.subject,
-                                  st.predicate.isBlank?undefined:st.predicate,
-                                  st.object.isBlank?undefined:st.object,
-                                  st.why).length <= 1) {
-            context = context.concat(st);
-        } else {
-            this._cache_ifps();
-            for (x in bnodes) {
-                context = context.concat(this._bnode_context(bnodes[x], st.why));
-            }
-        }
-    }
-    return context;
-}
-
-sparql.prototype._statement_context = function(st) {
-    var bnodes = this._statement_bnodes(st);
-    return this._bnode_context(bnodes);
-}
-
-sparql.prototype._context_where = function(context) {
-        return (context == undefined || context.length == 0)
-        ? ""
-        : "WHERE { " + context.map(anonymizeNT).join("\n") + " }\n";
-}
-
-sparql.prototype._fire = function(uri, query, callback) {
-    if (!uri) throw "No URI given for remote editing operation: "+query;
-    dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
-    var xhr = $rdf.Util.XMLHTTPFactory();
-
-    xhr.onreadystatechange = function() {
-        //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
-        if (xhr.readyState == 4) {
-            var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-            if (!success) dump("sparql: update failed for <"+uri+"> status="+
-                xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
-            callback(uri, success, xhr.responseText);
-        }
-    }
-
-    if(!isExtension) {
-        try {
-            $rdf.Util.enablePrivilege("UniversalBrowserRead")
-        } catch(e) {
-            alert("Failed to get privileges: " + e)
-        }
-    }
-    
-    xhr.open('POST', uri, true);  // async=true
-    xhr.setRequestHeader('Content-type', 'application/sparql-query');
-    xhr.send(query);
-}
-
-// This does NOT update the statement.
-// It returns an object whcih includes
-//  function which can be used to change the object of the statement.
-//
-sparql.prototype.update_statement = function(statement) {
-    if (statement && statement.why == undefined) return;
-
-    var sparql = this;
-    var context = this._statement_context(statement);
-
-    return {
-        statement: statement?[statement.subject, statement.predicate, statement.object, statement.why]:undefined,
-        statementNT: statement?anonymizeNT(statement):undefined,
-        where: sparql._context_where(context),
-
-        set_object: function(obj, callback) {
-            query = this.where;
-            query += "DELETE { " + this.statementNT + " }\n";
-            query += "INSERT { " +
-                anonymize(this.statement[0]) + " " +
-                anonymize(this.statement[1]) + " " +
-                anonymize(obj) + " " + " . }\n";
- 
-            sparql._fire(this.statement[3].uri, query, callback);
-        }
-    }
-}
-
-sparql.prototype.insert_statement = function(st, callback) {
-    var st0 = st instanceof Array ? st[0] : st;
-    var query = this._context_where(this._statement_context(st0));
-    
-    if (st instanceof Array) {
-        var stText="";
-        for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
-        //query += "INSERT { "+st.map(RDFStatement.prototype.toNT.call).join('\n')+" }\n";
-        //the above should work, but gives an error "called on imcompatible XUL...scope..."
-        query += "INSERT { " + stText + " }\n";
-    } else {
-        query += "INSERT { " +
-            anonymize(st.subject) + " " +
-            anonymize(st.predicate) + " " +
-            anonymize(st.object) + " " + " . }\n";
-    }
-    
-    this._fire(st0.why.uri, query, callback);
-}
-
-sparql.prototype.delete_statement = function(st, callback) {
-    var query = this._context_where(this._statement_context(st));
-    
-    query += "DELETE { " + anonymizeNT(st) + " }\n";
-    
-    this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
-}
-
-// This high-level function updates the local store iff the web is changed successfully. 
-//
-//  - deletions, insertions may be undefined or single statements or lists or formulae.
-//
-//  - callback is called as callback(uri, success, errorbody)
-//
-sparql.prototype.update = function(deletions, insertions, callback) {
-    var ds =  deletions == undefined ? []
-                : deletions instanceof $rdf.IndexedFormula ? deletions.statements
-                : deletions instanceof Array ? deletions : [ deletions ];
-    var is =  insertions == undefined? []
-                : insertions instanceof $rdf.IndexedFormula ? insertions.statements
-                : insertions instanceof Array ? insertions : [ insertions ];
-    if (! (ds instanceof Array)) throw "Type Error "+(typeof ds)+": "+ds;
-    if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
-    var doc = ds.length ? ds[0].why : is[0].why;
-
-    var protocol = this.editable(doc.uri);
-    if (!protocol) throw "Can't make changes in uneditable "+doc;
-
-    if (protocol.indexOf('SPARQL') >=0) {
-        var bnodes = []
-        if (ds.length) bnodes = this._statement_array_bnodes(ds);
-        if (is.length) bnodes = bnodes.concat(this._statement_array_bnodes(is));
-        var context = this._bnode_context(bnodes);
-        query = this._context_where(context);
-        if (ds.length) {
-            query += "DELETE { ";
-            for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
-            query += " }\n";
-        }
-        if (is.length) {
-            query += "INSERT { ";
-            for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
-            query += " }\n";
-        }
-        var mykb = tabulator.kb;
-        this._fire(doc.uri, query,
-            function(uri, success, body) {
-                dump("\t sparql: Return "+success+" for query "+query+"\n");
-                if (success) {
-                    for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
-                    for (var i=0; i<is.length;i++)
-                        mykb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                var status = kb.each(response, this.ns.http("status"));
+                if (status.length) {
+                    for (var i = 0; i < status.length; i++) {
+                        if (status[i] == 200) {
+                            // dump("sparql.editable: 200 status, not editable for "+uri+"\n");
+                            return false;
+                        }
+                    }
                 }
-                callback(uri, success, body);
-            });
-        
-    } else if (protocol.indexOf('WEBDAV') >=0) {
-
-        // The code below is derived from Kenny's UpdateCenter.js
-        var documentString;
-        var request = kb.any(doc, tabulator.ns.link("request"));
-        if (!request) throw "No record of our HTTP GET request for document: "+doc; //should not happen
-        var response =  kb.any(request, tabulator.ns.link("response"));
-        if (!response)  return null; // throw "No record HTTP GET response for document: "+doc;
-        var content_type = kb.the(response, tabulator.ns.httph("content-type")).value;            
-
-        //prepare contents of revised document
-        var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
-        for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
-        for (var i=0;i<ds.length;i++) RDFArrayRemove(newSts, ds[i]);
-        
-        //serialize to te appropriate format
-        var sz = $rdf.Serializer();
-        sz.suggestNamespaces(kb.namespaces);
-        sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
-        switch(content_type){
-            case 'application/rdf+xml': 
-                documentString = sz.statementsToXML(newSts);
-                break;
-            case 'text/rdf+n3': // Legacy
-            case 'text/n3':
-            case 'text/turtle':
-            case 'application/x-turtle': // Legacy
-            case 'application/n3': // Legacy
-                documentString = sz.statementsToN3(newSts);
-                break;
-            default:
-                throw "Content-type "+content_type +" not supported for data write";                                                                            
+            } else {
+                dump("sparql.editable: No response for "+uri+"\n");
+            }
+        } else {
+            dump("sparql.editable: No request for "+uri+"\n");
         }
-        
-        // Write the new version back
-        var candidateTarget = kb.the(response, tabulator.ns.httph("content-location"));
-        if (candidateTarget) targetURI = Util.uri.join(candidateTarget.value, targetURI);
-        var xhr = Util.XMLHTTPFactory();
-        xhr.onreadystatechange = function (){
-            if (xhr.readyState == 4){
-                //formula from sparqlUpdate.js, what about redirects?
+        dump("sparql.editable: inconclusive for "+uri+"\n");
+    }
+
+    ///////////  The identification of bnodes
+
+    sparql.prototype._statement_bnodes = function(st) {
+        return [st.subject, st.predicate, st.object].filter(function(x){return x.isBlank});
+    }
+
+    sparql.prototype._statement_array_bnodes = function(sts) {
+        var bnodes = [];
+        for (var i=0; i<sts.length;i++) bnodes = bnodes.concat(this._statement_bnodes(sts[i]));
+        bnodes.sort(); // in place sort - result may have duplicates
+        bnodes2 = [];
+        for (var j=0; j<bnodes.length; j++)
+            if (j==0 || !bnodes[j].sameTermAs(bnodes[j-1])) bnodes2.push(bnodes[j]);
+        return bnodes2;
+    }
+
+    sparql.prototype._cache_ifps = function() {
+        // Make a cached list of [Inverse-]Functional properties
+        // Call this once before calling context_statements
+        this.ifps = {};
+        var a = this.store.each(undefined, this.ns.rdf('type'), this.ns.owl('InverseFunctionalProperty'))
+        for (var i=0; i<a.length; i++) {
+            this.ifps[a[i].uri] = true;
+        }
+        this.fps = {};
+        var a = this.store.each(undefined, this.ns.rdf('type'), this.ns.owl('FunctionalProperty'))
+        for (var i=0; i<a.length; i++) {
+            this.fps[a[i].uri] = true;
+        }
+    }
+
+    sparql.prototype._bnode_context2 = function(x, source, depth) {
+        // Return a list of statements which indirectly identify a node
+        //  Depth > 1 if try further indirection.
+        //  Return array of statements (possibly empty), or null if failure
+        var sts = this.store.statementsMatching(undefined, undefined, x, source); // incoming links
+        for (var i=0; i<sts.length; i++) {
+            if (this.fps[sts[i].predicate.uri]) {
+                var y = sts[i].subject;
+                if (!y.isBlank)
+                    return [ sts[i] ];
+                if (depth) {
+                    var res = this._bnode_context2(y, source, depth-1);
+                    if (res != null)
+                        return res.concat([ sts[i] ]);
+                }
+            }        
+        }
+        var sts = this.store.statementsMatching(x, undefined, undefined, source); // outgoing links
+        for (var i=0; i<sts.length; i++) {
+            if (this.ifps[sts[i].predicate.uri]) {
+                var y = sts[i].object;
+                if (!y.isBlank)
+                    return [ sts[i] ];
+                if (depth) {
+                    var res = this._bnode_context2(y, source, depth-1);
+                    if (res != undefined)
+                        return res.concat([ sts[i] ]);
+                }
+            }        
+        }
+        return null; // Failure
+    }
+
+
+    sparql.prototype._bnode_context = function(x, source) {
+        // Return a list of statements which indirectly identify a node
+        //   Breadth-first
+        for (var depth = 0; depth < 3; depth++) { // Try simple first 
+            var con = this._bnode_context2(x, source, depth);
+            if (con != null) return con;
+        }
+        throw ('Unable to uniquely identify bnode: '+ x.toNT());
+    }
+
+    sparql.prototype._bnode_context = function(bnodes) {
+        var context = [];
+        if (bnodes.length) {
+            if (this.store.statementsMatching(st.subject.isBlank?undefined:st.subject,
+                                      st.predicate.isBlank?undefined:st.predicate,
+                                      st.object.isBlank?undefined:st.object,
+                                      st.why).length <= 1) {
+                context = context.concat(st);
+            } else {
+                this._cache_ifps();
+                for (x in bnodes) {
+                    context = context.concat(this._bnode_context(bnodes[x], st.why));
+                }
+            }
+        }
+        return context;
+    }
+
+    sparql.prototype._statement_context = function(st) {
+        var bnodes = this._statement_bnodes(st);
+        return this._bnode_context(bnodes);
+    }
+
+    sparql.prototype._context_where = function(context) {
+            return (context == undefined || context.length == 0)
+            ? ""
+            : "WHERE { " + context.map(anonymizeNT).join("\n") + " }\n";
+    }
+
+    sparql.prototype._fire = function(uri, query, callback) {
+        if (!uri) throw "No URI given for remote editing operation: "+query;
+        dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+        var xhr = $rdf.Util.XMLHTTPFactory();
+
+        xhr.onreadystatechange = function() {
+            //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
+            if (xhr.readyState == 4) {
                 var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-                if (success) {
-                    for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
-                    for (var i=0; i<is.length;i++)
-                        kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
-                }
-                callback(doc.uri, success, xhr.responseText);
+                if (!success) dump("sparql: update failed for <"+uri+"> status="+
+                    xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
+                callback(uri, success, xhr.responseText);
             }
-        };
-        xhr.open('PUT', targetURI, true);
-        //assume the server does PUT content-negotiation.
-        xhr.setRequestHeader('Content-type', content_type);//OK?
-        xhr.send(documentString);
-        // tabulator.log.info("sending "+sts+"["+documentString+"] to +"+targetURI);
+        }
 
-    
-    } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
-};
+        if(!isExtension) {
+            try {
+                $rdf.Util.enablePrivilege("UniversalBrowserRead")
+            } catch(e) {
+                alert("Failed to get privileges: " + e)
+            }
+        }
+        
+        xhr.open('POST', uri, true);  // async=true
+        xhr.setRequestHeader('Content-type', 'application/sparql-query');
+        xhr.send(query);
+    }
+
+    // This does NOT update the statement.
+    // It returns an object whcih includes
+    //  function which can be used to change the object of the statement.
+    //
+    sparql.prototype.update_statement = function(statement) {
+        if (statement && statement.why == undefined) return;
+
+        var sparql = this;
+        var context = this._statement_context(statement);
+
+        return {
+            statement: statement?[statement.subject, statement.predicate, statement.object, statement.why]:undefined,
+            statementNT: statement?anonymizeNT(statement):undefined,
+            where: sparql._context_where(context),
+
+            set_object: function(obj, callback) {
+                query = this.where;
+                query += "DELETE { " + this.statementNT + " }\n";
+                query += "INSERT { " +
+                    anonymize(this.statement[0]) + " " +
+                    anonymize(this.statement[1]) + " " +
+                    anonymize(obj) + " " + " . }\n";
+     
+                sparql._fire(this.statement[3].uri, query, callback);
+            }
+        }
+    }
+
+    sparql.prototype.insert_statement = function(st, callback) {
+        var st0 = st instanceof Array ? st[0] : st;
+        var query = this._context_where(this._statement_context(st0));
+        
+        if (st instanceof Array) {
+            var stText="";
+            for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
+            //query += "INSERT { "+st.map(RDFStatement.prototype.toNT.call).join('\n')+" }\n";
+            //the above should work, but gives an error "called on imcompatible XUL...scope..."
+            query += "INSERT { " + stText + " }\n";
+        } else {
+            query += "INSERT { " +
+                anonymize(st.subject) + " " +
+                anonymize(st.predicate) + " " +
+                anonymize(st.object) + " " + " . }\n";
+        }
+        
+        this._fire(st0.why.uri, query, callback);
+    }
+
+    sparql.prototype.delete_statement = function(st, callback) {
+        var query = this._context_where(this._statement_context(st));
+        
+        query += "DELETE { " + anonymizeNT(st) + " }\n";
+        
+        this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
+    }
+
+    // This high-level function updates the local store iff the web is changed successfully. 
+    //
+    //  - deletions, insertions may be undefined or single statements or lists or formulae.
+    //
+    //  - callback is called as callback(uri, success, errorbody)
+    //
+    sparql.prototype.update = function(deletions, insertions, callback) {
+        var ds =  deletions == undefined ? []
+                    : deletions instanceof $rdf.IndexedFormula ? deletions.statements
+                    : deletions instanceof Array ? deletions : [ deletions ];
+        var is =  insertions == undefined? []
+                    : insertions instanceof $rdf.IndexedFormula ? insertions.statements
+                    : insertions instanceof Array ? insertions : [ insertions ];
+        if (! (ds instanceof Array)) throw "Type Error "+(typeof ds)+": "+ds;
+        if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
+        var doc = ds.length ? ds[0].why : is[0].why;
+
+        var protocol = this.editable(doc.uri);
+        if (!protocol) throw "Can't make changes in uneditable "+doc;
+
+        if (protocol.indexOf('SPARQL') >=0) {
+            var bnodes = []
+            if (ds.length) bnodes = this._statement_array_bnodes(ds);
+            if (is.length) bnodes = bnodes.concat(this._statement_array_bnodes(is));
+            var context = this._bnode_context(bnodes);
+            query = this._context_where(context);
+            if (ds.length) {
+                query += "DELETE { ";
+                for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
+                query += " }\n";
+            }
+            if (is.length) {
+                query += "INSERT { ";
+                for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
+                query += " }\n";
+            }
+            var mykb = this.store;
+            this._fire(doc.uri, query,
+                function(uri, success, body) {
+                    dump("\t sparql: Return "+success+" for query "+query+"\n");
+                    if (success) {
+                        for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
+                        for (var i=0; i<is.length;i++)
+                            mykb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                    }
+                    callback(uri, success, body);
+                });
+            
+        } else if (protocol.indexOf('WEBDAV') >=0) {
+
+            // The code below is derived from Kenny's UpdateCenter.js
+            var documentString;
+            var request = kb.any(doc, this.ns.link("request"));
+            if (!request) throw "No record of our HTTP GET request for document: "+doc; //should not happen
+            var response =  kb.any(request, this.ns.link("response"));
+            if (!response)  return null; // throw "No record HTTP GET response for document: "+doc;
+            var content_type = kb.the(response, this.ns.httph("content-type")).value;            
+
+            //prepare contents of revised document
+            var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
+            for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
+            for (var i=0;i<ds.length;i++) RDFArrayRemove(newSts, ds[i]);
+            
+            //serialize to te appropriate format
+            var sz = $rdf.Serializer();
+            sz.suggestNamespaces(kb.namespaces);
+            sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
+            switch(content_type){
+                case 'application/rdf+xml': 
+                    documentString = sz.statementsToXML(newSts);
+                    break;
+                case 'text/rdf+n3': // Legacy
+                case 'text/n3':
+                case 'text/turtle':
+                case 'application/x-turtle': // Legacy
+                case 'application/n3': // Legacy
+                    documentString = sz.statementsToN3(newSts);
+                    break;
+                default:
+                    throw "Content-type "+content_type +" not supported for data write";                                                                            
+            }
+            
+            // Write the new version back
+            var candidateTarget = kb.the(response, this.ns.httph("content-location"));
+            if (candidateTarget) targetURI = Util.uri.join(candidateTarget.value, targetURI);
+            var xhr = Util.XMLHTTPFactory();
+            xhr.onreadystatechange = function (){
+                if (xhr.readyState == 4){
+                    //formula from sparqlUpdate.js, what about redirects?
+                    var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+                    if (success) {
+                        for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
+                        for (var i=0; i<is.length;i++)
+                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
+                    }
+                    callback(doc.uri, success, xhr.responseText);
+                }
+            };
+            xhr.open('PUT', targetURI, true);
+            //assume the server does PUT content-negotiation.
+            xhr.setRequestHeader('Content-type', content_type);//OK?
+            xhr.send(documentString);
+
+        
+        } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
+    };
 
 
 
-return sparql;
+    return sparql;
 
 }();
 $rdf.jsonParser = function() {
@@ -6866,7 +6869,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var root = this.dom.documentElement;
                 //some simple syntax issue should be dealt here, I think
                 if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue/issue110
-                    //            alert('Warning: Badly formed XML');
                     sf.failFetch(xhr, "Badly formed XML in " + xhr.uri.uri); //have to fail the request
                     throw new Error("Badly formed XML in " + xhr.uri.uri); //@@ Add details
                 }
@@ -6985,7 +6987,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                         // Is it RDF/XML?
                         if (ns == ns['rdf']) {
-                            this.addStatus(xhr, "Has XML root element in the RDF namespace, so assume RDF/XML.")
+                            sf.addStatus(xhr, "Has XML root element in the RDF namespace, so assume RDF/XML.")
                             sf.switchHandler('RDFXMLHandler', xhr, cb, [dom])
                             return
                         }
@@ -7007,7 +7009,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (dom.doctype) {
                     // $rdf.log.info("We found a DOCTYPE in " + xhr.uri)
                     if (dom.doctype.name == 'html' && dom.doctype.publicId.match(/^-\/\/W3C\/\/DTD XHTML/) && dom.doctype.systemId.match(/http:\/\/www.w3.org\/TR\/xhtml/)) {
-                        this.addStatus(xhr,"Has XHTML DOCTYPE. Switching to XHTML Handler.\n")
+                        sf.addStatus(xhr,"Has XHTML DOCTYPE. Switching to XHTML Handler.\n")
                         sf.switchHandler('XHTMLHandler', xhr, cb)
                         return
                     }
@@ -7018,7 +7020,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (html) {
                     var xmlns = html.getAttribute('xmlns')
                     if (xmlns && xmlns.match(/^http:\/\/www.w3.org\/1999\/xhtml/)) {
-                        this.addStatus(xhr, "Has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
+                        sf.addStatus(xhr, "Has a default namespace for " + "XHTML. Switching to XHTMLHandler.\n")
                         sf.switchHandler('XHTMLHandler', xhr, cb)
                         return
                     }
@@ -7055,7 +7057,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // $rdf.log.info("Sniffing HTML " + xhr.uri + " for XHTML.");
 
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    this.addStatus(xhr, "Has an XML declaration. We'll assume " +
+                    sf.addStatus(xhr, "Has an XML declaration. We'll assume " +
                         "it's XHTML as the content-type was text/html.\n")
                     sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
@@ -7064,14 +7066,14 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // DOCTYPE
                 // There is probably a smarter way to do this
                 if (rt.match(/.*<!DOCTYPE\s+html[^<]+-\/\/W3C\/\/DTD XHTML[^<]+http:\/\/www.w3.org\/TR\/xhtml[^<]+>/)) {
-                    this.addStatus(xhr, "Has XHTML DOCTYPE. Switching to XHTMLHandler.\n")
+                    sf.addStatus(xhr, "Has XHTML DOCTYPE. Switching to XHTMLHandler.\n")
                     sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
 
                 // xmlns
                 if (rt.match(/[^(<html)]*<html\s+[^<]*xmlns=['"]http:\/\/www.w3.org\/1999\/xhtml["'][^<]*>/)) {
-                    this.addStatus(xhr, "Has default namespace for XHTML, so switching to XHTMLHandler.\n")
+                    sf.addStatus(xhr, "Has default namespace for XHTML, so switching to XHTMLHandler.\n")
                     sf.switchHandler('XHTMLHandler', xhr, cb)
                     return
                 }
@@ -7112,7 +7114,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    this.addStatus(xhr, "Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
+                    sf.addStatus(xhr, "Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
                         + "it's XML but its content-type wasn't XML.\n")
                     sf.switchHandler('XMLHandler', xhr, cb)
                     return
@@ -7120,15 +7122,15 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.slice(0, 500).match(/xmlns:/)) {
-                    this.addStatus(xhr, "May have an XML namespace. We'll assume "
+                    sf.addStatus(xhr, "May have an XML namespace. We'll assume "
                             + "it's XML but its content-type wasn't XML.\n")
                     sf.switchHandler('XMLHandler', xhr, cb)
                     return
                 }
 
                 // We give up finding semantics - this is not an error, just no data
-                this.addStatus(xhr, "Plain text document, no known RDF semantics.");
-                this.doneFetch(xhr, [xhr.uri.uri]);
+                sf.addStatus(xhr, "Plain text document, no known RDF semantics.");
+                sf.doneFetch(xhr, [xhr.uri.uri]);
 //                sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
 //                dump(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
 
@@ -7282,6 +7284,8 @@ $rdf.Fetcher = function(store, timeout, async) {
     ['http', 'https', 'file', 'chrome'].map(this.addProtocol); // ftp?
     [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler, $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler, $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler, ].map(this.addHandler)
 
+
+    /* This was a hack to allow browsing to a doc's contents before we had the dataContentsPane.
     this.addCallback('done', function(uri, r) {
         if (uri.indexOf('#') >= 0) throw ('addCallback: Document URI may not contain #: ' + uri);
         var kb = sf.store
@@ -7293,6 +7297,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         })
         return true
     })
+    */
 
     /** Note two nodes are now smushed
      **
@@ -7356,27 +7361,22 @@ $rdf.Fetcher = function(store, timeout, async) {
      **      null if the protocol is not a look-up protocol,
      **              or URI has already been loaded
      */
-    this.requestURI = function(uri, rterm, force) { //sources_request_new
+    this.requestURI = function(docuri, rterm, force) { //sources_request_new
         if (uri.indexOf('#') >= 0) { // hash
-            throw ("requestURI should notbe called with fragid: " + uri)
+            throw ("requestURI should not be called with fragid: " + uri)
         }
 
-        var pcol = $rdf.Util.uri.protocol(uri);
+        var pcol = $rdf.Util.uri.protocol(docuri);
         if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn') return null; // No look-up operaion on these, but they are not errors
         var force = !! force
         var kb = this.store
         var args = arguments
         //	var term = kb.sym(uri)
-        var docuri = $rdf.Util.uri.docpart(uri)
         var docterm = kb.sym(docuri)
         // dump("requestURI: dereferencing " + uri)
         //this.fireCallbacks('request',args)
         if (!force && typeof(this.requested[docuri]) != "undefined") {
-            // dump("We already have " + docuri + ". Skipping.")
-            var newArgs = [];
-            for (var i = 0; i < args.length; i++) newArgs.push(args[i]);
-            newArgs.push(true); //extra information indicates this is a skipping done!
-            //this.fireCallbacks('done',newArgs) //comment out here
+            dump("We already have requested " + docuri + ". Skipping.\n")
             return null
         }
 
@@ -7421,9 +7421,6 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(uri)) == "undefined") {
             // update the status before we break out
-            if ($rdf.Util.uri.protocol(uri) == 'rdf') { // ??? eh? rdf: ?? -- tim
-                xhr.abort();
-            }
             this.failFetch(xhr, "Unsupported protocol")
             return xhr
         }
@@ -7443,7 +7440,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                     kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
                     if (xhr.status >= 400) {
-                        sf.failFetch(xhr, "HTTP error " + xhr.status + ' ' + xhr.statusText)
+                        sf.failFetch(xhr, "HTTP error " + xhr.status + ' ' + xhr.statusText);
+                        // @@ Here we should also make available the body of the error message.
                         break
                     }
 
@@ -7626,7 +7624,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         var badDoc = $rdf.Util.uri.docpart(rterm.uri);
                                         var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
-                                            msg += ' Link in ' + badDoc + 'should be changed';
+                                            msg += ' Link in <' + badDoc + ' >should be changed';
                                             kb.add(badDoc, kb.sym('http://www.w3.org/2006/link#warning'), msg, sf.appNode);
                                         }
                                         dump(msg+"\n");
@@ -7647,6 +7645,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     }
                                     xhr2 = sf.requestURI(newURI, xhr.uri)
                                     if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), xhr2.req, sf.appNode);
+                                    else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
                                 }
                             }
                         }

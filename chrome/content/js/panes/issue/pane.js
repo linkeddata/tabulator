@@ -55,7 +55,7 @@ tabulator.panes.register( {
 
         var complain = function complain(message){
             var pre = myDocument.createElement("pre");
-            pre.setAttribute('style', 'color: red');
+            pre.setAttribute('style', 'color: grey');
             div.appendChild(pre);
             pre.appendChild(myDocument.createTextNode(message));
         } 
@@ -201,7 +201,9 @@ tabulator.panes.register( {
         //  Form to collect data about a New Issue
         //
         var newIssueForm = function(myDocument, kb, tracker, superIssue) {
-           var form = myDocument.createElement('form');
+            var form = myDocument.createElement('form');
+            var stateStore = kb.any(tracker, WF('stateStore'));
+
             var sendNewIssue = function() {
                 titlefield.setAttribute('class','pendingedit');
                 titlefield.disabled = true;
@@ -265,6 +267,7 @@ tabulator.panes.register( {
 
             var tracker = kb.any(subject, WF('tracker'));
             if (!tracker) throw 'This issue '+subject+'has no tracker';
+            
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
             tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane() {
@@ -274,6 +277,7 @@ tabulator.panes.register( {
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
                 donePredicate(ns.rdf('type'));
                 donePredicate(ns.dc('title'));
+
 
                 var setPaneStyle = function() {
                     var types = kb.findTypeURIs(subject);
@@ -286,26 +290,29 @@ tabulator.panes.register( {
                 }
                 setPaneStyle();
                 
+                var stateStore = kb.any(tracker, WF('stateStore'));
+                var store = kb.sym(subject.uri.split('#')[0]);
+                if (stateStore != undefined && store.uri != stateStore.uri) {
+                    complain('(This bug is not stored in the default state store)')
+                }
 
                 var states = kb.any(tracker, WF('issueClass'));
                 if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var stateStore = kb.any(tracker, WF('stateStore'));
-                if (!stateStore) throw 'This tracker '+tracker+' has no stateStore';
-                donePredicate(WF('tracker'));
-
-                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-                var select = makeSelectForCategory(subject, states, stateStore, function(ok,body){
+                var select = makeSelectForCategory(subject, states, store, function(ok,body){
                         if (ok) {
-                            setModifiedDate(stateStore, kb, stateStore);
+                            setModifiedDate(store, kb, store);
                             rerender(div);
                         }
                         else complain("Failed to change state:\n"+body);
                     })
                 div.appendChild(select);
+
+
+                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 for (var i=0; i<cats.length; i++) {
-                    div.appendChild(makeSelectForCategory(subject, cats[i], stateStore, function(ok,body){
+                    div.appendChild(makeSelectForCategory(subject, cats[i], store, function(ok,body){
                         if (ok) {
-                            setModifiedDate(stateStore, kb, stateStore);
+                            setModifiedDate(store, kb, store);
                             rerender(div);
                         }
                         else complain("Failed to change category:\n"+body);
@@ -319,8 +326,8 @@ tabulator.panes.register( {
                 a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
 
                 div.appendChild(makeDescription(myDocument, subject, WF('description'),
-                    stateStore, function(ok,body){
-                        if (ok) setModifiedDate(stateStore, kb, stateStore);
+                    store, function(ok,body){
+                        if (ok) setModifiedDate(store, kb, store);
                         else complain("Failed to description:\n"+body);
                     }));
                 donePredicate(WF('description'));
@@ -353,15 +360,16 @@ tabulator.panes.register( {
 
                 div.appendChild(myDocument.createElement('br'));
 
-                var b = myDocument.createElement("button");
-                b.setAttribute("type", "button");
-                div.appendChild(b)
-                classLabel = tabulator.Util.label(states);
-                b.innerHTML = "New sub "+classLabel;
-                b.setAttribute('style', 'float: right;');
-                b.addEventListener('click', function(e) {
-                    div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
-                
+                if (stateStore) {
+                    var b = myDocument.createElement("button");
+                    b.setAttribute("type", "button");
+                    div.appendChild(b)
+                    classLabel = tabulator.Util.label(states);
+                    b.innerHTML = "New sub "+classLabel;
+                    b.setAttribute('style', 'float: right;');
+                    b.addEventListener('click', function(e) {
+                        div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
+                };
                 div.appendChild(myDocument.createElement('tr'))
                             .setAttribute('style','height: 1em'); // spacer
                 

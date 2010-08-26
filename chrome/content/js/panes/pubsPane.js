@@ -2,7 +2,8 @@
     Summer 2010
     haoqili@mit.edu
     
-This commit: Autocomplete, buggy basic version
+This commit: Autocomplete, buggy basic version, can move around menu with the (e) added to getAutoCompleteHandler("JournalTAC")(e)
+
 NOTE: Dropdown only shows if 
 1. you first visit http://dig.csail.mit.edu/2007/wiki/docs/collections
 2. refresh page
@@ -143,10 +144,13 @@ tabulator.panes.pubsPane = {
         var rootlistenRow = function(theForm, caption_title, typeofinp, storeURI, typeofdoc){
             // Makes the new row, with id: "inpid_"+sapcetoUline(caption_title)
             var doctitle = newFormRowID(theForm, caption_title, typeofinp);
+            doctitle.select();
+            //doctitle.addEventListener('keypress', tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC"), false);
             // Add the listener
             doctitle.addEventListener("keypress", function(e){
                 // Only register legal chars
-                if (e.charCode != 0){
+                //if (e.charCode != 0){ //can't arrow
+                if (e.keyCode != 13) {
                     //NB not using elementId.value because it's offbyone
                     //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
                     //var doctitle_value = doctitle_id.value;
@@ -159,8 +163,8 @@ tabulator.panes.pubsPane = {
                             dump("In Text=" + doctitle_value+"\n");
                             //tabulator.outline.UserInput.clearMenu();
                             //tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
-
-                            tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(1);
+                            dump("THIS IS="+this);
+                            tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e); //**This (e) is passed to event in userinput that will handle keypresses, including up and down in menu
 
                             dump("========OVER=========\n");
                             break;

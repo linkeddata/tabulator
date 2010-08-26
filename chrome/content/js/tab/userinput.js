@@ -307,6 +307,7 @@ function UserInput(outline){
  */    
     performAutoCompleteEdit: function performAutoCompleteEdit(selectedTd,menu){
         tabulator.Util.emptyNode(selectedTd);
+        qp("THIS IS="+this);
         this.lastModified=this.createInputBoxIn(selectedTd,"");
         this.lastModified.select();
         this.lastModified.addEventListener('keypress',this.getAutoCompleteHandler(menu),false);
@@ -315,7 +316,8 @@ function UserInput(outline){
            I shall write something about this but not now.        
         */            
         //this pops up the autocomplete menu
-        //1 is a dummy variable, it's for the "enterEvent"
+        //Pops up the menu even though no keypress has occured
+        //1 is a dummy variable for the "enterEvent"
         this.getAutoCompleteHandler(menu)(1);
     },
     backOut: function backOut(){
@@ -820,6 +822,7 @@ function UserInput(outline){
     },
 
     getAutoCompleteHandler: function getAutoCompleteHandler(mode){
+        qp("\n\n***** In getAutoCompleteHandler ******");
         if (mode=='PredicateAutoComplete')
             mode = 'predicate';
         //else 
@@ -829,7 +832,6 @@ function UserInput(outline){
         qp("hi");//hq
         var InputBox=this.lastModified||outline.getSelection()[0].firstChild;
         if (mode=="JournalTAC"){//hq
-            dump("INH>R>\n");
             InputBox = myDocument.getElementById("inpid_journal_title");
         }
         qp("InputBox="+InputBox);//hq
@@ -839,13 +841,13 @@ function UserInput(outline){
         //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
         //                                           but not [wrapped ...]
         //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
-        qp("1");
+        qp("1. outside eneterEvent");
         var e={};
         var tdNode=InputBox.parentNode;
         if (!mode) mode=tdNode.nextSibling?'predicate':'all';
         e.pageX=tabulator.Util.findPos(tdNode)[0];
         e.pageY=tabulator.Util.findPos(tdNode)[1]+tdNode.clientHeight;
-        
+        qp("epX="+e.pageX+", epY="+e.pageY);
         var menu=myDocument.getElementById(outline.UserInput.menuID);
         function setHighlightItem(item){
             if (!item) return; //do not make changes
@@ -855,16 +857,18 @@ function UserInput(outline){
             outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));            
         }
         if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
-            qp("3");
+            qp("2. in (if enterEvent).  with type ="+typeof enterEvent);
             var newText=InputBox.value;
 
             if (typeof enterEvent=='object'){
+                qp("3. in (typeof enterEvent is object");
                 enterEvent.stopPropagation();
                 if (menu && !menu.lastHighlight) //this ensures the following operation valid 
                     setHighlightItem(menu.firstChild.firstChild);
                 switch (enterEvent.keyCode){
                     case 13://enter
                     case 9://tab
+                        qp("handler: Enter or Tab");
                         if (!menu) {
                             outline.UserInput.clearInputAndSave();
                             return;
@@ -893,6 +897,7 @@ function UserInput(outline){
                         }
                         return;
                     case 38://up
+                        qp("handler: Arrow UP");
                         if (newText == '' && menu.lastHighlight.tagName == 'TR'
                                           && !menu.lastHighlight.previousSibling)
                             setHighlightItem(menu.firstChild.firstChild);
@@ -900,13 +905,15 @@ function UserInput(outline){
                             setHighlightItem(menu.lastHighlight.previousSibling);
                         return;
                     case 40://down
+                        qp("handler: Arrow Down");
                         if (menu.lastHighlight.tagName == 'INPUT')
                             setHighlightItem(menu.childNodes[1].firstChild);
                         else
                             setHighlightItem(menu.lastHighlight.nextSibling);
                         return;
                     case 37://left
-                    case 39://right                        
+                    case 39://right  
+                        qp("handler: Arrow left, right");
                         if (menu.lastHighlight.tagName == 'INPUT'){
                             if (enterEvent.keyCode == 37)
                                 setHighlightItem(menu.lastHighlight.previousSibling);
@@ -915,9 +922,11 @@ function UserInput(outline){
                         }
                         return
                     case 8://backspace
+                        qp("handler: Backspace");
                         newText=newText.slice(0,-1);
                         break;
                     case 27://esc to enter literal
+                        qp("handler: Esc");
                         if (!menu){
                             outline.UserInput.backOut();
                             return;
@@ -929,6 +938,7 @@ function UserInput(outline){
                         return;
                         break;
                     default:
+                        qp("handler: Default");
                         //we need this because it is keypress, seeAlso performAutoCompleteEdit
                         newText+=String.fromCharCode(enterEvent.charCode)
                         dump("DEFAULTTTTTTTTTTTTTTTTTTTTTTTTTTTTtxtstr="+newText+"\n"); //hq                       
@@ -937,22 +947,25 @@ function UserInput(outline){
             //tabulator.log.warn(InputBox.choices.length);
             //for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
             if (mode=='all') {
+                pp("after switch, nextxt="+nexText+"mode is all");
                 outline.UserInput.clearMenu();
                 //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
                 outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
                 if (newText.length==0) outline.UserInput.WildCardButtons();
                                
             }else if(mode=='predicate'){
+                qp("after switch, nextxt="+newText+"mode is predicate");
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
             }else if(mode=="JournalTAC"){//hq
-                dump("NEXTXT="+newText);
+                dump("after switch, NEXTXT="+newText);
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':newText},"orderisuseless");
             }
             var menu=myDocument.getElementById(outline.UserInput.menuID); 
             if (!menu) return; //no matches
-
+            
+            qp("at end of handler\n^^^^^^^^^^^^^^^^^\n\n");
             setHighlightItem(menu.firstChild.firstChild);
             outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));
             return;
@@ -1245,6 +1258,7 @@ function UserInput(outline){
         tabulator.log.info("outline.doucment is now " + outline.document.location);
         var This=this;
         var menu=myDocument.createElement('div');
+        qp("\n\n==============\n**** In showMenu ****\n===========");
         dump("CREATED MENU\n");//hq
         menu.id=this.menuID;
         menu.className='outlineMenu';
@@ -1291,7 +1305,7 @@ function UserInput(outline){
             menu.style.top = loc.top+"px";
             menu.style.left = loc.left+"px";
         }
-        dump("\nmenu at top="+menu.style.top+" left="+menu.style.left+"\n");//hql
+        dump("menu at top="+menu.style.top+" left="+menu.style.left+"\n");//hql
         //\\\\\\\hql
         
         myDocument.body.appendChild(menu);
@@ -1526,7 +1540,7 @@ function UserInput(outline){
                     
                     // If there inputText as a whole is contained in a journal title
                     if ( jtitle_lc.search(matchstr) != -1 ) {
-                        dump("matching: "+ jtitle_lc + " searching " + matchstr + " atloc " + jtitle_lc.search(matchstr) + "\n");
+                        //dump("matching: "+ jtitle_lc + " searching " + matchstr + " atloc " + jtitle_lc.search(matchstr) + "\n");
                         matchedtitle.push(jtitle);
                         var tr=table.appendChild(myDocument.createElement('tr'));
                         tr.setAttribute('about', 'journalTitle');

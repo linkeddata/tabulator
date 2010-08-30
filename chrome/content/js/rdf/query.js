@@ -152,7 +152,7 @@ function RDFUnifyTerm(self, other, bindings, formula) {
         if (!(other instanceof Array)) return [];
         return RDFArrayUnifyContents(self, other, bindings)
     };
-    alert('oops - code not written yet');
+    throw("query.js: oops - code not written yet");
     return undefined;  // for lint 
 //    return actual.unifyContents(other, bindings)
 }; //RDFUnifyTerm

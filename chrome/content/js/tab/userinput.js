@@ -34,6 +34,10 @@ function UserInput(outline){
     var qp = function qp(str){
         dump(str+"\n");
     }
+    var trim = function trim() {
+        return this.replace(/^\s+|\s+$/g,"");
+    }
+
     //\\
     
     //people like shortcuts for sure
@@ -50,6 +54,8 @@ function UserInput(outline){
     var bibo = tabulator.rdf.Namespace("http://purl.org/ontology/bibo/"); //hql for pubsPane
     var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
     var dcelems = tabulator.rdf.Namespace('http://purl.org/dc/elements/1.1/');
+    
+    var movedArrow = false; //hq
         
     var updateService=new updateCenter(kb);
     if (!UserInputFormula){
@@ -829,19 +835,19 @@ function UserInput(outline){
         else if (mode!="JournalTAC") //hq
             mode = 'all'; 
         qp("MODE="+mode+"\n");//hq
-        qp("hi");//hq
+
         var InputBox=this.lastModified||outline.getSelection()[0].firstChild;
         if (mode=="JournalTAC"){//hq
             InputBox = myDocument.getElementById("inpid_journal_title");
         }
         qp("InputBox="+InputBox);//hq
-        qp("IB_val="+InputBox.value);//hq
+        qp("InputBox.value="+InputBox.value);//hq
         return function (enterEvent) {
         qp("ENTER EVENT="+enterEvent);
         //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
         //                                           but not [wrapped ...]
         //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
-        qp("1. outside eneterEvent");
+        qp("1. outside (if eneterEvent)");
         var e={};
         var tdNode=InputBox.parentNode;
         if (!mode) mode=tdNode.nextSibling?'predicate':'all';
@@ -861,33 +867,60 @@ function UserInput(outline){
             var newText=InputBox.value;
 
             if (typeof enterEvent=='object'){
-                qp("3. in (typeof enterEvent is object");
+                qp("3. in typeof enterEvent is object, will switch to keys, arrows, etc");
                 enterEvent.stopPropagation();
                 if (menu && !menu.lastHighlight) //this ensures the following operation valid 
                     setHighlightItem(menu.firstChild.firstChild);
                 switch (enterEvent.keyCode){
                     case 13://enter
                     case 9://tab
-                        qp("handler: Enter or Tab");
+                        qp("@@@@@@@@@@@@handler: Enter or Tab");
                         if (!menu) {
+                            qp("No menu");
                             outline.UserInput.clearInputAndSave();
                             return;
                         }
-                        if (!menu.lastHighlight) return; //warning?
+                        if (!menu.lastHighlight){
+                            if (mode=="JournalTAC"){
+                                outline.UserInput.clearMenu();
+                                qp("no lastH"); 
+                                return "no lastH";
+                            }
+                            return;
+                        } //warning?
    
                         if (menu.lastHighlight.tagName == 'INPUT'){
+                            qp("lH tagName == INPUT");
                             switch (menu.lastHighlight.value){
                                 case 'New...':
+                                    qp("subcase New");
                                     outline.UserInput.createNew();
                                     break;
                                 case 'GiveURI':
+                                    qp("subcase GiveURI");
                                     outline.UserInput.inputURI();
                                     break;
                             }
                         //} else if (mode == "JournalTAC") { //hq
                             // adding stuff from 
                         }else{
-                            var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight)
+                            qp("with menu");
+                            qp("1");
+                            //tr, th, div, innerHTML
+                            if (mode=="JournalTAC"){
+                                qp("movedArrow? "+movedArrow);
+                                if (movedArrow && menu.lastHighlight) {
+                                    var jtitle = menu.lastHighlight.firstChild.firstChild.innerHTML;
+                                    //tr, th, td, innerHTML
+                                    var juri = menu.lastHighlight.firstChild.nextSibling.innerHTML;
+                                    //clearing out the &lt; and &gt; from juri
+                                    juri = juri.slice(4, -4);
+                                    return ["gotdptitle", jtitle, juri];
+                                }
+                                return "asGivenTxt";
+                            }
+                            
+                            var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight);
                             var fillInType=(mode=='predicate')?'predicate':'object';
                             dump("ClearMenu) called in autocompleteHandler tab or enter\n");//hq
                             outline.UserInput.clearMenu();
@@ -895,22 +928,25 @@ function UserInput(outline){
                             //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
                             //    outline.UserInput.clearMenu();
                         }
+                        qp("outside");
                         return;
                     case 38://up
                         qp("handler: Arrow UP");
+                        movedArrow = true; //hq
                         if (newText == '' && menu.lastHighlight.tagName == 'TR'
                                           && !menu.lastHighlight.previousSibling)
                             setHighlightItem(menu.firstChild.firstChild);
                         else
                             setHighlightItem(menu.lastHighlight.previousSibling);
-                        return;
+                        return "I'm a little Arrow Up";
                     case 40://down
                         qp("handler: Arrow Down");
+                        movedArrow = true; //hq
                         if (menu.lastHighlight.tagName == 'INPUT')
                             setHighlightItem(menu.childNodes[1].firstChild);
                         else
                             setHighlightItem(menu.lastHighlight.nextSibling);
-                        return;
+                        return "I'm a little Down Arrow";
                     case 37://left
                     case 39://right  
                         qp("handler: Arrow left, right");
@@ -939,26 +975,30 @@ function UserInput(outline){
                         break;
                     default:
                         qp("handler: Default");
+                        movedArrow = false; //hq
                         //we need this because it is keypress, seeAlso performAutoCompleteEdit
+                        qp("oldtext="+newText);
                         newText+=String.fromCharCode(enterEvent.charCode)
-                        dump("DEFAULTTTTTTTTTTTTTTTTTTTTTTTTTTTTtxtstr="+newText+"\n"); //hq                       
+                        qp("charcodent="+enterEvent.charCode);
+                        qp("strcharcod="+String.fromCharCode(enterEvent.charCode));
+                        dump("DEFAULT txtstr="+newText+"\n"); //hq                       
                 }
             }
             //tabulator.log.warn(InputBox.choices.length);
             //for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
             if (mode=='all') {
-                pp("after switch, nextxt="+nexText+"mode is all");
+                qp("generalAC after switch, nextxt="+nexText+"mode is all");
                 outline.UserInput.clearMenu();
                 //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
                 outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
                 if (newText.length==0) outline.UserInput.WildCardButtons();
                                
             }else if(mode=='predicate'){
-                qp("after switch, nextxt="+newText+"mode is predicate");
+                qp("predicateAC after switch, nextxt="+newText+"mode is predicate");
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
             }else if(mode=="JournalTAC"){//hq
-                dump("after switch, NEXTXT="+newText);
+                qp("JouralTAC after switch, NEXTXT="+newText);
                 outline.UserInput.clearMenu();
                 outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':newText},"orderisuseless");
             }
@@ -968,7 +1008,7 @@ function UserInput(outline){
             qp("at end of handler\n^^^^^^^^^^^^^^^^^\n\n");
             setHighlightItem(menu.firstChild.firstChild);
             outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));
-            return;
+            return "nothing to return";
         }
         };//end of return function
     },
@@ -1258,7 +1298,7 @@ function UserInput(outline){
         tabulator.log.info("outline.doucment is now " + outline.document.location);
         var This=this;
         var menu=myDocument.createElement('div');
-        qp("\n\n==============\n**** In showMenu ****\n===========");
+        qp("\n==============\n**** In showMenu ****\n===========");
         dump("CREATED MENU\n");//hq
         menu.id=this.menuID;
         menu.className='outlineMenu';
@@ -1518,11 +1558,11 @@ function UserInput(outline){
                 dump("testing searching text= "+ inputText+" =====\n");
                 
                 
-                dump("===start JournalTitleAutoComplete\n");
+                dump("\n===start JournalTitleAutoComplete\n");
                 //TODO: Make smarter searches
                 var juris=kb.each(undefined, rdf('type'), bibo('Journal'));
                 //dump("juris: "+juris+"\n\n");
-                var tableJournals = [];
+                //var tableJournals = [];
                 dump("1\n");
                 var matchedtitle = []; // For testing before inserts into menu
                 dump("2\n");
@@ -1531,15 +1571,16 @@ function UserInput(outline){
                     var juri = juris[i];
                     var jtitle = kb.each(juri, dcelems('title'), undefined);
 
-                    tableJournals.push([jtitle, juri]); 
+                    //tableJournals.push([jtitle, juri]); 
                 
                     var jtstr = jtitle + "";
                     
                     var matchstr = inputText.toLowerCase();
                     var jtitle_lc = jtstr.toLowerCase();
                     
-                    // If there inputText as a whole is contained in a journal title
+                    // If the inputText as a whole is contained in a journal title
                     if ( jtitle_lc.search(matchstr) != -1 ) {
+                        qp("FOUND ONE!!!!!!");
                         //dump("matching: "+ jtitle_lc + " searching " + matchstr + " atloc " + jtitle_lc.search(matchstr) + "\n");
                         matchedtitle.push(jtitle);
                         var tr=table.appendChild(myDocument.createElement('tr'));
@@ -1547,7 +1588,7 @@ function UserInput(outline){
                         var th=tr.appendChild(myDocument.createElement('th'))
                         // dummy stuff for testing
                         th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(jtitle));//juris[i]
-                        tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode('typeLabel?'))
+                        tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(juri))
                     }
                     
                 }
@@ -1558,7 +1599,7 @@ function UserInput(outline){
 //                var tresults = tabulator.lb.search(inputText);
  //               dump("treslts: "+tresults +"\n-----------\n");
 
-                dump("\\\\done\n");
+                dump("\\\\done showMenu's JTAutocomplete\n");
                 break;
             case 'LimitedPredicateChoice':
                 var choiceTerm=tabulator.util.getAbout(kb,extraInformation.clickedTd);

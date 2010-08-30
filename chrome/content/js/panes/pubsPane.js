@@ -116,6 +116,10 @@ tabulator.panes.pubsPane = {
             
         }
         
+        function pl(str){
+            return dump(str+"\n");
+        }
+        
         function newFormRowID(form, wordori, type){
             var outer_div = newElement('div', form);
             var word = spacetoUline(wordori);
@@ -142,74 +146,94 @@ tabulator.panes.pubsPane = {
         // inserts the input title into the URI 
         // For "Book Title", puts creator into URI too 
         var rootlistenRow = function(theForm, caption_title, typeofinp, storeURI, typeofdoc){
-            // Makes the new row, with id: "inpid_"+sapcetoUline(caption_title)
+            // Variables:
+            // create new row, with id: "inpid_"+sapcetoUline(caption_title)
             var doctitle = newFormRowID(theForm, caption_title, typeofinp);
             doctitle.select();
-            //doctitle.addEventListener('keypress', tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC"), false);
+            var userinputResult = "";
+            
+            
             // Add the listener
             doctitle.addEventListener("keypress", function(e){
                 // Only register legal chars
                 //if (e.charCode != 0){ //can't arrow
-                if (e.keyCode != 13) {
-                    //NB not using elementId.value because it's offbyone
-                    //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
-                    //var doctitle_value = doctitle_id.value;
-                    doctitle_value += String.fromCharCode(e.charCode);
-                    dump("\n\n\n=========start in pubsPane ==========\n");
-                    dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
-                    switch (caption_title) {
-                        case 'Journal Title':
-                            dump("yo journal\n");
-                            dump("In Text=" + doctitle_value+"\n");
-                            //tabulator.outline.UserInput.clearMenu();
-                            //tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
-                            dump("THIS IS="+this);
-                            tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e); //**This (e) is passed to event in userinput that will handle keypresses, including up and down in menu
+                //<=//if (e.keyCode != 13) {
+                //NB not using elementId.value because it's offbyone
+                //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
+                //var doctitle_value = doctitle_id.value;
+                doctitle_value += String.fromCharCode(e.charCode);
+                dump("\n\n\n=========start in pubsPane ==========\n");
+                dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
+                switch (caption_title) {
+                    case 'Journal Title':
+                        dump("It's case Journal Title\n");
+                        dump("TxtStr.formCharCode=" + doctitle_value+"\n");
+                        //tabulator.outline.UserInput.clearMenu();
+                        //tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
+                        
+                        // Journal Title has dropdown menu option
+                        var userinputResult = tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e); //**This (e) is passed to event in userinput that will handle keypresses, including up and down in menu
+                        dump("\n\n\n\nACRESULT!!="+userinputResult+"\n");
 
-                            dump("========OVER=========\n");
-                            break;
-                        case 'Book Title':
-                            dump("yo book\n");
-                            break;
-                        default:
-                            dump("neither\n");
-                    }
-                } else if (e.keyCode == 13 ){
+                        dump("========OVER=========\n");
+                        break;
+                    case 'Book Title':
+                        dump("yo book\n");
+                        break;
+                    default:
+                        dump("neither\n");
+                }
+                //<=//} else 
+                
+                // enter should now create new URI's
+                if (e.keyCode == 13 ){
                     dump("In " + caption_title + ", 2 Enter PRESSED title=" + doctitle_value+"\n");
                     // clear dropdown menu (if any)
                     tabulator.outline.UserInput.clearMenu();
                     
-                    // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
-                    var now = new Date();
-                    var docURI = storeURI + "#" + now.getTime();
-                    if (caption_title == "Journal Title"){
-                        journalURI = docURI;
-                        dump("journalURI="+journalURI+"\n");
-                    } else if (caption_title == "Book Title"){
-                        bookURI = docURI;
-                        dump("bookURI="+bookURI+"\n");
-                    }
-                    dump("docURI="+docURI+"\n");
-                    
-                    // 1. Make this doc URI type specified
-                    var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
-                    
-                    // 2. Add the title for the journal
-                    var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
+                    // ======== If dropdown was used ==========
+                    if (userinputResult[0] == "gotdptitle"){
+                        journalURI = userinputResult[2];
+                        dump("FROM DROP DOWN, journalURI="+journalURI+"\n");
+                    } else {
+                        // ======== Traditional, no dropdown =========
+                        // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
+                        var now = new Date();
+                        var docURI = storeURI + "#" + now.getTime();
+                        if (caption_title == "Journal Title"){
+                            journalURI = docURI;
+                            dump("journalURI="+journalURI+"\n");
+                        } else if (caption_title == "Book Title"){
+                            bookURI = docURI;
+                            dump("bookURI="+bookURI+"\n");
+                        }
+                        dump("docURI="+docURI+"\n");
+                        
+                        // 1. Make this doc URI type specified
+                        var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
+                        
+                        // 2. Add the title for the journal
+                        //NB, not using above doctitle_value because it will
+                        // add "enter" to the string, messing it up
+                        var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
+                        doctitle_value = doctitle_id.value;
+                        var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
 
-                    var totalst = [doctype_addst, doctitle_addst];
-                                        
-                    // 3. Only for books, add creator:
-                    if (caption_title == "Book Title"){
-                        var creator_add = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('creator'), subject, kb.sym(storeURI));
-                        totalst.push(creator_add);
-                    }
+                        var totalst = [doctype_addst, doctitle_addst];
+                                            
+                        // 3. Only for books, add creator:
+                        if (caption_title == "Book Title"){
+                            var creator_add = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('creator'), subject, kb.sym(storeURI));
+                            totalst.push(creator_add);
+                        }
 
-                    dump('Start SU' + caption_title + '\n');
-                    dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
-                    sparqlUpdater.insert_statement(totalst, returnFunc);
-                    dump('DONE SU' + caption_title + '\n');
+                        dump('Start SU' + caption_title + '\n');
+                        dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
+                        sparqlUpdater.insert_statement(totalst, returnFunc);
+                        dump('DONE SU' + caption_title + '\n');
+                    }
                 }
+            
             }, false);
         };
 

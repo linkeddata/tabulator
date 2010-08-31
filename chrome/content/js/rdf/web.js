@@ -27,6 +27,7 @@
 $rdf.Fetcher = function(store, timeout, async) {
     this.store = store
     this.thisURI = "http://dig.csail.mit.edu/2005/ajar/ajaw/rdf/sources.js" + "#SourceFetcher" // -- Kenny
+//    this.timeout = timeout ? timeout : 300000
     this.timeout = timeout ? timeout : 30000
     this.async = async != null ? async : true
     this.appNode = this.store.bnode(); // Denoting this session
@@ -674,16 +675,10 @@ $rdf.Fetcher = function(store, timeout, async) {
                         if (!ct) throw ('No content-type on 200 response for ' + xhr.uri)
                         else {
                             if (ct.indexOf('image/') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
-                            //if (ct.indexOf('text/') == 0)
-                            //    addType(ns.link('TextDocument'));
                         }
                     }
 
                     if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'file' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'chrome') {
-                        //// $rdf.log.info("Assuming local file is some flavor of XML.")
-                        //xhr.headers['content-type'] = 'text/xml' // @@ kludge 
-                        //Kenny asks: why text/xml
-                        // Timbl replies: I think so as to make it get parsed as XML
                         switch (xhr.uri.uri.split('.').pop()) {
                         case 'rdf':
                         case 'owl':

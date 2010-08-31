@@ -260,7 +260,8 @@ $rdf.Formula.prototype.list = function (values) {
 ** Variables are placeholders used in patterns to be matched.
 ** In cwm they are symbols which are the formula's list of quantified variables.
 ** In sparl they are not visibily URIs.  Here we compromise, by having
-** a common special base URI for variables.
+** a common special base URI for variables. Their names are uris,
+** but the ? nottaion has an implicit base uri of 'varid:'
 */
 
 $rdf.Variable = function(rel) {
@@ -279,7 +280,7 @@ $rdf.Variable.prototype.toNT = function() {
 $rdf.Variable.prototype.toString = $rdf.Variable.prototype.toNT;
 $rdf.Variable.prototype.classOrder = 7;
 
-$rdf.Formula.prototype.variable = function(name) {
+$rdf.variable = $rdf.Formula.prototype.variable = function(name) {
     return new $rdf.Variable(name);
 };
 

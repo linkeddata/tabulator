@@ -940,7 +940,7 @@ tabulator.OutlineObject = function(doc) {
     function queryObj() { 
             this.pat = kb.formula(), 
             this.vars = []
-            this.orderBy = [] 
+            // this.orderBy = [] 
     }
     
     var queries = [];

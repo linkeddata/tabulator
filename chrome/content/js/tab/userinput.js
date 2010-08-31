@@ -30,14 +30,13 @@ function UserInput(outline){
     var NameSpaces=this.namespaces;
     */
     
-    //hq
+    //hq, print and trim functions
     var qp = function qp(str){
         dump(str+"\n");
     }
     var trim = function trim() {
         return this.replace(/^\s+|\s+$/g,"");
     }
-
     //\\
     
     //people like shortcuts for sure
@@ -313,7 +312,7 @@ function UserInput(outline){
  */    
     performAutoCompleteEdit: function performAutoCompleteEdit(selectedTd,menu){
         tabulator.Util.emptyNode(selectedTd);
-        qp("THIS IS="+this);
+        qp("perform AutoCompleteEdit. THIS IS="+this);
         this.lastModified=this.createInputBoxIn(selectedTd,"");
         this.lastModified.select();
         this.lastModified.addEventListener('keypress',this.getAutoCompleteHandler(menu),false);
@@ -332,7 +331,6 @@ function UserInput(outline){
     },
 
     clearMenu: function clearMenu(){
-        dump("CLEARING MENU\n");//hq
         var menu=myDocument.getElementById(this.menuID);
         if (menu) {
             menu.parentNode.removeChild(menu);
@@ -827,14 +825,14 @@ function UserInput(outline){
         }
     },
 
+    //This is where pubsPane.js comes in, with: tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e);
     getAutoCompleteHandler: function getAutoCompleteHandler(mode){
         qp("\n\n***** In getAutoCompleteHandler ******");
         if (mode=='PredicateAutoComplete')
             mode = 'predicate';
-        //else 
+
         else if (mode!="JournalTAC") //hq
             mode = 'all'; 
-        qp("MODE="+mode+"\n");//hq
 
         var InputBox=this.lastModified||outline.getSelection()[0].firstChild;
         if (mode=="JournalTAC"){//hq
@@ -874,9 +872,8 @@ function UserInput(outline){
                 switch (enterEvent.keyCode){
                     case 13://enter
                     case 9://tab
-                        qp("@@@@@@@@@@@@handler: Enter or Tab");
+                        qp("handler: Enter or Tab");
                         if (!menu) {
-                            qp("No menu");
                             outline.UserInput.clearInputAndSave();
                             return;
                         }
@@ -890,7 +887,6 @@ function UserInput(outline){
                         } //warning?
    
                         if (menu.lastHighlight.tagName == 'INPUT'){
-                            qp("lH tagName == INPUT");
                             switch (menu.lastHighlight.value){
                                 case 'New...':
                                     qp("subcase New");
@@ -901,15 +897,14 @@ function UserInput(outline){
                                     outline.UserInput.inputURI();
                                     break;
                             }
-                        //} else if (mode == "JournalTAC") { //hq
-                            // adding stuff from 
                         }else{
-                            qp("with menu");
-                            qp("1");
-                            //tr, th, div, innerHTML
+                            // pubsPane Stuff:
                             if (mode=="JournalTAC"){
                                 qp("movedArrow? "+movedArrow);
+                                // Enter only works if arrows have been moved
                                 if (movedArrow && menu.lastHighlight) {
+                                    // Get the title from the DOM
+                                    //tr, th, div, innerHTML
                                     var jtitle = menu.lastHighlight.firstChild.firstChild.innerHTML;
                                     //tr, th, td, innerHTML
                                     var juri = menu.lastHighlight.firstChild.nextSibling.innerHTML;
@@ -917,12 +912,12 @@ function UserInput(outline){
                                     juri = juri.slice(4, -4);
                                     return ["gotdptitle", jtitle, juri];
                                 }
+                                //If doesn't qualify to be autocomplete, return this random string, since pubsPane checks for "gotdptitle" 
                                 return "asGivenTxt";
                             }
                             
                             var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight);
                             var fillInType=(mode=='predicate')?'predicate':'object';
-                            dump("ClearMenu) called in autocompleteHandler tab or enter\n");//hq
                             outline.UserInput.clearMenu();
                             outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
                             //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
@@ -967,7 +962,6 @@ function UserInput(outline){
                             outline.UserInput.backOut();
                             return;
                         }
-                        dump("ClearMenu) called in autocompleteHandeer escape\n");//hq
                         outline.UserInput.clearMenu();                   
                         //Not working? I don't know.
                         //InputBox.removeEventListener('keypress',outline.UserInput.Autocomplete,false);
@@ -1000,6 +994,7 @@ function UserInput(outline){
             }else if(mode=="JournalTAC"){//hq
                 qp("JouralTAC after switch, NEXTXT="+newText);
                 outline.UserInput.clearMenu();
+                // Goto showMenu
                 outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':newText},"orderisuseless");
             }
             var menu=myDocument.getElementById(outline.UserInput.menuID); 
@@ -1051,6 +1046,7 @@ function UserInput(outline){
     },
 
     Mousedown: function(e){
+        qp("MOUSING DOWN");
     //temporary key ctrl+s or q for swiching mode
         // This was in HCIOptions "right click to switch mode":
         window.addEventListener('keypress',function(e){	if (e.ctrlKey && (e.charCode==115 || e.charCode==113)) UserInput.switchMode();},false);
@@ -1158,7 +1154,6 @@ function UserInput(outline){
 
     //called when 'New...' is clicked(eventlistener) or enter is pressed while 'New...' is highlighted
     createNew: function createNew(e){
-        dump("clear menu in creating New\n");//hq
         outline.UserInput.clearMenu();
         var selectedTd=outline.getSelection()[0];
         var targetdoc=selectedTd.parentNode.AJAR_statement.why;
@@ -1171,7 +1166,6 @@ function UserInput(outline){
     
     inputURI: function inputURI(e){
         var This = outline.UserInput;   
-        dump("clear menu in inputURI\n");//hq     
         This.clearMenu();
         var selectedTd = outline.getSelection()[0];
         tabulator.Util.emptyNode(selectedTd);
@@ -1306,7 +1300,9 @@ function UserInput(outline){
         menu.style.top=e.pageY+"px";
         menu.style.left=e.pageX+"px";
         
-        /////////hql
+        ////For pubsPane
+        // This is for setting the location of the dropdown menu, because
+        // JournalTitleAutoComplete is called with a keypress, and not mouse actions
         // Get Offset of an HTML element
         var getOffset = function getOffset( el ) {
             var _lf = 0;
@@ -1316,12 +1312,13 @@ function UserInput(outline){
             var newlf = 0;
             var newtp = 0;
             
-            //only change if the new parent's offset is different
+            // repeatedly get ancestor's positions
             // TODO: STILL a small offset/bug 
             while( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
                 newlf = el.offsetLeft;
                 newtp = el.offsetTop;
                 
+                //only change if the new parent's offset is different
                 if (newlf != oldlf) {
                     _lf += el.offsetLeft - el.scrollLeft;
                 }
@@ -1337,8 +1334,7 @@ function UserInput(outline){
             // there is a constant offset
             return { top: _tp+54, left: _lf-38 };
         }
-        // because JournalTitleAutoComplete is called with a keypress, 
-        // and not mouse actions, which breaks other things
+        // Change the position of menu in pubsPane's journal Title AC 
         if (menuType == 'JournalTitleAutoComplete'){//hql 
             var loc = getOffset(myDocument.getElementById("inpid_journal_title"));
             loc.left -= myDocument.getElementById("inpid_journal_title").scrollTop;
@@ -1365,6 +1361,7 @@ function UserInput(outline){
         switch (menuType){
             case 'DidYouMeanDialog':            
                 var selectItem=function selectItem(e){
+                    qp("DID YOU MEAN SELECT ITEM!!!!!");
                     var target=tabulator.Util.ancestor(tabulator.Util.getTarget(e),'TR')
                     if (target.childNodes.length==2 && target.nextSibling){ //Yes
                         kb.add(bnodeTerm,IDpredicate,IDterm); //used to connect the two
@@ -1377,6 +1374,7 @@ function UserInput(outline){
             case 'LimitedPredicateChoice':
                 var clickedTd=extraInformation.clickedTd;         
                 var selectItem=function selectItem(e){
+                    qp("LIMITED P SELECT ITEM!!!!");
                     var selectedPredicate=tabulator.Util.getAbout(kb,tabulator.Util.getTarget(e));
                     var predicateChoices=clickedTd.parentNode.AJAR_statement.predicate.elements;
                     for (var i=0;i<predicateChoices.length;i++){
@@ -1399,20 +1397,27 @@ function UserInput(outline){
             case 'GeneralPredicateChoice':
             case 'JournalTitleAutoComplete'://hql
             case 'TypeChoice':
+                // Clickable menu
                 var isPredicate=extraInformation.isPredicate;
                 var selectedTd=extraInformation.selectedTd;
                 var selectItem=function selectItem(e){
+                    qp("WOOHOO");
                     var inputTerm=tabulator.Util.getAbout(kb,tabulator.Util.getTarget(e))
+                    qp("GENERAL SELECT ITEM!!!!!!="+inputTerm);
+                    qp("target="+tabulator.Util.getTarget(e));
                     if (isPredicate){
-                        if (outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm))
-                            outline.UserInput.clearMenu();
+                        qp("1");
+                        if (outline.UserInput.fillInRequest('predicate',selectedTd,inputTerm)) {qp("2");
+                            outline.UserInput.clearMenu();}
                     }else{
+                        qp("3");
                         //thisInput.fillInRequest('object',selectedTd,inputTerm); //why is this not working?
-                        if (outline.UserInput.fillInRequest('object',selectedTd,inputTerm))
-                            outline.UserInput.clearMenu();
+                        if (outline.UserInput.fillInRequest('object',selectedTd,inputTerm)){qp("4");
+                            outline.UserInput.clearMenu();}
                     }
                 }
-        }       
+        }    
+        //hq: this line makes the menu clickable   
         table.addEventListener('click',selectItem,false);
         
         //Add Items to the list
@@ -1553,25 +1558,21 @@ function UserInput(outline){
                 */
                 break;
             case 'JournalTitleAutoComplete': //hql
-                            
+                // HEART OF JOURNAL TITLE AUTOCOMPLETE
+            
+                // extraInformatin is from above getAutoCompleteHandler
                 var inputText = extraInformation.inputText;
                 dump("testing searching text= "+ inputText+" =====\n");
-                
-                
                 dump("\n===start JournalTitleAutoComplete\n");
-                //TODO: Make smarter searches
+
+                // Gets all the URI's with type Journal in the knowledge base
                 var juris=kb.each(undefined, rdf('type'), bibo('Journal'));
-                //dump("juris: "+juris+"\n\n");
-                //var tableJournals = [];
-                dump("1\n");
-                var matchedtitle = []; // For testing before inserts into menu
-                dump("2\n");
+
+                var matchedtitle = []; // debugging display before inserts into menu
                 
                 for (var i=0; i<juris.length; i++){
                     var juri = juris[i];
                     var jtitle = kb.each(juri, dcelems('title'), undefined);
-
-                    //tableJournals.push([jtitle, juri]); 
                 
                     var jtstr = jtitle + "";
                     
@@ -1580,24 +1581,21 @@ function UserInput(outline){
                     
                     // If the inputText as a whole is contained in a journal title
                     if ( jtitle_lc.search(matchstr) != -1 ) {
-                        qp("FOUND ONE!!!!!!");
-                        //dump("matching: "+ jtitle_lc + " searching " + matchstr + " atloc " + jtitle_lc.search(matchstr) + "\n");
+                        qp("FOUND A Journal Title Match!!!!!!");
                         matchedtitle.push(jtitle);
+                        
+                        // Add it as a row to the menu:
+                        // == Title, URI ==
                         var tr=table.appendChild(myDocument.createElement('tr'));
                         tr.setAttribute('about', 'journalTitle');
                         var th=tr.appendChild(myDocument.createElement('th'))
-                        // dummy stuff for testing
-                        th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(jtitle));//juris[i]
-                        tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(juri))
+                        th.appendChild(myDocument.createElement('div')).appendChild(myDocument.createTextNode(jtitle));
+                        tr.appendChild(myDocument.createElement('td')).appendChild(myDocument.createTextNode(juri));
                     }
                     
                 }
 
-                //dump("tableJournals="+tableJournals+"\n\n\n");
                 dump("matched: "+matchedtitle+"\n");
-
-//                var tresults = tabulator.lb.search(inputText);
- //               dump("treslts: "+tresults +"\n-----------\n");
 
                 dump("\\\\done showMenu's JTAutocomplete\n");
                 break;

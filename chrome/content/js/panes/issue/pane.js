@@ -68,6 +68,11 @@ tabulator.panes.register( {
             parent.replaceChild(div2, div);
         };
 
+        var shortDate = function(str) {
+            var now = $rdf.term(new Date()).value;
+            if (str.slice(0,10) == now.slice(0,10)) return str.slice(11,16);
+            return str.slice(0,10);
+        }
 
         // Make SELECT element to select subclasses
         //
@@ -395,8 +400,7 @@ tabulator.panes.register( {
                 var a = myDocument.createElement('a');
                 a.setAttribute('href',tracker.uri);
                 a.setAttribute('style', 'float:right');
-                div.appendChild(a);
-                a.appendChild(myDocument.createTextNode(tabulator.Util.label(tracker)))
+                div.appendChild(a).textContent = tabulator.Util.label(tracker);
                 donePredicate(ns.wf('tracker'));
 
 
@@ -446,7 +450,7 @@ tabulator.panes.register( {
                     if (!docStore) docStore = stateStore;
                     var b = myDocument.createElement("button");
                     b.setAttribute("type", "button");
-                    div.appendChild(b);
+                    div.insertBefore(b, table);
                     label = tabulator.Util.label(ns.wf('message'));
                     b.innerHTML = "New " + label;
                     b.setAttribute('style', 'margin: 0.5em 1em;');
@@ -495,9 +499,15 @@ tabulator.panes.register( {
                         tr.AJAR_date = date;
                         var  td1 = myDocument.createElement('td');
                         tr.appendChild(td1);
-                        td1.textContent = date;
+
+                        var a = myDocument.createElement('a');
+                        a.setAttribute('href',bindings['?msg'].uri);
+                        td1.appendChild(a).textContent = shortDate(date);
                         td1.appendChild(myDocument.createElement('br'));
-                        td1.appendChild(myDocument.createTextNode(nick(bindings['?creator'])));
+                        var a = myDocument.createElement('a');
+                        a.setAttribute('href',bindings['?creator'].uri);
+                        td1.appendChild(a).textContent = nick(bindings['?creator']);
+                        
                         var  td2 = myDocument.createElement('td');
                         tr.appendChild(td2);
                         var pre = myDocument.createElement('pre')

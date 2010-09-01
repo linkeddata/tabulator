@@ -2,27 +2,30 @@
     Summer 2010
     haoqili@mit.edu
     
-This commit: Autocomplete, buggy basic version
+This commit: - Autocomplete is done EXCEPT for clicking.  
+             - User output for uri links
+
 NOTE: Dropdown only shows if 
 1. you first visit http://dig.csail.mit.edu/2007/wiki/docs/collections
-2. refresh page
+2. refresh your foaf page
 
-Autocomplete TODO:
-1. Allow dropdown interactive (arrow up down, clicks) 
-... w/ userinput's autocomplete handler I think
-2. Fix backspace things break problem    
-    
     //TODO:
-    1 make autocomplete (kenny's search code)
+    1 autocomplete clickable
     2 Enable Tab == Enter
     3 Disable typing in lines that depend on incompleted previous lines.
-    4 Show words fading after entered into wiki AND/OR
-      More user output for links of journals created
+    4 Show words fading after entered into wiki
+    - Load journal titles
     
     //small
-    5 make change to css id's so that it corresponds to book or journal
-    6 Add co-authors
-    7 Use switch cases
+    - Add co-authors
+    - If Autocompleted a Journal title, check if the journal has an URL in its page before taking away the URL input box
+    - Fix in userinput.js menu dropdown place
+    - Background encorporates abstract textarea
+    - Get pdf
+    - Height of the input box
+    
+    NB:
+    - When you want to select the first dropdown item, you have to arrow down and up again, not enter directly.
  */
 
 tabulator.Icon.src.icon_pubs = 'chrome://tabulator/content/icons/publication/publicationPaneIcon.gif';
@@ -94,17 +97,7 @@ tabulator.panes.pubsPane = {
             else{ p.appendChild(x); }
             return x;
         }
-        
-        //* 
-        /* Makes a generic row in the form. 
-        /* With structure:
-        /*    <div id="divid_[arg2 word]" class="hideit" OR "active">
-        /*        <div class="pubsRow"> // for CSS formating convenience
-        /*            <span class="pubsWord">[Arg2 word]: </span>
-        /*            <[arg3 type] id="inpid_[arg2 word]">
-        /*        </div>
-        /*    </div>
-        //*/
+
         
         function removeSpaces(str){
             return str.split(' ').join('');
@@ -113,6 +106,10 @@ tabulator.panes.pubsPane = {
         function spacetoUline(str){
             return str.split(' ').join('_').toLowerCase();
             
+        }
+        
+        function pl(str){
+            return dump(str+"\n");
         }
         
         function newFormRowID(form, wordori, type){
@@ -134,78 +131,142 @@ tabulator.panes.pubsPane = {
             word_box.id = "inpid_" + word;
             return word_box;
         }
+        
+        function newOutputRow(form, wordori){
+            var outer_div = newElement('div', form);
+            var word = spacetoUline(wordori);
+            outer_div.id =  'outid_' + word;
+            outer_div.className = 'hideit';
+            return  outer_div;
+        }
 
-        // this function creates a new row in the form that
+        // Called first thing by Journal and Book
+        // this function creates a new first row in the form that
         // asks for a document title,
         // makes the document's URI, and
         // inserts the input title into the URI 
         // For "Book Title", puts creator into URI too 
         var rootlistenRow = function(theForm, caption_title, typeofinp, storeURI, typeofdoc){
-            // Makes the new row, with id: "inpid_"+sapcetoUline(caption_title)
+            // Variables:
+            // create new row, with id: "inpid_"+sapcetoUline(caption_title)
             var doctitle = newFormRowID(theForm, caption_title, typeofinp);
+            doctitle.select();
+            var userinputResult = "";
+            
+            var docOutput = newOutputRow(theForm, caption_title);
+            
             // Add the listener
             doctitle.addEventListener("keypress", function(e){
                 // Only register legal chars
-                if (e.charCode != 0){
-                    //NB not using elementId.value because it's offbyone
-                    //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
-                    //var doctitle_value = doctitle_id.value;
-                    doctitle_value += String.fromCharCode(e.charCode);
-                    dump("\n\n\n=========start in pubsPane ==========\n");
-                    dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
-                    switch (caption_title) {
-                        case 'Journal Title':
-                            dump("yo journal\n");
-                            dump("In Text=" + doctitle_value+"\n");
-                            //tabulator.outline.UserInput.clearMenu();
-                            //tabulator.outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':doctitle_value},"orderisuseless");
 
-                            tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(1);
+                //NB not using elementId.value because it's offbyone
+                // only for userinput.js stuff, otherwise use:
+                //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
+                //var doctitle_value = doctitle_id.value;
+                doctitle_value += String.fromCharCode(e.charCode);
+                
+                // When keys other than "enter" are entered, Journal Title should autocomplete
+                dump("\n\n\n=========start in pubsPane ==========\n");
+                dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
+                switch (caption_title) {
+                    case 'Journal Title':
+                        dump("It's case Journal Title\n");
+                        dump("TxtStr.formCharCode=" + doctitle_value+"\n");
+                        
+                        // Journal Title has dropdown menu option
+                        // THIS ONE LINE LINKS TO USERINPUT.JS:
+                        userinputResult = tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e); //**This (e) is passed to event in userinput.js that will handle keypresses, including up and down in menu
+                        // If AC used: userinputResult = ['gotdptitle', str title, str uri]
+                        // -- else: userinputResult = A string
+                        dump("\nACRESULT!!="+userinputResult+"\n");
 
-                            dump("========OVER=========\n");
-                            break;
-                        case 'Book Title':
-                            dump("yo book\n");
-                            break;
-                        default:
-                            dump("neither\n");
-                    }
-                } else if (e.keyCode == 13 ){
+                        dump("========OVER=========\n");
+                        break;
+                    case 'Book Title':
+                        dump("yo book\n");
+                        break;
+                    default:
+                        dump("neither\n");
+                }
+                 
+                
+                // For both Journal and Book, Enter Key creates new journal/book URI's
+                if (e.keyCode == 13 ){
                     dump("In " + caption_title + ", 2 Enter PRESSED title=" + doctitle_value+"\n");
-                    // clear dropdown menu (if any)
+                    // clear dropdown menu, the function will check if one exists
                     tabulator.outline.UserInput.clearMenu();
                     
-                    // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
-                    var now = new Date();
-                    var docURI = storeURI + "#" + now.getTime();
-                    if (caption_title == "Journal Title"){
-                        journalURI = docURI;
-                        dump("journalURI="+journalURI+"\n");
-                    } else if (caption_title == "Book Title"){
-                        bookURI = docURI;
-                        dump("bookURI="+bookURI+"\n");
-                    }
-                    dump("docURI="+docURI+"\n");
+                    // ======== If autocomplete was selected ==========
+                    // Right now "got dropdown title" only is for Journal
+                    if (userinputResult[0] == "gotdptitle"){
                     
-                    // 1. Make this doc URI type specified
-                    var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
+                        // If AC used: userinputResult = ['gotdptitle', str title, str uri]
+                        // -- else: userinputResult = A string
                     
-                    // 2. Add the title for the journal
-                    var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
+                        journalURI = userinputResult[2];
+                        dump("FROM DROP DOWN, journalURI="+journalURI+"\n");
+                        
+                        // put complete name in journal input box:
+                        var changeinpbox = myDocument.getElementById("inpid_journal_title");
+                        changeinpbox.value = userinputResult[1];
+                        
+                        // Show user the journal URI
+                        docOutput.innerHTML = "Journal URI = <i>"+journalURI+"</i>";
+                        docOutput.className = 'active';
+                        
+                        // Hide Journal URL row
+                        // TODO: First check that the Journal has a URL
+                        var urlrow = myDocument.getElementById("divid_journal_url");
+                        urlrow.className = 'hideit';
+                        
+                        // Focus on the next part
+                        var articleinp = myDocument.getElementById("inpid_journal_article_title");
+                        articleinp.focus();
+                    } else {
+                        // ======== Traditional, no dropdown =========
+                        
+                        // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
+                        dump("If NOT from title dropdown\n");
+                        var now = new Date();
+                        var docURI = storeURI + "#" + now.getTime();
+                        if (caption_title == "Journal Title"){
+                            journalURI = docURI;
+                            docOutput.innerHTML = "Journal URI = <i>"+journalURI+"</i>";
+                            dump("journalURI="+journalURI+"\n");
+                        } else if (caption_title == "Book Title"){
+                            bookURI = docURI;
+                            docOutput.innerHTML = "Book URI = <i>"+bookURI+"</i>";
+                            dump("bookURI="+bookURI+"\n");
+                        }
+                        dump("docURI="+docURI+"\n");
+                        // Show user the URI
+                        docOutput.className = 'active';
+                        
+                        // 1. Make this doc URI type specified
+                        var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
+                        
+                        // 2. Add the title for the journal (NB, not article title)
+                        //NB, not using above doctitle_value because it will
+                        // add "enter" to the string, messing it up
+                        var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
+                        doctitle_value = doctitle_id.value;
+                        var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
 
-                    var totalst = [doctype_addst, doctitle_addst];
-                                        
-                    // 3. Only for books, add creator:
-                    if (caption_title == "Book Title"){
-                        var creator_add = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('creator'), subject, kb.sym(storeURI));
-                        totalst.push(creator_add);
+                        var totalst = [doctype_addst, doctitle_addst];
+                                            
+                        // 3. Only for books, add creator:
+                        if (caption_title == "Book Title"){
+                            var creator_add = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('creator'), subject, kb.sym(storeURI));
+                            totalst.push(creator_add);
+                        }
+
+                        dump('Start SU' + caption_title + '\n');
+                        dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
+                        sparqlUpdater.insert_statement(totalst, returnFunc);
+                        dump('DONE SU' + caption_title + '\n');
                     }
-
-                    dump('Start SU' + caption_title + '\n');
-                    dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
-                    sparqlUpdater.insert_statement(totalst, returnFunc);
-                    dump('DONE SU' + caption_title + '\n');
                 }
+            
             }, false);
         };
 
@@ -282,6 +343,10 @@ tabulator.panes.pubsPane = {
         // NB: The names MUST be lowercase, ' '->_ names
         var jnlist = ['journal_title', 'journal_url', 'journal_article_title', 'article_published_date'];
         var bklist = ['book_title', 'book_url', 'book_published_date', 'book_description'];
+        //Hiding all uri output displays during every dropdown switch
+        var outputlist = ['journal_title', 'journal_article_title', 'book_title'];
+        
+        // Making the dropdown
         var dropdiv = newElement('div', theForm);
         dropdiv.setAttribute('class', 'pubsRow');
         var drop = newElement('select', dropdiv);
@@ -301,6 +366,10 @@ tabulator.panes.pubsPane = {
                 var bkitm = myDocument.getElementById("divid_"+bklist[x]);
                 bkitm.className = 'hideit';
             }
+            for (var y=0; y<outputlist.length; y++){
+                var ouitm = myDocument.getElementById("outid_"+outputlist[y]);
+                ouitm.className = 'hideit';
+            }
         }, false);
         var op2 = newElement('option', drop);
         op2.id = 'op2_id';
@@ -314,6 +383,10 @@ tabulator.panes.pubsPane = {
                 var bkitm = myDocument.getElementById("divid_"+bklist[x]);
                 bkitm.className = 'active';
             }
+            for (var y=0; y<outputlist.length; y++){
+                var ouitm = myDocument.getElementById("outid_"+outputlist[y]);
+                ouitm.className = 'hideit';
+            }
         }, false);
         
         // This is where the "journal" and "book" sections are created. Each id is "divid_" + 2ndarg
@@ -326,6 +399,9 @@ tabulator.panes.pubsPane = {
         
         // J3. Journal Article title, a new URI that links to the journal URI
         var jarttitle = newFormRowID(theForm, 'Journal Article Title', 'input');
+        
+        var jartoutp = newOutputRow(theForm, 'Journal Article Title');
+        
         jarttitle.addEventListener("keypress", function(e){
             dump("In Journal_article_title, 1 pressing a key \n");
             if (e.keyCode == 13 ){
@@ -338,6 +414,10 @@ tabulator.panes.pubsPane = {
                 // works_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/works';
                 var now = new Date();
                 jarticleURI = works_URI + "#" + now.getTime();
+                // Show user the URI
+                jartoutp.innerHTML = "Article URI = <i>"+jarticleURI+"</i>";
+                jartoutp.className = 'active';
+
                 dump("jartURI="+jarticleURI+"\n");
                 
                 // 1. Make this journal article URI type AcademicArticle

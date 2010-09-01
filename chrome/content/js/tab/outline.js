@@ -718,14 +718,6 @@ tabulator.OutlineObject = function(doc) {
         
             // Avoid predicates from other panes
             if (!predicateFilter(s.predicate, inverse)) continue;
-            /*
-            var internal = (typeof internalPane.predicates[''+s.predicate.uri] != 'undefined')
-            if ((!details && internal) || (details && !internal)) { // exclusive-or only in JS 2.0
-                continue;
-            }
-            if (inverse && (s.predicate.uri == 
-                    "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) continue; 
-            */
             var k;
             var dups = 0; // How many rows have the same predicate, -1?
             var langTagged = 0;  // how many objects have language tags?

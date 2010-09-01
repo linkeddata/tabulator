@@ -30,7 +30,7 @@ tabulator.panes.register( {
         sts.map(function(st){already[st.subject.uri] = st});
         for (var uri in kb.findMemberURIs(subject)) if (!already[uri])
             more.push($rdf.st(kb.sym(uri), tabulator.ns.rdf( 'type'), subject)); // @@ no provenence
-        complain("There are "+sts.length+" explicit and "+
+        if (more.length) complain("There are "+sts.length+" explicit and "+
                 more.length+" implicit members of "+tabulator.Util.label(subject));
         if (subject.sameTerm(tabulator.ns.rdf('Property'))) {
                 /// Do not find all properties used as properties .. unlesss look at kb index

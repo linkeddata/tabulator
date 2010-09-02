@@ -454,7 +454,7 @@ web ID</a>?<br/>\
                 if (kb.whether(works[i], tabulator.ns.rdf('type'),
                                             foaf('PersonalProfileDocument'))) {
 
-                    editable = outline.sparql.prototype.editable(works[i].uri, kb);
+                    editable = outline.UserInput.sparqler.editable(works[i].uri, kb);
                     if (!editable) { 
                         message += ("Your profile <"+tabulator.Util.escapeForXML(works[i].uri)+"> is not remotely editable.");
                     } else {
@@ -470,7 +470,7 @@ web ID</a>?<br/>\
                 } else  {
                     say("Editing your profile <"+tabulator.Util.escapeForXML(profile.uri)+">.");
                      // Do I have an EDITABLE profile?
-                    editable = outline.sparql.prototype.editable(profile.uri, kb);
+                    editable = outline.UserInput.sparqler.editable(profile.uri, kb);
                 }
             } else { // This is about someone else
                 // My relationship with this person

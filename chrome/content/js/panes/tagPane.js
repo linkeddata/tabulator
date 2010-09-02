@@ -30,7 +30,7 @@
         var docURI = subject.uri.substring(0,subject.uri.lastIndexOf("#"));
         var stWhy = new tabulator.rdf.Symbol(docURI);
         var outline = tabulator.outline;
-        var editable = outline.sparql.prototype.editable(docURI, kb);
+        var editable = outline.UserInput.sparqler.editable(docURI, kb);
         var tag = kb.the(subject, RDFS("label"), undefined, stWhy);
         
         // Create the main panel

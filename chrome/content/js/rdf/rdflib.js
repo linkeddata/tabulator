@@ -208,8 +208,8 @@ $rdf.Util = {
 
     'AJAR_handleNewTerm': function(kb, p, requestedBy) {
         var sf = null;
-        if( typeof tabulator != 'undefined' ) {
-            sf = tabulator.sf;
+        if( typeof kb.sf != 'undefined' ) {
+            sf = kb.sf;
         } else {
             return;
         }

@@ -22,7 +22,7 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/log-ext.js");
 tabulator.log = new TabulatorLogger();
 
 //Load the RDF Library, which defines itself in the namespace $rdf.
-// see the script rdf/create-lib
+// see the script rdf/create-lib (this script creates one file -rdflib.js that concatenates all the following js files)
 /*loader.loadSubScript("chrome://tabulator/content/js/rdf/util.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/uri.js");
 loader.loadSubScript("chrome://tabulator/content/js/rdf/term.js");

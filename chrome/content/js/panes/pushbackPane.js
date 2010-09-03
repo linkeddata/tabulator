@@ -22,8 +22,7 @@ tabulator.panes.pushbackPane = {
     }
 };
 
-//Let's not register this pane, at least for now
-//tabulator.panes.register(tabulator.panes.pushbackPane, false);
+tabulator.panes.register(tabulator.panes.pushbackPane, false);
 
 //This function should handle all the UI manipulations
 pushbackForm = function(subject, doc, apps){

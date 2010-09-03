@@ -88,18 +88,18 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         
     } else {
 
-    // Find the most common type and select it by default
+        // Find the most common type and select it by default
 
-    var mostCommonType = getMostCommonType(types);
+        var mostCommonType = getMostCommonType(types);
 
-    if (mostCommonType != null) {
-        buildFilteredTable(mostCommonType);
-    } else {
-        buildFilteredTable(allType);
-    }
+        if (mostCommonType != null) {
+            buildFilteredTable(mostCommonType);
+        } else {
+            buildFilteredTable(allType);
+        }
     }
     return resultDiv;
-
+    
     
     ///////////////////////////////////////////////////////////////////
     
@@ -167,7 +167,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         result.setAttribute("class", "toolbar");
 
         var tr = doc.createElement("tr");
-
+        
 /*             @@    Add in later -- not debugged yet 
         var sparqlButtonDiv = doc.createElement("td");
         sparqlButtonDiv.appendChild(generateSparqlButton());

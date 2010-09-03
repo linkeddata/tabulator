@@ -52,9 +52,3 @@
 <!ENTITY policysidebar.title "Policy Parser">
 <!ENTITY openPOLICYSidebar.commandkey "E">
 <!ENTITY openPOLICYSidebar.modifierskey "shift accel">
-
-<!ENTITY highlightsidebar.title "License/Restriction Highlighter">
-<!ENTITY highlightsidebar.accesskey "A">
-<!ENTITY openHighlightSidebar.commandkey "A">
-<!ENTITY openHighlightSidebar.modifierskey "shift accel">
-

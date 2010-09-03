@@ -39,7 +39,7 @@ var ap_ruleName = ap_tms('rule-name');
 var ap_prem = ap_tms('premise');
 var ap_instanceOf = ap_air('instanceOf');
 var justificationsArr = [];
-
+	
 /*  Build a checkbox from a given statement
 ** 
 **  If the source document is ediable, make it editable

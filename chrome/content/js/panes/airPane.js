@@ -738,7 +738,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		  p.appendChild(myDocument.createTextNode(" }"));
 		  break;
 		case 'symbol':
-          var anchor = myDocument.createElement('a');
+		  var anchor = myDocument.createElement('a');
 		  anchor.setAttribute('href', element.uri);
 		  anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(element)));
 		  p.appendChild(anchor);

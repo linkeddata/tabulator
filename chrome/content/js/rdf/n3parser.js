@@ -1110,7 +1110,7 @@ __SinkParser.prototype.uri_ref2 = function(str, i, res) {
     }
 };
 __SinkParser.prototype.skipSpace = function(str, i) {
-/*
+    /*
     Skip white space, newlines and comments.
     return -1 if EOF, else position of first non-ws character*/
     var tmp = str;
@@ -1122,9 +1122,9 @@ __SinkParser.prototype.skipSpace = function(str, i) {
                 i=0;
                 j=-1;
             } else {
-            break;
+                break;
+            }
         }
-    }
     }
     val = (tmp.length - str.length) + j;
     if( val === tmp.length ) {

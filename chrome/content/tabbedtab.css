@@ -222,7 +222,7 @@ div.social_linkButton {
   div.unknown { display:none } 
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 
-  
+
 /******************* Exception Pane ********
 **
 ** A pane created when the loading of a pane 
@@ -362,15 +362,15 @@ div.dataContentPane {
 }
 
 div.dataContentPane td {
-    padding-left: 0.2em;
-    padding-top: 0.1em;
-    padding-right: 0.2em;
-    padding-bottom: 0.05em;
+                padding-left: 0.2em;
+                padding-top: 0.1em;
+                padding-right: 0.2em;
+                padding-bottom: 0.05em;
 /*	        vertical-align: middle; /*@@ Lalana's request*/
 	        vertical-align: top; /*@@ Tims's request*/
                 /* With middel, you can't tell what is with what */
-    /* background-color: white; */
-}
+                /* background-color: white; */
+                 }
 
 div.dataContentPane tr { 
 	margin-bottom: 0.6em;

@@ -66,7 +66,7 @@ LawPane.render = function(subject, myDocument) {
     var kb = tabulator.kb
 	var collapse_icon = tabulator.Icon.src.icon_collapse;
 	var expand_icon = tabulator.Icon.src.icon_expand;
-
+	
 	LawPane.render.show = function(evt){
 		evt["target"].src = collapse_icon;
 		evt["target"].removeEventListener('click',LawPane.render.show, false);
@@ -98,20 +98,20 @@ LawPane.render = function(subject, myDocument) {
 	xmlhttp.open("GET",policy,true);
 	xmlhttp.send(null);
 	function state_Change(){
-            if (xmlhttp.readyState==4 && xmlhttp.status==200){
-                var policy_text = xmlhttp.responseText.toString();
-                var start_index = policy_text.search("rdfs:comment");
-                var end_index = 0;
-                if (start_index > -1){
-                    var newStr = policy_text;
-                    end_index = newStr.slice(start_index).search(/";/); //"
-                }
-                var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
-                if (myDocument.getElementById('td_2') != null)
-                    myDocument.getElementById('td_2').innerHTML = rule_statement;
-            }
-    }
-		
+		if (xmlhttp.readyState==4 && xmlhttp.status==200){
+			var policy_text = xmlhttp.responseText.toString();
+			var start_index = policy_text.search("rdfs:comment");
+			var end_index = 0;
+			if (start_index > -1){
+				var newStr = policy_text;
+				end_index = newStr.slice(start_index).search(/";/); //"
+			}
+			var rule_statement = policy_text.substring(start_index+"rdfs:comment".length+2, start_index+end_index);
+			if (myDocument.getElementById('td_2') != null)
+				myDocument.getElementById('td_2').innerHTML = rule_statement;
+		  }
+	}
+
 		
     var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
  	
@@ -127,17 +127,17 @@ LawPane.render = function(subject, myDocument) {
 	    if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
 	    	    stsAnalysisAll.push(LawPane.display(myDocument, stsDesc[j].object));
 		}
-		}
+	}
 	var stsFound = [];
-    for (var j=0; j<stsJust.length; j++){
+	for (var j=0; j<stsJust.length; j++){
 	    if (stsJust[j].subject.termType == 'formula'){
 	        var sts = stsJust[j].subject.statements;
 	        for (var k=0; k<sts.length; k++){
 	            if (sts[k].predicate.toString() == ap_compliant.toString() ||
 	            	sts[k].predicate.toString() == ap_nonCompliant.toString()){
 	                stsFound.push(sts[k]);
-                }
 	            } 
+	        }
 	        if (stsJust[j].object.termType == 'bnode'){
             	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
             	var ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name
@@ -191,7 +191,7 @@ LawPane.render = function(subject, myDocument) {
     a_log.setAttribute('href', log)
     a_log.appendChild(myDocument.createTextNode("log"));
     td_issue_data.appendChild(a_log);
-    td_issue_data.appendChild(myDocument.createTextNode('comply with '));
+    td_issue_data.appendChild(myDocument.createTextNode(' comply with '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
     a_policy.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[0].object)));

@@ -1292,7 +1292,8 @@ function UserInput(outline){
         tabulator.log.info("outline.doucment is now " + outline.document.location);
         var This=this;
         var menu=myDocument.createElement('div');
-        qp("\n==============\n**** In showMenu ****\n===========");
+        qp("\n**** In showMenu, menuType = "+menuType+"\n");
+        if (extraInformation) for (var x in extraInformation) dump('\t extra '+x+': '+extraInformation[x]+'\n');
         dump("CREATED MENU\n");//hq
         menu.id=this.menuID;
         menu.className='outlineMenu';

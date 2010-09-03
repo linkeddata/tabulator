@@ -4,25 +4,20 @@
 
 <overlay id="tabulator" 
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-  <script type="application/x-javascript" src="log-ext.js"/><!-- should be absolute path -->
-  <script type="application/x-javascript" src="js/util.js"/>
-  <script type="application/x-javascript" src="js/configuration.js"/>  
-  <script type="application/x-javascript" src="js/rdf/sparql.js"/>
-  <script type="application/x-javascript" src="js/uri.js"/>
-  <script type="application/x-javascript" src="js/rdf/term.js"/>
-  <script type="application/x-javascript" src="js/rdf/match.js"/>
-  <script type="application/x-javascript" src="js/rdf/identity.js"/>
-  <script type="application/x-javascript" src="js/rdf/rdfs.js"/>
-  <script type="application/x-javascript" src="js/rdf/query.js"/>
-  <script type="application/x-javascript" src="js/rdf/sources.js"/>
-  <script type="application/x-javascript" src="js/rdf/serialize.js"/>
 
-
-
-  <script type="application/x-javascript" src="outlineinit.js"/>
-  <script type="application/x-javascript" src="js/userinput.js"/>
-  <script type="application/x-javascript" src="test.js"/>
-  <script type="application/x-javascript" src="prefs.js"/>
+  <script type="application/x-javascript" src="js/tab/browserInit.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery-1.4.2.min.js"/> 
+  <script type="application/x-javascript" src="js/jquery/jquery-ui-1.8rc1.custom.min.js"/> 
+  <script type="application/x-javascript" src="js/jquery/jquery.json-1.3.min.js"/> <!-- not used at the moment-->
+  <script type="application/x-javascript" src="js/jquery/jquery.uri.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.xmlns.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.curie.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.datatype.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.rdf.js"/>
+  <script type="application/x-javascript" src="js/jquery/jquery.rdfa.js"/>
+  <script type="application/x-javascript" src="js/tab/sqlite.js"/> <!-- Functions to create an SQLite database-->
+  <script type="application/x-javascript" src="js/tab/semclip.js"/> <!-- For the Semantic Clipboard -->
+ <script type="application/x-javascript" src="js/tab/pusbackInterface.js"/> <!-- To talk with the pushback controller hosted at DERI -->
 
   <script type="application/x-javascript" src="js/sparqlUpdate.js"/>
   <script type="application/x-javascript" src="js/updateCenter.js"/>
@@ -65,15 +60,8 @@
   <script type="application/x-javascript" src="js/panes/policyPane/policyPane.js"/>
   
   <!-- browser reload hack -->
-  <script type="application/x-javascript" src="refresh_hack.js"/>
+  <script type="application/x-javascript" src="js/tab/refresh_hack.js"/>
   
-
-  <!-- panes for Photo access control project (By albert08@csail.mit.edu) -->
-  <script type="application/x-javascript" src="js/panes/photoPane.js"/>
-  <script type="application/x-javascript" src="js/panes/tagPane.js"/>
-  <script type="application/x-javascript" src="js/panes/photoImportPane.js"/>
-  
-  <!--<script type="application/x-javascript" src="searchbarOverlay.js"/>-->
   <menupopup id="viewSidebarMenu">
   <menuitem key="key_openTabulatorSidebar" observes="viewTabulatorSidebar"  />
   </menupopup>
@@ -127,7 +115,8 @@
 </menupopup>
   <menupopup id="menu_viewPopup">
         <menuitem label="&tabsources.label;" accesskey="&tabsources.accesskey;" insertbefore="fullScreenItem" oncommand="openTool('chrome://tabulator/content/sources.xul','tabulatorsources')"/>
-        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorDetectMetadata(event)"/> 
+        <menuitem label="&tabulatorPageMetadata.label;" insertbefore="fullScreenItem" oncommand="tabulatorShowMetadata(event)"/> 
+        <!-- This should show metdata (was DetectMetdata) timbl-->
   </menupopup>
 
   <hbox id="urlbar-icons">
@@ -147,6 +136,20 @@
   </statusbar>
 
   <script type="application/x-javascript"><![CDATA[
+
+function openTool(url, type, width, height)
+{
+  width = width || 500;
+  height = height || 400;
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Components.interfaces.nsIWindowMediator);
+  var toolWindow = wm.getMostRecentWindow(type);
+  if(!toolWindow)
+    var w = window.openDialog(url, "_blank", "all=no,width="+width+",height="+height+",scrollbars=yes,resizable=yes,dialog=no");
+  else
+     toolWindow.focus();
+}
+
     var myCheckbox;
 
     var rdfaData = [];
@@ -177,19 +180,20 @@
           new StatusWidget();
 
           var appcontent = window.document.getElementById('appcontent');
-          appcontent.addEventListener('DOMContentLoaded', tabulator_init.onDOMContentLoaded, false);
+          //@@ jambo try to speed up by eliminating the preproc..
+          //appcontent.addEventListener('DOMContentLoaded', tabulator_init.onDOMContentLoaded, false);
        },
 
       //This is called every time a page finishes loading
       onDOMContentLoaded : function(event) {
          var doc = event.originalTarget;
+
 	 dump("\npage " + gURLBar.value +" has finished loading");
 
 	 //Parse RDFa from a document which does not have a DOCType
 	try{
 	   //Glean all the RDFa out of the page, and cache it (so you don't have to parse the page on each tab switch)
 	   rdfaData = $jq('body', window.content.document).rdf().databank.triples();
-	   dump(rdfaData.length);
 	}
 	catch(e){/*no rdfa or some error*/}
 
@@ -204,7 +208,7 @@
 
     //This gets called when you switch tabs 
     function tabulatorDetectMetadata(e){
-
+        if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
         var kb = tabulator.kb;
         var semanticIcon = document.getElementById('tabulator-view-metadata');
 	
@@ -281,7 +285,7 @@
 	   return;            
 	}
 	
-        //This I consider non-standard
+        //This I(who?) consider non-standard
         try{
 		    var links = doc.getElementsByTagName('link');
 		    for (var x=0;x < links.length; x++) {
@@ -297,7 +301,8 @@
         semanticIcon.removeAttribute('metadata');
     }        
 
-    getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);
+    //@@ jambo try to speedup by eliminating the icon.
+    //getBrowser().tabContainer.addEventListener("TabSelect", tabulatorDetectMetadata,true);
     
     pumpRDFa = function(e){
      
@@ -309,11 +314,20 @@
 	var uri = gURLBar.value;
 	
 	
+
+    //@@ from jambo, WARNING ! the way that this code operates HAS BEEN CHANGED
+    // a UUID nonce is now used to identify the document to display..
+    // I am not sure if this will affect the execution of this code when
+    // it gets re-enabled.  If you experience issues, feel free to email
+    // me and I will help resolve it.
+    // For refs on how to do this, see init/init.js, where
+    // tabulator.requestUUIDs is used.
 	$jq('head', doc).append('<link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css"/>');
 	$jq('body', doc).append('<div class="TabulatorOutline"><table id="outline"/></div>');
 	
 	//Add the Tabulator outliner
-	var outline = new Outline(doc);
+	// var outline = new Outline(doc);  @@ Outline undefined
+        var outline = new tabulator.OutlineObject(doc)
 
 	var a =$jq('.TabulatorOutline', doc);
 	outline.init();
@@ -330,20 +344,24 @@
 	queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
 
             
-        outline.GotoSubject(kb.sym(uri),true);
-
+        outline.GotoSubject(tabulator.kb.sym(uri),true);
 
     }
     
+    // Whatever the thing is, show the tabulator outine view of it.
+    // Even if it is a web page which didn't load, show it in outline view
     function tabulatorShowMetadata(e){
+    
         //canonizeUrl(e,{});
+        if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
         tabulator.metadataURI = gURLBar.value;
         /*
         //before I know more about how cache works in Firefox, cache the DOM        
         tabulator.cacheDOM = content.document;
-		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM);
+		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM); // @@why? timbl
 		*/        
         //handleURLBarCommand(e);
+        pumpRDFa(e);
     }
     
     function tabulatorCopyURI() {
@@ -374,7 +392,7 @@
     window.addEventListener("load",tabulator_init.onLoad, false);
 
   ]]></script>
-  <script type="application/x-javascript" src="statuswidget.js" ></script>
+  <script type="application/x-javascript" src="js/tab/statuswidget.js" ></script>
 
 	<!-- New Addition -->
 

@@ -5,25 +5,22 @@
     */
 tabulator.panes.internalPane = {
 
-    icon: Icon.src.icon_internals,
+    icon: tabulator.Icon.src.icon_internals,
     
     name: 'internal',
 
     label: function(subject) {
-        var sts = kb.statementsMatching(subject);
-        sts = sts.concat(kb.statementsMatching(undefined, undefined, subject));
-        for (var i=0; i<sts.length; i++) {
-            if (tabulator.panes.internalPane.predicates[sts[i].predicate.uri] == 1) // worth displaing
-                return "under the hood";
-        }
-        return null
-    },
+        //if (subject.uri) 
+        return "under the hood";  // There is orften a URI even of no statements
+      },
     
     render: function(subject, myDocument) {
+        var $r = tabulator.rdf;
         var kb = tabulator.kb;
         subject = kb.canon(subject);
+        var types = kb.findTypeURIs(subject);
         function filter(pred, inverse) {
-            if (pred.sameTerm(tabulator.ns.owl('sameAs'))) return false; //our principle is not to show sameAs
+            if (types['http://www.w3.org/2007/ont/link#ProtocolEvent']) return true; // display everything for them
             return  !!(typeof tabulator.panes.internalPane.predicates[pred.uri] != 'undefined');
         }
         var div = myDocument.createElement('div')
@@ -31,8 +28,14 @@ tabulator.panes.internalPane = {
 //        appendRemoveIcon(div, subject, div);
                   
         var plist = kb.statementsMatching(subject)
-        if (subject.uri) plist.push(new RDFStatement(subject,
-                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, sf.appNode));
+        if (subject.uri) {
+            plist.push($r.st(subject,
+                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, tabulator.sf.appNode));
+            if (subject.uri.indexOf('#') >= 0) 
+                        plist.push($r.st(subject,
+                            kb.sym('http://www.w3.org/2006/link#documentURI'),
+                            subject.uri.split('#')[0], tabulator.sf.appNode));
+        }
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, filter)    
@@ -45,10 +48,13 @@ tabulator.panes.internalPane = {
         'http://www.w3.org/2007/ont/link#source': 1,
         'http://www.w3.org/2007/ont/link#session': 2, // 2=  test neg but display
         'http://www.w3.org/2006/link#uri': 1,
+        'http://www.w3.org/2006/link#documentURI': 1,
         'http://www.w3.org/2006/link#all': 1, // From userinput.js
         'http://www.w3.org/2006/link#Document': 1,
+    },
+    classes: { // Things which are inherently already undercover
+        'http://www.w3.org/2007/ont/link#ProtocolEvent': 1
     }
-    
 };    
 
 //    if (!SourceOptions["seeAlso not internal"].enabled)

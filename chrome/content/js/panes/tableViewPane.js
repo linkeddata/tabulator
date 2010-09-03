@@ -1,7 +1,16 @@
 
 // Format an array of RDF statements as an HTML table.
+//
+// This can operate in one of two modes: when the class of object is given
+// or when the source document from whuch data is taken is givem.
+// (In principle it could operate with neither gievn but typically
+// there would be too much data.)
+// When the tableClass is ot given, it looks for common  classes in the data,
+// and gibves the user the option.
+//
+// 2008 Written, Ilaria Liccardi
 
-function renderTableViewPane(doc, documentSubject) {
+function renderTableViewPane(doc, tableClass, sourceDocument) {
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
 
@@ -59,16 +68,25 @@ function renderTableViewPane(doc, documentSubject) {
     // The last SPARQL query used:
     var lastQuery = null;
 
-    [allType, types] = calculateTable();
-
     var resultDiv = doc.createElement("div");
     resultDiv.className = "tableViewPane";
 
-    resultDiv.appendChild(generateControlBar());
-    typeSelectorDiv.appendChild(generateTypeSelector(allType, types));
+    resultDiv.appendChild(generateControlBar()); // sets typeSelectorDiv
+
+    var s = calculateTable(); allType = s[0]; types = s[1];
+    if (!tableClass) typeSelectorDiv.appendChild(
+        generateTypeSelector(allType, types));
 
     var tableDiv = doc.createElement("div");
     resultDiv.appendChild(tableDiv);
+
+
+    // A specifically asked-for type
+    if (false) {
+    
+        buildFilteredTable(new SubjectType(tableClass));
+        
+    } else {
 
     // Find the most common type and select it by default
 
@@ -79,8 +97,12 @@ function renderTableViewPane(doc, documentSubject) {
     } else {
         buildFilteredTable(allType);
     }
-
+    }
     return resultDiv;
+
+    
+    ///////////////////////////////////////////////////////////////////
+    
 
     function closeDialog(dialog) {
         dialog.parentNode.removeChild(dialog);
@@ -146,10 +168,11 @@ function renderTableViewPane(doc, documentSubject) {
 
         var tr = doc.createElement("tr");
 
+/*             @@    Add in later -- not debugged yet 
         var sparqlButtonDiv = doc.createElement("td");
         sparqlButtonDiv.appendChild(generateSparqlButton());
         tr.appendChild(sparqlButtonDiv);
-
+*/
         typeSelectorDiv = doc.createElement("td");
         tr.appendChild(typeSelectorDiv);
 
@@ -170,7 +193,7 @@ function renderTableViewPane(doc, documentSubject) {
             // TODO: autogenerate nicer names for variables
             // variables have to be unambiguous
 
-            var variable = kb.variable("_col" + i);
+            var variable = tabulator.kb.variable("_col" + i);
 
             query.vars.push(variable);
             selectedColumns[i].setVariable(variable);
@@ -183,7 +206,7 @@ function renderTableViewPane(doc, documentSubject) {
         var queryType = type.type;
 
         if (queryType == null) {
-            queryType = kb.variable("_any");
+            queryType = tabulator.kb.variable("_any");
         }
 
         // _row a type
@@ -200,7 +223,7 @@ function renderTableViewPane(doc, documentSubject) {
         for (var i=0; i<selectedColumns.length; ++i) {
             var column = selectedColumns[i];
 
-            var formula = kb.formula();
+            var formula = tabulator.kb.formula();
 
             formula.add(rowVar,
                         column.predicate,
@@ -214,8 +237,8 @@ function renderTableViewPane(doc, documentSubject) {
     // object.
 
     function generateQuery(type) {
-        var query = new Query();
-        var rowVar = kb.variable(ROW_KEY_COLUMN);
+        var query = new tabulator.rdf.Query();
+        var rowVar = tabulator.kb.variable(ROW_KEY_COLUMN);
 
         addSelectToQuery(query, type);
         addWhereToQuery(query, rowVar, type);
@@ -327,7 +350,7 @@ function renderTableViewPane(doc, documentSubject) {
         }
 
         this.getLabel = function() {
-            return label(this.type);
+            return tabulator.Util.label(this.type);
         }
 
         this.addUse = function() {
@@ -399,7 +422,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         this.getLabel = function() {
             if (this.predicate != null) {
-                return label(this.predicate);
+                return tabulator.Util.label(this.predicate);
             } else if (this.variable != null) {
                 return this.variable.toString();
             } else {
@@ -409,7 +432,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         this.setPredicate = function(predicate) {
             this.predicate = predicate;
-            this.range = kb.any(predicate, tabulator.ns.rdfs("range"));
+            this.range = tabulator.kb.any(predicate, tabulator.ns.rdfs("range"));
         }
 
         this.getRange = function() {
@@ -593,21 +616,23 @@ function renderTableViewPane(doc, documentSubject) {
         // Get a list of statements that match:  ? rdfs:type ?
         // From this we can get a list of subjects and types.
 
-        var subjectList = kb.statementsMatching(undefined,
-                                                tabulator.ns.rdf("type"),
-                                                undefined,
-                                                documentSubject);
+        var subjectList = tabulator.kb.statementsMatching(undefined,
+                                                tabulator.ns.rdf('type'),
+                                                tableClass, // can be undefined OR
+                                                sourceDocument); // can be undefined
 
         // Subjects for later lookup.  This is a mapping of type URIs to
         // lists of subjects (it is necessary to record the type of
         // a subject).
 
         var subjects = {};
-
+        // dump("discoverTypes - subjectList.length "+subjectList.length+
+         //       " tableClass:"+tableClass+", sourceDocument="+sourceDocument+"\n");
         for (var i=0; i<subjectList.length; ++i) {
             var type = subjectList[i].object;
+            // dump("discoverTypes - type "+type+"\n");
 
-            if (type.termType != "symbol") {
+            if (type.termType != "symbol") {   // @@ no bnodes?
                 continue;
             }
 
@@ -627,13 +652,14 @@ function renderTableViewPane(doc, documentSubject) {
     // Get columns for the given subject.
 
     function getSubjectProperties(subject, columns) {
+        // dump("getSubjectProperties: "+subject+"\n");
 
         // Get a list of properties of this subject.
 
-        var properties = kb.statementsMatching(subject,
+        var properties = tabulator.kb.statementsMatching(subject,
                                                undefined,
                                                undefined,
-                                               documentSubject);
+                                               sourceDocument);
 
         var result = {};
 
@@ -648,6 +674,7 @@ function renderTableViewPane(doc, documentSubject) {
 
             var column = getColumnForPredicate(columns, predicate);
             column.checkValue(properties[j].object);
+            // dump("Found predicate: "+predicate+"\n");
 
             result[predicate.uri] = column;
         }
@@ -658,6 +685,7 @@ function renderTableViewPane(doc, documentSubject) {
     // Identify the columns associated with a type.
 
     function identifyColumnsForType(type, subjects) {
+        // dump("identifyColumnsForType\n");
 
         var allColumns = {};
 
@@ -686,15 +714,17 @@ function renderTableViewPane(doc, documentSubject) {
     // Build table information from parsing RDF statements.
 
     function calculateTable() {
+        // dump("calculateTable\n");
 
         // Find the types that we will display in the dropdown
         // list box, and associated objects of those types.
 
         var subjects, types;
 
-        [subjects, types] = discoverTypes();
+        var s = discoverTypes(); subjects = s[0]; types = s[1]; // no [ ] on LHS
 
         for (var typeUrl in subjects) {
+            // dump("calculateTable - typeUrl"+typeUrl+"\n");
             var subjectList = subjects[typeUrl];
             var type = types[typeUrl];
 
@@ -737,6 +767,7 @@ function renderTableViewPane(doc, documentSubject) {
     // Render the table header for the HTML table.
 
     function renderTableHeader(columns, type) {
+        // dump(" renderTableHeader type = "+type+", columns.length = "+columns.length+"\n");
         var tr = doc.createElement("tr");
 
         /* Empty header for link column */
@@ -754,6 +785,7 @@ function renderTableViewPane(doc, documentSubject) {
             var column = columns[i];
 
             //alert(column.getRange());
+            // dump(" label for columns "+i+" is <"+column.getLabel()+">\n");
             th.appendChild(doc.createTextNode(column.getLabel()));
 
             // We can only add a delete button if we are using the
@@ -966,7 +998,7 @@ function renderTableViewPane(doc, documentSubject) {
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
 
-            dropdown.appendChild(optionElement(label(value), i));
+            dropdown.appendChild(optionElement(tabulator.Util.label(value), i));
         }
 
         result.appendChild(dropdown);
@@ -1108,7 +1140,9 @@ function renderTableViewPane(doc, documentSubject) {
 
         // Is this an enumeration type?
 
-        var matches = kb.statementsMatching(range,
+        // Also  ToDo: @@@ Handle membership of classes whcih are disjointUnions
+        
+        var matches = tabulator.kb.statementsMatching(range,
                                             tabulator.ns.owl("oneOf"),
                                             undefined,
                                             undefined);
@@ -1171,7 +1205,7 @@ function renderTableViewPane(doc, documentSubject) {
         if (match) {
             return linkTo(obj.uri, match[1]);
         } else {
-            return linkTo(obj.uri, label(obj));
+            return linkTo(obj.uri, tabulator.Util.label(obj));
         }
     }
 
@@ -1231,6 +1265,7 @@ function renderTableViewPane(doc, documentSubject) {
 
                 for (var j=0; j<objects.length; ++j) {
                     var obj = objects[j];
+                    //dump("  column "+i+', object'+j+", obj= "+obj+"\n");
 
                     td.appendChild(renderValue(obj, column));
 
@@ -1341,7 +1376,7 @@ function renderTableViewPane(doc, documentSubject) {
 
         query.running = true;
 
-        kb.query(query, function(values) {
+        tabulator.kb.query(query, function(values) {
 
             if (!query.running) {
                 return;
@@ -1390,7 +1425,7 @@ function renderTableViewPane(doc, documentSubject) {
 
     // Given a formula object, process all statements and infer predicates
     // for columns.
-
+/*
     function inferColumnsFromFormula(columns, formula) {
         tabulator.log.debug(">> processing formula");
 
@@ -1452,7 +1487,7 @@ function renderTableViewPane(doc, documentSubject) {
     }
 
     // Generate a table from a query.
-
+/*
     function renderTableForQuery(query, type) {
 
         // Columns list.  If we are rendering a table for a specific type,
@@ -1468,6 +1503,172 @@ function renderTableViewPane(doc, documentSubject) {
         } else {
             columns = inferColumns(query);
         }
+
+        // Start with an empty list of rows; this will be populated
+        // by the query.
+
+        var rows = [];
+
+        // Create table element and header.
+
+        var table = doc.createElement("table");
+
+        table.appendChild(renderTableHeader(columns, type));
+        table.appendChild(renderTableSelectors(rows, columns));
+
+        // Run query.  Note that this is perform asynchronously; the
+        // query runs in the background and this call does not block.
+
+        runQuery(query, rows, columns, table);
+
+        return table;
+    }
+
+    // ========= Start of new query-based table rendering code =========
+
+    // Check if a value is already stored in the list of values for
+    // a cell (the query can sometimes find it multiple times)
+
+    function valueInList(value, list) {
+        var key = null;
+
+        if (value.termType == "literal") {
+            key = "value";
+        } else if (value.termType == "symbol") {
+            key = "uri";
+        } else {
+            return list.indexOf(value) >= 0;
+        }
+
+        // Check the list and compare keys:
+
+        var i;
+
+        for (i=0; i<list.length; ++i) {
+            if (list[i].termType == value.termType
+             && list[i][key] == value[key]) {
+                return true;
+            }
+        }
+
+        // Not found?
+
+        return false;
+    }
+
+    // Update a row, add new values, and regenerate the HTML element
+    // containing the values.
+
+    function updateRow(row, columns, values, columnLookup) {
+
+        var key;
+        var needUpdate = false;
+
+        for (key in values) {
+            var value = values[key];
+
+            // Which column is this for?
+
+            var column = columnLookup[key];
+            if (column == null) {
+                // ?
+                continue;
+            }
+
+            var columnUri = column.predicate.uri;
+
+            // If this key is not already in the row, create a new entry
+            // for it:
+
+            if (!(columnUri in row)) {
+                row[columnUri] = [];
+            }
+
+            // Possibly add this new value to the list, but don't
+            // add it if we have already added it:
+
+            if (!valueInList(value, row[columnUri])) {
+                row[columnUri].push(value);
+                needUpdate = true;
+            }
+        }
+
+        // Regenerate the HTML row?
+
+        if (needUpdate) {
+            clearElement(row._htmlRow);
+            renderTableRowInto(row._htmlRow, row, columns);
+        }
+    }
+
+    // Generate lookup table mapping query variable names to
+    // column objects.
+
+    function generateColumnLookup(columns) {
+        var result = {};
+        var i;
+
+        for (i=0; i<columns.length; ++i) {
+            var column = columns[i];
+            result[column.getVariable()] = column;
+        }
+
+        return result;
+    }
+
+    // Run a query and generate the table.
+    // Returns an array of rows.  This will be empty when the function
+    // first returns (as the query is performed in the background)
+
+    function runQuery(query, rows, columns, table) {
+
+        var columnLookup = generateColumnLookup(columns);
+
+        // All rows found so far, indexed by _row value.
+        // TODO: remove dependency on _row, as it cannot be relied on
+        // for generic queries.
+
+        var rowsLookup = {};
+
+        tabulator.kb.query(query, function(values) {
+
+            var rowKey = values["?_row"];
+
+            if (rowKey == null) throw ("rowKey is null!");
+
+            var rowKeyUri = rowKey.uri;
+
+            // Do we have a row for this already?  If not, create a new row.
+            var row;
+
+            if (rowKeyUri in rowsLookup) {
+                row = rowsLookup[rowKeyUri];
+            } else {
+                var tr = doc.createElement("tr");
+                table.appendChild(tr);
+                row = { _htmlRow: tr,
+                        _subject: rowKey };
+                rows.push(row);
+                rowsLookup[rowKeyUri] = row;
+            }
+
+            // Add the new values to this row.
+            
+            updateRow(row, columns, values, columnLookup);
+        })
+    }
+*/
+    // Generate a table from a query.
+    // TODO: for the time being, this is still tied to rendering based on
+    // a fixed type (rather than general queries).  This needs to be 
+    // reworked to work based on generic queries, and infer the predicates
+    // for columns by examining the query.
+
+    function renderTableForQuery(query, type) {
+
+        // TODO: infer columns from query, to allow generic queries
+
+        var columns = type.getColumns();
 
         // Start with an empty list of rows; this will be populated
         // by the query.
@@ -1529,13 +1730,38 @@ function renderTableViewPane(doc, documentSubject) {
     }
 
 }
+/////////////////////////////////////////////////////////////////////
 
-/* Table view pane */
+/* Table view pane  -- view of a class*/
 
 tabulator.panes.register({
     icon: iconPrefix + "icons/table.png",
 
-    name: "table",
+    name: "tableOfClass",
+
+    label: function(subject) {
+            //if (!tabulator.kb.holds(subject, tabulator.ns.rdf('type'),tabulator.ns.rdfs('Class'))) return null;
+            if (!tabulator.kb.any(undefined, tabulator.ns.rdf('type'),subject)) return null;
+            return tabulator.Util.label(subject)+ " table";
+        },
+
+    render: function(subject, myDocument) {
+        var div = myDocument.createElement("div");
+        div.setAttribute('class', 'n3Pane'); // needs a proper class
+        div.appendChild(renderTableViewPane(myDocument, subject, undefined));
+        return div;
+    }
+});
+
+/* Table view pane -- as a view of a document 
+*/
+/*
+
+tabulator.panes.register({
+    icon: iconPrefix + "icons/table.png",   
+    @@@@@@  Needs to be different from other icons used eg above as eems to be used asto fire up the pane
+
+    name: "tableOfDocument",
 
     label: function(subject) {
 
@@ -1556,7 +1782,7 @@ tabulator.panes.register({
             return true;
         }
 
-        var sts = kb.statementsMatching(undefined, undefined, undefined,
+        var sts = tabulator.kb.statementsMatching(undefined, undefined, undefined,
                                         subject); 
 
         // If all the statements are on a single subject, a table view 
@@ -1572,8 +1798,8 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        div.appendChild(renderTableViewPane(myDocument, subject));
+        div.appendChild(renderTableViewPane(myDocument, undefined, subject));
         return div;
     }
-})
-
+});
+*/

@@ -3,7 +3,7 @@
 **  This outline pane contains the document contents for an Image document
 */
 tabulator.panes.register( {
-    icon: Icon.src.icon_imageContents,
+    icon: tabulator.Icon.src.icon_imageContents,
     
     name: 'image',
     

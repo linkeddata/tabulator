@@ -5,7 +5,7 @@
 */
 tabulator.panes.register({
     
-    icon: Icon.src.icon_visit,
+    icon: tabulator.Icon.src.icon_visit,
     
     name: 'humaReadable',
     

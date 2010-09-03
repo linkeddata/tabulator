@@ -1,6 +1,6 @@
 tabulator.panes.register( {
 
-    icon: Icon.src.icon_CVPane, //This icon should be defined in 'test.js' and 'tabulate.js'
+    icon: tabulator.Icon.src.icon_CVPane, //This icon should be defined in 'test.js' and 'tabulate.js'
     
     name: 'CV',
 

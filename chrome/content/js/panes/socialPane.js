@@ -8,7 +8,7 @@
 */
 tabulator.panes.register( tabulator.panes.socialPane = {
 
-    icon: Icon.src.icon_foaf,
+    icon: tabulator.Icon.src.icon_foaf,
     
     name: 'social',
 
@@ -21,6 +21,8 @@ tabulator.panes.register( tabulator.panes.socialPane = {
     tb: tabulator,
 
     render: function(s, myDocument) {
+
+        var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 
 	    var common = function(x,y) { // Find common members of two lists
     //            var dict = [];
@@ -86,14 +88,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert("Error occurs while inserting "+statement+'\n\n'+error_body);
+                                prompts.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
                                 input.checked = false; //rollback UI
                                 return;
                             }
                             kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
                         })
                     }catch(e){
-                        alert("Data write fails:" + e);
+                        prompts.alert(null,"Message","Data write fails:" + e);
                         input.checked = false; //rollback UI
                         tx.className = 'question';
                     }
@@ -102,14 +104,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert("Error occurs while deleting "+statement+'\n\n'+error_body);
+                                prompts.alert(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
                                 this.checked = true; // Rollback UI
                             } else {
                                 kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
                             }
                         })
                     }catch(e){
-                        alert("Delete fails:" + e);
+                        prompts.alert(null,"Message","Delete fails:" + e);
                         this.checked = true; // Rollback UI
                         return;
                     }
@@ -144,7 +146,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             box.appendChild(img)
 
 			
-            var t = myDocument.createTextNode(label(friend));
+            var t = myDocument.createTextNode(tabulator.Util.label(friend));
 			if (confirmed) t.className = 'confirmed';
 			if (friend.uri) {
 				var a = myDocument.createElement('a');
@@ -168,7 +170,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         gotOne = function(ele) {
             var webid = myDocument.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
-            alert("You ID has been set to "+webid);
+            prompts.alert(null,"Message","You ID has been set to "+webid);
             ele.parentNode.removeChild(ele);
         }
 
@@ -401,7 +403,7 @@ web ID</a>?<br/>\
             but.setAttribute('value', 'Forget my Web ID');
             var zapIt = function() {
                 tabulator.preferences.set('me','');
-                alert('Your Web ID was '+me_uri+'. It has been forgotten.');
+                prompts.alert(null,"Message",'Your Web ID was '+me_uri+'. It has been forgotten.');
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             but.addEventListener('click', zapIt, false);
@@ -421,7 +423,7 @@ web ID</a>?<br/>\
             var myHandler = function(e) {
                 var uri = this.checked? s.uri : '';
                 tabulator.preferences.set('me', uri);
-                alert('Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
+                prompts.alert(null,"Message",'Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             input.setAttribute('type', 'checkbox');
@@ -452,9 +454,9 @@ web ID</a>?<br/>\
                 if (kb.whether(works[i], tabulator.ns.rdf('type'),
                                             foaf('PersonalProfileDocument'))) {
 
-                    editable = outline.sparql.prototype.editable(works[i].uri, kb);
+                    editable = outline.UserInput.sparqler.editable(works[i].uri, kb);
                     if (!editable) { 
-                        message += ("Your profile <"+escapeForXML(works[i].uri)+"> is not remotely editable.");
+                        message += ("Your profile <"+tabulator.Util.escapeForXML(works[i].uri)+"> is not remotely editable.");
                     } else {
                         profile = works[i];
                         break;
@@ -466,9 +468,9 @@ web ID</a>?<br/>\
                 if (!profile) {
                     say(message + "\nI couldn't find an editable personal profile document.");
                 } else  {
-                    say("Editing your profile <"+escapeForXML(profile.uri)+">.");
+                    say("Editing your profile <"+tabulator.Util.escapeForXML(profile.uri)+">.");
                      // Do I have an EDITABLE profile?
-                    editable = outline.sparql.prototype.editable(profile.uri, kb);
+                    editable = outline.UserInput.sparqler.editable(profile.uri, kb);
                 }
             } else { // This is about someone else
                 // My relationship with this person
@@ -520,7 +522,7 @@ web ID</a>?<br/>\
 
                 if (editable) {
                     var f = buildCheckboxForm("You know " + familiar,
-                            new RDFStatement(me, knows, s, profile), outgoing)
+                            new tabulator.rdf.Statement(me, knows, s, profile), outgoing)
                     tools.appendChild(f);
                 } // editable
                  
@@ -536,7 +538,7 @@ web ID</a>?<br/>\
                         if (mutualFriends) {
                             for (var i=0; i<mutualFriends.length; i++) {
                                 tr.appendChild(myDocument.createTextNode(
-                                    ',  '+ label(mutualFriends[i])));
+                                    ',  '+ tabulator.Util.label(mutualFriends[i])));
                             }
                         }
                     }
@@ -573,7 +575,7 @@ web ID</a>?<br/>\
 
         for (var i=0; i<incoming.length; i++) {
             var friend = incoming[i];
-            var lab = label(friend);
+            var lab = tabulator.Util.label(friend);
             var found = false;
             for (var j=0; j<outgoing.length; j++) {
                 if (outgoing[j].sameTerm(friend)) {
@@ -598,7 +600,7 @@ web ID</a>?<br/>\
 
             var items = [];
             for (var j=0; j<friends.length; j++) {
-                items.push([label(friends[j]), friends[j]]);
+                items.push([tabulator.Util.label(friends[j]), friends[j]]);
             }
             items.sort();
             var last = null;
@@ -606,7 +608,7 @@ web ID</a>?<br/>\
                 var friend = items[j][1];
 				if (friend.sameTerm(last)) continue; // unique
                 last = friend; 
-				if (label(friend) != "..."){	//This check is to avoid bnodes with no labels attached 
+				if (tabulator.Util.label(friend) != "..."){	//This check is to avoid bnodes with no labels attached 
 												//appearing in the friends list with "..." - Oshani
 					main.appendChild(oneFriend(friend));
 				}
@@ -642,7 +644,7 @@ web ID</a>?<br/>\
                     if (uri == last) continue; // uniques only
                     last = uri;
                     var hostlabel = ""
-                    var lab = label(pred);
+                    var lab = tabulator.Util.label(pred);
                     if (uris.length > 1) {
                         var l = uri.indexOf('//');
                         if (l>0) {
@@ -704,7 +706,7 @@ web ID</a>?<br/>\
 
 }, false);  // tabulator.panes.register({})
 
-if (tabulator.preferences.get('me')) {
+if (tabulator.preferences && tabulator.preferences.get('me')) {
     tabulator.sf.lookUpThing(tabulator.kb.sym(tabulator.preferences.get('me')));
 };
 //ends

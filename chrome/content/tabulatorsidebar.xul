@@ -8,7 +8,7 @@
 
   <listbox id="queryList"/>
   <toolbar id="queryToolbar" mode="icons"/>
-  <script type="application/x-javascript" src="querySidebar.js"/>
+  <script type="application/x-javascript" src="js/tab/querySidebar.js"/>
   <script type="application/x-javascript">
   var qsb = new querySidebar(document);
   </script>

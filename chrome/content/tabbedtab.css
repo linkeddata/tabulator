@@ -1,16 +1,19 @@
 /*  Some style for the tabulator
 **
-** NOTE: Development team - This MUST be edited in the 2005/ajar/ahaw directory
-**   and copied into the 2007/tab/ext/chrome/content directory and then checked in.
 **
 **  Do NOT use physical measures, but font-relative measures.
 **  2006-10-21  timbl  cconverted px to em at approx 1em = 12px
 ** 
 */
 @import url("chrome://tabulator/content/js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
-@import url("chrome://tabulator/content/js/panes/publicationPane/publicationPane.css"); /* publication pane */
-@import url("chrome://tabulator/content/js/panes/policyPane/policyStyle.css"); /*policy pane */
+@import url("chrome://tabulator/content/js/panes/social/style.css"); /*social pane*/
 
+/* I couldn't find the code for the collapse image. this is a quick work around
+to make the collapsing easier to use ( the triangles dont jump 20 pixels). ~cm2
+*/
+img[title="Hide details."]{
+  float:left;
+}
 body {background-color: white ; font-size: 80%; font-family: sans-serif}
 
 .warning { color: red; }
@@ -74,8 +77,7 @@ div.nonCompliantPane {
     padding: 0.5em;  
     background-color: #fbf0f7; 
     margin-top: 0.5em; margin-bottom: 0.5em;
-    -moz-border-radius: 0.5em;
-    width: 60%;
+    -moz-border-radius: 1em;
 }
 
 div.compliantPane {
@@ -86,24 +88,11 @@ div.compliantPane {
     padding: 0.5em;  
     background-color: #def8e0; 
     margin-top: 0.5em; margin-bottom: 0.5em;
-    -moz-border-radius: 0.5em;
-    width: 60%;
-}
-
-div.filterPane {
-    border-top: solid 1px #ff6633;
-    border-left: solid 1px #ff6633;
-    border-bottom: solid 1px #ff6633;
-    border-right: solid 1px #ff6633;
-    padding: 0.5em;  
-    background-color: #ff9966; 
-    margin-top: 0.5em; margin-bottom: 0.5em;
-    -moz-border-radius: 0.5em;
-    width: 60%;
+    -moz-border-radius: 1em;
 }
 
 div.justification {
-    font-size: 120%;
+    font-size: 100%;
     padding: 0 5px;
     width: 80%; /* @@ Don't use pixels -- use em */
     background-color: white; 
@@ -112,12 +101,13 @@ div.justification {
 
 
 div.description {
+    font-size: 120%;
     border-top: solid 1px yellow;
     border-left: solid 1px yellow;
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
     padding: 15px;
-    width: 80%; 
+    width: 100%; 
     background-color: #ffffdd; 
     margin-top: 0.5em; 
     margin-bottom: 0.5em;
@@ -135,7 +125,7 @@ div.premises {
     border-bottom: solid 1px #3399ff;
     border-right: solid 1px #3399ff;
     padding: 0.5px;
-    width: 80%; 
+    width: 100%; 
     background-color: #ccccff; 
     margin-top: 0.5em; 
     margin-bottom: 0.5em;
@@ -144,21 +134,6 @@ div.premises {
     -moz-border-radius: 0.75em;
     position:relative;
     left:0% /*May be we could shift the left margin a bit?*/
-}
-
-div.title {
-    background-color: #B8B8B8; 
-    border-top: solid 1px #545454;
-    border-bottom: solid 1px #545454;
-    padding: 0.5em;
-}
-
-div.irfac {
-    padding: 0.7em;
-}
-
-li.irfac_li{ 
-    margin-bottom: 10px; 
 }
 
 /* ***************** Social Pane **********/
@@ -248,6 +223,117 @@ div.social_linkButton {
   div.yes > div.negative { display: none } 
   div.no > div.affirmative { display: none } 
   
+/******************* Exception Pane ********
+**
+** A pane created when the loading of a pane 
+** throws an exception
+**/
+
+div.exceptionPane pre { background-color: #fee; }
+
+
+  
+/******************* Category Pane *********/
+
+.categoryPane a      { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a:link { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.categoryPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
+.categoryPane a:active { color: #888; text-decoration: none; }
+
+.categoryBottomClass { background-color: #efe ; margin: solid green 0.1em; }
+
+.categoryTable { padding-left: 2em;}
+.categoryPane { background-color: #f8fff8; padding: 0.5em;
+    border-width: 0.1em; border-color: #777777; 
+ -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
+
+.categoryPane a.categoryWhy      { color: #ddd}
+.categoryPane a.categoryWhy:link { color: #ddd; text-decoration: none; font-weight: bold}
+.categoryPane a.categoryWhy:visited { color: #ddd; text-decoration: none; font-weight: bold}
+.categoryPane a.categoryWhy:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
+.categoryPane a.categoryWhy:active { color: #ddd; text-decoration: none; }
+
+.categoryPane a.categoryWhy { color:grey }
+/* a.categoryWhy:hover { color: #3B5998 } */
+
+
+/******************* PubsPane *********/
+
+.pubsPane { 
+    background-color: #F2F6DA; 
+    border-width: 0.1em; 
+    border-color: #777777;
+    -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ 
+    padding: 1em;
+
+    text-decoration: none; 
+    font-weight: bold;
+}
+
+.pubsPane h2 {
+    margin: 0;
+    padding: 0;
+}
+
+.pubsPane form {
+    padding-left: 1em;
+}
+
+/*Clear both - start things on individula lines */
+.pubsRow {
+    margin: 0.5em 3em 0.5em 0em;
+    clear: both;
+}
+
+/*inputs float right to line up */
+.pubsRow input {
+    float: right;
+    width: 20em;
+    height: 1em;
+}
+#inpid_book_description {
+    float: right;
+    height: 8em;
+    width: 17em;
+}
+
+.pubsRow button {
+    float: left;
+    height: 2em;
+    padding: 0.5em;
+    margin: 0.5em;
+}
+
+.hideit
+{
+    display: none;
+}
+
+.active {
+    display: true;
+}
+
+.submitRow {
+    clear: both;
+    height: 5em;
+}
+
+.submitRow button {
+    width: 7em;
+    height: 100%;
+}
+
+#buttonid {
+    display: none;
+}
+
+#buttonid.active{
+    display: inline;
+}
+
+
+
 
 /******************* CV Pane *****************/
 
@@ -280,19 +366,26 @@ div.dataContentPane td {
     padding-top: 0.1em;
     padding-right: 0.2em;
     padding-bottom: 0.05em;
-    vertical-align: text-top;
-    border-style:dotted;
-    border-width:0.1px; 
+/*	        vertical-align: middle; /*@@ Lalana's request*/
+	        vertical-align: top; /*@@ Tims's request*/
+                /* With middel, you can't tell what is with what */
     /* background-color: white; */
 }
 
 div.dataContentPane tr { 
-	/*margin-bottom: 0.6em;*/
+	margin-bottom: 0.6em;
 	padding-top: 1em;
 	padding-bottom: 1em;
+    
 }
 
-div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
+.dataContentPane a      { color: #3B5998; text-decoration: none; font-weight: bold}
+.dataContentPane a:link { color: #3B5998; text-decoration: none; font-weight: bold}
+.dataContentPane a:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.dataContentPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
+.dataContentPane a:active { color: #888; text-decoration: none; }
+
+/* div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
 div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */ 
 div.dataContentPane td.pred a { color: #444 } /* Greyish as form field names have less info value */
 
@@ -339,7 +432,7 @@ div.RDFXMLPane {
 .paneHidden { -moz-border-radius: 0.5em; margin-left: 1em; padding: 3px;  }
 
 /* outline object view */
-.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
+img.outlineImage { max-height: 20em; max-width: 30em } /* save vertical space */
 /* Compare facebook which only limits width -> lots of tall images! */
 
 img.phoneIcon { border: 0; margin-left: 1em}

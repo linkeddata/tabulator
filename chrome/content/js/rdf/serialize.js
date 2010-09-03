@@ -6,8 +6,9 @@
 ** Bug: can't serialize  http://data.semanticweb.org/person/abraham-bernstein/rdf 
 ** in XML (from mhausenblas)
 */
+$rdf.Serializer = function() {
 
-__Serializer = function(){
+var __Serializer = function( store ){
     this.flags = "";
     this.base = null;
     this.prefixes = [];
@@ -15,11 +16,12 @@ __Serializer = function(){
     this.prefixchars = "abcdefghijklmnopqustuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     this.incoming = null;  // Array not calculated yet
     this.formulas = [];  // remebering original formulae from hashes 
+    this.store = store;
 
     /* pass */
 }
 
-Serializer = function() {return new __Serializer()}; 
+var Serializer = function( store ) {return new __Serializer( store )}; 
 
 __Serializer.prototype.setBase = function(base)
     { this.base = base };
@@ -42,7 +44,7 @@ __Serializer.prototype.fromStr = function(s) {
             if (!x) alert('No formula object for '+s)
             return x;
         }
-        return kb.fromNT(s);
+        return this.store.fromNT(s);
 };
     
 
@@ -75,11 +77,14 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     
     function canUse(pp) {
         if (namespaces[pp]) return false; // already used
+
         sz.prefixes[uri] = pp;
         pok = pp;
         return true
     }
-    for (var ns in sz.prefixes) namespaces[sz.prefixes[ns]] = ns; // reverse index
+    for (var ns in sz.prefixes) {
+        namespaces[sz.prefixes[ns]] = ns; // reverse index
+    }
     if ('#/'.indexOf(p[p.length-1]) >= 0) p = p.slice(0, -1);
     var slash = p.lastIndexOf('/');
     if (slash >= 0) p = p.slice(slash+1);
@@ -123,7 +128,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         if (!ss) ss = [];
         ss.push(sts[i]);
         subjects[this.toStr(sts[i].subject)] = ss; // Make hash. @@ too slow for formula?
-        tabulator.log.debug(' sz potential subject: '+sts[i].subject)
+        //$rdf.log.debug(' sz potential subject: '+sts[i].subject)
     }
 
     var roots = [];
@@ -141,14 +146,14 @@ __Serializer.prototype.rootSubjects = function(sts) {
         var x = sz.fromStr(xNT);
         if ((x.termType != 'bnode') || !incoming[x] || (incoming[x].length != 1)){
             roots.push(x);
-            tabulator.log.debug(' sz actual subject -: ' + x)
+            //$rdf.log.debug(' sz actual subject -: ' + x)
             continue;
         }
         if (accountedFor(incoming[x][0]), x) {
             continue;
         }
         roots.push(x);
-        tabulator.log.debug(' sz potential subject *: '+sts[i].subject)
+        //$rdf.log.debug(' sz potential subject *: '+sts[i].subject)
         loopBreakers[x] = 1;
     }
     this.incoming = incoming; // Keep for serializing
@@ -308,7 +313,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 
     // Convert a set of statements into a nested tree of lists and strings
     function objectTree(obj, subjects) {
-        if (obj.termType == 'bnode' && subjects[sz.toStr(obj)]) // and there are statements
+        if (obj.termType == 'bnode' && subjects[sz.toStr(obj)] /* && !sz.incoming[st.object]*/) // and there are statements
             return  ['['].concat(propertyTree(obj, subjects)).concat([']']);
         return termToN3(obj, subjects);
     }
@@ -324,7 +329,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
             case 'literal':
                 var str = stringToN3(expr.value);
                 if (expr.lang) str+= '@' + expr.lang;
-                if (expr.dt) str+= '^^' + termToN3(expr.dt, subjects);
+                if (expr.datatype) str+= '^^' + termToN3(expr.datatype, subjects);
                 return str;
             case 'symbol':
                 return symbolToN3(expr.uri);
@@ -379,7 +384,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
             }
         }
         if (sz.flags.indexOf('r') < 0 && sz.base)
-            uri = Util.uri.refTo(sz.base, uri);
+            uri = $rdf.Util.uri.refTo(sz.base, uri);
         else if (sz.flags.indexOf('u') >= 0)
             uri = backslashUify(uri);
         else uri = hexify(uri);
@@ -470,9 +475,9 @@ function backslashUify(str) {
     for (var i=0; i<str.length; i++) {
         k = str.charCodeAt(i);
         if (k>65535)
-            res += '\U' + ('00000000'+n.toString(16)).slice(-8); // convert to upper?
+            res += '\\U' + ('00000000'+n.toString(16)).slice(-8); // convert to upper?
         else if (k>126) 
-            res += '\u' + ('0000'+n.toString(16)).slice(-4);
+            res += '\\u' + ('0000'+n.toString(16)).slice(-4);
         else
             res += str[i];
     }
@@ -570,7 +575,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     }
 
     function relURI(term) {
-        return escapeForXML((sz.base) ? Util.uri.refTo(this.base, term.uri) : term.uri);
+        return escapeForXML((sz.base) ? $rdf.Util.uri.refTo(this.base, term.uri) : term.uri);
     }
 
     // The tree for a subject
@@ -606,6 +611,17 @@ __Serializer.prototype.statementsToXML = function(sts) {
             var st = sts[i];
             switch (st.object.termType) {
                 case 'bnode':
+                    /*if(!sz.incoming[st.object]) {
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
+                        propertyXMLTree(st.object, subjects),
+                        '</'+qname(st.predicate)+'>']);
+                    } else {
+                        results = results.concat(['<'+qname(st.predicate)+' rdf:resource="#'+st.object.toNT().slice(2)+'">',
+                        propertyXMLTree(st.object, subjects),
+                        '</'+qname(st.predicate)+'>']);
+
+                    }
+                    break;*/
                     results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
                         propertyXMLTree(st.object, subjects),
                         '</'+qname(st.predicate)+'>']);
@@ -616,7 +632,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
                     break;
                 case 'literal':
                     results = results.concat(['<'+qname(st.predicate)
-                        + (st.object.dt ? ' rdf:datatype="'+escapeForXML(st.object.dt.uri)+'"' : '') 
+                        + (st.object.datatype ? ' rdf:datatype="'+escapeForXML(st.object.datatype.uri)+'"' : '') 
                         + (st.object.lang ? ' xml:lang="'+st.object.lang+'"' : '') 
                         + '>' + escapeForXML(st.object.value)
                         + '</'+qname(st.predicate)+'>']);
@@ -668,8 +684,9 @@ __Serializer.prototype.statementsToXML = function(sts) {
     var str = '<rdf:RDF';
     if (sz.defaultNamespace)
       str += ' xmlns="'+escapeForXML(sz.defaultNamespace)+'"';
-    for (var ns in namespaceCounts)
+    for (var ns in namespaceCounts) {
         str += '\n xmlns:' + sz.prefixes[ns] + '="'+escapeForXML(ns)+'"';
+    }
     str += '>';
 
     var tree2 = [str, tree, '</rdf:RDF>'];  //@@ namespace declrations
@@ -678,3 +695,6 @@ __Serializer.prototype.statementsToXML = function(sts) {
 
 } // End @@ body
 
+return Serializer;
+
+}();

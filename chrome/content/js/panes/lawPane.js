@@ -4,15 +4,12 @@
 * 
 */
 LawPane = {};
-LawPane.icon = Icon.src.icon_LawPane;
+LawPane.icon = tabulator.Icon.src.icon_LawPane;
 LawPane.name = 'Law';
-
-var policy = '';
-var log = '';
 
 LawPane.label = function(subject) {
 
-    stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
+    stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
 
         for (var j=0; j<stsJust.length; j++){
             if (stsJust[j].subject.termType == 'formula'){
@@ -34,6 +31,19 @@ LawPane.label = function(subject) {
    return null;
 };
 
+//TODO handle more than one log file and policy file
+//This is a very clumsy method and should be changed
+//this returns the log and the policy file URIs from the full URI
+//Fails when there are multiple logs and policy files
+extractFileURIs = function(fullURI){
+	var uris = [];
+	var logPos = fullURI.search(/logFile=/);
+	var rulPos = fullURI.search(/&rulesFile=/);
+	uris.push(fullURI.substring(logPos+8, rulPos));
+	uris.push(fullURI.substring(rulPos+11, fullURI.length));
+	return uris; 			
+}
+
 LawPane.display = function(myDocument,obj){
 	var div = myDocument.createElement("div");
 	for (var i=0; i<obj.elements.length; i++) {
@@ -41,7 +51,7 @@ LawPane.display = function(myDocument,obj){
             case 'symbol':
                 var anchor = myDocument.createElement('a')
                 anchor.setAttribute('href', obj.elements[i].uri)
-                anchor.appendChild(myDocument.createTextNode(label(obj.elements[i])));
+                anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj.elements[i])));
                 div.appendChild(anchor);
                 
             case 'literal':
@@ -53,17 +63,9 @@ LawPane.display = function(myDocument,obj){
 }
 	
 LawPane.render = function(subject, myDocument) {
-
-    var log = "";
- 
-    //We are making the assumption that the rulesFile is the last parameter in the URI query string
-    var re = /\s*(?:[&?]by=)|(?:[&?]to=)|(?:[&?]data=)|(?:[&?]policy=)|(?:[&?]rulesFile=)\s*/;
-    var fullURI = window.content.location.toString();
-    var tokens = fullURI.split(re);
-    var policy = unescape(tokens[tokens.length-1]); //Could be incorrect if there are more than 1 policy file
-    
-	var collapse_icon = Icon.src.icon_collapse;
-	var expand_icon = Icon.src.icon_expand;
+    var kb = tabulator.kb
+	var collapse_icon = tabulator.Icon.src.icon_collapse;
+	var expand_icon = tabulator.Icon.src.icon_expand;
 
 	LawPane.render.show = function(evt){
 		evt["target"].src = collapse_icon;
@@ -85,11 +87,17 @@ LawPane.render = function(subject, myDocument) {
     var div = myDocument.createElement("div");
    div.setAttribute('class', 'instancePane');
     
-    /* @@ this was giving the @prefix bug in the lawyer pane
+    //Extract the log and policy files
+    var uris = extractFileURIs(myDocument.location.toString()); 
+    var policy = uris.pop();
+    var log = uris.pop();
+    
     //Retrieve policy file to get the description of the policy
-    if (policy != ""){
-        var xmlhttp = Util.XMLHTTPFactory();
-        xmlhttp.onreadystatechange = function () {
+	var xmlhttp = tabulator.rdf.Util.XMLHTTPFactory();
+	xmlhttp.onreadystatechange=state_Change;
+	xmlhttp.open("GET",policy,true);
+	xmlhttp.send(null);
+	function state_Change(){
             if (xmlhttp.readyState==4 && xmlhttp.status==200){
                 var policy_text = xmlhttp.responseText.toString();
                 var start_index = policy_text.search("rdfs:comment");
@@ -102,11 +110,8 @@ LawPane.render = function(subject, myDocument) {
                 if (myDocument.getElementById('td_2') != null)
                     myDocument.getElementById('td_2').innerHTML = rule_statement;
             }
-        };
-        xmlhttp.open("GET",policy,true);
-        xmlhttp.send(null);
     }
-    */
+		
 		
     var stsJust = kb.statementsMatching(undefined, ap_just, undefined, subject); 
  	
@@ -122,26 +127,17 @@ LawPane.render = function(subject, myDocument) {
 	    if (stsDesc[j].subject.termType == 'formula' && stsDesc[j].object.termType == 'collection'){
 	    	    stsAnalysisAll.push(LawPane.display(myDocument, stsDesc[j].object));
 		}
-	    if (stsDesc[j].subject.termType == 'bnode' && stsDesc[j].object.termType == 'collection'){
-	    	    stsDescAll.push(LawPane.display(myDocument, stsDesc[j].object));
 		}
-	}
-    
 	var stsFound = [];
-    compliant_str = "";
     for (var j=0; j<stsJust.length; j++){
 	    if (stsJust[j].subject.termType == 'formula'){
 	        var sts = stsJust[j].subject.statements;
 	        for (var k=0; k<sts.length; k++){
-	            if (sts[k].predicate.toString() == ap_compliant.toString()){
-                    compliant_str = "Compliant ";
+	            if (sts[k].predicate.toString() == ap_compliant.toString() ||
+	            	sts[k].predicate.toString() == ap_nonCompliant.toString()){
 	                stsFound.push(sts[k]);
                 }
-                else if (sts[k].predicate.toString() == ap_nonCompliant.toString()){
-                    compliant_str = "Non-compliant ";
-	                stsFound.push(sts[k]);
 	            } 
-	        }
 	        if (stsJust[j].object.termType == 'bnode'){
             	var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
             	var ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name
@@ -152,18 +148,7 @@ LawPane.render = function(subject, myDocument) {
 	            	if (currentRule[0].object.termType == 'collection'){
 			    	    stsDescAll.push(LawPane.display(myDocument, currentRule[0].object));
 	                }
-                    
-                    //This is a hack to fix the rule appearing instead of the bnode containing the description
-                    correctCurrentRule = "";
-                    for (var i=0; i< currentRule.length; i++){
-                        if (currentRule[i].subject.termType == 'bnode'){
-                            correctCurrentRule = currentRule[i].subject;
-                            break;
-                        }
-                    }
-                   
-                    var currentRuleSts = kb.statementsMatching(correctCurrentRule, ap_just, undefined, subject);
-
+	        		var currentRuleSts = kb.statementsMatching(currentRule[0].subject, ap_just, undefined, subject);
 				   	var nextRuleSts = kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
 				   	ruleNameFound = nextRuleSts[0].object;
 			   		terminatingCondition = kb.statementsMatching(ruleNameFound, ap_just, ap_prem, subject);
@@ -201,15 +186,15 @@ LawPane.render = function(subject, myDocument) {
     td_issue_dummy.appendChild(myDocument.createTextNode(' '));
     tr_issue_data.appendChild(td_issue_dummy);
 	var td_issue_data = myDocument.createElement('td');
-    td_issue_data.appendChild(myDocument.createTextNode('Whether the '));
+    td_issue_data.appendChild(myDocument.createTextNode('Whether the transactions in '));
     var a_log = myDocument.createElement('a')
     a_log.setAttribute('href', log)
-    a_log.appendChild(myDocument.createTextNode("transactions "));
+    a_log.appendChild(myDocument.createTextNode("log"));
     td_issue_data.appendChild(a_log);
     td_issue_data.appendChild(myDocument.createTextNode('comply with '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
-    a_policy.appendChild(myDocument.createTextNode(label(stsFound[0].object)));
+    a_policy.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[0].object)));
     td_issue_data.appendChild(a_policy);
     tr_issue_data.appendChild(td_issue_data);
     table_issue_data.appendChild(tr_issue_data);
@@ -253,12 +238,11 @@ LawPane.render = function(subject, myDocument) {
     tr_rule_data.appendChild(td_rule_dummy);
 	var td_rule_data = myDocument.createElement('td');
     td_rule_data.id = 'td_2';
-    td_rule_data.appendChild(myDocument.createTextNode('Rule(s) is/are specified in the '));
+    td_rule_data.appendChild(myDocument.createTextNode('Rule(s) is/are specified in '));
     var a_policy = myDocument.createElement('a')
     a_policy.setAttribute('href', policy)
-    a_policy.appendChild(myDocument.createTextNode("policy file"));
+    a_policy.appendChild(myDocument.createTextNode(policy));
     td_rule_data.appendChild(a_policy);
-    td_rule_data.appendChild(myDocument.createTextNode("."));
     tr_rule_data.appendChild(td_rule_data);
 	table_rule_data.appendChild(tr_rule_data);
     div_rule_data.appendChild(table_rule_data);
@@ -266,11 +250,9 @@ LawPane.render = function(subject, myDocument) {
     
     //End of Rules
 
-
-
     //Create the Facts div
 
-/*    var div_facts = myDocument.createElement("div");
+    var div_facts = myDocument.createElement("div");
     div_facts.setAttribute('id', 'div_facts');
     div_facts.setAttribute('class', 'title');
     var table_facts = myDocument.createElement("table");
@@ -305,7 +287,6 @@ LawPane.render = function(subject, myDocument) {
 	var list = myDocument.createElement("ul");
     for (var i=stsDescAll.length-1; i>=0; i--){
     	var li = myDocument.createElement("li");
-        li.setAttribute('class', 'irfac_li');
     	li.appendChild(stsDescAll[i]);
     	list.appendChild(li);
     }
@@ -319,8 +300,6 @@ LawPane.render = function(subject, myDocument) {
 	div.appendChild(div_facts_data);
     
     //End of Facts
-*/
-
 
     //Create the Analysis div
 
@@ -332,7 +311,7 @@ LawPane.render = function(subject, myDocument) {
     var td_img_analysis = myDocument.createElement("td");
     var img_analysis = myDocument.createElement("img");
     img_analysis.setAttribute("src", collapse_icon);
-    img_analysis.id = "img_3";
+    img_analysis.id = "img_4";
     img_analysis.addEventListener('click',LawPane.render.hide, false);
     td_img_analysis.appendChild(img_analysis);
     tr_analysis.appendChild(td_img_analysis);
@@ -343,43 +322,6 @@ LawPane.render = function(subject, myDocument) {
 	div_analysis.appendChild(table_analysis);
 	div.appendChild(div_analysis);
 	
-    var div_facts_data = myDocument.createElement("div");
-    div_facts_data.id = 'td_3';
-    div_facts_data.setAttribute('class', 'irfac');
-//   div_facts_data.setAttribute('style','display:none');
-    var table_facts_data = myDocument.createElement("table");
-	var tr_facts_data = myDocument.createElement('tr');
-    var td_facts_dummy = myDocument.createElement('td');
-    td_facts_dummy.appendChild(myDocument.createTextNode(' '));
-    tr_facts_data.appendChild(td_facts_dummy);
-    var td_facts_data = myDocument.createElement('td');
-	var table_inner = myDocument.createElement("table");
-    var tr = myDocument.createElement("tr");
-    var td = myDocument.createElement("td");
-	var list = myDocument.createElement("ul");
-    for (var i=stsDescAll.length-1; i>=0; i--){
-    	var li = myDocument.createElement("li");
-        li.setAttribute('class', 'irfac_li');
-    	li.appendChild(stsDescAll[i]);
-    	list.appendChild(li);
-    }
-    for (var i=0; i<stsAnalysisAll.length; i++){
-    	var li = myDocument.createElement("li");
-        li.setAttribute('class', 'irfac_li');
-    	li.appendChild(stsAnalysisAll[i]);
-    	list.appendChild(li);
-    }
-
-    td.appendChild(list);
-    tr.appendChild(td);       
-	table_inner.appendChild(tr);
-	td_facts_data.appendChild(table_inner);
-	tr_facts_data.appendChild(td_facts_data);
-    table_facts_data.appendChild(tr_facts_data);
-    div_facts_data.appendChild(table_facts_data);
-	div.appendChild(div_facts_data);
-  
-  /*
 	var div_analysis_data = myDocument.createElement("div");
     div_analysis_data.id = 'td_4';
    	div_analysis_data.setAttribute('class', 'irfac');
@@ -387,8 +329,7 @@ LawPane.render = function(subject, myDocument) {
     var table_analysis_data = myDocument.createElement("table");
 	var tr_analysis_data = myDocument.createElement('tr');
     var td_analysis_dummy = myDocument.createElement('td');
-    td_analysis_dummy.appendChild(myDocument.createTextNode(' '+compliant_str+' '));
-    td_analysis_dummy.appendChild(myDocument.createElement('br'));
+    td_analysis_dummy.appendChild(myDocument.createTextNode(' '));
     tr_analysis_data.appendChild(td_analysis_dummy);
     var td_analysis_data = myDocument.createElement('td');
     var table_inner = myDocument.createElement("table");
@@ -406,8 +347,6 @@ LawPane.render = function(subject, myDocument) {
     div.appendChild(div_analysis_data);
 
     //End of Analysis
-    
-    */
     
     //Create the Conclusion div
     
@@ -450,7 +389,7 @@ LawPane.render = function(subject, myDocument) {
             var td_s = myDocument.createElement("td");
             var a_s = myDocument.createElement('a')
             a_s.setAttribute('href', stsFound[i].subject.uri)
-            a_s.appendChild(myDocument.createTextNode(label(stsFound[i].subject)));
+            a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[i].subject)));
             td_s.appendChild(a_s);
             tr.appendChild(td_s);
 
@@ -459,13 +398,13 @@ LawPane.render = function(subject, myDocument) {
             tr.appendChild(td_is);
 
             var td_p = myDocument.createElement("td");
-            td_p.appendChild(myDocument.createTextNode(label(stsFound[i].predicate)));
+            td_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[i].predicate)));
 			tr.appendChild(td_p);
 			
             var td_o = myDocument.createElement("td");
             var a_o = myDocument.createElement('a')
             a_o.setAttribute('href', stsFound[i].object.uri)
-            a_o.appendChild(myDocument.createTextNode(label(stsFound[i].object)));
+            a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound[i].object)));
             td_o.appendChild(a_o);
             tr.appendChild(td_o);
             table_inner.appendChild(tr);

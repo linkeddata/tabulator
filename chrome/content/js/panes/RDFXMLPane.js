@@ -8,11 +8,13 @@
     */
 tabulator.panes.register ({
 
-    icon: Icon.src.icon_RDFXMLPane,
+    icon: tabulator.Icon.src.icon_RDFXMLPane,
     
     name: 'RDFXML',
     
     label: function(subject) {
+        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
+
         var n = tabulator.kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
@@ -34,7 +36,7 @@ tabulator.panes.register ({
             kludge.add(s.subject, s.predicate, s.object);
         }
         */
-        var sz = Serializer();
+        var sz = tabulator.rdf.Serializer(kb);
         sz.suggestNamespaces(kb.namespaces);
         sz.setBase(subject.uri);
         var str = sz.statementsToXML(sts)

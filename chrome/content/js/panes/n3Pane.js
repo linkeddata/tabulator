@@ -7,11 +7,12 @@
 
 tabulator.panes.register ({
 
-    icon: Icon.src.icon_n3Pane,
+    icon: tabulator.Icon.src.icon_n3Pane,
     
     name: 'n3',
     
     label: function(subject) {
+        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
         var n = tabulator.kb.statementsMatching(
             undefined, undefined, undefined, subject).length;
         if (n == 0) return null;
@@ -19,6 +20,7 @@ tabulator.panes.register ({
     },
 
     render: function(subject, myDocument) {
+        var kb = tabulator.kb;
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'n3Pane');
         // Because of smushing etc, this will not be a copy of the original source
@@ -32,7 +34,7 @@ tabulator.panes.register ({
             kludge.add(s.subject, s.predicate, s.object);
         }
         */
-        var sz = Serializer();
+        var sz = tabulator.rdf.Serializer(kb);
         sz.suggestNamespaces(kb.namespaces);
         sz.setBase(subject.uri);
         var str = sz.statementsToN3(sts)

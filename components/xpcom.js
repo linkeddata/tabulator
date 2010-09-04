@@ -65,8 +65,8 @@ function Tabulator() {
     var LanguagePreference = pref_intl.getComplexValue("accept_languages", Components.interfaces.nsIPrefLocalizedString).data;
 
     this.lb = new Labeler(this.kb,LanguagePreference);
-    this.kb.predicateCallback = tabulator.Util.AJAR_handleNewTerm;
-    this.kb.typeCallback = tabulator.Util.AJAR_handleNewTerm;
+    this.kb.predicateCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
+    this.kb.typeCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
 }//Tabulator
 
 

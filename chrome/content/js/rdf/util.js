@@ -205,6 +205,8 @@ $rdf.Util = {
         return (str.slice(0, pref.length) == pref);
     },
 
+    // This is the callback from the kb to the fetcher which is used to 
+    // load ontologies of the data we load.
     'AJAR_handleNewTerm': function(kb, p, requestedBy) {
         var sf = null;
         if( typeof kb.sf != 'undefined' ) {

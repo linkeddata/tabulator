@@ -6,6 +6,7 @@
 //ToDo: sorted array for optimization, I need a binary search tree... - Kenny
 function Labeler(kb, LanguagePreference){
     this.kb=kb;
+    // dump("\nLabeler: INITIALIZED  (...,"+LanguagePreference+")\n");
     var ns = tabulator.ns;
     var trim = function(str){return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');};
     this.isLanguagePreferred = 10; //how much you like your language
@@ -77,10 +78,12 @@ Labeler.prototype={
     // - set a callback so we are notified of new labels
     //
     addLabelProperty: function(property, priority){
+        // dump('    addLabelProperty: New label property:'+(property? ''+property:"@@")+'\n')
         if (tabulator.kb.propertyActions[property.hashString()]) return true; //this is already loaded
         if (priority) this.priority[property.hashString()] = priority;
         var lb = this;
         tabulator.kb.newPropertyAction(property, function (formula, subject, predicate, object,why){
+            // dump('    addLabelProperty: New label:'+ (object? ''+object:"@@")+'\n')
             var hashP = predicate.hashString();
             var priority = lb.priority[hashP];
             if (priority == undefined) priority = 3;
@@ -96,7 +99,7 @@ Labeler.prototype={
             else if (label>lb.entry[entryVol-1][0].value.toLowerCase()) 
                 lb.entry.push([object,subject,priority])
             else{
-                for (var i=0;i<entryVol;i++){ //O(n) bad!
+                for (var i=0;i<entryVol;i++){ //O(n) bad!     Put in in order
                     if (label<lb.entry[i][0].value.toLowerCase()){
                         //lb.entry.splice(i+1,0,[label+">"+lb.entry[i][0].toLowerCase(),subject,priority]);
                         lb.entry.splice(i,0,[object,subject,priority]);
@@ -126,7 +129,7 @@ Labeler.prototype={
         var match=false;
         var results=[];
         var types=[];
-        for (var i=0;i<(limited||this.entry.length);i++){
+        for (var i=0;i<(limited||this.entry.length);i++){   // What? limi
             var matchingString=this.entry[i][0].value.toLowerCase();
             if (!match && tabulator.rdf.Util.string_startswith(matchingString,label)) 
                 match=true;
@@ -140,9 +143,14 @@ Labeler.prototype={
         }
         return [results,types];
     },
+    
+    // This is (only) used for when the user has asked to add data and now
+    // needs to sepcify a predicate.
+    // It is called with (usertext, undefined, 'predicate')
+    //
     searchAdv: function(searchString,context,filterType){ //extends search
         var filter = (filterType=='predicate')?function(item)
-        {return tabulator.kb.predicateIndex[item.hashString()]||
+        {return tabulator.kb.predicateIndex[item.hashString()]|| // used as a predicate?
                 //should use transitive closure, but this takes too long
                 tabulator.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.rdf('Property'))||
                 tabulator.kb.whether(item,tabulator.ns.rdf('type'),tabulator.ns.owl('DatatypeProperty'))||
@@ -166,6 +174,8 @@ Labeler.prototype={
                 }
             }
         }
+        // dump('    labeler.searchAdv: this.entry.length = '+this.entry.length+
+        //                    ', results.length='+results.length+'\n'); // TBL
         return [results,types];
     },
     debug:""

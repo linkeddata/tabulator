@@ -827,16 +827,18 @@ function UserInput(outline){
 
     //This is where pubsPane.js comes in, with: tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e);
     getAutoCompleteHandler: function getAutoCompleteHandler(mode){
-        qp("\n\n***** In getAutoCompleteHandler ******");
+        qp("\n\n***** In getAutoCompleteHandler ****** mode = "+mode);
         if (mode=='PredicateAutoComplete')
             mode = 'predicate';
 
-        else if (mode!="JournalTAC") //hq
+        else if (mode!="JournalTAC") //hq  // why? -tim  - not 'predicate' below
             mode = 'all'; 
 
-        var InputBox=this.lastModified||outline.getSelection()[0].firstChild;
-        if (mode=="JournalTAC"){//hq
+        var InputBox;
+        if (mode=="JournalTAC"){//hq  // Better to pass in InputBox as a param
             InputBox = myDocument.getElementById("inpid_journal_title");
+        } else {
+            InputBox = this.lastModified||outline.getSelection()[0].firstChild;
         }
         qp("InputBox="+InputBox);//hq
         qp("InputBox.value="+InputBox.value);//hq
@@ -1417,6 +1419,8 @@ function UserInput(outline){
                             outline.UserInput.clearMenu();}
                     }
                 }
+                break;
+            default: throw "userinput: unexpected mode";
         }    
         //hq: this line makes the menu clickable   
         table.addEventListener('click',selectItem,false);

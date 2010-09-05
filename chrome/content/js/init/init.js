@@ -55,7 +55,6 @@ loader.loadSubScript("chrome://tabulator/content/js/init/prefs.js");
 //Now, load tabulator sourceWidget code.. the sources.js became rdf/web.js
 loader.loadSubScript("chrome://tabulator/content/js/tab/util-nonlib.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/sources-ext.js");
-//loader.loadSubScript("chrome://tabulator/content/js/tab/sources.js");
 
 //And, finally, all non-pane UI code.
 loader.loadSubScript("chrome://tabulator/content/js/tab/labeler.js");
@@ -221,3 +220,5 @@ observerService.addObserver(httpRequestObserver,
     "http-on-examine-merged-response", false);
 observerService.addObserver(httpRequestObserver,
     "http-on-examine-cached-response", false);
+    
+// Ends

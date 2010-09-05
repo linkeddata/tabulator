@@ -30,6 +30,10 @@ The default pane take little precedence, except the internals pane
 is lower as normally it is just for diagnostics.
 Also lower could be optional tools for various classes.
 */
+/* First we load the utils so panes can add them (while deevloping) as well as use them */
+loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
+
+
 loader.loadSubScript("chrome://tabulator/content/js/panes/issue/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
@@ -65,7 +69,6 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/photoImportPane.js");
 */
 // The internals pane is always the last as it is the least user-friendly
 loader.loadSubScript("chrome://tabulator/content/js/panes/internalPane.js");
-loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 
 // ENDS
 

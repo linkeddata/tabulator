@@ -557,9 +557,7 @@ tabulator.panes.register( {
         //          Render a Tracker instance
         
         } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
-            // var p = myDocument.createElement("p");
-            // div.appendChild(p);
-            // p.innerHTML = "This is a Tracker";
+            var tracker = subject;
             
             var states = kb.any(subject, WF('issueClass'));
             if (!states) throw 'This tracker has no issueClass';
@@ -573,7 +571,7 @@ tabulator.panes.register( {
             classLabel = tabulator.Util.label(states);
             h.appendChild(myDocument.createTextNode(classLabel+" list")); // Use class label @@I18n
 
-
+/*          // Crude list of issues
             var listDiv = myDocument.createElement('div');
             div.appendChild(listDiv);
             tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function() {
@@ -582,7 +580,7 @@ tabulator.panes.register( {
                     function(pred, inverse) {return true;});            
             });
             
-
+*/
             // New Issue button
             var b = myDocument.createElement("button");
             b.setAttribute("type", "button");
@@ -593,7 +591,25 @@ tabulator.panes.register( {
                     div.appendChild(newIssueForm(myDocument, kb, subject));
                 }, false);
             
-            // @@ TBD
+            // Table of issues
+            var query = new $rdf.Query(tabulator.Util.label(subject));
+            var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+            var vars =  ['issue', 'state', 'created'];
+            for (var i=0; i<cats.length; i++) { vars.push('_cat_'+i) };
+            var v = {};
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
+            query.pat.add(v['issue'], WF('tracker'), tracker);
+            //query.pat.add(v['issue'], ns.dc('title'), v['title']);
+            query.pat.add(v['issue'], ns.dct('created'), v['created']);
+            query.pat.add(v['issue'], ns.rdf('type'), v['state']);
+            query.pat.add(v['state'], ns.rdfs('subClassOf'), states);
+            for (var i=0; i<cats.length; i++) {
+                query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
+                query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
+            }
+            //complain('Query pattern is:\n'+query.pat);
+            var tableDiv = paneUtils.renderTableViewPane(myDocument, {'query': query} );
+            div.appendChild(tableDiv);
 
         } // end of Tracker instance
         

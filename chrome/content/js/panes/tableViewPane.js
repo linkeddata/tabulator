@@ -6,13 +6,19 @@
 // (In principle it could operate with neither gievn but typically
 // there would be too much data.)
 // When the tableClass is ot given, it looks for common  classes in the data,
-// and gibves the user the option.
+// and gives the user the option.
 //
 // 2008 Written, Ilaria Liccardi
 
-function renderTableViewPane(doc, tableClass, sourceDocument) {
+paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
+    var sourceDoc = options.sourceDoc;
+    var tableClass = options.tableClass;
+    var givenQuery = options.query;
+
     var RDFS_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
+    var ns = tabulator.ns;
+    var kb = tabulator.kb;
 
     // Predicates that are never made into columns:
 
@@ -42,10 +48,11 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         "http://www.w3.org/2001/XMLSchema#unsignedByte": true
     };
 
-    // Predicates that indicate an image:
+    // Classes that indicate an image:
 
     var IMAGE_TYPES = {
-        "http://xmlns.com/foaf/0.1/Image": true,
+        'http://xmlns.com/foaf/0.1/Image': true,
+        'http://purl.org/dc/terms/Image': true
     };
 
     // Name of the column used as a "key" value to look up the row.
@@ -73,22 +80,24 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
     resultDiv.appendChild(generateControlBar()); // sets typeSelectorDiv
 
-    var s = calculateTable(); allType = s[0]; types = s[1];
-    if (!tableClass) typeSelectorDiv.appendChild(
-        generateTypeSelector(allType, types));
-
     var tableDiv = doc.createElement("div");
     resultDiv.appendChild(tableDiv);
 
 
-    // A specifically asked-for type
-    if (false) {
+    // A specifically asked-for query
+    if (givenQuery) {
     
-        buildFilteredTable(new SubjectType(tableClass));
+        var table = renderTableForQuery(givenQuery);
+        //lastQuery = givenQuery;
+        tableDiv.appendChild(table);
         
     } else {
 
         // Find the most common type and select it by default
+
+        var s = calculateTable(); allType = s[0]; types = s[1];
+        if (!tableClass) typeSelectorDiv.appendChild(
+            generateTypeSelector(allType, types));
 
         var mostCommonType = getMostCommonType(types);
 
@@ -193,7 +202,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
             // TODO: autogenerate nicer names for variables
             // variables have to be unambiguous
 
-            var variable = tabulator.kb.variable("_col" + i);
+            var variable = kb.variable("_col" + i);
 
             query.vars.push(variable);
             selectedColumns[i].setVariable(variable);
@@ -206,7 +215,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         var queryType = type.type;
 
         if (queryType == null) {
-            queryType = tabulator.kb.variable("_any");
+            queryType = kb.variable("_any");
         }
 
         // _row a type
@@ -223,7 +232,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         for (var i=0; i<selectedColumns.length; ++i) {
             var column = selectedColumns[i];
 
-            var formula = tabulator.kb.formula();
+            var formula = kb.formula();
 
             formula.add(rowVar,
                         column.predicate,
@@ -238,7 +247,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
     function generateQuery(type) {
         var query = new tabulator.rdf.Query();
-        var rowVar = tabulator.kb.variable(ROW_KEY_COLUMN);
+        var rowVar = kb.variable(ROW_KEY_COLUMN);
 
         addSelectToQuery(query, type);
         addWhereToQuery(query, rowVar, type);
@@ -350,7 +359,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         }
 
         this.getLabel = function() {
-            return tabulator.Util.label(this.type);
+            return tabulator.Util.label(this.type, true);
         }
 
         this.addUse = function() {
@@ -377,6 +386,10 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         // a number selector.
 
         this.possiblyNumber = true;
+        
+        // We accumulate classes which things in the column must be a member of
+        
+        this.constraints = [];
 
         // Check values as they are read.  If we don't know what the
         // range is, we might be able to infer that it is a literal
@@ -422,7 +435,10 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
         this.getLabel = function() {
             if (this.predicate != null) {
-                return tabulator.Util.label(this.predicate);
+                if (this.predicate.sameTerm(ns.rdf('type')) && this.superClass) {
+                    return tabulator.Util.label(this.superClass, true)
+                }
+                return tabulator.Util.label(this.predicate, true);
             } else if (this.variable != null) {
                 return this.variable.toString();
             } else {
@@ -430,13 +446,23 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
             }
         }
 
-        this.setPredicate = function(predicate) {
-            this.predicate = predicate;
-            this.range = tabulator.kb.any(predicate, tabulator.ns.rdfs("range"));
+        this.setPredicate = function(predicate, inverse, other) {
+            if (inverse) {  // variable is in the subject pos
+                this.inverse = predicate;
+                this.constraints = this.constraints.concat(kb.each(predicate, tabulator.ns.rdfs("domain")));
+                if (predicate.sameTerm(ns.rdfs('subClassOf')) && (other.termType == 'symbol')) {
+                    this.superClass = other;
+                    this.alternatives = kb.each(undefined, ns.rdfs('subClassOf'), other)
+                }
+            } else {  // variable is the object
+                this.predicate = predicate;
+                this.constraints = this.constraints.concat(kb.each(predicate, tabulator.ns.rdfs("range")));
+            }
         }
 
-        this.getRange = function() {
-            return this.range;
+
+        this.getConstraints = function() {
+            return this.constraints;
         }
 
         this.filterFunction = function() {
@@ -448,7 +474,9 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         }
 
         this.isImageColumn = function() {
-            return this.range != null && this.range.uri in IMAGE_TYPES;
+            for (i=0; i<this.constraints.length; i++)
+                if (this.constraints[i].uri in IMAGE_TYPES) return true;
+            return false;
         }
     }
 
@@ -616,7 +644,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         // Get a list of statements that match:  ? rdfs:type ?
         // From this we can get a list of subjects and types.
 
-        var subjectList = tabulator.kb.statementsMatching(undefined,
+        var subjectList = kb.statementsMatching(undefined,
                                                 tabulator.ns.rdf('type'),
                                                 tableClass, // can be undefined OR
                                                 sourceDocument); // can be undefined
@@ -656,7 +684,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
         // Get a list of properties of this subject.
 
-        var properties = tabulator.kb.statementsMatching(subject,
+        var properties = kb.statementsMatching(subject,
                                                undefined,
                                                undefined,
                                                sourceDocument);
@@ -784,7 +812,6 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
             var th = doc.createElement("th");
             var column = columns[i];
 
-            //alert(column.getRange());
             // dump(" label for columns "+i+" is <"+column.getLabel()+">\n");
             th.appendChild(doc.createTextNode(column.getLabel()));
 
@@ -975,32 +1002,22 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         return result;
     }
 
-    // Generates a dropdown selector for enumeration types.
 
-    function renderEnumSelector(rows, columns, column, statements) {
+    // Generates a dropdown selector for enumeration types include
+    //
+    //  @param rows,
+    //  @param columns, the mapping of predictae URIs to columns
+    //  @param column,
+    //  @param list,    List of alternative terms
+    //
+    function renderEnumSelector(rows, columns, column, list) {
         var result = doc.createElement("div");
-
         var dropdown = doc.createElement("select");
-
         dropdown.appendChild(optionElement("(All)", "-1"));
-
-        // "statements" is a list of matching statements for:
-        //
-        // range owl:oneOf <collection>
-        //
-        // The collection then gives a list of valid values for this
-        // enumeration.
-        //
-        // Just assume that the first matching statement is the list.
-
-        var list = statements[0].object.elements;
-
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
-
-            dropdown.appendChild(optionElement(tabulator.Util.label(value), i));
+            dropdown.appendChild(optionElement(tabulator.Util.label(value, true), i));
         }
-
         result.appendChild(dropdown);
 
         // Select based on an enum value.
@@ -1089,6 +1106,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
     function fallbackRenderTableSelector(rows, columns, column) {
 
+
         // Have all values matched as numbers?
 
         if (column.checkedAnyValues && column.possiblyNumber) {
@@ -1101,12 +1119,6 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
             return renderLiteralSelector(rows, columns, column);
         }
 
-        // Show the range, for debugging.
-        if (false) {
-            var range = column.getRange();
-            if (range != null)
-                return doc.createTextNode(range.uri);
-        }
         return null;
     }
 
@@ -1114,44 +1126,44 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
     function renderTableSelector(rows, columns, column) {
 
-        // What type of data is in this column?  Check the range for 
+        // What type of data is in this column?  Check the constraints for 
         // this predicate.
 
-        var range = column.getRange();
+        // If this is a class which can be one of various sibling classes?
+        if (column.superClass && (column.alternatives.length > 0)) 
+                return renderEnumSelector(rows, columns, column, column.alternatives);
 
-        if (range == null) {
-            return fallbackRenderTableSelector(rows, columns, column);
+        var cs = column.getConstraints();
+        dump('column.constraints ='+cs+', .length '+cs.length+', type= '+typeof cs+'\n')
+        //var cons = cs.map(function(c){return tabulator.Util.label(c)}).join(', ');
+        dump(' column '+column.variable+'  Pred: '+column.predicate+'  superClass: '+column.superClass+'\n');
+        for (i=0; i<cs.length; i++) {
+            range = cs[i];
+
+            // Is this a number type?
+            // Alternatively, is this an rdf:Literal type where all of 
+            // the values match as numbers?
+
+            if (column.checkedAnyValues && column.possiblyNumber 
+             || range.uri in XSD_NUMBER_TYPES) {
+                return renderNumberSelector(rows, columns, column);
+            }
+
+            // rdf:Literal?  Assume a string at this point
+
+            if (range.uri == RDFS_LITERAL) {
+                return renderLiteralSelector(rows, columns, column);
+            }
+
+            // Is this an enumeration type?
+
+            // Also  ToDo: @@@ Handle membership of classes whcih are disjointUnions
+            
+            var choices = kb.each(range,tabulator.ns.owl("oneOf"));
+            if (choices.length > 0)
+                return renderEnumSelector(rows, columns, column, choices.elements);
+            
         }
-
-        // Is this a number type?
-        // Alternatively, is this an rdf:Literal type where all of 
-        // the values match as numbers?
-
-        if (column.checkedAnyValues && column.possiblyNumber 
-         || range.uri in XSD_NUMBER_TYPES) {
-            return renderNumberSelector(rows, columns, column);
-        }
-
-        // rdf:Literal?
-
-        if (range.uri == RDFS_LITERAL) {
-            return renderLiteralSelector(rows, columns, column);
-        }
-
-        // Is this an enumeration type?
-
-        // Also  ToDo: @@@ Handle membership of classes whcih are disjointUnions
-        
-        var matches = tabulator.kb.statementsMatching(range,
-                                            tabulator.ns.owl("oneOf"),
-                                            undefined,
-                                            undefined);
-
-        if (matches.length > 0) {
- //           alert(range.uri + " owl:oneOf ? " + " -> " + matches.length);
-            return renderEnumSelector(rows, columns, column, matches);
-        }
-
         return fallbackRenderTableSelector(rows, columns, column);
     }
 
@@ -1376,7 +1388,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
         query.running = true;
 
-        tabulator.kb.query(query, function(values) {
+        kb.query(query, function(values) {
 
             if (!query.running) {
                 return;
@@ -1423,35 +1435,41 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
         })
     }
 
-    // Given a formula object, process all statements and infer predicates
-    // for columns.
-/*
+    // Given the formula object which is the query pattern,
+    // deduce from where the variable occurs constraints on
+    // what values it can take.
+
     function inferColumnsFromFormula(columns, formula) {
         tabulator.log.debug(">> processing formula");
 
         for (var i=0; i<formula.statements.length; ++i) {
             var statement = formula.statements[i];
-            tabulator.log.debug("processing statement " + i);
+            //tabulator.log.debug("processing statement " + i);
 
             // Does it match this?:
             // <something> <predicate> ?var
             // If so, we can use the predicate as the predicate for the
             // column used for the specified variable.
 
-            if (statement.predicate != undefined
-             && statement.predicate.termType == "symbol"
-             && statement.object != undefined
+            if (statement.predicate.termType == "symbol"
              && statement.object.termType == "variable") {
                 var variable = statement.object.toString();
-
                 if (variable in columns) {
                     var column = columns[variable];
-                    column.setPredicate(statement.predicate);
+                    column.setPredicate(statement.predicate, false, statement.subject);
+                }
+            }
+            if (statement.predicate.termType == "symbol"
+             && statement.subject.termType == "variable") {
+                var variable = statement.subject.toString();
+                if (variable in columns) {
+                    var column = columns[variable];
+                    column.setPredicate(statement.predicate, true, statement.object);
                 }
             }
         }
 
-        // Recurse to optional sub-formulas:
+        // Apply to OPTIONAL formulas:
 
         for (var i=0; i<formula.optional.length; ++i) {
             tabulator.log.debug("recurse to optional subformula " + i);
@@ -1630,7 +1648,7 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
 
         var rowsLookup = {};
 
-        tabulator.kb.query(query, function(values) {
+        kb.query(query, function(values) {
 
             var rowKey = values["?_row"];
 
@@ -1659,16 +1677,16 @@ function renderTableViewPane(doc, tableClass, sourceDocument) {
     }
 */
     // Generate a table from a query.
-    // TODO: for the time being, this is still tied to rendering based on
-    // a fixed type (rather than general queries).  This needs to be 
-    // reworked to work based on generic queries, and infer the predicates
-    // for columns by examining the query.
 
     function renderTableForQuery(query, type) {
 
-        // TODO: infer columns from query, to allow generic queries
+        // infer columns from query, to allow generic queries
 
-        var columns = type.getColumns();
+        if (!givenQuery) {
+            columns = type.getColumns();
+        } else {
+            columns = inferColumns(query);
+        }
 
         // Start with an empty list of rows; this will be populated
         // by the query.
@@ -1748,7 +1766,7 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        div.appendChild(renderTableViewPane(myDocument, subject, undefined));
+        div.appendChild(paneUtils.renderTableViewPane(myDocument, {'tableClass': subject}));
         return div;
     }
 });
@@ -1798,7 +1816,7 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        div.appendChild(renderTableViewPane(myDocument, undefined, subject));
+        div.appendChild(paneUtils.renderTableViewPane(myDocument, {'sourceDoc': subject}));
         return div;
     }
 });

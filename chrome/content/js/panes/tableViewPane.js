@@ -11,7 +11,7 @@
 // 2008 Written, Ilaria Liccardi
 
 paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
-    var sourceDoc = options.sourceDoc;
+    var sourceDocument = options.sourceDocument;
     var tableClass = options.tableClass;
     var givenQuery = options.query;
 
@@ -1636,6 +1636,7 @@ tabulator.panes.register({
 tabulator.panes.register({
     icon: iconPrefix + "icons/table2.png",   
     @@@@@@  Needs to be different from other icons used eg above as eems to be used as to fire up the pane
+    @@@@@@ Needs to be lower prio for a document than the data content pane
 
     name: "tableOfDocument",
 
@@ -1674,7 +1675,7 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        div.appendChild(paneUtils.renderTableViewPane(myDocument, {'sourceDoc': subject}));
+        div.appendChild(paneUtils.renderTableViewPane(myDocument, {'sourceDocument': subject}));
         return div;
     }
 });

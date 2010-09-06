@@ -397,8 +397,8 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         // be able to determine if the literal values are actually
         // numbers (using regexps).
 
-        this.checkValue = function(value) {
-            var termType = value.termType;
+        this.checkValue = function(term) {
+            var termType = term.termType;
             if (this.possiblyLiteral && termType != "literal" && termType != "symbol") {
                 this.possiblyNumber = false;
                 this.possiblyLiteral = false;
@@ -406,7 +406,7 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
                 if (termType != "literal") {
                     this.possiblyNumber = false;
                 } else {
-                    var literalValue = value.value;
+                    var literalValue = term.value;
 
                     if (!literalValue.match(/^\-?\d+(\.\d*)?$/)) {
                         this.possiblyNumber = false;
@@ -449,7 +449,8 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         this.setPredicate = function(predicate, inverse, other) {
             if (inverse) {  // variable is in the subject pos
                 this.inverse = predicate;
-                this.constraints = this.constraints.concat(kb.each(predicate, tabulator.ns.rdfs("domain")));
+                this.constraints = this.constraints.concat(
+                            kb.each(predicate, tabulator.ns.rdfs("domain")));
                 if (predicate.sameTerm(ns.rdfs('subClassOf')) && (other.termType == 'symbol')) {
                     this.superClass = other;
                     this.alternatives = kb.each(undefined, ns.rdfs('subClassOf'), other)
@@ -911,6 +912,8 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
             }
         }
     }
+    
+    ///////////////////////////////////// Literal column handling
 
     // Sort by literal value
 
@@ -1002,6 +1005,7 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         return result;
     }
 
+    /////////////////////////////////////  Enumeration
 
     // Generates a dropdown selector for enumeration types include
     //
@@ -1011,9 +1015,13 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
     //  @param list,    List of alternative terms
     //
     function renderEnumSelector(rows, columns, column, list) {
+        var doMultiple = true;
         var result = doc.createElement("div");
         var dropdown = doc.createElement("select");
-        dropdown.appendChild(optionElement("(All)", "-1"));
+        
+        if (doMultiple) dropdown.setAttribute('multiple', 'true');
+        else dropdown.appendChild(optionElement("(All)", "-1"));
+        
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
             dropdown.appendChild(optionElement(tabulator.Util.label(value, true), i));
@@ -1026,22 +1034,41 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
 
         column.filterFunction = function(colValue) {
             return searchValue == null ||
-                   (colValue != null && searchValue.uri == colValue.uri);
+                   (colValue != null && searchValue[colValue.uri]);
         }
 
         dropdown.addEventListener("click", function() {
-            var index = new Number(dropdown.value);
-            if (index < 0) {
-                searchValue = null;
+            if (doMultiple) {
+                searchValue = {}; 
+                var opt = dropdown.options;
+                dump('dropdown '+dropdown+', options a '+typeof dropdown.options +'\n') // +' array? '+ dropdown.options instanceof Array
+                for (var i=0; i< opt.length; i++) {
+                    var option = opt[i];
+                    var index = new Number(option.value);
+                    if (opt[i].selected) searchValue[list[index].uri] = true;
+                }
+//                dropdown.options.map(function(option){
+//                    if (option.selected) searchValue[list[0+option.value].uri] = true})
+                dump('searchValue:'); for (var x in searchValue) dump(' '+x+': '+searchValue[x]+'; '); // @@TBL
+                dump('\n'); // @@TBL
+                
             } else {
-                searchValue = list[index];
+                if (index < 0) { // All
+                    searchValue = null;
+                } else {
+                    var index = new Number(dropdown.value);
+                    searchValue = {}
+                    searchValue[list[index].uri] = true;
+                }
             }
             applyColumnFilters(rows, columns);
-        }, false);
+        }, true);
 
         return result;
     }
 
+    ////////////////////////////////////// Numeric
+    //
     // Selector for XSD number types.
 
     function renderNumberSelector(rows, columns, column) {
@@ -1102,6 +1129,9 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         return result;
     }
 
+    ///////////////////////////////////////////////////////////////////
+    
+    
     // Fallback attempts at generating a selector if other attempts fail.
 
     function fallbackRenderTableSelector(rows, columns, column) {
@@ -1505,178 +1535,6 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
     }
 
     // Generate a table from a query.
-/*
-    function renderTableForQuery(query, type) {
-
-        // Columns list.  If we are rendering a table for a specific type,
-        // we can use the list of columns for that type.  Otherwise, if
-        // this is a generic query, we must build a list of column
-        // structures from the query, and infer information about the
-        // columns (predicates, etc) from the query statements.
-
-        var columns;
-
-        if (type != null) {
-            columns = type.getColumns();
-        } else {
-            columns = inferColumns(query);
-        }
-
-        // Start with an empty list of rows; this will be populated
-        // by the query.
-
-        var rows = [];
-
-        // Create table element and header.
-
-        var table = doc.createElement("table");
-
-        table.appendChild(renderTableHeader(columns, type));
-        table.appendChild(renderTableSelectors(rows, columns));
-
-        // Run query.  Note that this is perform asynchronously; the
-        // query runs in the background and this call does not block.
-
-        runQuery(query, rows, columns, table);
-
-        return table;
-    }
-
-    // ========= Start of new query-based table rendering code =========
-
-    // Check if a value is already stored in the list of values for
-    // a cell (the query can sometimes find it multiple times)
-
-    function valueInList(value, list) {
-        var key = null;
-
-        if (value.termType == "literal") {
-            key = "value";
-        } else if (value.termType == "symbol") {
-            key = "uri";
-        } else {
-            return list.indexOf(value) >= 0;
-        }
-
-        // Check the list and compare keys:
-
-        var i;
-
-        for (i=0; i<list.length; ++i) {
-            if (list[i].termType == value.termType
-             && list[i][key] == value[key]) {
-                return true;
-            }
-        }
-
-        // Not found?
-
-        return false;
-    }
-
-    // Update a row, add new values, and regenerate the HTML element
-    // containing the values.
-
-    function updateRow(row, columns, values, columnLookup) {
-
-        var key;
-        var needUpdate = false;
-
-        for (key in values) {
-            var value = values[key];
-
-            // Which column is this for?
-
-            var column = columnLookup[key];
-            if (column == null) {
-                // ?
-                continue;
-            }
-
-            var columnUri = column.predicate.uri;
-
-            // If this key is not already in the row, create a new entry
-            // for it:
-
-            if (!(columnUri in row)) {
-                row[columnUri] = [];
-            }
-
-            // Possibly add this new value to the list, but don't
-            // add it if we have already added it:
-
-            if (!valueInList(value, row[columnUri])) {
-                row[columnUri].push(value);
-                needUpdate = true;
-            }
-        }
-
-        // Regenerate the HTML row?
-
-        if (needUpdate) {
-            clearElement(row._htmlRow);
-            renderTableRowInto(row._htmlRow, row, columns);
-        }
-    }
-
-    // Generate lookup table mapping query variable names to
-    // column objects.
-
-    function generateColumnLookup(columns) {
-        var result = {};
-        var i;
-
-        for (i=0; i<columns.length; ++i) {
-            var column = columns[i];
-            result[column.getVariable()] = column;
-        }
-
-        return result;
-    }
-
-    // Run a query and generate the table.
-    // Returns an array of rows.  This will be empty when the function
-    // first returns (as the query is performed in the background)
-
-    function runQuery(query, rows, columns, table) {
-
-        var columnLookup = generateColumnLookup(columns);
-
-        // All rows found so far, indexed by _row value.
-        // TODO: remove dependency on _row, as it cannot be relied on
-        // for generic queries.
-
-        var rowsLookup = {};
-
-        kb.query(query, function(values) {
-
-            var rowKey = values["?_row"];
-
-            if (rowKey == null) throw ("rowKey is null!");
-
-            var rowKeyUri = rowKey.uri;
-
-            // Do we have a row for this already?  If not, create a new row.
-            var row;
-
-            if (rowKeyUri in rowsLookup) {
-                row = rowsLookup[rowKeyUri];
-            } else {
-                var tr = doc.createElement("tr");
-                table.appendChild(tr);
-                row = { _htmlRow: tr,
-                        _subject: rowKey };
-                rows.push(row);
-                rowsLookup[rowKeyUri] = row;
-            }
-
-            // Add the new values to this row.
-            
-            updateRow(row, columns, values, columnLookup);
-        })
-    }
-*/
-    // Generate a table from a query.
 
     function renderTableForQuery(query, type) {
 
@@ -1765,7 +1623,7 @@ tabulator.panes.register({
 
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
-        div.setAttribute('class', 'n3Pane'); // needs a proper class
+        div.setAttribute('class', 'tablePane');
         div.appendChild(paneUtils.renderTableViewPane(myDocument, {'tableClass': subject}));
         return div;
     }
@@ -1776,8 +1634,8 @@ tabulator.panes.register({
 /*
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table.png",   
-    @@@@@@  Needs to be different from other icons used eg above as eems to be used asto fire up the pane
+    icon: iconPrefix + "icons/table2.png",   
+    @@@@@@  Needs to be different from other icons used eg above as eems to be used as to fire up the pane
 
     name: "tableOfDocument",
 

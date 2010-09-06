@@ -946,8 +946,8 @@ Styles for tableViewPane
 */
 
 .tableViewPane table th {
-    background-color: black;
-    color: white;
+    background-color: #eee;
+    color: black;
 }
 
 .tableViewPane table th a {
@@ -987,6 +987,17 @@ Styles for tableViewPane
         width: 590px;
         height: 250px;
 }
+
+/* These should be the same as with hthe dataContentPane */
+.tableViewPane a         { color: #3B5998; text-decoration: none; font-weight: bold}
+.tableViewPane a:link    { color: #3B5998; text-decoration: none; font-weight: bold}
+.tableViewPane a:visited { color: #3B5998; text-decoration: none; font-weight: bold}
+.tableViewPane a:hover   { color: #3B5998; text-decoration: underline; font-weight: bold}
+.tableViewPane a:active  { color: #888; text-decoration: none; }
+
+.tableViewPane tr: {border-color: #444; padding-left 0.3em; padding-right: 0.3em  } 
+
+
 
 /*The 'display explanation' feature*/
 .inquiry {

@@ -30,12 +30,18 @@ tabulator.panes.dataContentPane = {
     statementsAsTables: function statementsAsTables(sts, myDocument) {
         var rep = myDocument.createElement('table');
         var sz = tabulator.rdf.Serializer( tabulator.kb );
-        var pair = sz.rootSubjects(sts);
-        var roots = pair[0];
-        var subjects = pair[1];
+        var res = sz.rootSubjects(sts);
+        var roots = res.roots;
+        var subjects = res.subjects;
+        var loopBreakers = res.loopBreakers;
+        for (var x in loopBreakers) dump('\tdataContentPane: loopbreaker:'+x+'\n')
         var outline = tabulator.outline;
+        var doneBnodes = {}; // For preventing looping
+        var referencedBnodes = {}; // Bnodes which need to be named alas
         
         var clickOnLink = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             var target = tabulator.Util.getTarget(e);
             dump('click on link:' +target+'\n')
             var uri = target.getAttribute('href');
@@ -43,8 +49,6 @@ tabulator.panes.dataContentPane = {
             // subject term, expand, pane, solo, referrer
             dump('click on link to:' +uri+'\n')
             tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
-            e.preventDefault();
-            e.stopPropagation();
         }
 
         // The property tree for a single subject or anonymos node
@@ -69,7 +73,7 @@ tabulator.panes.dataContentPane = {
                     td_p.setAttribute('class', 'pred');
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', st.predicate.uri)
-                    anchor.addEventListener('click', clickOnLink, false);
+                    anchor.addEventListener('click', clickOnLink, true);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.predicateLabelForXML(st.predicate)));
                     td_p.appendChild(anchor);
                     tr.appendChild(td_p);
@@ -92,7 +96,7 @@ tabulator.panes.dataContentPane = {
                 case 'symbol':
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', obj.uri)
-                    anchor.addEventListener('click', clickOnLink, false);
+                    anchor.addEventListener('click', clickOnLink, true);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
                     return anchor;
                     
@@ -100,7 +104,17 @@ tabulator.panes.dataContentPane = {
                     return myDocument.createTextNode(obj.value); // placeholder
                     
                 case 'bnode':
+                    if (obj.toNT() in doneBnodes) { // Break infinite recursion
+                        referencedBnodes[(obj.toNT())] = true;
+                        var anchor = myDocument.createElement('a')
+                        anchor.setAttribute('href', '#'+obj.toNT().slice(2))
+                        anchor.setAttribute('class','bnodeRef')
+                        anchor.textContent = '*'+obj.toNT().slice(3);
+                        return anchor; 
+                    }
+                    doneBnodes[obj.toNT()] = true; // Flag to prevent infinite recusruion in propertyTree
                     var newTable =  propertyTree(obj);
+                    doneBnodes[obj.toNT()] = newTable; // Track where we mentioned it first
                     if (tabulator.Util.ancestor(newTable, 'TABLE') && tabulator.Util.ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
                         newTable.style.backgroundColor='#eee'
                     } else {
@@ -145,6 +159,15 @@ tabulator.panes.dataContentPane = {
             }
             td_tree.appendChild(propertyTree(root));
         }
+        for (var bNT in referencedBnodes) { // Add number to refer to
+            var table = doneBnodes[bNT];
+            var tr = myDocument.createElement('tr');
+            var anchor = myDocument.createElement('a')
+            anchor.setAttribute('id', bNT.slice(2))
+            anchor.setAttribute('class','bnodeDef')
+            anchor.textContent = bNT.slice(3)+')';
+            table.insertBefore(anchor, table.firstChild);
+        }
         return rep;
     }, // statementsAsTables
 
@@ -165,7 +188,7 @@ tabulator.panes.dataContentPane = {
         } else {  // An outline mode openable rendering .. might be better
             var sz = tabulator.rdf.Serializer( tabulator.kb );
             var res = sz.rootSubjects(sts);
-            var roots = res[0]
+            var roots = res.roots;
             var p  = {};
             // p.icon = dataContentPane.icon
             p.render = function(s2) {

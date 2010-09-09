@@ -206,6 +206,8 @@ $rdf.Util = {
         return (str.slice(0, pref.length) == pref);
     },
 
+    // This is the callback from the kb to the fetcher which is used to 
+    // load ontologies of the data we load.
     'AJAR_handleNewTerm': function(kb, p, requestedBy) {
         var sf = null;
         if( typeof kb.sf != 'undefined' ) {
@@ -4655,11 +4657,19 @@ $rdf.Formula.prototype.isVar = 0;
 $rdf.Collection.prototype.isVar = 0;
 
 
-// Run a query
-// @param 
-// @param fetcher - USed??returns > 0 if it has requested a URI to be looked up
-// fetcher() waits for all the requested URIs to come in
-
+/**
+ * This function will match a pattern to the current kb
+ * 
+ * The callback function is called whenever a match is found
+ * When fetcher is supplied this will be called to satisfy any resource requests 
+ * currently not in the kb. The fetcher function needs to be defined manualy and
+ * should call $rdf.Util.AJAR_handleNewTerm to process the requested resource. 
+ * 
+ * @param	myQuery,	a knowledgebase containing a pattern to use as query
+ * @param	callback, 	whenever the pattern in myQuery is met this is called with 
+ * 						the binding as parameter
+ * @param	fetcher,	whenever a resource needs to be loaded this gets called
+ */
 $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher) {
     var kb = this;
     dump("Query:"+myQuery.pat+", fetcher="+fetcher+"\n");
@@ -6113,6 +6123,9 @@ $rdf.jsonParser = function() {
 ** Bug: can't serialize  http://data.semanticweb.org/person/abraham-bernstein/rdf 
 ** in XML (from mhausenblas)
 */
+
+// @@@ Check the whole toStr thing tosee whetehr it still makes sense -- tbl
+// 
 $rdf.Serializer = function() {
 
 var __Serializer = function( store ){
@@ -6209,14 +6222,6 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
 }
 
 
-/* The scan is to find out which nodes will have to be the roots of trees
-** in the serialized form. This will be any symbols, and any bnodes
-** which hve more or less than one incoming arc, and any bnodes which have
-** one incoming arc but it is an uninterrupted loop of such nodes back to itself.
-** This should be kept linear time with repect to the number of statements.
-** Note it does not use any indexing.
-*/
-
 
 // Todo:
 //  - Sort the statements by subject, pred, object
@@ -6226,21 +6231,102 @@ __Serializer.prototype.rootSubjects = function(sts) {
     var incoming = [];
     var subjects = [];
     var sz = this;
+    var allBnodes = {};
+
+/* This scan is to find out which nodes will have to be the roots of trees
+** in the serialized form. This will be any symbols, and any bnodes
+** which hve more or less than one incoming arc, and any bnodes which have
+** one incoming arc but it is an uninterrupted loop of such nodes back to itself.
+** This should be kept linear time with repect to the number of statements.
+** Note it does not use any indexing of the store.
+*/
+
 
     for (var i = 0; i<sts.length; i++) {
+        var st = sts[i];
+        [ st.subject, st.predicate, st.object].map(function(y){
+            if (y.termType =='bnode'){allBnodes[y.toNT()] = true}});
         var x = sts[i].object;
         if (!incoming[x]) incoming[x] = [];
-        incoming[x].push(sts[i].subject) // List of things which will cause this to be printed
-        var ss =  subjects[sz.toStr(sts[i].subject)]; // Statements with this as subject
+        incoming[x].push(st.subject) // List of things which will cause this to be printed
+        var ss =  subjects[sz.toStr(st.subject)]; // Statements with this as subject
         if (!ss) ss = [];
-        ss.push(sts[i]);
-        subjects[this.toStr(sts[i].subject)] = ss; // Make hash. @@ too slow for formula?
+        ss.push(st);
+        subjects[this.toStr(st.subject)] = ss; // Make hash. @@ too slow for formula?
         //$rdf.log.debug(' sz potential subject: '+sts[i].subject)
     }
 
     var roots = [];
-    var loopBreakers = [];
+    for (var xNT in subjects) {
+        var x = sz.fromStr(xNT);
+        if ((x.termType != 'bnode') || !incoming[x] || (incoming[x].length != 1)){
+            roots.push(x);
+            //$rdf.log.debug(' sz actual subject -: ' + x)
+            continue;
+        }
+    }
+    this.incoming = incoming; // Keep for serializing
     
+//////////// New bit for CONNECTED bnode loops:
+
+// This scans to see whether the serialization is gpoing to lead to a bnode loop
+// and at the same time accumulates a list of all bnodes mentioned.
+/*
+    var doneBnodesNT = {};
+    function dummyPropertyTree(subject, subjects) {
+        var sts = subjects[sz.toStr(subject)]; // relevant statements
+        for (var i=0; i<sts.length; i++) {
+            dummyObjectTree(sts[i].object, subjects);
+        }
+        results=results.concat([objects]);
+        return results;
+    }
+
+    // Convert a set of statements into a nested tree of lists and strings
+    function dummyObjectTree(obj, subjects) {
+        if (obj.termType == 'bnode' && subjects[sz.toStr(obj)]) // and there are statements
+            if (doneBnodesNT[obj.toNT()]) { // Ah-ha! a loop
+                throw "Serializer: Should be no loops "+obj;
+            }
+            doneBnodesNT[obj.toNT()] = true;
+            return  dummyPropertyTree(obj, subjects);
+        return dummyTermToN3(obj, subjects);
+    }
+    
+    // Scan for bnodes nested inside lists too
+    function dummyTermToN3(expr, subjects) {
+        if (expr.termType == 'collection') {
+            for (i=0; i<expr.elements.length; i++) {
+                dummyObjectTree(expr.elements[i], subjects);
+            }
+        return;             
+        }
+    }
+
+    // The tree for a subject
+    function dummySubjectTree(subject, subjects) {
+        if (subject.termType == 'bnode' && !sz.incoming[subject])
+            return objectTree(subject, subjects); // Anonymous bnode subject
+        dummyTermToN3(subject, subjects);
+        dummyPropertyTree(subject, subjects);
+    }
+    
+    // Now do the scan using existing roots
+    for (var i=0; i<roots.length; i++) {
+        var root = roots[i];
+        dummySubjectTree(root, subjects);
+    }
+*/    
+//// @@@ Missing: add in new roots for anythig not acccounted for
+
+    // Now we check for any bndoes which have not been covered.
+    // Such bnodes must be in isolated cyclic structures.
+    // They ecah have incoming of 1.
+
+/////////////////////////////////////////////    
+
+    var loopBreakers = {};
+   /* 
     function accountedFor(x, start) {
         if (x.termType != 'bnode') return true; // will be subject
         var zz = incoming[x];
@@ -6249,22 +6335,8 @@ __Serializer.prototype.rootSubjects = function(sts) {
         if (zz[0] == start) return false;
         return accountedFor(zz[0], start);
     }
-    for (var xNT in subjects) {
-        var x = sz.fromStr(xNT);
-        if ((x.termType != 'bnode') || !incoming[x] || (incoming[x].length != 1)){
-            roots.push(x);
-            //$rdf.log.debug(' sz actual subject -: ' + x)
-            continue;
-        }
-        if (accountedFor(incoming[x][0]), x) {
-            continue;
-        }
-        roots.push(x);
-        //$rdf.log.debug(' sz potential subject *: '+sts[i].subject)
-        loopBreakers[x] = 1;
-    }
-    this.incoming = incoming; // Keep for serializing
-    return [roots, subjects];
+    */
+    return {'roots':roots, 'subjects':subjects, 'loopBreakers': loopBreakers};
 }
 
 ////////////////////////////////////////////////////////
@@ -6368,10 +6440,13 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     function statementListToTree(statements) {
         // print('Statement tree for '+statements.length);
         var res = [];
-        var pair = sz.rootSubjects(statements);
-        var roots = pair[0];
+        var stats = sz.rootSubjects(statements);
+        var roots = stats.roots;
+        this.rootsHash = {}; // Hashtable copy for speed
+        for (var i = 0; i< roots.length; i++) this.rootsHash[roots[i].toNT()] = true;
         // print('Roots: '+roots)
-        var subjects = pair[1];
+        var subjects = stats.subjects;
+        var loopBreakers = stats.loopBreakers;
         var results = []
         for (var i=0; i<roots.length; i++) {
             var root = roots[i];
@@ -6420,7 +6495,9 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 
     // Convert a set of statements into a nested tree of lists and strings
     function objectTree(obj, subjects) {
-        if (obj.termType == 'bnode' && subjects[sz.toStr(obj)] /* && !sz.incoming[st.object]*/) // and there are statements
+        if (obj.termType == 'bnode' &&
+                subjects[sz.toStr(obj)] && // and there are statements
+                this.rootsHash[obj.toNT()] == undefined) // and not a root
             return  ['['].concat(propertyTree(obj, subjects)).concat([']']);
         return termToN3(obj, subjects);
     }
@@ -6664,10 +6741,11 @@ __Serializer.prototype.statementsToXML = function(sts) {
 
     function statementListToXMLTree(statements) {
         sz.suggestPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
-        var res = [];
-        var pair = sz.rootSubjects(statements);
-        var roots = pair[0];
-        var subjects = pair[1];
+        var stats = sz.rootSubjects(statements);
+        var roots = stats.roots;
+        // print('Roots: '+roots)
+        var subjects = stats.subjects;
+        var loopBreakers = stats.loopBreakers;
         results = []
         for (var i=0; i<roots.length; i++) {
             root = roots[i];
@@ -6713,6 +6791,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     function propertyXMLTree(subject, subjects) {
         var results = []
         var sts = subjects[sz.toStr(subject)]; // relevant statements
+        if (sts == undefined) return results;  // No relevant statements
         sts.sort();
         for (var i=0; i<sts.length; i++) {
             var st = sts[i];
@@ -6805,6 +6884,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
 return Serializer;
 
 }();
+
 /************************************************************
  * 
  * Project: rdflib, part of Tabulator project

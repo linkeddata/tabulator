@@ -58,7 +58,7 @@ tabulator.panes.dataContentPane = {
             var lastPred = null;
             var sts = subjects[sz.toStr(subject)]; // relevant statements
             if (!sts) { // No statements in tree
-                rep.appendChild(myDocument.createTextNode('@@: '+subject));
+                rep.appendChild(myDocument.createTextNode('...')); // just empty bnode as object
                 return rep;
             }
             sts.sort();

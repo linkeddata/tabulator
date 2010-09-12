@@ -117,11 +117,19 @@ $rdf.Formula.prototype.isVar = 0;
 $rdf.Collection.prototype.isVar = 0;
 
 
-// Run a query
-// @param 
-// @param fetcher - USed??returns > 0 if it has requested a URI to be looked up
-// fetcher() waits for all the requested URIs to come in
-
+/**
+ * This function will match a pattern to the current kb
+ * 
+ * The callback function is called whenever a match is found
+ * When fetcher is supplied this will be called to satisfy any resource requests 
+ * currently not in the kb. The fetcher function needs to be defined manualy and
+ * should call $rdf.Util.AJAR_handleNewTerm to process the requested resource. 
+ * 
+ * @param	myQuery,	a knowledgebase containing a pattern to use as query
+ * @param	callback, 	whenever the pattern in myQuery is met this is called with 
+ * 						the binding as parameter
+ * @param	fetcher,	whenever a resource needs to be loaded this gets called
+ */
 $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher) {
     var kb = this;
     dump("Query:"+myQuery.pat+", fetcher="+fetcher+"\n");

@@ -578,7 +578,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         // dump("requestURI: dereferencing " + docuri)
         //this.fireCallbacks('request',args)
         if (!force && typeof(this.requested[docuri]) != "undefined") {
-            dump("We already have requested " + docuri + ". Skipping.\n")
+            // dump("We already have requested " + docuri + ". Skipping.\n")
             return null
         }
 

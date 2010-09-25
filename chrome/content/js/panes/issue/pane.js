@@ -81,7 +81,6 @@ tabulator.panes.register( {
         // Callback takes (boolean ok, string errorBody)
         
         var makeSelectForCategory = function(subject, category, storeDoc, callback) {
-            var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             var types = kb.findTypeURIs(subject);
             var du = kb.any(category, OWL('disjointUnionOf'));
             var subs;
@@ -92,41 +91,60 @@ tabulator.panes.register( {
             } else {
                 subs = du.elements            
             }
+            
+            return makeSelectForOptions(subject, ns.rdf('type'), subs,
+                            multiple, "--classify--", storeDoc, callback);
+        }
+
+        // Make SELECT element to select options
+        //
+        // @param subject - a term, the subject of the statement(s) being edited.
+        // @param predicate - a term, the predicate of the statement(s) being edited
+        // @param possible - a list of terms, the possible value the object can take
+        // @param multiple - Boolean - Whether more than one at a time is allowed 
+        // @param nullLabel - a string to be displayed as the
+        //                        option for none selected (for non multiple)
+        // @param storeDoc - The web document being edited 
+        // @param callback - takes (boolean ok, string errorBody)
+        
+        var makeSelectForOptions = function(subject, predicate,
+                        possible, multiple, nullLabel, storeDoc, callback) {
+            var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             var n = 0; var uris ={}; // Count them
-            for (var i=0; i < subs.length; i++) {
-                var sub = subs[i];
+            for (var i=0; i < possible.length; i++) {
+                var sub = possible[i];
                 if (sub.uri in uris) continue;
                 uris[sub.uri] = true; n++;
             } // uris is now the set of possible options
+            if (n==0) throw "Can't do selector with no subclasses "+subject
+            
+            var actual = {};
+            kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
             
             var onChange = function(e) {
-                // select.setAttribute('class', 'pending');
-                select.disabled = true; // until data written back
-                if (true) {
-                    // throw "Multiple selections not implemented @@";
-                    var ds = [], is = [];
-                    for (var i =0; i< select.options.length; i++) {
-                        var opt = select.options[i];
-                        if (!opt.AJAR_uri) continue; // a prompt
-                        // dump('   option AJAR_uri='+opt.AJAR_uri+', selected='+opt.selected+'\n')
-                        if (opt.selected && !(opt.AJAR_uri in types)) {
-                            is.push(new $rdf.Statement(subject,
-                                ns.rdf('type'), kb.sym(opt.AJAR_uri),storeDoc ));
-                        }
-                        if (!opt.selected && opt.AJAR_uri in types) {
-                            ds.push(new $rdf.Statement(subject,
-                                ns.rdf('type'), kb.sym(opt.AJAR_uri),storeDoc ));
-                        }                        
+                select.disabled = true; // until data written back - gives user feedback too
+                var ds = [], is = [];
+                for (var i =0; i< select.options.length; i++) {
+                    var opt = select.options[i];
+                    if (!opt.AJAR_uri) continue; // a prompt
+                    if (opt.selected && !(opt.AJAR_uri in actual)) {
+                        is.push(new $rdf.Statement(subject,
+                            predicate, kb.sym(opt.AJAR_uri),storeDoc ));
                     }
-                    sparqlService.update(ds, is,
-                        function(uri, ok, body) {
-                            types = kb.findTypeURIs(subject); // Review our list of types
-                            if (ok) select.disabled = false; // data written back
-                            if (callback) callback(ok, body);
-                        });
+                    if (!opt.selected && opt.AJAR_uri in actual) {
+                        ds.push(new $rdf.Statement(subject,
+                            predicate, kb.sym(opt.AJAR_uri),storeDoc ));
+                    }                        
                 }
+                sparqlService.update(ds, is,
+                    function(uri, ok, body) {
+                        actual = {}; // refresh
+                        kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+                        if (ok) select.disabled = false; // data written back
+                        if (callback) callback(ok, body);
+                    });
             }
-            if (n==0) throw "Can't do selector with no subclasses "+subject
+            
             var select = myDocument.createElement('select');
             select.setAttribute('style', 'margin: 0.6em 1.5em;')
             if (multiple) select.setAttribute('multiple', 'true');
@@ -138,7 +156,7 @@ tabulator.panes.register( {
                 var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#background-color'));
                 if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
                 option.AJAR_uri = uri;
-                if (uri in types) {
+                if (uri in actual) {
                     option.setAttribute('selected', 'true')
                     currentURI = uri;
                     //dump("Already in class: "+ uri+"\n")
@@ -147,7 +165,7 @@ tabulator.panes.register( {
             }
             if ((currentURI == undefined) && !multiple) {
                 var prompt = myDocument.createElement('option');
-                prompt.appendChild(myDocument.createTextNode("--classify--"));
+                prompt.appendChild(myDocument.createTextNode(nullLabel));
                 dump("prompt option:" + prompt + "\n")
                 select.insertBefore(prompt, select.firstChild)
                 prompt.selected = true;
@@ -155,7 +173,7 @@ tabulator.panes.register( {
             select.addEventListener('change', onChange, false)
             return select;
         
-        } // makeSelectForCategory
+        } // makeSelectForOptions
         
         //      Description text area
         //
@@ -238,6 +256,8 @@ tabulator.panes.register( {
                         // dump('Tabulator issue pane: saved new issue\n')
                         div.removeChild(form);
                         rerender(div);
+                        tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
+                        // tabulator.outline.GoToURI(issue.uri); // ?? or open in place?
                     }
                 }
                 sparqlService.update([], sts, sendComplete);
@@ -411,6 +431,27 @@ tabulator.panes.register( {
                     }));
                 donePredicate(WF('description'));
 
+
+
+                // Assigned to whom?
+                
+                var assignees = kb.each(subject, ns.wf('assignee'));
+                if (assignees.length > 1) throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
+                var assignee = assignees.length ? assignees[0] : null;
+                // Who could be assigned to this?
+                // Anyone assigned to any issue we know about  @@ should be just for this tracker
+                var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
+                var devs = sts.map(function(st){return st.object});
+                // Anyone who is a developer of any project which uses this tracker
+                var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
+                if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
+                div.appendChild(makeSelectForOptions(
+                    subject, ns.wf('assignee'), devs, false, "--classify--", store,
+                    function(ok,body){
+                        if (ok) setModifiedDate(store, kb, store);
+                        else complain("Failed to description:\n"+body);
+                    }));
+                
 
                 // Sub issues
                 tabulator.outline.appendPropertyTRs(div, plist, false,

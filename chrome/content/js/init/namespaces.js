@@ -1,6 +1,7 @@
 tabulator.ns = {};
 tabulator.ns.dc = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
 tabulator.ns.dct = $rdf.Namespace('http://purl.org/dc/terms/');
+tabulator.ns.doap = $rdf.Namespace('http://usefulinc.com/ns/doap#');
 tabulator.ns.foaf = $rdf.Namespace('http://xmlns.com/foaf/0.1/');
 tabulator.ns.http = $rdf.Namespace('http://www.w3.org/2007/ont/http#');
 tabulator.ns.httph = $rdf.Namespace('http://www.w3.org/2007/ont/httph#');

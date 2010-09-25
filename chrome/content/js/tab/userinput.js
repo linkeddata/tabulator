@@ -842,171 +842,175 @@ function UserInput(outline){
         }
         qp("InputBox="+InputBox);//hq
         qp("InputBox.value="+InputBox.value);//hq
+        
         return function (enterEvent) {
-        qp("ENTER EVENT="+enterEvent);
-        //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
-        //                                           but not [wrapped ...]
-        //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
-        qp("1. outside (if eneterEvent)");
-        var e={};
-        var tdNode=InputBox.parentNode;
-        if (!mode) mode=tdNode.nextSibling?'predicate':'all';
-        e.pageX=tabulator.Util.findPos(tdNode)[0];
-        e.pageY=tabulator.Util.findPos(tdNode)[1]+tdNode.clientHeight;
-        qp("epX="+e.pageX+", epY="+e.pageY);
-        var menu=myDocument.getElementById(outline.UserInput.menuID);
-        function setHighlightItem(item){
-            if (!item) return; //do not make changes
-            if (menu.lastHighlight) menu.lastHighlight.className = '';
-            menu.lastHighlight = item;
-            menu.lastHighlight.className = 'activeItem';
-            outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));            
-        }
-        if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
-            qp("2. in (if enterEvent).  with type ="+typeof enterEvent);
-            var newText=InputBox.value;
+            qp("ENTER EVENT="+enterEvent);
+            //Firefox 2.0.0.6 makes this not working? 'this' becomes [object HTMLInputElement]
+            //                                           but not [wrapped ...]
+            //var InputBox=(typeof enterEvent=='object')?this:this.lastModified;//'this' is the <input> element
+            qp("1. outside (if eneterEvent)");
+            var e={};
+            var tdNode=InputBox.parentNode;
+            if (!mode) mode=tdNode.nextSibling?'predicate':'all';
+            e.pageX=tabulator.Util.findPos(tdNode)[0];
+            e.pageY=tabulator.Util.findPos(tdNode)[1]+tdNode.clientHeight;
+            qp("epX="+e.pageX+", epY="+e.pageY+", mode="+mode);
+            var menu=myDocument.getElementById(outline.UserInput.menuID);
+            function setHighlightItem(item){
+                if (!item) return; //do not make changes
+                if (menu.lastHighlight) menu.lastHighlight.className = '';
+                menu.lastHighlight = item;
+                menu.lastHighlight.className = 'activeItem';
+                outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));            
+            }
+            if (enterEvent){ //either the real event of the pseudo number passed by OutlineKeypressPanel
+                qp("2. in (if enterEvent).  with type = "+typeof enterEvent);
+                var newText=InputBox.value;
 
-            if (typeof enterEvent=='object'){
-                qp("3. in typeof enterEvent is object, will switch to keys, arrows, etc");
-                enterEvent.stopPropagation();
-                if (menu && !menu.lastHighlight) //this ensures the following operation valid 
-                    setHighlightItem(menu.firstChild.firstChild);
-                switch (enterEvent.keyCode){
-                    case 13://enter
-                    case 9://tab
-                        qp("handler: Enter or Tab");
-                        if (!menu) {
-                            outline.UserInput.clearInputAndSave();
-                            return;
-                        }
-                        if (!menu.lastHighlight){
-                            if (mode=="JournalTAC"){
-                                outline.UserInput.clearMenu();
-                                qp("no lastH"); 
-                                return "no lastH";
+                if (typeof enterEvent=='object'){
+                    qp("3. in typeof enterEvent is object, will switch to keys, arrows, etc. keycode = "+enterEvent.keyCode);
+                    enterEvent.stopPropagation();
+                    if (menu && !menu.lastHighlight) //this ensures the following operation valid 
+                        setHighlightItem(menu.firstChild.firstChild);
+                    switch (enterEvent.keyCode){
+                        case 13://enter
+                        case 9://tab
+                            qp("handler: Enter or Tab");
+                            if (!menu) {
+                                outline.UserInput.clearInputAndSave();
+                                return;
                             }
-                            return;
-                        } //warning?
-   
-                        if (menu.lastHighlight.tagName == 'INPUT'){
-                            switch (menu.lastHighlight.value){
-                                case 'New...':
-                                    qp("subcase New");
-                                    outline.UserInput.createNew();
-                                    break;
-                                case 'GiveURI':
-                                    qp("subcase GiveURI");
-                                    outline.UserInput.inputURI();
-                                    break;
-                            }
-                        }else{
-                            // pubsPane Stuff:
-                            if (mode=="JournalTAC"){
-                                qp("movedArrow? "+movedArrow);
-                                // Enter only works if arrows have been moved
-                                if (movedArrow && menu.lastHighlight) {
-                                    // Get the title from the DOM
-                                    //tr, th, div, innerHTML
-                                    var jtitle = menu.lastHighlight.firstChild.firstChild.innerHTML;
-                                    //tr, th, td, innerHTML
-                                    var juri = menu.lastHighlight.firstChild.nextSibling.innerHTML;
-                                    //clearing out the &lt; and &gt; from juri
-                                    juri = juri.slice(4, -4);
-                                    return ["gotdptitle", jtitle, juri];
+                            if (!menu.lastHighlight){
+                                if (mode=="JournalTAC"){
+                                    outline.UserInput.clearMenu();
+                                    qp("no lastH"); 
+                                    return "no lastH";
                                 }
-                                //If doesn't qualify to be autocomplete, return this random string, since pubsPane checks for "gotdptitle" 
-                                return "asGivenTxt";
+                                return;
+                            } //warning?
+       
+                            if (menu.lastHighlight.tagName == 'INPUT'){
+                                switch (menu.lastHighlight.value){
+                                    case 'New...':
+                                        qp("subcase New");
+                                        outline.UserInput.createNew();
+                                        break;
+                                    case 'GiveURI':
+                                        qp("subcase GiveURI");
+                                        outline.UserInput.inputURI();
+                                        break;
+                                }
+                            }else{
+                                // pubsPane Stuff:
+                                if (mode=="JournalTAC"){
+                                    qp("movedArrow? "+movedArrow);
+                                    // Enter only works if arrows have been moved
+                                    if (movedArrow && menu.lastHighlight) {
+                                        // Get the title from the DOM
+                                        //tr, th, div, innerHTML
+                                        var jtitle = menu.lastHighlight.firstChild.firstChild.innerHTML;
+                                        //tr, th, td, innerHTML
+                                        var juri = menu.lastHighlight.firstChild.nextSibling.innerHTML;
+                                        //clearing out the &lt; and &gt; from juri
+                                        juri = juri.slice(4, -4);
+                                        return ["gotdptitle", jtitle, juri];
+                                    }
+                                    //If doesn't qualify to be autocomplete, return this random string, since pubsPane checks for "gotdptitle" 
+                                    return "asGivenTxt";
+                                }
+                                
+                                var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight);
+                                var fillInType=(mode=='predicate')?'predicate':'object';
+                                outline.UserInput.clearMenu();
+                                outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
+                                //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
+                                //    outline.UserInput.clearMenu();
                             }
-                            
-                            var inputTerm=tabulator.Util.getAbout(kb,menu.lastHighlight);
-                            var fillInType=(mode=='predicate')?'predicate':'object';
-                            outline.UserInput.clearMenu();
-                            outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm);
-                            //if (outline.UserInput.fillInRequest(fillInType,InputBox.parentNode,inputTerm))
-                            //    outline.UserInput.clearMenu();
-                        }
-                        qp("outside");
-                        return;
-                    case 38://up
-                        qp("handler: Arrow UP");
-                        movedArrow = true; //hq
-                        if (newText == '' && menu.lastHighlight.tagName == 'TR'
-                                          && !menu.lastHighlight.previousSibling)
-                            setHighlightItem(menu.firstChild.firstChild);
-                        else
-                            setHighlightItem(menu.lastHighlight.previousSibling);
-                        return "I'm a little Arrow Up";
-                    case 40://down
-                        qp("handler: Arrow Down");
-                        movedArrow = true; //hq
-                        if (menu.lastHighlight.tagName == 'INPUT')
-                            setHighlightItem(menu.childNodes[1].firstChild);
-                        else
-                            setHighlightItem(menu.lastHighlight.nextSibling);
-                        return "I'm a little Down Arrow";
-                    case 37://left
-                    case 39://right  
-                        qp("handler: Arrow left, right");
-                        if (menu.lastHighlight.tagName == 'INPUT'){
-                            if (enterEvent.keyCode == 37)
+                            qp("outside");
+                            return;
+                        case 38://up
+                            qp("handler: Arrow UP");
+                            movedArrow = true; //hq
+                            if (newText == '' && menu.lastHighlight.tagName == 'TR'
+                                              && !menu.lastHighlight.previousSibling)
+                                setHighlightItem(menu.firstChild.firstChild);
+                            else
                                 setHighlightItem(menu.lastHighlight.previousSibling);
+                            return "I'm a little Arrow Up";
+                        case 40://down
+                            qp("handler: Arrow Down");
+                            movedArrow = true; //hq
+                            if (menu.lastHighlight.tagName == 'INPUT')
+                                setHighlightItem(menu.childNodes[1].firstChild);
                             else
                                 setHighlightItem(menu.lastHighlight.nextSibling);
-                        }
-                        return
-                    case 8://backspace
-                        qp("handler: Backspace");
-                        newText=newText.slice(0,-1);
-                        break;
-                    case 27://esc to enter literal
-                        qp("handler: Esc");
-                        if (!menu){
-                            outline.UserInput.backOut();
+                            return "I'm a little Down Arrow";
+                        case 37://left
+                        case 39://right  
+                            qp("handler: Arrow left, right");
+                            if (menu.lastHighlight.tagName == 'INPUT'){
+                                if (enterEvent.keyCode == 37)
+                                    setHighlightItem(menu.lastHighlight.previousSibling);
+                                else
+                                    setHighlightItem(menu.lastHighlight.nextSibling);
+                            }
+                            return
+                        case 8://backspace
+                            qp("handler: Backspace");
+                            newText=newText.slice(0,-1);
+                            break;
+                        case 27://esc to enter literal
+                            qp("handler: Esc");
+                            if (!menu){
+                                outline.UserInput.backOut();
+                                return;
+                            }
+                            outline.UserInput.clearMenu();                   
+                            //Not working? I don't know.
+                            //InputBox.removeEventListener('keypress',outline.UserInput.Autocomplete,false);
                             return;
-                        }
-                        outline.UserInput.clearMenu();                   
-                        //Not working? I don't know.
-                        //InputBox.removeEventListener('keypress',outline.UserInput.Autocomplete,false);
-                        return;
-                        break;
-                    default:
-                        qp("handler: Default");
-                        movedArrow = false; //hq
-                        //we need this because it is keypress, seeAlso performAutoCompleteEdit
-                        qp("oldtext="+newText);
-                        newText+=String.fromCharCode(enterEvent.charCode)
-                        qp("charcodent="+enterEvent.charCode);
-                        qp("strcharcod="+String.fromCharCode(enterEvent.charCode));
-                        dump("DEFAULT txtstr="+newText+"\n"); //hq                       
+                            break;
+                        default:
+                            qp("handler: Default");
+                            movedArrow = false; //hq
+                            //we need this because it is keypress, seeAlso performAutoCompleteEdit
+                            qp("oldtext="+newText);
+                            newText+=String.fromCharCode(enterEvent.charCode)
+                            qp("charcodent="+enterEvent.charCode);
+                            qp("strcharcod="+String.fromCharCode(enterEvent.charCode));
+                            dump("DEFAULT txtstr="+newText+"\n"); //hq                       
+                    }
+                } // endif typeof(event) == object
+                
+                //tabulator.log.warn(InputBox.choices.length);
+                //for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
+                if (mode=='all') {
+                    qp("generalAC after switch, newText="+newText+"mode is all");
+                    outline.UserInput.clearMenu();
+                    //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
+                    outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
+                    if (newText.length==0) outline.UserInput.WildCardButtons();
+                                   
+                }else if(mode=='predicate'){
+                    qp("predicateAC after switch, newText="+newText+"mode is predicate");
+                    outline.UserInput.clearMenu();
+                    outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
+                }else if(mode=='JournalTAC'){//hq
+                    qp("JouralTAC after switch, newText="+newText);
+                    outline.UserInput.clearMenu();
+                    // Goto showMenu
+                    outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':newText},"orderisuseless");
                 }
+                var menu = myDocument.getElementById(outline.UserInput.menuID); 
+                if (!menu) {
+                    qp("No menu element.  Do not show menu.");
+                    return;
+                }
+                qp("at end of handler\n^^^^^^^^^^^^^^^^^\n\n");
+                setHighlightItem(menu.firstChild.firstChild);
+                outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));
+                return "nothing to return";
             }
-            //tabulator.log.warn(InputBox.choices.length);
-            //for(i=0;InputBox.choices[i].label<newText;i++); //O(n) ToDo: O(log n)
-            if (mode=='all') {
-                qp("generalAC after switch, nextxt="+nexText+"mode is all");
-                outline.UserInput.clearMenu();
-                //outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'isPredicate':false,'selectedTd':tdNode,'choices':InputBox.choices, 'index':i});
-                outline.UserInput.showMenu(e,'GeneralAutoComplete',undefined,{'inputText':newText,'selectedTd': tdNode});
-                if (newText.length==0) outline.UserInput.WildCardButtons();
-                               
-            }else if(mode=='predicate'){
-                qp("predicateAC after switch, nextxt="+newText+"mode is predicate");
-                outline.UserInput.clearMenu();
-                outline.UserInput.showMenu(e,'PredicateAutoComplete',undefined,{'inputText':newText,'isPredicate':true,'selectedTd':tdNode});
-            }else if(mode=="JournalTAC"){//hq
-                qp("JouralTAC after switch, NEXTXT="+newText);
-                outline.UserInput.clearMenu();
-                // Goto showMenu
-                outline.UserInput.showMenu(e, 'JournalTitleAutoComplete', undefined, {'inputText':newText},"orderisuseless");
-            }
-            var menu=myDocument.getElementById(outline.UserInput.menuID); 
-            if (!menu) return; //no matches
-            
-            qp("at end of handler\n^^^^^^^^^^^^^^^^^\n\n");
-            setHighlightItem(menu.firstChild.firstChild);
-            outline.showURI(tabulator.Util.getAbout(kb,menu.lastHighlight));
-            return "nothing to return";
-        }
         };//end of return function
     },
     

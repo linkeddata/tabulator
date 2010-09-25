@@ -6265,7 +6265,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
             continue;
         }
     }
-    this.incoming = incoming; // Keep for serializing
+    this.incoming = incoming; // Keep for serializing @@ Bug for nested formulas
     
 //////////// New bit for CONNECTED bnode loops:
 
@@ -6316,7 +6316,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     // The tree for a subject
     function dummySubjectTree(subject, subjects, rootsHash) {
         dump('dummySubjectTree('+subject+'...)\n');
-        if (subject.termType == 'bnode' && !sz.incoming[subject])
+        if (subject.termType == 'bnode' && !incoming[subject])
             return dummyObjectTree(subject, subjects, rootsHash, true); // Anonymous bnode subject
         dummyTermToN3(subject, subjects, rootsHash);
         dummyPropertyTree(subject, subjects, rootsHash);
@@ -6360,7 +6360,8 @@ __Serializer.prototype.rootSubjects = function(sts) {
     }
     dump('Done bnode adjustments.\n')
 
-    return {'roots':roots, 'subjects':subjects, 'rootsHash': rootsHash};
+    return {'roots':roots, 'subjects':subjects, 
+                'rootsHash': rootsHash, 'incoming': incoming};
 }
 
 ////////////////////////////////////////////////////////
@@ -6377,7 +6378,6 @@ __Serializer.prototype._notNameChars =
 __Serializer.prototype.statementsToN3 = function(sts) {
     var indent = 4;
     var width = 80;
-    // var subjects = null; // set later
     var sz = this;
 
     var namespaceCounts = []; // which have been used
@@ -6462,38 +6462,33 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     
     
     // Convert a set of statements into a nested tree of lists and strings
-    function statementListToTree(statements, rootsHash) {
+    function statementListToTree(statements) {
         // print('Statement tree for '+statements.length);
         var res = [];
         var stats = sz.rootSubjects(statements);
         var roots = stats.roots;
-        var rootsHash = stats.rootsHash; // Hashtable copy for speed
-        for (var i = 0; i< roots.length; i++) rootsHash[roots[i].toNT()] = true;
-        // print('Roots: '+roots)
-        var subjects = stats.subjects;
-        var loopBreakers = stats.loopBreakers;
         var results = []
         for (var i=0; i<roots.length; i++) {
             var root = roots[i];
-            results.push(subjectTree(root, subjects, rootsHash))
+            results.push(subjectTree(root, stats))
         }
         return results;
     }
     
     // The tree for a subject
-    function subjectTree(subject, subjects, rootsHash) {
-        if (subject.termType == 'bnode' && !sz.incoming[subject])
-            return objectTree(subject, subjects, rootsHash, true).concat(["."]); // Anonymous bnode subject
-        return [ termToN3(subject, subjects, rootsHash) ].concat([propertyTree(subject, subjects, rootsHash)]).concat(["."]);
+    function subjectTree(subject, stats) {
+        if (subject.termType == 'bnode' && !stats.incoming[subject])
+            return objectTree(subject, stats, true).concat(["."]); // Anonymous bnode subject
+        return [ termToN3(subject, stats) ].concat([propertyTree(subject, stats)]).concat(["."]);
     }
     
 
     // The property tree for a single subject or anonymous node
-    function propertyTree(subject, subjects, rootsHash) {
+    function propertyTree(subject, stats) {
         // print('Proprty tree for '+subject);
         var results = []
         var lastPred = null;
-        var sts = subjects[sz.toStr(subject)]; // relevant statements
+        var sts = stats.subjects[sz.toStr(subject)]; // relevant statements
         if (typeof sts == 'undefined') {
             throw('Cant find statements for '+subject);
         }
@@ -6509,31 +6504,31 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                     objects = [];
                 }
                 results.push(predMap[st.predicate.uri] ?
-                            predMap[st.predicate.uri] : termToN3(st.predicate, subjects, rootsHash));
+                            predMap[st.predicate.uri] : termToN3(st.predicate, stats));
             }
             lastPred = st.predicate.uri;
-            objects.push(objectTree(st.object, subjects, rootsHash));
+            objects.push(objectTree(st.object, stats));
         }
         results=results.concat([objects]);
         return results;
     }
 
-    function objectTree(obj, subjects, rootsHash, force) {
+    function objectTree(obj, stats, force) {
         if (obj.termType == 'bnode' &&
-                subjects[sz.toStr(obj)] && // and there are statements
-                (force || rootsHash[obj.toNT()] == undefined)) // and not a root
-            return  ['['].concat(propertyTree(obj, subjects, rootsHash)).concat([']']);
-        return termToN3(obj, subjects, rootsHash);
+                stats.subjects[sz.toStr(obj)] && // and there are statements
+                (force || stats.rootsHash[obj.toNT()] == undefined)) // and not a root
+            return  ['['].concat(propertyTree(obj, stats)).concat([']']);
+        return termToN3(obj, stats);
     }
     
-    function termToN3(expr, subjects, rootsHash) {
+    function termToN3(expr, stats) {
         switch(expr.termType) {
             case 'bnode':
             case 'variable':  return expr.toNT();
             case 'literal':
                 var str = stringToN3(expr.value);
                 if (expr.lang) str+= '@' + expr.lang;
-                if (expr.datatype) str+= '^^' + termToN3(expr.datatype, subjects, rootsHash);
+                if (expr.datatype) str+= '^^' + termToN3(expr.datatype, stats);
                 return str;
             case 'symbol':
                 return symbolToN3(expr.uri);
@@ -6544,7 +6539,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
             case 'collection':
                 var res = ['('];
                 for (i=0; i<expr.elements.length; i++) {
-                    res.push(   [ objectTree(expr.elements[i], subjects, rootsHash) ]);
+                    res.push(   [ objectTree(expr.elements[i], stats) ]);
                 }
                 res.push(')');
                 return res;
@@ -6702,7 +6697,6 @@ function backslashUify(str) {
 __Serializer.prototype.statementsToXML = function(sts) {
     var indent = 4;
     var width = 80;
-    // var subjects = null; // set later
     var sz = this;
 
     var namespaceCounts = []; // which have been used
@@ -6767,14 +6761,10 @@ __Serializer.prototype.statementsToXML = function(sts) {
         sz.suggestPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
         var stats = sz.rootSubjects(statements);
         var roots = stats.roots;
-        var rootsHash = stats.rootsHash; // Hashtable copy for speed
-        // print('Roots: '+roots)
-        var subjects = stats.subjects;
-        var loopBreakers = stats.loopBreakers;
         results = []
         for (var i=0; i<roots.length; i++) {
             root = roots[i];
-            results.push(subjectXMLTree(root, subjects, rootsHash))
+            results.push(subjectXMLTree(root, stats))
         }
         return results;
     }
@@ -6789,10 +6779,10 @@ __Serializer.prototype.statementsToXML = function(sts) {
     }
 
     // The tree for a subject
-    function subjectXMLTree(subject, subjects, rootsHash) {
+    function subjectXMLTree(subject, stats) {
         var start
         if (subject.termType == 'bnode') {
-            if (!sz.incoming[subject]) { // anonymous bnode
+            if (!stats.incoming[subject]) { // anonymous bnode
                 var start = '<rdf:Description>';
             } else {
                 var start = '<rdf:Description rdf:nodeID="'+subject.toNT().slice(2)+'">';
@@ -6802,32 +6792,32 @@ __Serializer.prototype.statementsToXML = function(sts) {
         }
 
         return [ start ].concat(
-                [propertyXMLTree(subject, subjects, rootsHash)]).concat(["</rdf:Description>"]);
+                [propertyXMLTree(subject, stats)]).concat(["</rdf:Description>"]);
     }
-    function collectionXMLTree(subject, subjects, rootsHash) {
+    function collectionXMLTree(subject, stats) {
         res = []
         for (var i=0; i< subject.elements.length; i++) {
-            res.push(subjectXMLTree(subject.elements[i], subjects, rootsHash));
+            res.push(subjectXMLTree(subject.elements[i], stats));
          }
          return res;
     }   
 
     // The property tree for a single subject or anonymos node
-    function propertyXMLTree(subject, subjects, rootsHash) {
+    function propertyXMLTree(subject, stats) {
         var results = []
-        var sts = subjects[sz.toStr(subject)]; // relevant statements
+        var sts = stats.subjects[sz.toStr(subject)]; // relevant statements
         if (sts == undefined) return results;  // No relevant statements
         sts.sort();
         for (var i=0; i<sts.length; i++) {
             var st = sts[i];
             switch (st.object.termType) {
                 case 'bnode':
-                    if(rootsHash[st.object.toNT()]) { // This bnode has been done as a root -- no content here @@ what bout first time
+                    if(stats.rootsHash[st.object.toNT()]) { // This bnode has been done as a root -- no content here @@ what bout first time
                         results = results.concat(['<'+qname(st.predicate)+' rdf:nodeID="'+st.object.toNT().slice(2)+'">',
                         '</'+qname(st.predicate)+'>']);
                     } else { 
                     results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
-                        propertyXMLTree(st.object, subjects, rootsHash),
+                        propertyXMLTree(st.object, stats),
                         '</'+qname(st.predicate)+'>']);
                     }
                     break;
@@ -6844,7 +6834,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
                     break;
                 case 'collection':
                     results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Collection">', 
-                        collectionXMLTree(st.object, subjects, rootsHash),
+                        collectionXMLTree(st.object, stats),
                         '</'+qname(st.predicate)+'>']);
                     break;
                 default:

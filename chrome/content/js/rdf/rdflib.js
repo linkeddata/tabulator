@@ -1519,6 +1519,7 @@ $rdf.RDFParser = function (store) {
  * @requires jquery.datatype.js
  * @requires jquery.rdf.js
  */
+ 
 $rdf.RDFaParser = function (kb, docUri) {
   var RDFaParser = {};
 
@@ -1625,7 +1626,7 @@ $rdf.RDFaParser = function (kb, docUri) {
             atts[a.nodeName] = a.nodeValue === null ? undefined : a.nodeValue;
           }
         }
-      } else {
+      } else { //   For IE, which hides namespaces to carefully
         tag = /<[^>]+>/.exec(e.outerHTML);
         a = attRegex.exec(tag);
         while (a !== null) {
@@ -1849,6 +1850,16 @@ $rdf.RDFaParser = function (kb, docUri) {
       return string;
     },
 
+    // This is the ain function whcih extracts te RDFA
+    // 'this' is the elemnt
+    
+    // $rdf.rdfaParser(kb).rdfa.call(element or document)
+    
+    parseElement = function(element) {
+        this.rdfa.call(element);
+    },
+    
+    
     rdfa = function (context) {
       var i, subject, resource, lang, datatype, content, text,
         types, object, triple, parent,
@@ -1857,7 +1868,7 @@ $rdf.RDFaParser = function (kb, docUri) {
         triples = [],
         callback, relCurieOptions,
         attsAndNs, atts, namespaces, ns,
-        children = this.children();
+        children = this.childNodes; // $jq @@ getChild
       context = context || {};
       forward = context.forward || [];
       backward = context.backward || [];
@@ -1886,7 +1897,7 @@ $rdf.RDFaParser = function (kb, docUri) {
       } else {
         subject = subject.subject;
         if (forward.length > 0 || backward.length > 0) {
-          parent = context.subject || getSubject(this.parent()).subject;
+          parent = context.subject || getSubject(this.parent()).subject; // @@
           for (i = 0; i < forward.length; i += 1) {
             kb.add(parent, forward[i], subject, why);
             // triple = callback.call(triple, this.get(0), triple);
@@ -1965,7 +1976,9 @@ $rdf.RDFaParser = function (kb, docUri) {
         }
       }
       children.each(function () {
-        triples = triples.concat(rdfa.call($(this), { forward: rels, backward: revs, subject: subject, object: resource || subject, lang: lang, namespaces: namespaces, callback: callback }));
+        triples = triples.concat(rdfa.call($(this), { forward: rels, backward: revs,
+            subject: subject, object: resource || subject,
+            lang: lang, namespaces: namespaces, callback: callback }));
       });
       return triples;
     },
@@ -1991,294 +2004,9 @@ $rdf.RDFaParser = function (kb, docUri) {
       } else {
         return rdfa.call(this, options);
       }
-    },
+    }
+}
 
-    nsCounter = 1,
-
-    createCurieAttr = function (elem, attr, uri) {
-      var m, curie, value;
-      try {
-        curie = elem.createCurie(uri);
-      } catch (e) {
-        if (uri.toString() === rdfXMLLiteral) {
-          elem.attr('xmlns:rdf', ns.rdf);
-          curie = 'rdf:XMLLiteral';
-        } else {
-          m = /^(.+[\/#])([^#]+)$/.exec(uri);
-          elem.attr('xmlns:ns' + nsCounter, m[1]);
-          curie = 'ns' + nsCounter + ':' + m[2];
-          nsCounter += 1;
-        }
-      }
-      value = getAttribute(elem, attr);
-      if (value !== undefined) {
-        if ($jq.inArray(curie, value.split(/\s+/)) === -1) {
-          elem.attr(attr, value + ' ' + curie);
-        }
-      } else {
-        elem.attr(attr, curie);
-      }
-    },
-
-    createResourceAttr = function (elem, attr, resource) {
-      var ref;
-      if (resource.type === 'bnode') {
-        ref = '[_:' + resource.id + ']';
-      } else {
-        ref = $(elem).base().relative(resource.value);
-      }
-      elem.attr(attr, ref);
-    },
-
-    createSubjectAttr = function (elem, subject) {
-      var s = getSubject(elem).subject;
-      if (subject !== s) {
-        createResourceAttr(elem, 'about', subject);
-      }
-      elem.removeData('rdfa.subject');
-    },
-
-    createObjectAttr = function (elem, object) {
-      var o = getObjectResource(elem);
-      if (object !== o) {
-        createResourceAttr(elem, 'resource', object);
-      }
-      elem.removeData('rdfa.objectResource');
-    },
-
-    resetLang = function (elem, lang) {
-      elem.wrapInner('<span></span>')
-        .children('span')
-        .attr('lang', lang);
-      return elem;
-    },
-
-    addRDFa = function (triple) {
-      var hasContent, hasRelation, hasRDFa, overridableObject, span,
-        subject, sameSubject,
-        object, sameObject,
-        lang, content,
-        i, atts,
-        ns = this.xmlns();
-      span = this;
-      atts = getAttributes(this).atts;
-      if (typeof triple === 'string') {
-        triple = $jq.rdf.triple(triple, { namespaces: ns, base: this.base() });
-      } else if (triple.rdfquery) {
-        addRDFa.call(this, triple.sources().get(0));
-        return this;
-      } else if (triple.length) {
-        for (i = 0; i < triple.length; i += 1) {
-          addRDFa.call(this, triple[i]);
-        }
-        return this;
-      }
-      hasRelation = atts.rel !== undefined || atts.rev !== undefined;
-      hasRDFa = hasRelation || atts.property !== undefined || atts['typeof'] !== undefined;
-      if (triple.object.type !== 'literal') {
-        subject = getSubject(this, {atts: atts}, true).subject;
-        object = getObjectResource(this, {atts: atts}, true);
-        overridableObject = !hasRDFa && atts.resource === undefined;
-        sameSubject = subject === triple.subject;
-        sameObject = object === triple.object;
-        if (triple.property === $jq.rdf.type) {
-          if (sameSubject) {
-            createCurieAttr(this, 'typeof', triple.object.value);
-          } else if (hasRDFa) {
-            span = this.wrapInner('<span />').children('span');
-            createCurieAttr(span, 'typeof', triple.object.value);
-            if (object !== triple.subject) {
-              createSubjectAttr(span, triple.subject);
-            }
-          } else {
-            createCurieAttr(this, 'typeof', triple.object.value);
-            createSubjectAttr(this, triple.subject);
-          }
-        } else if (sameSubject) {
-          // use a rel
-          if (sameObject) {
-            createCurieAttr(this, 'rel', triple.property.value);
-          } else if (overridableObject || !hasRDFa) {
-            createCurieAttr(this, 'rel', triple.property.value);
-            createObjectAttr(this, triple.object);
-          } else {
-            span = this.wrap('<span />').parent();
-            createCurieAttr(span, 'rev', triple.property.value);
-            createSubjectAttr(span, triple.object);
-          }
-        } else if (subject === triple.object) {
-          if (object === triple.subject) {
-            // use a rev
-            createCurieAttr(this, 'rev', triple.property.value);
-          } else if (overridableObject || !hasRDFa) {
-            createCurieAttr(this, 'rev', triple.property.value);
-            createObjectAttr(this, triple.subject);
-          } else {
-            // wrap in a span with a rel
-            span = this.wrap('<span />').parent();
-            createCurieAttr(span, 'rel', triple.property.value);
-            createSubjectAttr(span, triple.subject);
-          }
-        } else if (sameObject) {
-          if (hasRDFa) {
-            // use a rev on a nested span
-            span = this.wrapInner('<span />').children('span');
-            createCurieAttr(span, 'rev', triple.property.value);
-            createObjectAttr(span, triple.subject);
-            span = span.wrapInner('<span />').children('span');
-            createSubjectAttr(span, triple.object);
-            span = this;
-          } else {
-            createSubjectAttr(this, triple.subject);
-            createCurieAttr(this, 'rel', triple.property.value);
-          }
-        } else if (object === triple.subject) {
-          if (hasRDFa) {
-            // wrap the contents in a span and use a rel
-            span = this.wrapInner('<span />').children('span');
-            createCurieAttr(span, 'rel', this.property.value);
-            createObjectAttr(span, triple.object);
-            span = span.wrapInner('<span />').children('span');
-            createSubjectAttr(span, object);
-            span = this;
-          } else {
-            // use a rev on this element
-            createSubjectAttr(this, triple.object);
-            createCurieAttr(this, 'rev', triple.property.value);
-          }
-        } else if (hasRDFa) {
-          span = this.wrapInner('<span />').children('span');
-          createCurieAttr(span, 'rel', triple.property.value);
-          createSubjectAttr(span, triple.subject);
-          createObjectAttr(span, triple.object);
-          if (span.children('*').length > 0) {
-            span = this.wrapInner('<span />').children('span');
-            createSubjectAttr(span, subject);
-          }
-          span = this;
-        } else {
-          createCurieAttr(span, 'rel', triple.property.value);
-          createSubjectAttr(this, triple.subject);
-          createObjectAttr(this, triple.object);
-          if (this.children('*').length > 0) {
-            span = this.wrapInner('<span />').children('span');
-            createSubjectAttr(span, subject);
-            span = this;
-          }
-        }
-      } else {
-        subject = getSubject(this, {atts: atts}).subject;
-        object = getObjectResource(this, {atts: atts});
-        sameSubject = subject === triple.subject;
-        hasContent = this.text() !== triple.object.value;
-        if (atts.property !== undefined) {
-          content = atts.content;
-          sameObject = content !== undefined ? content === triple.object.value : !hasContent;
-          if (sameSubject && sameObject) {
-            createCurieAttr(this, 'property', triple.property.value);
-          } else {
-            span = this.wrapInner('<span />').children('span');
-            return addRDFa.call(span, triple);
-          }
-        } else {
-          if (object === triple.subject) {
-            span = this.wrapInner('<span />').children('span');
-            return addRDFa.call(span, triple);
-          }
-          createCurieAttr(this, 'property', triple.property.value);
-          createSubjectAttr(this, triple.subject);
-          if (hasContent) {
-            if (triple.object.datatype && triple.object.datatype.toString() === rdfXMLLiteral) {
-              this.html(triple.object.value);
-            } else {
-              this.attr('content', triple.object.value);
-            }
-          }
-          lang = getLang(this);
-          if (triple.object.lang) {
-            if (lang !== triple.object.lang) {
-              this.attr('lang', triple.object.lang);
-              if (hasContent) {
-                resetLang(this, lang);
-              }
-            }
-          } else if (triple.object.datatype) {
-            createCurieAttr(this, 'datatype', triple.object.datatype);
-          } else {
-            // the empty datatype ensures that any child elements that might be added won't mess up this triple
-            if (!hasContent) {
-              this.attr('datatype', '');
-            }
-            // the empty lang ensures that a language won't be assigned to the literal
-            if (lang !== undefined) {
-              this.attr('lang', '');
-              if (hasContent) {
-                resetLang(this, lang);
-              }
-            }
-          }
-        }
-      }
-      this.parents().andSelf().trigger("rdfChange");
-      return span;
-    },
-
-    removeRDFa = function (what) {
-      var span, atts, property, rel, rev, type,
-        ns = this.xmlns();
-      atts = getAttributes(this).atts;
-      if (what.length) {
-        for (i = 0; i < what.length; i += 1) {
-          removeRDFa.call(this, what[i]);
-        }
-        return this;
-      }
-      hasRelation = atts.rel !== undefined || atts.rev !== undefined;
-      hasRDFa = hasRelation || atts.property !== undefined || atts['typeof'] !== undefined;
-      if (hasRDFa) {
-        if (what.property !== undefined) {
-          if (atts.property !== undefined) {
-            property = removeCurie(atts.property, what.property, { namespaces: ns });
-            if (property === '') {
-              this.removeAttr('property');
-            } else {
-              this.attr('property', property);
-            }
-          }
-          if (atts.rel !== undefined) {
-            rel = removeCurie(atts.rel, what.property, { namespaces: ns });
-            if (rel === '') {
-              this.removeAttr('rel');
-            } else {
-              this.attr('rel', rel);
-            }
-          }
-          if (atts.rev !== undefined) {
-            rev = removeCurie(atts.rev, what.property, { namespaces: ns });
-            if (rev === '') {
-              this.removeAttr('rev');
-            } else {
-              this.attr('rev', rev);
-            }
-          }
-        }
-        if (what.type !== undefined) {
-          if (atts['typeof'] !== undefined) {
-            type = removeCurie(atts['typeof'], what.type, { namespaces: ns });
-            if (type === '') {
-              this.removeAttr('typeof');
-            } else {
-              this.attr('typeof', type);
-            }
-          }
-        }
-        if (atts.property === this.attr('property') && atts.rel === this.attr('rel') && atts.rev === this.attr('rev') && atts['typeof'] === this.attr('typeof')) {
-          return removeRDFa.call(this.parent(), what);
-        }
-      }
-      this.parents().andSelf().trigger("rdfChange");
-      return this;
-    };
 
   /**
    * Creates a {@link jQuery.rdf} object containing the RDF triples parsed from the RDFa found in the current jQuery selection or adds the specified triple as RDFa markup on each member of the current jQuery selection. To create an {@link jQuery.rdf} object, you will usually want to use {@link jQuery#rdf} instead, as this may perform other useful processing (such as of microformats used within the page).
@@ -2294,6 +2022,8 @@ $rdf.RDFaParser = function (kb, docUri) {
    *  var span = $('#main > p > span');
    *  span.rdfa('&lt;> dc:date "2008-10-19"^^xsd:date .');
    */
+   /*
+   // 'this' is a jq bject whcih wraps an element
   $jq.fn.rdfa = function (triple) {
     if (triple === undefined) {
       var triples = $jq.map($(this), function (elem) {
@@ -2307,6 +2037,7 @@ $rdf.RDFaParser = function (kb, docUri) {
       return this;
     }
   };
+  */
 
   /**
    * Removes the specified RDFa markup from each of the items in the current jQuery selection. The input parameter can be either an object or an array of objects. The objects can either have a <code>type</code> property, in which case the specified type is removed from the RDFa provided on the selected elements, or a <code>property</code> property, in which case the specified property is removed from the RDFa provided on the selected elements.
@@ -2325,6 +2056,7 @@ $rdf.RDFaParser = function (kb, docUri) {
    * // To remove multiple triples from an element
    * $('#main > p > a').removeRdfa([{ property: "foaf:depicts" }, { property: "dc:creator" }]);
    */
+   /*
   $jq.fn.removeRdfa = function (triple) {
     $(this).each(function () {
       removeRDFa.call($(this), triple);
@@ -2333,8 +2065,13 @@ $rdf.RDFaParser = function (kb, docUri) {
   };
 
   $jq.rdf.gleaners.push(gleaner);
+*/
 
+$rdf.parseRdfa = function(element, kb, docURI) {
+    var p = $rdf.RDFaParser(kb, docURI);
+    p.rdfa.call(element);
 };
+
 /**
 *
 *  UTF-8 data encode / decode
@@ -7044,8 +6781,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 }
                 kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                 // @@ Do RDFa here
-                var p = $rdf.RDFaParser(kb, xhr.uri.uri);
-                cb()
+                //var p = $rdf.RDFaParser(kb, xhr.uri.uri);
+                $rdf.parseRdfa(this.dom, kb, xhr.uri.uri);  // see rdfa.js
             }
         }
     }

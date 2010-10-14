@@ -5,10 +5,10 @@
  * File: web.js
  * 
  * Description: contains functions for requesting/fetching/retracting
- *  This implements quite a lot of the web architecture
- * A fetchers is bound to a specific knowledge base graph, into which
+ *  This implements quite a lot of the web architecture.
+ * A fetcher is bound to a specific knowledge base graph, into which
  * it loads stuff and into which it writes its metadata
- * @@ The metadata should be optionally a separate grah
+ * @@ The metadata should be optionally a separate graph
  *
  * - implements semantics of HTTP headers, Internet Content Types
  * - selects parsers for rdf/xml, n3, rdfa, grddl
@@ -148,8 +148,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 }
                 kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                 // @@ Do RDFa here
-                var p = $rdf.RDFaParser(kb, xhr.uri.uri);
-                cb()
+                //var p = $rdf.RDFaParser(kb, xhr.uri.uri);
+                $rdf.parseRdfa(this.dom, kb, xhr.uri.uri);  // see rdfa.js
             }
         }
     }

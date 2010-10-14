@@ -92,6 +92,7 @@ tabulator.panes.register( {
                 subs = du.elements            
             }
             
+            if (subs.length == 0) throw "Can't do "+ (multiple?"multiple ":"")+"selector with no subclasses of category: "+category;
             return makeSelectForOptions(subject, ns.rdf('type'), subs,
                             multiple, "--classify--", storeDoc, callback);
         }
@@ -116,7 +117,7 @@ tabulator.panes.register( {
                 if (sub.uri in uris) continue;
                 uris[sub.uri] = true; n++;
             } // uris is now the set of possible options
-            if (n==0) throw "Can't do selector with no subclasses "+subject
+            if (n==0) throw "Can't do selector with no subclasses "+subject+" possible: "+possible
             
             var actual = {};
             kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
@@ -192,7 +193,7 @@ tabulator.panes.register( {
             if (sts.length) field.value = desc 
             else {
                 field.value = "Please enter a description here"
-                field.select(); // Select it ready for user input
+                field.select(); // Select it ready for user input -- doesn't work
             }
 
             var br = myDocument.createElement('br');
@@ -264,6 +265,7 @@ tabulator.panes.register( {
             }
             form.addEventListener('submit', sendNewIssue, false)
             form.setAttribute('onsubmit', "function xx(){return false;}");
+            var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
                     classLabel+"</h2><p>Title of new "+classLabel+":</p>";
@@ -283,8 +285,8 @@ tabulator.panes.register( {
             var issue = about;
 
             var sendMessage = function() {
-                titlefield.setAttribute('class','pendingedit');
-                titlefield.disabled = true;
+                // titlefield.setAttribute('class','pendingedit');
+                // titlefield.disabled = true;
                 field.setAttribute('class','pendingedit');
                 field.disabled = true;
                 sts = [];
@@ -294,7 +296,7 @@ tabulator.panes.register( {
                 // http://www.w3schools.com/jsref/jsref_obj_date.asp
                 var message = kb.sym(storeDoc.uri + '#' + 'Msg'+timestamp);
                 sts.push(new $rdf.Statement(about, ns.wf('message'), message, storeDoc));
-                sts.push(new $rdf.Statement(message, ns.dc('title'), kb.literal(titlefield.value), storeDoc))
+                // sts.push(new $rdf.Statement(message, ns.dc('title'), kb.literal(titlefield.value), storeDoc))
                 sts.push(new $rdf.Statement(message, ns.sioc('content'), kb.literal(field.value), storeDoc))
                 sts.push(new $rdf.Statement(message, DCT('created'), new Date(), storeDoc));
                 if (me) sts.push(new $rdf.Statement(message, ns.foaf('maker'), me, storeDoc));
@@ -314,6 +316,7 @@ tabulator.panes.register( {
             // label = tabulator.Util.label(ns.dc('title')); // Localise
             // form.innerHTML = "<p>"+label+":</p>";
                     
+/*
             var titlefield = myDocument.createElement('input')
             titlefield.setAttribute('type','text');
             titlefield.setAttribute('size','80');
@@ -321,7 +324,7 @@ tabulator.panes.register( {
             titlefield.setAttribute('maxLength','2048');// No arbitrary limits
             titlefield.select() // focus next user input - doesn't work @@
             form.appendChild(titlefield);
-
+*/
             form.appendChild(myDocument.createElement('br'));
 
             var field = myDocument.createElement('textarea');
@@ -445,13 +448,14 @@ tabulator.panes.register( {
                 // Anyone who is a developer of any project which uses this tracker
                 var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
                 if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
-                div.appendChild(makeSelectForOptions(
-                    subject, ns.wf('assignee'), devs, false, "--classify--", store,
-                    function(ok,body){
-                        if (ok) setModifiedDate(store, kb, store);
-                        else complain("Failed to description:\n"+body);
-                    }));
-                
+                if (devs.length) {
+                    div.appendChild(makeSelectForOptions(
+                        subject, ns.wf('assignee'), devs, false, "-- unassigned --", store,
+                        function(ok,body){
+                            if (ok) setModifiedDate(store, kb, store);
+                            else complain("Failed to description:\n"+body);
+                        }));
+                }
 
                 // Sub issues
                 tabulator.outline.appendPropertyTRs(div, plist, false,

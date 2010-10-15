@@ -167,7 +167,7 @@ tabulator.panes.register( {
             if ((currentURI == undefined) && !multiple) {
                 var prompt = myDocument.createElement('option');
                 prompt.appendChild(myDocument.createTextNode(nullLabel));
-                dump("prompt option:" + prompt + "\n")
+                //dump("prompt option:" + prompt + "\n")
                 select.insertBefore(prompt, select.firstChild)
                 prompt.selected = true;
             }
@@ -252,7 +252,7 @@ tabulator.panes.register( {
                 if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
                 var sendComplete = function(uri, success, body) {
                     if (!success) {
-                        dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
+                        //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                     } else {
                         // dump('Tabulator issue pane: saved new issue\n')
                         div.removeChild(form);
@@ -303,7 +303,7 @@ tabulator.panes.register( {
 
                 var sendComplete = function(uri, success, body) {
                     if (!success) {
-                        dump('Tabulator issue pane: can\'t save new message:\n\t'+body+'\n')
+                        //dump('Tabulator issue pane: can\'t save new message:\n\t'+body+'\n')
                     } else {
                         form.parentNode.removeChild(form);
                         rerender(div);
@@ -520,7 +520,7 @@ tabulator.panes.register( {
                     ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
                          query.vars.push(v[x]=$rdf.variable(x))});
                     query.pat.add(subject, WF('message'), v['msg']);
-                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
+//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
                     query.pat.add(v['msg'], ns.dct('created'), v['date']);
                     query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
                     query.pat.add(v['msg'], ns.sioc('content'), v['content']);

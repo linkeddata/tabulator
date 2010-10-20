@@ -246,9 +246,11 @@ tabulator.panes.register( {
                 // sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
                 sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
 
-                var initialState = kb.any(tracker, WF('initialState'));
-                if (!initialState) complain('This tracker has no initialState');
-                sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialState, stateStore))
+                var initialStates = kb.each(tracker, WF('initialState'));
+                if (initialStates.length == 0) complain('This tracker has no initialState');
+                for (var i=0; i<initialStates.length; i++) {
+                    sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialStates[i], stateStore))
+                }
                 if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
                 var sendComplete = function(uri, success, body) {
                     if (!success) {

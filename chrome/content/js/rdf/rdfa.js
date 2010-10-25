@@ -346,7 +346,7 @@ $rdf.RDFaParser = function (kb, docUri) {
         resource = r ? kb.bnode() : resource;
       } else {
         curieOptions = context.curieOptions || $rdf.Util.extend(
-<circle{}, rdfaCurieDefaults, { namespaces: elem.xmlns() });
+            {}, rdfaCurieDefaults, { namespaces: elem.xmlns() });
         resource = resourceFromSafeCurie(resource, elem, curieOptions);
       }
       return resource;
@@ -356,8 +356,8 @@ $rdf.RDFaParser = function (kb, docUri) {
       var r, atts, curieOptions, subject, skip = false;
       context = context || {};
       atts = context.atts || getAttributes(elem).atts;
-      curieOptions = context.curieOptions || $rdf.Util.extend(
-<circle{}, rdfaCurieDefaults, { namespaces: elem.xmlns(), base: elem.base() });
+      curieOptions = context.curieOptions || $rdf.Util.extend({},
+            rdfaCurieDefaults, { namespaces: elem.xmlns(), base: elem.base() });
       r = relation === undefined ? atts.rel !== undefined || atts.rev !== undefined : relation;
       if (atts.about !== undefined) {
         subject = resourceFromSafeCurie(atts.about, elem, curieOptions);
@@ -499,18 +499,16 @@ $rdf.RDFaParser = function (kb, docUri) {
       context.atts = atts;
       namespaces = context.namespaces || this.xmlns();
       if (attsAndNs.namespaces[':length'] > 0) {
-        namespaces = $rdf.Util.extend(
-<circle{}, namespaces);
+        namespaces = $rdf.Util.extend({}, namespaces);
         for (ns in attsAndNs.namespaces) {
-          if (ns !== ':length') {
+          if (ns != ':length') {
             namespaces[ns] = attsAndNs.namespaces[ns];
           }
         }
       }
-      context.curieOptions = $rdf.Util.extend(
-<circle{}, rdfaCurieDefaults, { reserved: [], namespaces: namespaces, base: this.base() });
-      relCurieOptions = $rdf.Util.extend(
-<circle{}, context.curieOptions, { reserved: relReserved });
+      context.curieOptions = $rdf.Util.extend({},
+        rdfaCurieDefaults, { reserved: [], namespaces: namespaces, base: this.base() });
+      relCurieOptions = $rdf.Util.extend({}, context.curieOptions, { reserved: relReserved });
       subject = getSubject(this, context);
       lang = getLang(this, context);
       if (subject.skip) {

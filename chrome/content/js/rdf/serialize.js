@@ -156,13 +156,13 @@ __Serializer.prototype.rootSubjects = function(sts) {
 // and at the same time accumulates a list of all bnodes mentioned.
 // This is in fact a cut down N3 serialization
 
-    dump('Staring scan...\n')
+    // dump('Staring scan...\n')
     for (var i=0; i<sts.length; i++) { // @@TBL
-        dump('\t'+sts[i]+'\n');
+        // dump('\t'+sts[i]+'\n');
     }
     var doneBnodesNT = {};
     function dummyPropertyTree(subject, subjects, rootsHash) {
-        dump('dummyPropertyTree('+subject+'...)\n');
+        // dump('dummyPropertyTree('+subject+'...)\n');
         var sts = subjects[sz.toStr(subject)]; // relevant statements
         for (var i=0; i<sts.length; i++) {
             dummyObjectTree(sts[i].object, subjects, rootsHash);
@@ -172,7 +172,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     // Convert a set of statements into a nested tree of lists and strings
     // @param force,    "we know this is a root, do it anyway. It isn't a loop."
     function dummyObjectTree(obj, subjects, rootsHash, force) { 
-        dump('dummyObjectTree('+obj+'...)\n');
+        // dump('dummyObjectTree('+obj+'...)\n');
         if (obj.termType == 'bnode' && (subjects[sz.toStr(obj)]  &&
             (force || (rootsHash[obj.toNT()] == undefined )))) {// and there are statements
             if (doneBnodesNT[obj.toNT()]) { // Ah-ha! a loop
@@ -187,7 +187,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     // Scan for bnodes nested inside lists too
     function dummyTermToN3(expr, subjects, rootsHash) {
         if (expr.termType == 'bnode') doneBnodesNT[expr.toNT()] = true;
-        dump('seen '+expr+'\n');
+        // dump('seen '+expr+'\n');
         if (expr.termType == 'collection') {
             for (i=0; i<expr.elements.length; i++) {
                 dummyObjectTree(expr.elements[i], subjects, rootsHash);
@@ -198,7 +198,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 
     // The tree for a subject
     function dummySubjectTree(subject, subjects, rootsHash) {
-        dump('dummySubjectTree('+subject+'...)\n');
+        // dump('dummySubjectTree('+subject+'...)\n');
         if (subject.termType == 'bnode' && !incoming[subject])
             return dummyObjectTree(subject, subjects, rootsHash, true); // Anonymous bnode subject
         dummyTermToN3(subject, subjects, rootsHash);
@@ -212,7 +212,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         var root = roots[i];
         dummySubjectTree(root, subjects, rootsHash);
     }
-    dump('Looking for mising bnodes...\n')
+    // dump('Looking for mising bnodes...\n')
     
 // Now in new roots for anythig not acccounted for
 // Now we check for any bndoes which have not been covered.
@@ -228,20 +228,20 @@ __Serializer.prototype.rootSubjects = function(sts) {
             break;
         }
         if (found == null) break; // All done - no bnodes left out/
-        dump('Found isolated bnode:'+found+'\n');
+        // dump('Found isolated bnode:'+found+'\n');
         var root = this.store.fromNT(found);
         roots.push(root); // Add a new root
         rootsHash[found] = true;
-        dump('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
+        // dump('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
         if (subjects[found] == undefined) {
             for (var i=0; i<sts.length; i++) {
-                dump('\t'+sts[i]+'\n');
+                // dump('\t'+sts[i]+'\n');
             }
             throw "Isolated node should be a subject" +found;
         }
         dummySubjectTree(root, subjects, rootsHash); // trace out the ring
     }
-    dump('Done bnode adjustments.\n')
+    // dump('Done bnode adjustments.\n')
 
     return {'roots':roots, 'subjects':subjects, 
                 'rootsHash': rootsHash, 'incoming': incoming};

@@ -16,7 +16,7 @@ function updateCenter(kb){
         **                              => {?doc :editable true}.
         */
         if (doc.uri == undefined) {
-            dump("editMethod: Weird -- called with: "+doc+"\n");
+            // dump("editMethod: Weird -- called with: "+doc+"\n");
             return false;  // Not a symbol  - some other provenance
         }
         if (doc.uri.indexOf('#') >= 0) throw "Document URI for writing to can't have a # in it:"+doc;
@@ -24,7 +24,7 @@ function updateCenter(kb){
         if (request !== undefined) {
             var response =  kb.any(request, tabulator.ns.link("response"));
             if (!response) {
-                dump("editMethod: No recorded HTTP GET response for document "+doc+" !\n")
+                // dump("editMethod: No recorded HTTP GET response for document "+doc+" !\n")
                 return null; // throw "No recorded HTTP GET response for document: "+doc; //could be still in process
             }
             var method = kb.any(response, tabulator.ns.httph("ms-author-via"));

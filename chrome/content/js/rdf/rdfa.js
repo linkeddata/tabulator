@@ -47,7 +47,7 @@
 /*global jQuery */
 
 $rdf.curie = {};
-$rdf.curie = function (curie, options) {
+$rdf.curie.parse = function (curie, options) {
     var
     opts = $rdf.extend({}, $rdf.curie.defaults, options || {}),
         m = /^(([^:]*):)?(.+)$/.exec(curie),
@@ -58,7 +58,7 @@ $rdf.curie = function (curie, options) {
         if (ns === undefined) {
             throw "Malformed CURIE: No namespace binding for " + prefix + " in CURIE " + curie;
         }
-    } else if (opts.reserved.length && $.inArray(curie, opts.reserved) >= 0) {
+    } else if (opts.reserved.length && $rdf.Util.inArray(curie, opts.reserved) >= 0) {
         ns = opts.reservedNamespace;
         local = curie;
     } else if (opts.defaultNamespace === undefined) {
@@ -68,7 +68,7 @@ $rdf.curie = function (curie, options) {
     } else {
         ns = opts.defaultNamespace;
     }
-    return $.uri(ns + local);
+    return $rdf.sym(ns + local);
 };
 
 $rdf.curie.defaults = {
@@ -78,22 +78,23 @@ $rdf.curie.defaults = {
     defaultNamespace: undefined
 };
 
-$.safeCurie = function (safeCurie, options) {
+$rdf.curie.safeCurie = function (safeCurie, options) {
     var m = /^\[([^\]]+)\]$/.exec(safeCurie);
-    return m ? $rdf.curie(m[1], options) : $.uri(safeCurie);
+    return m ? $rdf.curie(m[1], options) : $rdf.sym(safeCurie);
 };
 
-$.createCurie = function (uri, options) {
-    var opts = $.extend({}, $rdf.curie.defaults, options || {}),
+$rdf.curie.createCurie = function (uri, options) {
+    var opts = $rdf.extend({}, $rdf.curie.defaults, options || {}),
         ns = opts.namespaces,
         curie;
-    uri = $.uri(uri).toString();
-    $.each(ns, function (prefix, namespace) {
+    uri = $rdf.sym(uri).toString();
+    for (var prefix in ns) {
+        var namespace = ns[prefix];
         if (uri.substring(0, namespace.toString().length) === namespace.toString()) {
             curie = prefix + ':' + uri.substring(namespace.toString().length);
             return null;
         }
-    });
+    };
     if (curie === undefined) {
         throw "No Namespace Binding: There's no appropriate namespace binding for generating a CURIE from " + uri;
     } else {
@@ -102,24 +103,24 @@ $.createCurie = function (uri, options) {
 };
 
 $rdf.curie = function (curie, options) {
-    var opts = $.extend({}, $.fn.curie.defaults, {
+    var opts = $rdf.extend({}, $rdf.curie.defaults, {
         namespaces: this.xmlns()
     }, options || {});
     return $rdf.curie(curie, opts);
 };
 
 $rdf.safeCurie = function (safeCurie, options) {
-    var opts = $.extend({}, $.fn.curie.defaults, {
+    var opts = $rdf.extend({}, $rdf.curie.defaults, {
         namespaces: this.xmlns()
     }, options || {});
-    return $.safeCurie(safeCurie, opts);
+    return $rdf.curie.safeCurie(safeCurie, opts);
 };
 
 $rdf.createCurie = function (uri, options) {
-    var opts = $.extend({}, $.fn.curie.defaults, {
+    var opts = $rdf.extend({}, $rdf.curie.defaults, {
         namespaces: this.xmlns()
     }, options || {});
-    return $.createCurie(uri, opts);
+    return $rdf.curie.createCurie(uri, opts);
 };
 
 $rdf.curie.defaults = {
@@ -129,7 +130,7 @@ $rdf.curie.defaults = {
 };
 
 $rdf.safeCurie = function (safeCurie, options) {
-    var opts = $.extend({}, $.fn.curie.defaults, {
+    var opts = $rdf.extend({}, $rdf.curie.defaults, {
         namespaces: this.xmlns()
     }, options || {});
     return $rdf.safeCurie(safeCurie, opts);
@@ -162,7 +163,7 @@ $rdf.RDFaParser = function (kb, docUri) {
     rdfXMLLiteral = ns.rdf + 'XMLLiteral',
     rdfXMLLiteralSym = kb.sym(rdfXMLLiteral),
 
-    rdfaCurieDefaults = $jq.fn.curie.defaults,
+    rdfaCurieDefaults = $rdf.curie.defaults,
     relReserved = [
       'alternate', 'appendix', 'bookmark', 'cite', 'chapter', 'contents', 'copyright',
       'first', 'glossary', 'help', 'icon', 'index', 'last', 'license', 'meta', 'next',
@@ -236,7 +237,7 @@ $rdf.RDFaParser = function (kb, docUri) {
           if (/^xmlns(:(.+))?$/.test(a.nodeName) && a.nodeValue !== '') {
             prefix = /^xmlns(:(.+))?$/.exec(a.nodeName)[2] || '';
             if (ncNameRegex.test(prefix) && (prefix !== 'xml' || a.nodeValue === ns.xml) && (a.nodeValue !== ns.xml || prefix === 'xml') && prefix !== 'xmlns' && a.nodeValue !== ns.xmlns) {
-              nsMap[prefix] = $jq.uri(a.nodeValue);
+              nsMap[prefix] = $rdf.sym(a.nodeValue);
               nsMap[':length'] += 1;
             }
 //          } else if (/rel|rev|lang|xml:lang/.test(a.nodeName)) {
@@ -254,7 +255,7 @@ $rdf.RDFaParser = function (kb, docUri) {
           if (/^xmlns/.test(name) && name !== 'xmlns:' && value !== '') {
             prefix = /^xmlns(:(.+))?$/.exec(name)[2] || '';
             if (ncNameRegex.test(prefix) && (prefix !== 'xml' || a.nodeValue === ns.xml) && (a.nodeValue !== ns.xml || prefix === 'xml') && prefix !== 'xmlns' && a.nodeValue !== ns.xmlns) {
-              nsMap[prefix] = $jq.uri(value);
+              nsMap[prefix] = $rdf.sym(value);
               nsMap[':length'] += 1;
             }
           } else if (/about|href|src|resource|property|typeof|content|datatype|rel|rev|lang|xml:lang/.test(name)) {
@@ -291,7 +292,7 @@ $rdf.RDFaParser = function (kb, docUri) {
         return bn;
       } else {
         try {
-          return resourceFromUri($jq.curie(curie, options));
+          return resourceFromUri($rdf.curie.parse(curie, options));
         } catch (e) {
           return undefined;
         }
@@ -301,7 +302,7 @@ $rdf.RDFaParser = function (kb, docUri) {
     resourceFromSafeCurie = function (safeCurie, elem, options) {
       var m = /^\[(.*)\]$/.exec(safeCurie),
         base = options.base || elem.base();
-      return m ? resourceFromCurie(m[1], elem, false, options) : resourceFromUri($jq.uri(safeCurie, base));
+      return m ? resourceFromCurie(m[1], elem, false, options) : resourceFromUri($rdf.sym(safeCurie, base));
     },
 
     resourcesFromCuries = function (curies, elem, noblanks, options) {
@@ -550,7 +551,7 @@ $rdf.RDFaParser = function (kb, docUri) {
           content = atts.content;
           text = this.text().replace(/"/g, '\\"'); //'
           if (datatype !== undefined && datatype !== '') {
-            datatype = $jq.curie(datatype, context.curieOptions);
+            datatype = $rdf.curie.parse(datatype, context.curieOptions);
             if (datatype.toString() === rdfXMLLiteral) {
               object = kb.literal(serialize(this), undefined, rdfXMLLiteralSym );
             } else if (content !== undefined) {
@@ -627,6 +628,7 @@ $rdf.RDFaParser = function (kb, docUri) {
         return rdfa.call(this, options);
       }
     }
+    return RDFaParser;
 }
 
 

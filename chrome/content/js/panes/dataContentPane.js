@@ -22,11 +22,11 @@ tabulator.panes.dataContentPane = {
         if (n == 0) return null;
         return "Data ("+n+")";
     },
-    
+    /*
     shouldGetFocus: function(subject) {
         return tabulator.kb.whether(subject, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'));
     },
-
+*/
     statementsAsTables: function statementsAsTables(sts, myDocument) {
         var rep = myDocument.createElement('table');
         var sz = tabulator.rdf.Serializer( tabulator.kb );

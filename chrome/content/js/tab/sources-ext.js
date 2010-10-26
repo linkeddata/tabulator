@@ -33,7 +33,12 @@ function SourceWidget(container) {
             var udoc = tabulator.kb.sym(tabulator.rdf.Util.uri.docpart(uri))
             if (udoc.sameTerm(term)) {
                 var req = tabulator.kb.any(udoc, tabulator.ns.link('request')) // @@ what if > 1?
-                var lstat = tabulator.kb.the(req, tabulator.ns.link('status'))
+                if (!req) return true; // @ should not happen
+                var response = tabulator.kb.the(req, tabulator.ns.link('response'))
+                if (!response) return true; // @@
+                var lstat = tabulator.kb.the(response, tabulator.ns.link('status'))
+                if (!lstat) return true; // @@
+                if (!lstat.elements) return true; // @@
                 if (typeof lstat.elements[lstat.elements.length-1]
                     != "undefined") {
                     if(tabulator.sf.getState(term)=="failed"){

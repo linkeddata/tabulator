@@ -77,15 +77,15 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // Find the last URI we actual URI in a series of redirects
                 // (xhr.uri.uri is the original one)
                 var lastRequested = kb.any(xhr.req, ns.link('requestedURI'));
-                dump('lastRequested 1:'+lastRequested+'\n')
+                //dump('lastRequested 1:'+lastRequested+'\n')
                 if (!lastRequested) {
-                    dump("Eh? No last requested for "+xhr.uri+"\n");
+                    //dump("Eh? No last requested for "+xhr.uri+"\n");
                     lastRequested = xhr.uri;
                 } else {
                     lastRequested = kb.sym(lastRequested.value);
-                    dump('lastRequested 2:'+lastRequested+'\n')
+                    //dump('lastRequested 2:'+lastRequested+'\n')
                 }
-                dump('lastRequested 3:'+lastRequested+'\n')
+                //dump('lastRequested 3:'+lastRequested+'\n')
                 var parser = new $rdf.RDFParser(kb);
                 sf.addStatus(xhr.req, 'parsing as RDF/XML...');
                 parser.parse(this.dom, lastRequested.uri, lastRequested);

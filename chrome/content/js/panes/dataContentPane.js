@@ -27,7 +27,7 @@ tabulator.panes.dataContentPane = {
         return tabulator.kb.whether(subject, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'));
     },
 */
-    statementsAsTables: function statementsAsTables(sts, myDocument) {
+    statementsAsTables: function statementsAsTables(sts, myDocument, initialRoots) {
         var rep = myDocument.createElement('table');
         var sz = tabulator.rdf.Serializer( tabulator.kb );
         var res = sz.rootSubjects(sts);
@@ -142,7 +142,17 @@ tabulator.panes.dataContentPane = {
             }
             throw "Unhandled node type: "+obj.termType
         }
+    
+        // roots.sort();
 
+        if (initialRoots) {
+            roots = initialRoots.concat(roots.filter(function(x){
+                for (var i=0; i<initialRoots.length; i++) { // Max 2
+                    if (x.sameTerm(initialRoots[i])) return false;
+                }
+                return true;
+            }));
+        }
         for (var i=0; i<roots.length; i++) {
             var tr = myDocument.createElement('tr')
             rep.appendChild(tr);
@@ -183,7 +193,13 @@ tabulator.panes.dataContentPane = {
         // or we could keep all the pre-smushed triples.
         var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
         if (1) {
-            div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(sts, myDocument));
+            initialRoots = []; // Ordering: start with stuf fabout this doc
+            if (kb.holds(subject, undefined, undefined, subject)) initialRoots.push(subject);
+            // Then about the primary topic of the document if any
+            var ps = kb.any(subject, tabulator.ns.foaf('primaryTopic'), undefined, subject);
+            if (ps) initialRoots.push(ps);
+            div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(
+                            sts, myDocument, initialRoots));
             
         } else {  // An outline mode openable rendering .. might be better
             var sz = tabulator.rdf.Serializer( tabulator.kb );

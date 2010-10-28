@@ -14,8 +14,8 @@ xmlns:em="http://www.mozilla.org/2004/em-rdf#">
     Under development, experimental.
     </em:description>
     <em:creator>The Tabulator Team</em:creator>
-    <em:homepageURL>http://dig.csail.mit.edu/2007/tab/</em:homepageURL>
-    <em:updateURL>http://dig.csail.mit.edu/2007/tab/update?id=%ITEM_ID%&amp;status=%ITEM_STATUS%&amp;version=%ITEM_VERSION%&amp;app_id=%APP_ID%&amp;app_version=%APP_VERSION%&amp;app_os=%APP_OS%</em:updateURL>
+    <em:homepageURL>http://tabulator.org/</em:homepageURL>
+    <em:updateURL>https://tabulator.org/update?id=%ITEM_ID%&amp;status=%ITEM_STATUS%&amp;version=%ITEM_VERSION%&amp;app_id=%APP_ID%&amp;app_version=%APP_VERSION%&amp;app_os=%APP_OS%</em:updateURL>
     <em:targetApplication>
       <Description>
         <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>

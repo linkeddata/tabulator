@@ -9,8 +9,8 @@ tabulator.panes = {};
 tabulator.panes.list = [];
 tabulator.panes.paneForIcon = []
 tabulator.panes.paneForPredicate = []
-tabulator.panes.register = function(p, whether) {
-    p.requireQueryButton = whether;
+tabulator.panes.register = function(p, requireQueryButton) {
+    p.requireQueryButton = requireQueryButton;
     tabulator.panes.list.push(p);
     if (p.icon) tabulator.panes.paneForIcon[p.icon] = p;
     if (p.predicates) {

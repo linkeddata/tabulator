@@ -5656,7 +5656,7 @@ $rdf.sparqlUpdate = function() {
         // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
         if (!kb) kb = this.store;
         if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
-        var request = kb.any(kb.sym($rdf.Util.uri.docpart(uri)), this.ns.link("request"));
+        var request = kb.any(undefined, this.ns.link("requestedURI"), $rdf.Util.uri.docpart(uri));
         if (request !== undefined) {
             var response = kb.any(request, this.ns.link("response"));
             if (request !== undefined) {
@@ -5671,9 +5671,8 @@ $rdf.sparqlUpdate = function() {
                 var status = kb.each(response, this.ns.http("status"));
                 if (status.length) {
                     for (var i = 0; i < status.length; i++) {
-                        if (status[i] == 200) {
-                            // dump("sparql.editable: 200 status, not editable for "+uri+"\n");
-                            return false;
+                        if (status[i] == 200 || status[i] == 404) {
+                            return false; // A definitive answer
                         }
                     }
                 }
@@ -5684,6 +5683,7 @@ $rdf.sparqlUpdate = function() {
             dump("sparql.editable: No request for "+uri+"\n");
         }
         dump("sparql.editable: inconclusive for "+uri+"\n");
+        return undefined; // We don't know (yet) as we haven't had a response (yet)
     }
 
     ///////////  The identification of bnodes
@@ -6221,9 +6221,9 @@ __Serializer.prototype.rootSubjects = function(sts) {
                 throw "Serializer: Should be no loops "+obj;
             }
             doneBnodesNT[obj.toNT()] = true;
-            return  dummyPropertyTree(obj, subjects, rootsHash, rootsHash);
+            return  dummyPropertyTree(obj, subjects, rootsHash);
         }
-        return dummyTermToN3(obj, subjects);
+        return dummyTermToN3(obj, subjects, rootsHash);
     }
     
     // Scan for bnodes nested inside lists too

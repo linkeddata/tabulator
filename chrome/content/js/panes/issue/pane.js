@@ -73,7 +73,7 @@ tabulator.panes.register( {
             if (str.slice(0,10) == now.slice(0,10)) return str.slice(11,16);
             return str.slice(0,10);
         }
-
+/*
         // Make SELECT element to select subclasses
         //
         // If there is any disjoint union it will so a mutually exclusive dropdown
@@ -175,7 +175,7 @@ tabulator.panes.register( {
             return select;
         
         } // makeSelectForOptions
-        
+*/        
         //      Description text area
         //
         // Make a box to demand a description or display existing one
@@ -401,7 +401,7 @@ tabulator.panes.register( {
 */
                 var states = kb.any(tracker, WF('issueClass'));
                 if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var select = makeSelectForCategory(subject, states, store, function(ok,body){
+                var select = tabulator.panes.utils.makeSelectForCategory(myDocument, kb, subject, states, store, function(ok,body){
                         if (ok) {
                             setModifiedDate(store, kb, store);
                             rerender(div);
@@ -413,7 +413,8 @@ tabulator.panes.register( {
 
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 for (var i=0; i<cats.length; i++) {
-                    div.appendChild(makeSelectForCategory(subject, cats[i], store, function(ok,body){
+                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(myDocument, 
+                            kb, subject, cats[i], store, function(ok,body){
                         if (ok) {
                             setModifiedDate(store, kb, store);
                             rerender(div);
@@ -451,7 +452,7 @@ tabulator.panes.register( {
                 var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
                 if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
                 if (devs.length) {
-                    div.appendChild(makeSelectForOptions(
+                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(myDocument, kb,
                         subject, ns.wf('assignee'), devs, false, "-- unassigned --", store,
                         function(ok,body){
                             if (ok) setModifiedDate(store, kb, store);

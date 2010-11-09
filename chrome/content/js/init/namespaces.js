@@ -15,4 +15,5 @@ tabulator.ns.rss = $rdf.Namespace('http://purl.org/rss/1.0/');
 tabulator.ns.sioc =  $rdf.Namespace('http://rdfs.org/sioc/ns#');
 tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-');
 tabulator.ns.contact = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/contact#');
+tabulator.ns.ui = $rdf.Namespace('http://www.w3.org/ns/ui');
 tabulator.ns.wf = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');

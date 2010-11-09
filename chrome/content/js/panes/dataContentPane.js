@@ -229,7 +229,7 @@ tabulator.panes.dataContentPane = {
     }
 };
 
-tabulator.panes.register(tabulator.panes.dataContentPane, true);
+tabulator.panes.register(tabulator.panes.dataContentPane, false);
 
 
 /*   Pane within Document data content view

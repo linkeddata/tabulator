@@ -179,9 +179,9 @@ __Serializer.prototype.rootSubjects = function(sts) {
                 throw "Serializer: Should be no loops "+obj;
             }
             doneBnodesNT[obj.toNT()] = true;
-            return  dummyPropertyTree(obj, subjects, rootsHash, rootsHash);
+            return  dummyPropertyTree(obj, subjects, rootsHash);
         }
-        return dummyTermToN3(obj, subjects);
+        return dummyTermToN3(obj, subjects, rootsHash);
     }
     
     // Scan for bnodes nested inside lists too

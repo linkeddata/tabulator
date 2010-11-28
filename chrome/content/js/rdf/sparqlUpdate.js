@@ -31,7 +31,7 @@ $rdf.sparqlUpdate = function() {
     }
 
 
-    // Returns The method string SPARQL or WEBDAV or false if known, undefined if not known.
+    // Returns The method string SPARQL or DAV or false if known, undefined if not known.
     //
     sparql.prototype.editable = function(uri, kb) {
         // dump("sparql.prototype.editable: CALLED for "+uri+"\n")

@@ -88,11 +88,11 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
         for (var i =0; i< select.options.length; i++) {
             var opt = select.options[i];
             if (!opt.AJAR_uri) continue; // a prompt
-            if (opt.selected && !(opt.AJAR_uri in actual)) {
+            if (opt.selected && !(opt.AJAR_uri in actual)) { // new class
                 is.push(new $rdf.Statement(subject,
                     predicate, kb.sym(opt.AJAR_uri),storeDoc ));
             }
-            if (!opt.selected && opt.AJAR_uri in actual) {
+            if (!opt.selected && opt.AJAR_uri in actual) {  // old class
                 ds.push(new $rdf.Statement(subject,
                     predicate, kb.sym(opt.AJAR_uri),storeDoc ));
             }                        

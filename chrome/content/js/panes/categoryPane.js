@@ -69,6 +69,7 @@ tabulator.panes.register( {
             anchor.appendChild(myDocument.createTextNode(lab));
             tr.appendChild(anchor);
             
+            // Add provenance info - which statement makes us beleive this
             if (c.uri) {
                 var st = types[c.uri];
                 if (st) {
@@ -88,7 +89,7 @@ tabulator.panes.register( {
                 }
             }
             var table = null;
-            
+            /*
             var makeSelectForSubs = function(subs, multiple) {
                 var n = 0; var uris ={}; // Count them
                 for (var i=0; i < subs.length; i++) {
@@ -113,21 +114,29 @@ tabulator.panes.register( {
                 return null;
             
             } // makeSelectForSubs
+            */
             
+            if (kb.any(c, kb.sym('http://www.w3.org/2002/07/owl#disjointUnionOf'))) {
+                var sel = tabulator.panes.utils.makeSelectForCategory(
+                    myDocument, kb, subject, c, 
+                    subs, false); // Not multiple
+            }
+/*
             var subClassesAsNT = {};
-            var disjointSubclassLists = kb.each(c, kb.sym('http://www.w3.org/2002/07/owl#disjointUnionOf'));
-            if (disjointSubclassLists) {
+            if (disjointSubclassLists.length) {
                 for (j=0; j<disjointSubclassLists.length; j++) {
                     td.appendChild(myDocument.createTextNode('subs:'+subs));
                     var subs = disjointSubclassLists[j].elements;
-                    var sel = makeSelectForSubs(subs, false); // Not multiple
+                    var sel = tabulator.panes.utils.makeSelectForCategory(
+                        myDocument, kb, subject, c, 
+                        subs, false); // Not multiple
                     if (sel) tr.appendChild(sel); 
                     for (var i=0; i<subs.length; i++) {
                         subClassesAsNT[subs[i].toNT()] = true; // Could be blank node
                     }
                 }
             }
-            
+*/            
             
             var subs = kb.each(undefined, kb.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), c);
             if (subs) {

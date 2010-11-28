@@ -5650,7 +5650,7 @@ $rdf.sparqlUpdate = function() {
     }
 
 
-    // Returns The method string SPARQL or WEBDAV or false if known, undefined if not known.
+    // Returns The method string SPARQL or DAV or false if known, undefined if not known.
     //
     sparql.prototype.editable = function(uri, kb) {
         // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
@@ -7792,4 +7792,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         return this.requested[docuri] == true;
     }
 }
+
+$rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, timeout, async) };
+
 return $rdf;}()

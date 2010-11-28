@@ -925,6 +925,8 @@ $rdf.Fetcher = function(store, timeout, async) {
         return xhr
     }
 
+// this.requested[docuri]) != "undefined"
+
     this.objectRefresh = function(term) {
         var uris = kb.uris(term) // Get all URIs
         if (typeof uris != 'undefined') {
@@ -935,8 +937,13 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
     }
 
-    this.refresh = function(term) { // sources_refresh
+    this.unload = function(term) {
         this.store.removeMany(undefined, undefined, undefined, term)
+        delete this.requested[term.uri]; // So it can be loaded again
+    }
+    
+    this.refresh = function(term) { // sources_refresh
+        this.unload(term);
         this.fireCallbacks('refresh', arguments)
         this.requestURI(term.uri, undefined, true)
     }

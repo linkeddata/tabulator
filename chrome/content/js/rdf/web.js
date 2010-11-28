@@ -971,3 +971,6 @@ $rdf.Fetcher = function(store, timeout, async) {
         return this.requested[docuri] == true;
     }
 }
+
+$rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, timeout, async) };
+

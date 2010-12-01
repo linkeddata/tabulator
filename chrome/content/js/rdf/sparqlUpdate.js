@@ -216,8 +216,8 @@ $rdf.sparqlUpdate = function() {
 
             set_object: function(obj, callback) {
                 query = this.where;
-                query += "DELETE { " + this.statementNT + " }\n";
-                query += "INSERT { " +
+                query += "DELETE DATA { " + this.statementNT + " } ;\n";
+                query += "INSERT DATA { " +
                     anonymize(this.statement[0]) + " " +
                     anonymize(this.statement[1]) + " " +
                     anonymize(obj) + " " + " . }\n";
@@ -234,11 +234,11 @@ $rdf.sparqlUpdate = function() {
         if (st instanceof Array) {
             var stText="";
             for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
-            //query += "INSERT { "+st.map(RDFStatement.prototype.toNT.call).join('\n')+" }\n";
+            //query += "INSERT DATA { "+st.map(RDFStatement.prototype.toNT.call).join('\n')+" }\n";
             //the above should work, but gives an error "called on imcompatible XUL...scope..."
-            query += "INSERT { " + stText + " }\n";
+            query += "INSERT DATA { " + stText + " }\n";
         } else {
-            query += "INSERT { " +
+            query += "INSERT DATA { " +
                 anonymize(st.subject) + " " +
                 anonymize(st.predicate) + " " +
                 anonymize(st.object) + " " + " . }\n";
@@ -250,7 +250,7 @@ $rdf.sparqlUpdate = function() {
     sparql.prototype.delete_statement = function(st, callback) {
         var query = this._context_where(this._statement_context(st));
         
-        query += "DELETE { " + anonymizeNT(st) + " }\n";
+        query += "DELETE DATA { " + anonymizeNT(st) + " }\n";
         
         this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
     }
@@ -280,16 +280,32 @@ $rdf.sparqlUpdate = function() {
             if (ds.length) bnodes = this._statement_array_bnodes(ds);
             if (is.length) bnodes = bnodes.concat(this._statement_array_bnodes(is));
             var context = this._bnode_context(bnodes);
-            query = this._context_where(context);
-            if (ds.length) {
-                query += "DELETE { ";
-                for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
-                query += " }\n";
-            }
-            if (is.length) {
-                query += "INSERT { ";
-                for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
-                query += " }\n";
+            var whereClause = this._context_where(context);
+            var query = ""
+            if (whereClause.length) { // Is there a WHERE clause?
+                if (ds.length) {
+                    query += "DELETE { ";
+                    for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
+                    query += " }\n";
+                }
+                if (is.length) {
+                    query += "INSERT { ";
+                    for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
+                    query += " }\n";
+                }
+                query += whereClause;
+            } else { // no where clause
+                if (ds.length) {
+                    query += "DELETE DATA { ";
+                    for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
+                    query += " } \n";
+                }
+                if (is.length) {
+                    if (ds.length) query += " ; ";
+                    query += "INSERT DATA { ";
+                    for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
+                    query += " }\n";
+                }
             }
             var mykb = this.store;
             this._fire(doc.uri, query,

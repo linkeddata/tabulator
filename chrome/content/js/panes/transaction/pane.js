@@ -35,6 +35,7 @@ tabulator.panes.register( {
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
         
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'transactionPane');
@@ -120,20 +121,20 @@ tabulator.panes.register( {
             nav.setAttribute('style', 'float:right');
             div.appendChild(nav);
 
-            var navLink = function(pred) {
+            var navLink = function(pred, label) {
                 donePredicate(pred);
                 var obj =  kb.any(subject, pred);
                 if (!obj) return;
                 var a = myDocument.createElement('a');
                 a.setAttribute('href',obj.uri);
                 a.setAttribute('style', 'float:right');
-                nav.appendChild(a).textContent = tabulator.Util.label(obj);
+                nav.appendChild(a).textContent = label ? label : tabulator.Util.label(obj);
                 nav.appendChild(myDocument.createElement('br'));
             }
 
             navLink(Q('toAccount'));
-            // navLink(Q('accordingTo'));
-            navLink(Q('trip'));
+            navLink(Q('accordingTo'), "Statement");
+            navLink(TRIP('trip'));
             
             // Basic data:
             var table = myDocument.createElement('table');
@@ -148,16 +149,36 @@ tabulator.panes.register( {
             }).join('\n');
             table.innerHTML =  inner;
 
+            var complainIfBad = function(ok,body){
+                if (ok) {
+                    setModifiedDate(store, kb, store);
+                    rerender(div);
+                }
+                else complain("Sorry, failed to save your change:\n"+body);
+            }
+            // What trips do we know about?
+            
+            
             // Classify:
-            var select = tabulator.panes.utils.makeSelectForCategory(myDocument, kb,
-                        subject, Q('Classified'), store, function(ok,body){
-                    if (ok) {
-                        setModifiedDate(store, kb, store);
-                        rerender(div);
-                    }
-                    else complain("Failed to change state:\n"+body);
-                })
-            div.appendChild(select);
+            if (store) {
+                kb.sf.nowOrWhenFetched(store.uri, subject, function(){
+                    div.appendChild(
+                        tabulator.panes.utils.makeSelectForNestedCategory(myDocument, kb,
+                            subject, Q('Classified'), store, complainIfBad));
+
+                    div.appendChild(tabulator.panes.utils.makeDescription(myDocument, kb, subject,
+                            tabulator.ns.rdfs('comment'), store, complainIfBad));
+
+                    var trips = kb.statementsMatching(undefined, TRIP('trip'), undefined, store)
+                                .map(function(st){return st.object}); // @@ Use rdfs
+                    var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
+                    trips = trips.concat(trips2).sort(); // @@ Unique 
+                    if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
+                        myDocument, kb, subject, TRIP('trip'), trips, false,
+                         "-- what trip? --", store, complainIfBad));
+
+                });
+            }
 
             
 
@@ -166,13 +187,14 @@ tabulator.panes.register( {
 
             // Add in simple comments about the transaction
 
-            tabulator.outline.appendPropertyTRs(div, plist, false,
+            donePredicate(ns.rdfs('comment')); // Done above
+/*            tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
                     if (!inverse && pred.uri == 
                         "http://www.w3.org/2000/01/rdf-schema#comment") return true;
                     return false
                 });
-
+*/
             div.appendChild(myDocument.createElement('tr'))
                         .setAttribute('style','height: 1em'); // spacer
             

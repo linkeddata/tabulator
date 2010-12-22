@@ -420,7 +420,7 @@ function UserInput(outline){
                                 var type=kb.the(s.subject,rdf('type'));
                                 var s3=kb.anyStatementMatching(s.subject,rdf('type'),type,s.why);
                                 // TODO: DEFINE ERROR CALLBACK
-                                //because the table is reapinted, so...
+                                // because the table is repainted, so...
                                 var trCache=tabulator.Util.ancestor(tabulator.Util.ancestor(this.lastModified,'TR'),'TD').parentNode;
                                 try{updateService.insert_statement([s1,s2,s3], function(uri,success,error_body){
                                     if (!success){
@@ -677,12 +677,13 @@ function UserInput(outline){
                     
                 try{updateService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
                     if (!success){
-                        dump("Error occurs while inserting "+insertTr.AJAR_statement+'\n\n'+error_body);
+                        tabulator.log.error("userinput.js (pred selected): Fail trying to insert statement "+
+                            insertTr.AJAR_statement+": "+tabulator.Util.stackString(e));
                         outline.UserInput.deleteTriple(insertTr.lastChild,true);
                     }                    
                 })}catch(e){
-                    tabulator.log.error(e);
-                    tabulator.log.warn("Error trying to insert statement "+insertTr.AJAR_statement+": "+e);
+                    tabulator.log.error("Exception trying to insert statement "+
+                        insertTr.AJAR_statement+": "+tabulator.Util.stackString(e));
                     outline.UserInput.deleteTriple(insertTr.lastChild,true);
                     return;
                 }            
@@ -1670,9 +1671,9 @@ function UserInput(outline){
                         tr.AJAR_statement=newStat;
                         newTd.className=newTd.className.replace(/ pendingedit/g,"")
                     }else{
-                        outline.UserInput.deleteTriple(newTd,true);
+                        //outline.UserInput.deleteTriple(newTd,true);
                         // Warn the user that the write has failed.
-                        tabulator.log.warn("Error occurs while inserting "+tr.AJAR_statement+'\n\n'+error_body);
+                        tabulator.log.warn("Failure occurs (#2) while inserting "+tr.AJAR_statement+'\n\n'+error_body);
                     }
                 })}catch(e){
                     tabulator.log.error(e);
@@ -1701,20 +1702,23 @@ function UserInput(outline){
                     s=new tabulator.rdf.Statement(inputTerm,stat.predicate,stat.object,stat.why);
               //<SPARQLUpdate>
                 try{updateService.insert_statement(s, function(uri,success,error_body){
-                    if (success){   
+                    dump("@@ usinput.js 1706 callback ok="+success+" for statement:"+s+"\n ");
+                    if (success){
+                        newTd.className=newTd.className.replace(/ pendingedit/g,""); // User feedback                                               
                         if (!isInverse)
-                            newStat=kb.add(stat.subject,stat.predicate,inputTerm,stat.why);
+                            newStats=kb.statementsMatching(stat.subject,stat.predicate,inputTerm,stat.why);
                         else
-                            newStat=kb.add(inputTerm,stat.predicate,stat.object,stat.why);
-                        tr.AJAR_statement=newStat;
-                        newTd.className=newTd.className.replace(/ pendingedit/g,"");                                                
+                            newStats=kb.statementsMatching(inputTerm,stat.predicate,stat.object,stat.why);
+                        if (!newStats.length)  tabulator.log.error("userinput.js 1711: Can't find statememt!"); 
+                        tr.AJAR_statement=newStats[0];
                     }else{
-                        tabulator.log.warn("Error occurs while inserting "+s+'\n\n'+error_body);
-                        outline.UserInput.deleteTriple(newTd,true);
+                        tabulator.log.warn("userinput.js (object): Fail trying to insert statement "+s);
+                        // outline.UserInput.deleteTriple(newTd,true);
                     } 
                 })}catch(e){
-                    tabulator.log.error(e);
                     outline.UserInput.deleteTriple(newTd,true);
+                    tabulator.log.error("userinput.js (object): exception trying to insert statement "+
+                            s+": "+tabulator.Util.stackString(e));
                     tabulator.log.warn("Error trying to insert statement "+s+":\n"+e);
                     return;
                 }

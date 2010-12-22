@@ -125,6 +125,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 */
 
 
+    tabulator.log.debug('serialize.js Find bnodes with only one incoming arc\n')
     for (var i = 0; i<sts.length; i++) {
         var st = sts[i];
         [ st.subject, st.predicate, st.object].map(function(y){
@@ -150,13 +151,13 @@ __Serializer.prototype.rootSubjects = function(sts) {
     }
     this.incoming = incoming; // Keep for serializing @@ Bug for nested formulas
     
-//////////// New bit for CONNECTED bnode loops:
+//////////// New bit for CONNECTED bnode loops:frootshash
 
 // This scans to see whether the serialization is gpoing to lead to a bnode loop
 // and at the same time accumulates a list of all bnodes mentioned.
 // This is in fact a cut down N3 serialization
-
-    // dump('Staring scan...\n')
+/*
+    tabulator.log.debug('serialize.js Looking for connected bnode loops\n')
     for (var i=0; i<sts.length; i++) { // @@TBL
         // dump('\t'+sts[i]+'\n');
     }
@@ -187,10 +188,11 @@ __Serializer.prototype.rootSubjects = function(sts) {
     // Scan for bnodes nested inside lists too
     function dummyTermToN3(expr, subjects, rootsHash) {
         if (expr.termType == 'bnode') doneBnodesNT[expr.toNT()] = true;
-        // dump('seen '+expr+'\n');
+        tabulator.log.debug('serialize: seen '+expr);
         if (expr.termType == 'collection') {
             for (i=0; i<expr.elements.length; i++) {
-                dummyObjectTree(expr.elements[i], subjects, rootsHash);
+                if (expr.elements[i].termType == 'bnode')
+                    dummyObjectTree(expr.elements[i], subjects, rootsHash);
             }
         return;             
         }
@@ -204,10 +206,12 @@ __Serializer.prototype.rootSubjects = function(sts) {
         dummyTermToN3(subject, subjects, rootsHash);
         dummyPropertyTree(subject, subjects, rootsHash);
     }
-    
+*/    
     // Now do the scan using existing roots
+    tabulator.log.debug('serialize.js Dummy serialize to check for missing nodes')
     var rootsHash = {};
     for (var i = 0; i< roots.length; i++) rootsHash[roots[i].toNT()] = true;
+/*
     for (var i=0; i<roots.length; i++) {
         var root = roots[i];
         dummySubjectTree(root, subjects, rootsHash);
@@ -219,6 +223,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 // Such bnodes must be in isolated rings of pure bnodes.
 // They each have incoming link of 1.
 
+    tabulator.log.debug('serialize.js Looking for connected bnode loops\n')
     for (;;) {
         var bnt;
         var found = null;
@@ -229,10 +234,11 @@ __Serializer.prototype.rootSubjects = function(sts) {
         }
         if (found == null) break; // All done - no bnodes left out/
         // dump('Found isolated bnode:'+found+'\n');
+        doneBnodesNT[bnt] = true;
         var root = this.store.fromNT(found);
         roots.push(root); // Add a new root
         rootsHash[found] = true;
-        // dump('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
+        tabulator.log.debug('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
         if (subjects[found] == undefined) {
             for (var i=0; i<sts.length; i++) {
                 // dump('\t'+sts[i]+'\n');
@@ -242,7 +248,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         dummySubjectTree(root, subjects, rootsHash); // trace out the ring
     }
     // dump('Done bnode adjustments.\n')
-
+*/
     return {'roots':roots, 'subjects':subjects, 
                 'rootsHash': rootsHash, 'incoming': incoming};
 }

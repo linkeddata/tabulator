@@ -30,10 +30,10 @@ tabulator.panes.internalPane = {
         var plist = kb.statementsMatching(subject)
         if (subject.uri) {
             plist.push($r.st(subject,
-                    kb.sym('http://www.w3.org/2006/link#uri'), subject.uri, tabulator.sf.appNode));
+                    kb.sym('http://www.w3.org/2007/ont/link#uri'), subject.uri, tabulator.sf.appNode));
             if (subject.uri.indexOf('#') >= 0) 
                         plist.push($r.st(subject,
-                            kb.sym('http://www.w3.org/2006/link#documentURI'),
+                            kb.sym('http://www.w3.org/2007/ont/link#documentURI'),
                             subject.uri.split('#')[0], tabulator.sf.appNode));
         }
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
@@ -47,10 +47,10 @@ tabulator.panes.internalPane = {
         'http://www.w3.org/2007/ont/link#requestedBy': 1,
         'http://www.w3.org/2007/ont/link#source': 1,
         'http://www.w3.org/2007/ont/link#session': 2, // 2=  test neg but display
-        'http://www.w3.org/2006/link#uri': 1,
-        'http://www.w3.org/2006/link#documentURI': 1,
-        'http://www.w3.org/2006/link#all': 1, // From userinput.js
-        'http://www.w3.org/2006/link#Document': 1,
+        'http://www.w3.org/2007/ont/link#uri': 1,
+        'http://www.w3.org/2007/ont/link#documentURI': 1,
+        'http://www.w3.org/2007/ont/link#all': 1, // From userinput.js
+        'http://www.w3.org/2007/ont/link#Document': 1,
     },
     classes: { // Things which are inherently already undercover
         'http://www.w3.org/2007/ont/link#ProtocolEvent': 1

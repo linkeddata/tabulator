@@ -177,6 +177,7 @@ var httpRequestObserver =
         var chan = aSubject.QueryInterface(Ci.nsIChannel);
         var isBrowserLoad = chan.loadFlags & chan.LOAD_INITIAL_DOCUMENT_URI;
 
+        if (aTopic.slice(0,4) != 'http')  dump("init.js Observer @@ isBrowserLoad="+isBrowserLoad+", aTopic="+aTopic+"\n");
         if (isBrowserLoad && (aTopic == "http-on-examine-response" ||
                         aTopic == "http-on-examine-merged-response" ||
                         aTopic == "http-on-examine-cached-response"))

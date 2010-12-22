@@ -620,6 +620,7 @@ tabulator.OutlineObject = function(doc) {
                 if (typeof tabulator == 'undefined') alert('tabulator undefined')
                 var paneDiv;
                 try {
+                    tabulator.log.info('outline: Rendering pane (1): '+tr1.firstPane.name)
                     paneDiv = tr1.firstPane.render(subject, myDocument, jq);
                 }
                 catch(e) { // Easier debugging for pane developers
@@ -1120,11 +1121,11 @@ tabulator.OutlineObject = function(doc) {
             if (st) { //don't do these for headers or base nodes
             var source = st.why;
             var target = st.why;
-            var editable = outline.UserInput.updateService.editMethod(source, kb);
+            var editable = outline.UserInput.updateService.sparql.editable(source.uri, kb);
             if (!editable)
                 target = node.parentNode.AJAR_inverse ? st.object : st.subject; // left hand side
                 //think about this later. Because we update to the why for now.
-                //editable = outline.UserInput.updateService.editMethod(Util.uri.docpart(target.uri), kb);
+                //editable = outline.UserInput.updateService.sparql.editable(Util.uri.docpart(target.uri), kb);
             // alert('Target='+target+', editable='+editable+'\nselected statement:' + st)
             if (editable && (cla.indexOf('pred') >= 0))
                 termWidget.addIcon(node,tabulator.Icon.termWidgets.addTri); // Add blue plus
@@ -1143,7 +1144,7 @@ tabulator.OutlineObject = function(doc) {
             tabulator.log.info("Deselecting "+node.textContent);
         }
         if (sourceWidget) thisOutline.showSource(); // Update the data sources display
-        tabulator.log.info("selection becomes [" +selection.map(function(item){return item.textContent;}).join(", ")+"]");
+        //tabulator.log.info("selection becomes [" +selection.map(function(item){return item.textContent;}).join(", ")+"]");
         //tabulator.log.info("Setting className " + cla);
         node.setAttribute('class', cla)
     }
@@ -1284,7 +1285,7 @@ tabulator.OutlineObject = function(doc) {
                 if (tabulator.Util.getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'                   
                     var object=tabulator.Util.getAbout(kb,selectedTd);
                     var target = selectedTd.parentNode.AJAR_statement.why;
-                    var editable = this.UserInput.updateService.editMethod(target, kb);                    
+                    var editable = this.UserInput.updateService.sparql.editable(target.uri, kb);                    
                     if (object){
                         //<Feature about="enterToExpand"> 
                         outline.GotoSubject(object,true);
@@ -1334,7 +1335,7 @@ tabulator.OutlineObject = function(doc) {
             case 46://delete
             case 8://backspace
                 var target = selectedTd.parentNode.AJAR_statement.why;
-                var editable = outline.UserInput.updateService.editMethod(target, kb);
+                var editable = outline.UserInput.updateService.sparql.editable(target.uri, kb);
                 if (editable){                                
                     e.preventDefault();//prevent from going back
                     this.UserInput.Delete(selectedTd);
@@ -1496,7 +1497,7 @@ tabulator.OutlineObject = function(doc) {
                 var st = node.parentNode.AJAR_statement;
                 if (!st) return; // For example in the title TD of an expanded pane
                 var target = st.why;
-                var editable = outline.UserInput.updateService.editMethod(target, kb);
+                var editable = outline.UserInput.updateService.sparql.editable(target.uri, kb);
                 if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
                 // var text="TabulatorMouseDown@Outline()";
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
@@ -1639,7 +1640,7 @@ tabulator.OutlineObject = function(doc) {
                 for (var t = p; t.parentNode;  t = t.parentNode) {
                     if (t.nodeName == 'TABLE') break;
                 }
-                if  (t.nodeName != 'TABLE') throw "outline: internal error"+t;
+                if  (t.nodeName != 'TABLE') throw "outline: internal error: "+t;
 
                 // If the view already exists, remove it
                 var state = 'paneShown';
@@ -1664,6 +1665,7 @@ tabulator.OutlineObject = function(doc) {
                 if (state == 'paneShown') {
                     var paneDiv;
                     try {
+                        tabulator.log.info('outline: Rendering pane (2): '+pane.name)
                         paneDiv = pane.render(subject, myDocument, jq);
                     }
                     catch(e) { // Easier debugging for pane developers
@@ -1801,22 +1803,23 @@ tabulator.OutlineObject = function(doc) {
                        
         var returnConditions=[]; //this is quite a general way to do cut and paste programming
                                  //I might make a class for this
-        if (subject.uri && subject.uri.split(':')[0]=='rdf') {
+        if (subject.uri && subject.uri.split(':')[0]=='rdf') {   // what is this? -tim
             render()
             return;
         }
-        //SourceOptions["javascript2rdf"][1].setupHere([returnConditions],"outline_expand()");
-        //SourceOptions["tabulator internal terms"].setupHere([returnConditions],"outline_expand()");
+
         for (var i=0; i<returnConditions.length; i++){
             var returnCode;
             if (returnCode=returnConditions[i](subject)){
                 render();
+                tabulator.log.debug('outline 1815')
                 if (returnCode[1]) outlineElement.removeChild(outlineElement.lastChild);
                 return;
             }
         }
         sf.lookUpThing(subject);
         render()  // inital open, or else full if re-open
+        tabulator.log.debug('outline 1821')
     
     } //outline_expand
     

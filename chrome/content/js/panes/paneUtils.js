@@ -57,6 +57,69 @@ var justificationsArr = [];
 
 
 
+//      Description text area
+//
+// Make a box to demand a description or display existing one
+//
+// @param myDocument - the document DOM for the user interface
+// @param kb - the graph which is the knowledge base we are working with
+// @param subject - a term, the subject of the statement(s) being edited.
+// @param predicate - a term, the predicate of the statement(s) being edited
+// @param storeDoc - The web document being edited 
+// @param callback - takes (boolean ok, string errorBody)
+
+tabulator.panes.utils.makeDescription = function(myDocument, kb, subject, predicate, storeDoc, callback) {
+    var sparqlService = new tabulator.rdf.sparqlUpdate(kb); // @@ Use a common one attached to each fetcher or merge with fetcher
+    var group = myDocument.createElement('div');
+    var sts = kb.statementsMatching(subject, predicate,undefined,storeDoc); // Only one please
+    if (sts.length > 1) throw "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject;
+    var desc = sts.length? sts[0].object.value : undefined;
+    var field = myDocument.createElement('textarea');
+    group.appendChild(field);
+    field.rows = desc? desc.split('\n').length + 2 : 2;
+    field.cols = 80
+    field.setAttribute('style', 'font-size:100%; \
+            background-color: white; border: 0.07em solid gray; padding: 1em; margin: 1em 2em;')
+    if (sts.length) field.value = desc 
+    else {
+        field.value = "enter a description here"
+        field.select(); // Select it ready for user input -- doesn't work
+    }
+
+    var br = myDocument.createElement('br');
+    group.appendChild(br);
+    submit = myDocument.createElement('input');
+    submit.setAttribute('type', 'submit');
+    submit.disabled = true; // until the filled has been modified
+    submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
+    submit.setAttribute('style', 'float: right;');
+    group.appendChild(submit);
+
+    var groupSubmit = function(e) {
+        submit.disabled = true;
+        field.disabled = true;
+        var deletions = desc ? sts[0] : undefined; // If there was a desciption, remove it
+        insertions = field.value.length? new $rdf.Statement(subject, predicate, field.value, storeDoc) : [];
+        sparqlService.update(deletions, insertions,function(uri,ok, body){
+            if (ok) { desc = field.value; field.disabled = false;};
+            if (callback) callback(ok, body);
+        })
+    }
+
+    submit.addEventListener('click', groupSubmit, false)
+
+    field.addEventListener('keypress', function(e) {
+            submit.disabled = false;
+        }, false);
+    return group;
+}
+
+
+
+
+
+
+
 // Make SELECT element to select options
 //
 // @param subject - a term, the subject of the statement(s) being edited.
@@ -71,9 +134,11 @@ var justificationsArr = [];
 tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, predicate,
                 possible, multiple, nullLabel, storeDoc, callback) {
     var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+    tabulator.log.debug('Select list length now '+ possible.length)
     var n = 0; var uris ={}; // Count them
     for (var i=0; i < possible.length; i++) {
         var sub = possible[i];
+        // tabulator.log.warn('Select element: '+ sub)
         if (sub.uri in uris) continue;
         uris[sub.uri] = true; n++;
     } // uris is now the set of possible options
@@ -95,7 +160,14 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
             if (!opt.selected && opt.AJAR_uri in actual) {  // old class
                 ds.push(new $rdf.Statement(subject,
                     predicate, kb.sym(opt.AJAR_uri),storeDoc ));
-            }                        
+            }
+            if (opt.selected) select.currentURI =  opt.AJAR_uri;                      
+        }
+        var sub = select.subSelect;
+        while (sub && sub.currentURI) {
+            ds.push(new $rdf.Statement(subject,
+                    predicate, kb.sym(sub.currentURI),storeDoc));
+            sub = sub.subSelect;
         }
         sparqlService.update(ds, is,
             function(uri, ok, body) {
@@ -109,7 +181,7 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
     var select = myDocument.createElement('select');
     select.setAttribute('style', 'margin: 0.6em 1.5em;')
     if (multiple) select.setAttribute('multiple', 'true');
-    var currentURI = undefined;
+    select.currentURI = null;
     for (var uri in uris) {
         var c = kb.sym(uri)
         var option = myDocument.createElement('option');
@@ -119,12 +191,12 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
         option.AJAR_uri = uri;
         if (uri in actual) {
             option.setAttribute('selected', 'true')
-            currentURI = uri;
+            select.currentURI = uri;
             //dump("Already in class: "+ uri+"\n")
         }
         select.appendChild(option);
     }
-    if ((currentURI == undefined) && !multiple) {
+    if ((select.currentURI == null) && !multiple) {
         var prompt = myDocument.createElement('option');
         prompt.appendChild(myDocument.createTextNode(nullLabel));
         //dump("prompt option:" + prompt + "\n")
@@ -145,6 +217,7 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
 
 tabulator.panes.utils.makeSelectForCategory = function(myDocument, kb, subject, category, storeDoc, callback) {
     var types = kb.findTypeURIs(subject);
+    var log = tabulator.log;
     var du = kb.any(category, tabulator.ns.owl('disjointUnionOf'));
     var subs;
     var multiple = false;
@@ -154,17 +227,49 @@ tabulator.panes.utils.makeSelectForCategory = function(myDocument, kb, subject, 
     } else {
         subs = du.elements            
     }
-    
+    log.debug('Select list length '+ subs.length)
     if (subs.length == 0) throw "Can't do "+ (multiple?"multiple ":"")+"selector with no subclasses of category: "+category;
+    if (subs.length == 1) throw "Can't do "+ (multiple?"multiple ":"")+"selector with only 1 subclass of category: "+category+":"+subs[1];
     return tabulator.panes.utils.makeSelectForOptions(myDocument, kb, subject, tabulator.ns.rdf('type'), subs,
                     multiple, "--classify--", storeDoc, callback);
 }
 
+// Make SELECT element to select subclasses recurively
+//
+// It will so a mutually exclusive dropdown, with another if there are nested 
+// disjoint unions.
+// Callback takes (boolean ok, string errorBody)
+
+tabulator.panes.utils.makeSelectForNestedCategory = function(
+                myDocument, kb, subject, category, storeDoc, callback) {
+    var container = myDocument.createElement('span'); // Container
+    var child = null;
+    var select;
+    var onChange = function(ok, body) {
+        if (ok) update();
+        callback(ok, body);
+    }
+    select = tabulator.panes.utils.makeSelectForCategory(
+                myDocument, kb, subject, category, storeDoc, onChange);
+    container.appendChild(select);
+    var update = function() {
+        // tabulator.log.info("Selected is now: "+select.currentURI);
+        if (child) { container.removeChild(child); child = null;}
+        if (select.currentURI && kb.any(kb.sym(select.currentURI), tabulator.ns.owl('disjointUnionOf'))) {
+            child = tabulator.panes.utils.makeSelectForNestedCategory(
+                myDocument, kb, subject, kb.sym(select.currentURI), storeDoc, callback)
+            select.subSelect = child.firstChild;
+            container.appendChild(child);
+        }
+    };
+    update();
+    return container;
+}
 
 	
 /*  Build a checkbox from a given statement
 ** 
-**  If the source document is ediable, make it editable
+**  If the source document is ediable, make the checkbox editable
 ** originally in socialPane
 */
 tabulator.panes.utils.buildCheckboxForm = function(doc, kb, lab, statement, state) {

@@ -18,7 +18,7 @@
 $rdf.IndexedFormula = function() {
 
 var owl_ns = "http://www.w3.org/2002/07/owl#";
-var link_ns = "http://www.w3.org/2006/link#";
+// var link_ns = "http://www.w3.org/2007/ont/link#";
 
 /* hashString functions are used as array indeces. This is done to avoid
 ** conflict with existing properties of arrays such as length and map.
@@ -200,7 +200,7 @@ $rdf.IndexedFormula.prototype.replaceWith = function(big, small) {
             }            
         }
         
-	    this.add(small, this.sym('http://www.w3.org/2006/link#uri'), big.uri)
+	    this.add(small, this.sym('http://www.w3.org/2007/ont/link#uri'), big.uri)
         
 	    // If two things are equal, and one is requested, we should request the other.
 	    if (this.sf) {

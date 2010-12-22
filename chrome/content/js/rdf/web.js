@@ -672,9 +672,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                         for (;;) {
                             var doc = kb.sym(kb.any(prev, ns.link('requestedURI')))
                             kb.add(doc, ns.rdf('type'), cla, sf.appNode);
-                            prev = kb.any(undefined, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), prev);
+                            prev = kb.any(undefined, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), prev);
                             if (!prev) break;
-                            var response = kb.any(prev, kb.sym('http://www.w3.org/2006/link#response'));
+                            var response = kb.any(prev, kb.sym('http://www.w3.org/2007/ont/link#response'));
                             if (!response) break;
                             var redirection = kb.any(response, kb.sym('http://www.w3.org/2007/ont/http#status'));
                             if (!redirection) break;
@@ -846,7 +846,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
                                             msg += ' Link in <' + badDoc + ' >should be changed';
-                                            kb.add(badDoc, kb.sym('http://www.w3.org/2006/link#warning'), msg, sf.appNode);
+                                            kb.add(badDoc, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg, sf.appNode);
                                         }
                                         // dump(msg+"\n");
                                     }
@@ -861,11 +861,11 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     if (hash >= 0) {
                                         var msg = ('Warning: ' + xhr.uri + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
                                         // dump(msg+"\n");
-                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2006/link#warning'), msg)
+                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
                                         newURI = newURI.slice(0, hash);
                                     }
                                     xhr2 = sf.requestURI(newURI, xhr.uri)
-                                    if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), xhr2.req, sf.appNode);
+                                    if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), xhr2.req, sf.appNode);
                                     // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
                                 }
                             }
@@ -980,4 +980,28 @@ $rdf.Fetcher = function(store, timeout, async) {
 }
 
 $rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, timeout, async) };
+
+// Parse a string and put the result into the graph kb
+$rdf.parse = function parse(str, kb, base, contentType) {
+    if (contentType in ['text/n3', 'text/turtle']) {
+        var p = $rdf.N3Parser(kb, kb, base, base, null, null, "", null)
+        p.loadBuf(str);
+        return;
+    }
+
+    if (contentType == 'application/rdf+xml') {
+        var dparser;
+        if (isExtension) {
+            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(
+                        Components.interfaces.nsIDOMParser);
+        } else {
+            dparser = new DOMParser()
+        }
+        var dom = dparser.parseFromString(str, 'application/xml');
+        var parser = new $rdf.RDFParser(kb);
+        parser.parse(dom, base, kb.sym(base));
+    }
+    throw "Don't know how to parse "+contentType+" yet";
+
+};
 

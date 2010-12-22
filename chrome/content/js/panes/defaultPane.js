@@ -36,10 +36,17 @@ tabulator.panes.defaultPane = {
         tabulator.outline.appendPropertyTRs(div, plist, false, tabulator.panes.defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, tabulator.panes.defaultPane.filter)
+        if ((subject.termType == 'literal') && (subject.value.slice(0,7) == 'http://'))
+            tabulator.outline.appendPropertyTRs(div,
+                [$rdf.st(kb.sym(subject.value), tabulator.ns.link('uri'), subject)],
+                true, tabulator.panes.defaultPane.filter)
         if ((subject.termType == 'symbol' && 
-             outline.UserInput.updateService.editMethod(kb.sym(tabulator.rdf.Util.uri.docpart(subject.uri)), kb))
-             || (subject.termType == 'bnode' && kb.anyStatementMatching(subject) &&
-             outline.UserInput.updateService.editMethod(kb.anyStatementMatching(subject).why)
+             outline.UserInput.updateService.sparql.editable(tabulator.rdf.Util.uri.docpart(subject.uri), kb))
+             || (subject.termType == 'bnode'
+                && kb.anyStatementMatching(subject) 
+                && kb.anyStatementMatching(subject).why
+                && kb.anyStatementMatching(subject).why.uri
+                && outline.UserInput.updateService.sparql.editable(kb.anyStatementMatching(subject).why.uri)
                 //check the document containing something about of the bnode @@ what about as object?
              /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
             var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes
@@ -48,7 +55,7 @@ tabulator.panes.defaultPane = {
             holdingTd.setAttribute('notSelectable','true');
             var img = myDocument.createElement('img');
             img.src = tabulator.Icon.src.icon_add_new_triple;
-            img.className='bottom-border-active'
+            img.className='bottom-border-active';
             //img.addEventListener('click', thisOutline.UserInput.addNewPredicateObject,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        

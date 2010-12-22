@@ -20,7 +20,7 @@ var thisDocTerm=kb.sym("http://dig.csail.mit.edu/2005/ajar/ajaw/tab/js/internalK
 var ns = tabulator.ns;
 
 //fake knowledge!! contradiction? (For smushing on URI to work)
-//kb.add(kb.sym('http://www.w3.org/2006/link#uri'),rdf('type'),OWL('InverseFunctionalProperty'),thisDocTerm);
+//kb.add(kb.sym('http://www.w3.org/2007/ont/link#uri'),rdf('type'),OWL('InverseFunctionalProperty'),thisDocTerm);
 kb.add(ns.link('uri'), ns.rdf('type'), ns.owl('DatatypeProperty'), thisDocTerm);
 
 //FOAF related

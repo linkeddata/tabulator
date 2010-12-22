@@ -1,6 +1,7 @@
 // Joe Presbrey <presbrey@mit.edu>
 // 2007-07-15
 // 2010-08-08 TimBL folded in Kenny's WEBDAV 
+// 2010-12-07 TimBL addred local file write code
 
 $rdf.sparqlUpdate = function() {
 
@@ -31,10 +32,24 @@ $rdf.sparqlUpdate = function() {
     }
 
 
-    // Returns The method string SPARQL or DAV or false if known, undefined if not known.
+    // Returns The method string SPARQL or DAV or LOCALFILE or false if known, undefined if not known.
+    //
+    // Files have to have a specific annotaton that they are machine written, for safety.
+    // We don't actually check for write access on files.
     //
     sparql.prototype.editable = function(uri, kb) {
         // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
+        if (uri.slice(0,8) == 'file:///') {
+            if (kb.holds(kb.sym(uri), tabulator.ns.rdf('type'), tabulator.ns.link('MachineEditableDocument')))
+                return 'LOCALFILE';
+            var sts = kb.statementsMatching(kb.sym(uri),undefined,undefined);
+            
+            tabulator.log.warn("sparql.editable: Not MachineEditableDocument file "+uri+"\n");
+            tabulator.log.warn(sts.map(function(x){return x.toNT();}).join('\n'))
+            return false;
+        //@@ Would be nifty of course to see whether we actually have write acess first.
+        }
+        
         if (!kb) kb = this.store;
         if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
         var request = kb.any(undefined, this.ns.link("requestedURI"), $rdf.Util.uri.docpart(uri));
@@ -58,12 +73,12 @@ $rdf.sparqlUpdate = function() {
                     }
                 }
             } else {
-                dump("sparql.editable: No response for "+uri+"\n");
+                tabulator.log.warn("sparql.editable: No response for "+uri+"\n");
             }
         } else {
-            dump("sparql.editable: No request for "+uri+"\n");
+            tabulator.log.warn("sparql.editable: No request for "+uri+"\n");
         }
-        dump("sparql.editable: inconclusive for "+uri+"\n");
+        tabulator.log.warn("sparql.editable: inconclusive for "+uri+"\n");
         return undefined; // We don't know (yet) as we haven't had a response (yet)
     }
 
@@ -173,14 +188,14 @@ $rdf.sparqlUpdate = function() {
 
     sparql.prototype._fire = function(uri, query, callback) {
         if (!uri) throw "No URI given for remote editing operation: "+query;
-        dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+        tabulator.log.info("sparql: sending update to <"+uri+">\n   query="+query+"\n");
         var xhr = $rdf.Util.XMLHTTPFactory();
 
         xhr.onreadystatechange = function() {
             //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
             if (xhr.readyState == 4) {
                 var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-                if (!success) dump("sparql: update failed for <"+uri+"> status="+
+                if (!success) tabulator.log.error("sparql: update failed for <"+uri+"> status="+
                     xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
                 callback(uri, success, xhr.responseText);
             }
@@ -262,6 +277,8 @@ $rdf.sparqlUpdate = function() {
     //  - callback is called as callback(uri, success, errorbody)
     //
     sparql.prototype.update = function(deletions, insertions, callback) {
+        var kb = this.store;
+        tabulator.log.info("update called")
         var ds =  deletions == undefined ? []
                     : deletions instanceof $rdf.IndexedFormula ? deletions.statements
                     : deletions instanceof Array ? deletions : [ deletions ];
@@ -272,7 +289,7 @@ $rdf.sparqlUpdate = function() {
         if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
         var doc = ds.length ? ds[0].why : is[0].why;
 
-        var protocol = this.editable(doc.uri);
+        var protocol = this.editable(doc.uri, kb);
         if (!protocol) throw "Can't make changes in uneditable "+doc;
 
         if (protocol.indexOf('SPARQL') >=0) {
@@ -307,19 +324,18 @@ $rdf.sparqlUpdate = function() {
                     query += " }\n";
                 }
             }
-            var mykb = this.store;
             this._fire(doc.uri, query,
                 function(uri, success, body) {
-                    dump("\t sparql: Return "+success+" for query "+query+"\n");
+                    tabulator.log.info("\t sparql: Return "+success+" for query "+query+"\n");
                     if (success) {
-                        for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
+                        for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
                         for (var i=0; i<is.length;i++)
-                            mykb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
                     }
                     callback(uri, success, body);
                 });
             
-        } else if (protocol.indexOf('WEBDAV') >=0) {
+        } else if (protocol.indexOf('DAV') >=0) {
 
             // The code below is derived from Kenny's UpdateCenter.js
             var documentString;
@@ -331,11 +347,11 @@ $rdf.sparqlUpdate = function() {
 
             //prepare contents of revised document
             var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
+            for (var i=0;i<ds.length;i++) $rdf.Util.RDFArrayRemove(newSts, ds[i]);
             for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
-            for (var i=0;i<ds.length;i++) RDFArrayRemove(newSts, ds[i]);
             
             //serialize to te appropriate format
-            var sz = $rdf.Serializer();
+            var sz = $rdf.Serializer(kb);
             sz.suggestNamespaces(kb.namespaces);
             sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
             switch(content_type){
@@ -354,6 +370,7 @@ $rdf.sparqlUpdate = function() {
             }
             
             // Write the new version back
+            
             var candidateTarget = kb.the(response, this.ns.httph("content-location"));
             if (candidateTarget) targetURI = Util.uri.join(candidateTarget.value, targetURI);
             var xhr = Util.XMLHTTPFactory();
@@ -374,7 +391,74 @@ $rdf.sparqlUpdate = function() {
             xhr.setRequestHeader('Content-type', content_type);//OK?
             xhr.send(documentString);
 
-        
+        } else if (protocol.indexOf('LOCALFILE') >=0) {
+            try {
+                tabulator.log.info("Writing back to local file\n");
+                // See http://simon-jung.blogspot.com/2007/10/firefox-extension-file-io.html
+                //prepare contents of revised document
+                var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
+                for (var i=0;i<ds.length;i++) $rdf.Util.RDFArrayRemove(newSts, ds[i]);
+                for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
+                
+                //serialize to the appropriate format
+                var documentString;
+                var sz = $rdf.Serializer(kb);
+                sz.suggestNamespaces(kb.namespaces);
+                sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)
+                var dot = doc.uri.lastIndexOf('.');
+                if (dot < 1) throw "Rewriting file: No filename extension: "+doc.uri;
+                var ext = doc.uri.slice(dot+1);                  
+                switch(ext){
+                    case 'rdf': 
+                    case 'owl':  // Just my experence   ...@@ we should keep the format in which it was parsed
+                    case 'xml': 
+                        documentString = sz.statementsToXML(newSts);
+                        break;
+                    case 'n3':
+                    case 'nt':
+                    case 'ttl':
+                        documentString = sz.statementsToN3(newSts);
+                        break;
+                    default:
+                        throw "File extension ."+ext +" not supported for data write";                                                                            
+                }
+                
+                // Write the new version back
+                
+                //create component for file writing
+                dump("Writing back: <<<"+documentString+">>>\n")
+                var filename = doc.uri.slice(7); // chop off   file://  leaving /path
+                //tabulator.log.warn("Writeback: Filename: "+filename+"\n")
+                var file = Components.classes["@mozilla.org/file/local;1"]
+                    .createInstance(Components.interfaces.nsILocalFile);
+                file.initWithPath(filename);
+                if(!file.exists()) throw "Rewriting file <"+doc.uri+"> but it does not exist!";
+                    
+                //{
+                //file.create( Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 420);
+                //}
+                    //create file output stream and use write/create/truncate mode
+                //0x02 writing, 0x08 create file, 0x20 truncate length if exist
+                var stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                .createInstance(Components.interfaces.nsIFileOutputStream);
+
+                stream.init(file, 0x02 | 0x08 | 0x20, 0666, 0);
+
+                //write data to file then close output stream
+                stream.write(documentString, documentString.length);
+                stream.close();
+
+                for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
+                for (var i=0; i<is.length;i++)
+                    kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                                
+                callback(doc.uri, true, ""); // success!
+            } catch(e) {
+                callback(doc.uri, false, 
+                "Exception trying to write back file <"+doc.uri+">\n"+
+                        tabulator.Util.stackString(e))
+            }
+            
         } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
     };
 

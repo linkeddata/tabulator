@@ -3809,7 +3809,7 @@ return SinkParser;
 $rdf.IndexedFormula = function() {
 
 var owl_ns = "http://www.w3.org/2002/07/owl#";
-var link_ns = "http://www.w3.org/2006/link#";
+// var link_ns = "http://www.w3.org/2007/ont/link#";
 
 /* hashString functions are used as array indeces. This is done to avoid
 ** conflict with existing properties of arrays such as length and map.
@@ -3991,7 +3991,7 @@ $rdf.IndexedFormula.prototype.replaceWith = function(big, small) {
             }            
         }
         
-	    this.add(small, this.sym('http://www.w3.org/2006/link#uri'), big.uri)
+	    this.add(small, this.sym('http://www.w3.org/2007/ont/link#uri'), big.uri)
         
 	    // If two things are equal, and one is requested, we should request the other.
 	    if (this.sf) {
@@ -5620,6 +5620,7 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 // Joe Presbrey <presbrey@mit.edu>
 // 2007-07-15
 // 2010-08-08 TimBL folded in Kenny's WEBDAV 
+// 2010-12-07 TimBL addred local file write code
 
 $rdf.sparqlUpdate = function() {
 
@@ -5650,10 +5651,24 @@ $rdf.sparqlUpdate = function() {
     }
 
 
-    // Returns The method string SPARQL or DAV or false if known, undefined if not known.
+    // Returns The method string SPARQL or DAV or LOCALFILE or false if known, undefined if not known.
+    //
+    // Files have to have a specific annotaton that they are machine written, for safety.
+    // We don't actually check for write access on files.
     //
     sparql.prototype.editable = function(uri, kb) {
         // dump("sparql.prototype.editable: CALLED for "+uri+"\n")
+        if (uri.slice(0,8) == 'file:///') {
+            if (kb.holds(kb.sym(uri), tabulator.ns.rdf('type'), tabulator.ns.link('MachineEditableDocument')))
+                return 'LOCALFILE';
+            var sts = kb.statementsMatching(kb.sym(uri),undefined,undefined);
+            
+            tabulator.log.warn("sparql.editable: Not MachineEditableDocument file "+uri+"\n");
+            tabulator.log.warn(sts.map(function(x){return x.toNT();}).join('\n'))
+            return false;
+        //@@ Would be nifty of course to see whether we actually have write acess first.
+        }
+        
         if (!kb) kb = this.store;
         if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
         var request = kb.any(undefined, this.ns.link("requestedURI"), $rdf.Util.uri.docpart(uri));
@@ -5677,12 +5692,12 @@ $rdf.sparqlUpdate = function() {
                     }
                 }
             } else {
-                dump("sparql.editable: No response for "+uri+"\n");
+                tabulator.log.warn("sparql.editable: No response for "+uri+"\n");
             }
         } else {
-            dump("sparql.editable: No request for "+uri+"\n");
+            tabulator.log.warn("sparql.editable: No request for "+uri+"\n");
         }
-        dump("sparql.editable: inconclusive for "+uri+"\n");
+        tabulator.log.warn("sparql.editable: inconclusive for "+uri+"\n");
         return undefined; // We don't know (yet) as we haven't had a response (yet)
     }
 
@@ -5792,14 +5807,14 @@ $rdf.sparqlUpdate = function() {
 
     sparql.prototype._fire = function(uri, query, callback) {
         if (!uri) throw "No URI given for remote editing operation: "+query;
-        dump("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+        tabulator.log.info("sparql: sending update to <"+uri+">\n   query="+query+"\n");
         var xhr = $rdf.Util.XMLHTTPFactory();
 
         xhr.onreadystatechange = function() {
             //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
             if (xhr.readyState == 4) {
                 var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-                if (!success) dump("sparql: update failed for <"+uri+"> status="+
+                if (!success) tabulator.log.error("sparql: update failed for <"+uri+"> status="+
                     xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
                 callback(uri, success, xhr.responseText);
             }
@@ -5881,6 +5896,8 @@ $rdf.sparqlUpdate = function() {
     //  - callback is called as callback(uri, success, errorbody)
     //
     sparql.prototype.update = function(deletions, insertions, callback) {
+        var kb = this.store;
+        tabulator.log.info("update called")
         var ds =  deletions == undefined ? []
                     : deletions instanceof $rdf.IndexedFormula ? deletions.statements
                     : deletions instanceof Array ? deletions : [ deletions ];
@@ -5891,7 +5908,7 @@ $rdf.sparqlUpdate = function() {
         if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
         var doc = ds.length ? ds[0].why : is[0].why;
 
-        var protocol = this.editable(doc.uri);
+        var protocol = this.editable(doc.uri, kb);
         if (!protocol) throw "Can't make changes in uneditable "+doc;
 
         if (protocol.indexOf('SPARQL') >=0) {
@@ -5926,19 +5943,18 @@ $rdf.sparqlUpdate = function() {
                     query += " }\n";
                 }
             }
-            var mykb = this.store;
             this._fire(doc.uri, query,
                 function(uri, success, body) {
-                    dump("\t sparql: Return "+success+" for query "+query+"\n");
+                    tabulator.log.info("\t sparql: Return "+success+" for query "+query+"\n");
                     if (success) {
-                        for (var i=0; i<ds.length;i++) mykb.remove(ds[i]);
+                        for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
                         for (var i=0; i<is.length;i++)
-                            mykb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
                     }
                     callback(uri, success, body);
                 });
             
-        } else if (protocol.indexOf('WEBDAV') >=0) {
+        } else if (protocol.indexOf('DAV') >=0) {
 
             // The code below is derived from Kenny's UpdateCenter.js
             var documentString;
@@ -5950,11 +5966,11 @@ $rdf.sparqlUpdate = function() {
 
             //prepare contents of revised document
             var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
+            for (var i=0;i<ds.length;i++) $rdf.Util.RDFArrayRemove(newSts, ds[i]);
             for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
-            for (var i=0;i<ds.length;i++) RDFArrayRemove(newSts, ds[i]);
             
             //serialize to te appropriate format
-            var sz = $rdf.Serializer();
+            var sz = $rdf.Serializer(kb);
             sz.suggestNamespaces(kb.namespaces);
             sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
             switch(content_type){
@@ -5973,6 +5989,7 @@ $rdf.sparqlUpdate = function() {
             }
             
             // Write the new version back
+            
             var candidateTarget = kb.the(response, this.ns.httph("content-location"));
             if (candidateTarget) targetURI = Util.uri.join(candidateTarget.value, targetURI);
             var xhr = Util.XMLHTTPFactory();
@@ -5993,7 +6010,74 @@ $rdf.sparqlUpdate = function() {
             xhr.setRequestHeader('Content-type', content_type);//OK?
             xhr.send(documentString);
 
-        
+        } else if (protocol.indexOf('LOCALFILE') >=0) {
+            try {
+                tabulator.log.info("Writing back to local file\n");
+                // See http://simon-jung.blogspot.com/2007/10/firefox-extension-file-io.html
+                //prepare contents of revised document
+                var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
+                for (var i=0;i<ds.length;i++) $rdf.Util.RDFArrayRemove(newSts, ds[i]);
+                for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
+                
+                //serialize to the appropriate format
+                var documentString;
+                var sz = $rdf.Serializer(kb);
+                sz.suggestNamespaces(kb.namespaces);
+                sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)
+                var dot = doc.uri.lastIndexOf('.');
+                if (dot < 1) throw "Rewriting file: No filename extension: "+doc.uri;
+                var ext = doc.uri.slice(dot+1);                  
+                switch(ext){
+                    case 'rdf': 
+                    case 'owl':  // Just my experence   ...@@ we should keep the format in which it was parsed
+                    case 'xml': 
+                        documentString = sz.statementsToXML(newSts);
+                        break;
+                    case 'n3':
+                    case 'nt':
+                    case 'ttl':
+                        documentString = sz.statementsToN3(newSts);
+                        break;
+                    default:
+                        throw "File extension ."+ext +" not supported for data write";                                                                            
+                }
+                
+                // Write the new version back
+                
+                //create component for file writing
+                dump("Writing back: <<<"+documentString+">>>\n")
+                var filename = doc.uri.slice(7); // chop off   file://  leaving /path
+                //tabulator.log.warn("Writeback: Filename: "+filename+"\n")
+                var file = Components.classes["@mozilla.org/file/local;1"]
+                    .createInstance(Components.interfaces.nsILocalFile);
+                file.initWithPath(filename);
+                if(!file.exists()) throw "Rewriting file <"+doc.uri+"> but it does not exist!";
+                    
+                //{
+                //file.create( Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 420);
+                //}
+                    //create file output stream and use write/create/truncate mode
+                //0x02 writing, 0x08 create file, 0x20 truncate length if exist
+                var stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                .createInstance(Components.interfaces.nsIFileOutputStream);
+
+                stream.init(file, 0x02 | 0x08 | 0x20, 0666, 0);
+
+                //write data to file then close output stream
+                stream.write(documentString, documentString.length);
+                stream.close();
+
+                for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
+                for (var i=0; i<is.length;i++)
+                    kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                                
+                callback(doc.uri, true, ""); // success!
+            } catch(e) {
+                callback(doc.uri, false, 
+                "Exception trying to write back file <"+doc.uri+">\n"+
+                        tabulator.Util.stackString(e))
+            }
+            
         } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
     };
 
@@ -6183,6 +6267,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 */
 
 
+    tabulator.log.debug('serialize.js Find bnodes with only one incoming arc\n')
     for (var i = 0; i<sts.length; i++) {
         var st = sts[i];
         [ st.subject, st.predicate, st.object].map(function(y){
@@ -6208,13 +6293,13 @@ __Serializer.prototype.rootSubjects = function(sts) {
     }
     this.incoming = incoming; // Keep for serializing @@ Bug for nested formulas
     
-//////////// New bit for CONNECTED bnode loops:
+//////////// New bit for CONNECTED bnode loops:frootshash
 
 // This scans to see whether the serialization is gpoing to lead to a bnode loop
 // and at the same time accumulates a list of all bnodes mentioned.
 // This is in fact a cut down N3 serialization
-
-    // dump('Staring scan...\n')
+/*
+    tabulator.log.debug('serialize.js Looking for connected bnode loops\n')
     for (var i=0; i<sts.length; i++) { // @@TBL
         // dump('\t'+sts[i]+'\n');
     }
@@ -6245,10 +6330,11 @@ __Serializer.prototype.rootSubjects = function(sts) {
     // Scan for bnodes nested inside lists too
     function dummyTermToN3(expr, subjects, rootsHash) {
         if (expr.termType == 'bnode') doneBnodesNT[expr.toNT()] = true;
-        // dump('seen '+expr+'\n');
+        tabulator.log.debug('serialize: seen '+expr);
         if (expr.termType == 'collection') {
             for (i=0; i<expr.elements.length; i++) {
-                dummyObjectTree(expr.elements[i], subjects, rootsHash);
+                if (expr.elements[i].termType == 'bnode')
+                    dummyObjectTree(expr.elements[i], subjects, rootsHash);
             }
         return;             
         }
@@ -6262,10 +6348,12 @@ __Serializer.prototype.rootSubjects = function(sts) {
         dummyTermToN3(subject, subjects, rootsHash);
         dummyPropertyTree(subject, subjects, rootsHash);
     }
-    
+*/    
     // Now do the scan using existing roots
+    tabulator.log.debug('serialize.js Dummy serialize to check for missing nodes')
     var rootsHash = {};
     for (var i = 0; i< roots.length; i++) rootsHash[roots[i].toNT()] = true;
+/*
     for (var i=0; i<roots.length; i++) {
         var root = roots[i];
         dummySubjectTree(root, subjects, rootsHash);
@@ -6277,6 +6365,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 // Such bnodes must be in isolated rings of pure bnodes.
 // They each have incoming link of 1.
 
+    tabulator.log.debug('serialize.js Looking for connected bnode loops\n')
     for (;;) {
         var bnt;
         var found = null;
@@ -6287,10 +6376,11 @@ __Serializer.prototype.rootSubjects = function(sts) {
         }
         if (found == null) break; // All done - no bnodes left out/
         // dump('Found isolated bnode:'+found+'\n');
+        doneBnodesNT[bnt] = true;
         var root = this.store.fromNT(found);
         roots.push(root); // Add a new root
         rootsHash[found] = true;
-        // dump('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
+        tabulator.log.debug('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
         if (subjects[found] == undefined) {
             for (var i=0; i<sts.length; i++) {
                 // dump('\t'+sts[i]+'\n');
@@ -6300,7 +6390,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         dummySubjectTree(root, subjects, rootsHash); // trace out the ring
     }
     // dump('Done bnode adjustments.\n')
-
+*/
     return {'roots':roots, 'subjects':subjects, 
                 'rootsHash': rootsHash, 'incoming': incoming};
 }
@@ -7509,9 +7599,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                         for (;;) {
                             var doc = kb.sym(kb.any(prev, ns.link('requestedURI')))
                             kb.add(doc, ns.rdf('type'), cla, sf.appNode);
-                            prev = kb.any(undefined, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), prev);
+                            prev = kb.any(undefined, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), prev);
                             if (!prev) break;
-                            var response = kb.any(prev, kb.sym('http://www.w3.org/2006/link#response'));
+                            var response = kb.any(prev, kb.sym('http://www.w3.org/2007/ont/link#response'));
                             if (!response) break;
                             var redirection = kb.any(response, kb.sym('http://www.w3.org/2007/ont/http#status'));
                             if (!redirection) break;
@@ -7683,7 +7773,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
                                             msg += ' Link in <' + badDoc + ' >should be changed';
-                                            kb.add(badDoc, kb.sym('http://www.w3.org/2006/link#warning'), msg, sf.appNode);
+                                            kb.add(badDoc, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg, sf.appNode);
                                         }
                                         // dump(msg+"\n");
                                     }
@@ -7698,11 +7788,11 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     if (hash >= 0) {
                                         var msg = ('Warning: ' + xhr.uri + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
                                         // dump(msg+"\n");
-                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2006/link#warning'), msg)
+                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
                                         newURI = newURI.slice(0, hash);
                                     }
                                     xhr2 = sf.requestURI(newURI, xhr.uri)
-                                    if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2006/link#redirectedRequest'), xhr2.req, sf.appNode);
+                                    if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), xhr2.req, sf.appNode);
                                     // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
                                 }
                             }
@@ -7817,5 +7907,29 @@ $rdf.Fetcher = function(store, timeout, async) {
 }
 
 $rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, timeout, async) };
+
+// Parse a string and put the result into the graph kb
+$rdf.parse = function parse(str, kb, base, contentType) {
+    if (contentType in ['text/n3', 'text/turtle']) {
+        var p = $rdf.N3Parser(kb, kb, base, base, null, null, "", null)
+        p.loadBuf(str);
+        return;
+    }
+
+    if (contentType == 'application/rdf+xml') {
+        var dparser;
+        if (isExtension) {
+            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(
+                        Components.interfaces.nsIDOMParser);
+        } else {
+            dparser = new DOMParser()
+        }
+        var dom = dparser.parseFromString(str, 'application/xml');
+        var parser = new $rdf.RDFParser(kb);
+        parser.parse(dom, base, kb.sym(base));
+    }
+    throw "Don't know how to parse "+contentType+" yet";
+
+};
 
 return $rdf;}()

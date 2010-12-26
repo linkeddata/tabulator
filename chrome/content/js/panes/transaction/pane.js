@@ -24,6 +24,8 @@ tabulator.panes.register( {
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
         if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
 
+        if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
+        
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -89,7 +91,7 @@ tabulator.panes.register( {
 
         //              Render a single transaction
         
-        if (1) {  // (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
 
             var trip = kb.any(subject, WF('trip'));
             var ns = tabulator.ns
@@ -208,12 +210,52 @@ tabulator.panes.register( {
                     return !(pred.uri in predicateURIsDone)
                 });
 
-        } // end of render tranasaction instance
+        // end of render tranasaction instance
+
+
+        // Render the transactions in a Trip
+        } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
+        
+            var query = new $rdf.Query(tabulator.Util.label(subject));
+            var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
+            var v = {};
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
+            query.pat.add(v['transaction'], TRIP('trip'), subject);
+            query.pat.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get supertypes too
+            query.pat.add(v['transaction'], Q('date'), v['date']);
+            query.pat.add(v['transaction'], ns.rdfs('comment'), v['comment']);
+            query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
+            //complain('Query pattern is:\n'+query.pat);
+            var tableDiv = paneUtils.renderTableViewPane(myDocument, {'query': query} );
+            div.appendChild(tableDiv);
+            
+            var total = {};
+            var trans = kb.each(undefined, TRIP('trip'), subject);
+            trans.map(function(t){
+                var ty = kb.the(t, ns.rdf('type'));
+                if (ty && ty.uri) {
+                    ty = ty.uri;
+                    if (!total[ty]) total[ty]= 0.0;
+                    var lit = kb.the(t, Q('in_USD'));
+                    if (lit) total[ty] = total[ty] + (0.0-lit.value);
+                }
+            });
+            var str = '';
+            for (var uri in total) {
+                str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri];
+             } 
+            complain('Totals: '+str)
+        
+        }
+
+
         
         //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
 
         return div;
     }
+        
+
 }, true);
 
 //ends

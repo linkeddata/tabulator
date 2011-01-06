@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type"text/css" ?>
+<?xml-stylesheet href="chrome://browser/skin/browser.css" type="text/css" ?>
+<!DOCTYPE page SYSTEM "chrome://tabulator/locale/tabulatorsidebar.dtd">
+
+<page id="sbTabulatorSidebar"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" >
+
+  <listbox id="queryList"/>
+  <toolbar id="queryToolbar" mode="icons"/>
+  <script type="application/x-javascript" src="js/tab/querySidebar.js"/>
+  <script type="application/x-javascript">
+  var qsb = new querySidebar(document);
+  </script>
+</page>

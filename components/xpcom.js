@@ -79,13 +79,13 @@ function Tabulator() {
 // This is the implementation of your component.
 Tabulator.prototype = {
     //nsISupports
-    QueryInterface: function(aIID)
-    {
+    QueryInterface: function(aIID) {
         // add any other interfaces you support here
         if (!aIID.equals(nsISupports))
             throw Components.results.NS_ERROR_NO_INTERFACE;
         return this;
-    }
+    },
+    classID: CLASS_ID
 }
     
 //=================================================
@@ -105,7 +105,7 @@ Tabulator.prototype = {
         }
     };
 
-// Module
+// Firefox 3 Module
 var TabulatorModule = {
     registerSelf: function(aCompMgr, aFileSpec, aLocation, aType)
     {
@@ -132,6 +132,10 @@ var TabulatorModule = {
     
     canUnload: function(aCompMgr) { return true; }
 };
-
-//module initialization
 function NSGetModule(aCompMgr, aFileSpec) { return TabulatorModule; }
+
+// Firefox 4 Module
+// https://developer.mozilla.org/en/XPCOM/XPCOM_changes_in_Gecko_2.0
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+if (XPCOMUtils.generateNSGetFactory)
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory([Tabulator]);

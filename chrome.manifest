@@ -5,6 +5,5 @@ skin        tabulator    classic/1.0     skin/
 overlay chrome://browser/content/browser.xul chrome://tabulator/content/tabulator.xul
 component {968a15aa-83d2-4577-88dd-b493dab4deb7} components/xpcom.js
 contract @dig.csail.mit.edu/tabulator;1 {968a15aa-83d2-4577-88dd-b493dab4deb7}
-category profile-after-change Tabulator @dig.xvm.mit.edu/tabulator;1
 category ext-to-type-mapping n3 text/n3
 category ext-to-type-mapping ttl text/turtle

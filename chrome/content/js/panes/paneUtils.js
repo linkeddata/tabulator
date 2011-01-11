@@ -1,11 +1,12 @@
 /**
-* Few General purpose utlity functions used in the panes
+* Few General purpose utility functions used in the panes
 * oshani@csail.mit.edu 
 */
 
 
 paneUtils = {};
 tabulator.panes.utils = paneUtils;
+tabulator.panes.field = {}; // Form field functions by URI of field type.
 
 // This is used to canonicalize an array
 tabulator.panes.utils.unique = function(a){
@@ -32,6 +33,12 @@ tabulator.panes.utils.shortDate = function(str) {
     return str.slice(0,10);
 }
 
+tabulator.panes.utils.newThing = function(kb, store) {
+    var now = new Date();
+    var timestamp = ''+ now.getTime();
+    // http://www.w3schools.com/jsref/jsref_obj_date.asp
+    var issue = kb.sym(store.uri + '#' + 'id'+timestamp);
+}
 
 	
 //These are horrible global vars. To minimize the chance of an unintended name collision
@@ -51,9 +58,397 @@ var justificationsArr = [];
 
 
 
-/*              General purpose widgets
+/*                                  Form Field implementations
 **
 */
+/*          Group of different fields
+**
+*/
+tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
+                                    dom, container, kb, subject, form, store, callback) {
+    var box = dom.createElement('div');
+    var ui = tabulator.ns.ui;
+    container.appendChild(box);
+    var parts = kb.each(form, ui('part'));
+    if (!parts) throw "No parts to form "+form;
+    var p2 = parts.map(function(p) {var k = kb.any(p, ui('sequence')); return [k?k:999,p] });
+    p2.sort();
+    for (var i=0; i<p2.length; i++) {
+        var fn = [p[i][1].uri];
+        fn(dom, box, kb, subject, form, store, callback);
+    }
+    return;
+}
+
+/*          Multiple similar fields
+**
+*/
+tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
+                                    dom, container, kb, subject, form, store, callback) {
+    var box = dom.createElement('table');
+    var ui = tabulator.ns.ui;
+    container.appendChild(box);
+    var property = kb.any(form, ui('property'));
+    if (!property) throw "No property to multiple: "+form;
+    var element = kb.any(form, ui('element'));
+    if (!element) throw "No element to multiple: "+form;
+
+    var count = 0;
+    // box.appendChild(dom.createElement('h3')).textContents = "Fields:".
+    var body = box.appendChild(dom.createElement('tr'));
+    var tail = box.appendChild(dom.createElement('tr'));
+    var img = tail.appendChild(dom.createElement('img'));
+    img.setAttribute('src', tabulator.Icon.src.icon_add_triple); // blue plus
+    var addItem = function(e) {
+        var num = ++count;
+        var object = tabulator.panes.utils.newThing(kb, store);
+        var tr = box.insertBefore(dom.createElement('tr'), tail);
+        var itemDone = function(ok, body) {
+            if (!ok) return callback(ok, body);
+            var ins = [$rdf.st(subject, property, object)]
+            sparqlService.update([], ins, linkDone)
+        }
+        var linkDone = function(uri, ok, body) {
+            return callback(ok, body);
+        }
+        var fn = tabulator.panes.field[element.uri];
+        if (!fn) throw "In multiple, No support function for element: "+element;
+        fn(dom, body, kb, object, form, store, itemDone);
+        
+    }
+    img.addEventListener('click', addItem, false);
+    return box
+}
+
+
+tabulator.panes.field[tabulator.ns.ui('TextField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] =  // For now all the same
+tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
+                                    dom, container, kb, subject, form, store, callback) {
+    var box = dom.createElement('input');
+    var ui = tabulator.ns.ui;
+    container.appendChild(box);
+    var property = kb.any(form, ui('property'));
+    if (!property) throw "No property to multiple: "+form;
+
+}
+
+/*                      General purpose widgets
+**
+*/
+
+//          Find list of properties for class
+//
+// Three possible sources: Those mentioned in schemas, which exludes many;
+// those which occur in the data we alreadyhave, and those predicates we
+// have come across anywahere and which are not explicitly excluded from
+// being used with this class.
+//
+tabulator.panes.utils.propertiesForClass = function(kb, c) {
+    var ns = tabulator.ns;
+    var explicit = kb.each(undefined, ns.rdf('range'), c);
+    [ ns.rdfs('comment'), ns.dc('title'), // Generic things
+                ns.foaf('name'), ns.foaf('homepage')]
+        .map(function(x){explicit.push(x)});
+    var members = kb.each(undefined, ns.rdf('type'), c);
+    if (members.length > 60) members = members.slice(0,60); // Array supports slice? 
+    var used = {};
+    for (var i=0; i< (members.length > 60 ? 60 : members.length); i++)
+                kb.statementsMatching(members[i], undefined, undefined)
+                        .map(function(st){used[st.predicate.uri]=true});
+    explicit.map(function(p){used[p.uri]=true});
+    var result = [];
+    for (var uri in used) result.push(kb.sym(uri));
+    return result;
+}
+
+
+//          List of other things
+//
+/*
+tabulator.panes.utils.collectionWidget = function(dom, kb, subject, predicate, possible, store, callback) {
+    var list = kb.any(subject, predicate);
+    var box = dom.createElement('table')
+    if (!list) { // or maybe just leave  button to make the list
+        list = new $rdf.Collection();
+        kb.add(subject, predicate, list);
+    }
+    // termWidget.addIcon(node,tabulator.Icon.termWidgets.addTri); // Add blue plus
+
+    var tail = box.appendChild(dom.createElement('tr'));
+    var img = tail.appendChild(dom.createElement('img'));
+    img.setAttribute('src', tabulator.Icon.src.icon_add_triple);
+    var addItem = function(e) {
+        //var num = list.elements.length;
+        var tr = box.insertBefore(dom.createElement('tr'), tail);
+        tr.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
+                list, ns.rdf('_'+(list.elements.length+1)), // @@ kludge!
+                possible, false, "-- select property --", store, callback));
+        
+    }
+    img.addEventListener('click', addItem, false);
+    return box
+
+}
+*/
+// Create entry field for a given property
+
+tabulator.panes.utils.checkProperty = function(kb, pred) {
+    var data = undefined, ns = tabulator.ns;
+    if (kb.holds(pred, ns.rdfs('range'), ns.owl('DataProperty'))) data = true;
+    if (kb.holds(pred, ns.rdfs('range'), ns.owl('ObjectProperty'))) data = false;
+    var c = kb.any(pred, ns.rdfs('range'));
+    if (c) {
+        if (c.uri.slice(0,34) == 'http://www.w3.org/2001/XMLSchema#' ||
+        c in { 'http://www.w3.org/2000/01/rdf-schema#Literal': true, 
+                'http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral': true}) {
+            if (data == false) throw "ObjectProperty has datatype range: "+c.uri; 
+            data = true;
+        } else {
+            data = false; // Assume object then. @@ this is not necessarily true
+        }
+    }
+    return {'data': data, 'range': c};
+
+}
+
+tabulator.panes.utils.objectEntry = function(dom, kb, pred) {
+
+    var res = tabulator.panes.utils.checkProperty(kb, pred);
+    var data = res.data, range = res.range, ns = tabulator.ns;
+    if (data == undefined) {
+        var container = dom.createElement('div')
+        container.setAttribute('style', 'background-color: #ffffcc; border: 0.1em solid gray; ');
+        container.appendChild(dom.createElement('p')).textContent =
+            "I am sorry, you need to provide a "+
+            tabulator.Util.label(pred)+" but I don't know enough information about that property to ask you.";
+        var b = container.appendChild(dom.createElement('button'));
+        b.setAttribute('type', 'button');
+        b.innerHTML = "Goto "+tabulator.Util.label(pred);
+        b.addEventListener('click', function(e) {
+            tabulator.outline.GotoSubject(pred, true, undefined, true, undefined);
+        }, false);
+        return container;
+
+        //throw "[paneUtils] Don't know enough about property to input it: "+pred.uri;
+    }
+    var field = dom.createElement('input');
+    field.setAttribute('type','text');
+    field.setAttribute('size','100');
+    field.setAttribute('maxLength','2048');// No arbitrary limits
+    return field;
+}
+
+tabulator.panes.utils.findClosest = function findClosest(kb, cla, prop) {
+    var agenda = [cla]; // ordered - this is breadth first search
+    while (agenda.length > 0) { 
+        var c = agenda.shift(); // first
+        // if (c.uri && (c.uri == ns.owl('Thing').uri || c.uri == ns.rdf('Resource').uri )) continue
+        var lists = kb.each(c, prop);
+        tabulator.log.debug("Lists for "+c+", "+prop+": "+lists.length)
+        if (lists.length != 0) return lists;
+        var supers = kb.each(c, ns.rdfs('subClassOf'));
+        for (var i=0; i<supers.length; i++) {
+            agenda.push(supers[i]);
+        }
+    }
+    
+    return [];
+}
+
+tabulator.panes.utils.newButton = function(dom, kb, subject, predicate, theClass, store, callback)  {
+    var b = dom.createElement("button");
+    b.setAttribute("type", "button");
+    b.innerHTML = "New "+tabulator.Util.label(theClass);
+    b.addEventListener('click', function(e) {
+            b.parentNode.appendChild(tabulator.panes.utils.promptForNew(
+                dom, kb, subject, predicate, theClass, store, callback));
+        }, false);
+    return b;
+}
+
+//      Prompt for new object of a given class
+//
+//
+// @param dom - the document DOM for the user interface
+// @param kb - the graph which is the knowledge base we are working with
+// @param subject - a term, Thing this should be linked to when made.
+// @param predicate - a term, the relationship for the subject link.
+// @param theClass - an RDFS class containng the object about which the new information is.
+// @param store - The web document being edited 
+// @param callback - takes (boolean ok, string errorBody)
+
+tabulator.panes.utils.promptForNew1 = function(dom, kb, subject, predicate, theClass, store, callback) {
+    var ns = tabulator.ns
+    var lists =findClosest(kb, theClass, ns.ui('initialProperties'));
+    var form = dom.createElement('form');
+    if (lists.length == 0) {
+        var p = form.appendChild(dom.createElement('p'));
+        p.textContent = "I am sorry, you need to provide information about a "+
+            tabulator.Util.label(theClass)+" but I don't know enough information about those to ask you.";
+        var b = form.appendChild(dom.createElement('button'));
+        b.setAttribute('type', 'button');
+        b.innerHTML = "Goto "+tabulator.Util.label(theClass);
+        b.addEventListener('click', function(e) {
+            tabulator.outline.GotoSubject(theClass, true, undefined, true, undefined);
+        }, false);
+        return form;
+        //throw "Do not know enough about the class "
+        //+theClass+" to be able to be able to prompt for information about a new one";
+    }
+    var props = lists[0].elements;  // Pick any one
+    tabulator.log.debug('lists[0] is '+lists[0]);
+    tabulator.log.debug('props is '+props);
+    form.innerHTML="<h2>Add new "+ tabulator.Util.label(theClass)
+                        + "</h2>";
+    var table = form.appendChild(dom.createElement('table'))
+    var tb = table.appendChild(dom.createElement('tbody'))
+
+    var sendNew = function() {
+        sts = [];
+        
+        var now = new Date();
+        var timestamp = ''+ now.getTime();
+        // http://www.w3schools.com/jsref/jsref_obj_date.asp
+        var item = kb.sym(store.uri + '#' + 'id-'+timestamp);
+        sts.push(new $rdf.Statement(subject, predicate, item, store));
+
+        for (var i=0; i<fields.length; i++) {
+            fields[i].setAttribute('class','pendingedit');
+            fields[i].disabled = true;
+            sts.push(new $rdf.Statement(item, props[i], kb.literal(fields[i].value), store));
+        }
+
+        sts.push(new $rdf.Statement(item, ns.rdf('type'), theClass, store));
+
+        var sendComplete = function(uri, success, body) {
+            if (!success) {
+                callback(success, body);
+            } else {
+                var div = form.parentNode;
+                div.removeChild(form);
+                callback(success, body);
+                //if (div.rerender) rerender(div);
+                //tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
+            }
+        }
+        sparqlService.update([], sts, sendComplete);
+    }
+
+    form.addEventListener('submit', sendNew, false)
+    form.setAttribute('onsubmit', "function xx(){return false;}");
+    var fields = [];
+    for (var i=0; i<props.length; i++) {
+        var prop = props[i], tr;
+        // @@ here could test for prop being a complex form specification.
+        tb.appendChild(tr = dom.createElement('tr'))
+            .appendChild(dom.createElement('td'))
+            .textContent = tabulator.Util.label(prop);
+        var field = tabulator.panes.utils.objectEntry(dom, kb,prop)
+        tr.appendChild(dom.createElement('tr')).appendChild(field);
+        fields.push(field);
+    }
+    return form;
+}
+
+
+//      Prompt for new object of a given class
+//
+//
+// @param dom - the document DOM for the user interface
+// @param kb - the graph which is the knowledge base we are working with
+// @param subject - a term, Thing this should be linked to when made.
+// @param predicate - a term, the relationship for the subject link.
+// @param theClass - an RDFS class containng the object about which the new information is.
+// @param store - The web document being edited 
+// @param callback - takes (boolean ok, string errorBody)
+// @returns a dom object with the form DOM
+
+tabulator.panes.utils.promptForNew2 = function(dom, kb, subject, predicate, theClass, store, callback) {
+    var ns = tabulator.ns
+    var lists =findClosest(kb, theClass, ns.ui('creationForm'));
+    // if (!lists) throw "Can't create a new "+theClass+" as no creationForm.";
+    var box = dom.createElement('form');
+    if (lists.length == 0) {
+        var p = box.appendChild(dom.createElement('p'));
+        p.textContent = "I am sorry, you need to provide information about a "+
+            tabulator.Util.label(theClass)+" but I don't know enough information about those to ask you.";
+        var b = box.appendChild(dom.createElement('button'));
+        b.setAttribute('type', 'button');
+        b.innerHTML = "Goto "+tabulator.Util.label(theClass);
+        b.addEventListener('click', function(e) {
+            tabulator.outline.GotoSubject(theClass, true, undefined, true, undefined);
+        }, false);
+        return box;
+        //throw "Do not know enough about the class "
+        //+theClass+" to be able to be able to prompt for information about a new one";
+    }
+    var form = lists[0];  // Pick any one
+    tabulator.log.debug('lists[0] is '+lists[0]);
+    tabulator.log.debug('form is '+form);
+    box.innerHTML="<h2>Add new "+ tabulator.Util.label(theClass)
+                        + "</h2>";
+
+                        
+                        
+    var ft = kb.findTypeURIs(form);
+    var bot = bottomTypeURIs(ft); // most specific
+    var bots = []
+    for (var b in bot) bots.push(b);
+    if (bots.length > 1) throw "Don't expect multiple field types: "+bots;
+    b = bots[0];
+    formFunction = tabulator.panes.field[b]
+    if (!formFunction) throw "No handler for field type: "+b;
+    formFunction(dom, box, kb, subject, form, store, callback);
+    return box;
+/*    
+    var sendNew = function() {
+        sts = [];
+        
+        var now = new Date();
+        var timestamp = ''+ now.getTime();
+        // http://www.w3schools.com/jsref/jsref_obj_date.asp
+        var item = kb.sym(store.uri + '#' + 'id-'+timestamp);
+        sts.push(new $rdf.Statement(subject, predicate, item, store));
+
+        for (var i=0; i<fields.length; i++) {
+            fields[i].setAttribute('class','pendingedit');
+            fields[i].disabled = true;
+            sts.push(new $rdf.Statement(item, props[i], kb.literal(fields[i].value), store));
+        }
+
+        sts.push(new $rdf.Statement(item, ns.rdf('type'), theClass, store));
+
+        var sendComplete = function(uri, success, body) {
+            if (!success) {
+                callback(success, body);
+            } else {
+                var div = box.parentNode;
+                div.removeChild(box);
+                callback(success, body);
+                //if (div.rerender) rerender(div);
+                //tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
+            }
+        }
+        sparqlService.update([], sts, sendComplete);
+    }
+
+    box.addEventListener('submit', sendNew, false)
+    box.setAttribute('onsubmit', "function xx(){return false;}");
+    var fields = [];
+    for (var i=0; i<props.length; i++) {
+        var prop = props[i], tr;
+        // @@ here could test for prop being a complex form specification.
+        tb.appendChild(tr = dom.createElement('tr'))
+            .appendChild(dom.createElement('td'))
+            .textContent = tabulator.Util.label(prop);
+        var field = tabulator.panes.utils.objectEntry(dom, kb,prop)
+        tr.appendChild(dom.createElement('tr')).appendChild(field);
+        fields.push(field);
+    }
+    return box;
+*/
+}
 
 
 
@@ -61,20 +456,20 @@ var justificationsArr = [];
 //
 // Make a box to demand a description or display existing one
 //
-// @param myDocument - the document DOM for the user interface
+// @param dom - the document DOM for the user interface
 // @param kb - the graph which is the knowledge base we are working with
 // @param subject - a term, the subject of the statement(s) being edited.
 // @param predicate - a term, the predicate of the statement(s) being edited
 // @param storeDoc - The web document being edited 
 // @param callback - takes (boolean ok, string errorBody)
 
-tabulator.panes.utils.makeDescription = function(myDocument, kb, subject, predicate, storeDoc, callback) {
+tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, storeDoc, callback) {
     var sparqlService = new tabulator.rdf.sparqlUpdate(kb); // @@ Use a common one attached to each fetcher or merge with fetcher
-    var group = myDocument.createElement('div');
+    var group = dom.createElement('div');
     var sts = kb.statementsMatching(subject, predicate,undefined,storeDoc); // Only one please
     if (sts.length > 1) throw "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject;
     var desc = sts.length? sts[0].object.value : undefined;
-    var field = myDocument.createElement('textarea');
+    var field = dom.createElement('textarea');
     group.appendChild(field);
     field.rows = desc? desc.split('\n').length + 2 : 2;
     field.cols = 80
@@ -86,9 +481,9 @@ tabulator.panes.utils.makeDescription = function(myDocument, kb, subject, predic
         field.select(); // Select it ready for user input -- doesn't work
     }
 
-    var br = myDocument.createElement('br');
+    var br = dom.createElement('br');
     group.appendChild(br);
-    submit = myDocument.createElement('input');
+    submit = dom.createElement('input');
     submit.setAttribute('type', 'submit');
     submit.disabled = true; // until the filled has been modified
     submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
@@ -131,7 +526,7 @@ tabulator.panes.utils.makeDescription = function(myDocument, kb, subject, predic
 // @param storeDoc - The web document being edited 
 // @param callback - takes (boolean ok, string errorBody)
 
-tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, predicate,
+tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicate,
                 possible, multiple, nullLabel, storeDoc, callback) {
     var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
     tabulator.log.debug('Select list length now '+ possible.length)
@@ -142,7 +537,7 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
         if (sub.uri in uris) continue;
         uris[sub.uri] = true; n++;
     } // uris is now the set of possible options
-    if (n==0) throw "Can't do selector with no subclasses "+subject+" possible: "+possible
+    if (n==0) throw "Can't do selector with no options, subject= "+subject+" possible= "+possible+"."
     
     var actual = {};
     kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
@@ -178,14 +573,14 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
             });
     }
     
-    var select = myDocument.createElement('select');
+    var select = dom.createElement('select');
     select.setAttribute('style', 'margin: 0.6em 1.5em;')
     if (multiple) select.setAttribute('multiple', 'true');
     select.currentURI = null;
     for (var uri in uris) {
         var c = kb.sym(uri)
-        var option = myDocument.createElement('option');
-        option.appendChild(myDocument.createTextNode(tabulator.Util.label(c)));
+        var option = dom.createElement('option');
+        option.appendChild(dom.createTextNode(tabulator.Util.label(c)));
         var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#background-color'));
         if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
         option.AJAR_uri = uri;
@@ -197,8 +592,8 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
         select.appendChild(option);
     }
     if ((select.currentURI == null) && !multiple) {
-        var prompt = myDocument.createElement('option');
-        prompt.appendChild(myDocument.createTextNode(nullLabel));
+        var prompt = dom.createElement('option');
+        prompt.appendChild(dom.createTextNode(nullLabel));
         //dump("prompt option:" + prompt + "\n")
         select.insertBefore(prompt, select.firstChild)
         prompt.selected = true;
@@ -215,7 +610,7 @@ tabulator.panes.utils.makeSelectForOptions = function(myDocument, kb, subject, p
 // Failing that it will do a multiple selection of subclasses.
 // Callback takes (boolean ok, string errorBody)
 
-tabulator.panes.utils.makeSelectForCategory = function(myDocument, kb, subject, category, storeDoc, callback) {
+tabulator.panes.utils.makeSelectForCategory = function(dom, kb, subject, category, storeDoc, callback) {
     var types = kb.findTypeURIs(subject);
     var log = tabulator.log;
     var du = kb.any(category, tabulator.ns.owl('disjointUnionOf'));
@@ -230,7 +625,7 @@ tabulator.panes.utils.makeSelectForCategory = function(myDocument, kb, subject, 
     log.debug('Select list length '+ subs.length)
     if (subs.length == 0) throw "Can't do "+ (multiple?"multiple ":"")+"selector with no subclasses of category: "+category;
     if (subs.length == 1) throw "Can't do "+ (multiple?"multiple ":"")+"selector with only 1 subclass of category: "+category+":"+subs[1];
-    return tabulator.panes.utils.makeSelectForOptions(myDocument, kb, subject, tabulator.ns.rdf('type'), subs,
+    return tabulator.panes.utils.makeSelectForOptions(dom, kb, subject, tabulator.ns.rdf('type'), subs,
                     multiple, "--classify--", storeDoc, callback);
 }
 
@@ -241,8 +636,8 @@ tabulator.panes.utils.makeSelectForCategory = function(myDocument, kb, subject, 
 // Callback takes (boolean ok, string errorBody)
 
 tabulator.panes.utils.makeSelectForNestedCategory = function(
-                myDocument, kb, subject, category, storeDoc, callback) {
-    var container = myDocument.createElement('span'); // Container
+                dom, kb, subject, category, storeDoc, callback) {
+    var container = dom.createElement('span'); // Container
     var child = null;
     var select;
     var onChange = function(ok, body) {
@@ -250,14 +645,14 @@ tabulator.panes.utils.makeSelectForNestedCategory = function(
         callback(ok, body);
     }
     select = tabulator.panes.utils.makeSelectForCategory(
-                myDocument, kb, subject, category, storeDoc, onChange);
+                dom, kb, subject, category, storeDoc, onChange);
     container.appendChild(select);
     var update = function() {
         // tabulator.log.info("Selected is now: "+select.currentURI);
         if (child) { container.removeChild(child); child = null;}
         if (select.currentURI && kb.any(kb.sym(select.currentURI), tabulator.ns.owl('disjointUnionOf'))) {
             child = tabulator.panes.utils.makeSelectForNestedCategory(
-                myDocument, kb, subject, kb.sym(select.currentURI), storeDoc, callback)
+                dom, kb, subject, kb.sym(select.currentURI), storeDoc, callback)
             select.subSelect = child.firstChild;
             container.appendChild(child);
         }

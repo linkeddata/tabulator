@@ -80,6 +80,29 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
     return;
 }
 
+/*          Select one or more cases
+**
+*/
+tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
+                                    dom, container, kb, subject, form, store, callback) {
+    var box = dom.createElement('div');
+    var ui = tabulator.ns.ui;
+    container.appendChild(box);
+    var property = kb.any(form, ui('property'));
+    if (!property) property = tabulator.rdf('type'); // @@ default to type (do we want defaults?)
+    var cases = kb.each(form, ui('case'));
+    if (!cases) throw "No cases to Options form "+form;
+    var value = kb.any(subject, property);
+    for (var i=0; i<cases.length; i++) {
+        var test = kb.the(cases[i], ui('for'));
+        if (test.sameTerm(value)) {
+            var field = kb.the(cases[i], ui('use'));
+            field(dom, box, kb, subject, field, store, callback);
+        }
+    }
+    return;
+}
+
 /*          Multiple similar fields
 **
 */
@@ -99,9 +122,9 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     var tail = box.appendChild(dom.createElement('tr'));
     var img = tail.appendChild(dom.createElement('img'));
     img.setAttribute('src', tabulator.Icon.src.icon_add_triple); // blue plus
-    var addItem = function(e) {
+    var addItem = function(e, object) {
         var num = ++count;
-        var object = tabulator.panes.utils.newThing(kb, store);
+        if (!object) object = tabulator.panes.utils.newThing(kb, store);
         var tr = box.insertBefore(dom.createElement('tr'), tail);
         var itemDone = function(ok, body) {
             if (!ok) return callback(ok, body);
@@ -116,22 +139,64 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
         fn(dom, body, kb, object, form, store, itemDone);
         
     }
+
+    kb.each(subject, property).map(function(obj){addItem(null, obj)}); // @@ sort by sequence numbr
+
     img.addEventListener('click', addItem, false);
     return box
 }
 
+/*          Text field
+**
+*/
 
+tabulator.panes.field[tabulator.ns.ui('NumericField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('TextField').uri] = 
-tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] =  // For now all the same
+tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] =  // @@@@ For now all the same
 tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
                                     dom, container, kb, subject, form, store, callback) {
-    var box = dom.createElement('input');
+    var property = kb.any(form, ui('property'));
+    if (!property) throw "No property to text field: "+form;
+    var box = tabulator.panes.utils.makeDescription(dom, kb, subject, property, store, callback);
     var ui = tabulator.ns.ui;
     container.appendChild(box);
-    var property = kb.any(form, ui('property'));
-    if (!property) throw "No property to multiple: "+form;
-
 }
+
+/*          Classifier field
+**
+**  Nested categories
+*/
+
+tabulator.panes.field[tabulator.ns.ui('Classifier').uri] = function(
+                                    dom, container, kb, subject, form, store, callback) {
+    var category = kb.any(form, ui('category'));
+    if (!category) throw "No category for classifier: "+form;
+    container.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, category, store, callback));
+}
+
+/*          Choice field
+**
+**  Not nested
+**  Alternative implementatons caould be 
+** -- pop-up menu
+** -- radio buttons
+** -- auto-complete typing
+*/
+
+tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
+                                    dom, container, kb, subject, form, store, callback) {
+    var property = kb.any(form, ui('property'));
+    if (!property) throw "No property for Choce: "+form;
+    var from = kb.any(form, ui('from'));
+    if (!from) throw "No from for Choce: "+form;
+    var possible = kb.each(undefined, tabulator.ns.rdf('type'), from);
+    var multiple = false;
+    container.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb, subject, property,
+                possible, multiple, "--"+ tabulator.Util.label(property)+"-?", store, callback));
+}
+
+///////////////////////////////////////////////////////////////////////
+
 
 /*                      General purpose widgets
 **
@@ -163,34 +228,7 @@ tabulator.panes.utils.propertiesForClass = function(kb, c) {
 }
 
 
-//          List of other things
-//
-/*
-tabulator.panes.utils.collectionWidget = function(dom, kb, subject, predicate, possible, store, callback) {
-    var list = kb.any(subject, predicate);
-    var box = dom.createElement('table')
-    if (!list) { // or maybe just leave  button to make the list
-        list = new $rdf.Collection();
-        kb.add(subject, predicate, list);
-    }
-    // termWidget.addIcon(node,tabulator.Icon.termWidgets.addTri); // Add blue plus
 
-    var tail = box.appendChild(dom.createElement('tr'));
-    var img = tail.appendChild(dom.createElement('img'));
-    img.setAttribute('src', tabulator.Icon.src.icon_add_triple);
-    var addItem = function(e) {
-        //var num = list.elements.length;
-        var tr = box.insertBefore(dom.createElement('tr'), tail);
-        tr.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
-                list, ns.rdf('_'+(list.elements.length+1)), // @@ kludge!
-                possible, false, "-- select property --", store, callback));
-        
-    }
-    img.addEventListener('click', addItem, false);
-    return box
-
-}
-*/
 // Create entry field for a given property
 
 tabulator.panes.utils.checkProperty = function(kb, pred) {
@@ -390,7 +428,6 @@ tabulator.panes.utils.promptForNew2 = function(dom, kb, subject, predicate, theC
                         + "</h2>";
 
                         
-                        
     var ft = kb.findTypeURIs(form);
     var bot = bottomTypeURIs(ft); // most specific
     var bots = []
@@ -401,53 +438,6 @@ tabulator.panes.utils.promptForNew2 = function(dom, kb, subject, predicate, theC
     if (!formFunction) throw "No handler for field type: "+b;
     formFunction(dom, box, kb, subject, form, store, callback);
     return box;
-/*    
-    var sendNew = function() {
-        sts = [];
-        
-        var now = new Date();
-        var timestamp = ''+ now.getTime();
-        // http://www.w3schools.com/jsref/jsref_obj_date.asp
-        var item = kb.sym(store.uri + '#' + 'id-'+timestamp);
-        sts.push(new $rdf.Statement(subject, predicate, item, store));
-
-        for (var i=0; i<fields.length; i++) {
-            fields[i].setAttribute('class','pendingedit');
-            fields[i].disabled = true;
-            sts.push(new $rdf.Statement(item, props[i], kb.literal(fields[i].value), store));
-        }
-
-        sts.push(new $rdf.Statement(item, ns.rdf('type'), theClass, store));
-
-        var sendComplete = function(uri, success, body) {
-            if (!success) {
-                callback(success, body);
-            } else {
-                var div = box.parentNode;
-                div.removeChild(box);
-                callback(success, body);
-                //if (div.rerender) rerender(div);
-                //tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
-            }
-        }
-        sparqlService.update([], sts, sendComplete);
-    }
-
-    box.addEventListener('submit', sendNew, false)
-    box.setAttribute('onsubmit', "function xx(){return false;}");
-    var fields = [];
-    for (var i=0; i<props.length; i++) {
-        var prop = props[i], tr;
-        // @@ here could test for prop being a complex form specification.
-        tb.appendChild(tr = dom.createElement('tr'))
-            .appendChild(dom.createElement('td'))
-            .textContent = tabulator.Util.label(prop);
-        var field = tabulator.panes.utils.objectEntry(dom, kb,prop)
-        tr.appendChild(dom.createElement('tr')).appendChild(field);
-        fields.push(field);
-    }
-    return box;
-*/
 }
 
 

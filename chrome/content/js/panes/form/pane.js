@@ -1,0 +1,292 @@
+/*
+**                 Pane for running existing forms for any object
+**
+*/
+
+    
+tabulator.Icon.src.icon_form = iconPrefix + 'js/panes/form/form-b-22.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_form] = 'forms';
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_form,
+    
+    name: 'form',
+    
+    // Does the subject deserve this pane?
+    label: function(subject) {
+        var n = tabulator.panes.utils.formsFor(subject).length;
+        if (!n) return null;
+        return ""+n+" forms";
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
+        
+
+        var complain = function complain(message){
+            var pre = dom.createElement("pre");
+            pre.setAttribute('style', 'color: grey');
+            div.appendChild(pre);
+            pre.appendChild(dom.createTextNode(message));
+        } 
+
+        var complainIfBad = function(ok,body){
+            if (ok) {
+                // setModifiedDate(store, kb, store);
+                // rerender(div);   // Deleted forms at the moment
+            }
+            else complain("Sorry, failed to save your change:\n"+body);
+        }
+
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, dom);
+            parent.replaceChild(div2, div);
+        };
+
+
+        
+        if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
+ 
+        
+        kb.statementsMatching(undefined, undefined, subject);
+
+        // The question of where to store this data
+        // This in general needs a whole lot more thought
+        // and it connects to the discoverbility through links
+        
+        var docs = {}
+        kb.statementsMatching(subject).map(function(st){docs[st.why.uri] = 1});
+        kb.statementsMatching(undefined, undefined, subject).map(function(st){docs[st.why.uri] = 1});
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+        
+        var store;
+        var docuri = $rdf.Util.uri.docpart(subject.uri);
+        if (subject.uri != docuri
+            && tabulator.sparql.editable(docuri))
+            store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable data file with hash
+            
+        else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
+            // 
+        }
+        else store = kb.sym('http://tabulator.org/wiki/2010/testformdata/common'); // fallback
+        // A fallback which gives a different store page for each ontology would be good @@
+        
+        kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
+
+            //              Render the forms
+            
+            var forms = tabulator.panes.utils.formsFor(subject);
+            var div = dom.createElement('div');
+            div.setAttribute('class', 'formPane');
+            // complain('Form for editing this form:');
+            for (var i=0; i<forms.length; i++) {
+                div.appendChild(dom.createElement('h4').textContent)
+                tabulator.panes.utils.appendForm(dom, div, kb, subject, form, store, complainIfBad); // @@ No link from anywhere
+            }
+
+
+        }); // end: when store loded
+
+        return div;
+    }
+
+}, true);
+
+//ends
+
+
+
+
+
+#####################################################################
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_form,
+    
+    name: 'form',
+    
+    // Does the subject deserve this pane?
+    label: function(subject) {
+        var ns = tabulator.ns;
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+        if (t[ns.rdfs('Class').uri]) return "user interface";
+        if (t[ns.rdf('Property').uri]) return "user interface";
+        if (t[ns.ui('Form').uri]) return "user interface";
+        
+        return null; // No under other circumstances (while testing at least!)
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
+        
+        var div = dom.createElement('div')
+        div.setAttribute('class', 'uiPane');
+        var label = tabulator.Util.label(subject)
+        div.innherHTML='<h2>'+"Use Interface for "+label+'</h2><table><tbody><tr>\
+        <td>%s</tr></tbody></table>\
+        <p>This is a pane under development.</p>';
+
+        var commentFlter = function(pred, inverse) {
+            if (!inverse && pred.uri == 
+                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
+            return false
+        }
+
+        var complain = function complain(message){
+            var pre = dom.createElement("pre");
+            pre.setAttribute('style', 'color: grey');
+            div.appendChild(pre);
+            pre.appendChild(dom.createTextNode(message));
+        } 
+
+        var complainIfBad = function(ok,body){
+            if (ok) {
+                // setModifiedDate(store, kb, store);
+                // rerender(div);   // Deleted forms at the moment
+            }
+            else complain("Sorry, failed to save your change:\n"+body);
+        }
+
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, dom);
+            parent.replaceChild(div2, div);
+        };
+
+
+ // //////////////////////////////////////////////////////////////////////////////       
+        
+        
+        
+        if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
+ 
+        var plist = kb.statementsMatching(subject)
+        var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+        
+        var store
+        var docuri = $rdf.Util.uri.docpart(subject.uri);
+        if (subject.uri != docuri
+            && tabulator.sparql.editable(docuri))
+            store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable ontology with hash
+        else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
+            // 
+        }
+        else store = kb.sym('http://tabulator.org/wiki/ontologyAnnotation/common'); // fallback
+        // A fallback which gives a different store page for each ontology would be good @@
+        
+        kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
+
+            //              Render a Property
+            
+            if (t[ns.rdf('Property').uri]) {
+
+                var res = tabulator.panes.utils.checkProperty(kb, pred);
+                var data = res.data, range = res.range;
+            
+                if (data == undefined) {
+                    // add a select for data or object
+                    div.appendChild(dom.createElement('p')).textContent =
+                     "A data type property takes a data value";
+                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb, subject, ns.rdf('type'),
+                        [ns.owl('DatatypeProperty'), ns.owl('ObjectProperty') ], false, "-- which is it? -- " , store, complainIfBad));
+                }
+
+                if (data) {
+                    if (range) {
+                        
+
+                    } else {
+                    
+                    }
+                
+                } else { // not data, object property
+
+                    complain('object property @@');
+                }
+
+
+
+                div.appendChild(dom.createElement('tr'))
+                            .setAttribute('style','height: 1em'); // spacer
+                
+                // Remaining properties
+                /*
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        return !(pred.uri in predicateURIsDone)
+                    });
+                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                    function(pred, inverse) {
+                        return !(pred.uri in predicateURIsDone)
+                    });
+    */
+            // end of render property instance
+
+//      _____________________________________________________________________
+
+            //              Render a Class
+            
+            } else if (t[ns.rdfs('Class').uri]) {
+
+                // complain('class');
+
+                var pred = ns.ui('creationForm');
+                var sts = kb.statementsMatching(subject, pred);
+                if (sts.length) {
+                    div.appendChild(dom.createElement('h4')).textContent = tabulator.Util.label(pred);
+                    tabulator.outline.appendPropertyTRs(div, sts);
+                } else {
+                    complain("There are no forms defined for this class.");
+                }
+
+                div.appendChild(tabulator.panes.utils.newButton(
+                    dom, kb, subject, pred, ns.ui('Form'), store, complainIfBad) )
+
+//      _____________________________________________________________________
+
+            //              Render a Form
+            
+            } else if (t[ns.ui('Form').uri]) {
+
+                complain('Form for editing this form. (Editing '+store+')');
+                tabulator.panes.utils.appendForm(dom, div, kb, subject, ns.ui('FormForm'), store, complainIfBad);
+
+            } else {
+                complain("Eh?");
+
+            }
+
+        }); // end: when store loded
+
+        return div;
+    }
+
+}, true);
+
+//ends
+
+

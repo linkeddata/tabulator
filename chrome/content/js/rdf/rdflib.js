@@ -4064,6 +4064,7 @@ function RDFMakeTerm(formula,val, canonicalize) {
 // Add a triple to the store
 //
 //  Returns the statement added
+// (would it be better to return the original formula for chaining?)
 //
 $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
@@ -4338,20 +4339,22 @@ $rdf.Formula.prototype.transitiveClosure = function(seeds, predicate, inverse){
 // of something which has the type as its domain
 // We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
 
-$rdf.Formula.prototype.findMemberURIs = function (subject) {
-    var types = {}, types2 = this.transitiveClosure(types,
+$rdf.Formula.prototype.findMemberURIs = function (thisClass) {
+    var seeds = {}; seeds [thisClass.toNT()] = true;
+    var types = this.transitiveClosure(seeds,
         this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), true);
     var members = {};
-    for (t in types2) {
+    var kb = this;
+    for (t in types) {
         this.statementsMatching(undefined, this.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), this.sym(t))
             .map(function(st){members[st.subject.toNT()] = st});
         this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#domain'), this.sym(t))
             .map(function(pred){
-                this.statementsMatching(undefined, pred).map(function(st){members[st.subject.toNT()] = st});
+                kb.statementsMatching(undefined, pred).map(function(st){members[st.subject.toNT()] = st});
             });
         this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#range'), this.sym(t))
             .map(function(pred){
-                this.statementsMatching(undefined, pred).map(function(st){members[st.object.toNT()] = st});
+                kb.statementsMatching(undefined, pred).map(function(st){members[st.object.toNT()] = st});
             });
     }
     return members;
@@ -5907,6 +5910,9 @@ $rdf.sparqlUpdate = function() {
         if (! (ds instanceof Array)) throw "Type Error "+(typeof ds)+": "+ds;
         if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
         var doc = ds.length ? ds[0].why : is[0].why;
+        
+        ds.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination "+doc+" inconsitent with ds "+st.why;});
+        is.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination "+doc+" inconsitent with is "+st.why;});
 
         var protocol = this.editable(doc.uri, kb);
         if (!protocol) throw "Can't make changes in uneditable "+doc;
@@ -7706,12 +7712,12 @@ $rdf.Fetcher = function(store, timeout, async) {
         // Is the script istelf is running in localhost, then access all data in a localhost mirror.
         // Do not remove without checking with TimBL :)
         var uri2 = docuri;
-        if (!isExtension) {
-            var here = '' + document.location
-            if (here.slice(0, 17) == 'http://localhost/') {
-                uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
+        if (tabulator.preferences.get('offlineModeUsingLocalhost')) {
+            // var here = '' + document.location  // This was fro online version
+            //if (here.slice(0, 17) == 'http://localhost/') {
+            //uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
+            if (uri2.slice(0,7) == 'http://'  && uri2.slice(7,17) != 'localhost/') uri2 = 'http://localhost/' + uri2.slice(7);
                 // dump("URI mapped to " + uri2)
-            }
         }
 
         // Setup the request

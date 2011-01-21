@@ -32,20 +32,22 @@ $rdf.Formula.prototype.transitiveClosure = function(seeds, predicate, inverse){
 // of something which has the type as its domain
 // We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
 
-$rdf.Formula.prototype.findMemberURIs = function (subject) {
-    var types = {}, types2 = this.transitiveClosure(types,
+$rdf.Formula.prototype.findMemberURIs = function (thisClass) {
+    var seeds = {}; seeds [thisClass.toNT()] = true;
+    var types = this.transitiveClosure(seeds,
         this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), true);
     var members = {};
-    for (t in types2) {
+    var kb = this;
+    for (t in types) {
         this.statementsMatching(undefined, this.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), this.sym(t))
             .map(function(st){members[st.subject.toNT()] = st});
         this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#domain'), this.sym(t))
             .map(function(pred){
-                this.statementsMatching(undefined, pred).map(function(st){members[st.subject.toNT()] = st});
+                kb.statementsMatching(undefined, pred).map(function(st){members[st.subject.toNT()] = st});
             });
         this.each(undefined, this.sym('http://www.w3.org/2000/01/rdf-schema#range'), this.sym(t))
             .map(function(pred){
-                this.statementsMatching(undefined, pred).map(function(st){members[st.object.toNT()] = st});
+                kb.statementsMatching(undefined, pred).map(function(st){members[st.object.toNT()] = st});
             });
     }
     return members;

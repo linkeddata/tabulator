@@ -82,15 +82,17 @@ tabulator.panes.register( {
         var me_uri = tabulator.preferences.get('me');
         var me = me_uri? kb.sym(me_uri) : null;
         
-        var store
-        var docuri = $rdf.Util.uri.docpart(subject.uri);
-        if (subject.uri != docuri
-            && tabulator.sparql.editable(docuri))
-            store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable ontology with hash
-        else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
-            // 
+        var store = null;
+        if (subject.uri) {
+            var docuri = $rdf.Util.uri.docpart(subject.uri);
+            if (subject.uri != docuri
+                && tabulator.sparql.editable(docuri))
+                store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable ontology with hash
         }
-        else store = kb.sym('http://tabulator.org/wiki/ontologyAnnotation/common'); // fallback
+        if (!store) store = kb.any(kb.sym(docuri), ns.link('annotationStore'));
+
+        if (!store) store = kb.sym('http://tabulator.org/wiki/ontologyAnnotation/common'); // fallback
+        
         // A fallback which gives a different store page for each ontology would be good @@
         
         kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {

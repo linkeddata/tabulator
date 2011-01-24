@@ -469,16 +469,6 @@ tabulator.panes.register( {
             classLabel = tabulator.Util.label(states);
             h.appendChild(myDocument.createTextNode(classLabel+" list")); // Use class label @@I18n
 
-/*          // Crude list of issues
-            var listDiv = myDocument.createElement('div');
-            div.appendChild(listDiv);
-            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function() {
-                var plist = kb.statementsMatching(undefined, WF('tracker'), subject);
-                tabulator.outline.appendPropertyTRs(listDiv, plist, true,
-                    function(pred, inverse) {return true;});            
-            });
-            
-*/
             // New Issue button
             var b = myDocument.createElement("button");
             b.setAttribute("type", "button");

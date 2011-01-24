@@ -1,93 +1,10 @@
 # This defines the form which can be used for editing a form template
 #
 @keywords is, of, a.
-@prefix dc:  <http://purl.org/dc/elements/1.1/>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 @prefix s:   <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix ui:  <http://www.w3.org/ns/ui#>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
-
-#  A Taxonomy of Field types
-
-ui:Form owl:disjointUnionOf ( ui:ValueField ui:LinkField ui:Group ui:Choice ui:Classifier ui:Options ui:Multiple ).
-ui:Single owl:disjointUnionOf ( ui:ValueField ui:LinkField ui:Group ui:Choice ui:Classifier ui:Options ).
-ui:ValueField owl:disjointUnionOf ( ui:TextField ui:NumericField ui:DateField ).
-ui:NumericField owl:disjointUnionOf (ui:IntergerField ui:DecimalField ui:FloatField).
-ui:Multiple owl:disjointUnionOf ( ui:ZeroOrMore ui:OneOrMore ).
-ui:TextField owl:disjointUnionOf (ui:SingleLineTextField ui:MultiLineTextField).
-
-ui:property a rdf:Property; s:domain ui:Form; s:range rdf:Property;
-    s:label "property"@en;
-    s:comment """Many fields prompt for infromation about a given property of the subject""".
-
-ui:category  a rdf:Property; s:domain ui:Classifier; s:range s:Class;
-    s:label "property"@en;
-    s:comment """The superclass subclasses of which will be selected.""".
-
-ui:dependingOn a rdf:Property; s:domain ui:Options; s:range rdf:Property;
-    s:label "depending on"@en;
-    s:comment """Many fields prompt for infromation about a gven property of the subject""".
-
-ui:for a rdf:Property; s:label "for"@en; s:comment "Part of a case structure, the value fwhich selects this option".
-ui:use a rdf:Property; s:range ui:Form.
-
-
-ui:from a rdf:Property; s:domain ui:Choice; s:range rdf:Class;
-    s:label "from"; ui:prompt "from what class".
-
-ui:fieldLength a rdf:Property; s:domain ui:TextField; s:range xsd:integer;
-    s:label "field length".
-
-ui:minValue a rdf:Property; s:domain ui:NumericField; s:range xsd:integer; s:label "min".
-ui:maxValue a rdf:Property; s:domain ui:NumericField; s:range xsd:integer; s:label "max".
-
-ui:earliest a rdf:Property; s:domain ui:DateField; s:range xsd:integer; s:label "min".
-ui:tooLate a rdf:Property; s:domain ui:DateField; s:range xsd:integer; s:label "max".
-
- ui:creationForm a rdf:Property; s:domain s:Class; s:range ui:Form;
-    s:label "creation form"; 
-    s:comment """A form which may be used to collect information about a
-    hitherto locally undocumented instance instance of this class.""".
- 
-########
-
-NewForm a ui:Form, ui:Multiple;
-    dc:title "Form for making new forms";
-    is ui:creationForm of Form;
-    ui:element NewField.
-
-NewField a ui:Group;
-    ui:part
-        [ a ui:Classifier; ui:sequence 1; ui:property s:type; ui:category ui:Form], 
-        
-        [ a ui:Options; ui:sequence 2; ui:dependingOn s:type; 
-
-            ui:case [ ui:for ui:TextField; ui:use
-                [ a ui:Choice; ui:property ui:property; ui:label "property"; ui:from owl:DataProperty],  # @@@ Needs inference on current web
-                [ a ui:NumericField; ui:property ui:feildLength; ui:label "length"; ui:min 1; ui:max 4096]];
-
-            ui:case [ ui:for ui:NumericField; ui:use [a ui:Group; ui:part
-                [ ui:sequence 1; a ui:Choice; ui:property ui:property; ui:label "property"; ui:from owl:DataProperty],
-                [ ui:sequence 2; a ui:NumericField; ui:property ui:min; ui:label "minimum value"],
-                [ ui:sequence 3; a ui:NumericField; ui:property ui:max; ui:label "maximum value"]  ]];
-
-            ui:case [ ui:for ui:DateField; ui:use [a ui:Group; ui:part
-                [ ui:sequence 1; a ui:Choice; ui:property ui:property; ui:label "property"; ui:from owl:DataProperty], # @@ restsriction
-                [ ui:sequence 2; a ui:DateField; ui:property ui:earliest; ui:label "earliest date"],
-                [ ui:sequence 3; a ui:DateField; ui:property ui:tooLate; ui:label "first date too late"]
-            ]];
-
-            ui:case [ ui:for ui:LinkField; ui:use [a ui:Group; ui:part
-                [ a ui:Choice; ui:property ui:property; ui:label "property"; ui:from owl:ObjectProperty]
-            ]];
-
-            ui:case [ ui:for ui:Group; ui:use FormForm; ];
-
-            ui:case [ ui:for ui:Multiple; ui:use ui:Single; # don't allow immediately nestded multiples.
-            ];
-
-        ].
-
 
 #ends

@@ -3,3 +3,5 @@ content     tabulator    chrome/content/   contentaccessible=yes
 locale      tabulator    en-US   chrome/locale/
 skin        tabulator    classic/1.0     chrome/skin/
 overlay chrome://browser/content/browser.xul  chrome://tabulator/content/tabulator.xul
+category ext-to-type-mapping n3 text/n3
+category ext-to-type-mapping ttl text/turtle

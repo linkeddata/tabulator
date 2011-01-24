@@ -47,7 +47,6 @@ function UserInput(outline){
     var OWL = tabulator.ns.owl;
     var dc = tabulator.ns.dc;
     var rss = tabulator.ns.rss;
-    var xsd = tabulator.ns.xsd;
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
     var bibo = tabulator.rdf.Namespace("http://purl.org/ontology/bibo/"); //hql for pubsPane

@@ -1,11 +1,8 @@
 const nsISupports = Components.interfaces.nsISupports;
-
 const CLASS_ID = Components.ID("968a15aa-83d2-4577-88dd-b493dab4deb7");
-const CLASS_NAME = "the rdf/xml handler";
+const CLASS_NAME = "Tabulator RDF/XML Handler";
 const CONTRACT_ID = "@dig.csail.mit.edu/tabulator;1";
-
 const isExtension = true;
-
 
 //I don't like doing this, but it is a very useful function to have around.
 function setTimeout(cb, delay) {
@@ -24,7 +21,6 @@ function setTimeout(cb, delay) {
     }; 
     timer.initWithCallback(timerCallback,delay,timer.TYPE_ONE_SHOT);
 }
-
 
 //The XPCOM Component for tabulator.
 function Tabulator() {
@@ -69,43 +65,28 @@ function Tabulator() {
     this.kb.typeCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
 }//Tabulator
 
-
-
-
-// ========================================================================
-// COMPONENT REGISTRATION CODE - There shouldn't be a reason to change this
-// ========================================================================
-
-// This is the implementation of your component.
 Tabulator.prototype = {
     //nsISupports
-    QueryInterface: function(aIID)
-    {
+    QueryInterface: function(aIID) {
         // add any other interfaces you support here
         if (!aIID.equals(nsISupports))
             throw Components.results.NS_ERROR_NO_INTERFACE;
         return this;
-    }
-}
+    },
+    classID: CLASS_ID
+};
     
-//=================================================
-// Note: You probably don't want to edit anything
-// below this unless you know what you're doing.
-//
-// Factory
-    var TabulatorFactory = {
-        singleton: null,
-        createInstance: function (aOuter, aIID)
-        {
-            if (aOuter != null)
-                throw Components.results.NS_ERROR_NO_AGGREGATION;
-            if (this.singleton == null)
-                this.singleton = new Tabulator();
-            return this.singleton.QueryInterface(aIID);
-        }
-    };
-
-// Module
+// Firefox 3 Module
+var TabulatorFactory = {
+    singleton: null,
+    createInstance: function (aOuter, aIID) {
+        if (aOuter != null)
+            throw Components.results.NS_ERROR_NO_AGGREGATION;
+        if (this.singleton == null)
+            this.singleton = new Tabulator();
+        return this.singleton.QueryInterface(aIID);
+    }
+};
 var TabulatorModule = {
     registerSelf: function(aCompMgr, aFileSpec, aLocation, aType)
     {
@@ -132,6 +113,10 @@ var TabulatorModule = {
     
     canUnload: function(aCompMgr) { return true; }
 };
-
-//module initialization
 function NSGetModule(aCompMgr, aFileSpec) { return TabulatorModule; }
+
+// Firefox 4 Module
+// https://developer.mozilla.org/en/XPCOM/XPCOM_changes_in_Gecko_2.0
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+if (XPCOMUtils.generateNSGetFactory)
+    var NSGetFactory = XPCOMUtils.generateNSGetFactory([Tabulator]);

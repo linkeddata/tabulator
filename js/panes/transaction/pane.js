@@ -24,6 +24,8 @@ tabulator.panes.register( {
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
         if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
 
+        if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
+        
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -89,7 +91,7 @@ tabulator.panes.register( {
 
         //              Render a single transaction
         
-        if (1) {  // (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
 
             var trip = kb.any(subject, WF('trip'));
             var ns = tabulator.ns
@@ -176,6 +178,8 @@ tabulator.panes.register( {
                     if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
                         myDocument, kb, subject, TRIP('trip'), trips, false,
                          "-- what trip? --", store, complainIfBad));
+                    div.appendChild(tabulator.panes.utils.newButton(  // New Trip                    
+                        myDocument, kb, subject, TRIP('trip'), TRIP('Trip'), store, complainIfBad));
 
                 });
             }
@@ -208,12 +212,69 @@ tabulator.panes.register( {
                     return !(pred.uri in predicateURIsDone)
                 });
 
-        } // end of render tranasaction instance
+        // end of render tranasaction instance
+
+
+        // Render the transactions in a Trip
+        } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
+        
+            var query = new $rdf.Query(tabulator.Util.label(subject));
+            var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
+            var v = {};
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
+            query.pat.add(v['transaction'], TRIP('trip'), subject);
+            
+            var opt = kb.formula();
+            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get supertypes too
+            query.pat.optional.push(opt);
+            
+            query.pat.add(v['transaction'], Q('date'), v['date']);
+            
+            var opt = kb.formula();
+            opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
+            query.pat.optional.push(opt);
+
+            //opt = kb.formula();
+            query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
+            //query.pat.optional.push(opt);
+
+            var tableDiv = paneUtils.renderTableViewPane(myDocument, {'query': query} );
+            div.appendChild(tableDiv);
+            
+            var total = {};
+            var trans = kb.each(undefined, TRIP('trip'), subject);
+            trans.map(function(t){
+                var ty = kb.the(t, ns.rdf('type'));
+                if (!ty) ty = Q('ErrorNoType');
+                if (ty && ty.uri) {
+                    var tyuri = ty.uri;
+                    if (!total[tyuri]) total[tyuri] = 0.0;
+                    var lit = kb.the(t, Q('in_USD'));
+                    if (lit) {
+                        total[tyuri] = total[tyuri] + parseFloat(lit.value);
+                        complain('trans type ='+ty+'; in_USD "' + lit
+                                +'" ; lit.value = "' + lit.value
+                                +'" ; parseFloat(lit.value) = ' + parseFloat(lit.value)
+                                +'; total[tyuri] = '+total[tyuri]+';') 
+                    }
+                }
+            });
+            var str = '';
+            for (var uri in total) {
+                str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
+             } 
+            complain('Totals: '+str)
+        
+        }
+
+
         
         //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
 
         return div;
     }
+        
+
 }, true);
 
 //ends

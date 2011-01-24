@@ -74,7 +74,6 @@ tabulator.OutlineObject = function(doc) {
     var owl = OWL = tabulator.ns.owl;
     var dc = tabulator.ns.dc;
     var rss = tabulator.ns.rss;
-    var xsd = tabulator.ns.xsd;
     var contact = tabulator.ns.contact;
     var mo = tabulator.ns.mo;
     var link = tabulator.ns.link;
@@ -718,7 +717,7 @@ tabulator.OutlineObject = function(doc) {
         //      if (s.object == parentSubject) continue; // that we knew
         
             // Avoid predicates from other panes
-            if (!predicateFilter(s.predicate, inverse)) continue;
+            if (predicateFilter && !predicateFilter(s.predicate, inverse)) continue;
             var k;
             var dups = 0; // How many rows have the same predicate, -1?
             var langTagged = 0;  // how many objects have language tags?
@@ -1434,6 +1433,11 @@ tabulator.OutlineObject = function(doc) {
     }
 
     /** things to do onmousedown in outline view **/
+    /*
+    **   To Do:  This big event hander needs to be replaced by lots
+    ** of little ones individually connected to each icon.  This horrible
+    ** switch below isn't modular. (Sorry!) - Tim
+    */
     // expand
     // collapse
     // refocus
@@ -2062,7 +2066,7 @@ tabulator.OutlineObject = function(doc) {
                 row.appendChild(thisOutline.outline_objectTD(elt));
             }
         } else if (obj.termType=='formula'){
-            rep = tabulator.panes.dataContentPane.statementsAsTables(obj.statements);
+            rep = tabulator.panes.dataContentPane.statementsAsTables(obj.statements, myDocument);
             rep.setAttribute('class', 'nestedFormula')
                         
         } else {

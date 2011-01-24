@@ -35,6 +35,7 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 
 
 loader.loadSubScript("chrome://tabulator/content/js/panes/issue/pane.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/form/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/transaction/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
@@ -44,6 +45,7 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/tableViewPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/classInstancePane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
 //loader.loadSubScript("chrome://tabulator/content/js/panes/newOutline.js");
+loader.loadSubScript("chrome://tabulator/content/js/panes/ui/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/categoryPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/pubsPane.js");
 

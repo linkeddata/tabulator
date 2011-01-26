@@ -186,7 +186,7 @@ tabulator.panes.register( {
             
             } else if (t[ns.ui('Form').uri]) {
 
-                complain('Form for editing this form. (Editing '+store+')');
+                complain('(Storing data in: '+store+')');
                 tabulator.panes.utils.appendForm(dom, div, kb, subject, ns.ui('FormForm'), store, complainIfBad);
 
             } else {

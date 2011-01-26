@@ -16,6 +16,7 @@ tabulator.panes.register( {
     // Does the subject deserve this pane?
     label: function(subject) {
         var n = tabulator.panes.utils.formsFor(subject).length;
+        tabulator.log.debug("Form pane: forms for "+subject+": "+n)
         if (!n) return null;
         return ""+n+" forms";
     },
@@ -101,7 +102,7 @@ tabulator.panes.register( {
         return div;
     }
 
-}, true);
+}, false);
 
 //ends
 

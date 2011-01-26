@@ -63,6 +63,7 @@ var justificationsArr = [];
 /*          Group of different fields
 **
 */
+tabulator.panes.field[tabulator.ns.ui('Form').uri] =
 tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
                                     dom, container, already, subject, form, store, callback) {
     var kb = tabulator.kb;
@@ -88,10 +89,44 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
     if (!parts) throw "No parts to form "+form;
     var p2 = parts.map(function(p) {var k = kb.any(p, ui('sequence')); return [k?k:999,p] });
     p2.sort();
+
+    var eles = [];
+    var original = [];
     for (var i=0; i<p2.length; i++) {
         var field = p2[i][1];
+        var t = tabulator.panes.utils.bottomURI(field); // Field type
+        if (t == ui('Options').uri) {
+            var dep = kb.any(field, ui('dependingOn'));
+            if (dep && kb.any(subject, dep)) original[i] = kb.any(subject, dep).toNT();
+        }
+
         var fn = tabulator.panes.utils.fieldFunction(field);
-        fn(dom, box, already2, subject, field, store, callback);
+        
+        var itemChanged = function(ok, body) {
+            //box.appendChild(tabulator.panes.utils.errorMessage(dom, "Group: item done called."));
+            if (ok) {
+                //box.appendChild(tabulator.panes.utils.errorMessage(dom, "Group: item done ok"));
+                for (j=0; j<p2.length; j++) {  // This is really messy.
+                    var field = (p2[j][1])
+                    var t = tabulator.panes.utils.bottomURI(field); // Field type
+                    if (t == ui('Options').uri) {
+                        var dep = kb.any(field, ui('dependingOn'));
+                        //box.appendChild(tabulator.panes.utils.errorMessage(dom, "Group: depending on "+dep));
+ //                       if (dep && kb.any(subject, dep) && (kb.any(subject, dep).toNT() != original[j])) { // changed
+                        if (1) { // assume changed
+                            var newOne = fn(dom, box, already2, subject, field, store, callback);
+                            box.removeChild(newOne);
+                            box.insertBefore(newOne, eles[j]);
+                            box.removeChild(eles[j]);
+                            original[j] = kb.any(subject, dep).toNT();
+                            eles[j] = newOne;
+                        } 
+                    }
+                }
+            }
+            callback(ok, body);
+        }
+        eles.push(fn(dom, box, already2, subject, field, store, itemChanged));
     }
     return box;
 }
@@ -123,20 +158,18 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
             values[value.uri] = true;
         }
     }
-    var zt = kb.any(subject, tabulator.ns.rdf('type'))
-    // box.appendChild(dom.createTextNode('<-@@ subj:'+subject+', values: '+values+', dependingOn: '+dependingOn));
     for (var i=0; i<cases.length; i++) {
-        var c = cases[i], select = false;
+        var c = cases[i];
         var tests = kb.each(c, ui('for')); // There can be multiple 'for'
         for (var j=0; j<tests.length; j++) {
-            if (values[tests[j].uri]) select = true;
-         } 
-        if (select) {
-            // box.appendChild(dom.createTextNode('@@ case for:'+tests[0]));
-            var field = kb.the(c, ui('use'));
-            if (!field) throw "No 'use' part for case in form "+form
-            tabulator.panes.utils.appendForm(dom, box, already, subject, field, store, callback);
-        }
+            if (values[tests[j].uri]) {
+                // box.appendChild(dom.createTextNode('@@ case for:'+tests[0]));
+                var field = kb.the(c, ui('use'));
+                if (!field) throw "No 'use' part for case in form "+form
+                tabulator.panes.utils.appendForm(dom, box, already, subject, field, store, callback);
+                break;
+            }
+        } 
     }
     return box;
 }
@@ -165,15 +198,23 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     var img = tail.appendChild(dom.createElement('img'));
     img.setAttribute('src', tabulator.Icon.src.icon_add_triple); // blue plus
     img.title = "(m) Add " + tabulator.Util.label(property);
+    
     var addItem = function(e, object) {
         tabulator.log.debug('Multiple add: '+object);
         var num = ++count;
         if (!object) object = tabulator.panes.utils.newThing(kb, store);
         var tr = box.insertBefore(dom.createElement('tr'), tail);
         var itemDone = function(ok, body) {
-            if (!ok) return callback(ok, body);
-            var ins = [$rdf.st(subject, property, object, store)]
-            tabulator.sparql.update([], ins, linkDone)
+            if (ok) { // @@@ Check IT hasnt alreday been written in
+                //tr.appendChild(tabulator.panes.utils.errorMessage(dom, "Multiple: item done ok"));
+                if (!kb.holds(subject, property, object)) {
+                    var ins = [$rdf.st(subject, property, object, store)]
+                    tabulator.sparql.update([], ins, linkDone);
+                }
+            } else {
+                tr.appendChild(tabulator.panes.utils.errorMessage(dom, "Multiple: item failed: "+body));
+                callback(ok, body);
+            }
         }
         var linkDone = function(uri, ok, body) {
             return callback(ok, body);
@@ -182,10 +223,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
         // box.appendChild(dom.createTextNode('multiple object: '+object ));
         fn(dom, body, already, object, element, store, itemDone);        
     }
-    
-    tabulator.log.debug('Multiple a: '+ kb.each(form, ui('element')).length )
-    tabulator.log.debug('Multiple b: '+ tabulator.panes.utils.sortBySequence(kb.each(form, ui('element'))).length )
-    
+        
     kb.each(subject, property).map(function(obj){addItem(null, obj)});
 
     img.addEventListener('click', addItem, true);
@@ -195,7 +233,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
 /*          Text field
 **
 */
-// For possible date popus see e.g. http://www.dynamicdrive.com/dynamicindex7/jasoncalendar.htm
+// For possible date popups see e.g. http://www.dynamicdrive.com/dynamicindex7/jasoncalendar.htm
 // or use HTML5: http://www.w3.org/TR/2011/WD-html-markup-20110113/input.date.html
 //
 
@@ -203,32 +241,27 @@ tabulator.panes.fieldParams = {};
 
 
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri] = {
-//    'pattern': /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/,
-    'size': 20, 'type': 'date'
-     };
+    'size': 20, 'type': 'date'};
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/;
 
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri] = {
-//    'pattern': /^\s*-?[0-9]+\s*$/,
-    size: 12, 'style': 'text-align: right' };
+    size: 12, 'style': 'text-align: right', 'parse': parseInt };
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri].pattern =
      /^\s*-?[0-9]+\s*$/;
      
 tabulator.panes.fieldParams[tabulator.ns.ui('DecimalField').uri] = {
-//    'pattern': /^\s*-?[0-9]*(\.[0-9]*)?\s*$/,
-    'size': 12 , 'style': 'text-align: right'
-};
+    'size': 12 , 'style': 'text-align: right', 'parse': parseFloat };
 tabulator.panes.fieldParams[tabulator.ns.ui('DecimalField').uri].pattern =
     /^\s*-?[0-9]*(\.[0-9]*)?\s*$/;
     
 tabulator.panes.fieldParams[tabulator.ns.ui('FloatField').uri] = {
-//    'pattern': /^\s*-?[0-9]*(\.[0-9]*)?((e|E)-?[0-9]*)?\s*$/ ,
-    'size': 12, 'style': 'text-align: right' };
+    'size': 12, 'style': 'text-align: right', 'parse': parseFloat };
 tabulator.panes.fieldParams[tabulator.ns.ui('FloatField').uri].pattern =
     /^\s*-?[0-9]*(\.[0-9]*)?((e|E)-?[0-9]*)?\s*$/; 
 
 tabulator.panes.fieldParams[tabulator.ns.ui('SingleLineTextField').uri] = { };
+tabulator.panes.fieldParams[tabulator.ns.ui('TextField').uri] = { };
 
 
 
@@ -251,6 +284,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     box.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
     var uri = tabulator.panes.utils.bottomURI(form); 
     var params = tabulator.panes.fieldParams[uri];
+    if (params == undefined) params = {}; // non-bottom field types can do this
     var style = params.style? params.style : '';
     // box.appendChild(dom.createTextNode(' uri='+uri+', pattern='+ params.pattern));
     container.appendChild(box);
@@ -272,7 +306,21 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
             field.value.match(params.pattern) ?
                                 'color: green;' : 'color: red;'));
     }, true);
-    // @@@@ What about submitting the data when the focus moves away
+    field.addEventListener("change", function(e) { // i.e. lose focus with changed data
+        if (params.pattern && !field.value.match(params.pattern)) return;
+        field.setAttribute('style', 'color: gray;'); // pending 
+        var ds = kb.statementsMatching(subject, property);
+        var is = $rdf.st(subject, property,
+                    params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
+        tabulator.sparql.update(ds, is, function(ok, body) {
+            if (ok) {
+                field.setAttribute('style', 'color: black;');
+            } else {
+                box.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
+            }
+            callback(ok, body);
+        })
+    }, true);
     return box;
 }
 
@@ -321,16 +369,25 @@ tabulator.panes.field[tabulator.ns.ui('BooleanField').uri] = function(
 **
 **  Nested categories
 ** 
-** @@ To do: If a classificatoin changes, then change any dependent Options fields.
+** @@ To do: If a classification changes, then change any dependent Options fields.
 */
 
 tabulator.panes.field[tabulator.ns.ui('Classifier').uri] = function(
                                     dom, container, already, subject, form, store, callback) {
-    var kb = tabulator.kb;
-    var category = kb.any(form, tabulator.ns.ui('category'));
+    var kb = tabulator.kb, ui = tabulator.ns.ui, ns = tabulator.ns;
+    var category = kb.any(form, ui('category'));
     if (!category) throw "No category for classifier: " + form;
     tabulator.log.debug('Classifier: store='+store);
-    var box = tabulator.panes.utils.makeSelectForNestedCategory(dom, kb, subject, category, store, callback);
+    var checkOptions = function(ok, body) {
+        if (!ok) return callback(ok, body);
+        var parent = kb.any(undefined, ui('part'), form);
+        if (!parent) return callback(ok, body);
+        var kids = kb.each(parent, ui('part')); // @@@@@@@@@ Garbage
+        kids = kids.filter(function(k){return kb.any(k, ns.rdf('type'), ui('Options'))})
+        if (kids.length) tabulator.log.debug('Yes, found related options: '+kids[0])
+        return callback(ok, body);
+    };
+    var box = tabulator.panes.utils.makeSelectForNestedCategory(dom, kb, subject, category, store, checkOptions);
     container.appendChild(box);
     return box;
 }
@@ -355,7 +412,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var box = dom.createElement('div');
     container.appendChild(box);
     var property = kb.any(form, ui('property'));
-    if (!property) throw "No property for Choice: "+form;
+    if (!property) return tabulator.panes.utils.errorMessage(dom, "No property for Choice: "+form);
     box.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
     var from = kb.any(form, ui('from'));
     if (!from) throw "No from for Choice: "+form;
@@ -441,7 +498,12 @@ tabulator.panes.utils.fieldLabel = function(dom, property) {
 **
 */
 
-
+tabulator.panes.utils.errorMessage = function(dom, msg) {
+    var div = dom.createElement('div');
+    div.setAttribute('style', 'background-color: #fdd; color:black;');
+    div.appendChild(dom.createTextNode(msg));
+    return div;
+}
 tabulator.panes.utils.bottomURI = function(x) {
     var kb = tabulator.kb;
     var ft = kb.findTypeURIs(x);
@@ -458,6 +520,20 @@ tabulator.panes.utils.fieldFunction = function(field) {
     tabulator.log.debug("paneUtils: Going to implement field "+field+" of type "+uri)
     if (!fun) throw "No handler for field "+field+" of type "+uri
     return fun
+}
+
+// A button for editing a form (in place, at the moment)
+// 
+tabulator.panes.utils.editFormButton = function(dom, container, form, store, callback) {
+    var b = dom.createElement('button');
+    b.setAttribute('type', 'button');
+    b.innerHTML = "Edit "+tabulator.Util.label(tabulator.ns.ui('Form'));
+    b.addEventListener('click', function(e) {
+        tabulator.panes.utils.appendForm(dom, container,
+                {}, subject, tabulator.ns.ui('FormForm'), store, callback)
+        container.remove(b);
+    }, true);
+    return b;
 }
 
 tabulator.panes.utils.appendForm = function(dom, container, already, subject, form, store, itemDone) {
@@ -545,6 +621,7 @@ tabulator.panes.utils.formsFor = function(subject) {
         // Find the most specific
         forms = forms.concat(tabulator.panes.utils.findClosest(kb, b, ns.ui('creationForm')));
     }
+    tabulator.log.debug("formsFor: subject="+subject+", forms=");
     return forms;
 }
 
@@ -566,14 +643,18 @@ tabulator.panes.utils.sortByLabel = function(list) {
 
 
 
+// Button to add a new whatever using a form
+//
+// @param form - optional form , else will look for one
+// @param store - optional store else will prompt for one (unimplemented) 
 
-tabulator.panes.utils.newButton = function(dom, kb, subject, predicate, theClass, store, callback)  {
+tabulator.panes.utils.newButton = function(dom, kb, subject, predicate, theClass, form, store, callback)  {
     var b = dom.createElement("button");
     b.setAttribute("type", "button");
     b.innerHTML = "New "+tabulator.Util.label(theClass);
     b.addEventListener('click', function(e) {
             b.parentNode.appendChild(tabulator.panes.utils.promptForNew(
-                dom, kb, subject, predicate, theClass, store, callback));
+                dom, kb, subject, predicate, theClass, form, store, callback));
         }, false);
     return b;
 }
@@ -585,47 +666,51 @@ tabulator.panes.utils.newButton = function(dom, kb, subject, predicate, theClass
 //
 // @param dom - the document DOM for the user interface
 // @param kb - the graph which is the knowledge base we are working with
-// @param subject - a term, Thing this should be linked to when made.
-// @param predicate - a term, the relationship for the subject link.
+// @param subject - a term, Thing this should be linked to when made. Optional.
+// @param predicate - a term, the relationship for the subject link. Optional.
 // @param theClass - an RDFS class containng the object about which the new information is.
 // @param store - The web document being edited 
 // @param callback - takes (boolean ok, string errorBody)
 // @returns a dom object with the form DOM
 
-tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theClass, store, callback) {
+tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theClass, form, store, callback) {
     var ns = tabulator.ns
-    var lists = tabulator.panes.utils.findClosest(kb, theClass, ns.ui('creationForm'));
-    // if (!lists) throw "Can't create a new "+theClass+" as no creationForm.";
     var box = dom.createElement('form');
-    if (lists.length == 0) {
-        var p = box.appendChild(dom.createElement('p'));
-        p.textContent = "I am sorry, you need to provide information about a "+
-            tabulator.Util.label(theClass)+" but I don't know enough information about those to ask you.";
-        var b = box.appendChild(dom.createElement('button'));
-        b.setAttribute('type', 'button');
-        b.innerHTML = "Goto "+tabulator.Util.label(theClass);
-        b.addEventListener('click', function(e) {
-            tabulator.outline.GotoSubject(theClass, true, undefined, true, undefined);
-        }, false);
-        return box;
-        //throw "Do not know enough about the class "
-        //+theClass+" to be able to be able to prompt for information about a new one";
+    
+    if (!form) {
+        var lists = tabulator.panes.utils.findClosest(kb, theClass, ns.ui('creationForm'));
+        if (lists.length == 0) {
+            var p = box.appendChild(dom.createElement('p'));
+            p.textContent = "I am sorry, you need to provide information about a "+
+                tabulator.Util.label(theClass)+" but I don't know enough information about those to ask you.";
+            var b = box.appendChild(dom.createElement('button'));
+            b.setAttribute('type', 'button');
+            b.innerHTML = "Goto "+tabulator.Util.label(theClass);
+            b.addEventListener('click', function(e) {
+                tabulator.outline.GotoSubject(theClass, true, undefined, true, undefined);
+            }, false);
+            return box;
+            //throw "Do not know enough about the class "
+            //+theClass+" to be able to be able to prompt for information about a new one";
+        }
+        tabulator.log.debug('lists[0] is '+lists[0]);
+        form = lists[0];  // Pick any one
     }
-    var form = lists[0];  // Pick any one
-    tabulator.log.debug('lists[0] is '+lists[0]);
     tabulator.log.debug('form is '+form);
     box.setAttribute('style', 'border: 0.05em solid brown; color: brown');
     box.innerHTML="<h3>New "+ tabulator.Util.label(theClass)
                         + "</h3>";
 
                         
-    formFunction = tabulator.panes.utils.fieldFunction(form);
+    var formFunction = tabulator.panes.utils.fieldFunction(form);
     if (!formFunction) throw "No handler for field type: "+b;
     var object = tabulator.panes.utils.newThing(kb, store);
     var itemDone = function(ok, body) {
         if (!ok) return callback(ok, body);
-        var ins = [$rdf.st(subject, predicate, object, store)]
-        tabulator.sparql.update([], ins, linkDone)
+        if (subject) {
+            var ins = [$rdf.st(subject, predicate, object, store)];
+            tabulator.sparql.update([], ins, linkDone);
+        }
     }
     var linkDone = function(uri, ok, body) {
         return callback(ok, body);

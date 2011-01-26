@@ -1096,8 +1096,8 @@ tabulator.OutlineObject = function(doc) {
     };
     
     function setSelected(node, newValue) {
-        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));
-        tabulator.log.debug("@outline setSelected, intended to "+(newValue?"select ":"deselect ")+node+node.textContent);   
+        //tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));
+        //tabulator.log.debug("@outline setSelected, intended to "+(newValue?"select ":"deselect ")+node+node.textContent);   
         //if (newValue == selected(node)) return; //we might not need this anymore...
         if (node.nodeName != 'TD') {tabulator.log.debug('down'+node.nodeName);throw 'Expected TD in setSelected: '+node.nodeName+node.textContent;}
         tabulator.log.debug('pass');

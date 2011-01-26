@@ -86,10 +86,13 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
     already2[key] = 1;
     
     var parts = kb.each(form, ui('part'));
-    if (!parts) throw "No parts to form "+form;
-    var p2 = parts.map(function(p) {var k = kb.any(p, ui('sequence')); return [k?k:999,p] });
+    if (!parts) box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                "No parts to form! "));
+    var p2 = parts.map(function(p) {var k = kb.any(p, ui('sequence')); 
+                            if (k == undefined) return [99999, p];
+                            return [parseInt(k.value), p] });
     p2.sort();
-
+    //box.appendChild(tabulator.panes.utils.errorMessage(dom,"p2'="+p2));
     var eles = [];
     var original = [];
     for (var i=0; i<p2.length; i++) {
@@ -243,6 +246,11 @@ tabulator.panes.fieldParams = {};
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri] = {
     'size': 20, 'type': 'date'};
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri].pattern = 
+    /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?Z?\s*$/;
+
+tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri] = {
+    'size': 20, 'type': 'date'};
+tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/;
 
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri] = {
@@ -266,6 +274,7 @@ tabulator.panes.fieldParams[tabulator.ns.ui('TextField').uri] = { };
 
 
 tabulator.panes.field[tabulator.ns.ui('DateField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('DateTimeField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('NumericField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('IntegerField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DecimalField').uri] = 
@@ -451,6 +460,37 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
 }
 
 
+//          Documentation - non-interactive fields
+//
+
+tabulator.panes.fieldParams[tabulator.ns.ui('Comment').uri] = {
+    'element': 'p', 'style': 'padding: 0.1em 1.5em;'};
+tabulator.panes.fieldParams[tabulator.ns.ui('Heading').uri] = {
+    'element': 'h3', 'style': 'font-size: 110%; color: brown;' };
+
+
+tabulator.panes.field[tabulator.ns.ui('Comment').uri] =
+tabulator.panes.field[tabulator.ns.ui('Heading').uri] = function(
+                    dom, container, already, subject, form, store, callback) {
+    var ui = tabulator.ns.ui, kb = tabulator.kb;
+    var contents = kb.any(form, ui('contents')); 
+    if (!contents) contents = "Error: No contents in comment field.";
+
+    var uri = tabulator.panes.utils.bottomURI(form); 
+    var params = tabulator.panes.fieldParams[uri];
+    if (params == undefined) params = {}; // non-bottom field types can do this
+    
+    var box = dom.createElement('div');
+    container.appendChild(box);
+    var p = box.appendChild(dom.createElement(params['element']));
+    p.textContent = contents;
+
+    var style = kb.any(form, ui('style')); 
+    if (style == undefined) style = params.style? params.style : '';
+    if (style) p.setAttribute('style', style)
+
+    return box;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

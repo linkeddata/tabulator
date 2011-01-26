@@ -145,23 +145,40 @@ tabulator.panes.register( {
 
 //      _____________________________________________________________________
 
-            //              Render a Class
+            //              Render a Class -- the forms associated with it
             
             } else if (t[ns.rdfs('Class').uri]) {
 
                 // complain('class');
-
+                // For each creation form, allow one to caete a new trip with it, and also to edit the form.
                 var pred = ns.ui('creationForm');
                 var sts = kb.statementsMatching(subject, pred);
                 if (sts.length) {
-                    div.appendChild(dom.createElement('h4')).textContent = tabulator.Util.label(pred);
-                    tabulator.outline.appendPropertyTRs(div, sts);
+                    div.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
+                    for (var i=0; i<sts.length; i++) {
+                        tabulator.outline.appendPropertyTRs(div,  [ sts[i] ]);
+                        var form = sts[i].object;
+                        div.appendChild(tabulator.panes.utils.newButton(
+                            dom, kb, null, null, subject, form, store, function(ok,body){
+                            if (ok) {
+                                // tabulator.outline.GotoSubject(newThing@@, true, undefined, true, undefined);
+                                // rerender(div);   // Deleted forms at the moment
+                            }
+                            else complain("Sorry, failed to save your change:\n"+body);
+                        }) );
+                        
+                        var formdef = kb.statementsMatching(form, ns.rdf('type'));
+                        if (!formdef.length) formdef = kb.statementsMatching(form);
+                        if (!formdef.length) complain('No data about form');
+                        else tabulator.panes.utils.editFormButton(dom, div,
+                                        form, formdef[0].why, complainIfBad);
+                    }
                 } else {
                     complain("There are no forms defined for this class.");
                 }
-
+                div.appendChild(dom.createElement('hr'));
                 div.appendChild(tabulator.panes.utils.newButton(
-                    dom, kb, subject, pred, ns.ui('Form'), store, complainIfBad) )
+                    dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
 
 //      _____________________________________________________________________
 

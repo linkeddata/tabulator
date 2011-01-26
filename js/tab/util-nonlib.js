@@ -87,7 +87,7 @@ tabulator.Util.getTarget = function(e) {
     else if (e.srcElement) target = e.srcElement
     if (target.nodeType == 3) // defeat Safari bug [sic]
         target = target.parentNode
-    tabulator.log.debug("Click on: " + target.tagName)
+    // tabulator.log.debug("Click on: " + target.tagName)
     return target
 }
 
@@ -104,7 +104,7 @@ tabulator.Util.ancestor = function(target, tagName) {
 tabulator.Util.getAbout = function(kb, target) {
     var level, aa
     for (level=target; level && (level.nodeType==1); level=level.parentNode) {
-        tabulator.log.debug("Level "+level + ' '+level.nodeType + ': '+level.tagName)
+        // tabulator.log.debug("Level "+level + ' '+level.nodeType + ': '+level.tagName)
         aa = level.getAttribute('about')
         if (aa) {
             // tabulator.log.debug("kb.fromNT(aa) = " + kb.fromNT(aa));
@@ -390,7 +390,7 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     for (level=tr.parentNode; level; level=level.parentNode) {
         if (typeof level.AJAR_statement != 'undefined') {   // level.AJAR_statement
             level.setAttribute('bla',level.AJAR_statement)  // @@? -timbl
-            tabulator.log.debug("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
+            // tabulator.log.debug("Parent TR statement="+level.AJAR_statement + ", var=" + level.AJAR_variable)
             /*for(c=0;c<level.parentNode.childNodes.length;c++) //This makes sure the same variable is used for a subject
             	if(level.parentNode.childNodes[c].AJAR_variable)
             		level.AJAR_variable = level.parentNode.childNodes[c].AJAR_variable;*/
@@ -438,7 +438,7 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     	hasParent=false;
     	parentVar = inverse? st.object : st.subject; //if there is no parents, uses the sub/obj
     }
-    tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
+    // tabulator.log.debug('Initial variable: '+tr.AJAR_variable)
     v = tr.AJAR_variable? tr.AJAR_variable : kb.variable(tabulator.Util.newVariableName());
     q.vars.push(v)
     v.label = hasParent? parentVar.label : tabulator.Util.label(parentVar);
@@ -454,7 +454,7 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     pattern.tr = tr
     tr.AJAR_pattern = pattern    // Cross-link UI and query line
     tr.AJAR_variable = v;
-    tabulator.log.debug('Final variable: '+tr.AJAR_variable)
+    // tabulator.log.debug('Final variable: '+tr.AJAR_variable)
     tabulator.log.debug("Query pattern: "+pattern)
     pat.statements.push(pattern)
     return v

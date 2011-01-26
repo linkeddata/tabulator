@@ -43,7 +43,9 @@ loader.loadSubScript("chrome://tabulator/content/js/panes/n3Pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/RDFXMLPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/tableViewPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/classInstancePane.js");
+
 loader.loadSubScript("chrome://tabulator/content/js/panes/defaultPane.js");
+
 //loader.loadSubScript("chrome://tabulator/content/js/panes/newOutline.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/ui/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/categoryPane.js");

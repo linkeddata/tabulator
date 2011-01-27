@@ -359,7 +359,7 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         }
 
         this.getLabel = function() {
-            return tabulator.Util.label(this.type, true);
+            return tabulator.Util.label(this.type);
         }
 
         this.addUse = function() {
@@ -436,9 +436,9 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         this.getLabel = function() {
             if (this.predicate != null) {
                 if (this.predicate.sameTerm(ns.rdf('type')) && this.superClass) {
-                    return tabulator.Util.label(this.superClass, true)
+                    return tabulator.Util.label(this.superClass)
                 }
-                return tabulator.Util.label(this.predicate, true);
+                return tabulator.Util.label(this.predicate);
             } else if (this.variable != null) {
                 return this.variable.toString();
             } else {
@@ -1024,7 +1024,7 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
-            dropdown.appendChild(optionElement(tabulator.Util.label(value, true), i));
+            dropdown.appendChild(optionElement(tabulator.Util.label(value), i));
         }
         result.appendChild(dropdown);
 

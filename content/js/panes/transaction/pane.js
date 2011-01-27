@@ -176,8 +176,9 @@ tabulator.panes.register( {
                     var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
                     trips = trips.concat(trips2).sort(); // @@ Unique 
                     if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
-                        myDocument, kb, subject, TRIP('trip'), trips, false,
-                         "-- what trip? --", store, complainIfBad));
+                        myDocument, kb, subject, TRIP('trip'), trips,
+                            { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *"},
+                            store, complainIfBad));
                     div.appendChild(tabulator.panes.utils.newButton(  // New Trip                    
                         myDocument, kb, subject, TRIP('trip'), TRIP('Trip'), store, complainIfBad));
 

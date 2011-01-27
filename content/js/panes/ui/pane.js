@@ -32,10 +32,10 @@ tabulator.panes.register( {
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         
-        var div = dom.createElement('div')
-        div.setAttribute('class', 'uiPane');
+        var box = dom.createElement('div')
+        box.setAttribute('class', 'uiPane');
         var label = tabulator.Util.label(subject)
-        div.innherHTML='<h2>'+"Use Interface for "+label+'</h2><table><tbody><tr>\
+        box.innherHTML='<h2>'+"Use Interface for "+label+'</h2><table><tbody><tr>\
         <td>%s</tr></tbody></table>\
         <p>This is a pane under development.</p>';
 
@@ -45,26 +45,29 @@ tabulator.panes.register( {
             return false
         }
 
-        var complain = function complain(message){
+        var mention = function complain(message, style){
             var pre = dom.createElement("pre");
-            pre.setAttribute('style', 'color: grey');
-            div.appendChild(pre);
-            pre.appendChild(dom.createTextNode(message));
+            pre.setAttribute('style', style ? style :'color: grey; background-color: white');
+            box.appendChild(pre).textContent = message;
+        } 
+
+        var complain = function complain(message, style){
+            mention(message, 'style', style ? style :'color: grey; background-color: #fdd');
         } 
 
         var complainIfBad = function(ok,body){
             if (ok) {
                 // setModifiedDate(store, kb, store);
-                // rerender(div);   // Deleted forms at the moment
+                // rerender(box);   // Deleted forms at the moment
             }
             else complain("Sorry, failed to save your change:\n"+body);
         }
 
         var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, dom);
-            parent.replaceChild(div2, div);
+        var rerender = function(box) {
+            var parent  = box.parentNode;
+            var box2 = thisPane.render(subject, dom);
+            parent.replaceChild(box2, box);
         };
 
 
@@ -106,10 +109,13 @@ tabulator.panes.register( {
             
                 if (data == undefined) {
                     // add a select for data or object
-                    div.appendChild(dom.createElement('p')).textContent =
+                    box.appendChild(dom.createElement('p')).textContent =
                      "A data type property takes a data value";
-                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb, subject, ns.rdf('type'),
-                        [ns.owl('DatatypeProperty'), ns.owl('ObjectProperty') ], false, "-- which is it? -- " , store, complainIfBad));
+                    box.appendChild(tabulator.panes.utils.makeSelectForOptions(
+                        dom, kb, subject, ns.rdf('type'),
+                        [ns.owl('DatatypeProperty'), ns.owl('ObjectProperty') ], 
+                        { 'multiple': false, 'nullLabel': "-- which is it? -- "}
+                        , store, complainIfBad));
                 }
 
                 if (data) {
@@ -127,16 +133,16 @@ tabulator.panes.register( {
 
 
 
-                div.appendChild(dom.createElement('tr'))
+                box.appendChild(dom.createElement('tr'))
                             .setAttribute('style','height: 1em'); // spacer
                 
                 // Remaining properties
                 /*
-                tabulator.outline.appendPropertyTRs(div, plist, false,
+                tabulator.outline.appendPropertyTRs(box, plist, false,
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                     });
-                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                tabulator.outline.appendPropertyTRs(box, qlist, true,
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                     });
@@ -150,19 +156,20 @@ tabulator.panes.register( {
             } else if (t[ns.rdfs('Class').uri]) {
 
                 // complain('class');
-                // For each creation form, allow one to caete a new trip with it, and also to edit the form.
+                // For each creation form, allow one to create a new trip with it, and also to edit the form.
                 var pred = ns.ui('creationForm');
                 var sts = kb.statementsMatching(subject, pred);
+                
                 if (sts.length) {
-                    div.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
+                    box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
                     for (var i=0; i<sts.length; i++) {
-                        tabulator.outline.appendPropertyTRs(div,  [ sts[i] ]);
+                        tabulator.outline.appendPropertyTRs(box,  [ sts[i] ]);
                         var form = sts[i].object;
-                        div.appendChild(tabulator.panes.utils.newButton(
+                        box.appendChild(tabulator.panes.utils.newButton(
                             dom, kb, null, null, subject, form, store, function(ok,body){
                             if (ok) {
                                 // tabulator.outline.GotoSubject(newThing@@, true, undefined, true, undefined);
-                                // rerender(div);   // Deleted forms at the moment
+                                // rerender(box);   // Deleted forms at the moment
                             }
                             else complain("Sorry, failed to save your change:\n"+body);
                         }) );
@@ -170,15 +177,16 @@ tabulator.panes.register( {
                         var formdef = kb.statementsMatching(form, ns.rdf('type'));
                         if (!formdef.length) formdef = kb.statementsMatching(form);
                         if (!formdef.length) complain('No data about form');
-                        else tabulator.panes.utils.editFormButton(dom, div,
+                        else tabulator.panes.utils.editFormButton(dom, box,
                                         form, formdef[0].why, complainIfBad);
                     }
                 } else {
                     complain("There are no forms defined for this class.");
                 }
-                div.appendChild(dom.createElement('hr'));
-                div.appendChild(tabulator.panes.utils.newButton(
+                box.appendChild(dom.createElement('hr'));
+                box.appendChild(tabulator.panes.utils.newButton(
                     dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
+                box.appendChild(dom.createElement('hr'));
 
 //      _____________________________________________________________________
 
@@ -187,7 +195,7 @@ tabulator.panes.register( {
             } else if (t[ns.ui('Form').uri]) {
 
                 complain('(Storing data in: '+store+')');
-                tabulator.panes.utils.appendForm(dom, div, kb, subject, ns.ui('FormForm'), store, complainIfBad);
+                tabulator.panes.utils.appendForm(dom, box, kb, subject, ns.ui('FormForm'), store, complainIfBad);
 
             } else {
                 complain("Eh?");
@@ -196,7 +204,7 @@ tabulator.panes.register( {
 
         }); // end: when store loded
 
-        return div;
+        return box;
     }
 
 }, false);

@@ -321,7 +321,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
         var ds = kb.statementsMatching(subject, property);
         var is = $rdf.st(subject, property,
                     params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
-        tabulator.sparql.update(ds, is, function(ok, body) {
+        tabulator.sparql.update(ds, is, function(uri, ok, body) {
             if (ok) {
                 field.setAttribute('style', 'color: black;');
             } else {
@@ -450,9 +450,12 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var multiple = false;
     // box.appendChild(dom.createTextNode('Choice: subForm='+subForm))
     var possible2 = tabulator.panes.utils.sortByLabel(possible);
+    var np = "--"+ tabulator.Util.label(property)+"-?";
+    var opts = {'multiple': multiple, 'nullPrompt': np};
+    if (kb.any(form, ui('canMintNew'))) opts['mint'] = "* New *"; // @@ could be better
     var selector = tabulator.panes.utils.makeSelectForOptions(
                 dom, kb, subject, property,
-                possible2, multiple, "--"+ tabulator.Util.label(property)+"-?",
+                possible2, opts,
                 store, subForm ? addSubForm :callback);
     box.appendChild(selector);
     if (object && subForm) addSubForm(true, "");
@@ -835,14 +838,15 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
 // @param subject - a term, the subject of the statement(s) being edited.
 // @param predicate - a term, the predicate of the statement(s) being edited
 // @param possible - a list of terms, the possible value the object can take
-// @param multiple - Boolean - Whether more than one at a time is allowed 
-// @param nullLabel - a string to be displayed as the
+// @param options.multiple - Boolean - Whether more than one at a time is allowed 
+// @param options.nullLabel - a string to be displayed as the
 //                        option for none selected (for non multiple)
+// @param options.mint - User may create thing if this sent to the prompt string eg "New foo"
 // @param storeDoc - The web document being edited 
 // @param callback - takes (boolean ok, string errorBody)
 
 tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicate,
-                possible, multiple, nullLabel, storeDoc, callback) {
+                possible, options, storeDoc, callback) {
     if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
     tabulator.log.debug('Select list length now '+ possible.length)
     var n = 0; var uris ={}; // Count them
@@ -864,7 +868,12 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         var ds = [], is = [];
         for (var i =0; i< select.options.length; i++) {
             var opt = select.options[i];
-            if (!opt.AJAR_uri) continue; // a prompt
+            if (opt.selected && opt.AJAR_mint) {
+                var object = tabulator.panes.utils.newThing(kb, store);
+                is.push(new $rdf.Statement(subject,
+                    predicate, object, storeDoc ));
+            }
+            if (!opt.AJAR_uri) continue; // a prompt or mint
             if (opt.selected && !(opt.AJAR_uri in actual)) { // new class
                 is.push(new $rdf.Statement(subject,
                     predicate, kb.sym(opt.AJAR_uri),storeDoc ));
@@ -892,7 +901,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
     
     var select = dom.createElement('select');
     select.setAttribute('style', 'margin: 0.6em 1.5em;')
-    if (multiple) select.setAttribute('multiple', 'true');
+    if (options.multiple) select.setAttribute('multiple', 'true');
     select.currentURI = null;
     for (var uri in uris) {
         var c = kb.sym(uri)
@@ -908,10 +917,15 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         }
         select.appendChild(option);
     }
-    if ((select.currentURI == null) && !multiple) {
+    if (options.mint) {
+        var mint = dom.createElement('option');
+        mint.appendChild(dom.createTextNode(options.mint));
+        mint.AJAR_mint = true; // Flag it
+        select.insertBefore(mint, select.firstChild);
+    }
+    if ((select.currentURI == null) && !options.multiple) {
         var prompt = dom.createElement('option');
-        prompt.appendChild(dom.createTextNode(nullLabel));
-        //dump("prompt option:" + prompt + "\n")
+        prompt.appendChild(dom.createTextNode(options.nullLabel));
         select.insertBefore(prompt, select.firstChild)
         prompt.selected = true;
     }
@@ -942,7 +956,7 @@ tabulator.panes.utils.makeSelectForCategory = function(dom, kb, subject, categor
     if (subs.length == 0) throw "Can't do "+ (multiple?"multiple ":"")+"selector with no subclasses of category: "+category;
     if (subs.length == 1) throw "Can't do "+ (multiple?"multiple ":"")+"selector with only 1 subclass of category: "+category+":"+subs[1];
     return tabulator.panes.utils.makeSelectForOptions(dom, kb, subject, tabulator.ns.rdf('type'), subs,
-                    multiple, "--classify--", storeDoc, callback);
+                    { 'multiple': multiple, 'nullPrompt': "--classify--"}, storeDoc, callback);
 }
 
 // Make SELECT element to select subclasses recurively

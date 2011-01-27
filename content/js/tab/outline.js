@@ -1084,7 +1084,7 @@ tabulator.OutlineObject = function(doc) {
             var st = selection[i].parentNode.AJAR_statement;
             if (!st) continue; //for root TD
             var source = st.why;
-            if (source.uri) 
+            if (source && source.uri) 
                 sourceWidget.highlight(source, true);
             else if (isExtension && source.termType == 'bnode')
                 sourceWidget.highlight(kb.sym(tabulator.sourceURI), true);

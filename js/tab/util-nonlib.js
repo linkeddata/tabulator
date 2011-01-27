@@ -48,17 +48,8 @@ tabulator.Util.stackString = function(e){
     return str;
 }
 
-// AJAR_handleNewTerm is now in $rdf.Util
-/*
-tabulator.Util.myFetcher = function(x, requestedBy) {
-    if (x == null) {
-        tabulator.log.debug("@@ SHOULD SYNC NOW") // what does this mean?
-    } else {
-        tabulator.log.debug("Fetcher: "+x)
-        $rdf.Util.AJAR_handleNewTerm(tabulator.kb, x, requestedBy)
-    }
-}
-*/
+// @@ This shoud be in rdf.uri
+
 tabulator.Util.getURIQueryParameters = function(uri){
     var results =new Array();
     var getDataString=uri ? uri.toString() : new String(window.location);
@@ -167,6 +158,7 @@ tabulator.Util.addLoadEvent = function(func) {
     }
 } //addLoadEvent
 
+/* apparently unused 2011-01-27 timbl
 tabulator.Util.document={
     'split': function(doc, number){
         var result = [doc];
@@ -184,24 +176,15 @@ tabulator.Util.document={
         return result;    
     }
 }
+*/
 
+// Find the position of an object relative to the window
+//
 tabulator.Util.findPos = function(obj) { //C&P from http://www.quirksmode.org/js/findpos.html
-    var myDocument=obj.ownerDocument;
-    var DocBox=myDocument.documentElement.getBoundingClientRect();
-    var box=obj.getBoundingClientRect();
-    return [box.left-DocBox.left,box.top-DocBox.top];
-	/*
-	var curleft = curtop = 0;
-	if (obj.offsetParent) {
-		curleft = obj.offsetLeft
-		curtop = obj.offsetTop
-		while (obj = obj.offsetParent) {
-			curleft += obj.offsetLeft
-			curtop += obj.offsetTop
-		}
-	}
-	return [curleft,curtop];
-	*/
+    var myDocument = obj.ownerDocument;
+    var DocBox = myDocument.documentElement.getBoundingClientRect();
+    var box = obj.getBoundingClientRect();
+    return [box.left-DocBox.left, box.top-DocBox.top];
 }
 
 
@@ -269,8 +252,14 @@ tabulator.Util.parse_headers = function(headers) {
 
 
 
-
-tabulator.Util.label = function(x, trimSlash) { // x is an object
+// This ubiquitous function returns the best label for a thing
+//
+//  The hacks in this code make a major difference to the usability
+// of the tabulator.
+//
+// @returns string
+//
+tabulator.Util.label = function(x) { // x is an object
     function cleanUp(s1) {
         var s2 = "";
         for (var i=0; i<s1.length; i++) {
@@ -310,7 +299,7 @@ tabulator.Util.label = function(x, trimSlash) { // x is an object
     if (s.slice(-9) == '/foaf.rdf') s = s.slice(0,-9)
     else if (s.slice(-5) == '/foaf') s = s.slice(0,-5);
     
-    if (trimSlash) { // only trim URIs, not rdfs:labels
+    if (1) { //   Eh? Why not do this? e.g. dc:title needs it only trim URIs, not rdfs:labels
         var slash = s.lastIndexOf("/");
         if ((slash >=0) && (slash < x.uri.length)) return cleanUp(s.slice(slash+1));
     }
@@ -323,7 +312,7 @@ tabulator.Util.escapeForXML = function(str) {
 
 //  As above but escaped for XML and chopped of contains a slash
 tabulator.Util.labelForXML = function(x) {
-    return tabulator.Util.escapeForXML(tabulator.Util.label(x, true));
+    return tabulator.Util.escapeForXML(tabulator.Util.label(x));
 }
 
 // As above but for predicate, possibly inverse

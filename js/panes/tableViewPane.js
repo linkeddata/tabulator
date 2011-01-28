@@ -1272,8 +1272,18 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
             return renderImage(obj);
         } else if (obj.termType == "symbol" || obj.termType == "bnode") {
             return linkToObject(obj);
+        } else if (obj.termType == "collection") {
+            var span = doc.createElement('span');
+            span.appendChild(doc.createTextNode('['));
+            obj.elements.map(function(x){
+                span.appendChild(renderValue(x, column));
+                span.appendChild(doc.createTextNode(', '));
+            });
+            span.removeChild(span.lastChild);
+            span.appendChild(doc.createTextNode(']'));
+            return span;
         } else {
-            return doc.createTextNode("unknown termtype!");
+            return doc.createTextNode("unknown termtype '"+obj.termType+"'!");
         }
     }
 

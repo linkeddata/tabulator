@@ -17,9 +17,9 @@ tabulator.panes.register( {
         var ns = tabulator.ns;
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
-        if (t[ns.rdfs('Class').uri]) return "user interface";
-        if (t[ns.rdf('Property').uri]) return "user interface";
-        if (t[ns.ui('Form').uri]) return "user interface";
+        if (t[ns.rdfs('Class').uri]) return "creation forms";
+        // if (t[ns.rdf('Property').uri]) return "user interface";
+        if (t[ns.ui('Form').uri]) return "edit form";
         
         return null; // No under other circumstances (while testing at least!)
     },
@@ -27,28 +27,16 @@ tabulator.panes.register( {
     render: function(subject, dom) {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         
         var box = dom.createElement('div')
-        box.setAttribute('class', 'uiPane');
-        var label = tabulator.Util.label(subject)
-        box.innherHTML='<h2>'+"Use Interface for "+label+'</h2><table><tbody><tr>\
-        <td>%s</tr></tbody></table>\
-        <p>This is a pane under development.</p>';
-
-        var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
-                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
-            return false
-        }
+        //box.setAttribute('class', 'uiPane');
+        var label = tabulator.Util.label(subject);
 
         var mention = function complain(message, style){
-            var pre = dom.createElement("pre");
+            var pre = dom.createElement("p");
             pre.setAttribute('style', style ? style :'color: grey; background-color: white');
             box.appendChild(pre).textContent = message;
+            return pre
         } 
 
         var complain = function complain(message, style){
@@ -93,79 +81,37 @@ tabulator.panes.register( {
                 store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable ontology with hash
         }
         if (!store) store = kb.any(kb.sym(docuri), ns.link('annotationStore'));
-
+        if (!store) store = tabulator.panes.utils.defaultAnnotationStore(subject);
         if (!store) store = kb.sym('http://tabulator.org/wiki/ontologyAnnotation/common'); // fallback
         
         // A fallback which gives a different store page for each ontology would be good @@
         
+        var wait = mention('(Loading data from: '+store+')');
+
         kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
 
-            //              Render a Property
-            
-            if (t[ns.rdf('Property').uri]) {
-
-                var res = tabulator.panes.utils.checkProperty(kb, pred);
-                var data = res.data, range = res.range;
-            
-                if (data == undefined) {
-                    // add a select for data or object
-                    box.appendChild(dom.createElement('p')).textContent =
-                     "A data type property takes a data value";
-                    box.appendChild(tabulator.panes.utils.makeSelectForOptions(
-                        dom, kb, subject, ns.rdf('type'),
-                        [ns.owl('DatatypeProperty'), ns.owl('ObjectProperty') ], 
-                        { 'multiple': false, 'nullLabel': "-- which is it? -- "}
-                        , store, complainIfBad));
-                }
-
-                if (data) {
-                    if (range) {
-                        
-
-                    } else {
-                    
-                    }
-                
-                } else { // not data, object property
-
-                    complain('object property @@');
-                }
-
-
-
-                box.appendChild(dom.createElement('tr'))
-                            .setAttribute('style','height: 1em'); // spacer
-                
-                // Remaining properties
-                /*
-                tabulator.outline.appendPropertyTRs(box, plist, false,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                tabulator.outline.appendPropertyTRs(box, qlist, true,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-    */
-            // end of render property instance
+            box.removeChild(wait);
 
 //      _____________________________________________________________________
 
             //              Render a Class -- the forms associated with it
             
-            } else if (t[ns.rdfs('Class').uri]) {
+            if (t[ns.rdfs('Class').uri]) {
 
                 // complain('class');
                 // For each creation form, allow one to create a new trip with it, and also to edit the form.
                 var pred = ns.ui('creationForm');
                 var sts = kb.statementsMatching(subject, pred);
-                
+                box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
+                mention("Creation forms allow you to add information about a new thing,\
+                                    in this case a new "+label+".");
                 if (sts.length) {
-                    box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
                     for (var i=0; i<sts.length; i++) {
                         tabulator.outline.appendPropertyTRs(box,  [ sts[i] ]);
                         var form = sts[i].object;
-                        box.appendChild(tabulator.panes.utils.newButton(
+                        var cell = dom.createElement('td');
+                        box.lastChild.appendChild(cell);
+                        cell.appendChild(tabulator.panes.utils.newButton(
                             dom, kb, null, null, subject, form, store, function(ok,body){
                             if (ok) {
                                 // tabulator.outline.GotoSubject(newThing@@, true, undefined, true, undefined);
@@ -180,10 +126,12 @@ tabulator.panes.register( {
                         else tabulator.panes.utils.editFormButton(dom, box,
                                         form, formdef[0].why, complainIfBad);
                     }
+                    box.appendChild(dom.createElement('hr'));
                 } else {
-                    complain("There are no forms defined for this class.");
+                    mention("There are no forms currently defined to make a "+
+                        label+".");
                 }
-                box.appendChild(dom.createElement('hr'));
+                mention("You can make a new form.");
                 box.appendChild(tabulator.panes.utils.newButton(
                     dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
                 box.appendChild(dom.createElement('hr'));
@@ -194,11 +142,10 @@ tabulator.panes.register( {
             
             } else if (t[ns.ui('Form').uri]) {
 
-                complain('(Storing data in: '+store+')');
                 tabulator.panes.utils.appendForm(dom, box, kb, subject, ns.ui('FormForm'), store, complainIfBad);
 
             } else {
-                complain("Eh?");
+                complain("ui/pane internal error -- Eh?");
 
             }
 

@@ -88,15 +88,12 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
     var parts = kb.each(form, ui('part'));
     if (!parts) box.appendChild(tabulator.panes.utils.errorMessage(dom,
                 "No parts to form! "));
-    var p2 = parts.map(function(p) {var k = kb.any(p, ui('sequence')); 
-                            if (k == undefined) return [99999, p];
-                            return [parseInt(k.value), p] });
-    p2.sort();
+    var p2 = tabulator.panes.utils.sortBySequence(parts);
     //box.appendChild(tabulator.panes.utils.errorMessage(dom,"p2'="+p2));
     var eles = [];
     var original = [];
     for (var i=0; i<p2.length; i++) {
-        var field = p2[i][1];
+        var field = p2[i];
         var t = tabulator.panes.utils.bottomURI(field); // Field type
         if (t == ui('Options').uri) {
             var dep = kb.any(field, ui('dependingOn'));
@@ -110,14 +107,14 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
             if (ok) {
                 //box.appendChild(tabulator.panes.utils.errorMessage(dom, "Group: item done ok"));
                 for (j=0; j<p2.length; j++) {  // This is really messy.
-                    var field = (p2[j][1])
+                    var field = (p2[j])
                     var t = tabulator.panes.utils.bottomURI(field); // Field type
                     if (t == ui('Options').uri) {
                         var dep = kb.any(field, ui('dependingOn'));
                         //box.appendChild(tabulator.panes.utils.errorMessage(dom, "Group: depending on "+dep));
  //                       if (dep && kb.any(subject, dep) && (kb.any(subject, dep).toNT() != original[j])) { // changed
                         if (1) { // assume changed
-                            var newOne = fn(dom, box, already2, subject, field, store, callback);
+                            var newOne = fn(dom, box, already, subject, field, store, callback);
                             box.removeChild(newOne);
                             box.insertBefore(newOne, eles[j]);
                             box.removeChild(eles[j]);
@@ -467,7 +464,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
 //
 
 tabulator.panes.fieldParams[tabulator.ns.ui('Comment').uri] = {
-    'element': 'p', 'style': 'padding: 0.1em 1.5em;'};
+    'element': 'p', 'style': 'padding: 0.1em 1.5em; color: brown;'};
 tabulator.panes.fieldParams[tabulator.ns.ui('Heading').uri] = {
     'element': 'h3', 'style': 'font-size: 110%; color: brown;' };
 
@@ -496,6 +493,26 @@ tabulator.panes.field[tabulator.ns.ui('Heading').uri] = function(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// We make a URI in the annotation store out of the URI of the thing to be annotated.
+//
+// @@ Todo: make it a personal preference.
+//
+tabulator.panes.utils.defaultAnnotationStore = function(subject) {
+    if (subject.uri == undefined) return undefined;
+    var s = subject.uri;
+    if (s.slice(0,7) != 'http://') return undefined;
+    s = s.slice(7);   // Remove 
+    var hash = s.indexOf("#");
+    if (hash >=0) s = s.slice(0, hash); // Strip trailing
+    else {
+        var slash = s.lastIndexOf("/");
+        if (slash < 0) return undefined;
+        s = s.slice(0,slash);
+    }
+    return tabulator.kb.sym('http://tabulator.org/wiki/annnotation/' + s);
+}
+
 
 
 tabulator.panes.utils.allClassURIs = function() {
@@ -579,6 +596,19 @@ tabulator.panes.utils.editFormButton = function(dom, container, form, store, cal
     return b;
 }
 
+// A button for jumping
+// 
+tabulator.panes.utils.linkButton = function(dom, object) {
+    var b = dom.createElement('button');
+    b.setAttribute('type', 'button');
+    b.textContent = "Goto "+tabulator.Util.label(object);
+    b.addEventListener('click', function(e) {
+        b.parentNode.removeNode(b);
+        tabulator.outline.GotoSubject(object, true, undefined, true, undefined);
+    }, true);
+    return b;
+}
+
 tabulator.panes.utils.appendForm = function(dom, container, already, subject, form, store, itemDone) {
     return tabulator.panes.utils.fieldFunction(form)(
                 dom, container, already, subject, form, store, itemDone);
@@ -611,29 +641,6 @@ tabulator.panes.utils.propertiesForClass = function(kb, c) {
 }
 
 
-
-// Create entry field for a given property
-/*
-tabulator.panes.utils.checkProperty = function(kb, pred) {
-    var data = undefined, ns = tabulator.ns;
-    if (kb.holds(pred, ns.rdfs('range'), ns.owl('DataProperty'))) data = true;
-    if (kb.holds(pred, ns.rdfs('range'), ns.owl('ObjectProperty'))) data = false;
-    var c = kb.any(pred, ns.rdfs('range'));
-    if (c) {
-        if (c.uri.slice(0,34) == 'http://www.w3.org/2001/XMLSchema#' ||
-        c in { 'http://www.w3.org/2000/01/rdf-schema#Literal': true, 
-                'http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral': true}) {
-            if (data == false) throw "ObjectProperty has datatype range: "+c.uri; 
-            data = true;
-        } else {
-            data = false; // Assume object then. @@ this is not necessarily true
-        }
-    }
-    return {'data': data, 'range': c};
-
-}
-
-*/
 tabulator.panes.utils.findClosest = function findClosest(kb, cla, prop) {
     var agenda = [cla]; // ordered - this is breadth first search
     while (agenda.length > 0) { 
@@ -647,7 +654,6 @@ tabulator.panes.utils.findClosest = function findClosest(kb, cla, prop) {
             agenda.push(supers[i]);
         }
     }
-    
     return [];
 }
 
@@ -717,7 +723,7 @@ tabulator.panes.utils.newButton = function(dom, kb, subject, predicate, theClass
 // @returns a dom object with the form DOM
 
 tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theClass, form, store, callback) {
-    var ns = tabulator.ns
+    var ns = tabulator.ns;
     var box = dom.createElement('form');
     
     if (!form) {
@@ -728,6 +734,7 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
                 tabulator.Util.label(theClass)+" but I don't know enough information about those to ask you.";
             var b = box.appendChild(dom.createElement('button'));
             b.setAttribute('type', 'button');
+            b.setAttribute('style', 'float: right;');
             b.innerHTML = "Goto "+tabulator.Util.label(theClass);
             b.addEventListener('click', function(e) {
                 tabulator.outline.GotoSubject(theClass, true, undefined, true, undefined);
@@ -750,15 +757,16 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
     var object = tabulator.panes.utils.newThing(kb, store);
     var itemDone = function(ok, body) {
         if (!ok) return callback(ok, body);
-        if (subject) {
-            var ins = [$rdf.st(subject, predicate, object, store)];
-            tabulator.sparql.update([], ins, linkDone);
-        }
+        if (subject && !kb.holds(subject, predicate, object))
+            tabulator.sparql.update([], 
+                    [$rdf.st(subject, predicate, object, store)], linkDone);
+        box.appendChild(tabulator.panes.utils.linkButton(dom, object))
+        tabulator.outline.GotoSubject(object, true, undefined, true, undefined);
     }
     var linkDone = function(uri, ok, body) {
         return callback(ok, body);
     }
-    tabulator.log.info("paneUtils Object is "+object)
+    tabulator.log.info("paneUtils Object is "+object);
     formFunction(dom, box, {}, object, form, store, itemDone);
     return box;
 }
@@ -811,7 +819,7 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     var groupSubmit = function(e) {
         submit.disabled = true;
         field.disabled = true;
-        var deletions = desc ? sts[0] : undefined; // If there was a desciption, remove it
+        var deletions = desc ? sts[0] : undefined; // If there was a description, remove it
         insertions = field.value.length? new $rdf.Statement(subject, predicate, field.value, storeDoc) : [];
         tabulator.sparql.update(deletions, insertions,function(uri,ok, body){
             if (ok) { desc = field.value; field.disabled = false;};

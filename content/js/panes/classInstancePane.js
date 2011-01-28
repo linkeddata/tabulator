@@ -28,7 +28,7 @@ tabulator.panes.register( {
         var sts = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
         var already = {}, more = [];
         sts.map(function(st){already[st.subject.toNT()] = st});
-        for (var nt in kb.findMemberURIs(subject)) if (!already[nt])
+        for (var nt in kb.findMembersNT(subject)) if (!already[nt])
             more.push($rdf.st(kb.fromNT(nt), tabulator.ns.rdf( 'type'), subject)); // @@ no provenence
         if (more.length) complain("There are "+sts.length+" explicit and "+
                 more.length+" implicit members of "+tabulator.Util.label(subject));

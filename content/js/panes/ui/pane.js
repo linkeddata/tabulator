@@ -134,6 +134,7 @@ tabulator.panes.register( {
                 mention("You can make a new form.");
                 box.appendChild(tabulator.panes.utils.newButton(
                     dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
+                mention("Storing new form in: "+store)
                 box.appendChild(dom.createElement('hr'));
 
 //      _____________________________________________________________________

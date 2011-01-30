@@ -63,8 +63,7 @@ tabulator.panes.register( {
             if (c.uri) anchor.setAttribute('href', c.uri);
             anchor.setAttribute('class', c.uri in types ? 'categoryIn' : 'categoryOut')
             if (c.uri in bots) anchor.setAttribute('class', 'categoryBottom');
-            var lab = tabulator.Util.label(c);
-            lab = lab.slice(0,1).toUpperCase() + lab.slice(1);
+            var lab = tabulator.Util.label(c, true);
             if (c.uri in types) lab += " *";
             anchor.appendChild(myDocument.createTextNode(lab));
             tr.appendChild(anchor);

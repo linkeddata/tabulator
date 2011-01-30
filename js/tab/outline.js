@@ -403,7 +403,7 @@ tabulator.OutlineObject = function(doc) {
               
         //set about and put 'expand' icon
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode') ||
-                (obj.termType == 'literal' && obj.value.slice(0,7) == 'http://')) {
+                (obj.termType == 'literal' && obj.value.slice && obj.value.slice(0,7) == 'http://')) {
             td.setAttribute('about', obj.toNT());
             td.appendChild(tabulator.Util.AJARImage(
                 tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));
@@ -2025,7 +2025,21 @@ tabulator.OutlineObject = function(doc) {
 
         if (obj.termType == 'literal')
         {
-            rep = myDocument.createTextNode(obj.value);
+            var styles = { 'integer': 'text-align: right;',
+                    'decimal': 'text-align: ".";',
+                    'double' : 'text-align: ".";',
+                    };
+            rep = myDocument.createElement('span');
+            rep.textContent = obj.value;
+            // Newlines have effect and overlong lines wrapped automatically
+            var style = '';
+            if (obj.datatype && obj.datatype.uri) {
+                var xsd = tabulator.ns.xsd('').uri;
+                if (obj.datatype.uri.slice(0, xsd.length) == xsd)
+                    style = styles[obj.datatype.uri.slice(xsd.length)];
+            }
+            rep.setAttribute('style', style ? style : 'white-space: pre-wrap;');
+            
         } else if (obj.termType == 'symbol' || obj.termType == 'bnode') {
             rep = myDocument.createElement('span');
             rep.setAttribute('about', obj.toNT());

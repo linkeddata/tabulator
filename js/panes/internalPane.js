@@ -31,10 +31,14 @@ tabulator.panes.internalPane = {
         if (subject.uri) {
             plist.push($r.st(subject,
                     kb.sym('http://www.w3.org/2007/ont/link#uri'), subject.uri, tabulator.sf.appNode));
-            if (subject.uri.indexOf('#') >= 0) 
-                        plist.push($r.st(subject,
-                            kb.sym('http://www.w3.org/2007/ont/link#documentURI'),
-                            subject.uri.split('#')[0], tabulator.sf.appNode));
+            if (subject.uri.indexOf('#') >= 0) {
+                plist.push($r.st(subject,
+                    kb.sym('http://www.w3.org/2007/ont/link#documentURI'),
+                    subject.uri.split('#')[0], tabulator.sf.appNode));
+                plist.push($r.st(subject,
+                    kb.sym('http://www.w3.org/2007/ont/link#document'),
+                     kb.sym(subject.uri.split('#')[0]), tabulator.sf.appNode));
+            }
         }
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)

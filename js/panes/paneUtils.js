@@ -359,14 +359,15 @@ tabulator.panes.field[tabulator.ns.ui('BooleanField').uri] = function(
     var ui = tabulator.ns.ui;
     var kb = tabulator.kb;
     var property = kb.any(form, ui('property'));
-    if (!property) throw "No property to text field: "+form;
+    if (!property) throw "No property to boolean field: "+form
     var lab = kb.any(form, ui('label'));
-    if (!lab) lab = tabulator.Util.label(property);
+    if (!lab) lab = tabulator.Util.label(property, true); // Init capital
     var state = kb.any(subject, property)
     if (state == undefined) state = false; // @@ sure we want that -- or three-state?
-    tabulator.log.debug('store is '+store);
-    var statement = $rdf.st(subject, property, true, store);  /// @@@ lack of stsement is not enough
-    var box = tabulator.panes.utils.buildCheckboxForm(dom, kb, lab, statement, state);
+    // tabulator.log.debug('store is '+store);
+    var ins = $rdf.st(subject, property, true, store);
+    var del = $rdf.st(subject, property, false, store); 
+    var box = tabulator.panes.utils.buildCheckboxForm(dom, kb, lab, del, ins, form, store);
     container.appendChild(box);
     return box;
 }
@@ -429,13 +430,17 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
         possible.push(kb.fromNT(x));
         // box.appendChild(dom.createTextNode("RDFS: adding "+x));
     }; // Use rdfs
-    if (from.sameTerm(ns.rdf('type'))) {
+    // tabulator.log.debug("%%% Choice field: possible.length 1 = "+possible.length)
+    if (from.sameTerm(ns.rdfs('Class'))) {
         for (var p in tabulator.panes.utils.allClassURIs()) possible.push(kb.sym(p));     
+        // tabulator.log.debug("%%% Choice field: possible.length 2 = "+possible.length)
     } else if (from.sameTerm(ns.owl('ObjectProperty'))) {
-       if (tabulator.properties == undefined) tabulator.panes.utils.propertyTriage();
+        //if (tabulator.properties == undefined) 
+        tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.op) possible.push(kb.fromNT(p));     
     } else if (from.sameTerm(ns.owl('DataProperty'))) {
-        if (tabulator.properties == undefined) tabulator.panes.utils.propertyTriage();
+        //if (tabulator.properties == undefined)
+        tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.dp) possible.push(kb.fromNT(p));     
     }
     var object = kb.any(subject, property);
@@ -448,7 +453,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     // box.appendChild(dom.createTextNode('Choice: subForm='+subForm))
     var possible2 = tabulator.panes.utils.sortByLabel(possible);
     var np = "--"+ tabulator.Util.label(property)+"-?";
-    var opts = {'multiple': multiple, 'nullPrompt': np};
+    var opts = {'multiple': multiple, 'nullLabel': np};
     if (kb.any(form, ui('canMintNew'))) opts['mint'] = "* New *"; // @@ could be better
     var selector = tabulator.panes.utils.makeSelectForOptions(
                 dom, kb, subject, property,
@@ -464,7 +469,8 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
 //
 
 tabulator.panes.fieldParams[tabulator.ns.ui('Comment').uri] = {
-    'element': 'p', 'style': 'padding: 0.1em 1.5em; color: brown;'};
+    'element': 'p',
+    'style': 'padding: 0.1em 1.5em; color: brown; white-space: pre-wrap;'};
 tabulator.panes.fieldParams[tabulator.ns.ui('Heading').uri] = {
     'element': 'h3', 'style': 'font-size: 110%; color: brown;' };
 
@@ -510,7 +516,7 @@ tabulator.panes.utils.defaultAnnotationStore = function(subject) {
         if (slash < 0) return undefined;
         s = s.slice(0,slash);
     }
-    return tabulator.kb.sym('http://tabulator.org/wiki/annnotation/' + s);
+    return tabulator.kb.sym('http://tabulator.org/wiki/annnotation/' + s );
 }
 
 
@@ -523,7 +529,8 @@ tabulator.panes.utils.allClassURIs = function() {
         .map(function(st){
             if (st.object.uri) set[st.object.uri] = true ;
             if (st.subject.uri) set[st.subject.uri] = true });
-    tabulator.kb.each(undefined, tabulator.ns.rdf('type'),tabulator.ns.rdf('type'))
+('Class')));
+    tabulator.kb.each(undefined, tabulator.ns.rdf('type'),tabulator.ns.rdfs('Class'))
         .map(function(c){if (c.uri) set[c.uri] = true});
     return set;
 }
@@ -551,7 +558,9 @@ tabulator.panes.utils.propertyTriage = function() {
 
 tabulator.panes.utils.fieldLabel = function(dom, property) {
     if (property == undefined) return dom.createTextNode('@@ undefined property');
-    return dom.createTextNode(tabulator.Util.label(property));
+    var lab = tabulator.Util.label(property);
+
+    return dom.createTextNode(lab);
 }
 
 /*                      General purpose widgets
@@ -603,8 +612,18 @@ tabulator.panes.utils.linkButton = function(dom, object) {
     b.setAttribute('type', 'button');
     b.textContent = "Goto "+tabulator.Util.label(object);
     b.addEventListener('click', function(e) {
-        b.parentNode.removeNode(b);
+        // b.parentNode.removeChild(b);
         tabulator.outline.GotoSubject(object, true, undefined, true, undefined);
+    }, true);
+    return b;
+}
+
+tabulator.panes.utils.removeButton = function(dom, element) {
+    var b = dom.createElement('button');
+    b.setAttribute('type', 'button');
+    b.textContent = "✕"; // MULTIPLICATION X
+    b.addEventListener('click', function(e) {
+        element.parentNode.removeChild(element);
     }, true);
     return b;
 }
@@ -680,12 +699,12 @@ tabulator.panes.utils.sortBySequence = function(list) {
         var k = tabulator.kb.any(p, tabulator.ns.ui('sequence'));
         return [k?k:999,p]
     });
-    p2.sort();
+    p2.sort(function(a,b){return a[0] - b[0]});
     return p2.map(function(pair){return pair[1]});
 }
 
 tabulator.panes.utils.sortByLabel = function(list) {
-    var p2 = list.map(function(p) {return [tabulator.Util.label(p), p]});
+    var p2 = list.map(function(p) {return [tabulator.Util.label(p).toLowerCase(), p]});
     p2.sort();
     return p2.map(function(pair){return pair[1]});
 }
@@ -755,19 +774,23 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
     var formFunction = tabulator.panes.utils.fieldFunction(form);
     if (!formFunction) throw "No handler for field type: "+b;
     var object = tabulator.panes.utils.newThing(kb, store);
+    var gotButton = false;
     var itemDone = function(ok, body) {
         if (!ok) return callback(ok, body);
         if (subject && !kb.holds(subject, predicate, object))
             tabulator.sparql.update([], 
                     [$rdf.st(subject, predicate, object, store)], linkDone);
-        box.appendChild(tabulator.panes.utils.linkButton(dom, object))
-        tabulator.outline.GotoSubject(object, true, undefined, true, undefined);
+        if (!gotButton) gotButton = box.appendChild(
+                            tabulator.panes.utils.linkButton(dom, object));
+        // tabulator.outline.GotoSubject(object, true, undefined, true, undefined);
     }
     var linkDone = function(uri, ok, body) {
         return callback(ok, body);
     }
     tabulator.log.info("paneUtils Object is "+object);
-    formFunction(dom, box, {}, object, form, store, itemDone);
+    var f = formFunction(dom, box, {}, object, form, store, itemDone);
+    var b = tabulator.panes.utils.removeButton(dom, f);
+    b.setAttribute('style', 'float: right;');
     return box;
 }
 
@@ -799,8 +822,8 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     group.appendChild(field);
     field.rows = desc? desc.split('\n').length + 2 : 2;
     field.cols = 80
-    field.setAttribute('style', 'font-size:100%; \
-            background-color: white; border: 0.07em solid gray; padding: 1em; margin: 1em 2em;')
+    field.setAttribute('style', 'font-size:100%; white-space: pre-wrap;\
+            background-color: white; border: 0.07em solid gray; padding: 1em 0.5em; margin: 1em 1em;')
     if (sts.length) field.value = desc 
     else {
         field.value = tabulator.Util.label(predicate); // Was"enter a description here"
@@ -914,7 +937,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
     for (var uri in uris) {
         var c = kb.sym(uri)
         var option = dom.createElement('option');
-        option.appendChild(dom.createTextNode(tabulator.Util.label(c)));
+        option.appendChild(dom.createTextNode(tabulator.Util.label(c, true))); // Init. cap.
         var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#background-color'));
         if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
         option.AJAR_uri = uri;
@@ -1003,59 +1026,71 @@ tabulator.panes.utils.makeSelectForNestedCategory = function(
 /*  Build a checkbox from a given statement
 ** 
 **  If the source document is editable, make the checkbox editable
-** originally in socialPane
+** originally in s
 */
-tabulator.panes.utils.buildCheckboxForm = function(doc, kb, lab, statement, state) {
-    tabulator.log.debug('why is '+statement.why);
-    var f = doc.createElement('form');
-    var input = doc.createElement('input');
-    f.appendChild(input);
-    var tx = doc.createTextNode(lab);
-    var editable = tabulator.sparql.editable(statement.why.uri);
+tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form, store) {
+    var box = dom.createElement('div');
+    if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
+    var tx = dom.createTextNode(lab);
+    var editable = tabulator.sparql.editable(store.uri);
     tx.className = 'question';
-    f.appendChild(tx);
+    box.appendChild(tx);
+    var input = dom.createElement('input');
+    box.appendChild(input);
     input.setAttribute('type', 'checkbox');
+    
+    state = kb.holds(ins.subject, ins.predicate, ins.object, store);
+    if (del) {
+        negation = kb.holds(del.subject, del.predicate, del.object, store);
+        if (state && negation) {
+            box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                            "Inconsistent data in store!\n"+ins+" and\n"+del));
+            return box;
+        }
+        if (!state && !negation) {
+            state = !!kb.any(form, tabulator.ns.ui('default'));
+        }
+    }
+        
     input.checked = state;
-    if (!editable) return f;
+    if (!editable) return box;
     
     var boxHandler = function(e) {
         tx.className = 'pendingedit';
         // alert('Should be greyed out')
-        if (this.checked) { // Add link
-            try {
-                outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
-                    tx.className = 'question';
-                    if (!success){
-                        prompts.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
-                        input.checked = false; //rollback UI
-                        return;
-                    }
-                    kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
-                })
-            }catch(e){
-                prompts.alert(null,"Message","Data write fails:" + e);
-                input.checked = false; //rollback UI
+        if (this.checked) {
+            toInsert = ins;
+            toDelete = (del && negation) ? del : [];
+            tabulator.sparql.update( del && negation? del: [], ins, function(uri,success,error_body) {
                 tx.className = 'question';
-            }
-        } else { // Remove link
-            try {
-                outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
-                    tx.className = 'question';
-                    if (!success){
-                        prompts.alert(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
-                        this.checked = true; // Rollback UI
-                    } else {
-                        kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
-                    }
-                })
-            }catch(e){
-                prompts.alert(null,"Message","Delete fails:" + e);
-                this.checked = true; // Rollback UI
-                return;
-            }
+                if (!success){
+                    box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                        "Error updating store (setting boolean) "+statement+':\n\n'+error_body));
+                    input.checked = false; //rollback UI
+                    return;
+                } else {
+                    state = true;
+                    negation = false;
+                }
+            });
+        } else { // unchecked
+            toInsert = del;
+            toDelete = kb.statementsMatching(ins.subject, ins.predicate, ins.object, store);
+            tabulator.sparql.update( toDelete, toInsert, function(uri,success,error_body) {
+                tx.className = 'question';
+                if (!success){
+                    box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                        "Error updating store: "+statement+':\n\n'+error_body));
+                    input.checked = false; //rollback UI
+                    return;
+                } else {
+                    state = false;
+                    negation = !!del;
+                }
+            });
         }
     }
     input.addEventListener('click', boxHandler, false);
-    return f;
+    return box;
 }
   

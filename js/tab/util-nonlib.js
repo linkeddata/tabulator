@@ -259,7 +259,12 @@ tabulator.Util.parse_headers = function(headers) {
 //
 // @returns string
 //
-tabulator.Util.label = function(x) { // x is an object
+tabulator.Util.label = function(x, initialCap) { // x is an object
+    function doCap(s) {
+        //s = s.toString();
+        if (initialCap) return s.slice(0,1).toUpperCase() + s.slice(1);
+        return s;
+    } 
     function cleanUp(s1) {
         var s2 = "";
         for (var i=0; i<s1.length; i++) {
@@ -275,11 +280,11 @@ tabulator.Util.label = function(x) { // x is an object
             }
         }
         if (s2.slice(0,4) == 'has ') s2 = s2.slice(4);
-        return s2;
+        return doCap(s2);
     }
     
     var lab=tabulator.lb.label(x);
-    if (lab) return lab.value;
+    if (lab) return doCap(lab.value);
     //load #foo to Labeler?
     
     if (x.termType == 'bnode') {
@@ -303,7 +308,7 @@ tabulator.Util.label = function(x) { // x is an object
         var slash = s.lastIndexOf("/");
         if ((slash >=0) && (slash < x.uri.length)) return cleanUp(s.slice(slash+1));
     }
-    return decodeURIComponent(x.uri)
+    return doCap(decodeURIComponent(x.uri));
 }
 
 tabulator.Util.escapeForXML = function(str) {

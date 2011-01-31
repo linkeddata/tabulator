@@ -99,7 +99,7 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
             if (dep && kb.any(subject, dep)) original[i] = kb.any(subject, dep).toNT();
         }
 
-        var fn = tabulator.panes.utils.fieldFunction(field);
+        var fn = tabulator.panes.utils.fieldFunction(dom, field);
         
         var itemChanged = function(ok, body) {
             if (ok) {
@@ -222,7 +222,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
         var linkDone = function(uri, ok, body) {
             return callback(ok, body);
         }
-        var fn = tabulator.panes.utils.fieldFunction(element);
+        var fn = tabulator.panes.utils.fieldFunction(dom, element);
         // box.appendChild(dom.createTextNode('multiple object: '+object ));
         fn(dom, body, already, object, element, store, itemDone);        
     }
@@ -456,7 +456,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var object = kb.any(subject, property);
     function addSubForm(ok, body) {
         object = kb.any(subject, property);
-        tabulator.panes.utils.fieldFunction(subForm)(dom, box, already,
+        tabulator.panes.utils.fieldFunction(dom, subForm)(dom, box, already,
                                         object, subForm, store, callback);
     }
     var multiple = false;
@@ -568,10 +568,8 @@ tabulator.panes.utils.propertyTriage = function() {
 
 
 tabulator.panes.utils.fieldLabel = function(dom, property) {
-    if (property == undefined) return dom.createTextNode('@@ undefined property');
-    var lab = tabulator.Util.label(property);
-
-    return dom.createTextNode(lab);
+    if (property == undefined) return dom.createTextNode('@@Internal error: undefined property');
+    return dom.createTextNode( tabulator.Util.label(property, true));
 }
 
 /*                      General purpose widgets
@@ -594,25 +592,30 @@ tabulator.panes.utils.bottomURI = function(x) {
     return bots[0];
 }
 
-tabulator.panes.utils.fieldFunction = function(field) {
+tabulator.panes.utils.fieldFunction = function(dom, field) {
     var uri = tabulator.panes.utils.bottomURI(field);
     var fun = tabulator.panes.field[uri];
     tabulator.log.debug("paneUtils: Going to implement field "+field+" of type "+uri)
     if (!fun) return function() {
-        return tabulator.panes.utils.errorMessage("No handler for field "+field+" of type "+uri);
+        return tabulator.panes.utils.errorMessage(dom, "No handler for field "+field+" of type "+uri);
     };
     return fun
 }
 
 // A button for editing a form (in place, at the moment)
 // 
+//  When editing forms, make it yellow, when editing thr form form,, pink
+// Help people understand how many levels down they are.
+//
 tabulator.panes.utils.editFormButton = function(dom, container, form, store, callback) {
     var b = dom.createElement('button');
     b.setAttribute('type', 'button');
     b.innerHTML = "Edit "+tabulator.Util.label(tabulator.ns.ui('Form'));
     b.addEventListener('click', function(e) {
-        tabulator.panes.utils.appendForm(dom, container,
-                {}, subject, tabulator.ns.ui('FormForm'), store, callback)
+        var ff = tabulator.panes.utils.appendForm(dom, container,
+                {}, form, tabulator.ns.ui('FormForm'), store, callback);
+        ff.setAttribute('style', tabulator.ns.ui('FormForm').sameTerm(form) ?
+                    'background-color: #fee;' : 'background-color: #ffe;');
         container.remove(b);
     }, true);
     return b;
@@ -642,7 +645,7 @@ tabulator.panes.utils.removeButton = function(dom, element) {
 }
 
 tabulator.panes.utils.appendForm = function(dom, container, already, subject, form, store, itemDone) {
-    return tabulator.panes.utils.fieldFunction(form)(
+    return tabulator.panes.utils.fieldFunction(dom, form)(
                 dom, container, already, subject, form, store, itemDone);
 }
 
@@ -785,7 +788,7 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
                         + "</h3>";
 
                         
-    var formFunction = tabulator.panes.utils.fieldFunction(form);
+    var formFunction = tabulator.panes.utils.fieldFunction(dom, form);
     var object = tabulator.panes.utils.newThing(kb, store);
     var gotButton = false;
     var itemDone = function(ok, body) {
@@ -902,8 +905,8 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         if (sub.uri in uris) continue;
         uris[sub.uri] = true; n++;
     } // uris is now the set of possible options
-    if (n==0) return tabulator.panes.utils.errorMessage(dom,
-                "Can't do selector with no options, subject= "+subject+" possible= "+possible+".");
+    if (n==0 && !options.mint) return tabulator.panes.utils.errorMessage(dom,
+                "Can't do selector with no options, subject= "+subject+" property = "+predicate+".");
     
     tabulator.log.debug('makeSelectForOptions: store='+store);
     var actual = {};
@@ -947,7 +950,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 if (ok) {
                     select.disabled = false; // data written back
                     if (newObject) {
-                        var fn = tabulator.panes.utils.fieldFunction(options.subForm);
+                        var fn = tabulator.panes.utils.fieldFunction(dom, options.subForm);
                         fn(dom, select.parentNode, {}, newObject, options.subForm, store, doneNew);
                     }
                 }

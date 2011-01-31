@@ -95,8 +95,16 @@ tabulator.panes.register( {
                 var form = forms[i];
                 var heading = dom.createElement('h4');
                 div.appendChild(heading);
+                if (form.uri) {
+                    var formStore = $rdf.Util.uri.document(form);
+                    if (formStore.uri != form.uri) {// The form is a hash-type URI
+                        var e = div.appendChild(tabulator.panes.utils.editFormButton(
+                                dom, div, form, formStore,complainIfBad ));
+                        e.setAttribute('style', 'float: right;');
+                    }
+                }
                 heading.textContent = tabulator.Util.label(form, true);
-                tabulator.panes.utils.appendForm(dom, div, kb, subject, form, store, complainIfBad); // @@ No link from anywhere
+                tabulator.panes.utils.appendForm(dom, div, {}, subject, form, store, complainIfBad);
             }
 
 

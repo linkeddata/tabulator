@@ -83,16 +83,19 @@ tabulator.panes.register( {
         else store = kb.sym('http://tabulator.org/wiki/2010/testformdata/common'); // fallback
         // A fallback which gives a different store page for each ontology would be good @@
         
+        var div = dom.createElement('div');
+        div.setAttribute('class', 'formPane');
         kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
 
             //              Render the forms
             
             var forms = tabulator.panes.utils.formsFor(subject);
-            var div = dom.createElement('div');
-            div.setAttribute('class', 'formPane');
             // complain('Form for editing this form:');
             for (var i=0; i<forms.length; i++) {
-                div.appendChild(dom.createElement('h4').textContent)
+                var form = forms[i];
+                var heading = dom.createElement('h4');
+                div.appendChild(heading);
+                heading.textContent = tabulator.Util.label(form, true);
                 tabulator.panes.utils.appendForm(dom, div, kb, subject, form, store, complainIfBad); // @@ No link from anywhere
             }
 

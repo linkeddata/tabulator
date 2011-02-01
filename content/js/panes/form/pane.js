@@ -30,26 +30,30 @@ tabulator.panes.register( {
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         
 
-        var complain = function complain(message){
-            var pre = dom.createElement("pre");
-            pre.setAttribute('style', 'color: grey');
-            div.appendChild(pre);
-            pre.appendChild(dom.createTextNode(message));
+        var mention = function complain(message, style){
+            var pre = dom.createElement("p");
+            pre.setAttribute('style', style ? style :'color: grey; background-color: white');
+            box.appendChild(pre).textContent = message;
+            return pre
+        } 
+
+        var complain = function complain(message, style){
+            mention(message, 'style', style ? style :'color: grey; background-color: #fdd');
         } 
 
         var complainIfBad = function(ok,body){
             if (ok) {
                 // setModifiedDate(store, kb, store);
-                // rerender(div);   // Deleted forms at the moment
+                // rerender(box);   // Deleted forms at the moment
             }
             else complain("Sorry, failed to save your change:\n"+body);
         }
 
         var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, dom);
-            parent.replaceChild(div2, div);
+        var rerender = function(box) {
+            var parent  = box.parentNode;
+            var box2 = thisPane.render(subject, dom);
+            parent.replaceChild(box2, box);
         };
 
 
@@ -83,8 +87,8 @@ tabulator.panes.register( {
         else store = kb.sym('http://tabulator.org/wiki/2010/testformdata/common'); // fallback
         // A fallback which gives a different store page for each ontology would be good @@
         
-        var div = dom.createElement('div');
-        div.setAttribute('class', 'formPane');
+        var box = dom.createElement('div');
+        box.setAttribute('class', 'formPane');
         kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
 
             //              Render the forms
@@ -94,23 +98,36 @@ tabulator.panes.register( {
             for (var i=0; i<forms.length; i++) {
                 var form = forms[i];
                 var heading = dom.createElement('h4');
-                div.appendChild(heading);
+                box.appendChild(heading);
                 if (form.uri) {
                     var formStore = $rdf.Util.uri.document(form);
                     if (formStore.uri != form.uri) {// The form is a hash-type URI
-                        var e = div.appendChild(tabulator.panes.utils.editFormButton(
-                                dom, div, form, formStore,complainIfBad ));
+                        var e = box.appendChild(tabulator.panes.utils.editFormButton(
+                                dom, box, form, formStore,complainIfBad ));
                         e.setAttribute('style', 'float: right;');
                     }
                 }
-                heading.textContent = tabulator.Util.label(form, true);
-                tabulator.panes.utils.appendForm(dom, div, {}, subject, form, store, complainIfBad);
+                var anchor = dom.createElement('a');
+                anchor.setAttribute('href', form.uri);
+                heading.appendChild(anchor)
+                anchor.textContent = tabulator.Util.label(form, true);
+                
+                mention("Where will this information be stored?")
+                var ele = dom.createElement('input');
+                box.appendChild(ele);
+                ele.setAttribute('type', 'text');
+                ele.setAttribute('size', '72');
+                ele.setAttribute('maxlength', '1024');
+                ele.setAttribute('style', 'font-size: 80%; color:#222;');
+                ele.value = store.uri
+                
+                tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
             }
 
 
         }); // end: when store loded
 
-        return div;
+        return box;
     }
 
 }, false);

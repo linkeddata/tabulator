@@ -29,7 +29,7 @@ tabulator.panes.register( {
         var ns = tabulator.ns;
         
         var box = dom.createElement('div')
-        //box.setAttribute('class', 'uiPane');
+        box.setAttribute('class', 'formPane'); // Share styles
         var label = tabulator.Util.label(subject);
 
         var mention = function complain(message, style){

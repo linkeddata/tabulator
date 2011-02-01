@@ -285,20 +285,24 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     var ui = tabulator.ns.ui;
     var kb = tabulator.kb;
 
-    var box = dom.createElement('div');
+    var box = dom.createElement('tr');
+    container.appendChild(box);
+    var lhs = dom.createElement('td');
+    box.appendChild(lhs);
+    var rhs = dom.createElement('td');
+    box.appendChild(rhs);
 
     var property = kb.any(form, ui('property'));
     if (!property) { box.appendChild(dom.createTextNode("Error: No property given for text field: "+form)); return box};
 
-    box.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
     var uri = tabulator.panes.utils.bottomURI(form); 
     var params = tabulator.panes.fieldParams[uri];
     if (params == undefined) params = {}; // non-bottom field types can do this
     var style = params.style? params.style : '';
     // box.appendChild(dom.createTextNode(' uri='+uri+', pattern='+ params.pattern));
-    container.appendChild(box);
     var field = dom.createElement('input');
-    box.appendChild(field);
+    rhs.appendChild(field);
     field.setAttribute('type', params.type? params.type : 'text');
     
 
@@ -325,7 +329,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
             if (ok) {
                 field.setAttribute('style', 'color: black;');
             } else {
-                box.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
+                rhs.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
             }
             callback(ok, body);
         })
@@ -425,11 +429,15 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var ui= tabulator.ns.ui;
     var ns = tabulator.ns;
     var kb = tabulator.kb;
-    var box = dom.createElement('div');
+    var box = dom.createElement('tr');
     container.appendChild(box);
+    var lhs = dom.createElement('td');
+    box.appendChild(lhs);
+    var rhs = dom.createElement('td');
+    box.appendChild(rhs);
     var property = kb.any(form, ui('property'));
     if (!property) return tabulator.panes.utils.errorMessage(dom, "No property for Choice: "+form);
-    box.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
     var from = kb.any(form, ui('from'));
     if (!from) return tabulator.panes.utils.errorMessage(dom,
                 "No 'from' for Choice: "+form);
@@ -456,7 +464,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var object = kb.any(subject, property);
     function addSubForm(ok, body) {
         object = kb.any(subject, property);
-        tabulator.panes.utils.fieldFunction(dom, subForm)(dom, box, already,
+        tabulator.panes.utils.fieldFunction(dom, subForm)(dom, rhs, already,
                                         object, subForm, store, callback);
     }
     var multiple = false;
@@ -471,7 +479,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var selector = tabulator.panes.utils.makeSelectForOptions(
                 dom, kb, subject, property,
                 possible2, opts, store, callback);
-    box.appendChild(selector);
+    rhs.appendChild(selector);
     if (object && subForm) addSubForm(true, "");
     return box;
 }
@@ -546,10 +554,12 @@ tabulator.panes.utils.allClassURIs = function() {
     return set;
 }
 
+//  Figuring which propertites could by be used
+//
 tabulator.panes.utils.propertyTriage = function() {
     if (tabulator.properties == undefined) tabulator.properties = {};
     var kb = tabulator.kb;
-    var dp = {}, op = {}, no= 0, nd = 1;
+    var dp = {}, op = {}, up = {}, no= 0, nd = 0, nu = 0;
     var pi = kb.predicateIndex; // One entry for each pred
     for (var p in pi) {
         var object = pi[p][0].object;
@@ -560,16 +570,25 @@ tabulator.panes.utils.propertyTriage = function() {
             op[p] = true;
             no ++;
         }    
+    }   // If nothing discovered, then could be either:
+    var ps = kb.each(undefined, tabulator.ns.rdf('type'), tabulator.ns.rdf('Property'))
+    for (var i =0; i<ps.length; i++) {
+        var p = ps[i].toNT();
+        tabulator.log.debug("propertyTriage: unknown: "+p)
+        if (!op[p] && !dp[p]) {dp[p] = true; op[p] = true; nu++};
     }
     tabulator.properties.op = op;
     tabulator.properties.dp = dp;
-    tabulator.log.info('propertyTriage: '+no+' non-lit, '+nd+' literal.')
+    tabulator.log.info('propertyTriage: '+no+' non-lit, '+nd+' literal. '+nu+' unknown.')
 }
 
 
 tabulator.panes.utils.fieldLabel = function(dom, property) {
     if (property == undefined) return dom.createTextNode('@@Internal error: undefined property');
-    return dom.createTextNode( tabulator.Util.label(property, true));
+    var anchor = dom.createElement('a');
+    if (property.uri) anchor.setAttribute('href', property.uri);
+    anchor.textContent = tabulator.Util.label(property, true);
+    return anchor
 }
 
 /*                      General purpose widgets

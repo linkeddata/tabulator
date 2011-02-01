@@ -1010,3 +1010,18 @@ Styles for tableViewPane
 /*
 End of styles for tableViewPane 
 */
+
+
+
+/* Styles for   FORM PANE
+**
+** Colors from data cotent pane
+*/
+
+.formPane a      { color: #3B5998; text-decoration: none; }
+.formPane a:link { color: #3B5998; text-decoration: none; }
+.formPane a:visited { color: #3B5998; text-decoration: none; }
+.formPane a:hover { color: #3B5998; font-weight: bold}  /* was  text-decoration: underline; */
+.formPane a:active { color: #888; text-decoration: none; }
+
+/* ends */

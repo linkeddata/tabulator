@@ -49,6 +49,7 @@ loader.loadSubScript("chrome://tabulator/content/js/init/icons.js");
 loader.loadSubScript("chrome://tabulator/content/js/init/namespaces.js");
 //And Panes.. (see the below file to change which panes are turned on)
 loader.loadSubScript("chrome://tabulator/content/js/init/panes.js");
+// loader.loadSubScript("chrome://tabulator/content/js/jscolor/jscolor.js");
 //And Preferences mechanisms.
 loader.loadSubScript("chrome://tabulator/content/js/init/prefs.js");
 

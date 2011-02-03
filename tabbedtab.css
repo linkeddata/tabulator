@@ -241,7 +241,7 @@ div.exceptionPane pre { background-color: #fee; }
 .categoryPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
 .categoryPane a:active { color: #888; text-decoration: none; }
 
-.categoryBottomClass { background-color: #efe ; margin: 0.1em solid green }
+.categoryBottomClass { background-color: #efe ; border: 0.1em solid green }
 
 .categoryTable { padding-left: 2em;}
 .categoryPane { background-color: #f8fff8; padding: 0.5em;
@@ -311,7 +311,7 @@ div.exceptionPane pre { background-color: #fee; }
 }
 
 .active {
-    display: visible;
+    /* display: visible; */
 }
 
 .submitRow {
@@ -995,7 +995,7 @@ Styles for tableViewPane
 .tableViewPane a:hover   { color: #3B5998; text-decoration: underline; font-weight: bold}
 .tableViewPane a:active  { color: #888; text-decoration: none; }
 
-.tableViewPane tr {border-color: #444; padding-left 0.3em; padding-right: 0.3em  } 
+.tableViewPane tr {border-color: #444; padding-left: 0.3em; padding-right: 0.3em  } 
 
 
 

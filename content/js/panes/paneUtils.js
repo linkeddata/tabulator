@@ -243,36 +243,52 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
 tabulator.panes.fieldParams = {};
 
 
+tabulator.panes.fieldParams[tabulator.ns.ui('ColorField').uri] = {
+    'size': 9, };
+tabulator.panes.fieldParams[tabulator.ns.ui('ColorField').uri].pattern = 
+    /^\s*#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]\s*$/;
+
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri] = {
-    'size': 20, 'type': 'date'};
+    'size': 20, 'type': 'date', 'dt': 'date'};
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?Z?\s*$/;
 
 tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri] = {
-    'size': 20, 'type': 'date'};
+    'size': 20, 'type': 'date', 'dt': 'dateTime'};
 tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/;
 
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri] = {
-    size: 12, 'style': 'text-align: right', 'parse': parseInt };
+    'size': 12, 'style': 'text-align: right', 'dt': 'integer' };
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri].pattern =
      /^\s*-?[0-9]+\s*$/;
      
 tabulator.panes.fieldParams[tabulator.ns.ui('DecimalField').uri] = {
-    'size': 12 , 'style': 'text-align: right', 'parse': parseFloat };
+    'size': 12 , 'style': 'text-align: right', 'dt': 'decimal' };
 tabulator.panes.fieldParams[tabulator.ns.ui('DecimalField').uri].pattern =
     /^\s*-?[0-9]*(\.[0-9]*)?\s*$/;
     
 tabulator.panes.fieldParams[tabulator.ns.ui('FloatField').uri] = {
-    'size': 12, 'style': 'text-align: right', 'parse': parseFloat };
+    'size': 12, 'style': 'text-align: right', 'dt': 'float' };
 tabulator.panes.fieldParams[tabulator.ns.ui('FloatField').uri].pattern =
     /^\s*-?[0-9]*(\.[0-9]*)?((e|E)-?[0-9]*)?\s*$/; 
 
 tabulator.panes.fieldParams[tabulator.ns.ui('SingleLineTextField').uri] = { };
 tabulator.panes.fieldParams[tabulator.ns.ui('TextField').uri] = { };
 
+tabulator.panes.fieldParams[tabulator.ns.ui('PhoneField').uri] = { 'size' :12, 'uriPrefix': 'tel:' };
+tabulator.panes.fieldParams[tabulator.ns.ui('PhoneField').uri].pattern =
+     /^\s*\+?[ 0-9-]+[0-9]\s*$/;
+
+tabulator.panes.fieldParams[tabulator.ns.ui('EmailField').uri] = { 'size' :20, 'uriPrefix': 'mailto:' };
+tabulator.panes.fieldParams[tabulator.ns.ui('EmailField').uri].pattern =
+     /^\s*.*@.*\..*\s*$/;  // @@ Get the right regexp here
 
 
+
+tabulator.panes.field[tabulator.ns.ui('PhoneField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('EmailField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('ColorField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateTimeField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('NumericField').uri] = 
@@ -312,7 +328,12 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     field.setAttribute('maxLength',maxLength? ''+maxLength :'4096');
 
     var obj = kb.any(subject, property);
-    if (obj != undefined && obj.value != undefined) field.value = ''+obj.value;
+    if (!obj) {
+        obj = kb.any(form, ui('default'));
+        if (obj != undefined) kb.add(subject, property, obj, store)
+    }
+    if (obj != undefined && obj.value != undefined) field.value = obj.value.toString();
+    if (obj != undefined && obj.uri != undefined) field.value = obj.uri.split(':')[1];    // @@ URI encoding/decoding
 
     field.addEventListener("keyup", function(e) {
         if (params.pattern) field.setAttribute('style', style + (
@@ -323,6 +344,8 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
         if (params.pattern && !field.value.match(params.pattern)) return;
         field.setAttribute('style', 'color: gray;'); // pending 
         var ds = kb.statementsMatching(subject, property);
+        var newObj =  params.uriPrefix ? kb.sym(params.uriPrefix + field.value.replace(/ /g, ''))
+                    : kb.literal(field.value, params.dt);
         var is = $rdf.st(subject, property,
                     params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
         tabulator.sparql.update(ds, is, function(uri, ok, body) {
@@ -635,7 +658,7 @@ tabulator.panes.utils.editFormButton = function(dom, container, form, store, cal
                 {}, form, tabulator.ns.ui('FormForm'), store, callback);
         ff.setAttribute('style', tabulator.ns.ui('FormForm').sameTerm(form) ?
                     'background-color: #fee;' : 'background-color: #ffe;');
-        container.remove(b);
+        container.removeChild(b);
     }, true);
     return b;
 }

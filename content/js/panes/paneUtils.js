@@ -246,7 +246,7 @@ tabulator.panes.fieldParams = {};
 tabulator.panes.fieldParams[tabulator.ns.ui('ColorField').uri] = {
     'size': 9, };
 tabulator.panes.fieldParams[tabulator.ns.ui('ColorField').uri].pattern = 
-    /^\s*#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]\s*$/;
+    /^\s*#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]([0-9a-f][0-9a-f])?\s*$/;
 
 tabulator.panes.fieldParams[tabulator.ns.ui('DateField').uri] = {
     'size': 20, 'type': 'date', 'dt': 'date'};
@@ -807,7 +807,7 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
     var box = dom.createElement('form');
     
     if (!form) {
-        var lists = tabulator.panes.utils.findClosest(kb, theClass, ns.ui('creationForm'));
+        var lists = tabulator.panes.utils.findClosest(kb, theClass.uri, ns.ui('creationForm'));
         if (lists.length == 0) {
             var p = box.appendChild(dom.createElement('p'));
             p.textContent = "I am sorry, you need to provide information about a "+

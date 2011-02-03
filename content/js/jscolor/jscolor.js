@@ -9,8 +9,8 @@
  * @link    http://jscolor.com
  */
 
-
-var jscolor = {
+tabulator.panes.jscolor = function() {
+    jscolor = {
 
         // All the following 4 chnaged for tabulator
 	dir : 'chrome://tabulator/content/js/jscolor', // location of jscolor directory (leave empty to autodetect)
@@ -834,7 +834,11 @@ var jscolor = {
 		this.importColor();
 	}
 
-};
+    };
 
 
-jscolor.install();
+    // jscolor.install();
+
+    return jscolor;
+}();
+

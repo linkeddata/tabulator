@@ -40,7 +40,7 @@ function UserInput(outline){
     //\\
     
     //people like shortcuts for sure
-    var tabont = tabulator.ns.tabont;
+    // var tabont = tabulator.ns.tabont;
     var foaf = tabulator.ns.foaf;
     var rdf = tabulator.ns.rdf;
     var RDFS = tabulator.ns.rdfs;
@@ -55,7 +55,8 @@ function UserInput(outline){
     
     var movedArrow = false; //hq
         
-    var updateService=new updateCenter(kb);
+    // var updateService=new updateCenter(kb);
+    
     if (!UserInputFormula){
         UserInputFormula=new tabulator.rdf.Formula();
         UserInputFormula.superFormula=kb;
@@ -63,11 +64,14 @@ function UserInput(outline){
     }
     if (!TempFormula) TempFormula=new tabulator.rdf.IndexedFormula(); 
                                       //Use RDFIndexedFormula so add returns the statement
-    TempFormula.name = "TempFormula";                                       
+    TempFormula.name = "TempFormula";
+    if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
 
     return {
-    updateService: updateService,
-    sparqler: new tabulator.rdf.sparqlUpdate(kb),
+
+    // updateService: updateService,
+
+    sparqler: tabulator.sparql,
     lastModified: null, //the last <input> being modified, .isNew indicates whether it's a new input
     lastModifiedStat: null, //the last statement being modified
     statIsInverse: false, //whether the statement is an inverse
@@ -339,14 +343,14 @@ function UserInput(outline){
 
     /*goes here when either this is a literal or escape from menu and then input text*/
     clearInputAndSave: function clearInputAndSave(e){
-        if(!this.lastModified) return;
-        if(!this.lastModified.isNew){
+        if (!this.lastModified) return;
+        if (!this.lastModified.isNew){
             try{
                  var obj=this.getStatementAbout(this.lastModified).object;
             }catch(e){return;}
         }
         var s=this.lastModifiedStat; //when 'isNew' this is set at addNewObject()
-        if(this.lastModified.value != this.lastModified.defaultValue){
+        if (this.lastModified.value != this.lastModified.defaultValue){
             if (this.lastModified.value == ''){
                 //ToDo: remove this
                 this.lastModified.value=this.lastModified.defaultValue;
@@ -356,43 +360,44 @@ function UserInput(outline){
                 s=new tabulator.rdf.Statement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
                 // TODO: DEFINE ERROR CALLBACK
                 var trCache=tabulator.Util.ancestor(this.lastModified,'TR');
-                try{updateService.insert_statement(s, function(uri,success,error_body){
+                try{tabulator.sparql.update([], [s], function(uri,success,error_body){
                     if (!success){
-                        dump("Error occurs while inserting "+s+'\n\n'+error_body+"\n");
+                        tabulator.log.error("Error occurs while inserting "+s+'\n\n'+error_body+"\n");
                         // tabulator.log.warn("Error occurs while inserting "+s+'\n\n'+error_body);
                         outline.UserInput.deleteTriple(trCache.lastChild,true);
                     }                    
                 })}catch(e){
-                    dump("Error inserting fact "+s+':\n\t'+e+"\n");
+                    tabulator.log.error("Error inserting fact "+s+':\n\t'+e+"\n");
                     return;
                 }
                 s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);
             }else{
                 if (this.statIsInverse){
-                    dump("Invalid Input: a literal can't be a subject in RDF/XML");
+                    tabulator.log.error("Invalid Input: a literal can't be a subject in RDF/XML");
                     this.backOut();
                     return;
                 }
                 switch (obj.termType){
                     case 'literal':
                         // generate path and nailing from current values
-                        //sparqlUpdate = updateService.update_statement(s);
+
                         // TODO: DEFINE ERROR CALLBACK
                         var valueCache=this.lastModified.value;
                         var trCache=tabulator.Util.ancestor(this.lastModified,'TR');
                         var oldValue=this.lastModified.defaultValue;
-                        
-                        try{updateService.update_statement(s, function(uri,success,error_body){
-                            if (success){
-                                obj.value=valueCache;                                
-                            }else{
-                                //obj.value=oldValue;
-                                tabulator.log.warn("Error occurs while editing "+s+'\n\n'+error_body);
-                                trCache.lastChild.textContent=oldValue;
-                            }
-                            trCache.lastChild.className=trCache.lastChild.className.replace(/ pendingedit/g,"");                                   
-                            },kb.literal(this.lastModified.value));                            
-                        }catch(e){
+                        var s2 = $rdf.st(s.subject, s.predicate, kb.literal(this.lastModified.value), s.why);
+                        try{
+                            tabulator.sparql.update([s], [s2], function(uri,success,error_body){
+                                if (success){
+                                    obj.value=valueCache;                                
+                                }else{
+                                    //obj.value=oldValue;
+                                    tabulator.log.warn("Error occurs while editing "+s+'\n\n'+error_body);
+                                    trCache.lastChild.textContent=oldValue;
+                                }
+                                trCache.lastChild.className=trCache.lastChild.className.replace(/ pendingedit/g,"");                                   
+                            });                            
+                        } catch(e) {
                              tabulator.log.warn("Error occurs while editing "+s+':\n\t' + e);
                              return;
                         }
@@ -404,7 +409,7 @@ function UserInput(outline){
                         var textTerm=kb.literal(this.lastModified.value,"");
                         //<Feature about="labelChoice">
                         if (s.predicate.termType=='collection'){ //case: add triple   ????????? Weird - tbl
-                            var selectedPredicate=s.predicate.elements[0];   //    @@ TBL elemenst is a list on the predicate??
+                            var selectedPredicate=s.predicate.elements[0];   //    @@ TBL elements is a list on the predicate??
                             if (kb.any(undefined,selectedPredicate,textTerm)){
                                 if (!e){ //keyboard
                                     var tdNode=this.lastModified.parentNode;
@@ -414,25 +419,24 @@ function UserInput(outline){
                                 }
                                 this.showMenu(e,'DidYouMeanDialog',undefined,{'dialogTerm':kb.any(undefined,selectedPredicate,textTerm),'bnodeTerm':s.subject});
                             }else{
-                                var s1=tabulator.Util.ancestor(tabulator.Util.ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
-                                var s2=kb.add(s.subject,selectedPredicate,textTerm,s.why);
-                                var type=kb.the(s.subject,rdf('type'));
-                                var s3=kb.anyStatementMatching(s.subject,rdf('type'),type,s.why);
+                                var s1 = tabulator.Util.ancestor(tabulator.Util.ancestor(this.lastModified,'TR').parentNode,'TR').AJAR_statement;
+                                var s2 = $rdf.st(s.subject, selectedPredicate, textTerm, s.why);
+                                var type = kb.the(s.subject,rdf('type'));
+                                var s3 = kb.anyStatementMatching(s.subject,rdf('type'),type,s.why);
                                 // TODO: DEFINE ERROR CALLBACK
                                 // because the table is repainted, so...
                                 var trCache=tabulator.Util.ancestor(tabulator.Util.ancestor(this.lastModified,'TR'),'TD').parentNode;
-                                try{updateService.insert_statement([s1,s2,s3], function(uri,success,error_body){
+                                try{tabulator.sparql.update([], [s1,s2,s3], function(uri,success,error_body){
                                     if (!success){
-                                        kb.remove(s2);kb.remove(s3);
                                         dump("Error occurs while editing "+s1+'\n\n'+error_body);
-                                        outline.UserInput.deleteTriple(trCache.lastChild,true);
+                                        outline.UserInput.deleteTriple(trCache.lastChild,true);   // @@@@ This 
                                     }
                                 })}catch(e){
                                     dump("Error occurs while editing "+s1+':\n\t'+e);
                                     return;
                                 }
                                 kb.remove(s);
-                                newStat=kb.add(s.subject,selectedPredicate,textTerm,s.why);
+                                newStat = kb.add(s.subject, selectedPredicate, textTerm, s.why);
                                 //a subtle bug occurs here, if foaf:nick hasn't been dereferneced,
                                 //this add will cause a repainting
                             }
@@ -442,26 +446,8 @@ function UserInput(outline){
                         //</Feature>                         
                         }else{
                             this.fillInRequest('object',this.lastModified.parentNode,kb.literal(this.lastModified.value));
-                            /*
-                            var st=new RDFStatement(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why)
-                            // TODO: DEFINE ERROR CALLBACK
-                            var trCache=tabulator.Util.ancestor(this.lastModified,'TR');
-                            try{updateService.insert_statement(st, function(uri,success,error_body){
-                                if (!success){           
-                                    tabulator.log.warn("Error occurs while inserting "+st+'\n\n'+error_body);
-                                    outline.UserInput.deleteTriple(trCache.lastChild,true);
-                                }
-                            })}catch(e){
-                                tabulator.log.warn("You can not edit statement about this blank node object "+
-                                      "becuase it is not identifiable. (Known Tabulator Issue)");
-                                return;
-                            }
-                            kb.remove(s);
-                            newStat=s=kb.add(s.subject,s.predicate,kb.literal(this.lastModified.value),s.why);;
-                            */
                             return; //The new Td is already generated by fillInRequest, so it's done.
                         }
-                        //UserInputFormula.statements.push(newStat);
                         break;
                 }
             }
@@ -514,7 +500,7 @@ function UserInput(outline){
         tabulator.log.debug("deleteTriple entered");
 
         //allow a pending node to be deleted if it's a backout sent by SPARQL update callback
-        if(!isBackOut&&selectedTd.className.indexOf(" pendingedit")!=-1) {
+        if(!isBackOut && selectedTd.className.indexOf(" pendingedit")!=-1) {
             dump("The node you attempted to edit has a request still pending.\n"+
                   "Please wait for the request to finish (the text will turn black)\n"+
                   "before editing this node again.");
@@ -529,33 +515,16 @@ function UserInput(outline){
             !kb.whether(s.predicate,rdf('type'),tabulator.ns.link('Request')) &&
             !kb.whether(s.subject,rdf('type'),tabulator.ns.link('Request'))){
             tabulator.log.debug("about to send SPARQLUpdate");
-          //<SPARQLUpdate>
-            //updateService.delete_statement(s, function(uri,success,error_body){});
-            try{updateService.delete_statement(s, function(uri,success,error_body){
-                if (success){
-                    kb.remove(s);
-                    removefromview();
-                }
-                else{                
-                    //removedTr.AJAR_statement=kb.add(s.subject,s.predicate,s.object,s.why);
-                    dump("Error occurs while deleting "+s+'\n\n'+error_body);
-                    selectedTd.className=selectedTd.className.replace(/ pendingedit/g,"");
-                    /*
-                    afterTr.parentNode.insertBefore(removedTr,afterTr);
-                    if (removedTr.childNodes.length==1 && afterTr.childNodes.length==2 &&
-                        removedTr.AJAR_statement.predicate.sameTerm(afterTr.AJAR_statement.predicate)){
-                        removedTr.insertBefore(afterTr.firstChild,removedTr.firstChild)
-                        removedTr.firstChild.rowSpan++;
-                    }else if (removedTr.childNodes.length==1){
-                        var trIterator;
-                        for (trIterator=removedTr;
-                        trIterator.childNodes.length==1;
-                        trIterator=trIterator.previousSibling);
-                        trIterator.firstChild.rowSpan++;
+            try{
+                tabulator.sparql.update([s], [], function(uri,success,error_body){
+                    if (success){
+                        removefromview();
                     }
-                    outline.walk('down');
-                    */
-                }
+                    else{                
+                        //removedTr.AJAR_statement=kb.add(s.subject,s.predicate,s.object,s.why);
+                        dump("Error occurs while deleting "+s+'\n\n'+error_body);
+                        selectedTd.className=selectedTd.className.replace(/ pendingedit/g,"");
+                    }
                 });
                 selectedTd.className+=' pendingedit';
             }catch(e){
@@ -564,7 +533,6 @@ function UserInput(outline){
                 return;
             }
             
-          //</SPARQLUpdate>
             tabulator.log.debug("SPARQLUpdate sent");
             
         }else{ //removal of an undetermined statement associated with pending TRs 
@@ -670,25 +638,25 @@ function UserInput(outline){
                 //modify store and update here
                 var isInverse=selectedTd.parentNode.AJAR_inverse;
                 if (!isInverse)
-                    insertTr.AJAR_statement=kb.add(preStat.subject,preStat.predicate,term,preStat.why);
+                    insertTr.AJAR_statement = kb.add(preStat.subject,preStat.predicate,term,preStat.why);
                 else
-                    insertTr.AJAR_statemnet=kb.add(term,preStat.predicate,preStat.object,preStat.why);
+                    insertTr.AJAR_statemnet = kb.add(term,preStat.predicate,preStat.object,preStat.why);
                     
-                try{updateService.insert_statement(insertTr.AJAR_statement, function(uri,success,error_body){
-                    if (!success){
-                        tabulator.log.error("userinput.js (pred selected): Fail trying to insert statement "+
+                try{
+                    tabulator.sparql.update([ ], [insertTr.AJAR_statement], function(uri,success,error_body){
+                        if (!success){
+                            tabulator.log.error("userinput.js (pred selected): Fail trying to insert statement "+
+                                insertTr.AJAR_statement+": "+tabulator.Util.stackString(e));
+                        }                    
+                    })}catch(e){
+                        tabulator.log.error("Exception trying to insert statement "+
                             insertTr.AJAR_statement+": "+tabulator.Util.stackString(e));
-                        outline.UserInput.deleteTriple(insertTr.lastChild,true);
-                    }                    
-                })}catch(e){
-                    tabulator.log.error("Exception trying to insert statement "+
-                        insertTr.AJAR_statement+": "+tabulator.Util.stackString(e));
-                    outline.UserInput.deleteTriple(insertTr.lastChild,true);
-                    return;
-                }            
-                insertTr.AJAR_inverse=isInverse;
+                        return;
+                    }            
+                insertTr.AJAR_inverse = isInverse;
                 UserInputFormula.statements.push(insertTr.AJAR_statement);
-                break;            
+                break;
+
             case 'selected': //header <TD>, undetermined generated
                 var paneDiv=tabulator.Util.ancestor(selectedTd,'TABLE').lastChild;
                 var newTr=paneDiv.insertBefore(myDocument.createElement('tr'),paneDiv.lastChild);
@@ -1663,10 +1631,10 @@ function UserInput(outline){
             var newTd=outline.outline_predicateTD(inputTerm,tr,false,false);
             if (selectedTd.nextSibling.className!='undetermined'){
                 var s= new tabulator.rdf.Statement(stat.subject,inputTerm,stat.object,stat.why);
-              //<SPARQLUpdate>   
-                try{updateService.insert_statement(s, function(uri,success,error_body){
+
+                try{tabulator.sparql.update([], [s], function(uri,success,error_body){
                     if (success){
-                        newStat=kb.add(stat.subject,inputTerm,stat.object,stat.why);
+                        newStat = kb.anyStatementMatching(stat.subject,inputTerm,stat.object,stat.why);
                         tr.AJAR_statement=newStat;
                         newTd.className=newTd.className.replace(/ pendingedit/g,"")
                     }else{
@@ -1680,7 +1648,7 @@ function UserInput(outline){
                     tabulator.log.warn("Error when insert (#2) of statement "+s+':\n\t'+e);
                     return;
                 }
-              //</SPARQLUpdate>
+
                 newTd.className+=' pendingedit';
                 this.lastModified=null;
             }else{
@@ -1690,38 +1658,41 @@ function UserInput(outline){
             }
             outline.replaceTD(newTd,selectedTd);
             TempFormula.remove(stat);
-        }else if (type=='object'){   
-            var newTd=outline.outline_objectTD(inputTerm);
-            outline.replaceTD(newTd,selectedTd);
+            
+        }else if (type=='object'){     // Object value has been edited
+            var newTd = outline.outline_objectTD(inputTerm);
+            outline.replaceTD(newTd, selectedTd);
             if (!selectedTd.previousSibling||selectedTd.previousSibling.className!='undetermined'){
                 var s;
                 if (!isInverse)
                     s=new tabulator.rdf.Statement(stat.subject,stat.predicate,inputTerm,stat.why);
                 else
                     s=new tabulator.rdf.Statement(inputTerm,stat.predicate,stat.object,stat.why);
-              //<SPARQLUpdate>
-                try{updateService.insert_statement(s, function(uri,success,error_body){
-                    dump("@@ usinput.js 1706 callback ok="+success+" for statement:"+s+"\n ");
-                    if (success){
-                        newTd.className=newTd.className.replace(/ pendingedit/g,""); // User feedback                                               
-                        if (!isInverse)
-                            newStats=kb.statementsMatching(stat.subject,stat.predicate,inputTerm,stat.why);
-                        else
-                            newStats=kb.statementsMatching(inputTerm,stat.predicate,stat.object,stat.why);
-                        if (!newStats.length)  tabulator.log.error("userinput.js 1711: Can't find statememt!"); 
-                        tr.AJAR_statement=newStats[0];
-                    }else{
-                        tabulator.log.warn("userinput.js (object): Fail trying to insert statement "+s);
-                        // outline.UserInput.deleteTriple(newTd,true);
-                    } 
-                })}catch(e){
-                    outline.UserInput.deleteTriple(newTd,true);
+
+                try{
+                    tabulator.sparql.update([], [s], function(uri,success,error_body){
+                        tabulator.log.info("@@ usinput.js (object) callback ok="+success+" for statement:"+s+"\n ");
+                        if (success){
+                            newTd.className = newTd.className.replace(/ pendingedit/g,""); // User feedback                                               
+                            if (!isInverse)
+                                newStats = kb.statementsMatching(stat.subject,stat.predicate,inputTerm,stat.why);
+                            else
+                                newStats = kb.statementsMatching(inputTerm,stat.predicate,stat.object,stat.why);
+                            if (!newStats.length)  tabulator.log.error("userinput.js 1711: Can't find statememt!"); 
+                            tr.AJAR_statement=newStats[0];
+                        }else{
+                            tabulator.log.warn("userinput.js (object): Fail trying to insert statement "+s);
+                            // outline.UserInput.deleteTriple(newTd,true);
+                        } 
+                    })
+                }catch(e){
+                    // outline.UserInput.deleteTriple(newTd,true);
                     tabulator.log.error("userinput.js (object): exception trying to insert statement "+
                             s+": "+tabulator.Util.stackString(e));
                     tabulator.log.warn("Error trying to insert statement "+s+":\n"+e);
                     return;
                 }
-              //</SPARQLUpdate>
+
                 this.lastModified=null;
                 newTd.className+=' pendingedit';
             }else{

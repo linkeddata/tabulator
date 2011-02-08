@@ -1120,11 +1120,10 @@ tabulator.OutlineObject = function(doc) {
             if (st) { //don't do these for headers or base nodes
             var source = st.why;
             var target = st.why;
-            var editable = outline.UserInput.updateService.sparql.editable(source.uri, kb);
+            var editable = tabulator.sparql.editable(source.uri, kb);
             if (!editable)
                 target = node.parentNode.AJAR_inverse ? st.object : st.subject; // left hand side
                 //think about this later. Because we update to the why for now.
-                //editable = outline.UserInput.updateService.sparql.editable(Util.uri.docpart(target.uri), kb);
             // alert('Target='+target+', editable='+editable+'\nselected statement:' + st)
             if (editable && (cla.indexOf('pred') >= 0))
                 termWidget.addIcon(node,tabulator.Icon.termWidgets.addTri); // Add blue plus
@@ -1284,7 +1283,7 @@ tabulator.OutlineObject = function(doc) {
                 if (tabulator.Util.getTarget(e).tagName=='HTML'){ //I don't know why 'HTML'                   
                     var object=tabulator.Util.getAbout(kb,selectedTd);
                     var target = selectedTd.parentNode.AJAR_statement.why;
-                    var editable = this.UserInput.updateService.sparql.editable(target.uri, kb);                    
+                    var editable = tabulator.sparql.editable(target.uri, kb);                    
                     if (object){
                         //<Feature about="enterToExpand"> 
                         outline.GotoSubject(object,true);
@@ -1334,7 +1333,7 @@ tabulator.OutlineObject = function(doc) {
             case 46://delete
             case 8://backspace
                 var target = selectedTd.parentNode.AJAR_statement.why;
-                var editable = outline.UserInput.updateService.sparql.editable(target.uri, kb);
+                var editable = tabulator.sparql.editable(target.uri, kb);
                 if (editable){                                
                     e.preventDefault();//prevent from going back
                     this.UserInput.Delete(selectedTd);
@@ -1501,7 +1500,7 @@ tabulator.OutlineObject = function(doc) {
                 var st = node.parentNode.AJAR_statement;
                 if (!st) return; // For example in the title TD of an expanded pane
                 var target = st.why;
-                var editable = outline.UserInput.updateService.sparql.editable(target.uri, kb);
+                var editable = tabulator.sparql.editable(target.uri, kb);
                 if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
                 // var text="TabulatorMouseDown@Outline()";
                 // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 

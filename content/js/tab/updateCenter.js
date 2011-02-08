@@ -13,7 +13,7 @@ function updateCenter(kb){
     
     update_statement: function update_statement(st, callback, newObject) {
         //this._mutate_statement(st, callback, 'UPDATE', newObject);
-        var st2 = $rdf.st(st.subject, st.predicate, newObject);
+        var st2 = $rdf.st(st.subject, st.predicate, newObject, st.why);
         return sparqlService.update([st], [st2], callback);
     },
     insert_statement: function insert_statement(st, callback) {

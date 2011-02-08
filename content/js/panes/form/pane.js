@@ -55,36 +55,65 @@ tabulator.panes.register( {
             var box2 = thisPane.render(subject, dom);
             parent.replaceChild(box2, box);
         };
-
-
         
         if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
- 
-        
-        kb.statementsMatching(undefined, undefined, subject);
+         
+        //kb.statementsMatching(undefined, undefined, subject);
 
-        // The question of where to store this data
+        // The question of where to store this data about subject
         // This in general needs a whole lot more thought
         // and it connects to the discoverbility through links
         
-        var docs = {}
-        kb.statementsMatching(subject).map(function(st){docs[st.why.uri] = 1});
-        kb.statementsMatching(undefined, undefined, subject).map(function(st){docs[st.why.uri] = 1});
         var t = kb.findTypeURIs(subject);
 
         var me_uri = tabulator.preferences.get('me');
         var me = me_uri? kb.sym(me_uri) : null;
-        
-        var store;
+
+        if (!me) {
+            mention("You are not logged in. If you log in and have \
+workspaces then you would be able to select workspace in which \
+to put this new information")
+        } else {
+            var ws = kb.each(me, ns.ui('workspace'));
+            if (ws.length = 0) {
+                mention("You don't seem to have any workspaces defined.  \
+A workspace is a place on the web (http://..) or in \
+the file system (file:///) to store application data.\n")            
+            } else {
+                //@@
+            }
+        }
+        // Which places are editable and have stuff about the subject?
+        var store = null;
+
+        // 1. The document URI of the subject itself
         var docuri = $rdf.Util.uri.docpart(subject.uri);
         if (subject.uri != docuri
-            && tabulator.sparql.editable(docuri))
+            && tabulator.sparql.editable(docuri, kb))
             store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable data file with hash
             
         else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
             // 
         }
-        else store = kb.sym('http://tabulator.org/wiki/2010/testformdata/common'); // fallback
+        // 2. where stuff is already stored
+        if (!store) {
+            var docs = {}, docList = [];
+            kb.statementsMatching(subject).map(function(st){docs[st.why.uri] = 1});
+            kb.statementsMatching(undefined, undefined, subject).map(function(st){docs[st.why.uri] = 2});
+            for (var d in docs) docList.push(docs[d], d);
+            docList.sort();
+            for (var i=0; i<docList.length; i++) {
+                var uri = docList[i][1];
+                if (uri && tabulator.sparql.editable(uri)) {
+                    store = kb.sym(uri);
+                    break;
+                }            
+            }
+        }
+
+
+
+        if (!store) store = kb.sym('http://tabulator.org/wiki/2010/testformdata/common'); // fallback
         // A fallback which gives a different store page for each ontology would be good @@
         
         var box = dom.createElement('div');

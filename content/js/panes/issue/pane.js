@@ -236,7 +236,7 @@ tabulator.panes.register( {
                     var types = kb.findTypeURIs(subject);
                     var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                     for (var uri in types) {
-                        var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#background-color'));
+                        var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
                         if (backgroundColor) { mystyle += "background-color: "+backgroundColor.value+"; "; break;}
                     }
                     div.setAttribute('style', mystyle);

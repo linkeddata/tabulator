@@ -103,7 +103,7 @@ tabulator.panes.register( {
             var setPaneStyle = function() {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                 if (account) {
-                    var backgroundColor = kb.any(account,UI('background-color'));
+                    var backgroundColor = kb.any(account,UI('backgroundColor'));
                     if (backgroundColor) mystyle += "background-color: "
                                 +backgroundColor.value+"; ";
                 }

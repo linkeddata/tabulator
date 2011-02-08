@@ -49,7 +49,7 @@ loader.loadSubScript("chrome://tabulator/content/js/init/icons.js");
 loader.loadSubScript("chrome://tabulator/content/js/init/namespaces.js");
 //And Panes.. (see the below file to change which panes are turned on)
 loader.loadSubScript("chrome://tabulator/content/js/init/panes.js");
-// loader.loadSubScript("chrome://tabulator/content/js/jscolor/jscolor.js");
+loader.loadSubScript("chrome://tabulator/content/js/jscolor/jscolor.js");
 //And Preferences mechanisms.
 loader.loadSubScript("chrome://tabulator/content/js/init/prefs.js");
 
@@ -61,7 +61,7 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/sources-ext.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/labeler.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/request.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/outlineinit.js");
-loader.loadSubScript("chrome://tabulator/content/js/tab/updateCenter.js");
+// loader.loadSubScript("chrome://tabulator/content/js/tab/updateCenter.js"); obsolete, moved to rdf/sparqlUpdate.js
 loader.loadSubScript("chrome://tabulator/content/js/tab/userinput.js");
 loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
 

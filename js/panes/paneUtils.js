@@ -155,6 +155,7 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
             values[value.uri] = true;
         }
     }
+
     for (var i=0; i<cases.length; i++) {
         var c = cases[i];
         var tests = kb.each(c, ui('for')); // There can be multiple 'for'
@@ -327,6 +328,8 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     var maxLength = kb.any(form, ui('maxLength'));
     field.setAttribute('maxLength',maxLength? ''+maxLength :'4096');
 
+    store = tabulator.panes.utils.fieldStore(subject, property, store);
+
     var obj = kb.any(subject, property);
     if (!obj) {
         obj = kb.any(form, ui('default'));
@@ -373,6 +376,7 @@ tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] = function(
     if (!property) return tabulator.panes.utils.errorMessage(dom,
                 "No property to text field: "+form);
     container.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    store = tabulator.panes.utils.fieldStore(subject, property, store);
     var box = tabulator.panes.utils.makeDescription(dom, kb, subject, property, store, callback);
     // box.appendChild(dom.createTextNode('<-@@ subj:'+subject+', prop:'+property));
     container.appendChild(box);
@@ -394,6 +398,7 @@ tabulator.panes.field[tabulator.ns.ui('BooleanField').uri] = function(
                 "No property to boolean field: "+form)); 
     var lab = kb.any(form, ui('label'));
     if (!lab) lab = tabulator.Util.label(property, true); // Init capital
+    store = tabulator.panes.utils.fieldStore(subject, property, store);
     var state = kb.any(subject, property)
     if (state == undefined) state = false; // @@ sure we want that -- or three-state?
     // tabulator.log.debug('store is '+store);
@@ -479,7 +484,7 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
         //if (tabulator.properties == undefined) 
         tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.op) possible.push(kb.fromNT(p));     
-    } else if (from.sameTerm(ns.owl('DataProperty'))) {
+    } else if (from.sameTerm(ns.owl('DatatypeProperty'))) {
         //if (tabulator.properties == undefined)
         tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.dp) possible.push(kb.fromNT(p));     
@@ -563,6 +568,13 @@ tabulator.panes.utils.defaultAnnotationStore = function(subject) {
 }
 
 
+tabulator.panes.utils.fieldStore = function(subject, predicate, def) {
+    var sts = tabulator.kb.statementsMatching(subject, predicate);
+    if (sts.length == 0) return def;  // can used default as no data yet
+    if (sts.length > 0 && sts[0].why.uri && tabulator.sparql.editable(sts[0].why.uri, tabulator.kb))
+        return tabulator.kb.sym(sts[0].why.uri);
+    return null;  // Can't edit
+}
 
 tabulator.panes.utils.allClassURIs = function() {
     var set = {};
@@ -646,7 +658,7 @@ tabulator.panes.utils.fieldFunction = function(dom, field) {
 
 // A button for editing a form (in place, at the moment)
 // 
-//  When editing forms, make it yellow, when editing thr form form,, pink
+//  When editing forms, make it yellow, when editing thr form form, pink
 // Help people understand how many levels down they are.
 //
 tabulator.panes.utils.editFormButton = function(dom, container, form, store, callback) {
@@ -657,7 +669,7 @@ tabulator.panes.utils.editFormButton = function(dom, container, form, store, cal
         var ff = tabulator.panes.utils.appendForm(dom, container,
                 {}, form, tabulator.ns.ui('FormForm'), store, callback);
         ff.setAttribute('style', tabulator.ns.ui('FormForm').sameTerm(form) ?
-                    'background-color: #fee;' : 'background-color: #ffe;');
+                    'background-color: #fee;' : 'background-color: #ffffe7;');
         container.removeChild(b);
     }, true);
     return b;
@@ -835,9 +847,13 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
     var gotButton = false;
     var itemDone = function(ok, body) {
         if (!ok) return callback(ok, body);
-        if (subject && !kb.holds(subject, predicate, object))
-            tabulator.sparql.update([], 
-                    [$rdf.st(subject, predicate, object, store)], linkDone);
+        var insertMe = [];
+        if (subject && !kb.holds(subject, predicate, object, store))
+                insertMe.push($rdf.st(subject, predicate, object, store));
+        if (subject && !kb.holds(object, ns.rdf('type'), theClass, store))
+                insertMe.push($rdf.st(object, ns.rdf('type'), theClass, store));
+        if (insertMe.length) tabulator.sparql.update([], insertMe, linkDone)
+        else callback(true, body)
         if (!gotButton) gotButton = box.appendChild(
                             tabulator.panes.utils.linkButton(dom, object));
         // tabulator.outline.GotoSubject(object, true, undefined, true, undefined);

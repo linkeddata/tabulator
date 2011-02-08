@@ -41,12 +41,12 @@ tabulator.panes.defaultPane = {
                 [$rdf.st(kb.sym(subject.value), tabulator.ns.link('uri'), subject)],
                 true, tabulator.panes.defaultPane.filter)
         if ((subject.termType == 'symbol' && 
-             outline.UserInput.updateService.sparql.editable(tabulator.rdf.Util.uri.docpart(subject.uri), kb))
+             tabulator.sparql.editable(tabulator.rdf.Util.uri.docpart(subject.uri), kb))
              || (subject.termType == 'bnode'
                 && kb.anyStatementMatching(subject) 
                 && kb.anyStatementMatching(subject).why
                 && kb.anyStatementMatching(subject).why.uri
-                && outline.UserInput.updateService.sparql.editable(kb.anyStatementMatching(subject).why.uri)
+                && tabulator.sparql.editable(kb.anyStatementMatching(subject).why.uri)
                 //check the document containing something about of the bnode @@ what about as object?
              /*! && HCIoptions["bottom insert highlights"].enabled*/)) {
             var holdingTr = myDocument.createElement('tr'); //these are to minimize required changes

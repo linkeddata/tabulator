@@ -51,8 +51,8 @@ airPane.label = function(subject) {
 		}   
 	}
 	//Make the subject list we will be exploring in the render function unique
-	//compliantStrings = paneUtils.unique(compliantStrings);
-	//nonCompliantStrings = paneUtils.unique(nonCompliantStrings); 
+	//compliantStrings = tabulator.panes.utils.unique(compliantStrings);
+	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings); 
     
    return stringToDisplay;
 }
@@ -66,7 +66,7 @@ airPane.render = function(subject, myDocument) {
 	var div = myDocument.createElement("div");
 
 	//Helpers
-	var logFileURI = paneUtils.extractLogURI(myDocument.location.toString());
+	var logFileURI = tabulator.panes.utils.extractLogURI(myDocument.location.toString());
 
 	div.setAttribute('class', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
 	div.setAttribute('id', 'dataContentPane'); //airPane has the same formatting as the dataContentPane

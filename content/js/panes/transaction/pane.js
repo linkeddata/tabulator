@@ -239,7 +239,7 @@ tabulator.panes.register( {
             query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
             //query.pat.optional.push(opt);
 
-            var tableDiv = paneUtils.renderTableViewPane(myDocument, {'query': query} );
+            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query} );
             div.appendChild(tableDiv);
             
             var total = {};

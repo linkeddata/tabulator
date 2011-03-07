@@ -39,18 +39,6 @@ tabulator.panes.dataContentPane = {
         var doneBnodes = {}; // For preventing looping
         var referencedBnodes = {}; // Bnodes which need to be named alas
         
-        var clickOnLink = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var target = tabulator.Util.getTarget(e);
-            dump('click on link:' +target+'\n')
-            var uri = target.getAttribute('href');
-            if (!uri) dump("No href found \n")
-            // subject term, expand, pane, solo, referrer
-            dump('click on link to:' +uri+'\n')
-            tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
-        }
-
         // The property tree for a single subject or anonymos node
         function propertyTree(subject) {
             // print('Proprty tree for '+subject);
@@ -73,7 +61,7 @@ tabulator.panes.dataContentPane = {
                     td_p.setAttribute('class', 'pred');
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', st.predicate.uri)
-                    anchor.addEventListener('click', clickOnLink, true);
+                    anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.predicateLabelForXML(st.predicate)));
                     td_p.appendChild(anchor);
                     tr.appendChild(td_p);
@@ -96,7 +84,7 @@ tabulator.panes.dataContentPane = {
                 case 'symbol':
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', obj.uri)
-                    anchor.addEventListener('click', clickOnLink, true);
+                    anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
                     return anchor;
                     

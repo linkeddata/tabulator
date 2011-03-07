@@ -4,8 +4,8 @@
 */
 
 
-paneUtils = {};
-tabulator.panes.utils = paneUtils;
+// paneUtils = {};
+tabulator.panes.utils = {};
 tabulator.panes.field = {}; // Form field functions by URI of field type.
 
 // This is used to canonicalize an array
@@ -546,7 +546,30 @@ tabulator.panes.field[tabulator.ns.ui('Heading').uri] = function(
     return box;
 }
 
+
+
+
 ///////////////////////////////////////////////////////////////////////////////
+
+
+// Event Handler for making a tabulat-r
+// Note that native links have consraints in Firsfox, they 
+// don't work with local files ffor instance (2011)
+//
+tabulator.panes.utils.openHrefInOutlineMode = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var target = tabulator.Util.getTarget(e);
+    var uri = target.getAttribute('href');
+    if (!uri) dump("No href found \n")
+    // subject term, expand, pane, solo, referrer
+    // dump('click on link to:' +uri+'\n')
+    tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
+}
+
+
+
+
 
 // We make a URI in the annotation store out of the URI of the thing to be annotated.
 //
@@ -980,27 +1003,26 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
             if (opt.selected && opt.AJAR_mint) {
                 var newObject = tabulator.panes.utils.newThing(kb, store);
                 is.push($rdf.st(subject, predicate, newObject, store));
+                if (options.mintStatementsFun) is = is.concat(options.mintStatementsFun(newObject));
             }
             if (!opt.AJAR_uri) continue; // a prompt or mint
             if (opt.selected && !(opt.AJAR_uri in actual)) { // new class
-                is.push(new $rdf.Statement(subject,
-                    predicate, kb.sym(opt.AJAR_uri),store ));
+                is.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
             }
             if (!opt.selected && opt.AJAR_uri in actual) {  // old class
-                ds.push(new $rdf.Statement(subject,
-                    predicate, kb.sym(opt.AJAR_uri), store ));
+                ds.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
             }
             if (opt.selected) select.currentURI =  opt.AJAR_uri;                      
         }
         var sub = select.subSelect;
         while (sub && sub.currentURI) {
-            ds.push(new $rdf.Statement(subject,
-                    predicate, kb.sym(sub.currentURI), store));
+            ds.push($rdf.st(subject, predicate, kb.sym(sub.currentURI), store));
             sub = sub.subSelect;
         }
         function doneNew(ok, body) {
             callback(ok, body);
         }
+        tabulator.log.info('selectForOptions: stote = ' + store );
         tabulator.sparql.update(ds, is,
             function(uri, ok, body) {
                 actual = {}; // refresh
@@ -1024,7 +1046,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         var c = kb.sym(uri)
         var option = dom.createElement('option');
         option.appendChild(dom.createTextNode(tabulator.Util.label(c, true))); // Init. cap.
-        var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#background-color'));
+        var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
         if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
         option.AJAR_uri = uri;
         if (uri in actual) {

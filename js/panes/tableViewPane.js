@@ -10,7 +10,7 @@
 //
 // 2008 Written, Ilaria Liccardi
 
-paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
+tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, options) {
     var sourceDocument = options.sourceDocument;
     var tableClass = options.tableClass;
     var givenQuery = options.query;
@@ -1234,6 +1234,8 @@ paneUtils.renderTableViewPane = function renderTableViewPane(doc, options) {
         var result = doc.createElement("a");
         result.setAttribute("href", uri);
         result.appendChild(doc.createTextNode(linkText));
+        result.addEventListener('click',
+            tabulator.panes.utils.openHrefInOutlineMode, true);
         return result;
     }
 
@@ -1634,7 +1636,7 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'tablePane');
-        div.appendChild(paneUtils.renderTableViewPane(myDocument, {'tableClass': subject}));
+        div.appendChild(tabulator.panes.utils.renderTableViewPane(myDocument, {'tableClass': subject}));
         return div;
     }
 });
@@ -1685,7 +1687,7 @@ tabulator.panes.register({
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div");
         div.setAttribute('class', 'n3Pane'); // needs a proper class
-        div.appendChild(paneUtils.renderTableViewPane(myDocument, {'sourceDocument': subject}));
+        div.appendChild(tabulator.panes.utils.renderTableViewPane(myDocument, {'sourceDocument': subject}));
         return div;
     }
 });

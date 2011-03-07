@@ -277,6 +277,7 @@ tabulator.panes.register( {
                 a.setAttribute('href',tracker.uri);
                 a.setAttribute('style', 'float:right');
                 div.appendChild(a).textContent = tabulator.Util.label(tracker);
+                a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
                 donePredicate(ns.wf('tracker'));
 
 
@@ -302,8 +303,15 @@ tabulator.panes.register( {
                 var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
                 if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
                 if (devs.length) {
+                    var opts = { 'mint': "** Add new person **",
+                                'nullLabel': "(unassigned)",
+                                'mintStatementsFun': function(newDev) {
+                                    var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
+                                    if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
+                                    return sts;
+                                }};
                     div.appendChild(tabulator.panes.utils.makeSelectForOptions(myDocument, kb,
-                        subject, ns.wf('assignee'), devs, false, "-- unassigned --", store,
+                        subject, ns.wf('assignee'), devs, opts, store,
                         function(ok,body){
                             if (ok) setModifiedDate(store, kb, store);
                             else complain("Failed to description:\n"+body);
@@ -400,10 +408,12 @@ tabulator.panes.register( {
 
                         var a = myDocument.createElement('a');
                         a.setAttribute('href',bindings['?msg'].uri);
+                        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
                         td1.appendChild(a).textContent = shortDate(date);
                         td1.appendChild(myDocument.createElement('br'));
                         var a = myDocument.createElement('a');
                         a.setAttribute('href',bindings['?creator'].uri);
+                        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
                         td1.appendChild(a).textContent = nick(bindings['?creator']);
                         
                         var  td2 = myDocument.createElement('td');
@@ -497,7 +507,7 @@ tabulator.panes.register( {
                     query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
                 }
                 //complain('Query pattern is:\n'+query.pat);
-                var tableDiv = paneUtils.renderTableViewPane(myDocument, {'query': query} );
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query} );
                 div.appendChild(tableDiv);
             });
 

@@ -22,5 +22,6 @@ xmlns:em="http://www.mozilla.org/2004/em-rdf#">
         <em:maxVersion>4.*</em:maxVersion>
       </Description>
     </em:targetApplication>
+    <em:unpack>true</em:unpack>
   </Description>
 </RDF>

@@ -67,7 +67,7 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
 
 //Oh, and the views!
 //@@ jambo commented this out to pare things down temporarily.
-//loader.loadSubScript("chrome://tabulator/content/js/init/views.js");
+loader.loadSubScript("chrome://tabulator/content/js/init/views.js");
 
 
 //TODO: SEPARATE.
@@ -76,8 +76,26 @@ loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
 //tabulator only renders in a page if the extension explicitly
 //decided to do so.. (before it just relied on the existence of
 //the class "TabulatorOutline" on a div, and had data exposure
-//issues.
+//issues.)
+
 tabulator.requestUUIDs = {};
+
+// This has an empty id attribute instead of uuid string, beware.
+tabulator.outlineTemplate = 
+        // "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
+        "<html id='docHTML'>\n"+
+        "    <head>\n"+
+        "        <title>Tabulator: Data Browser</title>\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"+
+        "    </head>\n"+
+        "    <body>\n"+
+        "        <div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
+        "            <table id=\"outline\"></table>\n"+
+        "        </div>\n"+
+        "    </body>\n"+
+        "</html>\n";
+
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
@@ -138,7 +156,7 @@ TracingListener.prototype =
         var binaryOutputStream = CCIN("@mozilla.org/binaryoutputstream;1",
                 "nsIBinaryOutputStream");
 
-        var data = 
+        var data =
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
         "<html id='docHTML'>\n"+
         "    <head>\n"+
@@ -222,5 +240,72 @@ observerService.addObserver(httpRequestObserver,
     "http-on-examine-merged-response", false);
 observerService.addObserver(httpRequestObserver,
     "http-on-examine-cached-response", false);
+
+///////////////////////////////////////////////////////////////////
+
+tabulator.pumpRDFa = function(e){
+     
+
+        // if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+	var uri = gURLBar.value;
+        
+	// From init/init.js
+        var uuidGenerator = 
+            Components.classes["@mozilla.org/uuid-generator;1"]
+            .getService(Components.interfaces.nsIUUIDGenerator);
+        var uuid = uuidGenerator.generateUUID();
+        var uuidString = uuid.toString();
+        
+        tabulator.requestUUIDs[uuidString] = uri;
+
+	var doc = window.content.document;
+        //Remove all the style sheet elements and scripts
+        
+	$jq('head', doc).empty();
+	$jq('body', doc).empty();
+	$jq('html', doc).attr("id","docHTML");
+        // doc.innerHTML = tabulator.outlineTemplate; // Reset doc entirely
+
+
+    //@@ from jambo, WARNING ! the way that this code operates HAS BEEN CHANGED
+    // a UUID nonce is now used to identify the document to display..
+    // I am not sure if this will affect the execution of this code when
+    // it gets re-enabled.  If you experience issues, feel free to email
+    // me and I will help resolve it.
+    // For refs on how to do this, see init/init.js, where
+    // tabulator.requestUUIDs is used.
+	$jq('head', doc).append("<title>Data View</title>\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"
+        );
+	$jq('body', doc).append("<div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
+        "<table id=\"outline\"></table>\n"+
+        "</div>\n"
+        );
+
+	//Add the Tabulator outliner
+        var outline = new tabulator.OutlineObject(doc)
+
+	var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
+        
+	outline.init();
+
+	var nsIURI = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(uri, null, null); //ToDo: make sure the encoding is correct
+	gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
+	
+	var queryButton = doc.createElement('input');
+	queryButton.setAttribute('id','queryButton');
+	queryButton.setAttribute('style','display:none;');
+	queryButton.setAttribute('type','button');
+	queryButton.setAttribute('value','Find All');
+	doc.body.appendChild(queryButton);
+	queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
+
+            
+        outline.GotoSubject(tabulator.kb.sym(uri),true);
+
+    }
+    
+
     
 // Ends

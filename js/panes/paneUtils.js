@@ -833,6 +833,7 @@ tabulator.panes.utils.newButton = function(dom, kb, subject, predicate, theClass
 // @param subject - a term, Thing this should be linked to when made. Optional.
 // @param predicate - a term, the relationship for the subject link. Optional.
 // @param theClass - an RDFS class containng the object about which the new information is.
+// @param form  - the form to be used when a new one. null means please find one.
 // @param store - The web document being edited 
 // @param callback - takes (boolean ok, string errorBody)
 // @returns a dom object with the form DOM
@@ -888,6 +889,7 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
     var f = formFunction(dom, box, {}, object, form, store, itemDone);
     var b = tabulator.panes.utils.removeButton(dom, f);
     b.setAttribute('style', 'float: right;');
+    box.AJAR_subject = object;
     return box;
 }
 
@@ -1001,7 +1003,18 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         for (var i =0; i< select.options.length; i++) {
             var opt = select.options[i];
             if (opt.selected && opt.AJAR_mint) {
-                var newObject = tabulator.panes.utils.newThing(kb, store);
+                var newObject;
+                if (options.mintClass) {
+                    thisForm = tabulator.panes.utils.promptForNew(dom, kb, subject, predicate, options.mintClass, null, store, function(ok, body){
+                        if (!ok) {
+                            callback(ok, body); // @@ if ok, need some form of refresh of the select for the new thing
+                        }
+                    });
+                    select.parentNode.appendChild(thisForm);
+                    newObject = thisForm.AJAR_subject;
+                } else {
+                    newObject = tabulator.panes.utils.newThing(kb, store);
+                }
                 is.push($rdf.st(subject, predicate, newObject, store));
                 if (options.mintStatementsFun) is = is.concat(options.mintStatementsFun(newObject));
             }

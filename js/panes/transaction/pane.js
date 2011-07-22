@@ -59,9 +59,10 @@ tabulator.panes.register( {
             sparqlService.update(deletions, insertions, function(uri, ok, body){});
         }
 
-        var complain = function complain(message){
+        var complain = function complain(message, style){
+            if (style == undefined) style = 'color: grey';
             var pre = myDocument.createElement("pre");
-            pre.setAttribute('style', 'color: grey');
+            pre.setAttribute('style', style);
             div.appendChild(pre);
             pre.appendChild(myDocument.createTextNode(message));
         } 
@@ -177,10 +178,15 @@ tabulator.panes.register( {
                     trips = trips.concat(trips2).sort(); // @@ Unique 
                     if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
                         myDocument, kb, subject, TRIP('trip'), trips,
-                            { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *"},
+                            { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *",
+                                'mintClass':  TRIP('Trip'),
+                                'mintStatementsFun': function(trip){
+                                    var is = [];
+                                    is.push($rdf.st(trip, tabulator.ns.rdf('type'), TRIP('Trip')));
+                                    return is}},
                             store, complainIfBad));
-                    div.appendChild(tabulator.panes.utils.newButton(  // New Trip                    
-                        myDocument, kb, subject, TRIP('trip'), TRIP('Trip'), store, complainIfBad));
+//                    div.appendChild(tabulator.panes.utils.newButton(  // New Trip    -- now included in selector box                
+//                        myDocument, kb, subject, TRIP('trip'), TRIP('Trip'), null, store, complainIfBad)); // null form
 
                 });
             }
@@ -215,18 +221,20 @@ tabulator.panes.register( {
 
         // end of render tranasaction instance
 
-
-        // Render the transactions in a Trip
+        //////////////////////////////////////////////////////////////////////
+        //
+        //      Render the transactions in a Trip
+        //
         } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
         
             var query = new $rdf.Query(tabulator.Util.label(subject));
             var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
             var v = {};
-            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
             query.pat.add(v['transaction'], TRIP('trip'), subject);
             
             var opt = kb.formula();
-            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get supertypes too
+            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
             query.pat.optional.push(opt);
             
             query.pat.add(v['transaction'], Q('date'), v['date']);
@@ -244,27 +252,35 @@ tabulator.panes.register( {
             
             var total = {};
             var trans = kb.each(undefined, TRIP('trip'), subject);
+            // complain("@@ Number of transactions in this trip: " + trans.length);
             trans.map(function(t){
                 var ty = kb.the(t, ns.rdf('type'));
+                // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
                 if (!ty) ty = Q('ErrorNoType');
                 if (ty && ty.uri) {
                     var tyuri = ty.uri;
                     if (!total[tyuri]) total[tyuri] = 0.0;
-                    var lit = kb.the(t, Q('in_USD'));
+                    var lit = kb.any(t, Q('in_USD'));
+                    if (!lit) {
+                        complain("    @@ No amount in USD: "+lit+" for " + t);
+                    }
                     if (lit) {
                         total[tyuri] = total[tyuri] + parseFloat(lit.value);
-                        complain('trans type ='+ty+'; in_USD "' + lit
-                                +'" ; lit.value = "' + lit.value
-                                +'" ; parseFloat(lit.value) = ' + parseFloat(lit.value)
-                                +'; total[tyuri] = '+total[tyuri]+';') 
+                        //complain('      Trans type ='+ty+'; in_USD "' + lit
+                        //       +'; total[tyuri] = '+total[tyuri]+';') 
                     }
                 }
             });
             var str = '';
+            var types = 0;
+            var grandTotal = 0.0;
             for (var uri in total) {
                 str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
-             } 
-            complain('Totals: '+str)
+                types++;
+                grandTotal += total[uri];
+            } 
+            complain("Totals of "+trans.length+" transactions: " + str, '')
+            if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
         
         }
 

@@ -266,14 +266,27 @@ function openTool(url, type, width, height)
     
     pumpRDFa = function(e){
      
+
+        // if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+	var uri = gURLBar.value;
+        
+	// From init/init.js
+        var uuidGenerator = 
+            Components.classes["@mozilla.org/uuid-generator;1"]
+            .getService(Components.interfaces.nsIUUIDGenerator);
+        var uuid = uuidGenerator.generateUUID();
+        var uuidString = uuid.toString();
+        
+        tabulator.requestUUIDs[uuidString] = uri;
+
 	var doc = window.content.document;
         //Remove all the style sheet elements and scripts
+        
 	$jq('head', doc).empty();
 	$jq('body', doc).empty();
 	$jq('html', doc).attr("id","docHTML");
-	var uri = gURLBar.value;
-	
-	
+        // doc.innerHTML = tabulator.outlineTemplate; // Reset doc entirely
+
 
     //@@ from jambo, WARNING ! the way that this code operates HAS BEEN CHANGED
     // a UUID nonce is now used to identify the document to display..
@@ -282,14 +295,20 @@ function openTool(url, type, width, height)
     // me and I will help resolve it.
     // For refs on how to do this, see init/init.js, where
     // tabulator.requestUUIDs is used.
-	$jq('head', doc).append('<link rel="stylesheet" href="chrome://tabulator/content/tabbedtab.css" type="text/css"/>');
-	$jq('body', doc).append('<div class="TabulatorOutline"><table id="outline"/></div>');
-	
+	$jq('head', doc).append("<title>Data View</title>\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
+        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"
+        );
+	$jq('body', doc).append("<div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
+        "<table id=\"outline\"></table>\n"+
+        "</div>\n"
+        );
+
 	//Add the Tabulator outliner
-	// var outline = new Outline(doc);  @@ Outline undefined
         var outline = new tabulator.OutlineObject(doc)
 
-	var a =$jq('.TabulatorOutline', doc);
+	var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
+        
 	outline.init();
 
 	var nsIURI = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(uri, null, null); //ToDo: make sure the encoding is correct
@@ -321,7 +340,7 @@ function openTool(url, type, width, height)
 		tabulator.log.warn('storing cache %s to tabulator.cacheDOM', tabulator.cacheDOM); // @@why? timbl
 		*/        
         //handleURLBarCommand(e);
-        pumpRDFa(e);
+        tabulator.pumpRDFa(e);
     }
     
     function tabulatorCopyURI() {

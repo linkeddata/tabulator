@@ -10,7 +10,7 @@ tabulator.registerViewType = function(viewFactory) {
     if(viewFactory) {
         tabulator.views.push(viewFactory);
     } else {
-        alert("ERROR: View class not found.");
+        tabulator.log.error("ERROR: View class not found.");
     }
 };
     
@@ -21,7 +21,7 @@ tabulator.drawInBestView = function(query) {
             return true;
         }
     }
-    alert("ERROR: That query can't be drawn! No valid views were found.");
+    tabulator.log.error("ERROR: That query can't be drawn! No valid views were found.");
     return false;
 };
     

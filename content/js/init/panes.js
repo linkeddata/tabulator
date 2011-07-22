@@ -33,14 +33,16 @@ Also lower could be optional tools for various classes.
 /* First we load the utils so panes can add them (while deevloping) as well as use them */
 loader.loadSubScript("chrome://tabulator/content/js/panes/paneUtils.js");
 
-
+// Developer designed:
 loader.loadSubScript("chrome://tabulator/content/js/panes/issue/pane.js");
-loader.loadSubScript("chrome://tabulator/content/js/panes/form/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/transaction/pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/dataContentPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/airPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/n3Pane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/RDFXMLPane.js");
+// User configured:
+loader.loadSubScript("chrome://tabulator/content/js/panes/form/pane.js");
+// Generic:
 loader.loadSubScript("chrome://tabulator/content/js/panes/tableViewPane.js");
 loader.loadSubScript("chrome://tabulator/content/js/panes/classInstancePane.js");
 

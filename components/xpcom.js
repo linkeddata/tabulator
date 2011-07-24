@@ -1,3 +1,4 @@
+// XPCOM constants
 const nsISupports = Components.interfaces.nsISupports;
 const CLASS_ID = Components.ID("968a15aa-83d2-4577-88dd-b493dab4deb7");
 const CLASS_NAME = "Tabulator RDF/XML Handler";

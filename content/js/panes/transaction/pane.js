@@ -247,41 +247,43 @@ tabulator.panes.register( {
             query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
             //query.pat.optional.push(opt);
 
-            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query} );
+            var calculations = function() {
+                var total = {};
+                var trans = kb.each(undefined, TRIP('trip'), subject);
+                // complain("@@ Number of transactions in this trip: " + trans.length);
+                trans.map(function(t){
+                    var ty = kb.the(t, ns.rdf('type'));
+                    // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
+                    if (!ty) ty = Q('ErrorNoType');
+                    if (ty && ty.uri) {
+                        var tyuri = ty.uri;
+                        if (!total[tyuri]) total[tyuri] = 0.0;
+                        var lit = kb.any(t, Q('in_USD'));
+                        if (!lit) {
+                            complain("    @@ No amount in USD: "+lit+" for " + t);
+                        }
+                        if (lit) {
+                            total[tyuri] = total[tyuri] + parseFloat(lit.value);
+                            //complain('      Trans type ='+ty+'; in_USD "' + lit
+                            //       +'; total[tyuri] = '+total[tyuri]+';') 
+                        }
+                    }
+                });
+                var str = '';
+                var types = 0;
+                var grandTotal = 0.0;
+                for (var uri in total) {
+                    str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
+                    types++;
+                    grandTotal += total[uri];
+                } 
+                complain("Totals of "+trans.length+" transactions: " + str, '')
+                if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
+            }
+
+            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query, 'onDone': calculations} );
             div.appendChild(tableDiv);
             
-            var total = {};
-            var trans = kb.each(undefined, TRIP('trip'), subject);
-            // complain("@@ Number of transactions in this trip: " + trans.length);
-            trans.map(function(t){
-                var ty = kb.the(t, ns.rdf('type'));
-                // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
-                if (!ty) ty = Q('ErrorNoType');
-                if (ty && ty.uri) {
-                    var tyuri = ty.uri;
-                    if (!total[tyuri]) total[tyuri] = 0.0;
-                    var lit = kb.any(t, Q('in_USD'));
-                    if (!lit) {
-                        complain("    @@ No amount in USD: "+lit+" for " + t);
-                    }
-                    if (lit) {
-                        total[tyuri] = total[tyuri] + parseFloat(lit.value);
-                        //complain('      Trans type ='+ty+'; in_USD "' + lit
-                        //       +'; total[tyuri] = '+total[tyuri]+';') 
-                    }
-                }
-            });
-            var str = '';
-            var types = 0;
-            var grandTotal = 0.0;
-            for (var uri in total) {
-                str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
-                types++;
-                grandTotal += total[uri];
-            } 
-            complain("Totals of "+trans.length+" transactions: " + str, '')
-            if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
-        
         }
 
 

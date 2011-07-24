@@ -1,11 +1,13 @@
 
 // Format an array of RDF statements as an HTML table.
 //
-// This can operate in one of two modes: when the class of object is given
-// or when the source document from whuch data is taken is givem.
-// (In principle it could operate with neither gievn but typically
+// This can operate in one of three modes: when the class of object is given
+// or when the source document from whuch data is taken is given,
+// or if a prepared query object is given.
+// (In principle it could operate with neither class nor document 
+// given but typically
 // there would be too much data.)
-// When the tableClass is ot given, it looks for common  classes in the data,
+// When the tableClass is not given, it looks for common  classes in the data,
 // and gives the user the option.
 //
 // 2008 Written, Ilaria Liccardi
@@ -1425,12 +1427,15 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // first returns (as the query is performed in the background)
 
     function runQuery(query, rows, columns, table) {
-
         var rowsLookup = {};
-
         query.running = true;
+        
+        var progressMessage = doc.createElement("tr");
+        table.appendChild(progressMessage);
+        progressMessage.textContent = "Loading ...";
 
-        kb.query(query, function(values) {
+        
+        var onResult = function(values) {
 
             if (!query.running) {
                 return;
@@ -1474,7 +1479,15 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             // Add the new values to this row.
 
             updateRow(row, columns, values);
-        })
+        };
+        
+        var onDone = function() {
+            progressMessage.parentNode.removeChild(progressMessage);
+            // Here add table clean-up, remove "loading" message etc.
+            if (options.onDone) options.onDone();
+        }
+
+        kb.query(query, onResult, undefined, onDone)
     }
 
     // Given the formula object which is the query pattern,

@@ -5,8 +5,10 @@
 **  2006-10-21  timbl  cconverted px to em at approx 1em = 12px
 ** 
 */
-@import url("chrome://tabulator/content/js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
-@import url("chrome://tabulator/content/js/panes/social/style.css"); /*social pane*/
+@import url("js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
+@import url("js/panes/social/style.css"); /*social pane*/
+/* @import url("chrome://tabulator/content/js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
+/* @import url("chrome://tabulator/content/js/panes/social/style.css"); /*social pane*/
 
 /* I couldn't find the code for the collapse image. this is a quick work around
 to make the collapsing easier to use ( the triangles dont jump 20 pixels). ~cm2

@@ -5,52 +5,38 @@
 */
 
 tabulator.OutlineObject = function(doc) {
-    var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+//      Needed? If so why?
+//        var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
+//            .getService(Components.interfaces.nsISupports).wrappedJSObject;
+    if (tabulator.isExtension) {
+        var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                       .getService(Components.interfaces.nsIWindowMediator);
+        var window = wm.getMostRecentWindow("navigator:browser");
+        var gBrowser = window.getBrowser();
+        var myDocument=doc;
+    } else {
+        // window = document.window;
+        myDocument = doc;
+    }
 
-    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                   .getService(Components.interfaces.nsIWindowMediator);
-    var window = wm.getMostRecentWindow("navigator:browser");
-    var gBrowser = window.getBrowser();
+/*    //@@ jambo put this in timbl removed it
+// it was part of the attempt to integrate rdfwidgets and jQuery with tabulator
+// before jambo left for Google.  Keep the code for a bit in case we try again.
 
-    var myDocument=doc;
-
-    //@@ jambo
     var jq = function() {
         //var win = window.content.wrappedJSObject;
         var win = doc.wrappedJSObject.defaultView;
-        //this.document = doc.wrappedJSObject;
-        //this.location = window.location;
-        //dump( this.window );
-        //dump( window.jQuery );
-        /*this.window = win;
-        this.document = win.document;
-        this.navigator = win.navigator;
-        this.location = win.location;*/
-
-
         this.window = win;
         this.document = win.document;
         this.navigator = win.navigator;
         this.location = win.location;
         this.jQuery = window.jQuery;
-        /*var $rdf = tabulator.rdf;
-        var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
-            .getService(Components.interfaces.mozIJSSubScriptLoader);
-        loader.loadSubScript("chrome://tabulator/content/js/jquery/jquery-1.4.2.min.js");
-        this.jQuery = this.window.jQuery;
-        //dump( this.window.jQuery );
-        //dump( "fofofof" );
-        //this.jQuery = win.jQuery;
-        var jQuery = window.jQuery;
-        loader.loadSubScript("chrome://tabulator/content/js/jquery/jquery-ui-1.8rc1.custom.min.js");
-
-        this.jQuery = window.jQuery;*/
-        loader.loadSubScript("chrome://tabulator/content/js/rdf/rdflib.js");
-        loader.loadSubScript("chrome://tabulator/content/js/widgets/jquery.rdf.widgets.js");
+        // loader.loadSubScript("js/rdf/rdflib.js");
+        // loader.loadSubScript("js/widgets/jquery.rdf.widgets.js");
         return jQuery;
     }();
     jq.rdfwidgets.setStore( tabulator.kb );
-
+*/
     tabulator.outline = this; // Allow panes to access outline.register()
     this.document=doc;
     var outline = this; //Kenny: do we need this?
@@ -94,7 +80,7 @@ tabulator.OutlineObject = function(doc) {
         var qs = tabulator.qs;
         tabulator.log.info("outline.doucment is now " + outline.document.location);    
         var q = saveQuery();
-        if(isExtension) {
+        if(tabulator.isExtension) {
             tabulator.drawInBestView(q);
         } else {
             var i;
@@ -494,7 +480,7 @@ tabulator.OutlineObject = function(doc) {
     } //outline_predicateTD
 
     ///////////////// Represent an arbirary subject by its properties
-    //These are public variables
+    //These are public variables ---  @@@@ ugh
     expandedHeaderTR.tr = myDocument.createElement('tr');
     expandedHeaderTR.td = myDocument.createElement('td');
     expandedHeaderTR.td.setAttribute('colspan', '2');
@@ -620,7 +606,8 @@ tabulator.OutlineObject = function(doc) {
                 var paneDiv;
                 try {
                     tabulator.log.info('outline: Rendering pane (1): '+tr1.firstPane.name)
-                    paneDiv = tr1.firstPane.render(subject, myDocument, jq);
+                    paneDiv = tr1.firstPane.render(subject, myDocument);
+                    // paneDiv = tr1.firstPane.render(subject, myDocument, jq);
                 }
                 catch(e) { // Easier debugging for pane developers
                     paneDiv = myDocument.createElement("div")
@@ -1057,7 +1044,7 @@ tabulator.OutlineObject = function(doc) {
         if(about && myDocument.getElementById('UserURI')) { 
              myDocument.getElementById('UserURI').value = 
                   (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-         } else if(about && isExtension) {
+         } else if(about && tabulator.isExtension) {
              var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
              tabStatusBar.setAttribute('style','display:block');
              tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
@@ -1074,7 +1061,7 @@ tabulator.OutlineObject = function(doc) {
     this.showSource = function showSource(){
         //deselect all before going on, this is necessary because you would switch tab,
         //close tab or so on...
-        for each (var sourceRow in sourceWidget.sources)
+        for (var sourceRow in sourceWidget.sources)
             sourceRow.setAttribute('class', ''); //.class doesn't work. Be careful!
         for (var i=0;i<selection.length;i++){
             if (!selection[i].parentNode) {
@@ -1086,7 +1073,7 @@ tabulator.OutlineObject = function(doc) {
             var source = st.why;
             if (source && source.uri) 
                 sourceWidget.highlight(source, true);
-            else if (isExtension && source.termType == 'bnode')
+            else if (tabulator.isExtension && source.termType == 'bnode')
                 sourceWidget.highlight(kb.sym(tabulator.sourceURI), true);
         }
     };
@@ -1111,7 +1098,7 @@ tabulator.OutlineObject = function(doc) {
 
             var about=tabulator.Util.getTerm(node); //show uri for a newly selectedTd
             thisOutline.showURI(about);
-            //if(isExtension && about && about.termType=='symbol') gURLBar.value = about.uri;
+            //if(tabulator.isExtension && about && about.termType=='symbol') gURLBar.value = about.uri;
                            //about==null when node is a TBD
                          
             var st = node.AJAR_statement; //show blue cross when the why of that triple is editable
@@ -1464,7 +1451,7 @@ tabulator.OutlineObject = function(doc) {
             if(about && myDocument.getElementById('UserURI')) { 
                 myDocument.getElementById('UserURI').value = 
                      (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-            } else if(about && isExtension) {
+            } else if(about && tabulator.isExtension) {
                 var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
                 tabStatusBar.setAttribute('style','display:block');
                 tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
@@ -1615,7 +1602,7 @@ tabulator.OutlineObject = function(doc) {
                     choiceQuery,{'clickedTd':p.parentNode});
                 break;
             case tabulator.Icon.src.icon_display_reasons:
-                if(!isExtension) return;
+                if(!tabulator.isExtension) return;
                 var TMS = RDFNamespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
                 var st_to_explain = tabulator.Util.ancestor(target, 'TR').AJAR_statement;
                 //the 'explanationID' triples are used to pass the information
@@ -1669,7 +1656,7 @@ tabulator.OutlineObject = function(doc) {
                     var paneDiv;
                     try {
                         tabulator.log.info('outline: Rendering pane (2): '+pane.name)
-                        paneDiv = pane.render(subject, myDocument, jq);
+                        paneDiv = pane.render(subject, myDocument);
                     }
                     catch(e) { // Easier debugging for pane developers
                         paneDiv = myDocument.createElement("div")
@@ -1869,7 +1856,7 @@ tabulator.OutlineObject = function(doc) {
     }
     
     function outline_refocus(p, subject) { // Shift-expand or shift-collapse: Maximize
-        if(isExtension && subject.termType == "symbol" && subject.uri.indexOf('#')<0) {
+        if(tabulator.isExtension && subject.termType == "symbol" && subject.uri.indexOf('#')<0) {
             gBrowser.selectedBrowser.loadURI(subject.uri);
             return;   
         }
@@ -1917,6 +1904,7 @@ tabulator.OutlineObject = function(doc) {
     // solo    -- optional -- the window will be cleared out and only the subject displayed
     
     this.GotoSubject = function(subject, expand, pane, solo, referrer) {
+        tabulator.log.error("@@ outline.js test 50 tabulator.log.error: $rdf.log.error)"+$rdf.log.error);
         var table = myDocument.getElementById('outline');
         if (solo) tabulator.Util.emptyNode(table);
         
@@ -1929,13 +1917,14 @@ tabulator.OutlineObject = function(doc) {
             tr.appendChild(td)
             return td
         }
-        function GotoSubject_option(){
+        function GotoSubject_option() {
             var lastTr=table.lastChild;
             if (lastTr)
                 return lastTr.appendChild(outline.outline_objectTD(subject,undefined,true));
         }
-        newURI = function(spec) // e.g. see http://www.nexgenmedia.net/docs/protocol/
-       {
+
+        if (tabulator.isExtension) newURI = function(spec) {
+            // e.g. see http://www.nexgenmedia.net/docs/protocol/
             const kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
             const nsIURI = Components.interfaces.nsIURI;
             var uri = Components.classes[kSIMPLEURI_CONTRACTID].createInstance(nsIURI);
@@ -1951,7 +1940,7 @@ tabulator.OutlineObject = function(doc) {
             tr=td.parentNode;
             tabulator.Util.getEyeFocus(tr,false,undefined,window);//instantly: false
         }
-        if (solo) {
+        if (solo && tabulator.isExtension) {
             // See https://developer.mozilla.org/en/NsIGlobalHistory2
             // See <http://mxr.mozilla.org/mozilla-central/source/toolkit/
             //     components/places/tests/mochitest/bug_411966/redirect.js#157>
@@ -2202,8 +2191,12 @@ tabulator.OutlineObject = function(doc) {
           myDocument.URL+"?uri="+myDocument.getElementById('UserURI').value;
     }
 
-    doc.getElementById('docHTML').addEventListener('keypress',function(e){thisOutline.OutlinerKeypressPanel.apply(thisOutline,[e])},false);
-    doc.getElementById('outline').addEventListener('mousedown',thisOutline.OutlinerMouseclickPanel,false);
+    var wholeDoc = doc.getElementById('docHTML');
+    if (wholeDoc) wholeDoc.addEventListener('keypress',function(e){thisOutline.OutlinerKeypressPanel.apply(thisOutline,[e])},false);
+    
+    var outlinePart = doc.getElementById('outline');
+    if (outlinePart) outlinePart.addEventListener('mousedown',thisOutline.OutlinerMouseclickPanel,false);
+    
     //doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
     //Kenny: I cannot make this work. The target of keypress is always <html>.
     //       I tried doc.getElementById('outline').focus();
@@ -2217,7 +2210,7 @@ tabulator.OutlineObject = function(doc) {
     this.UserInput.views=views;
     this.outline_expand=outline_expand;
     
-    if(isExtension) {
+    if(tabulator.isExtension) {
         // dump('myDocument.getElementById("tabulator-display") = '+myDocument.getElementById("tabulator-display")+"\n");
         window.addEventListener('unload',function() {
                 var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");

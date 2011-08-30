@@ -28,7 +28,7 @@ NOTE: Dropdown only shows if
     - When you want to select the first dropdown item, you have to arrow down and up again, not enter directly.
  */
 
-tabulator.Icon.src.icon_pubs = 'chrome://tabulator/content/icons/publication/publicationPaneIcon.gif';
+tabulator.Icon.src.icon_pubs = tabulator.iconPrefix + 'icons/publication/publicationPaneIcon.gif';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_pubs] = 'pubs'; //hover show word
 
 
@@ -43,7 +43,7 @@ tabulator.panes.pubsPane = {
         if (tabulator.kb.whether(
             subject, tabulator.ns.rdf('type'),
             tabulator.ns.foaf('Person'))){
-            dump("pubsPane: the subject is: "+subject);
+            //dump("pubsPane: the subject is: "+subject);
                 return 'pubs';
             } else {
                 return null;

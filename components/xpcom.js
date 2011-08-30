@@ -32,6 +32,8 @@ function Tabulator() {
     var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
                        .getService(Components.interfaces.mozIJSSubScriptLoader);
     loader.loadSubScript("chrome://tabulator/content/js/init/init.js");
+    dump("@@ xpcom.js test 92  $rdf.log.error)"+this.rdf.log.error+"\n");
+
     this.kb = new tabulator.rdf.IndexedFormula();
     this.sf = new tabulator.rdf.Fetcher(this.kb);
     this.kb.sf = this.sf;
@@ -50,7 +52,7 @@ function Tabulator() {
 
     this.sourceWidget.addSource(tabulator.sourceURI);
     var sourceRow = this.sourceWidget.sources[tabulator.sourceURI];
-    sourceRow.childNodes[1].textContent = "Because Tabulator says so...";
+    sourceRow.childNodes[1].textContent = "Direct experience in this session.";
 
     this.kb.register('dc', "http://purl.org/dc/elements/1.1/")
     this.kb.register('rdf', "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
@@ -64,6 +66,8 @@ function Tabulator() {
     this.lb = new Labeler(this.kb,LanguagePreference);
     this.kb.predicateCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
     this.kb.typeCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
+    dump("@@ xpcom.js test 94  $rdf.log.error)"+this.rdf.log.error+"\n");
+
 }//Tabulator
 
 Tabulator.prototype = {

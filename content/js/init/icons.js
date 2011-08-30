@@ -1,7 +1,8 @@
 tabulator.Icon = {};
 tabulator.Icon.src= []
 tabulator.Icon.tooltips= []
-var iconPrefix = 'chrome://tabulator/content/';
+
+var iconPrefix = tabulator.iconPrefix; // e.g. 'chrome://tabulator/content/';
 
 ////////////////////////// Common icons with extension version
 

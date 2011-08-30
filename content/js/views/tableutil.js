@@ -1,4 +1,10 @@
-isExtension = true;
+/// @@@ Only works with tabulator.isExtension 
+
+
+// isExtension = true;
+
+if (!tabulator.isExtension) throw "Coded only for extension";
+
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"]
                     .getService(Components.interfaces.nsISupports)
                     .wrappedJSObject;

@@ -13,7 +13,7 @@ var UserInputFormula; //Formula to store references of user's work
 var TempFormula; //Formula to store incomplete tripes (Requests), 
                  //temporarily disjoint with kb to avoid bugs
 function UserInput(outline){
-    var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    // var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
     var This=this;
     var kb = tabulator.kb;
     
@@ -1160,7 +1160,7 @@ function UserInput(outline){
         }
         This.lastModified.addEventListener('keypress',typeURIhandler,false);
         /*
-        if (false &&isExtension){
+        if (false &&tabulator.isExtension){
             var selectedTd = outline.getSelection()[0];
             emptyNode(selectedTd);
             var textbox = myDocument.createElementNS(kXULNS,'textbox');

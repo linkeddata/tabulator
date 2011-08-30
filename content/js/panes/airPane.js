@@ -766,7 +766,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		      divDescription.informationFound = true;
 		      if (p.lastChild.nodeName=="#text"){
 			var explain_icon = p.appendChild(myDocument.createElement('img'));
-			explain_icon.src = "chrome://tabulator/content/icons/tango/22-help-browser.png";
+			explain_icon.src = tabulator.iconPrefix + "icons/tango/22-help-browser.png";
 			var click_cb = function(){
 			  airPane.renderReasonsForStatement(
 			    p.AJAR_formula, divJustification);
@@ -822,7 +822,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	  throbber_p.setAttribute('class', 'ap_premise_loading')
 	  var throbber = throbber_p.appendChild(myDocument.createElement
 						('img'));
-	  throbber.src = "chrome://tabulator/content/icons/loading.png";
+	  throbber.src = tabulator.iconPrefix + "icons/loading.png";
 	  throbber_p.appendChild(myDocument.createTextNode
 				 ("Looking for more information..."));
 	  divDescription.appendChild(throbber_p);

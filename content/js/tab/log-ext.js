@@ -27,12 +27,16 @@ function TabulatorLogger () {
             str = tabulator.rdf.Util.string.template(str, subs)
         }        
         
+        // Local version to reduce dependencies
+        var escapeForXML = function(str) { // don't use library one in case ithasn't been loaded yet
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        };
         var addendum = this.document.createElementNS('http://www.w3.org/1999/xhtml','span');
         addendum.setAttribute('class', typestr);
         var now = new Date();
         addendum.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds()
-                + " [" + typestr + "] "+ tabulator.Util.escapeForXML(str) + "<br/>";
-        if (tabulator.log.ascending)
+                + " [" + typestr + "] "+ escapeForXML(str) + "<br/>";
+        if (!tabulator.log.ascending)
             this.container.appendChild(addendum);
         else
             this.container.insertBefore(addendum, this.container.firstChild);
@@ -76,4 +80,5 @@ function TabulatorLogger () {
         }catch(e){tabulator.log.warn('Error catched by Tabulator:'+e);}
         this.ele.appendChild(this.container);
     }
+    return this;
 }

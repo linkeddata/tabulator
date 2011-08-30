@@ -1,10 +1,10 @@
 /*   Default Pane
 **
 **  This outline pane contains the properties which are
-**  normaly displayed to the user. See also: innternalPane
+**  normaly displayed to the user. See also: internalPane
 */
 tabulator.panes.defaultPane = {
-    icon:  'chrome://tabulator/content/icons/about.png', // was tabulator.Icon.src.icon_defaultPane,
+    icon:  tabulator.iconPrefix + 'icons/about.png', // was tabulator.Icon.src.icon_defaultPane,
     
     name: 'default',
     
@@ -18,7 +18,7 @@ tabulator.panes.defaultPane = {
         return true;
     },
     
-    render: function(subject, myDocument, jq) {
+    render: function(subject, myDocument) {
         //var doc = myDocument.wrappedJSObject;   Jim? why-tim
         // dump( doc );
         var kb = tabulator.kb;

@@ -5,7 +5,7 @@
 */
 //ToDo: sorted array for optimization, I need a binary search tree... - Kenny
 function Labeler(kb, LanguagePreference){
-    this.kb=kb;
+    this.kb = kb;
     // dump("\nLabeler: INITIALIZED  (...,"+LanguagePreference+")\n");
     var ns = tabulator.ns;
     var trim = function(str){return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');};
@@ -148,7 +148,7 @@ Labeler.prototype={
     // needs to sepcify a predicate.
     // It is called with (usertext, undefined, 'predicate')
     //
-    searchAdv: function(searchString,context,filterType){ //extends search
+    searchAdv: function(searchString, context, filterType){ //extends search
         var filter = (filterType=='predicate')?function(item)
         {return tabulator.kb.predicateIndex[item.hashString()]|| // used as a predicate?
                 //should use transitive closure, but this takes too long

@@ -1,8 +1,11 @@
-loader.loadSubScript("chrome://tabulator/content/js/views/sorttable.js"/*, rootObj*/);
-loader.loadSubScript("chrome://tabulator/content/js/views/tableView.js"/*, rootObj*/);
-loader.loadSubScript("chrome://tabulator/content/js/views/mapView-ext.js"/*, rootObj*/);
-loader.loadSubScript("chrome://tabulator/content/js/views/calView.js"/*, rootObj*/);
-loader.loadSubScript("chrome://tabulator/content/js/views/calView/timeline/api/timelineView.js"/*, rootObj*/);
+
+
+
+tabulator.loadScript("js/views/sorttable.js");
+tabulator.loadScript("js/views/tableView.js");
+tabulator.loadScript("js/views/mapView-ext.js");
+tabulator.loadScript("js/views/calView.js");
+tabulator.loadScript("js/views/calView/timeline/api/timelineView.js");
 
 tabulator.views=[];
 

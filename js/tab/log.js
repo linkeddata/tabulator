@@ -1,7 +1,5 @@
-//TODO: tabulator = {} should be moved to some file that is loaded before
-//      all of the other ones are, so that its declaration isn't in a
-//      really strange place.
-var tabulator = {};
+// Log of diagnositics -- non-extension versions
+
 tabulator.log = {};
 
 /////////////////////////  Logging
@@ -17,27 +15,42 @@ TDEBUG = 32;
 TALL = 63;
 
 tabulator.log.level=TERROR+TWARN+TMESG;
-tabulator.log.ascending=false;
+tabulator.log.ascending = false;
 
-function escapeForXML(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
-}
-
-tabulator.log.msg =function (str, type, typestr) {
+tabulator.log.msg = function (str, type, typestr) {
     if (!type) { type = TMESG; typestr = 'mesg'};
     if (!(tabulator.log.level & type)) return; //bitmask
-    var log_area = document.getElementById('status');
-    if (!log_area) return;
     
-    var addendum = document.createElement("span");
-    addendum.setAttribute('class', typestr);
-    var now = new Date();
-    addendum.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds()
-            + " [" + typestr + "] "+ escapeForXML(str) + "<br/>";
-    if (tabulator.log.ascending)
-        log_area.appendChild(addendum);
-    else
-        log_area.insertBefore(addendum, log_area.firstChild);
+    if (typeof document != 'undefined') { // Not AJAX environment
+
+        
+        var log_area = document.getElementById('status');
+        if (!log_area) return;
+        
+        // Local version to reduce dependencies
+        var escapeForXML = function(str) { // don't use library one in case ithasn't been loaded yet
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        };
+        
+        var addendum = document.createElement("span");
+        addendum.setAttribute('class', typestr);
+        var now = new Date();
+        addendum.innerHTML = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds()
+                + " [" + typestr + "] "+ escapeForXML(str) + "<br/>";
+        if (!tabulator.log.ascending)
+            log_area.appendChild(addendum);
+        else
+            log_area.insertBefore(addendum, log_area.firstChild);
+
+
+    } else if (typeof console != 'undefined') { // node.js
+        console.log(msg);
+        
+    } else {
+        var f = (dump ? dump : print );
+        if (!f) throw "log: No way to output message: "+str;
+        f("Log: "+str + '\n');
+    }
 } //tabulator.log.msg
 
 tabulator.log.warn = function(msg) { tabulator.log.msg(msg, TWARN, 'warn') };

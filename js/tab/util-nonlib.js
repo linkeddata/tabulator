@@ -1,4 +1,8 @@
-
+//                  Tabulator Utilities
+//                  ===================
+//
+// This must load AFTER the rdflib.js and log-ext.js (or log.js).
+//
 if (typeof tabulator.Util == "undefined") tabulator.Util = {};
 
 if (typeof tabulator.Util.nextVariable == "undefined") tabulator.Util.nextVariable = 0;
@@ -47,6 +51,33 @@ tabulator.Util.stackString = function(e){
     };
     return str;
 }
+
+
+
+
+
+// Now  --afetr the rdflib.js scripts set up a dummy -- 
+// overwrite RDF's dummy logger with Tabulator's :
+// Overwrite the default dummy logger in rdf/Utils.js with a real one//
+// $rdf.log = tabulator.log;    // @@ Doesn't work :-( tbl
+//
+
+try {
+    tabulator.log.error("RDF error logger was " + $rdf.log.error); // @@
+    $rdf.log = tabulator.log;
+    //$rdf.log.error = function(s){tabulator.log.error(s)};
+    // for (var x in tabulator.log) $rdf.log[x] = tabulator.log[x];
+    tabulator.log.error("@@ init.js test 1 tabulator.log.error"+$rdf.log.error);
+    $rdf.log.error("@@ init.js test 2 rdf.log.error");
+    tabulator.log.error("RDF error logger is now" + $rdf.log.error); // @@
+} catch(e) { // Easier debugging
+    dump("\nJS exception:" + tabulator.Util.stackString(e));
+    //tabulator.log.error("JS exception:" + tabulator.Util.stackString(e));
+}
+
+
+
+
 
 // @@ This shoud be in rdf.uri
 

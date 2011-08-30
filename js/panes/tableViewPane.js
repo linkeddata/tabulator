@@ -163,7 +163,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     function generateSparqlButton() {
         var image = doc.createElement("img");
         image.setAttribute("class", "sparqlButton");
-        image.setAttribute("src", "chrome://tabulator/content/icons/1pt5a.gif");
+        image.setAttribute("src", tabulator.iconPrefix + "icons/1pt5a.gif");
         image.setAttribute("alt", "Edit SPARQL query");
 
         image.addEventListener("click", sparqlButtonPressed, false);
@@ -1043,7 +1043,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             if (doMultiple) {
                 searchValue = {}; 
                 var opt = dropdown.options;
-                dump('dropdown '+dropdown+', options a '+typeof dropdown.options +'\n') // +' array? '+ dropdown.options instanceof Array
+                // dump('dropdown '+dropdown+', options a '+typeof dropdown.options +'\n') // +' array? '+ dropdown.options instanceof Array
                 for (var i=0; i< opt.length; i++) {
                     var option = opt[i];
                     var index = new Number(option.value);
@@ -1051,8 +1051,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 }
 //                dropdown.options.map(function(option){
 //                    if (option.selected) searchValue[list[0+option.value].uri] = true})
-                dump('searchValue:'); for (var x in searchValue) dump(' '+x+': '+searchValue[x]+'; '); // @@TBL
-                dump('\n'); // @@TBL
+                // dump('searchValue:'); for (var x in searchValue) dump(' '+x+': '+searchValue[x]+'; '); // @@TBL
+                // dump('\n'); // @@TBL
                 
             } else {
                 if (index < 0) { // All
@@ -1166,9 +1166,9 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 return renderEnumSelector(rows, columns, column, column.alternatives);
 
         var cs = column.getConstraints();
-        dump('column.constraints ='+cs+', .length '+cs.length+', type= '+typeof cs+'\n')
-        //var cons = cs.map(function(c){return tabulator.Util.label(c)}).join(', ');
-        dump(' column '+column.variable+'  Pred: '+column.predicate+'  superClass: '+column.superClass+'\n');
+        // dump('column.constraints ='+cs+', .length '+cs.length+', type= '+typeof cs+'\n')
+        // var cons = cs.map(function(c){return tabulator.Util.label(c)}).join(', ');
+        // dump(' column '+column.variable+'  Pred: '+column.predicate+'  superClass: '+column.superClass+'\n');
         for (i=0; i<cs.length; i++) {
             range = cs[i];
 

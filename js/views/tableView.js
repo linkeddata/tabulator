@@ -340,7 +340,7 @@ function tableView(container,doc)
         if (!selTD.stat) {saveAddRowText(newText); return;};
         tabulator.log.msg('sparql update with stat: ' + selTD.stat);
         tabulator.log.msg('new object will be: ' + kb.literal(newText, ''));
-        if (isExtension) {sparqlUpdate = sparql.update_statement(selTD.stat);}
+        if (tabulator.isExtension) {sparqlUpdate = sparql.update_statement(selTD.stat);}
         else {sparqlUpdate = new sparql(kb).update_statement(selTD.stat);}
         // TODO: DEFINE ERROR CALLBACK
         //selTD.stat.object = kb.literal(newText, '');
@@ -547,7 +547,7 @@ function tableView(container,doc)
                 
                 // sparql update; for each cell in the completed row, send the value of the stat pointer
                 tabulator.log.msg('sparql update with stat: ' + td.stat);
-                if (isExtension) {sparqlUpdate = sparql}
+                if (tabulator.isExtension) {sparqlUpdate = sparql}
                 else {sparqlUpdate = new sparql(kb)}
                 // TODO: DEFINE ERROR CALLBACK
                 sparqlUpdate.insert_statement(td.stat, function(uri,success,error_body) {

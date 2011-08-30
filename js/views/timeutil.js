@@ -1,7 +1,9 @@
-isExtension=true;
+//     @@@@ Note only works with extension
+
+// isExtension=true;
 
 if ((typeof lb) == "undefined") {
-      lb = Components.classes["@dig.csail.mit.edu/tabulator;1"]
+      lb = Components.classes["@dig.csail.mit.edu/tabulator;1"] // @@@ tabulator.isExtension
                     .getService(Components.interfaces.nsISupports)
                     .wrappedJSObject.lb;
 }

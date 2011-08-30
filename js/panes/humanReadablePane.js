@@ -10,8 +10,8 @@ tabulator.panes.register({
     name: 'humaReadable',
     
     label: function(subject, myDocument) {
-        //recursive iframe is not allowed
-        if (isExtension && myDocument.location == subject.uri) return null;
+        //recursive iframe is not allowed (eh? -tim)
+        if (tabulator.isExtension && myDocument.location == subject.uri) return null;
         var kb = tabulator.kb;
         var request = kb.any(subject, tabulator.ns.link("request"));
         if (!request) return null;

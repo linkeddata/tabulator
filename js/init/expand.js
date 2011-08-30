@@ -1,17 +1,16 @@
 // Expand a script to insert the included files in place
 //
-// Run under node.js
+// Run under node.js a la
+//
+// node expand.js init.js > lib.js
 //
 
-console.log("// @@@ Starting")
 var fs = require('fs');
-
 var prefix = '../../' ; // Take up to the directory above js
 
 var expand = function(filename) {
     console.log("// ###### Expanding "+filename+" ##############");
     var s = fs.readFileSync(prefix + filename, 'utf8');
-    // console.log("// Read file "+filename + " length "+s.length);
     var i = 0;
     var l = s.length;
     var eol = 0;
@@ -38,7 +37,7 @@ var expand = function(filename) {
     return;
 };
 
-expand('js/init/init.js');
+expand(process.argv[2]);
 
 
 // ends

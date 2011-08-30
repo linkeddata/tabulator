@@ -12,9 +12,9 @@
 tabulator.panes.jscolor = function() {
     jscolor = {
 
-        // All the following 4 chnaged for tabulator
-	dir : 'chrome://tabulator/content/js/jscolor', // location of jscolor directory (leave empty to autodetect)
-	bindClass : 'color', // class name
+        // All the following 4 changed for tabulator
+	dir : tabulator.scriptBase + 'js/jscolor', // location of jscolor directory (leave empty to autodetect)
+	bindClass : 'colorPicker', // class name
 	binding : false, // automatic binding via <input class="...">
 	preloading : false, // use image preloading?
 

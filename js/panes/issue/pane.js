@@ -510,10 +510,12 @@ tabulator.panes.register( {
                 var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query} );
                 div.appendChild(tableDiv);
             });
+        // end of Tracker instance
 
-        } // end of Tracker instance
-        
-        if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
+        } else { 
+            complain("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
+        }         
+        if (!me) complain("(You do not have your Web Id set. Set your Web ID to make changes.)");
 
         return div;
     }

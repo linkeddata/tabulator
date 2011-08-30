@@ -1,6 +1,6 @@
 /**
  *
- * INITIALIZATION CODE...
+ * INITIALIZATION CODE... for the Tabulator Firefox Extension
  *
  * Tabulator has a lot of things going on.
  * Previously, all of these things were declared in one huge file.
@@ -8,6 +8,9 @@
  * more easily.  The following loadSubScript calls each make
  * different pieces of the tabulator library available, while keeping those
  * definitions out of the XPCOM code.
+ * In some variations of the code, the tabulator.loadScript() calls are
+ * instead actually expanded inline during library generation.
+ * So these if commented out must be commented with a leading //
  *
  * The only assumption that this file makes is that the global name "tabulator"
  * has already been defined in this scope.
@@ -17,66 +20,54 @@
 var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
     .getService(Components.interfaces.mozIJSSubScriptLoader);
 
+tabulator.isExtension = true;
+tabulator.iconPrefix = 'chrome://tabulator/content/';
+
+tabulator.loadScript = function(uri) {
+    dump("@@ Loading "+uri+"\n");
+    loader.loadSubScript('chrome://tabulator/content/'+ uri);
+}
+
 //Before anything else, load up the logger so that errors can get logged.
-loader.loadSubScript("chrome://tabulator/content/js/tab/log-ext.js");
+tabulator.loadScript("js/tab/log-ext.js");
+
 tabulator.log = new TabulatorLogger();
+dump("@@@ init.js Inital setting of tabulator.log\n");
 
 //Load the RDF Library, which defines itself in the namespace $rdf.
-// see the script rdf/create-lib (this script creates one file -rdflib.js that concatenates all the following js files)
-/*loader.loadSubScript("chrome://tabulator/content/js/rdf/util.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/uri.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/term.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/match.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfparser.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfa.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/n3parser.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/identity.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/rdfs.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/query.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/serialize.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/sparqlUpdate.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/sparql.js");
-loader.loadSubScript("chrome://tabulator/content/js/rdf/web.js");*/
-loader.loadSubScript("chrome://tabulator/content/js/rdf/rdflib.js");
+// see the script rdf/create-lib which creates one file, rdflib.js
+// by concatenating all the js files)
+
+tabulator.loadScript("js/rdf/rdflib.js");
 tabulator.rdf = $rdf;
 
-// Overwrite the default dummy logger in rdf/Utils.js with a real one
-// $rdf.log2 = tabulator.log;    @@ Doesn't work :-( tbl
 
 //Load the icons namespace onto tabulator.
-loader.loadSubScript("chrome://tabulator/content/js/init/icons.js");
+tabulator.loadScript("js/init/icons.js");
 //And Namespaces..
-loader.loadSubScript("chrome://tabulator/content/js/init/namespaces.js");
+tabulator.loadScript("js/init/namespaces.js");
 //And Panes.. (see the below file to change which panes are turned on)
-loader.loadSubScript("chrome://tabulator/content/js/init/panes.js");
-loader.loadSubScript("chrome://tabulator/content/js/jscolor/jscolor.js");
+tabulator.loadScript("js/init/panes.js");
+tabulator.loadScript("js/jscolor/jscolor.js");
 //And Preferences mechanisms.
-loader.loadSubScript("chrome://tabulator/content/js/init/prefs.js");
+tabulator.loadScript("js/init/prefs.js");
 
 //Now, load tabulator sourceWidget code.. the sources.js became rdf/web.js
-loader.loadSubScript("chrome://tabulator/content/js/tab/util-nonlib.js");
-loader.loadSubScript("chrome://tabulator/content/js/tab/sources-ext.js");
+tabulator.loadScript("js/tab/util-nonlib.js");
+
+tabulator.loadScript("js/tab/sources-ext.js");
 
 //And, finally, all non-pane UI code.
-loader.loadSubScript("chrome://tabulator/content/js/tab/labeler.js");
-loader.loadSubScript("chrome://tabulator/content/js/tab/request.js");
-loader.loadSubScript("chrome://tabulator/content/js/tab/outlineinit.js");
-// loader.loadSubScript("chrome://tabulator/content/js/tab/updateCenter.js"); obsolete, moved to rdf/sparqlUpdate.js
-loader.loadSubScript("chrome://tabulator/content/js/tab/userinput.js");
-loader.loadSubScript("chrome://tabulator/content/js/tab/outline.js");
+tabulator.loadScript("js/tab/labeler.js");
+tabulator.loadScript("js/tab/request.js");
+tabulator.loadScript("js/tab/outlineinit.js");
+tabulator.loadScript("js/tab/userinput.js");
+tabulator.loadScript("js/tab/outline.js");
 
 //Oh, and the views!
-//@@ jambo commented this out to pare things down temporarily.
-loader.loadSubScript("chrome://tabulator/content/js/init/views.js");
+tabulator.loadScript("js/init/views.js");
 
 
-//TODO: SEPARATE.
-
-//generate a UID for each thing to be drawn in tabulator, so that
-//tabulator only renders in a page if the extension explicitly
-//decided to do so.. (before it just relied on the existence of
-//the class "TabulatorOutline" on a div, and had data exposure
-//issues.)
 
 tabulator.requestUUIDs = {};
 
@@ -246,66 +237,68 @@ observerService.addObserver(httpRequestObserver,
 tabulator.pumpRDFa = function(e){
      
 
-        // if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
-	var uri = gURLBar.value;
-        
-	// From init/init.js
-        var uuidGenerator = 
-            Components.classes["@mozilla.org/uuid-generator;1"]
-            .getService(Components.interfaces.nsIUUIDGenerator);
-        var uuid = uuidGenerator.generateUUID();
-        var uuidString = uuid.toString();
-        
-        tabulator.requestUUIDs[uuidString] = uri;
-
-	var doc = window.content.document;
-        //Remove all the style sheet elements and scripts
-        
-	$jq('head', doc).empty();
-	$jq('body', doc).empty();
-	$jq('html', doc).attr("id","docHTML");
-        // doc.innerHTML = tabulator.outlineTemplate; // Reset doc entirely
-
-
-    //@@ from jambo, WARNING ! the way that this code operates HAS BEEN CHANGED
-    // a UUID nonce is now used to identify the document to display..
-    // I am not sure if this will affect the execution of this code when
-    // it gets re-enabled.  If you experience issues, feel free to email
-    // me and I will help resolve it.
-    // For refs on how to do this, see init/init.js, where
-    // tabulator.requestUUIDs is used.
-	$jq('head', doc).append("<title>Data View</title>\n"+
-        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
-        "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"
-        );
-	$jq('body', doc).append("<div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
-        "<table id=\"outline\"></table>\n"+
-        "</div>\n"
-        );
-
-	//Add the Tabulator outliner
-        var outline = new tabulator.OutlineObject(doc)
-
-	var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
-        
-	outline.init();
-
-	var nsIURI = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(uri, null, null); //ToDo: make sure the encoding is correct
-	gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
-	
-	var queryButton = doc.createElement('input');
-	queryButton.setAttribute('id','queryButton');
-	queryButton.setAttribute('style','display:none;');
-	queryButton.setAttribute('type','button');
-	queryButton.setAttribute('value','Find All');
-	doc.body.appendChild(queryButton);
-	queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
-
-            
-        outline.GotoSubject(tabulator.kb.sym(uri),true);
-
-    }
+    // if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    var uri = gURLBar.value;
     
+    // From init/init.js
+    var uuidGenerator = 
+        Components.classes["@mozilla.org/uuid-generator;1"]
+        .getService(Components.interfaces.nsIUUIDGenerator);
+    var uuid = uuidGenerator.generateUUID();
+    var uuidString = uuid.toString();
+    
+    tabulator.requestUUIDs[uuidString] = uri;
+
+    var doc = window.content.document;
+    //Remove all the style sheet elements and scripts
+    
+    $jq('head', doc).empty();
+    $jq('body', doc).empty();
+    $jq('html', doc).attr("id","docHTML");
+    // doc.innerHTML = tabulator.outlineTemplate; // Reset doc entirely
+
+
+//@@ from jambo, WARNING ! the way that this code operates HAS BEEN CHANGED
+// a UUID nonce is now used to identify the document to display.
+// I am not sure if this will affect the execution of this code when
+// it gets re-enabled.  If you experience issues, feel free to email
+// me and I will help resolve it.
+// For refs on how to do this, see init/init.js, where
+// tabulator.requestUUIDs is used.
+
+    $jq('head', doc).append("<title>Data View</title>\n"+
+    "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
+    "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"
+    );
+    $jq('body', doc).append("<div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
+    "<table id=\"outline\"></table>\n"+
+    "</div>\n"
+    );
+
+    //Add the Tabulator outliner
+    var outline = new tabulator.OutlineObject(doc)
+
+    var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
+    
+    outline.init();
+
+    var nsIURI = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(uri, null, null); //ToDo: make sure the encoding is correct
+    gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
+    
+    var queryButton = doc.createElement('input');
+    queryButton.setAttribute('id','queryButton');
+    queryButton.setAttribute('style','display:none;');
+    queryButton.setAttribute('type','button');
+    queryButton.setAttribute('value','Find All');
+    doc.body.appendChild(queryButton);
+    queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
+
+        
+    outline.GotoSubject(tabulator.kb.sym(uri),true);
+
+}
+    
+tabulator.log.error("@@ init.js test 90 tabulator.log.error: $rdf.log.error)"+$rdf.log.error);
 
     
 // Ends

@@ -1,5 +1,8 @@
-isExtension = true;
+// Used.
+
 var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
+
+tabulator.isExtension = true;
 
 function isFirefox3(){ //from http://developer.mozilla.org/en/docs/Using_nsIXULAppInfo
     var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]

@@ -22,13 +22,16 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
     render: function(s, myDocument) {
 
-        var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+        if (tabulator.isExtension) {
+            var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+            var alert1 = prompts.alert;
+        } else {
+            var alert1 = alert;
+        };
 
-	    var common = function(x,y) { // Find common members of two lists
-    //            var dict = [];
+        var common = function(x,y) { // Find common members of two lists
             var both = [];
             for(var i=0; i<x.length; i++) {
-    //                dict[x[i].uri] = true;
                 for(var j=0; j<y.length; j++) {
                     if (y[j].sameTerm(x[i])) {
                         both.push(y[j]);
@@ -39,6 +42,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             }
             return both;
         }
+            
         var plural = function(n, s) {
             var res = ' ';
             res+= (n ? n : 'No');
@@ -88,14 +92,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                prompts.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
+                                alert1(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
                                 input.checked = false; //rollback UI
                                 return;
                             }
                             kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
                         })
                     }catch(e){
-                        prompts.alert(null,"Message","Data write fails:" + e);
+                        alert1(null,"Message","Data write fails:" + e);
                         input.checked = false; //rollback UI
                         tx.className = 'question';
                     }
@@ -104,14 +108,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                prompts.alert(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
+                                alert1(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
                                 this.checked = true; // Rollback UI
                             } else {
                                 kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
                             }
                         })
                     }catch(e){
-                        prompts.alert(null,"Message","Delete fails:" + e);
+                        alert1(null,"Message","Delete fails:" + e);
                         this.checked = true; // Rollback UI
                         return;
                     }
@@ -170,7 +174,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         gotOne = function(ele) {
             var webid = myDocument.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
-            prompts.alert(null,"Message","You ID has been set to "+webid);
+            alert1(null,"Message","You ID has been set to "+webid);
             ele.parentNode.removeChild(ele);
         }
 
@@ -403,7 +407,7 @@ web ID</a>?<br/>\
             but.setAttribute('value', 'Forget my Web ID');
             var zapIt = function() {
                 tabulator.preferences.set('me','');
-                prompts.alert(null,"Message",'Your Web ID was '+me_uri+'. It has been forgotten.');
+                alert1(null,"Message",'Your Web ID was '+me_uri+'. It has been forgotten.');
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             but.addEventListener('click', zapIt, false);
@@ -423,7 +427,7 @@ web ID</a>?<br/>\
             var myHandler = function(e) {
                 var uri = this.checked? s.uri : '';
                 tabulator.preferences.set('me', uri);
-                prompts.alert(null,"Message",'Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
+                alert1(null,"Message",'Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             input.setAttribute('type', 'checkbox');

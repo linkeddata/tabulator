@@ -1,3 +1,5 @@
+// Data Source List   - Provenance - Firefox Extension verion
+
 function SourceWidget(container) {
     var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                    .getService(Components.interfaces.nsIWindowMediator);                   

@@ -111,8 +111,8 @@ jQuery(document).ready(function(){
 
 
     tabulator.requestUUIDs = {};
-
-    // This has an empty id attribute instead of uuid string, beware.
+/*
+    // This has an empty id attribute instead of uuid string, beware. Not used
     tabulator.outlineTemplate = //    ###    This needs its link URIs adjusting! @@@
             // "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
             "<html id='docHTML'>\n"+
@@ -127,7 +127,7 @@ jQuery(document).ready(function(){
             "        </div>\n"+
             "    </body>\n"+
             "</html>\n";
-
+*/
     // complain("@@ init.js test 118 )");
 
 

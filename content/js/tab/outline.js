@@ -1061,8 +1061,8 @@ tabulator.OutlineObject = function(doc) {
     this.showSource = function showSource(){
         //deselect all before going on, this is necessary because you would switch tab,
         //close tab or so on...
-        for (var sourceRow in sourceWidget.sources)
-            sourceRow.setAttribute('class', ''); //.class doesn't work. Be careful!
+        for (var uri in sourceWidget.sources)
+            sourceWidget.sources[uri].setAttribute('class', ''); //.class doesn't work. Be careful!
         for (var i=0;i<selection.length;i++){
             if (!selection[i].parentNode) {
                 dump("showSource: EH? no parentNode? "+selection[i]+"\n");
@@ -1506,7 +1506,7 @@ tabulator.OutlineObject = function(doc) {
             var outer
             var i = tsrc.indexOf('/icons/')
             //TODO: This check could definitely be made cleaner.
-            if (i >=0 && tsrc.search('chrome://tabulator/content/icons')==-1) tsrc=tsrc.slice(i+1) // get just relative bit we use
+            // if (i >=0 && tsrc.search('chrome://tabulator/content/icons') == -1) tsrc=tsrc.slice(i+1) // get just relative bit we use
             tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
             tabulator.log.debug("\nEvent: about=" + about)
 									   
@@ -2205,10 +2205,10 @@ tabulator.OutlineObject = function(doc) {
     //doc.getElementById('outline').addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
 
     //a way to expose variables to UserInput without making them propeties/methods
-    this.UserInput.setSelected=setSelected;
-    this.UserInput.deselectAll=deselectAll;
-    this.UserInput.views=views;
-    this.outline_expand=outline_expand;
+    this.UserInput.setSelected = setSelected;
+    this.UserInput.deselectAll = deselectAll;
+    this.UserInput.views = views;
+    this.outline_expand = outline_expand;
     
     if(tabulator.isExtension) {
         // dump('myDocument.getElementById("tabulator-display") = '+myDocument.getElementById("tabulator-display")+"\n");

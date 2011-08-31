@@ -1,3 +1,5 @@
+
+
 function StatusWidget() {
 
     var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;

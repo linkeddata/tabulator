@@ -56,7 +56,7 @@ tabulator.loadScript("js/panes/defaultPane.js");
 
 //tabulator.loadScript("js/panes/newOutline.js");
 tabulator.loadScript("js/panes/ui/pane.js");
-tabulator.loadScript("js/panes/categoryPane.js");
+// tabulator.loadScript("js/panes/categoryPane.js");  // Not useful enough
 tabulator.loadScript("js/panes/pubsPane.js");
 
 //@@ jambo commented these things out to pare things down temporarily.

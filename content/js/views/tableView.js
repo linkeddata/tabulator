@@ -103,8 +103,8 @@ function tableView(container,doc)
         numCols = nv;
         
         // auto completion array
-        entryArray = lb.entry;
-        for (i = 0; i<lb.entry.length; i++) {
+        entryArray = tabulator.lb.entry;
+        for (i = 0; i<tabulator.lb.entry.length; i++) {
             autoCompArray.push(entryArray[i][0].toString());
             entryArray = entryArray.slice(0);
         }

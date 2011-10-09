@@ -22,13 +22,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
     render: function(s, myDocument) {
 
-        if (tabulator.isExtension) {
-            var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
-            var alert1 = prompts.alert;
-        } else {
-            var alert1 = alert;
-        };
-
+ 
         var common = function(x,y) { // Find common members of two lists
             var both = [];
             for(var i=0; i<x.length; i++) {
@@ -92,14 +86,15 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert1(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
+                                tabulator.log.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
                                 input.checked = false; //rollback UI
                                 return;
                             }
                             kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
                         })
                     }catch(e){
-                        alert1(null,"Message","Data write fails:" + e);
+                        tabulator.log.error("Data write fails:" + e);
+                        tabulator.log.alert("Data write fails:" + e);
                         input.checked = false; //rollback UI
                         tx.className = 'question';
                     }
@@ -108,14 +103,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert1(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
+                                tabulator.log.alert("Error occurs while deleting "+statement+'\n\n'+error_body);
                                 this.checked = true; // Rollback UI
                             } else {
                                 kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
                             }
                         })
                     }catch(e){
-                        alert1(null,"Message","Delete fails:" + e);
+                        tabulator.log.alert("Delete fails:" + e);
                         this.checked = true; // Rollback UI
                         return;
                     }
@@ -174,7 +169,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         gotOne = function(ele) {
             var webid = myDocument.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
-            alert1(null,"Message","You ID has been set to "+webid);
+            tabulator.log.alert("You are now logged in as "+webid);
             ele.parentNode.removeChild(ele);
         }
 
@@ -182,7 +177,6 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         tryFoaf = function() {
 
             myDocument.getElementById("saveStatus").className = "unknown";
-            var form = myDocument.getElementById("socialBootForm");
 
             // Construct the initial FOAF file when the form bellow is submitted
             var inputField = myDocument.getElementById("fileuri_input");
@@ -281,138 +275,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         var h3 = myDocument.createElement("H3");
         h3.appendChild(myDocument.createTextNode(name));
 
-        var me_uri = tabulator.preferences.get('me');
-        var me = me_uri? kb.sym(me_uri) : null;
         var div2 = myDocument.createElement("div");
 
+        // @@ Addd: event handler to redraw the stuff below when me changes.
+        tips.appendChild(tabulator.panes.utils.loginStatusBox(myDocument));
         
-        // If the user has no WebID that we know of
-        if (!me) {
-            var box = myDocument.createElement('div');
-            var p = myDocument.createElement('p');
-            box.appendChild(p);
-            box.className="mildNotice";
-            p.innerHTML = ("Tip:  Do you have <a target='explain' href='http://esw.w3.org/topic/WebID'>" +
-                "web ID</a>?<br/><i>  ");
-            var but = myDocument.createElement('input');
-            box.appendChild(but);
-            but.setAttribute('type', 'button');
-            but.setAttribute('value', 'Make or set A Web ID');
-            var makeOne = function() {
-                box.parentNode.removeChild(box); // Tip has been taken up!
-                var foo = myDocument.createElement('div');
-                main.insertBefore(foo, main.firstChild);
-                // This is an encoded verion of webid.html
-                foo.innerHTML = "\
-<div class='task'>\
-<p>Do you have <a target=\"explain\" href=\"http://esw.w3.org/topic/WebID\" >\
-web ID</a>?<br/>\
-</p>\
-<ul>\
-    <li>\
-        <p class=\"answer\"  onclick=\"document.getElementById('WebIdHelp').className='tip'\">\
-        What is A Web ID?</p>\
-        <div id=\"WebIdHelp\" class=\"unknown\">\
-            <p>    A Web ID is a URL for you. \
-            It allows you to set up a public profile, with friends, pictures and all kinds of things.\
-            </p><p>\
-            It works like having an account on a social networking site,\
-            but it isn't restricted to just that site.\
-            It is very open because the information can connect to other people,\
-            organizations and projects and so on, without everyon having to join the same\
-            social networking site.\
-            All you need is some place on the web where you can save a file to.\
-            (<a  target='explain' href=\"http://esw.w3.org/topic/WebID\">More on the wiki</a>) \
-            <span onclick=\"document.getElementById('WebIdHelp').className='unknown'\">(close)</span>\
-            </p>\
-        </div>\
-    </li>\
-    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='yes'\">\
-    Yes, I have a web ID\
-    </li>\
-    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='no'\">\
-    No, I would like to make one\
-    </li>\
-</ul>\
-<div id=\"WhetherWebId\" class=\"unknown\">\
-    <div class=\"affirmative\">\
-        <p>What is your Web ID?</p>\
-        <p>\
-            <input id='webidField' name=\"webid\" type=\"text\" style='width:100%' value=\"http:\"/>\
-            <br/>\
-            <input id='gotOneButton' type=\"button\" value=\"Use this ID\"/>\
-        </p>\
-    </div>\
-    <div class=\"negative\">\
-        <p>Ok, Let's make one.  Would you like to use your real name, or make it anonymous?</p>\
-        <ul>\
-            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='no'\">\
-            I would like to use my real name. (Recommended, for example, for professionals who have\
-            and want public visibility).\
-            </li>\
-            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='yes'\">\
-            I would like to be anonymous. (If you are a child, use this.) \
-            </li>\
-        </ul>\
-\
-        <div id=\"WhetherAnon\" class=\"unknown\">\
-            <div class=\"affirmative\">\
-                <p>Think of a nick name, handle, or screen name by which you would like to be known.\
-                Or one by which you are already known online.\
-                    <br/>\
-                    <input name=\"nick\" type=\"text\" size=\"40\" id=\"nick_input\"/>\
-                </p>\
-            </div>\
-            <div class=\"negative\">\
-                <p>What is your name?  (A full name in the normal order in which you prefer it,\
-                such as Bill Gates, or Marie-Claire Forgue. Normally people omit \
-                prefixes, like Dr., and suffixes, like PhD, but it is up to you.)\
-                <br/><input name=\"foafname\" type=\"text\" size=\"40\" id=\"foafname_input\"/>\
-                </p>\
-                <p>Your initials? (These will be used as part of your web ID)\
-                <br/><input name=\"initials\" type=\"text\" size=\"10\" id=\"initials_input\"/>\
-                </p>\
-            </div>\
-            <p>You need the URI of a file which you can write to on the web.\
-            (The general public should be able to read it but not change it.\
-            The server should support the <em>WebDAV</em> protocol.)<br/>\
-            It will typcially look something like:<br/>\
-            http://www.example.com/users/gates/foaf.rdf<br/><br/>\
-                 <input name=\"fileuri\" type=\"text\" size=\"80\" id=\"fileuri_input\"\
-                     value=\"http://your.isp.com/...something.../foaf.rdf\"\
-                     />\
-            <br/>\
-            <input id=\"tryFoafButton\" type=\"button\" value=\"Create my new profile\" onclickOFF =\"tryFoaf()\"/>\
-            </p>\
-        </div>\
-\
-    </div>\
-    <div id=\"saveStatus\" class=\"unknown\">\
-    </div>\
-</div>\
-</div>\
-";
-                var button = myDocument.getElementById('tryFoafButton');
-                button.addEventListener('click', function(){ return tryFoaf()}, false);
-                button = myDocument.getElementById('gotOneButton');
-                button.addEventListener('click', function(){ return gotOne(foo)}, false);
-            }
-            but.addEventListener('click', makeOne, false);
-            tips.appendChild(box); 
-        } else {  // We do have a webid
-            var but = myDocument.createElement('input');
-            tips.appendChild(but);
-            but.className = 'WebIDCancelButton';
-            but.setAttribute('type', 'button');
-            but.setAttribute('value', 'Forget my Web ID');
-            var zapIt = function() {
-                tabulator.preferences.set('me','');
-                alert1(null,"Message",'Your Web ID was '+me_uri+'. It has been forgotten.');
-                // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-            }
-            but.addEventListener('click', zapIt, false);
-        }
-
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri && kb.sym(me_uri);
+        
         var thisIsYou = (me && kb.sameThings(me,s));
 
         if (!me || thisIsYou) {  // If we know who me is, don't ask for other people
@@ -427,7 +297,8 @@ web ID</a>?<br/>\
             var myHandler = function(e) {
                 var uri = this.checked? s.uri : '';
                 tabulator.preferences.set('me', uri);
-                alert1(null,"Message",'Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
+                tabulator.log.alert('You are now '+ (uri ? 'logged in as ' + uri :
+                    'logged out. To log in again, find yourself and check "This is you".'));
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             input.setAttribute('type', 'checkbox');

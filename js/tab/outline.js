@@ -176,6 +176,7 @@ tabulator.OutlineObject = function(doc) {
 
 
     this.appendAccessIcon = function(node, uri) {
+        if (!uri) return '';
         var docuri = tabulator.rdf.Util.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
         var state = sf.getState(docuri);
@@ -238,88 +239,41 @@ tabulator.OutlineObject = function(doc) {
      
      {
      
-        display = window.open(" ",'NewWin','menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
+        display = window.open(" ",'NewWin',
+            'menubar=0,location=no,status=no,directories=no,toolbar=no,scrollbars=yes,height=200,width=200')
      
         display.tabulator = tabulator;
+        tabulator.options.names = [ 'BY-NC-ND', 'BY-NC-SA', 'BY-NC', 'BY-ND', 'BY-SA', 'BY'];
                                   
         var message="<font face='arial' size='2'><form name ='checkboxes'>";
-                 
-        if(tabulator.options.checkedLicenses[0]){    
-            message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-ND<br />";        
-        }
-        
-        else{
-            message+="<input type='checkbox' name = 'one' onClick = 'tabulator.options.submit()' />CC: BY-NC-ND<br />";
-        }
-        
-        if(tabulator.options.checkedLicenses[1]){    
-            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC-SA<br />";        
-        }
-                
-        else{
-            message+="<input type='checkbox' name = 'two' onClick = 'tabulator.options.submit()' />CC: BY-NC-SA<br />";
-        }
-        if(tabulator.options.checkedLicenses[2]){    
-            message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-NC<br />";        
-        }
-                
-                else{
-                    message+="<input type='checkbox' name = 'three' onClick = 'tabulator.options.submit()' />CC: BY-NC<br />";
-        }
-         if(tabulator.options.checkedLicenses[3]){    
-                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-ND<br />";        
-                }
-                
-                else{
-                    message+="<input type='checkbox' name = 'four' onClick = 'tabulator.options.submit()' />CC: BY-ND<br />";
-        }
-         if(tabulator.options.checkedLicenses[4]){    
-                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' CHECKED />CC: BY-SA<br />";        
-                }
-                
-                else{
-                    message+="<input type='checkbox' name = 'five' onClick = 'tabulator.options.submit()' />CC: BY-SA<br />";
-        }
-         if(tabulator.options.checkedLicenses[5]){    
-                    message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' CHECKED />CC: BY<br />";        
-                }
-                
-         else{
-             message+="<input type='checkbox' name = 'six' onClick = 'tabulator.options.submit()' />CC: BY<br />";
-        }
+        var lics = tabulator.options.checkedLicenses;
+        for (var kk =0; kk< lics.length; kk++)
+            message += "<input type='checkbox' name = 'n"+kk+
+                "' onClick = 'tabulator.options.submit()'"
+                + (lics[kk] ? "CHECKED" : "") + " />CC: "+tabulator.options.names[kk]+"<br />";
                  
         message+="<br /> <a onclick='tabulator.options.selectAll()'>[Select All] </a>";
-                 
         message+="<a onclick='tabulator.options.deselectAll()'> [Deselect All]</a>";
-     
         message+="</form></font>";
                  
         display.document.write(message);
                  
         display.document.close(); 
         
-        tabulator.options.references[0] = display.document.checkboxes.one;
-        tabulator.options.references[1] = display.document.checkboxes.two;
-        tabulator.options.references[2] = display.document.checkboxes.three;
-        tabulator.options.references[3] = display.document.checkboxes.four;
-        tabulator.options.references[4] = display.document.checkboxes.five;
-        tabulator.options.references[5] = display.document.checkboxes.six;
-     
-            }
+        var i;
+        for(i=0; i<6; i++){
+            tabulator.options.references[i] = display.document.checkboxes.elements[i];
+        }     
+    }
     
     
     tabulator.options.checkedLicenses = [];
    
     tabulator.options.selectAll = function()
     {
-        display.document.checkboxes.one.checked = true;
-        display.document.checkboxes.two.checked = true;
-        display.document.checkboxes.three.checked = true;
-        display.document.checkboxes.four.checked = true;
-        display.document.checkboxes.five.checked = true;
-        display.document.checkboxes.six.checked = true;
-        
+        var i;
         for(i=0; i<6; i++){
+            display.document.checkboxes.elements[i].checked = true;
             tabulator.options.references[i].checked = true;
             tabulator.options.checkedLicenses[i] = true;
         }
@@ -328,16 +282,11 @@ tabulator.OutlineObject = function(doc) {
     
     tabulator.options.deselectAll = function()
     {
-        display.document.checkboxes.one.checked = false;
-        display.document.checkboxes.two.checked = false;
-        display.document.checkboxes.three.checked = false;
-        display.document.checkboxes.four.checked = false;
-        display.document.checkboxes.five.checked = false;
-        display.document.checkboxes.six.checked = false;
-        
+        var i;
         for(i=0; i<6; i++){
-                    tabulator.options.references[i].checked = false;
-                    tabulator.options.checkedLicenses[i] = false;
+            display.document.checkboxes.elements[i].checked = false;
+            tabulator.options.references[i].checked = false;
+            tabulator.options.checkedLicenses[i] = false;
         }
     
     }
@@ -345,19 +294,10 @@ tabulator.OutlineObject = function(doc) {
     
     tabulator.options.submit = function()
     {   
-    
         alert('tabulator.options.submit: checked='+tabulator.options.references[0].checked);
-        
         for(i=0; i<6; i++)
-        {
-            if(tabulator.options.references[i].checked)
-            {
-                tabulator.options.checkedLicenses[i] = true;
-            }
-            else
-            {
-                tabulator.options.checkedLicenses[i] = false;
-            }
+        {   tabulator.options.checkedLicenses[i] = !!
+                    tabulator.options.references[i].checked;
         }
     }
         
@@ -398,7 +338,7 @@ tabulator.OutlineObject = function(doc) {
         // tabulator.log.info('class on '+td)
         var check = td.getAttribute('class')
         // tabulator.log.info('td has class:' + check)
-        tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
+        // tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl

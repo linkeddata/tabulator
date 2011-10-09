@@ -14,6 +14,7 @@ TINFO = 16;
 TDEBUG = 32;
 TALL = 63;
 
+tabulator.log.alert = alert;
 tabulator.log.level=TERROR+TWARN+TMESG;
 tabulator.log.ascending = false;
 

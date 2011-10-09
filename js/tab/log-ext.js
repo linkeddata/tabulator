@@ -16,6 +16,11 @@ function TabulatorLogger () {
     this.ele=null;
     this.container=this.document.createElementNS('http://www.w3.org/1999/xhtml','html:div');
 
+
+    var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+    this.alert = function(message) { return prompts.alert(null, "", message)};
+
+
     this.msg = function (str, type, typestr, arg) {
         if (!type) { type = this.TMESG; typestr = 'mesg'};
         if (!(tabulator.log.level & type)) return; //bitmask //do we have to use this fancy method?

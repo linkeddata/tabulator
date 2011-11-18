@@ -28,6 +28,10 @@ tabulator.loadScript = function(uri) {
     loader.loadSubScript('chrome://tabulator/content/'+ uri);
 }
 
+
+// Now we have to load jQuery for rda -- but it is also loaded in ../../tabulator.xul @@
+// tabulator.loadScript("js/jquery/jquery-1.4.2.min.js");
+
 //Before anything else, load up the logger so that errors can get logged.
 tabulator.loadScript("js/tab/log-ext.js");
 

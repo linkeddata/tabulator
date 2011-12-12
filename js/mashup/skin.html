@@ -1,0 +1,30 @@
+<html id="docHTML">
+<head>
+<title>The data will be presented (if you have Javascript enabled)</title>
+<link rel="stylesheet" href="mash.css">
+<!-- http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js  -->
+<!--
+<script src="jquery.min.js"></script>
+-->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+<script src="mashlib.js"></script>
+<script>
+jQuery(document).ready(function() {
+    var uri = window.location.href
+    var kb = tabulator.kb;
+    var subject = kb.sym(uri);
+    tabulator.outline.GotoSubject  (subject, true, undefined, true, undefined);
+});
+</script>
+</head>
+<body>
+<!-- below to make outline code to put stuff -->
+<div class="TabulatorOutline" id="DummyUUID">
+            <table id="outline"></table>
+</div>
+<hr />
+<!-- dummy button for making query -->
+<p id="queryButton"></p> 
+
+</body>
+</html>

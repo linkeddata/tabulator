@@ -471,6 +471,18 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     pattern = makeRDFStatement(v,parentVar);
     //alert(pattern);
     v.label = v.label.slice(0,1).toUpperCase() + v.label.slice(1)// init cap
+
+    // See ../rdf/sparql.js
+    function constraintEqualTo (value) //This should only work on literals but doesn't.
+    {
+        this.describe = function (varstr) { return varstr + " = "+value.toNT() }
+        this.test = function (term) {
+            return value.sameTerm(term)
+        }
+        return this;
+    }
+    
+
     
     if (constraint)   //binds the constrained variable to its selected value
     	pat.constraints[v]=new constraintEqualTo(constraintVar);

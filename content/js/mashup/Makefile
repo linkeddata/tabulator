@@ -19,7 +19,7 @@ update :
 	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib.js
 	cp mashlib.js $A/src/main/resources/public/mashlib.js 
 	cp mashlib.js /devel/dvcs.w3.org/read-write-web/target/scala-*/classes/public/mashlib.js
-	(cd /devel/dvcs.w3.org/read-write-web; hg commit -m "New mashlib.js -- see http://www.w3.org/2011/datastuff/init/Makefile")
+	(cd /devel/dvcs.w3.org/read-write-web; hg commit -m "New mashlib.js -- see http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/js/mashup/Makefile")
 	
 
 $J/rdf/rdflib.js :

@@ -62,6 +62,7 @@ TINFO = 16;
 TDEBUG = 32;
 TALL = 63;
 
+tabulator.log.alert = alert;
 tabulator.log.level=TERROR+TWARN+TMESG;
 tabulator.log.ascending = false;
 
@@ -158,15 +159,15 @@ $rdf = function() {
 * Utility functions for $rdf and the $rdf object itself
  */
 
-if (typeof tabulator.isExtension == 'undefined') tabulator.isExtension = false; // stand-alone library
+if (typeof tabulator != 'undefined' && typeof tabulator.isExtension == 'undefined') tabulator.isExtension = false; // stand-alone library
 
 if( typeof $rdf == 'undefined' ) {
     var $rdf = {};
 } else {
-    dump("Internal error: RDF libray has already been loaded\n");
-    dump("Internal error: $rdf type is "+typeof $rdf+"\n");
-    dump("Internal error: $rdf.log type is "+typeof $rdf.log+"\n");
-    dump("Internal error: $rdf.log.error type is "+typeof $rdf.log.error+"\n");
+    //dump("Internal error: RDF libray has already been loaded\n");
+    //dump("Internal error: $rdf type is "+typeof $rdf+"\n");
+    //dump("Internal error: $rdf.log type is "+typeof $rdf.log+"\n");
+    //dump("Internal error: $rdf.log.error type is "+typeof $rdf.log.error+"\n");
     return $rdf;
 
     throw "Internal error: RDF libray has already been loaded: $rdf already exists";
@@ -179,9 +180,9 @@ if( typeof $rdf == 'undefined' ) {
   https://developer.mozilla.org/en/nsIConsoleService
  */
 
-dump("@@ rdf/util.js test RESET RDF LOGGER  $rdf.log.error)\n");
+//dump("@@ rdf/util.js test RESET RDF LOGGER  $rdf.log.error)\n");
 if($rdf.log != undefined) {
-    dump("WTF util.js:" + $rdf.log);
+    //dump("WTF util.js:" + $rdf.log);
     throw "Internal Error: $rdf.log already defined,  util.js: " + $rdf.log;
 }
 
@@ -271,35 +272,31 @@ $rdf.Util = {
     * A standard way to create XMLHttpRequest objects
      */
 	'XMLHTTPFactory': function () {
-        if (tabulator.isExtension) {
+        if (typeof module != 'undefined' && module && module.exports) { //Node.js
+            var XMLHttpRequest = require("XMLHttpRequest").XMLHttpRequest;
+            return new XMLHttpRequest()
+        }
+        if (typeof tabulator != 'undefined' && tabulator.isExtension) {
             return Components.
             classes["@mozilla.org/xmlextras/xmlhttprequest;1"].
             createInstance().QueryInterface(Components.interfaces.nsIXMLHttpRequest);
         } else if (window.XMLHttpRequest) {
-            try {
-                return new XMLHttpRequest()
-            } catch (e) {
-                return false
-            }
+                return new window.XMLHttpRequest()
 	    }
 	    else if (window.ActiveXObject) {
-            try {
-                return new ActiveXObject("Msxml2.XMLHTTP")
-            } catch (e) {
                 try {
-                    return new ActiveXObject("Microsoft.XMLHTTP")
+                    return new ActiveXObject("Msxml2.XMLHTTP")
                 } catch (e) {
-                    return false
+                    return new ActiveXObject("Microsoft.XMLHTTP")
                 }
-            }
 	    }
 	    else {
-            return false
+                return false
 	    }
 	},
 
 	'DOMParserFactory': function () {
-        if(tabulator.isExtension) {
+        if(tabulator && tabulator.isExtension) {
             return Components.classes["@mozilla.org/xmlextras/domparser;1"]
             .getService(Components.interfaces.nsIDOMParser);
         } else if ( window.DOMParser ){
@@ -310,6 +307,7 @@ $rdf.Util = {
             return false;
 	    }
 	},
+
     /**
     * Returns a hash of headers and values
     **
@@ -430,6 +428,26 @@ $rdf.Util = {
     }
     
 };
+
+///////////////////// Parse XML
+//
+// Returns: A DOM
+//
+
+$rdf.Util.parseXML = function(str) {
+    var dparser;
+    if ((typeof tabulator != 'undefined' && tabulator.isExtension)) {
+        dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(
+                    Components.interfaces.nsIDOMParser);
+    } else if (typeof module != 'undefined' ){ // Node.js
+        var jsdom = require('jsdom');
+        return jsdom.jsdom(str, undefined, {} );// html, level, options
+    } else {
+        dparser = new DOMParser()
+    }
+    return dparser.parseFromString(str, 'application/xml');
+};
+
 
 //////////////////////String Utility
 // substitutes given terms for occurrnces of %s
@@ -593,7 +611,7 @@ $rdf.Util.uri.join = function (given, base) {
     return base.slice(0, baseSingle) + path
 }
 
-if (tabulator.isExtension) {
+if (typeof tabulator != 'undefined' && tabulator.isExtension) {
     $rdf.Util.uri.join2 = function (given, base){
         var tIOService = Components.classes['@mozilla.org/network/io-service;1']
                         .getService(Components.interfaces.nsIIOService);
@@ -609,6 +627,9 @@ if (tabulator.isExtension) {
 // based on code in http://www.w3.org/2000/10/swap/uripath.py
 //
 $rdf.Util.uri.commonHost = new RegExp("^[-_a-zA-Z0-9.]+:(//[^/]*)?/[^/]*$");
+
+$rdf.Util.uri.hostpart = function(u) { var m = /[^\/]*\/\/([^\/]*)\//.exec(u); return m? m[1]: '' };
+
 $rdf.Util.uri.refTo = function(base, uri) {
     if (!base) return uri;
     if (base == uri) return "";
@@ -1150,7 +1171,7 @@ $rdf.Formula.prototype.whether = function(s,p,o,w) {
  *  and industry standards where appropriate (DOM, ECMAScript, &c.)
  *
  *  Author: David Sheets <dsheets@mit.edu>
- *  SVN ID: $Id: mashlib.js,v 1.7 2011/09/29 18:52:27 timbl Exp $
+ *  SVN ID: $Id$
  *
  * W3C® SOFTWARE NOTICE AND LICENSE
  * http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
@@ -1736,723 +1757,6 @@ $rdf.RDFParser = function (store) {
 	return frame
     }
 }
-/*
- * jQuery RDFa @VERSION
- *                                U N T E S T E D      T R I A L    O N L Y
- *                                P O R T   I N   P R O G R E S S
- *
- * Copyright (c) 2008,2009 Jeni Tennison
- * Licensed under the MIT (MIT-LICENSE.txt)
- * 2010-06-11 Taken from http://code.google.com/p/rdfquery/source/checkout TBL
- * Callbacks for new triples removed -- should more logically be on the store
- * so as to make common for all sources
- *
- * Depends:
- *  uri.js
- *  term.js
- *  identity.js
- *  
- *  jquery.rdf.js
- */
-/**
- * @fileOverview jQuery RDFa processing
- * @author <a href="mailto:jeni@jenitennison.com">Jeni Tennison</a>
- * @copyright (c) 2008,2009 Jeni Tennison
- * @license MIT license (MIT-LICENSE.txt)
- * @version 1.0
- * @requires jquery.uri.js
- * @requires jquery.xmlns.js
- * @requires jquery.curie.js
- * @requires jquery.datatype.js
- * @requires jquery.rdf.js
- */
- 
-
-
-
-
-
-/*
- * jQuery CURIE @VERSION
- * 
- * Copyright (c) 2008 Jeni Tennison
- * Licensed under the MIT (MIT-LICENSE.txt)
- *
- * Depends:
- *	jquery.uri.js
- *  jquery.xmlns.js
- */
-/*global jQuery */
-
-$rdf.curie = {};
-$rdf.curie.parse = function (curie, options) {
-    var
-    opts = $rdf.extend({}, $rdf.curie.defaults, options || {}),
-        m = /^(([^:]*):)?(.+)$/.exec(curie),
-        prefix = m[2],
-        local = m[3],
-        ns = opts.namespaces[prefix];
-    if (prefix) {
-        if (ns === undefined) {
-            throw "Malformed CURIE: No namespace binding for " + prefix + " in CURIE " + curie;
-        }
-    } else if (opts.reserved.length && $rdf.Util.inArray(curie, opts.reserved) >= 0) {
-        ns = opts.reservedNamespace;
-        local = curie;
-    } else if (opts.defaultNamespace === undefined) {
-        // the default namespace is provided by the application; it's not clear whether
-        // the default XML namespace should be used if there's a colon but no prefix
-        throw "Malformed CURIE: No prefix and no default namespace for unprefixed CURIE " + curie;
-    } else {
-        ns = opts.defaultNamespace;
-    }
-    return $rdf.sym(ns + local);
-};
-
-$rdf.curie.defaults = {
-    namespaces: {},
-    reserved: [],
-    reservedNamespace: undefined,
-    defaultNamespace: undefined
-};
-
-$rdf.curie.safeCurie = function (safeCurie, options) {
-    var m = /^\[([^\]]+)\]$/.exec(safeCurie);
-    return m ? $rdf.curie(m[1], options) : $rdf.sym(safeCurie);
-};
-
-$rdf.curie.createCurie = function (uri, options) {
-    var opts = $rdf.extend({}, $rdf.curie.defaults, options || {}),
-        ns = opts.namespaces,
-        curie;
-    uri = $rdf.sym(uri).toString();
-    for (var prefix in ns) {
-        var namespace = ns[prefix];
-        if (uri.substring(0, namespace.toString().length) === namespace.toString()) {
-            curie = prefix + ':' + uri.substring(namespace.toString().length);
-            return null;
-        }
-    };
-    if (curie === undefined) {
-        throw "No Namespace Binding: There's no appropriate namespace binding for generating a CURIE from " + uri;
-    } else {
-        return curie;
-    }
-};
-
-$rdf.curie = function (curie, options) {
-    var opts = $rdf.extend({}, $rdf.curie.defaults, {
-        namespaces: thisElement.xmlns()
-    }, options || {});
-    return $rdf.curie(curie, opts);
-};
-
-$rdf.safeCurie = function (safeCurie, options) {
-    var opts = $rdf.extend({}, $rdf.curie.defaults, {
-        namespaces: thisElement.xmlns()
-    }, options || {});
-    return $rdf.curie.safeCurie(safeCurie, opts);
-};
-
-$rdf.createCurie = function (uri, options) {
-    var opts = $rdf.extend({}, $rdf.curie.defaults, {
-        namespaces: thisElement.xmlns()
-    }, options || {});
-    return $rdf.curie.createCurie(uri, opts);
-};
-
-$rdf.curie.defaults = {
-    reserved: ['alternate', 'appendix', 'bookmark', 'cite', 'chapter', 'contents', 'copyright', 'first', 'glossary', 'help', 'icon', 'index', 'last', 'license', 'meta', 'next', 'p3pv1', 'prev', 'role', 'section', 'stylesheet', 'subsection', 'start', 'top', 'up'],
-    reservedNamespace: 'http://www.w3.org/1999/xhtml/vocab#',
-    defaultNamespace: undefined
-};
-
-$rdf.safeCurie = function (safeCurie, options) {
-    var opts = $rdf.extend({}, $rdf.curie.defaults, {
-        namespaces: thisElement.xmlns()
-    }, options || {});
-    return $rdf.safeCurie(safeCurie, opts);
-};
-
-
-
-//////////////////////////////////////////////////////////////////////////////
-
-$rdf.rdfa = {};
-
-$rdf.rdfa.parse = function (dom, kb, baseUri, doc) {
-    this.kb = kb;
-    this.baseUri = baseUri;
-    thisElement = dom;
- 
-
-// Agenda:
-//    fn.curie.
-//   docResource   (relies on database-wide document base)
-//  Replace all $jq.rdf.   with equivalent $rdf.
-//
-//  Note: The original jQuery "$" is now $jq in this code.
-////////////////////////////////////////////////////
-
-  //if ($ == undefined && tabulator && tabulator.jq) $ = tabulator.jq; // not sure hot this is upposed to be wired - tbl
-
-  var
-    ns = {
-      rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-      xsd: "http://www.w3.org/2001/XMLSchema#",
-      xml: 'http://www.w3.org/XML/1998/namespace',
-      xmlns: 'http://www.w3.org/2000/xmlns/'
-    },
-    
-    rdfXMLLiteral = ns.rdf + 'XMLLiteral',
-    rdfXMLLiteralSym = kb.sym(rdfXMLLiteral),
-
-    rdfaCurieDefaults = $rdf.curie.defaults,
-    relReserved = [
-      'alternate', 'appendix', 'bookmark', 'cite', 'chapter', 'contents', 'copyright',
-      'first', 'glossary', 'help', 'icon', 'index', 'last', 'license', 'meta', 'next',
-      'p3pv1', 'prev', 'role', 'section', 'stylesheet', 'subsection', 'start', 'top', 'up'
-    ],
-
-    attRegex = /\s([^ =]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^ >]+))/g,
-    
-    ncNameChar = '[-A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u10000-\uEFFFF\.0-9\u00B7\u0300-\u036F\u203F-\u2040]',
-    ncNameStartChar = '[\u0041-\u005A\u0061-\u007A\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\u0100-\u0131\u0134-\u013E\u0141-\u0148\u014A-\u017E\u0180-\u01C3\u01CD-\u01F0\u01F4-\u01F5\u01FA-\u0217\u0250-\u02A8\u02BB-\u02C1\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03CE\u03D0-\u03D6\u03DA\u03DC\u03DE\u03E0\u03E2-\u03F3\u0401-\u040C\u040E-\u044F\u0451-\u045C\u045E-\u0481\u0490-\u04C4\u04C7-\u04C8\u04CB-\u04CC\u04D0-\u04EB\u04EE-\u04F5\u04F8-\u04F9\u0531-\u0556\u0559\u0561-\u0586\u05D0-\u05EA\u05F0-\u05F2\u0621-\u063A\u0641-\u064A\u0671-\u06B7\u06BA-\u06BE\u06C0-\u06CE\u06D0-\u06D3\u06D5\u06E5-\u06E6\u0905-\u0939\u093D\u0958-\u0961\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09DC-\u09DD\u09DF-\u09E1\u09F0-\u09F1\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8B\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABD\u0AE0\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B36-\u0B39\u0B3D\u0B5C-\u0B5D\u0B5F-\u0B61\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB5\u0BB7-\u0BB9\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C60-\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CDE\u0CE0-\u0CE1\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D28\u0D2A-\u0D39\u0D60-\u0D61\u0E01-\u0E2E\u0E30\u0E32-\u0E33\u0E40-\u0E45\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EAE\u0EB0\u0EB2-\u0EB3\u0EBD\u0EC0-\u0EC4\u0F40-\u0F47\u0F49-\u0F69\u10A0-\u10C5\u10D0-\u10F6\u1100\u1102-\u1103\u1105-\u1107\u1109\u110B-\u110C\u110E-\u1112\u113C\u113E\u1140\u114C\u114E\u1150\u1154-\u1155\u1159\u115F-\u1161\u1163\u1165\u1167\u1169\u116D-\u116E\u1172-\u1173\u1175\u119E\u11A8\u11AB\u11AE-\u11AF\u11B7-\u11B8\u11BA\u11BC-\u11C2\u11EB\u11F0\u11F9\u1E00-\u1E9B\u1EA0-\u1EF9\u1F00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2126\u212A-\u212B\u212E\u2180-\u2182\u3041-\u3094\u30A1-\u30FA\u3105-\u312C\uAC00-\uD7A3\u4E00-\u9FA5\u3007\u3021-\u3029_]', //"
-    ncNameRegex = new RegExp('^' + ncNameStartChar + ncNameChar + '*$'),
-
-    docResource = kb.sym(baseUri),
-    bnodeMap = {};
-    
-    var type = kb.sym("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-    var why = docResource;
-
-   parseEntities = function (string) {
-      var result = "", m, entity;
-      if (!/&/.test(string)) {
-         return string;
-      }
-      while (string.length > 0) {
-        m = /([^&]*)(&([^;]+);)(.*)/g.exec(string);
-        if (m === null) {
-          result += string;
-          break;
-        }
-        result += m[1];
-        entity = m[3];
-        string = m[4];
-        if (entity.charAt(0) === '#') {
-          if (entity.charAt(1) === 'x') {
-              result += String.fromCharCode(parseInt(entity.substring(2), 16));
-          } else {
-              result += String.fromCharCode(parseInt(entity.substring(1), 10));
-          }
-        } else {
-          switch(entity) {
-            case 'amp':
-              result += '&';
-              break;
-            case 'nbsp':
-              result += String.fromCharCode(160);
-              break;
-            case 'quot':
-              result += '"';
-              break;
-            case 'apos':
-              result += "'";
-              break;
-            default:
-              result += '&' + entity + ';';
-          }
-        }
-      }
-      return result;
-    };
-
-
-    getAttributes = function (elem) {
-        var i, e, a, tag, name, value, attMap, prefix,
-            atts = {},
-            nsMap = {};
-        var e = elem[0];
-        nsMap[':length'] = 0;
-      
-        if (e.attributes && e.attributes.getNamedItemNS) {
-            attMap = e.attributes;
-            for (i = 0; i < attMap.length; i += 1) {
-                a = attMap[i];
-                if (/^xmlns(:(.+))?$/.test(a.nodeName) && a.nodeValue !== '') {
-                    prefix = /^xmlns(:(.+))?$/.exec(a.nodeName)[2] || '';
-                    if (ncNameRegex.test(prefix) && (prefix !== 'xml' || a.nodeValue === ns.xml) && (a.nodeValue !== ns.xml || prefix === 'xml') && prefix !== 'xmlns' && a.nodeValue !== ns.xmlns) {
-                        nsMap[prefix] = $rdf.sym(a.nodeValue);
-                        nsMap[':length'] += 1;
-                    }
-//              } else if (/rel|rev|lang|xml:lang/.test(a.nodeName)) {
-//                      atts[a.nodeName] = a.nodeValue === '' ? undefined : a.nodeValue;
-                } else if (/rel|rev|lang|xml:lang|about|href|src|resource|property|typeof|content|datatype/.test(a.nodeName)) {
-                    atts[a.nodeName] = a.nodeValue === null ? undefined : a.nodeValue;
-                }
-            }
-        } else { //   For IE, which hides namespaces to carefully
-            tag = /<[^>]+>/.exec(e.outerHTML);
-            a = attRegex.exec(tag);
-            while (a !== null) {
-                name = a[1];
-                value = a[2] || a[3] || a[4];
-                if (/^xmlns/.test(name) && name !== 'xmlns:' && value !== '') {
-                    prefix = /^xmlns(:(.+))?$/.exec(name)[2] || '';
-                    if (ncNameRegex.test(prefix) && (prefix !== 'xml' || a.nodeValue === ns.xml) && (a.nodeValue !== ns.xml || prefix === 'xml') && prefix !== 'xmlns' && a.nodeValue !== ns.xmlns) {
-                        nsMap[prefix] = $rdf.sym(value);
-                        nsMap[':length'] += 1;
-                    }
-                } else if (/about|href|src|resource|property|typeof|content|datatype|rel|rev|lang|xml:lang/.test(name)) {
-                    atts[name] = parseEntities(value);
-                }
-                a = attRegex.exec(tag);
-            }
-            attRegex.lastIndex = 0;
-        }
-        return { atts: atts, namespaces: nsMap };
-    };
-
-    getAttribute = function (elem, attr) {
-        var val = elem[0].getAttribute(attr);
-//          if (attr === 'rev' || attr === 'rel' || attr === 'lang' || attr === 'xml:lang') {
-//          val = val === '' ? undefined : val;
-//          }
-        return val === null ? undefined : val;
-    };
-
-    resourceFromUri = function (uri) {
-      return kb.sym(uri);
-    };
-
-    resourceFromCurie = function (curie, elem, noblanks, options) {
-      if (curie.substring(0, 2) === '_:') {
-        if (noblanks) {
-          return undefined;
-        }
-        var bn = bnodeMap[curie]
-        if (bn) return bn;
-        var bn = kb.bnode();
-        bnodeMap[curie] = bn
-        return bn;
-      } else {
-        try {
-          return resourceFromUri($rdf.curie.parse(curie, options));
-        } catch (e) {
-          return undefined;
-        }
-      }
-    },
-
-    resourceFromSafeCurie = function (safeCurie, elem, options) {
-      var m = /^\[(.*)\]$/.exec(safeCurie),
-        base = options.base || elem.base();
-      return m ? resourceFromCurie(m[1], elem, false, options) : resourceFromUri($rdf.sym(safeCurie, base));
-    },
-
-    resourcesFromCuries = function (curies, elem, noblanks, options) {
-      var i, resource, resources = [];
-      curies = curies && curies.split ? curies.split(/[ \t\n\r\x0C]+/g) : [];
-      for (i = 0; i < curies.length; i += 1) {
-        if (curies[i] !== '') {
-          resource = resourceFromCurie(curies[i], elem, noblanks, options);
-          if (resource !== undefined) {
-            resources.push(resource);
-          }
-        }
-      }
-      return resources;
-    },
-
-    /* @@ suppressed for now as we only read not change them -- timbl
-    removeCurie = function (curies, resource, options) {
-      var i, r, newCuries = [];
-      resource = resource.type === 'uri' ? resource : $jq.rdf.resource(resource, options);
-      curies = curies && curies.split ? curies.split(/\s+/) : [];
-      for (i = 0; i < curies.length; i += 1) {
-        if (curies[i] !== '') {
-          r = resourceFromCurie(curies[i], null, false, options);
-          if (r !== resource) {
-            newCuries.push(curies[i]);
-          }
-        }
-      }
-      return newCuries.reverse().join(' ');
-    },
-    */
-
-    $rdf.rdfaParser = function(kb, baseUri) {
-        this.kb = kb;
-        this.baseUri = baseUri;
-        return true;
-    }
-    
-    getObjectResource = function (elem, context, relation) {
-        var r, resource, atts, curieOptions;
-        context = context || {};
-        atts = context.atts || getAttributes(elem).atts;
-        r = relation === undefined ? atts.rel !== undefined || atts.rev !== undefined : relation;
-        resource = atts.resource;
-        resource = resource === undefined ? atts.href : resource;
-        if (resource === undefined) {
-            resource = r ? kb.bnode() : resource;
-        } else {
-            curieOptions = context.curieOptions || $rdf.Util.extend(
-            {}, rdfaCurieDefaults, { namespaces: elem.xmlns() });
-            resource = resourceFromSafeCurie(resource, elem, curieOptions);
-        }
-        return resource;
-    };
-
-    getSubject = function (elem, context, relation) {
-      var r, atts, curieOptions, subject, skip = false;
-      context = context || {};
-      atts = context.atts || getAttributes(elem).atts;
-      curieOptions = context.curieOptions || $rdf.Util.extend({},
-            rdfaCurieDefaults, { namespaces: elem.xmlns(), base: elem.base() });
-      r = relation === undefined ? atts.rel !== undefined || atts.rev !== undefined : relation;
-      if (atts.about !== undefined) {
-        subject = resourceFromSafeCurie(atts.about, elem, curieOptions);
-      }
-      if (subject === undefined && atts.src !== undefined) {
-        subject = resourceFromSafeCurie(atts.src, elem, curieOptions);
-      }
-      if (!r && subject === undefined && atts.resource !== undefined) {
-        subject = resourceFromSafeCurie(atts.resource, elem, curieOptions);
-      }
-      if (!r && subject === undefined && atts.href !== undefined) {
-        subject = resourceFromSafeCurie(atts.href, elem, curieOptions);
-      }
-      if (subject === undefined) {
-        if (/^(head|body)$/i.test(elem[0].nodeName)) {
-          subject = docResource;
-        } else if (atts['typeof'] !== undefined) {
-          subject = kb.bnode();
-        } else if (elem[0].parentNode.nodeType === 1) {
-          subject = context.object || getObjectResource(elem.parent()) || getSubject(elem.parent()).subject;
-          skip = !r && atts.property === undefined;
-        } else {
-          subject = docResource;
-        }
-      }
-      return { subject: subject, skip: skip };
-    };
-
-    getLang = function (elem, context) {
-      var lang;
-      context = context || {};
-      if (context.atts) {
-        lang = context.atts.lang;
-        lang = lang || context.atts['xml:lang'];
-      } else {
-        lang = elem[0].getAttribute('lang');
-        try {
-          lang = (lang === null || lang === '') ? elem[0].getAttribute('xml:lang') : lang;
-        } catch (e) {
-        }
-        lang = (lang === null || lang === '') ? undefined : lang;
-      }
-      if (lang === undefined) {
-        if (context.lang) {
-          lang = context.lang;
-        } else {
-          if (elem[0].parentNode.nodeType === 1) {
-            lang = getLang(elem.parent());
-          }
-        }
-      }
-      return lang;
-    };
-
-    entity = function (c) {
-        switch (c) {
-        case '<':
-            return '&lt;';
-        case '"':
-            return '&quot;';
-        case '&':
-            return '&amp;';
-        }
-    };
-
-    serialize = function (elem, ignoreNs) {
-        var i, string = '', atts, a, name, ns, tag;
-            elem.contents().each(function () {
-        var j = $(thisElement), // @@@ ?   Use of "this'?
-            e = j[0];
-        if (e.nodeType === 1) { // tests whether the node is an element
-            name = e.nodeName.toLowerCase();
-            string += '<' + name;
-            if (e.outerHTML) {
-                tag = /<[^>]+>/.exec(e.outerHTML);
-                a = attRegex.exec(tag);
-                while (a !== null) {
-                if (!/^jQuery/.test(a[1])) {
-                    string += ' ' + a[1] + '=';
-                    string += a[2] ? a[3] : '"' + a[1] + '"';
-                }
-                a = attRegex.exec(tag);
-            }
-            attRegex.lastIndex = 0;
-        } else {
-            atts = e.attributes;
-            for (i = 0; i < atts.length; i += 1) {
-                a = atts.item(i);
-                string += ' ' + a.nodeName + '="';
-                string += a.nodeValue.replace(/[<"&]/g, entity);
-                string += '"'; //'
-            }
-        }
-        if (!ignoreNs) {
-            ns = j.xmlns('');
-            if (ns !== undefined && j.attr('xmlns') === undefined) {
-                string += ' xmlns="' + ns + '"';
-            }
-        }
-          string += '>';
-          string += serialize(j, true);
-          string += '</' + name + '>';
-        } else if (e.nodeType === 8) { // tests whether the node is a comment
-            string += '<!--';
-            string += e.nodeValue;
-            string += '-->';
-        } else {
-            string += e.nodeValue;
-        }
-      });
-      return string;
-    },
-
-    // Originally:
-    // This is the main function whcih extracts te RDFA
-    // 'this' is the element
-    // $rdf.rdfaParser(kb).rdfa.call(element or document)
-    // parseElement = function(element) {
-    //     this.rdfa.call(element);
-    // };
-    
-    
-    parse = function (thisElement, context) {
-      var i, subject, resource, lang, datatype, content, text,
-        types, object, triple, parent,
-        properties, rels, revs,
-        forward, backward,
-        triples = [],
-        callback, relCurieOptions,
-        attsAndNs, atts, namespaces, ns,
-        children = thisElement.childNodes;
-      context = context || {};
-      forward = context.forward || [];
-      backward = context.backward || [];
-      callback = context.callback || function () { return thisElement; };
-      attsAndNs = getAttributes(thisElement);
-      atts = attsAndNs.atts;
-      context.atts = atts;
-      namespaces = context.namespaces || thisElement.xmlns();
-      if (attsAndNs.namespaces[':length'] > 0) {
-        namespaces = $rdf.Util.extend({}, namespaces);
-        for (ns in attsAndNs.namespaces) {
-          if (ns != ':length') {
-            namespaces[ns] = attsAndNs.namespaces[ns];
-          }
-        }
-      }
-      context.curieOptions = $rdf.Util.extend({},
-        rdfaCurieDefaults, { reserved: [], namespaces: namespaces, base: thisElement.base() });
-      relCurieOptions = $rdf.Util.extend({}, context.curieOptions, { reserved: relReserved });
-      subject = getSubject(thisElement, context);
-      lang = getLang(thisElement, context);
-      if (subject.skip) {
-        rels = context.forward;
-        revs = context.backward;
-        subject = context.subject;
-        resource = context.object;
-      } else {
-        subject = subject.subject;
-        if (forward.length > 0 || backward.length > 0) {
-          parent = context.subject || getSubject(thisElement.parent()).subject; // @@
-          for (i = 0; i < forward.length; i += 1) {
-            kb.add(parent, forward[i], subject, why);
-            // triple = callback.call(triple, thisElement.get(0), triple);
-            //if (triple !== undefined && triple !== null) {
-            //  triples = triples.concat(triple);
-            //}
-          }
-          for (i = 0; i < backward.length; i += 1) {
-            kb.add(subject, backward[i], parent, why);
-            //triple = callback.call(triple, thisElement.get(0), triple);
-            //if (triple !== undefined && triple !== null) {
-            //  triples = triples.concat(triple);
-            //}
-          }
-        }
-        resource = getObjectResource(thisElement, context);
-        types = resourcesFromCuries(atts['typeof'], thisElement, false, context.curieOptions);
-        for (i = 0; i < types.length; i += 1) {
-          kb.add(subject, type, types[i], why);
-          //triple = callback.call(triple, thisElement.get(0), triple);
-          //if (triple !== undefined && triple !== null) {
-          //  triples = triples.concat(triple);
-          //}
-        }
-        properties = resourcesFromCuries(atts.property, thisElement, true, context.curieOptions);
-        if (properties.length > 0) {
-          datatype = atts.datatype;
-          content = atts.content;
-          text = thisElement.text().replace(/"/g, '\\"'); //'
-          if (datatype !== undefined && datatype !== '') {
-            datatype = $rdf.curie.parse(datatype, context.curieOptions);
-            if (datatype.toString() === rdfXMLLiteral) {
-              object = kb.literal(serialize(thisElement), undefined, rdfXMLLiteralSym );
-            } else if (content !== undefined) {
-              object = kb.literal(content, kb.sym(datatype));
-            } else {
-              object = kb.literal(text, kb.sym(datatype));
-            }
-          } else if (content !== undefined) {
-            if (lang === undefined) {
-              object = kb.literal(content);
-            } else {
-              object = kb.literal(content, lang);
-            }
-          } else if (children.length === 0 ||
-                     datatype === '') {
-            lang = getLang(thisElement, context);
-            if (lang === undefined) {
-              object = kb.literal('"' + text + '"');    //@@ added double quote marks??
-            } else {
-              object = kb.literal(text, undefined, lang);
-            }
-          } else {
-            object = kb.literal(serialize(thisElement), kb.sym(rdfXMLLiteral));
-          }
-          for (i = 0; i < properties.length; i += 1) {
-            kb.add(subject, properties[i], object, why);
-          }
-        }
-        rels = resourcesFromCuries(atts.rel, thisElement, true, relCurieOptions);
-        revs = resourcesFromCuries(atts.rev, thisElement, true, relCurieOptions);
-        if (atts.resource !== undefined || atts.href !== undefined) {
-          // make the triples immediately
-          if (rels !== undefined) {
-            for (i = 0; i < rels.length; i += 1) {
-              kb.add(subject, rels[i], resource, why);
-            }
-          }
-          rels = [];
-          if (revs !== undefined) {
-            for (i = 0; i < revs.length; i += 1) {
-              kb.add(resource, revs[i], subject, why);
-            }
-          }
-          revs = [];
-        }
-      }
-      children.each(function () {
-        triples = triples.concat(rdfa.call($(thisElement), { forward: rels, backward: revs,
-            subject: subject, object: resource || subject,
-            lang: lang, namespaces: namespaces, callback: callback }));
-      });
-      return triples;
-    };
-
-    // Ad to list of gleaners @@@
-    gleaner = function (options) {
-      var type, atts;
-      if (options && options.about !== undefined) {
-        atts = getAttributes(thisElement).atts;
-        if (options.about === null) {
-          return atts.property !== undefined ||
-                 atts.rel !== undefined ||
-                 atts.rev !== undefined ||
-                 atts['typeof'] !== undefined;
-        } else {
-          return getSubject(thisElement, {atts: atts}).subject.value === options.about;
-        }
-      } else if (options && options.type !== undefined) {
-            type = getAttribute(thisElement, 'typeof');
-        if (type !== undefined) {
-            return options.type === null ? true : this.curie(type) === options.type;
-        }
-            return false;
-        } else {
-            return parse(thisElement, options);
-        }
-    }
-    
-    return;     // debug later   @@@@@@@@
-    
-    return parse(dom); 
-    // End of Parser object
-
-}
-
-
-  /**
-   * Creates a {@link jQuery.rdf} object containing the RDF triples parsed from the RDFa found in the current jQuery selection or adds the specified triple as RDFa markup on each member of the current jQuery selection. To create an {@link jQuery.rdf} object, you will usually want to use {@link jQuery#rdf} instead, as this may perform other useful processing (such as of microformats used within the page).
-   * @methodOf jQuery#
-   * @name jQuery#rdfa
-   * @param {jQuery.rdf.triple} [triple] The RDF triple to be added to each item in the jQuery selection.
-   * @returns {jQuery.rdf}
-   * @example
-   * // Extract RDFa markup from all span elements contained inside #main
-   * rdf = $('#main > span').rdfa();
-   * @example
-   * // Add RDFa markup to a particular element
-   *  var span = $('#main > p > span');
-   *  span.rdfa('&lt;> dc:date "2008-10-19"^^xsd:date .');
-   */
-   /*
-   // 'this' is a jq bject whcih wraps an element
-  $jq.fn.rdfa = function (triple) {
-    if (triple === undefined) {
-      var triples = $jq.map($(thisElement), function (elem) {
-        return rdfa.call($(elem));
-      });
-      return $jq.rdf({ triples: triples });
-    } else {
-      $(thisElement).each(function () {
-        addRDFa.call($(thisElement), triple);
-      });
-      return thisElement;
-    }
-  };
-  */
-
-  /**
-   * Removes the specified RDFa markup from each of the items in the current jQuery selection. The input parameter can be either an object or an array of objects. The objects can either have a <code>type</code> property, in which case the specified type is removed from the RDFa provided on the selected elements, or a <code>property</code> property, in which case the specified property is removed from the RDFa provided on the selected elements.
-   * @methodOf jQuery#
-   * @name jQuery#removeRdfa
-   * @param {Object|Object[]} triple The RDFa markup items to be removed
-   * from the items in the jQuery selection.
-   * @returns {jQuery} The original jQuery object.
-   * @example 
-   * // To remove a property resource or relation from an element 
-   * $('#main > p > a').removeRdfa({ property: "dc:creator" });
-   * @example
-   * // To remove a type from an element
-   * $('#main >p > a').removeRdfa({ type: "foaf:Person" });
-   * @example
-   * // To remove multiple triples from an element
-   * $('#main > p > a').removeRdfa([{ property: "foaf:depicts" }, { property: "dc:creator" }]);
-   */
-   /*
-  $jq.fn.removeRdfa = function (triple) {
-    $(thisElement).each(function () {
-      removeRDFa.call($(thisElement), triple);
-    });
-    return thisElement;
-  };
-
-  $jq.rdf.gleaners.push(gleaner);
-*/
-/*
-$rdf.parseRdfa = function(element, kb, baseUri) {
-    var p = new $rdf.RDFaParser(kb, baseUri);
-    p.rdfa.call(element);
-};
-*/
 /**
 *
 *  UTF-8 data encode / decode
@@ -2620,7 +1924,7 @@ function __SyntaxError(details) {
 
 /*
 
-$Id: mashlib.js,v 1.7 2011/09/29 18:52:27 timbl Exp $
+$Id: n3parser.js 14561 2008-02-23 06:37:26Z kennyluck $
 
 HAND EDITED FOR CONVERSION TO JAVASCRIPT
 
@@ -4664,7 +3968,7 @@ $rdf.Formula.prototype.bottomTypeURIs = function(types) {
 //
 // Here we introduce for the first time a subclass of term: variable.
 //
-// SVN ID: $Id: mashlib.js,v 1.7 2011/09/29 18:52:27 timbl Exp $
+// SVN ID: $Id: query.js 25116 2008-11-15 16:13:48Z timbl $
 
 //  Variable
 //
@@ -5934,33 +5238,46 @@ $rdf.sparqlUpdate = function() {
         
         if (!kb) kb = this.store;
         if (!uri) return false; // Eg subject is bnode, no knowm doc to write to
-        var request = kb.any(undefined, this.ns.link("requestedURI"), $rdf.Util.uri.docpart(uri));
-        if (request !== undefined) {
-            var response = kb.any(request, this.ns.link("response"));
+        var request;
+        var definitive = false;
+        var requests = kb.each(undefined, this.ns.link("requestedURI"), $rdf.Util.uri.docpart(uri));
+        for (var r=0; r<requests.length; r++) {
+            request = requests[r];
             if (request !== undefined) {
-                var author_via = kb.each(response, this.ns.httph("ms-author-via"));
-                if (author_via.length) {
-                    for (var i = 0; i < author_via.length; i++) {
-                        var method = author_via[i].value.trim();
-                        if (author_via[i].value == "SPARQL" || author_via[i].value == "DAV")
-                            // dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
-                            return author_via[i].value;
-                    }
-                }
-                var status = kb.each(response, this.ns.http("status"));
-                if (status.length) {
-                    for (var i = 0; i < status.length; i++) {
-                        if (status[i] == 200 || status[i] == 404) {
-                            return false; // A definitive answer
+                var response = kb.any(request, this.ns.link("response"));
+                if (request !== undefined) {
+                    var author_via = kb.each(response, this.ns.httph("ms-author-via"));
+                    if (author_via.length) {
+                        for (var i = 0; i < author_via.length; i++) {
+                            var method = author_via[i].value.trim();
+                            if (method.indexOf('SPARQL') >=0 ) return 'SPARQL';
+                            if (method.indexOf('DAV') >0 ) return 'DAV';
+//                            if (author_via[i].value == "SPARQL" || author_via[i].value == "DAV")
+                                // dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
+                                //return author_via[i].value;
+                                
                         }
                     }
+                    var status = kb.each(response, this.ns.http("status"));
+                    if (status.length) {
+                        for (var i = 0; i < status.length; i++) {
+                            if (status[i] == 200 || status[i] == 404) {
+                                definitive = true;
+                                // return false; // A definitive answer
+                            }
+                        }
+                    }
+                } else {
+                    tabulator.log.warn("sparql.editable: No response for "+uri+"\n");
                 }
-            } else {
-                tabulator.log.warn("sparql.editable: No response for "+uri+"\n");
             }
-        } else {
-            tabulator.log.warn("sparql.editable: No request for "+uri+"\n");
         }
+        if (requests.length == 0) {
+            tabulator.log.warn("sparql.editable: No request for "+uri+"\n");
+        } else {
+            if (definitive) return false;  // We have got a request and it did NOT say editable => not editable
+        };
+
         tabulator.log.warn("sparql.editable: inconclusive for "+uri+"\n");
         return undefined; // We don't know (yet) as we haven't had a response (yet)
     }
@@ -6173,8 +5490,8 @@ $rdf.sparqlUpdate = function() {
         if (! (is instanceof Array)) throw "Type Error "+(typeof is)+": "+is;
         var doc = ds.length ? ds[0].why : is[0].why;
         
-        ds.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination "+doc+" inconsitent with ds "+st.why;});
-        is.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination "+doc+" inconsitent with is "+st.why;});
+        ds.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination "+doc+" inconsistent with ds "+st.why;});
+        is.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination = "+doc+" inconsistent with st.why ="+st.why;});
 
         var protocol = this.editable(doc.uri, kb);
         if (!protocol) throw "Can't make changes in uneditable "+doc;
@@ -7251,10 +6568,11 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
-                var kb = sf.store
-                if (!this.dom) {
+                var kb = sf.store;
+                if (!this.dom) this.dom = $rdf.Util.parseXML(xhr.responseText);
+/*                {
                     var dparser;
-                    if ((tabulator !=undefined && tabulator.isExtension)) {
+                    if ((typeof tabulator != 'undefined' && tabulator.isExtension)) {
                         dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(Components.interfaces.nsIDOMParser);
                     } else {
                         dparser = new DOMParser()
@@ -7262,7 +6580,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     //strange things happen when responseText is empty
                     this.dom = dparser.parseFromString(xhr.responseText, 'application/xml')
                 }
-
+*/
                 var root = this.dom.documentElement;
                 //some simple syntax issue should be dealt here, I think
                 if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue/issue110
@@ -7311,7 +6629,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.handle = function(cb) {
                 if (!this.dom) {
                     var dparser;
-                    if (tabulator !=undefined && tabulator.isExtension) {
+                    if (typeof tabulator != 'undefined' && tabulator.isExtension) {
                         dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(Components.interfaces.nsIDOMParser);
                     } else {
                         dparser = new DOMParser()
@@ -7354,7 +6672,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     }
                 }
                 kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
-                // @@ Do RDFa here
+                // Do RDFa here
                 //var p = $rdf.RDFaParser(kb, xhr.uri.uri);
                 $rdf.rdfa.parse(this.dom, kb, xhr.uri.uri);  // see rdfa.js
             }
@@ -7379,7 +6697,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.handle = function(cb) {
                 var kb = sf.store
                 var dparser;
-                if (tabulator !=undefined && tabulator.isExtension) {
+                if (typeof tabulator != 'undefined' && tabulator.isExtension) {
                     dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(Components.interfaces.nsIDOMParser);
                 } else {
                     dparser = new DOMParser()
@@ -7395,7 +6713,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                         var ns = dom.childNodes[c].namespaceURI;
 
                         // Is it RDF/XML?
-                        if (ns == ns['rdf']) {
+                        if (ns != undefined && ns == ns['rdf']) {
                             sf.addStatus(xhr.req, "Has XML root element in the RDF namespace, so assume RDF/XML.")
                             sf.switchHandler('RDFXMLHandler', xhr, cb, [dom])
                             return
@@ -7612,16 +6930,6 @@ $rdf.Fetcher = function(store, timeout, async) {
 
     $rdf.Util.callbackify(this, ['request', 'recv', 'load', 'fail', 'refresh', 'retract', 'done'])
 
-/* now see ns
-       this.store.setPrefixForURI('rdfs', "http://www.w3.org/2000/01/rdf-schema#")
-       this.store.setPrefixForURI('owl', "http://www.w3.org/2002/07/owl#")
-       this.store.setPrefixForURI('tab',"http://www.w3.org/2007/ont/link#")
-       this.store.setPrefixForURI('http',"http://www.w3.org/2007/ont/http#")
-       this.store.setPrefixForURI('httph',
-	   "http://www.w3.org/2007/ont/httph#")
-       this.store.setPrefixForURI('ical',"http://www.w3.org/2002/12/cal/icaltzd#")
-       
-    */
     this.addProtocol = function(proto) {
         sf.store.add(sf.appNode, ns.link("protocol"), sf.store.literal(proto), this.appNode)
     }
@@ -7646,7 +6954,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                     '\n\tsf.handlers='+sf.handlers+'\n'
         }
         (new handler(args)).recv(xhr);
-        // kb.the(xhr.req, ns.link('handler')).append(handler.term)
         xhr.handle(cb)
     }
 
@@ -7810,23 +7117,17 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         var xhr = $rdf.Util.XMLHTTPFactory()
         var req = xhr.req = kb.bnode()
-        xhr.uri = docterm
-        xhr.requestedURI = args[0]
+        xhr.uri = docterm;
+        xhr.requestedURI = args[0];
         var requestHandlers = kb.collection()
         var sf = this
 
-        // The list of sources is kept in the source widget
-        // kb.add(this.appNode, ns.link("source"), docterm, this.appNode)
-        // kb.add(docterm, ns.link('request'), req, this.appNode)
         var now = new Date();
         var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
 
         kb.add(req, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
         kb.add(req, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
         kb.add(req, ns.link('status'), kb.collection(), sf.req)
-
-        // This request will have handlers probably
-//        kb.add(req, ns.link('handler'), requestHandlers, sf.appNode)
 
 
         if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(docuri)) == "undefined") {
@@ -7837,134 +7138,187 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         // Set up callbacks
         xhr.onreadystatechange = function() {
-            // dump("@@ readystate "+xhr.readyState+" for "+xhr.uri+"\n");
-            switch (xhr.readyState) {
-            case 3:
-                // Intermediate states
-                if (!xhr.recv) {
-                    xhr.recv = true
-                    var handler = null
-                    var thisReq = xhr.req // Might have changes by redirect
-                    sf.fireCallbacks('recv', args)
-                    var response = kb.bnode();
-                    kb.add(thisReq, ns.link('response'), response);
-                    kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
-                    kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+            
+            var handleResponse = function() {
+                if (xhr.handleResponseDone) return;
+                xhr.handleResponseDone = true;
+                var handler = null;
+                var thisReq = xhr.req // Might have changes by redirect
+                sf.fireCallbacks('recv', args)
+                var response = kb.bnode();
+                kb.add(thisReq, ns.link('response'), response);
+                kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
+                kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
-                    xhr.headers = {}
-                    if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
-                        xhr.headers = $rdf.Util.getHTTPHeaders(xhr)
-                        for (var h in xhr.headers) { // trim below for Safari - adds a CR!
-                            kb.add(response, ns.httph(h), xhr.headers[h].trim(), response)
-                        }
+                xhr.headers = {}
+                if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
+                    xhr.headers = $rdf.Util.getHTTPHeaders(xhr)
+                    for (var h in xhr.headers) { // trim below for Safari - adds a CR!
+                        kb.add(response, ns.httph(h), xhr.headers[h].trim(), response)
                     }
+                }
 
-                    if (xhr.status >= 400) { // For extra dignostics, keep the reply
-                        if (xhr.responseText.length > 10) { 
-                            kb.add(response, ns.http('content'), kb.literal(xhr.responseText), response);
-                            // dump("HTTP >= 400 responseText:\n"+xhr.responseText+"\n"); // @@@@
-                        }
-                        sf.failFetch(xhr, "HTTP error for " +xhr.uri + ": "+ xhr.status + ' ' + xhr.statusText);
-                        break
+                if (xhr.status >= 400) { // For extra dignostics, keep the reply
+                    if (xhr.responseText.length > 10) { 
+                        kb.add(response, ns.http('content'), kb.literal(xhr.responseText), response);
+                        // dump("HTTP >= 400 responseText:\n"+xhr.responseText+"\n"); // @@@@
                     }
+                    sf.failFetch(xhr, "HTTP error for " +xhr.uri + ": "+ xhr.status + ' ' + xhr.statusText);
+                    return;
+                }
 
 
 
-                    var loc = xhr.headers['content-location'];
+                var loc = xhr.headers['content-location'];
 
 
 
-                    // deduce some things from the HTTP transaction
-                    var addType = function(cla) { // add type to all redirected resources too
-                        var prev = thisReq;
-                        if (loc) {
-                            var docURI = kb.any(prev, ns.link('requestedURI'));
-                            if (docURI != loc) {
-                                kb.add(kb.sym(doc), ns.rdf('type'), cla, sf.appNode);
-                            }
-                        }
-                        for (;;) {
-                            var doc = kb.sym(kb.any(prev, ns.link('requestedURI')))
-                            kb.add(doc, ns.rdf('type'), cla, sf.appNode);
-                            prev = kb.any(undefined, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), prev);
-                            if (!prev) break;
-                            var response = kb.any(prev, kb.sym('http://www.w3.org/2007/ont/link#response'));
-                            if (!response) break;
-                            var redirection = kb.any(response, kb.sym('http://www.w3.org/2007/ont/http#status'));
-                            if (!redirection) break;
-                            if (redirection != '301' && redirection != '302') break;
-                        }
-                    }
-                    if (xhr.status == 200) {
-                        addType(ns.link('Document'));
-                        var ct = xhr.headers['content-type'];
-                        if (!ct) throw ('No content-type on 200 response for ' + xhr.uri)
-                        else {
-                            if (ct.indexOf('image/') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
-                        }
-                    }
-
-                    if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'file' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'chrome') {
-                        switch (xhr.uri.uri.split('.').pop()) {
-                        case 'rdf':
-                        case 'owl':
-                            xhr.headers['content-type'] = 'application/rdf+xml';
-                            break;
-                        case 'n3':
-                        case 'nt':
-                        case 'ttl':
-                            xhr.headers['content-type'] = 'text/n3';
-                            break;
-                        default:
-                            xhr.headers['content-type'] = 'text/xml';
-                        }
-                    }
-
-                    // If we have alread got the thing at this location, abort
+                // deduce some things from the HTTP transaction
+                var addType = function(cla) { // add type to all redirected resources too
+                    var prev = thisReq;
                     if (loc) {
-                        var udoc = $rdf.Util.uri.join(xhr.uri.uri, loc)
-                        if (!force && udoc != xhr.uri.uri && sf.requested[udoc]) {
-                            // should we smush too?
-                            // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.uri + " as " + udoc + ". Aborting.")
-                            sf.doneFetch(xhr, args)
-                            xhr.abort()
-                            break
-                        }
-                        sf.requested[udoc] = true
-                    }
-
-
-                    for (var x = 0; x < sf.handlers.length; x++) {
-                        if (xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
-                            handler = new sf.handlers[x]()
-                            requestHandlers.append(sf.handlers[x].term) // FYI
-                            break
+                        var docURI = kb.any(prev, ns.link('requestedURI'));
+                        if (docURI != loc) {
+                            kb.add(kb.sym(doc), ns.rdf('type'), cla, sf.appNode);
                         }
                     }
-
-                    var link = xhr.headers['link']; // Only one?
-                    if (link) {
-                        var rel = null;
-                        var arg = link.replace(/ /g, '').split(';');
-                        for (var i = 0; i < arg.length; i++) {
-                            lr = arg[i].split('=');
-                            if (lr[0] == 'rel') rel = lr[1];
-                        }
-                        if (rel) // Treat just like HTML link element
-                        sf.linkData(xhr, rel, arg[0]);
+                    for (;;) {
+                        var doc = kb.sym(kb.any(prev, ns.link('requestedURI')))
+                        kb.add(doc, ns.rdf('type'), cla, sf.appNode);
+                        prev = kb.any(undefined, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), prev);
+                        if (!prev) break;
+                        var response = kb.any(prev, kb.sym('http://www.w3.org/2007/ont/link#response'));
+                        if (!response) break;
+                        var redirection = kb.any(response, kb.sym('http://www.w3.org/2007/ont/http#status'));
+                        if (!redirection) break;
+                        if (redirection != '301' && redirection != '302') break;
                     }
+                }
+                if (xhr.status == 200) {
+                    addType(ns.link('Document'));
+                    var ct = xhr.headers['content-type'];
+                    if (!ct) throw ('No content-type on 200 response for ' + xhr.uri)
+                    else {
+                        if (ct.indexOf('image/') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
+                    }
+                }
+
+                if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'file' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'chrome') {
+                    switch (xhr.uri.uri.split('.').pop()) {
+                    case 'rdf':
+                    case 'owl':
+                        xhr.headers['content-type'] = 'application/rdf+xml';
+                        break;
+                    case 'n3':
+                    case 'nt':
+                    case 'ttl':
+                        xhr.headers['content-type'] = 'text/n3';
+                        break;
+                    default:
+                        xhr.headers['content-type'] = 'text/xml';
+                    }
+                }
+
+                // If we have alread got the thing at this location, abort
+                if (loc) {
+                    var udoc = $rdf.Util.uri.join(xhr.uri.uri, loc)
+                    if (!force && udoc != xhr.uri.uri && sf.requested[udoc]) {
+                        // should we smush too?
+                        // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.uri + " as " + udoc + ". Aborting.")
+                        sf.doneFetch(xhr, args)
+                        xhr.abort()
+                        return
+                    }
+                    sf.requested[udoc] = true
+                }
 
 
-                    if (handler) {
-                        handler.recv(xhr)
-                    } else {
-                        sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']);
+                for (var x = 0; x < sf.handlers.length; x++) {
+                    if (xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
+                        handler = new sf.handlers[x]()
+                        requestHandlers.append(sf.handlers[x].term) // FYI
                         break
                     }
                 }
+
+                var link = xhr.headers['link']; // Only one?
+                if (link) {
+                    var rel = null;
+                    var arg = link.replace(/ /g, '').split(';');
+                    for (var i = 0; i < arg.length; i++) {
+                        lr = arg[i].split('=');
+                        if (lr[0] == 'rel') rel = lr[1];
+                    }
+                    if (rel) // Treat just like HTML link element
+                    sf.linkData(xhr, rel, arg[0]);
+                }
+
+
+                if (handler) {
+                    handler.recv(xhr)
+                } else {
+                    sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']);
+                    return;
+                }
+            };
+
+
+
+            switch (xhr.readyState) {
+            case 0:
+                    var uri = xhr.uri.uri, newURI;
+                    if (this.crossSiteProxyTemplate && document && document.location) { // In mashup situation
+                        var hostpart = $rdf.Util.uri.hostpart;
+                        var here = '' + document.location;
+                        if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
+                            newURI = uri.replace('{uri}', encodeURIComponent(uri));
+                            sf.addStatus(xhr.req, "BLOCKED -> Cross-site Proxy to <" + newURI + ">");
+                            if (xhr.aborted) return;
+                            
+                            var kb = sf.store;
+                            var oldreq = xhr.req;
+                            kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), oldreq);
+
+
+                            ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
+                            var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
+                            kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
+
+                            var now = new Date();
+                            var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
+                            kb.add(newreq, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + newURI), this.appNode)
+                            kb.add(newreq, ns.link('status'), kb.collection(), sf.req);
+                            kb.add(newreq, ns.link("requestedURI"), kb.literal(newURI), this.appNode);
+
+                            var response = kb.bnode();
+                            kb.add(oldreq, ns.link('response'), response);
+                            // kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
+                            // if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+
+                            xhr.abort()
+                            xhr.aborted = true
+
+                            sf.addStatus(oldreq, 'done') // why
+                            sf.fireCallbacks('done', args) // Are these args right? @@@
+                            sf.requested[xhr.uri.uri] = 'redirected';
+
+                            var xhr2 = sf.requestURI(newURI, xhr.uri);
+                            if (xhr2 && xhr2.req) kb.add(xhr.req,
+                                kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
+                                xhr2.req, sf.appNode);                             return;
+                        }
+                    }
+                    sf.failFetch(xhr, "HTTP Blocked. (ReadyState 0) Cross-site violation for <"+
+                        docuri+">");
+                    break;
+                
+            case 3:
+                // Intermediate state -- 3 may OR MAY NOT be called, selon browser.
+                handleResponse();
                 break
             case 4:
                 // Final state
+                handleResponse();
                 // Now handle
                 if (xhr.handle) {
                     if (sf.requested[xhr.uri.uri] === 'redirected') {
@@ -7975,15 +7329,15 @@ $rdf.Fetcher = function(store, timeout, async) {
                         sf.doneFetch(xhr, args)
                     })
                 } else {
-                    sf.failFetch(xhr, "HTTP failed unusually. (Skipped readyState3?) (cross-site violation?) for <"+
+                    sf.failFetch(xhr, "HTTP failed unusually. (no handler set) (cross-site violation?) for <"+
                         docuri+">");
                 }    
                 break
-            }
+            } // switch
         }
 
         // Get privileges for cross-domain XHR
-        if (!(tabulator !=undefined && tabulator.isExtension)) {
+        if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
             try {
                 $rdf.Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
             } catch (e) {
@@ -7997,13 +7351,14 @@ $rdf.Fetcher = function(store, timeout, async) {
         // Is the script istelf is running in localhost, then access all data in a localhost mirror.
         // Do not remove without checking with TimBL :)
         var uri2 = docuri;
-        if (tabulator.preferences.get('offlineModeUsingLocalhost')) {
+        if (typeof tabulator != 'undefined' && tabulator.preferences.get('offlineModeUsingLocalhost')) {
             // var here = '' + document.location  // This was fro online version
             //if (here.slice(0, 17) == 'http://localhost/') {
             //uri2 = 'http://localhost/' + uri2.slice(7, uri2.length)
             if (uri2.slice(0,7) == 'http://'  && uri2.slice(7,17) != 'localhost/') uri2 = 'http://localhost/' + uri2.slice(7);
                 // dump("URI mapped to " + uri2)
         }
+        
 
         // Setup the request
         try {
@@ -8018,14 +7373,14 @@ $rdf.Fetcher = function(store, timeout, async) {
             try {
                 xhr.channel.notificationCallbacks = {
                     getInterface: function(iid) {
-                        if (!(tabulator !=undefined && tabulator.isExtension)) {
+                        if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
                             $rdf.Util.enablePrivilege("UniversalXPConnect")
                         }
                         if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
                             return {
 
                                 onChannelRedirect: function(oldC, newC, flags) {
-                                    if (!(tabulator !=undefined && tabulator.isExtension)) {
+                                    if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
                                         $rdf.Util.enablePrivilege("UniversalXPConnect")
                                     }
                                     if (xhr.aborted) return;
@@ -8087,8 +7442,11 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         kb.add(xhr.uri, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
                                         newURI = newURI.slice(0, hash);
                                     }
-                                    xhr2 = sf.requestURI(newURI, xhr.uri)
-                                    if (xhr2 && xhr2.req) kb.add(xhr.req, kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'), xhr2.req, sf.appNode);
+                                    var xhr2 = sf.requestURI(newURI, xhr.uri);
+                                    if (xhr2 && xhr2.req) kb.add(xhr.req,
+                                        kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
+                                        xhr2.req, sf.appNode); 
+        
                                     // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
                                 }
                             }
@@ -8097,7 +7455,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     }
                 }
             } catch (err) {
-                if (tabulator != undefined && tabulator.isExtension) return sf.failFetch(xhr,
+                if (typeof tabulator != 'undefined' && tabulator.isExtension) return sf.failFetch(xhr,
                         "Couldn't set callback for redirects: " + err);
             }
 
@@ -8132,7 +7490,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.addStatus(xhr.req, "HTTP Request sent.");
 
         // Drop privs
-        if (!(tabulator !=undefined && tabulator.isExtension)) {
+        if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
             try {
                 $rdf.Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
             } catch (e) {
@@ -8206,28 +7564,47 @@ $rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, 
 
 // Parse a string and put the result into the graph kb
 $rdf.parse = function parse(str, kb, base, contentType) {
-    if (contentType in ['text/n3', 'text/turtle']) {
-        var p = $rdf.N3Parser(kb, kb, base, base, null, null, "", null)
-        p.loadBuf(str);
-        return;
-    }
-
-    if (contentType == 'application/rdf+xml') {
-        var dparser;
-        if ((tabulator !=undefined && tabulator.isExtension)) {
-            dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(
-                        Components.interfaces.nsIDOMParser);
-        } else {
-            dparser = new DOMParser()
+    try {
+    /*
+        parseXML = function(str) {
+            var dparser;
+            if ((typeof tabulator != 'undefined' && tabulator.isExtension)) {
+                dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(
+                            Components.interfaces.nsIDOMParser);
+            } else if (typeof module != 'undefined' ){ // Node.js
+                var jsdom = require('jsdom');
+                return jsdom.jsdom(str, undefined, {} );// html, level, options
+            } else {
+                dparser = new DOMParser()
+            }
+            return dparser.parseFromString(str, 'application/xml');
         }
-        var dom = dparser.parseFromString(str, 'application/xml');
-        var parser = new $rdf.RDFParser(kb);
-        parser.parse(dom, base, kb.sym(base));
+        */
+        if (contentType == 'text/n3' || contentType == 'text/turtle') {
+            var p = $rdf.N3Parser(kb, kb, base, base, null, null, "", null)
+            p.loadBuf(str);
+            return;
+        }
+
+        if (contentType == 'application/rdf+xml') {
+            var parser = new $rdf.RDFParser(kb);
+            parser.parse($rdf.Util.parseXML(str), base, kb.sym(base));
+            return;
+        }
+        
+        if (contentType == 'application/rdfa') {  // @@ not really a valid mime type
+            $rdf.rdfa.parse($rdf.Util.parseXML(str), kb, base);  // see rdfa.js
+            return;
+        }
+    } catch(e) {
+        throw "Error trying to parse <"+base+"> as "+contentType+":\n"+e;
     }
     throw "Don't know how to parse "+contentType+" yet";
 
 };
 
+
+// ends
 return $rdf;}()
 
 // ###### Finished expanding js/rdf/rdflib.js ##############
@@ -9646,7 +9023,164 @@ tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form,
     input.addEventListener('click', boxHandler, false);
     return box;
 }
-  
+
+
+
+
+////////////////////////////////////////// Boostrapping identity
+//
+//
+
+tabulator.panes.utils.signInOrSignUpBox = function(myDocument) {
+    var box = myDocument.createElement('div');
+    var p = myDocument.createElement('p');
+    box.appendChild(p);
+    box.className="mildNotice";
+    p.innerHTML = ("Tip:  Do you have <a target='explain' href='http://esw.w3.org/topic/WebID'>" +
+        "web ID</a>?<br/><i>  ");
+    var but = myDocument.createElement('input');
+    box.appendChild(but);
+    but.setAttribute('type', 'button');
+    but.setAttribute('value', 'Log in or Sign Up');
+    var makeOne = function() {
+        // box.parentNode.removeChild(box); // Tip has been taken up!
+        box.removeChild(box.firstChild); // Tip has been taken up!
+        var foo = myDocument.createElement('div');
+        //main.insertBefore(foo, main.firstChild);
+        box.insertBefore(foo, box.firstChild);
+        // This is an encoded verion of webid.html
+        foo.innerHTML = "\
+<div class='task'>\
+<p>Do you have <a target=\"explain\" href=\"http://esw.w3.org/topic/WebID\" >\
+web ID</a>?<br/>\
+</p>\
+<ul>\
+    <li>\
+        <p class=\"answer\"  onclick=\"document.getElementById('WebIdHelp').className='tip'\">\
+        What is A Web ID?</p>\
+        <div id=\"WebIdHelp\" class=\"unknown\">\
+            <p>    A Web ID is a URL for you. \
+            It allows you to set up a public profile, with friends, pictures and all kinds of things.\
+            </p><p>\
+            It works like having an account on a social networking site,\
+            but it isn't restricted to just that site.\
+            It is very open because the information can connect to other people,\
+            organizations and projects and so on, without everyon having to join the same\
+            social networking site.\
+            All you need is some place on the web where you can save a file to.\
+            (<a  target='explain' href=\"http://esw.w3.org/topic/WebID\">More on the wiki</a>) \
+            <span onclick=\"document.getElementById('WebIdHelp').className='unknown'\">(close)</span>\
+            </p>\
+        </div>\
+    </li>\
+    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='yes'\">\
+    Yes, I have a web ID\
+    </li>\
+    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='no'\">\
+    No, I would like to make one\
+    </li>\
+</ul>\
+<div id=\"WhetherWebId\" class=\"unknown\">\
+    <div class=\"affirmative\">\
+        <p>What is your Web ID?</p>\
+        <p>\
+            <input id='webidField' name=\"webid\" type=\"text\" style='width:100%' value=\"http:\"/>\
+            <br/>\
+            <input id='gotOneButton' type=\"button\" value=\"Use this ID\"/>\
+        </p>\
+    </div>\
+    <div class=\"negative\">\
+        <p>Ok, Let's make one.  Would you like to use your real name, or make it anonymous?</p>\
+        <ul>\
+            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='no'\">\
+            I would like to use my real name. (Recommended, for example, for professionals who have\
+            and want public visibility).\
+            </li>\
+            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='yes'\">\
+            I would like to be anonymous. (If you are a child, use this.) \
+            </li>\
+        </ul>\
+\
+        <div id=\"WhetherAnon\" class=\"unknown\">\
+            <div class=\"affirmative\">\
+                <p>Think of a nick name, handle, or screen name by which you would like to be known.\
+                Or one by which you are already known online.\
+                    <br/>\
+                    <input name=\"nick\" type=\"text\" size=\"40\" id=\"nick_input\"/>\
+                </p>\
+            </div>\
+            <div class=\"negative\">\
+                <p>What is your name?  (A full name in the normal order in which you prefer it,\
+                such as Bill Gates, or Marie-Claire Forgue. Normally people omit \
+                prefixes, like Dr., and suffixes, like PhD, but it is up to you.)\
+                <br/><input name=\"foafname\" type=\"text\" size=\"40\" id=\"foafname_input\"/>\
+                </p>\
+                <p>Your initials? (These will be used as part of your web ID)\
+                <br/><input name=\"initials\" type=\"text\" size=\"10\" id=\"initials_input\"/>\
+                </p>\
+            </div>\
+            <p>You need the URI of a file which you can write to on the web.\
+            (The general public should be able to read it but not change it.\
+            The server should support the <em>WebDAV</em> protocol.)<br/>\
+            It will typcially look something like:<br/>\
+            http://www.example.com/users/gates/foaf.rdf<br/><br/>\
+                 <input name=\"fileuri\" type=\"text\" size=\"80\" id=\"fileuri_input\"\
+                     value=\"http://your.isp.com/...something.../foaf.rdf\"\
+                     />\
+            <br/>\
+            <input id=\"tryFoafButton\" type=\"button\" value=\"Create my new profile\" onclickOFF =\"tryFoaf()\"/>\
+            </p>\
+        </div>\
+\
+    </div>\
+    <div id=\"saveStatus\" class=\"unknown\">\
+    </div>\
+</div>\
+</div>\
+";
+        var button = myDocument.getElementById('tryFoafButton');
+        button.addEventListener('click', function(){ return tryFoaf()}, false);
+        button = myDocument.getElementById('gotOneButton');
+        button.addEventListener('click', function(){ return gotOne(foo)}, false);
+    }
+    but.addEventListener('click', makeOne, false);
+    return box; 
+};
+
+tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
+
+    var me_uri = tabulator.preferences.get('me');
+    var me = me_uri && tabulator.kb.sym(me_uri);
+
+
+    // If the user has no WebID that we know of
+    if (!me) {
+        return tabulator.panes.utils.signInOrSignUpBox(myDocument, listener); 
+    } else {  // We do have a webid
+        var box = myDocument.createElement('div');
+        var but = myDocument.createElement('input');
+        box.appendChild(but);
+        but.className = 'WebIDCancelButton';
+        but.setAttribute('type', 'button');
+        but.setAttribute('value', 'Web ID Logout');
+        var zapIt = function() {
+            tabulator.preferences.set('me','');
+            tabulator.log.alert('Your Web ID was '+me_uri+'. It has been forgotten.');
+            // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+            if (listener) listener(undefined);
+        }
+        but.addEventListener('click', zapIt, false);
+    }
+    return box
+
+}
+
+
+
+
+
+
+
 // ###### Finished expanding js/panes/paneUtils.js ##############
 
 // Developer designed:
@@ -14088,191 +13622,7 @@ tabulator.panes.register( {
 
 
 // ###### Finished expanding js/panes/ui/pane.js ##############
-// ###### Expanding js/panes/categoryPane.js ##############
-/*   Category Pane
-**
-**  This outline pane allows the user to select which sublclasses
-** something is a member of in a tree-organized class hierarchy.
-** This could equally well be used for any other hierarchical set of things
-** such as nested geograpgical regions or nested time periods,
-** or for a class of a related thing, such of class of person in the picture.
-** Maybe this hsoul dbe split off as a widget for tagging within other panes.
-*/
-    
-// These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_categorize = iconPrefix + 'icons/22-categorize.png';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_categorize] = 'Categories'
-
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_categorize,
-    
-    name: 'category',
-    
-    // Does the subject deserve a categorizing pane?
-    label: function(subject) {
-        var kb = tabulator.kb
-        var t = kb.findTypeURIs(subject);
-        //@@@ t = kb.topTypeURIs(t);
-        var classes = 0;
-        for (var u in t) classes++;
-        //@@@@  if (classes==0) return null ;  // None, suppress pane
-        
-        // Not if a class itself (maybe need a different pane for that):
-        if (t['http://www.w3.org/2000/01/rdf-schema#Class']) return null; 
-        if (t['http://www.w3.org/2002/07/owl#Class']) return null;
-        
-        return "Categorize "+classes; // Yes under other circumstances (while testing at least!)
-
-    },
-
-    render: function(subject, myDocument) {
-        var kb = tabulator.kb;
-    
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'categoryPane');
-        
-        var types = kb.findTypeURIs(subject);
-        var tops = kb.topTypeURIs(types);
-        var bots = kb.bottomTypeURIs(types);
-
-        /////////////// debug 
-        /*
-        var str = "";
-        for (var t in types) str = str + t + ",  ";
-        var debug = div.appendChild(myDocument.createTextNode('Types: '+str)) // @@@
-        
-        var str = "";
-        for (var t in bots) str = str + t + ",  ";
-        var debug = div.appendChild(myDocument.createTextNode('. Bots: '+str)) // @@@
-        */
-        
-        function domForClass(c, force) {
-            var tr = myDocument.createElement('TR');
-            tr.setAttribute('class', 'categoryClass');
-            var anchor = myDocument.createElement('A');
-            if (c.uri) anchor.setAttribute('href', c.uri);
-            anchor.setAttribute('class', c.uri in types ? 'categoryIn' : 'categoryOut')
-            if (c.uri in bots) anchor.setAttribute('class', 'categoryBottom');
-            var lab = tabulator.Util.label(c, true);
-            if (c.uri in types) lab += " *";
-            anchor.appendChild(myDocument.createTextNode(lab));
-            tr.appendChild(anchor);
-            
-            // Add provenance info - which statement makes us beleive this
-            if (c.uri) {
-                var st = types[c.uri];
-                if (st) {
-                    if (st.uri) { // just a subsumption
-                        /* nothing */
-                    } else if (st.why) {// specific statement
-                        var anchor = myDocument.createElement('A');
-                        anchor.appendChild(myDocument.createTextNode(
-                            "  ("+
-                            tabulator.Util.label(st.subject)+" "+
-                            tabulator.Util.label(st.predicate)+" "+
-                            tabulator.Util.label(st.object)+")"));
-                        if (st.why.uri) anchor.setAttribute('href', st.why.uri)
-                        anchor.setAttribute('class', 'categoryWhy')
-                        tr.appendChild(anchor);
-                    }
-                }
-            }
-            var table = null;
-            /*
-            var makeSelectForSubs = function(subs, multiple) {
-                var n = 0; var uris ={}; // Count them
-                for (var i=0; i < subs.length; i++) {
-                    var sub = subs[i];
-                    if (sub.uri in uris) continue;
-                    uris[sub.uri] = true; n++;
-                }
-                if (n>0) {
-                    var select = myDocument.createElement('select');
-                    if (multiple) select.setAttribute('multiple', 'true');
-                    //@@ Later, check whether classes are disjoint.
-                    select.innerHTML = "<option>-- classify --</option>";
-                    for (var uri in uris) {
-                        var option = myDocument.createElement('option');
-                        option.appendChild(myDocument.createTextNode(tabulator.Util.label(kb.sym(uri))));
-                        option.setAttribute('name', uri);
-                        if (uri in types) option.setAttribute('selected', 'true')
-                        select.appendChild(option);
-                    }
-                    return select;
-                }
-                return null;
-            
-            } // makeSelectForSubs
-            */
-            
-            if (kb.any(c, kb.sym('http://www.w3.org/2002/07/owl#disjointUnionOf'))) {
-                var sel = tabulator.panes.utils.makeSelectForCategory(
-                    myDocument, kb, subject, c, 
-                    subs, false); // Not multiple
-            }
-/*
-            var subClassesAsNT = {};
-            if (disjointSubclassLists.length) {
-                for (j=0; j<disjointSubclassLists.length; j++) {
-                    td.appendChild(myDocument.createTextNode('subs:'+subs));
-                    var subs = disjointSubclassLists[j].elements;
-                    var sel = tabulator.panes.utils.makeSelectForCategory(
-                        myDocument, kb, subject, c, 
-                        subs, false); // Not multiple
-                    if (sel) tr.appendChild(sel); 
-                    for (var i=0; i<subs.length; i++) {
-                        subClassesAsNT[subs[i].toNT()] = true; // Could be blank node
-                    }
-                }
-            }
-*/            
-            
-            var subs = kb.each(undefined, kb.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), c);
-            if (subs) {
-                if (!table) {
-                    table = myDocument.createElement('TABLE')
-                    table.setAttribute('class', 'categoryTable');
-                    tr.appendChild(table);
-                }
-                
-                var uris = {}; // remove duplicates (why dups?) and count
-                var n = 0;
-                for (var i=0; i < subs.length; i++) {
-                    var sub = subs[i];
-                    if (sub.uri in uris) continue;
-                    uris[sub.uri] = true; n++;
-                }
-//@@
-                for (uri in uris) {
-                    if (uri in types) {
-                        table.appendChild(domForClass(kb.sym(uri), false))
-//                    } else if (c.uri && ((c.uri in bots) || (c.uri in categorizables))) {
-//                        table.appendChild(domForClass(kb.sym(uri), false))
-                    }
-                }
-            }
-
-            return tr;
-        }
-        
-        for (var u in tops) {
-            var c = kb.sym(u);
-            var tr = domForClass(c);
-            div.appendChild(tr);
-        }
-        
-        
-        
-        return div;
-    }
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/categoryPane.js ##############
+// tabulator.loadScript("js/panes/categoryPane.js");  // Not useful enough
 // ###### Expanding js/panes/pubsPane.js ##############
 /*
     Summer 2010
@@ -15899,13 +15249,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
     render: function(s, myDocument) {
 
-        if (tabulator.isExtension) {
-            var prompts = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
-            var alert1 = prompts.alert;
-        } else {
-            var alert1 = alert;
-        };
-
+ 
         var common = function(x,y) { // Find common members of two lists
             var both = [];
             for(var i=0; i<x.length; i++) {
@@ -15969,14 +15313,15 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.insert_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert1(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
+                                tabulator.log.alert(null,"Message","Error occurs while inserting "+statement+'\n\n'+error_body);
                                 input.checked = false; //rollback UI
                                 return;
                             }
                             kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
                         })
                     }catch(e){
-                        alert1(null,"Message","Data write fails:" + e);
+                        tabulator.log.error("Data write fails:" + e);
+                        tabulator.log.alert("Data write fails:" + e);
                         input.checked = false; //rollback UI
                         tx.className = 'question';
                     }
@@ -15985,14 +15330,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         outline.UserInput.sparqler.delete_statement(statement, function(uri,success,error_body) {
                             tx.className = 'question';
                             if (!success){
-                                alert1(null,"Message","Error occurs while deleting "+statement+'\n\n'+error_body);
+                                tabulator.log.alert("Error occurs while deleting "+statement+'\n\n'+error_body);
                                 this.checked = true; // Rollback UI
                             } else {
                                 kb.removeMany(statement.subject, statement.predicate, statement.object, statement.why);
                             }
                         })
                     }catch(e){
-                        alert1(null,"Message","Delete fails:" + e);
+                        tabulator.log.alert("Delete fails:" + e);
                         this.checked = true; // Rollback UI
                         return;
                     }
@@ -16051,7 +15396,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         gotOne = function(ele) {
             var webid = myDocument.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
-            alert1(null,"Message","You ID has been set to "+webid);
+            tabulator.log.alert("You are now logged in as "+webid);
             ele.parentNode.removeChild(ele);
         }
 
@@ -16059,7 +15404,6 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         tryFoaf = function() {
 
             myDocument.getElementById("saveStatus").className = "unknown";
-            var form = myDocument.getElementById("socialBootForm");
 
             // Construct the initial FOAF file when the form bellow is submitted
             var inputField = myDocument.getElementById("fileuri_input");
@@ -16158,138 +15502,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         var h3 = myDocument.createElement("H3");
         h3.appendChild(myDocument.createTextNode(name));
 
-        var me_uri = tabulator.preferences.get('me');
-        var me = me_uri? kb.sym(me_uri) : null;
         var div2 = myDocument.createElement("div");
 
+        // @@ Addd: event handler to redraw the stuff below when me changes.
+        tips.appendChild(tabulator.panes.utils.loginStatusBox(myDocument));
         
-        // If the user has no WebID that we know of
-        if (!me) {
-            var box = myDocument.createElement('div');
-            var p = myDocument.createElement('p');
-            box.appendChild(p);
-            box.className="mildNotice";
-            p.innerHTML = ("Tip:  Do you have <a target='explain' href='http://esw.w3.org/topic/WebID'>" +
-                "web ID</a>?<br/><i>  ");
-            var but = myDocument.createElement('input');
-            box.appendChild(but);
-            but.setAttribute('type', 'button');
-            but.setAttribute('value', 'Make or set A Web ID');
-            var makeOne = function() {
-                box.parentNode.removeChild(box); // Tip has been taken up!
-                var foo = myDocument.createElement('div');
-                main.insertBefore(foo, main.firstChild);
-                // This is an encoded verion of webid.html
-                foo.innerHTML = "\
-<div class='task'>\
-<p>Do you have <a target=\"explain\" href=\"http://esw.w3.org/topic/WebID\" >\
-web ID</a>?<br/>\
-</p>\
-<ul>\
-    <li>\
-        <p class=\"answer\"  onclick=\"document.getElementById('WebIdHelp').className='tip'\">\
-        What is A Web ID?</p>\
-        <div id=\"WebIdHelp\" class=\"unknown\">\
-            <p>    A Web ID is a URL for you. \
-            It allows you to set up a public profile, with friends, pictures and all kinds of things.\
-            </p><p>\
-            It works like having an account on a social networking site,\
-            but it isn't restricted to just that site.\
-            It is very open because the information can connect to other people,\
-            organizations and projects and so on, without everyon having to join the same\
-            social networking site.\
-            All you need is some place on the web where you can save a file to.\
-            (<a  target='explain' href=\"http://esw.w3.org/topic/WebID\">More on the wiki</a>) \
-            <span onclick=\"document.getElementById('WebIdHelp').className='unknown'\">(close)</span>\
-            </p>\
-        </div>\
-    </li>\
-    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='yes'\">\
-    Yes, I have a web ID\
-    </li>\
-    <li class=\"answer\" onclick=\"document.getElementById('WhetherWebId').className='no'\">\
-    No, I would like to make one\
-    </li>\
-</ul>\
-<div id=\"WhetherWebId\" class=\"unknown\">\
-    <div class=\"affirmative\">\
-        <p>What is your Web ID?</p>\
-        <p>\
-            <input id='webidField' name=\"webid\" type=\"text\" style='width:100%' value=\"http:\"/>\
-            <br/>\
-            <input id='gotOneButton' type=\"button\" value=\"Use this ID\"/>\
-        </p>\
-    </div>\
-    <div class=\"negative\">\
-        <p>Ok, Let's make one.  Would you like to use your real name, or make it anonymous?</p>\
-        <ul>\
-            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='no'\">\
-            I would like to use my real name. (Recommended, for example, for professionals who have\
-            and want public visibility).\
-            </li>\
-            <li class=\"answer\" onclick=\"document.getElementById('WhetherAnon').className='yes'\">\
-            I would like to be anonymous. (If you are a child, use this.) \
-            </li>\
-        </ul>\
-\
-        <div id=\"WhetherAnon\" class=\"unknown\">\
-            <div class=\"affirmative\">\
-                <p>Think of a nick name, handle, or screen name by which you would like to be known.\
-                Or one by which you are already known online.\
-                    <br/>\
-                    <input name=\"nick\" type=\"text\" size=\"40\" id=\"nick_input\"/>\
-                </p>\
-            </div>\
-            <div class=\"negative\">\
-                <p>What is your name?  (A full name in the normal order in which you prefer it,\
-                such as Bill Gates, or Marie-Claire Forgue. Normally people omit \
-                prefixes, like Dr., and suffixes, like PhD, but it is up to you.)\
-                <br/><input name=\"foafname\" type=\"text\" size=\"40\" id=\"foafname_input\"/>\
-                </p>\
-                <p>Your initials? (These will be used as part of your web ID)\
-                <br/><input name=\"initials\" type=\"text\" size=\"10\" id=\"initials_input\"/>\
-                </p>\
-            </div>\
-            <p>You need the URI of a file which you can write to on the web.\
-            (The general public should be able to read it but not change it.\
-            The server should support the <em>WebDAV</em> protocol.)<br/>\
-            It will typcially look something like:<br/>\
-            http://www.example.com/users/gates/foaf.rdf<br/><br/>\
-                 <input name=\"fileuri\" type=\"text\" size=\"80\" id=\"fileuri_input\"\
-                     value=\"http://your.isp.com/...something.../foaf.rdf\"\
-                     />\
-            <br/>\
-            <input id=\"tryFoafButton\" type=\"button\" value=\"Create my new profile\" onclickOFF =\"tryFoaf()\"/>\
-            </p>\
-        </div>\
-\
-    </div>\
-    <div id=\"saveStatus\" class=\"unknown\">\
-    </div>\
-</div>\
-</div>\
-";
-                var button = myDocument.getElementById('tryFoafButton');
-                button.addEventListener('click', function(){ return tryFoaf()}, false);
-                button = myDocument.getElementById('gotOneButton');
-                button.addEventListener('click', function(){ return gotOne(foo)}, false);
-            }
-            but.addEventListener('click', makeOne, false);
-            tips.appendChild(box); 
-        } else {  // We do have a webid
-            var but = myDocument.createElement('input');
-            tips.appendChild(but);
-            but.className = 'WebIDCancelButton';
-            but.setAttribute('type', 'button');
-            but.setAttribute('value', 'Forget my Web ID');
-            var zapIt = function() {
-                tabulator.preferences.set('me','');
-                alert1(null,"Message",'Your Web ID was '+me_uri+'. It has been forgotten.');
-                // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-            }
-            but.addEventListener('click', zapIt, false);
-        }
-
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri && kb.sym(me_uri);
+        
         var thisIsYou = (me && kb.sameThings(me,s));
 
         if (!me || thisIsYou) {  // If we know who me is, don't ask for other people
@@ -16304,7 +15524,8 @@ web ID</a>?<br/>\
             var myHandler = function(e) {
                 var uri = this.checked? s.uri : '';
                 tabulator.preferences.set('me', uri);
-                alert1(null,"Message",'Your own Web ID is now ' + (uri?uri:'reset. To set it again, find yourself and check "This is you".'));
+                tabulator.log.alert('You are now '+ (uri ? 'logged in as ' + uri :
+                    'logged out. To log in again, find yourself and check "This is you".'));
                 // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
             }
             input.setAttribute('type', 'checkbox');
@@ -18073,6 +17294,18 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     pattern = makeRDFStatement(v,parentVar);
     //alert(pattern);
     v.label = v.label.slice(0,1).toUpperCase() + v.label.slice(1)// init cap
+
+    // See ../rdf/sparql.js
+    function constraintEqualTo (value) //This should only work on literals but doesn't.
+    {
+        this.describe = function (varstr) { return varstr + " = "+value.toNT() }
+        this.test = function (term) {
+            return value.sameTerm(term)
+        }
+        return this;
+    }
+    
+
     
     if (constraint)   //binds the constrained variable to its selected value
     	pat.constraints[v]=new constraintEqualTo(constraintVar);
@@ -20715,6 +19948,7 @@ tabulator.OutlineObject = function(doc) {
 
 
     this.appendAccessIcon = function(node, uri) {
+        if (!uri) return '';
         var docuri = tabulator.rdf.Util.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
         var state = sf.getState(docuri);
@@ -23038,8 +22272,8 @@ function tableView(container,doc)
         numCols = nv;
         
         // auto completion array
-        entryArray = lb.entry;
-        for (i = 0; i<lb.entry.length; i++) {
+        entryArray = tabulator.lb.entry;
+        for (i = 0; i<tabulator.lb.entry.length; i++) {
             autoCompArray.push(entryArray[i][0].toString());
             entryArray = entryArray.slice(0);
         }

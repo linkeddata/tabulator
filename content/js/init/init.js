@@ -42,7 +42,7 @@ dump("@@@ init.js Inital setting of tabulator.log\n");
 // see the script rdf/create-lib which creates one file, rdflib.js
 // by concatenating all the js files)
 
-tabulator.loadScript("js/rdf/rdflib.js");
+tabulator.loadScript("js/rdf/dist/rdflib.js");
 tabulator.rdf = $rdf;
 
 

@@ -51,7 +51,7 @@ jQuery(document).ready(function(){
     //Load the RDF Library, which defines itself in the namespace $rdf.
     // see the script rdf/create-lib (this script creates one file -rdflib.js that concatenates all the js files)
 
-    tabulator.loadScript("js/rdf/rdflib.js");
+    tabulator.loadScript("js/rdf/dist/rdflib.js");
     tabulator.rdf = $rdf;
 
 

@@ -31,7 +31,7 @@ tabulator.OutlineObject = function(doc) {
         this.navigator = win.navigator;
         this.location = win.location;
         this.jQuery = window.jQuery;
-        // loader.loadSubScript("js/rdf/rdflib.js");
+        // loader.loadSubScript("js/rdf/dist/rdflib.js");
         // loader.loadSubScript("js/widgets/jquery.rdf.widgets.js");
         return jQuery;
     }();

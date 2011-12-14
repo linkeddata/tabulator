@@ -153,7 +153,7 @@ tabulator.log.dumpHTML = function(){
     //Load the RDF Library, which defines itself in the namespace $rdf.
     // see the script rdf/create-lib (this script creates one file -rdflib.js that concatenates all the js files)
 
-// ###### Expanding js/rdf/rdflib.js ##############
+// ###### Expanding js/rdf/dist/rdflib.js ##############
 $rdf = function() {
 /**
 * Utility functions for $rdf and the $rdf object itself
@@ -7607,7 +7607,7 @@ $rdf.parse = function parse(str, kb, base, contentType) {
 // ends
 return $rdf;}()
 
-// ###### Finished expanding js/rdf/rdflib.js ##############
+// ###### Finished expanding js/rdf/dist/rdflib.js ##############
     tabulator.rdf = $rdf;
 
 
@@ -19803,7 +19803,7 @@ tabulator.OutlineObject = function(doc) {
         this.navigator = win.navigator;
         this.location = win.location;
         this.jQuery = window.jQuery;
-        // loader.loadSubScript("js/rdf/rdflib.js");
+        // loader.loadSubScript("js/rdf/dist/rdflib.js");
         // loader.loadSubScript("js/widgets/jquery.rdf.widgets.js");
         return jQuery;
     }();

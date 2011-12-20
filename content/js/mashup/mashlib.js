@@ -7136,6 +7136,10 @@ $rdf.Fetcher = function(store, timeout, async) {
             return xhr
         }
 
+        xhr.onerror = function(event) {
+            sf.failFetch(xhr, "XHR Error: "+event)
+        }
+        
         // Set up callbacks
         xhr.onreadystatechange = function() {
             
@@ -7145,6 +7149,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var handler = null;
                 var thisReq = xhr.req // Might have changes by redirect
                 sf.fireCallbacks('recv', args)
+                var kb = sf.store;
                 var response = kb.bnode();
                 kb.add(thisReq, ns.link('response'), response);
                 kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
@@ -7234,7 +7239,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
 
                 for (var x = 0; x < sf.handlers.length; x++) {
-                    if (xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
+                    if (xhr.headers['content-type'] && xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
                         handler = new sf.handlers[x]()
                         requestHandlers.append(sf.handlers[x].term) // FYI
                         break
@@ -7257,13 +7262,17 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (handler) {
                     handler.recv(xhr)
                 } else {
-                    sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']);
+                    sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']+
+                            ", readyState = "+xhr.readyState);
                     return;
                 }
             };
 
-
-
+            // DONE: 4
+            // HEADERS_RECEIVED: 2
+            // LOADING: 3
+            // OPENED: 1
+            // UNSENT: 0
             switch (xhr.readyState) {
             case 0:
                     var uri = xhr.uri.uri, newURI;
@@ -7367,9 +7376,11 @@ $rdf.Fetcher = function(store, timeout, async) {
             return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
         }
         
-        // Set redirect callback and request headers -- alas Firefox Only
+        // Set redirect callback and request headers -- alas Firefox Extension Only
         
-        if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
+        if (typeof tabulator != 'undefined' && tabulator.isExtension &&
+                $rdf.Util.uri.protocol(xhr.uri.uri) == 'http' ||
+                $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
             try {
                 xhr.channel.notificationCallbacks = {
                     getInterface: function(iid) {
@@ -7455,8 +7466,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                     }
                 }
             } catch (err) {
-                if (typeof tabulator != 'undefined' && tabulator.isExtension) return sf.failFetch(xhr,
-                        "Couldn't set callback for redirects: " + err);
+                 return sf.failFetch(xhr,
+                        "@@ Couldn't set callback for redirects: " + err);
             }
 
             try {

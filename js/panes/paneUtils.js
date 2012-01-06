@@ -172,7 +172,7 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
     return box;
 }
 
-/*          Multiple similar fields
+/*          Multiple similar fields (unordered)
 **
 */
 tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
@@ -912,11 +912,11 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     var sts = kb.statementsMatching(subject, predicate,undefined); // Only one please
     if (sts.length > 1) return tabulator.panes.utils.errorMessage(dom,
                 "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject);
-    if (sts.length) {
+    /* if (sts.length) {
         if (sts[0].why.sameTerm(store)) {
             group.appendChild(dom.createTextNode("Note this is stored in "+sts[0].why)); // @@
         }
-    }
+    } */
     var desc = sts.length? sts[0].object.value : undefined;
     var field = dom.createElement('textarea');
     group.appendChild(field);

@@ -7,8 +7,8 @@
 
 tabulator = {};
 tabulator.isExtension = false;
- // @@@ Hg hosted for testing only! Need a seiously hosted main site - or mashup user's site of course
-tabulator.scriptBase = 'http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/';
+ // @@@ Git hosted for testing only! Need a seiously hosted main site - or mashup user's site of course
+tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator-firefox/master/content/';
 tabulator.iconPrefix = tabulator.scriptBase;
 
 
@@ -26,8 +26,8 @@ var complain = function complain(message, style){
 /*
 tabulator.loadScript = function(uri) {
     if (uri.slice(0,19) == 'chrome://tabulator/')
-        // uri = 'file:///devel/dig-hg/tabulator/'+uri.slice(19);  // getScript fails silently on file:
-        uri = 'http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/'+uri.slice(19);
+        // uri = 'file:///devel/github.com/linkeddata/tabulator-firefox/'+uri.slice(19);  // getScript fails silently on file:
+        uri = ''https://raw.github.com/linkeddata/tabulator-firefox/'+uri.slice(19);
     if (uri.slice(-7) == '-ext.js')
         uri = uri.slice(0,-7) + '.js';
     complain("Loading "+uri);

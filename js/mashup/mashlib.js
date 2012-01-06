@@ -8,8 +8,8 @@
 
 tabulator = {};
 tabulator.isExtension = false;
- // @@@ Hg hosted for testing only! Need a seiously hosted main site - or mashup user's site of course
-tabulator.scriptBase = 'http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/';
+ // @@@ Git hosted for testing only! Need a seiously hosted main site - or mashup user's site of course
+tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator-firefox/master/content/';
 tabulator.iconPrefix = tabulator.scriptBase;
 
 
@@ -27,8 +27,8 @@ var complain = function complain(message, style){
 /*
 tabulator.loadScript = function(uri) {
     if (uri.slice(0,19) == 'chrome://tabulator/')
-        // uri = 'file:///devel/dig-hg/tabulator/'+uri.slice(19);  // getScript fails silently on file:
-        uri = 'http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/'+uri.slice(19);
+        // uri = 'file:///devel/github.com/linkeddata/tabulator-firefox/'+uri.slice(19);  // getScript fails silently on file:
+        uri = ''https://raw.github.com/linkeddata/tabulator-firefox/'+uri.slice(19);
     if (uri.slice(-7) == '-ext.js')
         uri = uri.slice(0,-7) + '.js';
     complain("Loading "+uri);
@@ -6303,8 +6303,28 @@ function backslashUify(str) {
     return res;
 }
 
+///////////////////////////// Quad store serialization
 
 
+// @para. write  - a function taking a single string to be output
+//
+__Serializer.prototype.writeStore = function(write) {
+
+    var fetcher = kb.fetcher;
+    var session = fetcher && fetcher.appNode;
+    
+    // Everything we know from experience just write out.
+    if (session) write(this.toStr(kb.statementsMatching(
+                                undefined, undefimed, undefimed, session)));
+                                
+    var sources = this.store.index[3];
+    for (source in sources) {  // -> assume we can use -> as short for log:semantics
+        if (!source.sameTermAs(sesssion)) {
+            write('\n'+ termToN3(source)+' -> { '+ this.toStr(kb.statementsMatching(
+                                undefined, undefimed, undefimed, session)) + ' }.\n');
+        }
+    }
+}
 
 
 
@@ -6758,7 +6778,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // @@  Get namespace document <n>, parse it, look for  <n> grddl:namespaceTransform ?y
                 // Apply ?y to   dom
                 // We give up. What dialect is this?
-                sf.failFetch(xhr, "unsupportedDialect")
+                sf.failFetch(xhr, "Unsupported dialect of XML: not RDF or XHTML namespace, etc.\n"+xhr.responseText.slice(0,80));
             }
         }
     }
@@ -7129,13 +7149,17 @@ $rdf.Fetcher = function(store, timeout, async) {
         kb.add(req, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
         kb.add(req, ns.link('status'), kb.collection(), sf.req)
 
-
+        // This should not be stored in the store, but in the JS data
         if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.Util.uri.protocol(docuri)) == "undefined") {
             // update the status before we break out
-            this.failFetch(xhr, "Unsupported protocol")
+            this.failFetch(xhr, "Unsupported protocol: "+$rdf.Util.uri.protocol(docuri))
             return xhr
         }
 
+        xhr.onerror = function(event) {
+            sf.failFetch(xhr, "XHR Error: "+event)
+        }
+        
         // Set up callbacks
         xhr.onreadystatechange = function() {
             
@@ -7145,6 +7169,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var handler = null;
                 var thisReq = xhr.req // Might have changes by redirect
                 sf.fireCallbacks('recv', args)
+                var kb = sf.store;
                 var response = kb.bnode();
                 kb.add(thisReq, ns.link('response'), response);
                 kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
@@ -7234,7 +7259,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
 
                 for (var x = 0; x < sf.handlers.length; x++) {
-                    if (xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
+                    if (xhr.headers['content-type'] && xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
                         handler = new sf.handlers[x]()
                         requestHandlers.append(sf.handlers[x].term) // FYI
                         break
@@ -7257,13 +7282,17 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (handler) {
                     handler.recv(xhr)
                 } else {
-                    sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']);
+                    sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']+
+                            ", readyState = "+xhr.readyState);
                     return;
                 }
             };
 
-
-
+            // DONE: 4
+            // HEADERS_RECEIVED: 2
+            // LOADING: 3
+            // OPENED: 1
+            // UNSENT: 0
             switch (xhr.readyState) {
             case 0:
                     var uri = xhr.uri.uri, newURI;
@@ -7367,9 +7396,11 @@ $rdf.Fetcher = function(store, timeout, async) {
             return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
         }
         
-        // Set redirect callback and request headers -- alas Firefox Only
+        // Set redirect callback and request headers -- alas Firefox Extension Only
         
-        if ($rdf.Util.uri.protocol(xhr.uri.uri) == 'http' || $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
+        if (typeof tabulator != 'undefined' && tabulator.isExtension &&
+                $rdf.Util.uri.protocol(xhr.uri.uri) == 'http' ||
+                $rdf.Util.uri.protocol(xhr.uri.uri) == 'https') {
             try {
                 xhr.channel.notificationCallbacks = {
                     getInterface: function(iid) {
@@ -7448,15 +7479,87 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         xhr2.req, sf.appNode); 
         
                                     // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
-                                }
+                                },
+                                
+                                // See https://developer.mozilla.org/en/XPCOM_Interface_Reference/nsIChannelEventSink
+                                asyncOnChannelRedirect: function(oldC, newC, flags, callback) {
+                                    if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
+                                        $rdf.Util.enablePrivilege("UniversalXPConnect")
+                                    }
+                                    if (xhr.aborted) return;
+                                    var kb = sf.store;
+                                    var newURI = newC.URI.spec;
+                                    var oldreq = xhr.req;
+                                    sf.addStatus(xhr.req, "Redirected: " + xhr.status + " to <" + newURI + ">");
+                                    kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), xhr.req);
+
+
+
+                                    ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
+                                    var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
+                                    // xhr.uri = docterm
+                                    // xhr.requestedURI = args[0]
+                                    // var requestHandlers = kb.collection()
+
+                                    // kb.add(kb.sym(newURI), ns.link("request"), req, this.appNode)
+                                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
+
+                                    var now = new Date();
+                                    var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
+                                    kb.add(newreq, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + newURI), this.appNode)
+                                    kb.add(newreq, ns.link('status'), kb.collection(), sf.req)
+                                    kb.add(newreq, ns.link("requestedURI"), kb.literal(newURI), this.appNode)
+                                    ///////////////
+
+                                    
+                                    //// $rdf.log.info('@@ sources onChannelRedirect'+
+                                    //               "Redirected: "+ 
+                                    //               xhr.status + " to <" + newURI + ">"); //@@
+                                    var response = kb.bnode();
+                                    // kb.add(response, ns.http('location'), newURI, response); Not on this response
+                                    kb.add(oldreq, ns.link('response'), response);
+                                    kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
+                                    if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+
+                                    if (xhr.status - 0 != 303) kb.HTTPRedirects[xhr.uri.uri] = newURI; // same document as
+                                    if (xhr.status - 0 == 301 && rterm) { // 301 Moved
+                                        var badDoc = $rdf.Util.uri.docpart(rterm.uri);
+                                        var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
+                                        if (rterm) {
+                                            msg += ' Link in <' + badDoc + ' >should be changed';
+                                            kb.add(badDoc, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg, sf.appNode);
+                                        }
+                                        // dump(msg+"\n");
+                                    }
+                                    xhr.abort()
+                                    xhr.aborted = true
+
+                                    sf.addStatus(oldreq, 'done') // why
+                                    sf.fireCallbacks('done', args) // Are these args right? @@@
+                                    sf.requested[xhr.uri.uri] = 'redirected';
+
+                                    var hash = newURI.indexOf('#');
+                                    if (hash >= 0) {
+                                        var msg = ('Warning: ' + xhr.uri + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
+                                        // dump(msg+"\n");
+                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
+                                        newURI = newURI.slice(0, hash);
+                                    }
+                                    var xhr2 = sf.requestURI(newURI, xhr.uri);
+                                    if (xhr2 && xhr2.req) kb.add(xhr.req,
+                                        kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
+                                        xhr2.req, sf.appNode); 
+        
+                                    // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
+                                } // asyncOnChannelRedirect
                             }
                         }
                         return Components.results.NS_NOINTERFACE
                     }
                 }
             } catch (err) {
-                if (typeof tabulator != 'undefined' && tabulator.isExtension) return sf.failFetch(xhr,
-                        "Couldn't set callback for redirects: " + err);
+                 return sf.failFetch(xhr,
+                        "@@ Couldn't set callback for redirects: " + err);
             }
 
             try {

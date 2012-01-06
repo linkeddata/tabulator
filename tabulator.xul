@@ -56,6 +56,7 @@
     <menu id="menu_ToolsTabulatorMenu" label="&toolsTabulatorMenu.label;" accesskey="&toolsTabulatorMenu.accesskey;" insertafter="javascriptConsole">
       <menupopup id="menu_ToolsTabulatorPopup">
         <menuitem id="tabulator_setaccept" label="&tabulatorToggleHeader.label;" accesskey="&tabulatorToggleHeader.accesskey;" type="checkbox" oncommand="toggleSetHeader()"/>
+        <menuitem id="tabulator_saveSession" label="&tabulatorSaveSession.label;" accesskey="&tabulatorSaveSession.accesskey;" type="checkbox" oncommand="saveSession()"/>
       </menupopup>
     </menu>
     <menuitem label="&tablog.label;" accesskey="&tablog.accesskey;" insertafter="javascriptConsole" oncommand="openTool('chrome://tabulator/content/log.xul','tabulatorlog')"/>
@@ -366,6 +367,14 @@ function openTool(url, type, width, height)
         } catch(e) {
           alert("Error: Could not set the HTTP Accept header preference.\n       Please report error to http://dig.csail.mit.edu/issues/tabulator/");
         }
+    }
+
+    function saveSession() {
+        if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].
+                getService(Components.interfaces.nsISupports).wrappedJSObject;
+        var sz = tabulator.rdf.Serializer(tabulator.kb);
+        sz.writeStore(dump); // @@ Later, chose filename to dump to
+        alert("Store dumped to log.");
     }
 
     window.addEventListener("load",tabulator_init.onLoad, false);

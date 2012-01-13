@@ -9,7 +9,7 @@
 tabulator = {};
 tabulator.isExtension = false;
  // @@@ Git hosted for testing only! Need a seiously hosted main site - or mashup user's site of course
-tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator-firefox/master/content/';
+tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/';
 tabulator.iconPrefix = tabulator.scriptBase;
 
 
@@ -6303,28 +6303,8 @@ function backslashUify(str) {
     return res;
 }
 
-///////////////////////////// Quad store serialization
 
 
-// @para. write  - a function taking a single string to be output
-//
-__Serializer.prototype.writeStore = function(write) {
-
-    var fetcher = kb.fetcher;
-    var session = fetcher && fetcher.appNode;
-    
-    // Everything we know from experience just write out.
-    if (session) write(this.toStr(kb.statementsMatching(
-                                undefined, undefimed, undefimed, session)));
-                                
-    var sources = this.store.index[3];
-    for (source in sources) {  // -> assume we can use -> as short for log:semantics
-        if (!source.sameTermAs(sesssion)) {
-            write('\n'+ termToN3(source)+' -> { '+ this.toStr(kb.statementsMatching(
-                                undefined, undefimed, undefimed, session)) + ' }.\n');
-        }
-    }
-}
 
 
 
@@ -8082,7 +8062,7 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
     return box;
 }
 
-/*          Multiple similar fields
+/*          Multiple similar fields (unordered)
 **
 */
 tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
@@ -8822,11 +8802,11 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     var sts = kb.statementsMatching(subject, predicate,undefined); // Only one please
     if (sts.length > 1) return tabulator.panes.utils.errorMessage(dom,
                 "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject);
-    if (sts.length) {
+    /* if (sts.length) {
         if (sts[0].why.sameTerm(store)) {
             group.appendChild(dom.createTextNode("Note this is stored in "+sts[0].why)); // @@
         }
-    }
+    } */
     var desc = sts.length? sts[0].object.value : undefined;
     var field = dom.createElement('textarea');
     group.appendChild(field);

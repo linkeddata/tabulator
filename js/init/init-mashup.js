@@ -8,7 +8,7 @@
 tabulator = {};
 tabulator.isExtension = false;
  // @@@ Git hosted for testing only! Need a seiously hosted main site - or mashup user's site of course
-tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator-firefox/master/content/';
+tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/';
 tabulator.iconPrefix = tabulator.scriptBase;
 
 

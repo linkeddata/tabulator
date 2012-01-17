@@ -1,16 +1,10 @@
-/**
- *
- * INITIALIZATION CODE...  for non-extension versions, in HTML mashup as webapp
- *
- */
-
+// mashlib-init.js
 
 tabulator = {};
 tabulator.isExtension = false;
 //tabulator.scriptBase = 'http://linkeddata.github.com/tabulator/';
 tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/';
 tabulator.iconPrefix = tabulator.scriptBase;
-
 
 // Dump exists in ff but not safari.
 if (typeof dump == 'undefined') dump = function(x) {};
@@ -23,24 +17,7 @@ var complain = function complain(message, style){
     pre.appendChild(document.createTextNode(message));
 } 
 
-/*
-tabulator.loadScript = function(uri) {
-    if (uri.slice(0,19) == 'chrome://tabulator/')
-        // uri = 'file:///devel/github.com/linkeddata/tabulator-firefox/'+uri.slice(19);  // getScript fails silently on file:
-        uri = ''https://raw.github.com/linkeddata/tabulator-firefox/'+uri.slice(19);
-    if (uri.slice(-7) == '-ext.js')
-        uri = uri.slice(0,-7) + '.js';
-    complain("Loading "+uri);
-    jQuery.getScript(uri, function(data, status){
-        complain("Loaded "+uri+": ");
-    });
-    // load(uri)
-}; 
-*/
-
-
-jQuery(function(){
-
+tabulator.setup = function() {
     // complain("@@ init.js test 40 )");
 
     //Before anything else, load up the logger so that errors can get logged.
@@ -53,8 +30,6 @@ jQuery(function(){
 
     tabulator.loadScript("js/rdf/dist/rdflib.js");
     tabulator.rdf = $rdf;
-
-
 
     //Load the icons namespace onto tabulator.
     tabulator.loadScript("js/init/icons.js");
@@ -85,8 +60,6 @@ jQuery(function(){
     //@@ jambo commented this out to pare things down temporarily.
     tabulator.loadScript("js/init/views.js");
 
-///////////////  These things in the extension are in components/xpcom.js
-
     tabulator.kb = new tabulator.rdf.IndexedFormula();
     tabulator.sf = new tabulator.rdf.Fetcher(tabulator.kb);
     tabulator.kb.sf = tabulator.sf;
@@ -98,17 +71,9 @@ jQuery(function(){
     tabulator.requestCache = [];
     tabulator.cacheEntry = {};
 
-
     tabulator.lb = new Labeler(tabulator.kb, tabulator.preferences.get('languages')); // @@ was LanguagePreference
     tabulator.kb.predicateCallback = tabulator.rdf.Util.AJAR_handleNewTerm; // @@ needed??
     tabulator.kb.typeCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
-
-
-//////////////////////
-
-
-
-
 
     tabulator.requestUUIDs = {};
 /*
@@ -130,20 +95,15 @@ jQuery(function(){
 */
     // complain("@@ init.js test 118 )");
 
-
     //Add the Tabulator outliner
-    var outline = new tabulator.OutlineObject(document);
+    tabulator.outline = new tabulator.OutlineObject(document);
 
     // we don't currently have a uuid generator code in non-extension mode
     // var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
-    
-    outline.init();
+    tabulator.outline.init();
+};
 
-
-});  // End jQuery ready()
-
-
-    
-
-    
-// Ends
+jQuery(function() {
+    if (tabulator.rdf == undefined)
+        tabulator.setup();
+});

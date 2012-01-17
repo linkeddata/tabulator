@@ -20412,11 +20412,8 @@ tabulator.OutlineObject = function(doc) {
                     pre.appendChild(myDocument.createTextNode(tabulator.Util.stackString(e)));
                 }
 
-
-
-
-
-                if (tr1.firstPane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');
+                if (tr1.firstPane.requireQueryButton)
+                    $('#queryButton').removeAttr('style');
                 table.appendChild(paneDiv);
                 paneDiv.pane = tr1.firstPane;
             }
@@ -21441,7 +21438,7 @@ tabulator.OutlineObject = function(doc) {
                             state = 'paneHidden';
                             if (d.pane.requireQueryButton && t.parentNode.className /*outer table*/
                                 && numberOfPanesRequiringQueryButton == 1)
-                                myDocument.getElementById('queryButton').setAttribute('style','display:none;');
+                                $('#queryButton').hide();
                             break;
                         }
                     }
@@ -21460,7 +21457,8 @@ tabulator.OutlineObject = function(doc) {
                         paneDiv.appendChild(pre);
                         pre.appendChild(myDocument.createTextNode(tabulator.Util.stackString(e)));
                     }
-                    if (pane.requireQueryButton) myDocument.getElementById('queryButton').removeAttribute('style');                    
+                    if (pane.requireQueryButton)
+                        $('#queryButton').removeAttr('style');
                     var second = t.firstChild.nextSibling;
                     if (second) t.insertBefore(paneDiv, second);
                     else t.appendChild(paneDiv);

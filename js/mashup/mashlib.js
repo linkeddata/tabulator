@@ -40,7 +40,7 @@ tabulator.loadScript = function(uri) {
 */
 
 
-jQuery(document).ready(function(){
+jQuery(function(){
 
     // complain("@@ init.js test 40 )");
 

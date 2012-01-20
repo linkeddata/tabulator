@@ -820,7 +820,7 @@ $rdf.term = function(val) {
         if ((''+val).indexOf('e')>=0) dt = $rdf.Symbol.prototype.XSDfloat;
         else if ((''+val).indexOf('.')>=0) dt = $rdf.Symbol.prototype.XSDdecimal;
         else dt = $rdf.Symbol.prototype.XSDinteger;
-        return new $rdf.Literal(val, undefined, dt);
+        return new $rdf.Literal(''+val, undefined, dt); // Stored as string - good idea?
     }
     if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
                                                        $rdf.Symbol.prototype.XSDboolean);
@@ -3337,7 +3337,7 @@ $rdf.IndexedFormula = function(features) {
     if ($rdf.Util.ArrayIndexOf(features,"sameAs") >= 0)
         this.propertyActions['<http://www.w3.org/2002/07/owl#sameAs>'] = [
 	function(formula, subj, pred, obj, why) {
-            // tabulator.log.warn("Equating "+subj.uri+" sameAs "+obj.uri);  //@@
+            // $rdf.log.warn("Equating "+subj.uri+" sameAs "+obj.uri);  //@@
             formula.equate(subj,obj);
             return true; // true if statement given is NOT needed in the store
 	}]; //sameAs -> equate & don't add to index
@@ -3357,7 +3357,7 @@ $rdf.IndexedFormula = function(features) {
     function handle_IFP(formula, subj, pred, obj)  {
         var s1 = formula.any(undefined, pred, obj);
         if (s1 == undefined) return false; // First time with this value
-        // tabulator.log.warn("Equating "+s1.uri+" and "+subj.uri + " because IFP "+pred.uri);  //@@
+        // $rdf.log.warn("Equating "+s1.uri+" and "+subj.uri + " because IFP "+pred.uri);  //@@
         formula.equate(s1, subj);
         return true;
     } //handle_IFP
@@ -3365,7 +3365,7 @@ $rdf.IndexedFormula = function(features) {
     function handle_FP(formula, subj, pred, obj)  {
         var o1 = formula.any(subj, pred, undefined);
         if (o1 == undefined) return false; // First time with this value
-        // tabulator.log.warn("Equating "+o1.uri+" and "+obj.uri + " because FP "+pred.uri);  //@@
+        // $rdf.log.warn("Equating "+o1.uri+" and "+obj.uri + " because FP "+pred.uri);  //@@
         formula.equate(o1, obj);
         return true ;
     } //handle_FP
@@ -3412,7 +3412,7 @@ We replace the bigger with the smaller.
 
 */
 $rdf.IndexedFormula.prototype.equate = function(u1, u2) {
-    // tabulator.log.warn("Equating "+u1+" and "+u2); // @@
+    // $rdf.log.warn("Equating "+u1+" and "+u2); // @@
     //@@JAMBO Must canonicalize the uris to prevent errors from a=b=c
     //03-21-2010
     u1 = this.canon( u1 );
@@ -3425,7 +3425,7 @@ $rdf.IndexedFormula.prototype.equate = function(u1, u2) {
     } else {
 	    return this.replaceWith(u1, u2);
     }
-}
+};
 
 // Replace big with small, obsoleted with obsoleting.
 //
@@ -3514,26 +3514,6 @@ $rdf.IndexedFormula.prototype.uris = function(term) {
     return res
 }
 
-// On input parameters, convert constants to terms
-// 
-function RDFMakeTerm(formula,val, canonicalize) {
-    if (typeof val != 'object') {   
-	    if (typeof val == 'string')
-	        return new $rdf.Literal(val);
-        if (typeof val == 'number')
-            return new $rdf.Literal(val); // @@ differet types
-        if (typeof val == 'boolean')
-            return new $rdf.Literal(val?"1":"0", undefined, 
-                                    $rdf.Symbol.prototype.XSDboolean);
-	    else if (typeof val == 'number')
-	        return new $rdf.Literal(''+val);   // @@ datatypes
-	    else if (typeof val == 'undefined')
-	        return undefined;
-	    else    // @@ add converting of dates and numbers
-	        throw "Can't make Term from " + val + " of type " + typeof val; 
-    }
-    return val;
-}
 
 // Add a triple to the store
 //
@@ -3543,11 +3523,11 @@ function RDFMakeTerm(formula,val, canonicalize) {
 $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
     var actions, st;
     if (why == undefined) why = this.fetcher ? this.fetcher.appNode: this.sym("chrome:theSession"); //system generated
-                               //defined in source.js, is this OK with identity.js only user?
-    subj = RDFMakeTerm(this, subj);
-    pred = RDFMakeTerm(this, pred);
-    obj = RDFMakeTerm(this, obj);
-    why = RDFMakeTerm(this, why);
+                //defined in source.js, is this OK with identity.js only user?
+    subj = $rdf.term(subj);
+    pred = $rdf.term(pred);
+    obj = $rdf.term(obj);
+    why = $rdf.term(why);
     
     var hash = [ this.canon(subj).hashString(), this.canon(pred).hashString(),
             this.canon(obj).hashString(), this.canon(why).hashString()];
@@ -3618,7 +3598,7 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
     var wild = []; // wildcards
     var given = []; // Not wild
     for (var p=0; p<4; p++) {
-        pattern[p] = this.canon(RDFMakeTerm(this, pat[p]));
+        pattern[p] = this.canon($rdf.term(pat[p]));
         if (pattern[p] == undefined) {
             wild.push(p);
         } else {
@@ -4071,7 +4051,7 @@ $rdf.Collection.prototype.isVar = 0;
 $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDone) {
     var kb = this;
     $rdf.log.info("Query:"+myQuery.pat+", fetcher="+fetcher+"\n");
-        tabulator.log.error("@@@@ query.js 4: "+$rdf.log.error); // @@ works
+        $rdf.log.error("@@@@ query.js 4: "+$rdf.log.error); // @@ works
         $rdf.log.error("@@@@ query.js 5");  // @@
 
     ///////////// Debug strings
@@ -4455,7 +4435,7 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
     }
     
     MandatoryBranch.prototype.reportMatch = function(bindings) {
-        tabulator.log.error("@@@@ query.js 1"); // @@
+        $rdf.log.error("@@@@ query.js 1"); // @@
         $rdf.log.error("@@@@ query.js 2");  // @@
         this.callback(bindings);
         this.success = true;
@@ -5829,7 +5809,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 */
 
 
-    tabulator.log.debug('serialize.js Find bnodes with only one incoming arc\n')
+    // $rdf.log.debug('serialize.js Find bnodes with only one incoming arc\n')
     for (var i = 0; i<sts.length; i++) {
         var st = sts[i];
         [ st.subject, st.predicate, st.object].map(function(y){
@@ -5841,7 +5821,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         if (!ss) ss = [];
         ss.push(st);
         subjects[this.toStr(st.subject)] = ss; // Make hash. @@ too slow for formula?
-        //$rdf.log.debug(' sz potential subject: '+sts[i].subject)
+        // $rdf.log.debug(' sz potential subject: '+sts[i].subject)
     }
 
     var roots = [];
@@ -5861,7 +5841,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 // and at the same time accumulates a list of all bnodes mentioned.
 // This is in fact a cut down N3 serialization
 /*
-    tabulator.log.debug('serialize.js Looking for connected bnode loops\n')
+    // $rdf.log.debug('serialize.js Looking for connected bnode loops\n')
     for (var i=0; i<sts.length; i++) { // @@TBL
         // dump('\t'+sts[i]+'\n');
     }
@@ -5892,7 +5872,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     // Scan for bnodes nested inside lists too
     function dummyTermToN3(expr, subjects, rootsHash) {
         if (expr.termType == 'bnode') doneBnodesNT[expr.toNT()] = true;
-        tabulator.log.debug('serialize: seen '+expr);
+        // $rdf.log.debug('serialize: seen '+expr);
         if (expr.termType == 'collection') {
             for (i=0; i<expr.elements.length; i++) {
                 if (expr.elements[i].termType == 'bnode')
@@ -5912,7 +5892,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     }
 */    
     // Now do the scan using existing roots
-    tabulator.log.debug('serialize.js Dummy serialize to check for missing nodes')
+    // $rdf.log.debug('serialize.js Dummy serialize to check for missing nodes')
     var rootsHash = {};
     for (var i = 0; i< roots.length; i++) rootsHash[roots[i].toNT()] = true;
 /*
@@ -5927,7 +5907,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
 // Such bnodes must be in isolated rings of pure bnodes.
 // They each have incoming link of 1.
 
-    tabulator.log.debug('serialize.js Looking for connected bnode loops\n')
+    // $rdf.log.debug('serialize.js Looking for connected bnode loops\n')
     for (;;) {
         var bnt;
         var found = null;
@@ -5942,7 +5922,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
         var root = this.store.fromNT(found);
         roots.push(root); // Add a new root
         rootsHash[found] = true;
-        tabulator.log.debug('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
+        // $rdf.log.debug('isolated bnode:'+found+', subjects[found]:'+subjects[found]+'\n');
         if (subjects[found] == undefined) {
             for (var i=0; i<sts.length; i++) {
                 // dump('\t'+sts[i]+'\n');
@@ -6116,19 +6096,12 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     
     function termToN3(expr, stats) {
         switch(expr.termType) {
-            case 'bnode':
-            case 'variable':  return expr.toNT();
-            case 'literal':
-                var str = stringToN3(expr.value);
-                if (expr.lang) str+= '@' + expr.lang;
-                if (expr.datatype) str+= '^^' + termToN3(expr.datatype, stats);
-                return str;
-            case 'symbol':
-                return symbolToN3(expr.uri);
+        
             case 'formula':
                 var res = ['{'];
                 res = res.concat(statementListToTree(expr.statements));
                 return  res.concat(['}']);
+
             case 'collection':
                 var res = ['('];
                 for (i=0; i<expr.elements.length; i++) {
@@ -6138,54 +6111,11 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                 return res;
                 
            default:
-                throw "Internal: termToN3 cannot handle "+expr+" of termType+"+expr.termType
-                return ''+expr;
+                return sz.atomicTermToN3(expr);
         }
     }
     
-    ////////////////////////////////////////////// Atomic Terms
-    
-    //  Deal with term level things and nesting with no bnode structure
-    
-    function symbolToN3(uri) {  // c.f. symbolString() in notation3.py
-        var j = uri.indexOf('#');
-        if (j<0 && sz.flags.indexOf('/') < 0) {
-            j = uri.lastIndexOf('/');
-        }
-        if (j >= 0 && sz.flags.indexOf('p') < 0)  { // Can split at namespace
-            var canSplit = true;
-            for (var k=j+1; k<uri.length; k++) {
-                if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
-                    canSplit = false; break;
-                }
-            }
-            if (canSplit) {
-                var localid = uri.slice(j+1);
-                var namesp = uri.slice(0,j+1);
-                if (sz.defaultNamespace && sz.defaultNamespace == namesp
-                    && sz.flags.indexOf('d') < 0) {// d -> suppress default
-                    if (sz.flags.indexOf('k') >= 0 &&
-                        sz.keyords.indexOf(localid) <0)
-                        return localid; 
-                    return ':' + localid;
-                }
-                var prefix = sz.prefixes[namesp];
-                if (prefix) {
-                    namespaceCounts[namesp] = true;
-                    return prefix + ':' + localid;
-                }
-                if (uri.slice(0, j) == sz.base)
-                    return '<#' + localid + '>';
-                // Fall though if can't do qname
-            }
-        }
-        if (sz.flags.indexOf('r') < 0 && sz.base)
-            uri = $rdf.Util.uri.refTo(sz.base, uri);
-        else if (sz.flags.indexOf('u') >= 0)
-            uri = backslashUify(uri);
-        else uri = hexify(uri);
-        return '<'+uri+'>';
-    }
+
     
     function prefixDirectives() {
         str = '';
@@ -6196,72 +6126,169 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         }
         return str + '\n';
     }
-    
-    //  stringToN3:  String escaping for N3
-    //
-    var forbidden1 = new RegExp(/[\\"\b\f\r\v\t\n\u0080-\uffff]/gm);
-    var forbidden3 = new RegExp(/[\\"\b\f\r\v\u0080-\uffff]/gm);
-    function stringToN3(str, flags) {
-        if (!flags) flags = "e";
-        var res = '', i=0, j=0;
-        var delim;
-        var forbidden;
-        if (str.length > 20 // Long enough to make sense
-                && str.slice(-1) != '"'  // corner case'
-                && flags.indexOf('n') <0  // Force single line
-                && (str.indexOf('\n') >0 || str.indexOf('"') > 0)) {
-            delim = '"""';
-            forbidden =  forbidden3;
-        } else {
-            delim = '"';
-            forbidden = forbidden1;
-        }
-        for(i=0; i<str.length;) {
-            forbidden.lastIndex = 0;
-            var m = forbidden.exec(str.slice(i));
-            if (m == null) break;
-            j = i + forbidden.lastIndex -1;
-            res += str.slice(i,j);
-            var ch = str[j];
-            if (ch=='"' && delim == '"""' &&  str.slice(j,j+3) != '"""') {
-                res += ch;
-            } else {
-                var k = '\b\f\r\t\v\n\\"'.indexOf(ch); // No escaping of bell (7)?
-                if (k >= 0) {
-                    res += "\\" + 'bfrtvn\\"'[k];
-                } else  {
-                    if (flags.indexOf('e')>=0) {
-                        res += '\\u' + ('000'+
-                         ch.charCodeAt(0).toString(16).toLowerCase()).slice(-4)
-                    } else { // no 'e' flag
-                        res += ch;
-                    }
-                }
-            }
-            i = j+1;
-        }
-        return delim + res + str.slice(i) + delim
-    }
 
-    // Body of toN3:
+
+
+
+
+
+
+
+
+
+    // Body of statementsToN3:
     
     var tree = statementListToTree(sts);
     return prefixDirectives() + treeToString(tree, -1);
     
 }
 
+
+////////////////////////////////////////////// Atomic Terms
+
+//  Deal with term level things and nesting with no bnode structure
+
+
+__Serializer.prototype.atomicTermToN3 = function atomicTermToN3(expr, stats) {
+    switch(expr.termType) {
+        case 'bnode':
+        case 'variable':  return expr.toNT();
+        case 'literal':
+            if (expr.datatype) {
+                switch (expr.datatype.uri) {
+                case 'http://www.w3.org/2001/XMLSchema#integer':
+                    return expr.value.toString();
+                    
+                //case 'http://www.w3.org/2001/XMLSchema#double': // Must force use of 'e'
+                
+                case 'http://www.w3.org/2001/XMLSchema#boolean':
+                    return expr.value? 'true' : 'false';
+                }
+            }
+            var str = this.stringToN3(expr.value);
+            if (expr.lang) str+= '@' + expr.lang;
+            if (expr.datatype) str+= '^^' + termToN3(expr.datatype, stats);
+            return str;
+        case 'symbol':
+            return this.symbolToN3(expr);
+       default:
+            throw "Internal: atomicTermToN3 cannot handle "+expr+" of termType+"+expr.termType
+            return ''+expr;
+    }
+};
+
+
+
+
+
+
+
+
+
+
+    //  stringToN3:  String escaping for N3
+    //
+
+__Serializer.prototype.forbidden1 = new RegExp(/[\\"\b\f\r\v\t\n\u0080-\uffff]/gm);
+__Serializer.prototype.forbidden3 = new RegExp(/[\\"\b\f\r\v\u0080-\uffff]/gm);
+__Serializer.prototype.stringToN3 = function stringToN3(str, flags) {
+    if (!flags) flags = "e";
+    var res = '', i=0, j=0;
+    var delim;
+    var forbidden;
+    if (str.length > 20 // Long enough to make sense
+            && str.slice(-1) != '"'  // corner case'
+            && flags.indexOf('n') <0  // Force single line
+            && (str.indexOf('\n') >0 || str.indexOf('"') > 0)) {
+        delim = '"""';
+        forbidden =  __Serializer.prototype.forbidden3;
+    } else {
+        delim = '"';
+        forbidden = __Serializer.prototype.forbidden1;
+    }
+    for(i=0; i<str.length;) {
+        forbidden.lastIndex = 0;
+        var m = forbidden.exec(str.slice(i));
+        if (m == null) break;
+        j = i + forbidden.lastIndex -1;
+        res += str.slice(i,j);
+        var ch = str[j];
+        if (ch=='"' && delim == '"""' &&  str.slice(j,j+3) != '"""') {
+            res += ch;
+
+
+
+        } else {
+
+            var k = '\b\f\r\t\v\n\\"'.indexOf(ch); // No escaping of bell (7)?
+            if (k >= 0) {
+                res += "\\" + 'bfrtvn\\"'[k];
+            } else  {
+                if (flags.indexOf('e')>=0) {
+                    res += '\\u' + ('000'+
+                     ch.charCodeAt(0).toString(16).toLowerCase()).slice(-4)
+                } else { // no 'e' flag
+                    res += ch;
+
+                }
+            }
+        }
+        i = j+1;
+    }
+    return delim + res + str.slice(i) + delim
+}
+
+
+
+//  A single symbol, either in  <> or namespace notation
+
+
+__Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolString() in notation3.py
+    var uri = x.uri;
+    var j = uri.indexOf('#');
+    if (j<0 && this.flags.indexOf('/') < 0) {
+        j = uri.lastIndexOf('/');
+    }
+    if (j >= 0 && this.flags.indexOf('p') < 0)  { // Can split at namespace
+        var canSplit = true;
+        for (var k=j+1; k<uri.length; k++) {
+            if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
+                canSplit = false; break;
+            }
+        }
+        if (canSplit) {
+            var localid = uri.slice(j+1);
+            var namesp = uri.slice(0,j+1);
+            if (this.defaultNamespace && this.defaultNamespace == namesp
+                && this.flags.indexOf('d') < 0) {// d -> suppress default
+                if (this.flags.indexOf('k') >= 0 &&
+                    this.keyords.indexOf(localid) <0)
+                    return localid; 
+                return ':' + localid;
+            }
+            var prefix = this.prefixes[namesp];
+            if (prefix) {
+                namespaceCounts[namesp] = true;
+                return prefix + ':' + localid;
+            }
+            if (uri.slice(0, j) == this.base)
+                return '<#' + localid + '>';
+            // Fall though if can't do qname
+        }
+    }
+    if (this.flags.indexOf('r') < 0 && this.base)
+        uri = $rdf.Util.uri.refTo(this.base, uri);
+    else if (this.flags.indexOf('u') >= 0)
+        uri = backslashUify(uri);
+    else uri = hexify(uri);
+    return '<'+uri+'>';
+}
+
+
 // String ecaping utilities 
 
+
 function hexify(str) { // also used in parser
-//     var res = '';
-//     for (var i=0; i<str.length; i++) {
-//         k = str.charCodeAt(i);
-//         if (k>126 || k<33)
-//             res += '%' + ('0'+n.toString(16)).slice(-2); // convert to upper?
-//         else
-//             res += str[i];
-//     }
-//     return res;
   return encodeURI(str);
 }
 
@@ -6281,7 +6308,31 @@ function backslashUify(str) {
 }
 
 
+///////////////////////////// Quad store serialization
 
+ 
+// @para. write  - a function taking a single string to be output
+//
+__Serializer.prototype.writeStore = function(write) {
+ 
+    var kb = this.store;
+    var fetcher = kb.fetcher;
+    var session = fetcher && fetcher.appNode;
+    
+    // Everything we know from experience just write out.
+    if (session) write(this.statementsToN3(kb.statementsMatching(
+                                undefined, undefined, undefined, session)));
+                                
+    var sources = this.store.index[3];
+    for (s in sources) {  // -> assume we can use -> as short for log:semantics
+        var source = kb.fromNT(s);
+        if (session && source.sameTerm(session)) continue;
+        write('\n'+ this.atomicTermToN3(source)+' -> { '+ this.statementsToN3(kb.statementsMatching(
+                            undefined, undefined, undefined, source)) + ' }.\n');
+    }
+}
+ 
+ 
 
 
 
@@ -6539,6 +6590,11 @@ $rdf.Fetcher = function(store, timeout, async) {
     ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
     ns.dc = $rdf.Namespace("http://purl.org/dc/elements/1.1/");
 
+    $rdf.Fetcher.crossSiteProxy = function(uri) {
+        if ($rdf.Fetcher.crossSiteProxyTemplate)
+          return $rdf.Fetcher.crossSiteProxyTemplate.replace('{uri}', encodeURIComponent(uri));
+        else return undefined
+    }
     $rdf.Fetcher.RDFXMLHandler = function(args) {
         if (args) {
             this.dom = args[0]
@@ -6865,7 +6921,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     p.loadBuf(xhr.responseText)
 
                 } catch (e) {
-                    var msg = ("Error trying to parse " + xhr.uri + ' as Notation3:\n' + e)
+                    var msg = ("Error trying to parse " + xhr.uri + ' as Notation3:\n' + e +':\n'+e.stack)
                     // dump(msg+"\n")
                     sf.failFetch(xhr, msg)
                     return;
@@ -7035,7 +7091,8 @@ $rdf.Fetcher = function(store, timeout, async) {
         var sta = this.getState(uri);
         if (sta == 'fetched') return callback();
         this.addCallback('done', function(uri2) {
-            if (uri2 == uri) callback();
+            if (uri2 == uri ||
+                ( $rdf.Fetcher.crossSiteProxy(uri) == uri2  )) callback();
             return (uri2 != uri); // Call me again?
         });
         if (sta == 'unrequested') this.requestURI(
@@ -7114,7 +7171,57 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
 
         xhr.onerror = function(event) {
-            sf.failFetch(xhr, "XHR Error: "+event)
+            if ($rdf.Fetcher.crossSiteProxyTemplate && document && document.location && !this.proxyUsed) { // In mashup situation
+                var hostpart = $rdf.Util.uri.hostpart;
+                var here = '' + document.location;
+                var uri = xhr.uri.uri
+                if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
+                    this.proxyUsed = true; //only try the proxy once
+                    newURI = $rdf.Fetcher.crossSiteProxy(uri);
+                    sf.addStatus(xhr.req, "BLOCKED -> Cross-site Proxy to <" + newURI + ">");
+                    if (xhr.aborted) return;
+
+                    var kb = sf.store;
+                    var oldreq = xhr.req;
+                    kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), oldreq);
+
+
+                    ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
+                    var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
+                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
+
+                    var now = new Date();
+                    var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
+                    kb.add(newreq, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + newURI), this.appNode)
+                    kb.add(newreq, ns.link('status'), kb.collection(), sf.req);
+                    kb.add(newreq, ns.link("requestedURI"), kb.literal(newURI), this.appNode);
+
+                    var response = kb.bnode();
+                    kb.add(oldreq, ns.link('response'), response);
+                    // kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
+                    // if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+
+                    xhr.abort()
+                    xhr.aborted = true
+
+                    sf.addStatus(oldreq, 'done') // why
+                    //the callback throws an exception when called from xhr.onerror (so removed)
+                    //sf.fireCallbacks('done', args) // Are these args right? @@@
+                    sf.requested[xhr.uri.uri] = 'redirected';
+
+                    var xhr2 = sf.requestURI(newURI, xhr.uri);
+
+                    if (xhr2 && xhr2.req) {
+                        kb.add(xhr.req,
+                            kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
+                            xhr2.req,
+                            sf.appNode);
+                        return;
+                    }
+                }
+            } else {
+                sf.failFetch(xhr, "XHR Error: "+event)
+            }
         }
         
         // Set up callbacks
@@ -7179,8 +7286,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (xhr.status == 200) {
                     addType(ns.link('Document'));
                     var ct = xhr.headers['content-type'];
-                    if (!ct) throw ('No content-type on 200 response for ' + xhr.uri)
-                    else {
+                    if (ct) {
                         if (ct.indexOf('image/') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
                     }
                 }
@@ -7253,49 +7359,9 @@ $rdf.Fetcher = function(store, timeout, async) {
             switch (xhr.readyState) {
             case 0:
                     var uri = xhr.uri.uri, newURI;
-                    if (this.crossSiteProxyTemplate && document && document.location) { // In mashup situation
-                        var hostpart = $rdf.Util.uri.hostpart;
-                        var here = '' + document.location;
-                        if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
-                            newURI = uri.replace('{uri}', encodeURIComponent(uri));
-                            sf.addStatus(xhr.req, "BLOCKED -> Cross-site Proxy to <" + newURI + ">");
-                            if (xhr.aborted) return;
-                            
-                            var kb = sf.store;
-                            var oldreq = xhr.req;
-                            kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), oldreq);
-
-
-                            ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
-                            var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
-                            kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
-
-                            var now = new Date();
-                            var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
-                            kb.add(newreq, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + newURI), this.appNode)
-                            kb.add(newreq, ns.link('status'), kb.collection(), sf.req);
-                            kb.add(newreq, ns.link("requestedURI"), kb.literal(newURI), this.appNode);
-
-                            var response = kb.bnode();
-                            kb.add(oldreq, ns.link('response'), response);
-                            // kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
-                            // if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
-
-                            xhr.abort()
-                            xhr.aborted = true
-
-                            sf.addStatus(oldreq, 'done') // why
-                            sf.fireCallbacks('done', args) // Are these args right? @@@
-                            sf.requested[xhr.uri.uri] = 'redirected';
-
-                            var xhr2 = sf.requestURI(newURI, xhr.uri);
-                            if (xhr2 && xhr2.req) kb.add(xhr.req,
-                                kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
-                                xhr2.req, sf.appNode);                             return;
-                        }
-                    }
                     sf.failFetch(xhr, "HTTP Blocked. (ReadyState 0) Cross-site violation for <"+
-                        docuri+">");
+                    docuri+">");
+
                     break;
                 
             case 3:
@@ -7327,8 +7393,9 @@ $rdf.Fetcher = function(store, timeout, async) {
             try {
                 $rdf.Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
             } catch (e) {
-                this.failFetch(xhr, "Failed to get (UniversalXPConnect UniversalBrowserRead) privilege to read different web site: " + docuri);
-                return xhr;
+                //(!CORS?)
+                //this.failFetch(xhr, "Failed to get (UniversalXPConnect UniversalBrowserRead) privilege to read different web site: " + docuri);
+                //return xhr;
             }
         }
 
@@ -7657,7 +7724,7 @@ $rdf.parse = function parse(str, kb, base, contentType) {
             return;
         }
     } catch(e) {
-        throw "Error trying to parse <"+base+"> as "+contentType+":\n"+e;
+        throw "Error trying to parse <"+base+"> as "+contentType+":\n"+e +':\n'+e.stack;
     }
     throw "Don't know how to parse "+contentType+" yet";
 

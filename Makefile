@@ -1,7 +1,6 @@
 all: update
-	for x in js/*/Makefile; do \
-		make -C `dirname $$x` all; \
-	done
+	make -C js/rdf all
+	make -C js/mashup all
 
 .PHONY: all update
 

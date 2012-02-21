@@ -25,5 +25,5 @@ update :
 $J/rdf/dist/rdflib.js :
 	(cd $J/rdf; make dist/rdflib.js)
 
-
-
+clean:
+	rm -f mashlib.js mash.css

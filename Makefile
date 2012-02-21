@@ -21,3 +21,5 @@ gh-pages: all
 	git push -f origin gh-pages
 	git checkout master
 
+clean:
+	make -C js/mashup clean

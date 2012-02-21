@@ -43,6 +43,7 @@ tabulator.panes.internalPane = {
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, filter)    
+        jQuery(div).append('<tr><td>Editable</td><td>'+tabulator.sparql.editable(subject.uri)+'</td></tr>');
         return div
     },
     

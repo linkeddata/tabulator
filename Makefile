@@ -1,8 +1,3 @@
-all:
-	for x in content/js/*/Makefile; do \
-		make -C `dirname $$x` all; \
-	done
-
 all: update
 	make -C js/rdf all
 	make -C js/mashup all

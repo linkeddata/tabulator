@@ -355,7 +355,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
             if (ok) {
                 field.setAttribute('style', 'color: black;');
             } else {
-                rhs.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
+                box.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
             }
             callback(ok, body);
         })
@@ -912,18 +912,14 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     var sts = kb.statementsMatching(subject, predicate,undefined); // Only one please
     if (sts.length > 1) return tabulator.panes.utils.errorMessage(dom,
                 "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject);
-    /* if (sts.length) {
-        if (sts[0].why.sameTerm(store)) {
-            group.appendChild(dom.createTextNode("Note this is stored in "+sts[0].why)); // @@
-        }
-    } */
     var desc = sts.length? sts[0].object.value : undefined;
     var field = dom.createElement('textarea');
     group.appendChild(field);
     field.rows = desc? desc.split('\n').length + 2 : 2;
     field.cols = 80
-    field.setAttribute('style', 'font-size:100%; white-space: pre-wrap;\
-            background-color: white; border: 0.07em solid gray; padding: 1em 0.5em; margin: 1em 1em;')
+    var style = 'font-size:100%; white-space: pre-wrap;\
+            background-color: white; border: 0.07em solid gray; padding: 1em 0.5em; margin: 1em 1em;'
+    field.setAttribute('style', style)
     if (sts.length) field.value = desc 
     else {
         field.value = tabulator.Util.label(predicate); // Was"enter a description here"
@@ -932,29 +928,39 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
 
     var br = dom.createElement('br');
     group.appendChild(br);
-    submit = dom.createElement('input');
+    var submit = dom.createElement('input');
     submit.setAttribute('type', 'submit');
     submit.disabled = true; // until the filled has been modified
     submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
     submit.setAttribute('style', 'float: right;');
     group.appendChild(submit);
 
-    var groupSubmit = function(e) {
+    var saveChange = function(e) {
         submit.disabled = true;
         field.disabled = true;
-        var deletions = desc ? sts[0] : undefined; // If there was a description, remove it
-        insertions = field.value.length? new $rdf.Statement(subject, predicate, field.value, store) : [];
-        tabulator.sparql.update(deletions, insertions,function(uri,ok, body){
-            if (ok) { desc = field.value; field.disabled = false;};
+        field.setAttribute('style', style + 'color: gray;'); // pending 
+        var ds = kb.statementsMatching(subject, predicate);
+        var is = $rdf.st(subject, predicate, field.value, store);
+        tabulator.sparql.update(ds, is, function(uri, ok, body) {
+            if (ok) {
+                field.setAttribute('style', style + 'color: black;');
+                field.disabled = false;
+            } else {
+                rhs.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
+            }
             if (callback) callback(ok, body);
-        })
+        });
     }
 
-    submit.addEventListener('click', groupSubmit, false)
+    field.addEventListener('keyup', function(e) { // Green means has been changed, not saved yet
+        field.setAttribute('style', style + 'color: green;');
+        if (submit) submit.disabled = false;
+    }, true);
 
-    field.addEventListener('keypress', function(e) {
-            submit.disabled = false;
-        }, false);
+    field.addEventListener('change', saveChange, true);
+    
+    submit.addEventListener('click', saveChange, false)
+
     return group;
 }
 

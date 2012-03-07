@@ -21,12 +21,7 @@ tabulator.Util.clearVariableNames = function() {
 
 tabulator.Util.stackString = function(e){
 	
-    function print(msg) {
-            console.log(msg);
-    }
-    
-    var str = "" + e + "\n";
-    
+    var str = "" + e + "\n";    
     if (!e.stack) {
             return str + 'No stack available.\n'
     };
@@ -44,7 +39,7 @@ tabulator.Util.stackString = function(e){
             var chunks = line.split('@');
             toprint.push(chunks);
     };
-    //toprint.reverse();  I prefer the latest at the top by the error message
+    //toprint.reverse();  No - I prefer the latest at the top by the error message -tbl
     
     for (var i = 0; i < toprint.length; i++) {
             str += '  ' + toprint[i][1] + '\n    '+ toprint[i][0];
@@ -189,25 +184,6 @@ tabulator.Util.addLoadEvent = function(func) {
     }
 } //addLoadEvent
 
-/* apparently unused 2011-01-27 timbl
-tabulator.Util.document={
-    'split': function(doc, number){
-        var result = [doc];
-        var docRoot = doc.documentElement;
-        var nodeNumber = docRoot.childNodes.length;
-        var dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
-                    .getService(Components.interfaces.nsIDOMParser);
-        var division = (nodeNumber - nodeNumber%number)/number;
-        for (var i=0;i< number-1;i++){
-            var newDoc = dparser.parseFromString('<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF>','application/xml');                        
-            for (var j=0;j<division;j++)
-                newDoc.documentElement.appendChild(newDoc.adoptNode(docRoot.firstChild));
-            result.push(newDoc);
-        }
-        return result;    
-    }
-}
-*/
 
 // Find the position of an object relative to the window
 //

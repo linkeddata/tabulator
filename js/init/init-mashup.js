@@ -43,7 +43,7 @@ tabulator.setup = function() {
     tabulator.loadScript("js/tab/preferences.js"); // cookies
 
     //Now, load tabulator sourceWidget code.. the sources.js became rdf/web.js
-    tabulator.loadScript("js/tab/util-nonlib.js");
+    tabulator.loadScript("js/tab/common.js");
 
     // Not sure wheere the sources code is fro non-extension tabulator.
     // tabulator.loadScript("js/tab/sources-ext.js");

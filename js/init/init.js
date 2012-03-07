@@ -57,7 +57,7 @@ tabulator.loadScript("js/jscolor/jscolor.js");
 tabulator.loadScript("js/init/prefs.js");
 
 //Now, load tabulator sourceWidget code.. the sources.js became rdf/web.js
-tabulator.loadScript("js/tab/util-nonlib.js");
+tabulator.loadScript("js/tab/common.js");
 
 tabulator.loadScript("js/tab/sources-ext.js");
 
@@ -75,6 +75,7 @@ tabulator.loadScript("js/init/views.js");
 
 tabulator.requestUUIDs = {};
 
+/*  Think this is unused -- see code below.
 // This has an empty id attribute instead of uuid string, beware.
 tabulator.outlineTemplate = 
         // "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
@@ -91,7 +92,7 @@ tabulator.outlineTemplate =
         "    </body>\n"+
         "</html>\n";
 
-
+*/
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 

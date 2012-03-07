@@ -23,4 +23,8 @@ status:
 	@pwd
 	@git branch -v
 	@git status -s
-	@make -C js/rdf status
+	@make -sC js/rdf status
+
+writable:
+	@sed -i -re 's/git:\/\/github.com\//git@github.com:/' .git/config
+	@make -sC js/rdf writable

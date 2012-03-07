@@ -310,5 +310,5 @@ try {
      dump('Tabulator init.js: '+tabulator.Util.stackString(e)+'\n');
 }
 
-    
 // Ends
+dump("@@ init.js END\n");

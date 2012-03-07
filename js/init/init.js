@@ -45,33 +45,38 @@ dump("@@@ init.js Inital setting of tabulator.log\n");
 tabulator.loadScript("js/rdf/dist/rdflib.js");
 tabulator.rdf = $rdf;
 
-
-//Load the icons namespace onto tabulator.
-tabulator.loadScript("js/init/icons.js");
-//And Namespaces..
-tabulator.loadScript("js/init/namespaces.js");
-//And Panes.. (see the below file to change which panes are turned on)
-tabulator.loadScript("js/init/panes.js");
-tabulator.loadScript("js/jscolor/jscolor.js");
-//And Preferences mechanisms.
-tabulator.loadScript("js/init/prefs.js");
-
-//Now, load tabulator sourceWidget code.. the sources.js became rdf/web.js
+//Common code has the stackString fucntion useful for reporting errors
 tabulator.loadScript("js/tab/common.js");
 
-tabulator.loadScript("js/tab/sources-ext.js");
+dump("@@Start of covered load\n") 
+try {
 
-//And, finally, all non-pane UI code.
-tabulator.loadScript("js/tab/labeler.js");
-tabulator.loadScript("js/tab/request.js");
-tabulator.loadScript("js/tab/outlineinit.js");
-tabulator.loadScript("js/tab/userinput.js");
-tabulator.loadScript("js/tab/outline.js");
+    //Load the icons namespace onto tabulator.
+    tabulator.loadScript("js/init/icons.js");
+    //And Namespaces..
+    tabulator.loadScript("js/init/namespaces.js");
+    //And Panes.. (see the below file to change which panes are turned on)
+    tabulator.loadScript("js/init/panes.js");
+    tabulator.loadScript("js/jscolor/jscolor.js");
+    //And Preferences mechanisms.
+    tabulator.loadScript("js/init/prefs.js");
 
-//Oh, and the views!
-tabulator.loadScript("js/init/views.js");
 
+    tabulator.loadScript("js/tab/sources-ext.js");
 
+    //And, finally, all non-pane UI code.
+    tabulator.loadScript("js/tab/labeler.js");
+    tabulator.loadScript("js/tab/request.js");
+    tabulator.loadScript("js/tab/outlineinit.js");
+    tabulator.loadScript("js/tab/userinput.js");
+    tabulator.loadScript("js/tab/outline.js");
+
+    //Oh, and the views!
+    tabulator.loadScript("js/init/views.js");
+
+} catch(e) {
+     dump('Tabulator init.js: '+tabulator.Util.stackString(e)+'\n');
+}
 
 tabulator.requestUUIDs = {};
 

@@ -18,3 +18,9 @@ gh-pages: all
 
 clean:
 	make -C js/mashup clean
+
+status:
+	@pwd
+	@git branch -v
+	@git status -s
+	@make -C js/rdf status

@@ -1,9 +1,0 @@
-{
-  "name": "Tabulator",
-  "version": "1.0",
-  "description": "Linked Data Browser",
-  "background_page": "background.html",
-  "permissions": [
-    "tabs", "http://*/*", "https://*/*", "ftp://*/*", "file:///*"
-  ]
-}

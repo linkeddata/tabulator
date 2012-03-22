@@ -99,6 +99,11 @@
 
   <script type="application/x-javascript"><![CDATA[
 
+// Create a jQuery $ which will
+tabulator.jQuery = $ = function(selector,context){ return new jQuery.fn.init(selector, context || window.content.document); };
+$.fn = $.prototype = jQuery.fn;
+
+
 function openTool(url, type, width, height)
 {
   width = width || 500;

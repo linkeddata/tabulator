@@ -27,23 +27,27 @@ tabulator.panes.internalPane = {
         div.setAttribute('class', 'internalPane')
 //        appendRemoveIcon(div, subject, div);
                   
-        var plist = kb.statementsMatching(subject)
+        var plist = kb.statementsMatching(subject);
+        var doc_uri = null;
         if (subject.uri) {
             plist.push($r.st(subject,
                     kb.sym('http://www.w3.org/2007/ont/link#uri'), subject.uri, tabulator.sf.appNode));
             if (subject.uri.indexOf('#') >= 0) {
+                doc_uri = subject.uri.split('#')[0];
                 plist.push($r.st(subject,
                     kb.sym('http://www.w3.org/2007/ont/link#documentURI'),
                     subject.uri.split('#')[0], tabulator.sf.appNode));
                 plist.push($r.st(subject,
                     kb.sym('http://www.w3.org/2007/ont/link#document'),
                      kb.sym(subject.uri.split('#')[0]), tabulator.sf.appNode));
+            } else {
+                doc_uri = subject.uri;
             }
         }
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, filter)    
-        jQuery(div).append('<tr><td>Editable</td><td>'+tabulator.sparql.editable(subject.uri)+'</td></tr>');
+        if (doc_uri) jQuery(div).append('<tr><td>Editable</td><td>'+tabulator.sparql.editable(doc_uri)+'</td></tr>');
         return div
     },
     
@@ -54,6 +58,7 @@ tabulator.panes.internalPane = {
         'http://www.w3.org/2007/ont/link#session': 2, // 2=  test neg but display
         'http://www.w3.org/2007/ont/link#uri': 1,
         'http://www.w3.org/2007/ont/link#documentURI': 1,
+        'http://www.w3.org/2007/ont/link#document':1,
         'http://www.w3.org/2007/ont/link#all': 1, // From userinput.js
         'http://www.w3.org/2007/ont/link#Document': 1,
     },

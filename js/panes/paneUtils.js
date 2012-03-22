@@ -355,7 +355,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
             if (ok) {
                 field.setAttribute('style', 'color: black;');
             } else {
-                box.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
+                box.appendChild(tabulator.panes.utils.errorMessage(dom, body));
             }
             callback(ok, body);
         })
@@ -946,7 +946,8 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
                 field.setAttribute('style', style + 'color: black;');
                 field.disabled = false;
             } else {
-                rhs.appendChild(tabulator.panes.utils.errorMessage(dom, msg));
+                group.appendChild(tabulator.panes.utils.errorMessage(dom, 
+                "Error (while saving change to "+store.uri+'): '+body));
             }
             if (callback) callback(ok, body);
         });

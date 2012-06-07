@@ -1034,10 +1034,20 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
             }
             if (opt.selected) select.currentURI =  opt.AJAR_uri;                      
         }
-        var sub = select.subSelect;
-        while (sub && sub.currentURI) {
-            ds.push($rdf.st(subject, predicate, kb.sym(sub.currentURI), store));
-            sub = sub.subSelect;
+        var removeType = function(t) {
+            if (kb.holds(subject, predicate, t, store)) {
+                ds.push($rdf.st(subject, predicate, t, store));
+            }
+        }
+        var sel = select.subSelect; // All subclasses must also go
+        while (sel && sel.currentURI) {
+            removeType(kb.sym(sel.currentURI));
+            sel = sel.subSelect;
+        }
+        var sel = select.superSelect; // All superclasses are redundant
+        while (sel && sel.currentURI) {
+            removeType(kb.sym(sel.currentURI));
+            sel = sel.superSelect;
         }
         function doneNew(ok, body) {
             callback(ok, body);
@@ -1145,6 +1155,7 @@ tabulator.panes.utils.makeSelectForNestedCategory = function(
             child = tabulator.panes.utils.makeSelectForNestedCategory(
                 dom, kb, subject, kb.sym(select.currentURI), store, callback)
             select.subSelect = child.firstChild;
+            select.subSelect.superSelect = select;
             container.appendChild(child);
         }
     };

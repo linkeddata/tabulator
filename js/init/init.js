@@ -28,22 +28,29 @@ tabulator.loadScript = function(uri) {
     loader.loadSubScript('chrome://tabulator/content/'+ uri);
 }
 
-
-// Now we have to load jQuery for rda -- but it is also loaded in ../../tabulator.xul @@
-// tabulator.loadScript("js/jquery/jquery-1.4.2.min.js");
-
 //Before anything else, load up the logger so that errors can get logged.
 tabulator.loadScript("js/tab/log-ext.js");
-
 tabulator.log = new TabulatorLogger();
 dump("@@@ init.js Inital setting of tabulator.log\n");
+
+// Now we have to load jQuery for RDFa -- but it is also loaded in ../../tabulator.xul @@
+// tabulator.loadScript("js/jquery/jquery-1.4.2.min.js");
 
 //Load the RDF Library, which defines itself in the namespace $rdf.
 // see the script rdf/create-lib which creates one file, rdflib.js
 // by concatenating all the js files)
 
-tabulator.loadScript("js/rdf/dist/rdflib.js");
+if (tabulator.jQuery) {
+    jQuery = tabulator.jQuery;
+    dump("tabulator.jQuery is defined\n");
+    tabulator.loadScript("js/rdf/dist/rdflib-rdfa.js");
+} else {
+    dump("Hmmm, tabulator.jQuery not defined. Not loading RDFa\n");
+    tabulator.loadScript("js/rdf/dist/rdflib.js");
+};
 tabulator.rdf = $rdf;
+
+
 
 //Common code has  stackString used reporting errors in catch() below
 tabulator.loadScript("js/tab/common.js");
@@ -77,24 +84,6 @@ try {
 
     tabulator.requestUUIDs = {};
 
-    /*  Think this is unused -- see code below.
-    // This has an empty id attribute instead of uuid string, beware.
-    tabulator.outlineTemplate = 
-            // "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
-            "<html id='docHTML'>\n"+
-            "    <head>\n"+
-            "        <title>Tabulator: Data Browser</title>\n"+
-            "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
-            "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"+
-            "    </head>\n"+
-            "    <body>\n"+
-            "        <div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
-            "            <table id=\"outline\"></table>\n"+
-            "        </div>\n"+
-            "    </body>\n"+
-            "</html>\n";
-
-    */
     const Cc = Components.classes;
     const Ci = Components.interfaces;
 
@@ -157,7 +146,7 @@ try {
             var data =
             "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
             "<html id='docHTML'>\n"+
-            "    <head>\n"+
+            "    <head><meta charset='UTF-8'>\n"+
             "        <title>Tabulator: Data Browser</title>\n"+
             "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/tabbedtab.css\" type=\"text/css\" />\n"+
             "        <link rel=\"stylesheet\" href=\"chrome://tabulator/content/js/widgets/style.css\" type=\"text/css\" />\n"+
@@ -307,7 +296,8 @@ try {
         
     tabulator.log.error("@@ init.js test 90 tabulator.log.error: $rdf.log.error)"+$rdf.log.error);
 } catch(e) {
-     dump('Tabulator init.js: '+tabulator.Util.stackString(e)+'\n');
+    dump('Tabulator init.js:  Aaaaagh loading failed\n');
+    dump('Tabulator init.js: '+tabulator.Util.stackString(e)+'\n');
 }
 
 // Ends

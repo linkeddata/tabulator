@@ -109,10 +109,14 @@ tabulator.Util.getTarget = function(e) {
 }
 
 tabulator.Util.ancestor = function(target, tagName) {
-    var level
+    var level;
     for (level = target; level; level = level.parentNode) {
         // tabulator.log.debug("looking for "+tagName+" Level: "+level+" "+level.tagName)
-        if (level.tagName == tagName) return level;
+        try {
+            if (level.tagName == tagName) return level;
+        } catch(e) { // can hit "TypeError: can't access dead object" in ffox
+            return undefined; 
+        };
     }
     return undefined
 }

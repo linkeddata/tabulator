@@ -76,24 +76,6 @@ tabulator.setup = function() {
     tabulator.kb.typeCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
 
     tabulator.requestUUIDs = {};
-/*
-    // This has an empty id attribute instead of uuid string, beware. Not used
-    tabulator.outlineTemplate = //    ###    This needs its link URIs adjusting! @@@
-            // "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"+
-            "<html id='docHTML'>\n"+
-            "    <head>\n"+
-            "        <title>Tabulator: Data Browser</title>\n"+
-            "        <link rel=\"stylesheet\" href=\"@@@@@tabbedtab.css\" type=\"text/css\" />\n"+
-            "        <link rel=\"stylesheet\" href=\"@@@@@js/widgets/style.css\" type=\"text/css\" />\n"+
-            "    </head>\n"+
-            "    <body>\n"+
-            "        <div class=\"TabulatorOutline\" id=\"DummyUUID\">\n"+
-            "            <table id=\"outline\"></table>\n"+
-            "        </div>\n"+
-            "    </body>\n"+
-            "</html>\n";
-*/
-    // complain("@@ init.js test 118 )");
 
     //Add the Tabulator outliner
     tabulator.outline = new tabulator.OutlineObject(document);

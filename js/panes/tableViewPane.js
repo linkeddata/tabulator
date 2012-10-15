@@ -477,7 +477,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         }
 
         this.isImageColumn = function() {
-            for (i=0; i<this.constraints.length; i++)
+            for (var i=0; i<this.constraints.length; i++)
                 if (this.constraints[i].uri in IMAGE_TYPES) return true;
             return false;
         }
@@ -488,7 +488,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     function objectToArray(obj, filter) {
         var result = [];
 
-        for (var property in obj) {
+        for (var property in obj) {    // @@@ have to guard against methods
             var value = obj[property];
 
             if (!filter || filter(property, value)) {
@@ -1169,6 +1169,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // dump('column.constraints ='+cs+', .length '+cs.length+', type= '+typeof cs+'\n')
         // var cons = cs.map(function(c){return tabulator.Util.label(c)}).join(', ');
         // dump(' column '+column.variable+'  Pred: '+column.predicate+'  superClass: '+column.superClass+'\n');
+        var range;
         for (i=0; i<cs.length; i++) {
             range = cs[i];
 

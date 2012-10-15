@@ -620,8 +620,8 @@ tabulator.OutlineObject = function(doc) {
     
     ///////////// Property list 
     function appendPropertyTRs(parent, plist, inverse, predicateFilter) {
-        tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+
-                           "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
+        //tabulator.log.info("@appendPropertyTRs, 'this' is %s, myDocument is %s, "+ // Gives "can't access dead object"
+        //                   "thisOutline.document is %s", this, myDocument.location, thisOutline.document.location);
         //tabulator.log.info("@appendPropertyTRs, myDocument is now " + this.document.location);
         //tabulator.log.info("@appendPropertyTRs, myDocument is now " + thisOutline.document.location);            
         tabulator.log.debug("Property list length = " + plist.length)

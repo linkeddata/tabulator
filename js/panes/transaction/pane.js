@@ -92,6 +92,8 @@ tabulator.panes.register( {
 
         //              Render a single transaction
         
+        // This works only if enough metadata about the properties can drive the RDFS
+        // (or actual type statements whichtypically are NOT there on)
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
 
             var trip = kb.any(subject, WF('trip'));
@@ -99,7 +101,6 @@ tabulator.panes.register( {
             var predicateURIsDone = {};
             var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
             donePredicate(ns.rdf('type'));
-            
             
             var setPaneStyle = function() {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
@@ -159,8 +160,8 @@ tabulator.panes.register( {
                 }
                 else complain("Sorry, failed to save your change:\n"+body);
             }
+
             // What trips do we know about?
-            
             
             // Classify:
             if (store) {

@@ -104,6 +104,7 @@ tabulator.panes.register( {
                 if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
                 var sendComplete = function(uri, success, body) {
                     if (!success) {
+                         complain("Error: can\'t save new issue:" + body);
                         //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                     } else {
                         // dump('Tabulator issue pane: saved new issue\n')

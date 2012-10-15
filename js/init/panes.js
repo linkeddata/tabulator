@@ -42,6 +42,7 @@ tabulator.loadScript("js/panes/paneUtils.js");
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
 tabulator.loadScript("js/panes/transaction/pane.js");
+tabulator.loadScript("js/panes/trip/tripPane.js");
 tabulator.loadScript("js/panes/dataContentPane.js");
 tabulator.loadScript("js/panes/airPane.js");
 tabulator.loadScript("js/panes/n3Pane.js");

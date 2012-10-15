@@ -44,11 +44,13 @@ tabulator.panes.internalPane = {
                 doc_uri = subject.uri;
             }
         }
+        if (doc_uri)
+            plist.push($r.st(subject,
+                kb.sym('http://www.w3.org/ns/rww#editable'),
+                kb.literal(tabulator.sparql.editable(doc_uri)), tabulator.sf.appNode));
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, filter);
-        if (typeof jQuery == 'undefined') var jQuery = tabulator.jQuery;    
-        if (doc_uri) jQuery(div).append('<tr><td>Editable</td><td>'+tabulator.sparql.editable(doc_uri)+'</td></tr>');
         return div
     },
     
@@ -62,6 +64,7 @@ tabulator.panes.internalPane = {
         'http://www.w3.org/2007/ont/link#document':1,
         'http://www.w3.org/2007/ont/link#all': 1, // From userinput.js
         'http://www.w3.org/2007/ont/link#Document': 1,
+        'http://www.w3.org/ns/rww#editable': 1,
     },
     classes: { // Things which are inherently already undercover
         'http://www.w3.org/2007/ont/link#ProtocolEvent': 1

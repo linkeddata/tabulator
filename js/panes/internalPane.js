@@ -44,10 +44,14 @@ tabulator.panes.internalPane = {
                 doc_uri = subject.uri;
             }
         }
-        if (doc_uri)
-            plist.push($r.st(subject,
-                kb.sym('http://www.w3.org/ns/rww#editable'),
-                kb.literal(tabulator.sparql.editable(doc_uri)), tabulator.sf.appNode));
+        if (doc_uri) {
+            var ed = tabulator.sparql.editable(doc_uri);
+            if (ed) {
+                plist.push($r.st(subject,
+                    kb.sym('http://www.w3.org/ns/rww#editable'),
+                    kb.literal(ed), tabulator.sf.appNode));
+            }
+        }
         tabulator.outline.appendPropertyTRs(div, plist, false, filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, filter);

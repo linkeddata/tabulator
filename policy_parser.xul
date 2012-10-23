@@ -13,7 +13,6 @@
 <script type="application/x-javascript" src="js/rdf/identity.js"/>
 <script type="application/x-javascript" src="js/webdav.js"/>
 <script type="application/x-javascript" src="test.js"/>
-<script type="application/x-javascript" src="js/rdf/match.js"/>
 
 <script src="js/policy_parser/acl_editor.js" type="text/javascript"></script>
 <script src="js/policy_parser/webdav.js" type="text/javascript"></script>

@@ -142,7 +142,7 @@ tabulator.Util.getAbout = function(kb, target) {
 
 tabulator.Util.getTerm = function(target){
     var statementTr=target.parentNode;
-    var st=statementTr.AJAR_statement;
+    var st=statementTr?statementTr.AJAR_statement:undefined;
 
     var className=st?target.className:'';//if no st then it's necessary to use getAbout    
     switch (className){

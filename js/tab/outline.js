@@ -801,9 +801,10 @@ tabulator.OutlineObject = function(doc) {
         return td
     }
     termWidget.addIcon = function (td, icon) {
-        var img = tabulator.Util.AJARImage(icon.src,icon.alt,icon.tooltip,myDocument)
         var iconTD = td.childNodes[1];
+        if (!iconTD) return;
         var width = iconTD.style.width;
+        var img = tabulator.Util.AJARImage(icon.src,icon.alt,icon.tooltip,myDocument);
         width = parseInt(width);
         width = width + icon.width;
         iconTD.style.width = width+'px';
@@ -811,6 +812,7 @@ tabulator.OutlineObject = function(doc) {
     }
     termWidget.removeIcon = function (td, icon) {
         var iconTD = td.childNodes[1];
+        if (!iconTD) return;
         var width = iconTD.style.width;
         width = parseInt(width);
         width = width - icon.width;

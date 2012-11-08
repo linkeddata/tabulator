@@ -5,7 +5,7 @@ all: update_submodules
 update: pull
 
 update_submodules:
-	@@if [ -d .git ]; then \
+	@@if [ -e .git ]; then \
 		if git submodule status | grep -q -E '^-'; then \
 			git submodule update --init --recursive; \
 		else \

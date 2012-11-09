@@ -39,6 +39,9 @@ Also lower could be optional tools for various classes.
 /* First we load the utils so panes can add them (while developing) as well as use them */
 tabulator.loadScript("js/panes/paneUtils.js");
 
+/*  Note that hte earliest panes have priority. So the most specific ones are first.
+**
+*/
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
 tabulator.loadScript("js/panes/transaction/pane.js");
@@ -47,12 +50,16 @@ tabulator.loadScript("js/panes/dataContentPane.js");
 tabulator.loadScript("js/panes/airPane.js");
 tabulator.loadScript("js/panes/n3Pane.js");
 tabulator.loadScript("js/panes/RDFXMLPane.js");
+
 // User configured:
 tabulator.loadScript("js/panes/form/pane.js");
+
 // Generic:
+tabulator.loadScript("js/panes/attach/attachPane.js");
 tabulator.loadScript("js/panes/tableViewPane.js");
 tabulator.loadScript("js/panes/classInstancePane.js");
 
+// Fallback totally generic:
 tabulator.loadScript("js/panes/defaultPane.js");
 
 //tabulator.loadScript("js/panes/newOutline.js");

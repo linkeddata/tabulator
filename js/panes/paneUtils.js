@@ -552,9 +552,9 @@ tabulator.panes.field[tabulator.ns.ui('Heading').uri] = function(
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// Event Handler for making a tabulat-r
-// Note that native links have consraints in Firsfox, they 
-// don't work with local files ffor instance (2011)
+// Event Handler for making a tabulator
+// Note that native links have consraints in Firefox, they 
+// don't work with local files for instance (2011)
 //
 tabulator.panes.utils.openHrefInOutlineMode = function(e) {
     e.preventDefault();
@@ -755,16 +755,17 @@ tabulator.panes.utils.propertiesForClass = function(kb, c) {
 // @param cla - the URI of the class
 // @proap
 tabulator.panes.utils.findClosest = function findClosest(kb, cla, prop) {
-    var agenda = [cla]; // ordered - this is breadth first search
+    var agenda = [kb.sym(cla)]; // ordered - this is breadth first search
     while (agenda.length > 0) { 
         var c = agenda.shift(); // first
         // if (c.uri && (c.uri == ns.owl('Thing').uri || c.uri == ns.rdf('Resource').uri )) continue
-        var lists = kb.each(kb.sym(c), prop);
-        tabulator.log.debug("Lists for <"+c+">, "+prop+": "+lists.length)
+        var lists = kb.each(c, prop);
+        tabulator.log.debug("Lists for "+c+", "+prop+": "+lists.length)
         if (lists.length != 0) return lists;
         var supers = kb.each(c, tabulator.ns.rdfs('subClassOf'));
         for (var i=0; i<supers.length; i++) {
             agenda.push(supers[i]);
+            tabulator.log.debug("findClosest: add super: "+supers[i]); 
         }
     }
     return [];
@@ -776,13 +777,14 @@ tabulator.panes.utils.formsFor = function(subject) {
     var ns = tabulator.ns;
     var kb = tabulator.kb;
 
-    tabulator.log.debug("formsFor: subject="+subject+", forms=");
+    tabulator.log.debug("formsFor: subject="+subject);
     var t = kb.findTypeURIs(subject);
+    var t1; for (t1 in t) { tabulator.log.debug("   type: "+t1);}
     var bottom = kb.bottomTypeURIs(t); // most specific
-    var forms = [ ]
+    var forms = [ ];
     for (var b in bottom) {
         // Find the most specific
-        tabulator.log.debug("formsFor: trying type ="+b);
+        tabulator.log.debug("formsFor: trying bottom type ="+b);
         forms = forms.concat(tabulator.panes.utils.findClosest(kb, b, ns.ui('creationForm')));
     }
     tabulator.log.debug("formsFor: subject="+subject+", forms=");
@@ -1386,7 +1388,41 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 
 }
 
+//######################################################
+//
+//       Workspace selection etc
+//
 
+tabulator.panes.utils.selectWorkspace = function(dom, callback) {
+
+    var me_uri = tabulator.preferences.get('me');
+    var me = me_uri && tabulator.kb.sym(me_uri);
+    var kb = tabulator.kb;
+    var loadPrefs = function(id) {
+        var boot = kb.any(id, tabulator.ns.space('preferencesFile'));  
+        if (!boot) return tabulator.panes.utils.errorMessage(dom,
+            "You have not got a preferences file for user: " + id);  
+        kb.fetcher.nowOrWhenFetched(boot, function(){
+            var w = kb.statementsMatching(me, tabulator.ns.space('workspace'),
+             undefined, boot).map(function(st){return st.object;});
+            return tabulator.panes.utils.errorMessage(dom,
+                "" + w.length + " workspaces: " + id);  
+        });
+    };
+
+    if (me) return loadPrefs(me);
+    
+    var listener = function(me) {
+        if (typeof id == 'undefined') return undefined;
+        var docURI = $rdf.util.uri.docPart(id.uri);
+        kb.nowOrWhenFetched(docURI, function(){
+            loadPrefs(me);
+        });
+    };
+    var box = tabulator.panes.utils.loginStatusBox(dom, listener);
+    return box;
+
+};
 
 
 

@@ -86,6 +86,19 @@ tabulator.panes.register( {
         
         // A fallback which gives a different store page for each ontology would be good @@
         
+        var pred;
+        if (t[ns.rdfs('Class').uri]) { // Stuff we can do before we load the store
+            pred = ns.ui('creationForm');
+            box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
+            mention("Creation forms allow you to add information about a new thing,\
+                                in this case a new "+label+".");
+            mention("You can make a new form.");
+            box.appendChild(tabulator.panes.utils.newButton(
+                dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
+            mention("Storing new form in: "+store)
+            box.appendChild(dom.createElement('hr'));
+        } 
+        
         var wait = mention('(Loading data from: '+store+')');
 
         kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
@@ -100,11 +113,7 @@ tabulator.panes.register( {
 
                 // complain('class');
                 // For each creation form, allow one to create a new trip with it, and also to edit the form.
-                var pred = ns.ui('creationForm');
                 var sts = kb.statementsMatching(subject, pred);
-                box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
-                mention("Creation forms allow you to add information about a new thing,\
-                                    in this case a new "+label+".");
                 if (sts.length) {
                     for (var i=0; i<sts.length; i++) {
                         tabulator.outline.appendPropertyTRs(box,  [ sts[i] ]);
@@ -131,10 +140,6 @@ tabulator.panes.register( {
                     mention("There are no forms currently defined to make a "+
                         label+".");
                 }
-                mention("You can make a new form.");
-                box.appendChild(tabulator.panes.utils.newButton(
-                    dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
-                mention("Storing new form in: "+store)
                 box.appendChild(dom.createElement('hr'));
 
 //      _____________________________________________________________________

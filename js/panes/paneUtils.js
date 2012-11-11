@@ -1387,11 +1387,22 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     return box
 
 }
+//######################################################
+//
+//      Small compact views of things
+//
+tabulator.panes.widget = {};
+tabulator.panes.widget.line = {}; // Approx 80em
+tabulator.panes.widget.twoLine = {}; // Approx 40em * 2.4
+
+
+
 
 //######################################################
 //
 //       Workspace selection etc
 //
+
 
 tabulator.panes.utils.selectWorkspace = function(dom, callback) {
 

@@ -37,6 +37,7 @@ tabulator.panes.register( {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
         var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var CAL = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
         var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
@@ -73,28 +74,85 @@ tabulator.panes.register( {
         var findStore = function(kb, subject) {
             var docURI = tabulator.rdf.Util.uri.docpart(subject.uri);
             if (tabulator.sparql.editable(docURI, kb)) return kb.sym(docURI);
-            var store = (kb.sym(docURI), QU('annotationStore'));
+            var store = kb.any(kb.sym(docURI), QU('annotationStore'));
             return store;
         }
  
+ /////////////////////////////////////////////////////////////////////////////
+ // We need these for anything which is a subject of an attachment.
+ //
+ tabulator.panes.widget.twoLine[
+    'http://www.w3.org/2000/10/swap/pim/qif#Transaction'] = function(dom, x) {
+    var failed = false;
+    var enc = function(p) {
+        var y = tabulator.kb.any(x, QU(p));
+        if (!y) failed = true;
+        return y ? tabulator.Util.escapeForXML(y.value) : '?';   // @@@@
+    };
+    var box = dom.createElement("table");
+    box.innerHTML = '<tr><td colspan="2">' + enc('payee') + 
+        '</td></tr>\n<tr><td><td>' + enc('date').slice(0,10) +
+        '</td><td style="text-align: right;">' + enc('amount') + '</td></tr>';
+    if (failed) box.innerHTML = '<tr><td>' + tabulator.Util.escapeForXML(x.uri) + '</td></tr>';
+    return box;
+};
+ 
+ tabulator.panes.widget.twoLine[
+    'http://www.w3.org/ns/pim/trip#Trip'] = function(dom, x) {
+    var enc = function(p) {
+        var y = tabulator.kb.any(x, p);
+        return y ? tabulator.Util.escapeForXML(y.value) : '?';
+    };
+    var box = dom.createElement("table");
+    box.innerHTML = '<tr><td colspan="2">' + enc(DC('title')) + 
+        '</td></tr>\n<tr style="color: #777"><td><td>' +
+        enc(CAL('dtstart')) + '</td><td>' + enc(CAL('dtend'))
+        + '</td></tr>';
+    return box;
+};
+
+tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
+    var box = dom.createElement("div");
+    box.textContent = (tabulator.Util.label(x));
+    return box;
+};
+ 
  // //////////////////////////////////////////////////////////////////////////////       
         
-        var selectorPanel = function(dom, kb,
-            predicate, inverse, possible, options, store, callback) {
+        var selectorPanel = function(dom, kb, type,
+            predicate, inverse, possible, options, callback) {
             
             var list = dom.createElement("div");
+            selectorPanelRefresh(list, dom, kb, type,
+                predicate, inverse, possible, options, callback);
+            return list;
+        }
+        
+        var selectorPanelRefresh = function(list, dom, kb, type,
+            predicate, inverse, possible, options, callback) {
+            if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
+            
             var item, x, already;
+            var selected = null;
+            list.innerHTML = '';
 
-            var listen = function(it, xx){
+            var listen = function(it, xx){ // Scope to hold it and xx 
                 item.addEventListener('click', function(event){
                     // complain('Clicked!'+event+" for "+xx.uri);
-                    it.setAttribute('style', style0 + 'background-color: black; color:white;')
-                    callback(xx, event);
+                    if (selected == it) { // deselect
+                        it.setAttribute('style', style0);
+                        selected = null;
+                    } else {
+                        if (selected) selected.setAttribute('style', style0);
+                        it.setAttribute('style', style0 + 'background-color: black; color:white;');
+                        selected = it;
+                    }
+                    callback(xx, event, selected == it);
                 }, false);
             };
             
             //list.setAttribute('style', 'border: 0.1em; width: 40%; height: 100%; padding: 1em;');
-            var style0 = 'border: 0.1em; width: 80%; height: 2em; padding: 0.5em;';
+            var style0 = 'border: 0.1em; width: 95%; height: 2em; padding: 0.5em;';
             for (var i=0; i < possible.length; i++) {
                 x = possible[i];
                 already = inverse   ? kb.each(undefined, predicate, x)
@@ -102,19 +160,36 @@ tabulator.panes.register( {
                 if (options.unused && already.length > 0) {
                     continue;
                 }
-                item = dom.createElement("div");
+                
+                var f = tabulator.panes.widget.twoLine[type.uri] || tabulator.panes.widget.twoLine[''];
+                item = f(dom, x);
+//                item = dom.createElement("div");
                 item.setAttribute('style', style0);
-                item.textContent = (tabulator.Util.label(x));
+//                item.textContent = (tabulator.Util.label(x));
            //     item.textContent = (tabulator.Util.label(x) + already.length? ('('+already.length+')'): '');
+
+                
+                var nav = dom.createElement('div');
+                nav.setAttribute('class', 'hideTillHover'); // See tabbedtab.css
+                nav.setAttribute('style', 'float:right; width:10%');
+
+                var a = dom.createElement('a');
+                a.setAttribute('href',x.uri);
+                a.setAttribute('style', 'float:right');
+                nav.appendChild(a).textContent = '>';                 
+                item.appendChild(nav);
+
                 list.appendChild(item);
                 listen(item, x);
             };
             return list;
         };
+
+        ////////→↖➝
         
         div.setAttribute('class', 'attachPane');
         
-        div.innerHTML='<h1>Attachments</h1><p>This is a pane under development</p>';
+        div.innerHTML='<h1>Attachments</h1>';
         div.setAttribute('style', 'background-color: #efe; width:40cm; height:20cm;');
 
 
@@ -129,46 +204,129 @@ tabulator.panes.register( {
         types['http://www.w3.org/2000/10/swap/pim/qif#Transaction'] ||
 */
 
-        // Set up a triage of many class memembers against documents
-        if (subject.uri == 'http://www.w3.org/ns/pim/trip#Trip' ||
-            subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction'){
-            subjects = kb.each(undefined, ns.rdf('type'), subject);
+        // Find all members of the class which we know about
+        // and sort them by an appropriate property.   @@ Move to library
+        //
+        var getMembersAndSort = function(subject) {
+        
+            var sortBy = {  'http://www.w3.org/ns/pim/trip#Trip' : // @@ put this into the ontologies
+                    'http://www.w3.org/2002/12/cal/ical#dtstart' ,
+                'http://www.w3.org/2000/10/swap/pim/qif#Transaction' :
+                    'http://www.w3.org/2000/10/swap/pim/qif#date',
+                'http://www.w3.org/2000/10/swap/pim/qif#Transaction':
+                    'http://purl.org/dc/elements/1.1/date'} [subject.uri];
+                    
+            if (!sortBy) {
+                sortBy = kb.any(subject, tabulator.ns.ui('sortBy'));
+            }
+            var u, x, uriHash = kb.findMemberURIs(subject);
+            var pairs = [], subjects = [];
+            for (u in uriHash) { //@ protect against methods?
+                x = kb.sym(u);
+                pairs.push( [kb.any(x, kb.sym(sortBy)), x]);
+            }
+            pairs.sort();
+            pairs.reverse(); // @@ Descending order .. made a toggle?
+            for (var i=0; i< pairs.length; i++) {
+                subjects.push(pairs[i][1]);
+            }
+            return subjects;
+        };
+        
+        // Set up a triage of many class members against documents
+        if (subject.uri ==  'http://www.w3.org/ns/pim/trip#Trip' ||
+            subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction') {
             multi = true;
+            subjects = getMembersAndSort(subject);
         }
 
-        var store = findStore(kb, subject);
-        if (!store) complain("There is no annotation store for: "+subject.uri);
+        //var store = findStore(kb, subject);
+        //if (!store) complain("There is no annotation store for: "+subject.uri);
 
-        var objects = kb.each(undefined, ns.rdf('type'), range);
-        if (!objects.length) complain("objects:"+objects.length);
+        //var objects = kb.each(undefined, ns.rdf('type'), range);
+        var objects = getMembersAndSort(range);
+        if (!objects) complain("objects:"+objects.length);
         
         var options = {};
-        var showSubject = function(x, event) {
-            complain('subject clicked' + x.uri);
+        var currentSubject = null, currentObject = null;
+        var objectType = QU('SupportingDocument');
+        
+        var deselectObject = function() {
+            currentObject = null;
+            preview.innerHTML = '';
+        }
+
+        var showFiltered = function(x) {
+            var filtered = objects.filter(function(y){return !!kb.holds(x, predicate, y)});
+            //complain('Number of filtered objects: ' + filtered.length+ ' for '+x.uri +' out of '+objects.length);
+            deselectObject();
+            selectorPanelRefresh(objectList,
+                dom, kb, objectType, predicate, true, filtered, options, showObject);
+        };
+        
+        // When you click on a subject, filter the objects connected to the subject
+        var showSubject = function(x, event, selected) {
+            if (selected) {
+                currentSubject = x;
+                var linkDone = function(uri, ok, body) {
+                    if (ok) {
+                        showFiltered(x);
+                    } else {
+                        complain("Error: Unable to attach "+currentObject.uri+" to "+x.uri+ ":\n"+ body);
+                    }
+                };
+                if (currentObject) {
+                     complain("Info: starting to attach "+currentObject.uri+" to "+x.uri+ ":\n")
+                    var store = findStore(kb, x);
+                    if (!store) {
+                        complain("There is no annotation store for: "+x.uri);
+                    } else {
+                        var ins = [$rdf.st(x, predicate, currentObject, store)];
+                        tabulator.sparql.update([], ins, linkDone);
+                    }
+                } else {
+                    showFiltered(x);
+                }
+            } else {
+                currentSubject = null;
+                deselectObject();
+                selectorPanelRefresh(objectList,
+                    dom, kb, objectType, predicate, true, objects, options, showObject)
+            }
         }
         if (multi) {
-            var subjectList = selectorPanel(dom, kb,
-                    predicate, false, subjects, options, store, showSubject);
+            var subjectList = selectorPanel(dom, kb, subject,
+                    predicate, false, subjects, options, showSubject);
             subjectList.setAttribute('style',
                 'background-color: #ffe;  width: 25em; height: 100%; padding: 1em; overflow:scroll; float:left');
             div.appendChild(subjectList);
         }
 
-        var showObject = function(x, event) {
-            //preview.innerHTML = ''; // Clean out what is there
-            complain("Show object "+x.uri)
-            if (0) {
-                preview.innerHTML = '<iframe width="100%" height="100%" src="'
-                    + x.uri + '">' + x.uri + '</iframe>';
-            } else {
-                preview.innerHTML = '<img width="100%" height="100%" src="'
-                    + x.uri + '">';
+        var showObject = function(x, event, selected) {
+            if (!selected) {
+                deselectObject();
+                preview.innerHTML = ''; // Clean out what is there
+            // complain("Show object "+x.uri)
+                return;
+            }
+            currentObject = x;
+            try {
+                if (x.uri.slice(-4) == ".pdf") { // @@@ KLUDGE! use metadata after HEAD
+                    preview.innerHTML = '<iframe height="100%" width="100%"src="'
+                        + x.uri + '">' + x.uri + '</iframe>';
+                } else {
+                    preview.innerHTML = '<img src="'
+                        + x.uri + '">';
+                }
+            } catch(e) {
+                preview.innerHTML = '<span color="red">' + "Error:" + '</span>';
             }
         }
 
 
-       var objectList = selectorPanel(dom, kb, predicate, true, objects, options, store, showObject);
-        objectList.setAttribute('style', 'background-color: #fef;  width: 30em; height: 100%; padding: 1em; float:left;overflow:scroll;');
+        var objectList = selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject);
+        objectList.setAttribute('style',
+            'background-color: #fef;  width: 30em; height: 100%; padding: 1em; float:left;overflow:scroll;');
         div.appendChild(objectList);
 
         var preview = dom.createElement("div");

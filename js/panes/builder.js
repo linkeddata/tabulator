@@ -17,9 +17,10 @@ tabulator.panes.metaPane = {
     name: 'dynmaic', // @@ fix
     
     label: function(subject) {
-        var ts = rdf.findAllTypes(subject);
+        var t, nt, ts = rdf.findTypesNT(subject);
         ps ={};
-        for (var t in ts) {
+        for (nt in ts) {
+            t = kb.fromNT(nt);
             ps = ps.concat(kb.each(t, tabulator.ns.ui('formDefinition')));
         }
         for (var i=0; i <ps.length; i++) {

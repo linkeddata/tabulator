@@ -13,8 +13,10 @@
 
     
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_paperclip = iconPrefix + 'js/panes/attach/tbl-paperclip-22.png';
+tabulator.Icon.src.icon_paperclip = tabulator.iconPrefix + 'js/panes/attach/tbl-paperclip-22.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Attachments'
+
+if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(tabulator.kb);
 
 tabulator.panes.register( {
 
@@ -42,7 +44,6 @@ tabulator.panes.register( {
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
         var QU = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        var div = dom.createElement("div");
         
         
    //////////////////////////////////////////////////////////////////////////////     
@@ -57,7 +58,7 @@ tabulator.panes.register( {
 
         var complain = function complain(message){
             var pre = dom.createElement("pre");
-            pre.setAttribute('style', 'color: grey');
+            pre.setAttribute('style', 'background-color: pink');
             div.appendChild(pre);
             pre.appendChild(dom.createTextNode(message));
         } 
@@ -78,132 +79,26 @@ tabulator.panes.register( {
             return store;
         }
  
- /////////////////////////////////////////////////////////////////////////////
- // We need these for anything which is a subject of an attachment.
- //
- tabulator.panes.widget.twoLine[
-    'http://www.w3.org/2000/10/swap/pim/qif#Transaction'] = function(dom, x) {
-    var failed = false;
-    var enc = function(p) {
-        var y = tabulator.kb.any(x, QU(p));
-        if (!y) failed = true;
-        return y ? tabulator.Util.escapeForXML(y.value) : '?';   // @@@@
-    };
-    var box = dom.createElement("table");
-    box.innerHTML = '<tr><td colspan="2">' + enc('payee') + 
-        '</td></tr>\n<tr><td><td>' + enc('date').slice(0,10) +
-        '</td><td style="text-align: right;">' + enc('amount') + '</td></tr>';
-    if (failed) box.innerHTML = '<tr><td>' + tabulator.Util.escapeForXML(x.uri) + '</td></tr>';
-    return box;
-};
  
- tabulator.panes.widget.twoLine[
-    'http://www.w3.org/ns/pim/trip#Trip'] = function(dom, x) {
-    var enc = function(p) {
-        var y = tabulator.kb.any(x, p);
-        return y ? tabulator.Util.escapeForXML(y.value) : '?';
-    };
-    var box = dom.createElement("table");
-    box.innerHTML = '<tr><td colspan="2">' + enc(DC('title')) + 
-        '</td></tr>\n<tr style="color: #777"><td><td>' +
-        enc(CAL('dtstart')) + '</td><td>' + enc(CAL('dtend'))
-        + '</td></tr>';
-    return box;
-};
 
-tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
-    var box = dom.createElement("div");
-    box.textContent = (tabulator.Util.label(x));
-    return box;
-};
- 
- // //////////////////////////////////////////////////////////////////////////////       
+
         
-        var selectorPanel = function(dom, kb, type,
-            predicate, inverse, possible, options, callback) {
-            
-            var list = dom.createElement("div");
-            selectorPanelRefresh(list, dom, kb, type,
-                predicate, inverse, possible, options, callback);
-            return list;
-        }
-        
-        var selectorPanelRefresh = function(list, dom, kb, type,
-            predicate, inverse, possible, options, callback) {
-            if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
-            
-            var item, x, already;
-            var selected = null;
-            list.innerHTML = '';
-
-            var listen = function(it, xx){ // Scope to hold it and xx 
-                item.addEventListener('click', function(event){
-                    // complain('Clicked!'+event+" for "+xx.uri);
-                    if (selected == it) { // deselect
-                        it.setAttribute('style', style0);
-                        selected = null;
-                    } else {
-                        if (selected) selected.setAttribute('style', style0);
-                        it.setAttribute('style', style0 + 'background-color: black; color:white;');
-                        selected = it;
-                    }
-                    callback(xx, event, selected == it);
-                }, false);
-            };
-            
-            //list.setAttribute('style', 'border: 0.1em; width: 40%; height: 100%; padding: 1em;');
-            var style0 = 'border: 0.1em; width: 95%; height: 2em; padding: 0.5em;';
-            for (var i=0; i < possible.length; i++) {
-                x = possible[i];
-                already = inverse   ? kb.each(undefined, predicate, x)
-                                        : kb.each(x, predicate);
-                if (options.unused && already.length > 0) {
-                    continue;
-                }
-                
-                var f = tabulator.panes.widget.twoLine[type.uri] || tabulator.panes.widget.twoLine[''];
-                item = f(dom, x);
-//                item = dom.createElement("div");
-                item.setAttribute('style', style0);
-//                item.textContent = (tabulator.Util.label(x));
-           //     item.textContent = (tabulator.Util.label(x) + already.length? ('('+already.length+')'): '');
-
-                
-                var nav = dom.createElement('div');
-                nav.setAttribute('class', 'hideTillHover'); // See tabbedtab.css
-                nav.setAttribute('style', 'float:right; width:10%');
-
-                var a = dom.createElement('a');
-                a.setAttribute('href',x.uri);
-                a.setAttribute('style', 'float:right');
-                nav.appendChild(a).textContent = '>';                 
-                item.appendChild(nav);
-
-                list.appendChild(item);
-                listen(item, x);
-            };
-            return list;
-        };
-
-        ////////→↖➝
-        
+        var div = dom.createElement("div");
         div.setAttribute('class', 'attachPane');
-        
         div.innerHTML='<h1>Attachments</h1>';
-        div.setAttribute('style', 'background-color: #efe; width:40cm; height:20cm;');
 
 
         var predicate =  WF('attachment');
         var range = QU('SupportingDocument');
         
-        var subjects = [ subject ];
-        var multi = false;
-        /*
-        var types = kb.findTypeURIs(subject);
-        if (types['http://www.w3.org/ns/pim/trip#Trip'] ||
-        types['http://www.w3.org/2000/10/swap/pim/qif#Transaction'] ||
-*/
-
+        var subjects;
+        var multi;
+        var options = {};
+        var currentMode = 0;
+        var currentSubject = null, currentObject = null;
+        var currentSubjectItem = null, currentObjectItem = null;
+        var objectType = QU('SupportingDocument');
+        
         // Find all members of the class which we know about
         // and sort them by an appropriate property.   @@ Move to library
         //
@@ -213,17 +108,19 @@ tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
                     'http://www.w3.org/2002/12/cal/ical#dtstart' ,
                 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' :
                     'http://www.w3.org/2000/10/swap/pim/qif#date',
-                'http://www.w3.org/2000/10/swap/pim/qif#Transaction':
+                'http://www.w3.org/2000/10/swap/pim/qif#SupportingDocument':
                     'http://purl.org/dc/elements/1.1/date'} [subject.uri];
                     
             if (!sortBy) {
                 sortBy = kb.any(subject, tabulator.ns.ui('sortBy'));
             }
-            var u, x, uriHash = kb.findMemberURIs(subject);
+            var u, x, key, uriHash = kb.findMemberURIs(subject);
             var pairs = [], subjects = [];
             for (u in uriHash) { //@ protect against methods?
                 x = kb.sym(u);
-                pairs.push( [kb.any(x, kb.sym(sortBy)), x]);
+                key = kb.any(x, kb.sym(sortBy));
+                // if (!key) complain("Sort: '"+key+"' No "+sortBy+" for "+x); // Assume just not in this year
+                if (key) pairs.push( [key, x]);
             }
             pairs.sort();
             pairs.reverse(); // @@ Descending order .. made a toggle?
@@ -233,11 +130,16 @@ tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
             return subjects;
         };
         
-        // Set up a triage of many class members against documents
+        // Set up a triage of many class members against documents or just one
         if (subject.uri ==  'http://www.w3.org/ns/pim/trip#Trip' ||
             subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction') {
             multi = true;
             subjects = getMembersAndSort(subject);
+        } else {
+            currentSubject = subject;
+            currentMode = 1; // Show attached only.
+            subjects = [ subject ];
+            multi = false;
         }
 
         //var store = findStore(kb, subject);
@@ -247,58 +149,93 @@ tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
         var objects = getMembersAndSort(range);
         if (!objects) complain("objects:"+objects.length);
         
-        var options = {};
-        var currentSubject = null, currentObject = null;
-        var objectType = QU('SupportingDocument');
-        
         var deselectObject = function() {
             currentObject = null;
             preview.innerHTML = '';
         }
 
-        var showFiltered = function(x) {
-            var filtered = objects.filter(function(y){return !!kb.holds(x, predicate, y)});
-            //complain('Number of filtered objects: ' + filtered.length+ ' for '+x.uri +' out of '+objects.length);
-            deselectObject();
-            selectorPanelRefresh(objectList,
-                dom, kb, objectType, predicate, true, filtered, options, showObject);
+        var showFiltered = function(mode) {
+            var filtered = (mode == 0) ? objects :
+                (mode == 1) ?   (currentSubject === null
+                    ? objects.filter(function(y){return !!kb.holds(undefined, predicate, y)})
+                    : objects.filter(function(y){return !!kb.holds(currentSubject, predicate, y)}) )
+                : objects.filter(function(y){return kb.each(undefined, predicate, y).length == 0});
+            tabulator.panes.utils.selectorPanelRefresh(objectList,
+                dom, kb, objectType, predicate, true, filtered, options, showObject, linkClicked);
+            if (filtered.length == 1) {
+                currentObject = filtered[0];
+                showObject(currentObject, null, true); // @@ (Sure?) if only one select it.
+            };
+        };
+        
+
+
+        var setAttachment = function(x, y, value, refresh) {
+            if (kb.holds(x, predicate, y) == value) return;
+            var verb = value ? "attach" : "detach";
+            //complain("Info: starting to "+verb+" " + y.uri + " to "+x.uri+ ":\n")
+            var linkDone3 = function(uri, ok, body) {
+                if (ok) {
+                    // complain("Success "+verb+" "+y.uri+" to "+x.uri+ ":\n"+ body);
+                    refresh();
+                } else {
+                    complain("Error: Unable to "+verb+" "+y.uri+" to "+x.uri+ ":\n"+ body);
+                }
+            };
+
+            var store = findStore(kb, x);
+            if (!store) {
+                complain("There is no annotation store for: "+x.uri);
+            } else {
+                var sts = [$rdf.st(x, predicate, y, store)];
+                if (value) {
+                    tabulator.sparql.update([], sts, linkDone3);
+                } else {
+                    tabulator.sparql.update(sts, [], linkDone3);
+                };
+            };
+        };
+
+        var linkClicked = function(x, event, inverse, refresh) {
+            var s, o;
+            if (inverse) { // Objectlist
+                if (!currentSubject) {
+                    complain("No subject for the link has been selected");
+                    return;
+                } else {
+                    s = currentSubject;
+                    o = x;
+                };
+            
+            } else { // Subjectlist
+                if (!currentObject) {
+                    complain("No object for the link has been selected");
+                    return;
+                } else {
+                    s = x;
+                    o = currentObject;
+                };
+            };
+            setAttachment(s, o, !kb.holds(s, predicate, o), refresh); // @@ toggle
         };
         
         // When you click on a subject, filter the objects connected to the subject
         var showSubject = function(x, event, selected) {
             if (selected) {
                 currentSubject = x;
-                var linkDone = function(uri, ok, body) {
-                    if (ok) {
-                        showFiltered(x);
-                    } else {
-                        complain("Error: Unable to attach "+currentObject.uri+" to "+x.uri+ ":\n"+ body);
-                    }
-                };
-                if (currentObject) {
-                     complain("Info: starting to attach "+currentObject.uri+" to "+x.uri+ ":\n")
-                    var store = findStore(kb, x);
-                    if (!store) {
-                        complain("There is no annotation store for: "+x.uri);
-                    } else {
-                        var ins = [$rdf.st(x, predicate, currentObject, store)];
-                        tabulator.sparql.update([], ins, linkDone);
-                    }
-                } else {
-                    showFiltered(x);
-                }
             } else {
                 currentSubject = null;
                 deselectObject();
-                selectorPanelRefresh(objectList,
-                    dom, kb, objectType, predicate, true, objects, options, showObject)
+                // tabulator.panes.utils.selectorPanelRefresh(objectList, dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked)
             }
+            showFiltered(currentMode); // Refresh the objects
         }
+        
         if (multi) {
-            var subjectList = selectorPanel(dom, kb, subject,
-                    predicate, false, subjects, options, showSubject);
+            var subjectList = tabulator.panes.utils.selectorPanel(dom, kb, subject,
+                    predicate, false, subjects, options, showSubject, linkClicked);
             subjectList.setAttribute('style',
-                'background-color: #ffe;  width: 25em; height: 100%; padding: 1em; overflow:scroll; float:left');
+                'background-color: white;  width: 25em; height: 100%; padding: 1em; overflow:scroll; float:left');
             div.appendChild(subjectList);
         }
 
@@ -323,14 +260,61 @@ tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
             }
         }
 
+        div.setAttribute('style', 'background-color: white; width:40cm; height:20cm;');
+        
+        
+        var headerButtons = function(dom, labels, callback) {
+            var head = dom.createElement('table');
+            var current = 0;
+            head.setAttribute('style', 'float: left; width: 30em; padding: 1em; height: 1.5em; background-color: #ddd; color: #444; font-weight: bold')
+            var tr = dom.createElement('tr');
+            var style0 = 'border-radius: 0.6em; text-align: center;'
+            var style1 = style0 + 'background-color: #ccc; color: black;'
+            head.appendChild(tr);
+            var setStyles = function() {
+                for (i=0; i<labels.length; i++) {
+                    buttons[i] .setAttribute('style', i == current ? style1 : style0);
+                }
+            }
+            var i, b, buttons = [];
+            for (i=0; i<labels.length; i++) {
+                b = buttons[i] = dom.createElement('td');
+                b.textContent = labels[i];
+                tr.appendChild(buttons[i]);
+                var listen = function(b, i) {
+                    b.addEventListener('click', function(e) {
+                        current = i;
+                        setStyles();
+                        callback(i);
+                    });
+                }
+                listen(b, i);
+            };
+            setStyles();
+            return head;
+        };
 
-        var objectList = selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject);
+        var setMode = function (mode){
+            currentMode = mode;
+            deselectObject();
+            showFiltered(mode);
+        }
+
+        var wrapper = dom.createElement('div');
+        wrapper.setAttribute('style', ' width: 30em; height: 100%;  padding: 0em; float:left;');
+        // wrapper.appendChild(head);
+        div.appendChild(wrapper);
+        wrapper.appendChild(headerButtons(dom, [ 'all', 'attached', 'not attached',], setMode));
+
+        var objectList = tabulator.panes.utils.selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked);
         objectList.setAttribute('style',
-            'background-color: #fef;  width: 30em; height: 100%; padding: 1em; float:left;overflow:scroll;');
-        div.appendChild(objectList);
+            'background-color: #ffe;  width: 27.5em; height: 100%; padding: 1em; overflow:scroll;'); //float:left
+        wrapper.appendChild(objectList);
+        
+        //objectList.insertBefore(head, objectList.firstChild);
 
         var preview = dom.createElement("div");
-        preview.setAttribute('style', 'background-color: #fee; padding: 1em;  height: 100%; overflow:scroll;');
+        preview.setAttribute('style', 'background-color: black; padding: 1em; margin: 0;  height: 100%; overflow:scroll;');
         div.appendChild(preview);
 
          

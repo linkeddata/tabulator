@@ -1237,6 +1237,108 @@ tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form,
     return box;
 }
 
+///////////////////////////////////////// Random I/O widgets /////////////
+
+
+//////              Column Header Buttons
+//
+//  These are for selecting different modes, sources,styles, etc.
+//
+/* 
+tabulator.panes.utils.headerButtons = function (dom, kb, name, words) {
+    var box = dom.createElement('table');
+    var i, word, s = '<tr>'
+    box.setAttribute('style', 'width: 90%; height: 1.5em');
+    for (i=0; i<words.length; i++) {
+        s += '<td><input type="radio" name="' + name + '" id="' + words[i] + '" value=';
+    }
+    box.innerHTML = s + '</tr>';
+    
+};
+*/
+//////////////////////////////////////////////////////////////       
+//
+//     selectorPanel
+//
+//  A vertical panel for selecting connections to left or right.
+//
+//   @param inverse means this is the object rather than the subject
+//       
+tabulator.panes.utils.selectorPanel = function(dom, kb, type,
+    predicate, inverse, possible, options, callback, linkCallback) {
+    
+    return tabulator.panes.utils.selectorPanelRefresh(dom.createElement('div'),
+        dom, kb, type, predicate, inverse, possible, options, callback, linkCallback);
+}
+
+tabulator.panes.utils.selectorPanelRefresh = function(list, dom, kb, type,
+    predicate, inverse, possible, options, callback, linkCallback) {
+    
+    var style0 = 'border: 0.1em solid #ddd; border-bottom: none; width: 95%; height: 2em; padding: 0.5em;';
+    var selected = null;
+    list.innerHTML = '';
+
+    var refreshItem = function(box, x){ // Scope to hold item and x
+
+        var item, image;
+        
+        var setStyle = function(){
+            var already = (inverse)   ? kb.each(undefined, predicate, x)
+                                    : kb.each(x, predicate);
+            iconDiv.setAttribute('class', already.length == 0 ? 'hideTillHover':''); // See tabbedtab.css
+            image.setAttribute('src', tabulator.iconPrefix + 'js/panes/attach/tbl-paperclip-22a.png');
+            image.setAttribute('title', already.length ? already.length : 'attach');
+        }
+        var f = tabulator.panes.widget.twoLine[type.uri] || tabulator.panes.widget.twoLine[''];
+        item = f(dom, x);
+        item.setAttribute('style', style0);
+        
+        var nav = dom.createElement('div');
+        nav.setAttribute('class', 'hideTillHover'); // See tabbedtab.css
+        nav.setAttribute('style', 'float:right; width:10%');
+
+        var a = dom.createElement('a');
+        a.setAttribute('href',x.uri);
+        a.setAttribute('style', 'float:right');
+        nav.appendChild(a).textContent = '>';                 
+        box.appendChild(nav);
+
+        var iconDiv = dom.createElement('div');
+        iconDiv.setAttribute('style', (inverse ? 'float:left;' : 'float:right;') + ' width:30px;' );
+        image = dom.createElement('img');
+        setStyle();
+        iconDiv.appendChild(image)
+        box.appendChild(iconDiv);
+
+        item.addEventListener('click', function(event){
+            if (selected == item) { // deselect
+                item.setAttribute('style', style0);
+                selected = null;
+            } else {
+                if (selected) selected.setAttribute('style', style0);
+                item.setAttribute('style', style0 + 'background-color: #111; color:white;');
+                selected = item;
+            }
+            callback(x, event, selected == item);
+            setStyle();
+        }, false);
+
+        image.addEventListener('click', function(event){
+            linkCallback(x, event, inverse, setStyle);
+        }, false);
+        
+        box.appendChild(item);
+        return box;
+    };
+    
+    for (var i=0; i < possible.length; i++) {
+        var box = dom.createElement('div');
+        list.appendChild(box);
+        refreshItem (box, possible[i]);
+    };
+    return list;
+};
+
 
 
 
@@ -1387,14 +1489,55 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     return box
 
 }
-//######################################################
+//###########################################################################
 //
 //      Small compact views of things
 //
 tabulator.panes.widget = {};
 tabulator.panes.widget.line = {}; // Approx 80em
-tabulator.panes.widget.twoLine = {}; // Approx 40em * 2.4
+tabulator.panes.widget.twoLine = {}; // Approx 40em * 2.4em
 
+
+/////////////////////////////////////////////////////////////////////////////
+ // We need these for anything which is a subject of an attachment.
+ //
+ 
+tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
+    var box = dom.createElement("div");
+    box.textContent = (tabulator.Util.label(x));
+    return box;
+};
+
+
+ tabulator.panes.widget.twoLine[
+    'http://www.w3.org/2000/10/swap/pim/qif#Transaction'] = function(dom, x) {
+    var failed = false;
+    var enc = function(p) {
+        var y = tabulator.kb.any(x, tabulator.ns.qu(p));
+        if (!y) failed = true;
+        return y ? tabulator.Util.escapeForXML(y.value) : '?';   // @@@@
+    };
+    var box = dom.createElement("table");
+    box.innerHTML = '<tr><td colspan="2">' + enc('payee') + 
+        '</td></tr>\n<tr><td><td>' + enc('date').slice(0,10) +
+        '</td><td style="text-align: right;">' + enc('amount') + '</td></tr>';
+    if (failed) box.innerHTML = '<tr><td>' + tabulator.Util.escapeForXML(x.uri) + '</td></tr>';
+    return box;
+};
+ 
+ tabulator.panes.widget.twoLine[
+    'http://www.w3.org/ns/pim/trip#Trip'] = function(dom, x) {
+    var enc = function(p) {
+        var y = tabulator.kb.any(x, p);
+        return y ? tabulator.Util.escapeForXML(y.value) : '?';
+    };
+    var box = dom.createElement("table");
+    box.innerHTML = '<tr><td colspan="2">' + enc(tabulator.ns.dc('title')) + 
+        '</td></tr>\n<tr style="color: #777"><td><td>' +
+        enc(tabulator.ns.cal('dtstart')) + '</td><td>' + enc(tabulator.ns.cal('dtend'))
+        + '</td></tr>';
+    return box;
+};
 
 
 

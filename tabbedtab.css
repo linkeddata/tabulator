@@ -421,6 +421,27 @@ div.RDFXMLPane {
     color: #440;
 }
 
+/* Generic things useful anywhere */
+
+
+img.hideTillHover {
+  visibility:hidden;
+}
+img.hideTillHover:hover  {
+ visibility:visible;
+}
+.hideTillHover img{
+  visibility:hidden;
+}
+.hideTillHover:hover img {
+ visibility:visible;
+}
+.hideTillHover a{
+  visibility:hidden;
+}
+.hideTillHover:hover a {
+ visibility:visible;
+}
 
 
 /* Pane icons: */
@@ -494,6 +515,7 @@ table.results th {  font-size: 100%;
 /* Hide sections of the display.
 Collpase not actually in CSS1 except for table row and col.
 Supposed to leave layoutunchanged. So we float it too. */
+
 .collapse { display: none }
 .expand { display: block }
 
@@ -501,7 +523,7 @@ Supposed to leave layoutunchanged. So we float it too. */
 .nrml { color: black; }
 .info { color: black; }
 .warn { color: black; background-color: yellow; }
-.eror { color: white; background-color: red; }
+.eror { color: white; background-color: pink; }
 .mesg { color: green; }
 .dbug { color: black; }  /* timbl can't read grey easily */
 

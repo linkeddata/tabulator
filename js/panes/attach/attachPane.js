@@ -165,6 +165,8 @@ tabulator.panes.register( {
             if (filtered.length == 1) {
                 currentObject = filtered[0];
                 showObject(currentObject, null, true); // @@ (Sure?) if only one select it.
+            } else {
+                deselectObject();
             };
         };
         
@@ -226,7 +228,6 @@ tabulator.panes.register( {
             } else {
                 currentSubject = null;
                 deselectObject();
-                // tabulator.panes.utils.selectorPanelRefresh(objectList, dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked)
             }
             showFiltered(currentMode); // Refresh the objects
         }
@@ -235,7 +236,7 @@ tabulator.panes.register( {
             var subjectList = tabulator.panes.utils.selectorPanel(dom, kb, subject,
                     predicate, false, subjects, options, showSubject, linkClicked);
             subjectList.setAttribute('style',
-                'background-color: white;  width: 25em; height: 100%; padding: 1em; overflow:scroll; float:left');
+                'background-color: white;  width: 25em; height: 100%; padding: 0 em; overflow:scroll; float:left');
             div.appendChild(subjectList);
         }
 
@@ -266,7 +267,7 @@ tabulator.panes.register( {
         var headerButtons = function(dom, labels, callback) {
             var head = dom.createElement('table');
             var current = 0;
-            head.setAttribute('style', 'float: left; width: 30em; padding: 1em; height: 1.5em; background-color: #ddd; color: #444; font-weight: bold')
+            head.setAttribute('style', 'float: left; width: 30em; padding: 0.5em; height: 1.5em; background-color: #ddd; color: #444; font-weight: bold')
             var tr = dom.createElement('tr');
             var style0 = 'border-radius: 0.6em; text-align: center;'
             var style1 = style0 + 'background-color: #ccc; color: black;'
@@ -308,13 +309,13 @@ tabulator.panes.register( {
 
         var objectList = tabulator.panes.utils.selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked);
         objectList.setAttribute('style',
-            'background-color: #ffe;  width: 27.5em; height: 100%; padding: 1em; overflow:scroll;'); //float:left
+            'background-color: #ffe;  width: 27.5em; height: 100%; padding: 0em; overflow:scroll;'); //float:left
         wrapper.appendChild(objectList);
         
         //objectList.insertBefore(head, objectList.firstChild);
 
         var preview = dom.createElement("div");
-        preview.setAttribute('style', 'background-color: black; padding: 1em; margin: 0;  height: 100%; overflow:scroll;');
+        preview.setAttribute('style', 'background-color: black; padding: 0em; margin: 0;  height: 100%; overflow:scroll;');
         div.appendChild(preview);
 
          

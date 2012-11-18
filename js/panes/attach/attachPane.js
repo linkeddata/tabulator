@@ -25,13 +25,22 @@ tabulator.panes.register( {
     name: 'attachments',
     
     // Does the subject deserve an issue pane?
+    //
+    //  In this case we will render any thing which is in any subclass of 
+    //  certain classes, or also the certain classes themselves, as a
+    //  triage tool for correlating many attachees with attachments.
+    // We also offer the pane for anything of any class which just has an attachment already.
+    //
     label: function(subject) {
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
-        if (t['http://www.w3.org/ns/pim/trip#Trip'] ||
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        if (t['http://www.w3.org/ns/pim/trip#Trip'] || // If in any subclass
         subject.uri == 'http://www.w3.org/ns/pim/trip#Trip' ||
+        t['http://www.w3.org/2005/01/wf/flow#Task'] ||
         t['http://www.w3.org/2000/10/swap/pim/qif#Transaction'] ||
-        subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction') return "attachments";
+        subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' ||
+        kb.holds(subject, WF('attachment'))) return "attachments";
         return null; 
     },
 
@@ -71,16 +80,14 @@ tabulator.panes.register( {
 
         // Where can we write about this thing?
         //
-        // Returns term for document of null 
+        // Returns term for document or null 
         var findStore = function(kb, subject) {
             var docURI = tabulator.rdf.Util.uri.docpart(subject.uri);
             if (tabulator.sparql.editable(docURI, kb)) return kb.sym(docURI);
             var store = kb.any(kb.sym(docURI), QU('annotationStore'));
+            // if (!store) complain("No store for "+docURI);
             return store;
         }
- 
- 
-
 
         
         var div = dom.createElement("div");
@@ -104,7 +111,10 @@ tabulator.panes.register( {
         //
         var getMembersAndSort = function(subject) {
         
-            var sortBy = {  'http://www.w3.org/ns/pim/trip#Trip' : // @@ put this into the ontologies
+            var sortBy = {
+                'http://www.w3.org/2005/01/wf/flow#Task' :
+                    'http://purl.org/dc/elements/1.1/created',
+                'http://www.w3.org/ns/pim/trip#Trip' : // @@ put this into the ontologies
                     'http://www.w3.org/2002/12/cal/ical#dtstart' ,
                 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' :
                     'http://www.w3.org/2000/10/swap/pim/qif#date',
@@ -249,15 +259,27 @@ tabulator.panes.register( {
             }
             currentObject = x;
             try {
-                if (x.uri.slice(-4) == ".pdf") { // @@@ KLUDGE! use metadata after HEAD
+
+/*
+                var table = dom.createElement('table');
+                tabulator.outline.GotoSubject(x, true, undefined, false, undefined, table) 
+*/
+
+                if (x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" ||
+                        x.uri.slice(-5) == ".jpeg") { // @@@ KLUDGE! use metadata after HEAD
                     preview.innerHTML = '<iframe height="100%" width="100%"src="'
                         + x.uri + '">' + x.uri + '</iframe>';
                 } else {
-                    preview.innerHTML = '<img src="'
-                        + x.uri + '">';
-                }
+                    preview.innerHTML = '';
+                    if (x.uri) kb.fetcher.nowOrWhenFetched(x.uri, undefined, function() {
+                        var display = tabulator.outline.propertyTable(x); //  ,table, pane
+                        preview.appendChild(display);                    
+                    });
+                };
+
+
             } catch(e) {
-                preview.innerHTML = '<span color="red">' + "Error:" + '</span>';
+                preview.innerHTML = '<span style="background-color: pink;">' + "Error:" + e + '</span>'; // @@ enc
             }
         }
 
@@ -309,14 +331,54 @@ tabulator.panes.register( {
 
         var objectList = tabulator.panes.utils.selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked);
         objectList.setAttribute('style',
-            'background-color: #ffe;  width: 27.5em; height: 100%; padding: 0em; overflow:scroll;'); //float:left
+            'background-color: #ffe;  width: 30em; height: 100%; padding: 0em; overflow:scroll;'); //float:left
         wrapper.appendChild(objectList);
         
         //objectList.insertBefore(head, objectList.firstChild);
 
         var preview = dom.createElement("div");
-        preview.setAttribute('style', 'background-color: black; padding: 0em; margin: 0;  height: 100%; overflow:scroll;');
+        preview.setAttribute('style', /*background-color: black; */ 'padding: 0em; margin: 0;  height: 100%; overflow:scroll;');
         div.appendChild(preview);
+
+        if (subjects.length > 0 && multi) {
+            var stores = {};
+            for (var k=0; k<subjects.length; k++) {
+                var store = findStore(kb, subjects[k]);
+                if (store) stores[store.uri] = subjects[k];
+                //if (!store) complain("No store for "+subjects[k].uri);
+            };
+            for (var storeURI in stores) {
+            //var store = findStore(kb,subjects[subjectList.length-1]);
+                var store = kb.sym(storeURI);
+                var mintBox = dom.createElement('div');
+                mintBox.setAttribute('style', 'clear: left; margin-top:2em; background-color:#ccc; border-radius: 1em; padding: 2em; font-weight: bold;');
+                mintBox.textContent = "+ New in "+storeURI;
+                /*
+                var mintButton = dom.createElement('img');
+                mintBox.appendChild(mintButton);
+                mintButton.setAttribute('src', tabulator.Icon.src.icon_add_triple); @@ Invokes master handler
+                */
+                mintBox.addEventListener('click', function(event) {
+                    var thisForm = tabulator.panes.utils.promptForNew(
+                        dom, kb, subject, predicate, subject, null, store,
+                        function(ok, body){
+                            if (!ok) {
+                                //callback(ok, body); // @@ if ok, need some form of refresh of the select for the new thing
+                            } else {
+                                // Refresh @@
+                            }
+                        });
+                    try {
+                        div.insertBefore(thisForm, mintBox.nextSibling) // Sigh no insertAfter
+                    } catch(e) {
+                        div.appendChild(thisForm);
+                    }
+                    var newObject = thisForm.AJAR_subject;
+
+                }, false);
+                div.appendChild(mintBox);
+            };
+        };
 
          
         

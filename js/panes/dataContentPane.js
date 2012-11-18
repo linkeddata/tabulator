@@ -80,6 +80,7 @@ tabulator.panes.dataContentPane = {
 
         // Convert a set of statements into a nested tree of tables
         function objectTree(obj) {
+            var res;
             switch(obj.termType) {
                 case 'symbol':
                     var anchor = myDocument.createElement('a')
@@ -89,7 +90,19 @@ tabulator.panes.dataContentPane = {
                     return anchor;
                     
                 case 'literal':
-                    return myDocument.createTextNode(obj.value); // placeholder
+
+                    if (!obj.datatype || !obj.datatype.uri) {
+                        res = myDocument.createElement('div');
+                        res.setAttribute('style', 'white-space: pre-wrap;');
+                        res.textContent = obj.value;
+                        return res
+                    } else if (obj.datatype.uri == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral') {
+                        res = myDocument.createElement('div');
+                        res.setAttribute('class', 'embeddedXHTML');
+                        res.innerHTML = obj.value; // Try that  @@@ beware embedded dangerous code
+                        return res;
+                    };
+                    return myDocument.createTextNode(obj.value); // placeholder - could be smarter, 
                     
                 case 'bnode':
                     if (obj.toNT() in doneBnodes) { // Break infinite recursion

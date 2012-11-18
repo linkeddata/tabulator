@@ -46,8 +46,13 @@ tabulator.loadScript("js/panes/paneUtils.js");
 tabulator.loadScript("js/panes/issue/pane.js");
 tabulator.loadScript("js/panes/transaction/pane.js");
 tabulator.loadScript("js/panes/trip/tripPane.js");
-tabulator.loadScript("js/panes/dataContentPane.js");
 tabulator.loadScript("js/panes/airPane.js");
+
+// Content views
+
+tabulator.loadScript("js/panes/imagePane.js");   // Basic image view
+
+tabulator.loadScript("js/panes/dataContentPane.js");  // Prefered
 tabulator.loadScript("js/panes/n3Pane.js");
 tabulator.loadScript("js/panes/RDFXMLPane.js");
 
@@ -74,7 +79,6 @@ tabulator.loadScript("js/panes/pubsPane.js");
 
 tabulator.loadScript("js/panes/microblogPane/microblogPane.js");
 
-// tabulator.loadScript("js/panes/imagePane.js");
 
 tabulator.loadScript("js/panes/socialPane.js");
 //tabulator.loadScript("js/panes/social/pane.js");

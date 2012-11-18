@@ -514,7 +514,7 @@ tabulator.OutlineObject = function(doc) {
         par.replaceChild(table, placeholder) // Attempt to 
     }
 
-    function propertyTable(subject, table, pane) {
+    var propertyTable = this.propertyTable = function propertyTable(subject, table, pane) {
         tabulator.log.debug("Property table for: "+ subject)
         subject = kb.canon(subject)
         // if (!pane) pane = tabulator.panes.defaultPane;
@@ -526,7 +526,9 @@ tabulator.OutlineObject = function(doc) {
             
             /*   This should be a beautiful system not a quick kludge - timbl 
             **   Put  link to inferenceWeb browsers for anything which is a proof
+            **    @@@ This should just be an optional pane.
             */  
+            /*
             var classes = kb.each(subject, rdf('type'))
             var i=0, n=classes.length;
             for (i=0; i<n; i++) {
@@ -539,7 +541,7 @@ tabulator.OutlineObject = function(doc) {
                     tr1.appendChild(anchor)
                 }
             }
-            
+            */
 //            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
                 if (typeof tabulator == 'undefined') alert('tabulator undefined')
@@ -1678,8 +1680,7 @@ tabulator.OutlineObject = function(doc) {
     
         function expand(uri)  {
             if (arguments[3]) return true;//already fetched indicator
-            if (uri=="https://svn.csail.mit.edu/kennyluck/data") var debug=true;
-            var cursubj = kb.canon(subject)  // canonical identifier may have changed
+            var cursubj = kb.canon(subject);  // canonical identifier may have changed
                 tabulator.log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
             var term = kb.sym(uri)
             var docTerm = kb.sym(tabulator.rdf.Util.uri.docpart(uri))
@@ -1842,10 +1843,12 @@ tabulator.OutlineObject = function(doc) {
     // expand  -- flag -- open the subject rather tahn keep folded closed
     // pane    -- optional -- pane to be used for exanded display
     // solo    -- optional -- the window will be cleared out and only the subject displayed
+    // referer -- optional -- where did we hear about this from anyway?
+    // table   -- option  -- a table element in which to put the outline.
     
-    this.GotoSubject = function(subject, expand, pane, solo, referrer) {
+    this.GotoSubject = function(subject, expand, pane, solo, referrer, table) {
         tabulator.log.error("@@ outline.js test 50 tabulator.log.error: $rdf.log.error)"+$rdf.log.error);
-        var table = myDocument.getElementById('outline');
+        if (!table) table = myDocument.getElementById('outline');
         if (solo) tabulator.Util.emptyNode(table);
         
         function GotoSubject_default(){
@@ -1872,7 +1875,6 @@ tabulator.OutlineObject = function(doc) {
             return uri;
         }
         var td = GotoSubject_default();
-        // Was: DisplayOptions["outliner rotate left"].setupHere([table,subject],text,GotoSubject_default);
         if (!td) td = GotoSubject_default(); //the first tr is required       
         if (expand) {
             outline_expand(td, subject, pane);

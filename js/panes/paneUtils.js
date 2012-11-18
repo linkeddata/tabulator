@@ -1316,7 +1316,7 @@ tabulator.panes.utils.selectorPanelRefresh = function(list, dom, kb, type,
                 selected = null;
             } else {
                 if (selected) selected.setAttribute('style', style0);
-                item.setAttribute('style', style0 + 'background-color: #111; color:white;');
+                item.setAttribute('style', style0 + 'background-color: #ccc; color:black;');
                 selected = item;
             }
             callback(x, event, selected == item);

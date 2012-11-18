@@ -387,6 +387,9 @@ div.dataContentPane tr {
 .dataContentPane a:hover { color: #3B5998; text-decoration: underline; font-weight: bold}
 .dataContentPane a:active { color: #888; text-decoration: none; }
 
+.dataContentPane.embeddedText { white-space: pre-wrap;}
+.dataContentPane.embeddedXHTML {}
+
 /* div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
 div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */ 
 div.dataContentPane td.pred a { color: #444 } /* Greyish as form field names have less info value */

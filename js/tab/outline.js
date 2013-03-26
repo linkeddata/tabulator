@@ -418,7 +418,7 @@ tabulator.OutlineObject = function(doc) {
         td_p.tabulatorDeselect = function(){setSelected(this,false);}; 
         return td_p;              
     } //outline_predicateTD
-
+/*
     ///////////////// Represent an arbirary subject by its properties
     //These are public variables ---  @@@@ ugh
     expandedHeaderTR.tr = myDocument.createElement('tr');
@@ -427,18 +427,31 @@ tabulator.OutlineObject = function(doc) {
     expandedHeaderTR.td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument));
     expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
     expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
+*/
+    function makeExpandedHeaderTR(myDocument) {
+        return tr;
+    };
     
     function expandedHeaderTR(subject, requiredPane) {
-        var tr = expandedHeaderTR.tr.cloneNode(true); //This sets the private tr as a clone of the public tr
+        var tr = myDocument.createElement('tr');
+        var td = myDocument.createElement('td');
+        td.setAttribute('colspan', '2');
+        td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument));
+        td.appendChild(myDocument.createElement('strong'));
+        tr.appendChild(td);
+
+        // var tr = makeExpandedHeaderTR(myDocument); //This sets the private tr as a clone of the public tr
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(tabulator.Util.label(subject)));
         tr.firstPane = null;
         var paneNumber = 0;
         var relevantPanes = [];
-        var labels = []
+        var labels = [];
+        
+
         if (requiredPane) {
             tr.firstPane = requiredPane;
-        }
+        };
         for (var i=0; i< tabulator.panes.list.length; i++) {
             var pane = tabulator.panes.list[i];
             var lab = pane.label(subject, myDocument);
@@ -463,6 +476,65 @@ tabulator.OutlineObject = function(doc) {
                 var pane = relevantPanes[i];
                 var ico = tabulator.Util.AJARImage(pane.icon, labels[i], labels[i],myDocument);
                 // ico.setAttribute('align','right');   @@ Should be better, but ffox bug pushes them down
+                var listen = function(ico, pane) {  // Freeze scope for event time
+                    ico.addEventListener('click', function(event) { 
+                        // Find the containing table for this subject 
+                        for (var t = td; t.parentNode;  t = t.parentNode) {
+                            if (t.nodeName == 'TABLE') break;
+                        }
+                        if  (t.nodeName != 'TABLE') throw "outline: internal error: "+t;
+                        
+                        
+                        // If the view already exists, remove it
+                        var state = 'paneShown';
+                        var numberOfPanesRequiringQueryButton = 0;
+                        for (var d = t.firstChild; d; d = d.nextSibling) {
+                            if (d.pane && d.pane.requireQueryButton) numberOfPanesRequiringQueryButton++;
+                        }
+                        for (var d = t.firstChild; d; d = d.nextSibling) {
+                            if (typeof d.pane != 'undefined') {
+                                if (d.pane == pane) {                      
+                                    removeAndRefresh(d)                           
+                                    // If we just delete the node d, ffox doesn't refresh the display properly.
+                                    state = 'paneHidden';
+                                    if (d.pane.requireQueryButton && t.parentNode.className /*outer table*/
+                                        && numberOfPanesRequiringQueryButton == 1 && myDocument.getElementById('queryButton'))
+                                        myDocument.getElementById('queryButton').setAttribute('style','display:none;');
+                                    break;
+                                }
+                            }
+                        }
+                        // If the view does not exist, create it
+                        if (state == 'paneShown') {
+                            var paneDiv;
+                            try {
+                                tabulator.log.info('outline: Rendering pane (2): '+pane.name)
+                                paneDiv = pane.render(subject, myDocument);
+                            }
+                            catch(e) { // Easier debugging for pane developers
+                                paneDiv = myDocument.createElement("div")
+                                paneDiv.setAttribute('class', 'exceptionPane');
+                                var pre = myDocument.createElement("pre")
+                                paneDiv.appendChild(pre);
+                                pre.appendChild(myDocument.createTextNode(tabulator.Util.stackString(e)));
+                            }
+                            if (pane.requireQueryButton && myDocument.getElementById('queryButton'))
+                                myDocument.getElementById('queryButton').removeAttribute('style');
+                            var second = t.firstChild.nextSibling;
+                            if (second) t.insertBefore(paneDiv, second);
+                            else t.appendChild(paneDiv);
+                            paneDiv.pane = pane;
+                        }
+                        ico.setAttribute('class', state) // set the button state
+                        // outline_expand(p, subject, internalPane, true); //  pane, already
+
+                    
+                    
+                    // paneEventClick();
+                    }, false);
+                }; // listen
+                
+                listen(ico, pane);
                 ico.setAttribute('class',  (i!=paneNumber) ? 'paneHidden':'paneShown')
                 tr.firstChild.childNodes[1].appendChild(ico);
             }
@@ -473,6 +545,12 @@ tabulator.OutlineObject = function(doc) {
         tr.firstChild.tabulatorDeselect = function(){setSelected(this,false);};   
         return tr;
     } //expandedHeaderTR
+
+
+
+ 
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -520,9 +598,9 @@ tabulator.OutlineObject = function(doc) {
         // if (!pane) pane = tabulator.panes.defaultPane;
         
         if (!table) { // Create a new property table
-            var table = myDocument.createElement('table')
-            var tr1 = expandedHeaderTR(subject, pane)
-            table.appendChild(tr1)
+            var table = myDocument.createElement('table');
+            var tr1 = expandedHeaderTR(subject, pane);
+            table.appendChild(tr1);
             
             /*   This should be a beautiful system not a quick kludge - timbl 
             **   Put  link to inferenceWeb browsers for anything which is a proof
@@ -1564,58 +1642,7 @@ tabulator.OutlineObject = function(doc) {
                 gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
                 break;
             default:  // Look up any icons for panes
-                var pane = tabulator.panes.paneForIcon[tsrc];
-                if (!pane) break;
-                
-                // Find the containing table for this subject 
-                for (var t = p; t.parentNode;  t = t.parentNode) {
-                    if (t.nodeName == 'TABLE') break;
-                }
-                if  (t.nodeName != 'TABLE') throw "outline: internal error: "+t;
-
-                // If the view already exists, remove it
-                var state = 'paneShown';
-                var numberOfPanesRequiringQueryButton = 0;
-                for (var d = t.firstChild; d; d = d.nextSibling) {
-                    if (d.pane && d.pane.requireQueryButton) numberOfPanesRequiringQueryButton++;
-                }
-                for (var d = t.firstChild; d; d = d.nextSibling) {
-                    if (typeof d.pane != 'undefined') {
-                        if (d.pane == pane) {                      
-                            removeAndRefresh(d)                           
-                            // If we just delete the node d, ffox doesn't refresh the display properly.
-                            state = 'paneHidden';
-                            if (d.pane.requireQueryButton && t.parentNode.className /*outer table*/
-                                && numberOfPanesRequiringQueryButton == 1 && myDocument.getElementById('queryButton'))
-                                myDocument.getElementById('queryButton').setAttribute('style','display:none;');
-                            break;
-                        }
-                    }
-                }
-                // If the view does not exist, create it
-                if (state == 'paneShown') {
-                    var paneDiv;
-                    try {
-                        tabulator.log.info('outline: Rendering pane (2): '+pane.name)
-                        paneDiv = pane.render(subject, myDocument);
-                    }
-                    catch(e) { // Easier debugging for pane developers
-                        paneDiv = myDocument.createElement("div")
-                        paneDiv.setAttribute('class', 'exceptionPane');
-                        var pre = myDocument.createElement("pre")
-                        paneDiv.appendChild(pre);
-                        pre.appendChild(myDocument.createTextNode(tabulator.Util.stackString(e)));
-                    }
-                    if (pane.requireQueryButton && myDocument.getElementById('queryButton'))
-                        myDocument.getElementById('queryButton').removeAttribute('style');
-                    var second = t.firstChild.nextSibling;
-                    if (second) t.insertBefore(paneDiv, second);
-                    else t.appendChild(paneDiv);
-                    paneDiv.pane = pane;
-                }
-                target.setAttribute('class', state) // set the button state
-                // outline_expand(p, subject, internalPane, true); //  pane, already
-                break;
+                // paneButtonClick(@@@)
            }
         }  // else IMG
         //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
@@ -1629,6 +1656,7 @@ tabulator.OutlineObject = function(doc) {
     } //function
     
 
+ 
     function outline_expand(p, subject1, pane, already) {
         tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
         //remove callback to prevent unexpected repaint

@@ -1289,7 +1289,7 @@ tabulator.panes.utils.selectorPanelRefresh = function(list, dom, kb, type,
             image.setAttribute('src', tabulator.iconPrefix + 'js/panes/attach/tbl-paperclip-22a.png');
             image.setAttribute('title', already.length ? already.length : 'attach');
         }
-        var f = tabulator.panes.widget.twoLine[type.uri] || tabulator.panes.widget.twoLine[''];
+        var f = tabulator.panes.widget.twoLine.widgetForClass(type); 
         item = f(dom, x);
         item.setAttribute('style', style0);
         
@@ -1501,6 +1501,7 @@ tabulator.panes.widget.twoLine = {}; // Approx 40em * 2.4em
 /////////////////////////////////////////////////////////////////////////////
  // We need these for anything which is a subject of an attachment.
  //
+ // These should be moved to type-dependeent UI code. Related panes maybe
  
 tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
     var box = dom.createElement("div");
@@ -1508,24 +1509,37 @@ tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
     return box;
 };
 
-
- tabulator.panes.widget.twoLine[
+tabulator.panes.widget.twoLine.widgetForClass = function(c) {
+    var widget = tabulator.panes.widget.twoLine[c.uri];
+    var kb = tabulator.kb;
+    if (widget) return widget;
+    var sup =  kb.findSuperClassesNT(c);
+    for (var cl in sup) {
+        widget = tabulator.panes.widget.twoLine[kb.fromNT(cl).uri];
+        if (widget) return widget;
+    }
+    return tabulator.panes.widget.twoLine[''];
+};
+ 
+tabulator.panes.widget.twoLine[
     'http://www.w3.org/2000/10/swap/pim/qif#Transaction'] = function(dom, x) {
-    var failed = false;
+    var failed = "";
     var enc = function(p) {
         var y = tabulator.kb.any(x, tabulator.ns.qu(p));
-        if (!y) failed = true;
+        if (!y) failed += "@@ No value for " + p +"! ";
         return y ? tabulator.Util.escapeForXML(y.value) : '?';   // @@@@
     };
     var box = dom.createElement("table");
     box.innerHTML = '<tr><td colspan="2">' + enc('payee') + 
         '</td></tr>\n<tr><td><td>' + enc('date').slice(0,10) +
         '</td><td style="text-align: right;">' + enc('amount') + '</td></tr>';
-    if (failed) box.innerHTML = '<tr><td>' + tabulator.Util.escapeForXML(x.uri) + '</td></tr>';
+    if (failed) box.innerHTML = '<tr><td><a href="' + 
+        tabulator.Util.escapeForXML(x.uri) + '">' + 
+        tabulator.Util.escapeForXML(failed) + '</a></td></tr>';
     return box;
 };
  
- tabulator.panes.widget.twoLine[
+tabulator.panes.widget.twoLine[
     'http://www.w3.org/ns/pim/trip#Trip'] = function(dom, x) {
     var enc = function(p) {
         var y = tabulator.kb.any(x, p);

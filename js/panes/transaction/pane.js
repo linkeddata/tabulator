@@ -115,7 +115,11 @@ tabulator.panes.register( {
             
             var account = kb.any(subject, Q('toAccount'));
             var statement = kb.any(subject, Q('accordingTo'));
-            var store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
+            if (statement == undefined) {
+                complain('(Error: There is no back link to the original data source foir this transaction <'
+                        +subject.uri+'>,\nso I can\'t tell how to annotate it.)')
+            };
+             var store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
             if (store == undefined) {
                 complain('(There is no annotation document for this statement\n<'
                         +statement.uri+'>,\nso you cannot classify this transaction.)')
@@ -177,6 +181,20 @@ tabulator.panes.register( {
                                 .map(function(st){return st.object}); // @@ Use rdfs
                     var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
                     trips = trips.concat(trips2).sort(); // @@ Unique 
+                    
+                    var sortedBy = function(kb, list, pred, reverse) {
+                        l2 = list.map(function(x) {
+                            var key = kb.any(x, pred);
+                            key = key ? key.value : "9999-12-31";
+                            return [ key, x ]; 
+                        });
+                        l2.sort();
+                        if (reverse) l2.reverse();
+                        return l2.map(function(pair){return pair[1]});
+                    }
+                    
+                    trips = sortedBy(kb, trips, tabulator.ns.cal('dtstart'), true); // Reverse chron
+                    
                     if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
                         myDocument, kb, subject, TRIP('trip'), trips,
                             { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *",
@@ -186,8 +204,6 @@ tabulator.panes.register( {
                                     is.push($rdf.st(trip, tabulator.ns.rdf('type'), TRIP('Trip')));
                                     return is}},
                             store, complainIfBad));
-//                    div.appendChild(tabulator.panes.utils.newButton(  // New Trip    -- now included in selector box                
-//                        myDocument, kb, subject, TRIP('trip'), TRIP('Trip'), null, store, complainIfBad)); // null form
 
                 });
             }

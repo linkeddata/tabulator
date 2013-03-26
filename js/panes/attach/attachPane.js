@@ -34,12 +34,14 @@ tabulator.panes.register( {
     label: function(subject) {
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
+        var QU = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
         if (t['http://www.w3.org/ns/pim/trip#Trip'] || // If in any subclass
         subject.uri == 'http://www.w3.org/ns/pim/trip#Trip' ||
         t['http://www.w3.org/2005/01/wf/flow#Task'] ||
         t['http://www.w3.org/2000/10/swap/pim/qif#Transaction'] ||
-        subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' ||
+        //subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' ||
+        QU('Transaction') in kb.findSuperClassesNT(subject) ||
         kb.holds(subject, WF('attachment'))) return "attachments";
         return null; 
     },
@@ -91,8 +93,10 @@ tabulator.panes.register( {
 
         
         var div = dom.createElement("div");
+        var esc = tabulator.Util.escapeForXML;
         div.setAttribute('class', 'attachPane');
-        div.innerHTML='<h1>Attachments</h1>';
+        div.innerHTML='<h1>' + esc(tabulator.Util.label(subject, true)) +
+                            ' attachments</h1>'; //
 
 
         var predicate =  WF('attachment');
@@ -101,7 +105,7 @@ tabulator.panes.register( {
         var subjects;
         var multi;
         var options = {};
-        var currentMode = 0;
+        var currentMode = 0; // 0 -> Show all;  1 -> Attached;    2 -> unattached
         var currentSubject = null, currentObject = null;
         var currentSubjectItem = null, currentObjectItem = null;
         var objectType = QU('SupportingDocument');
@@ -109,9 +113,9 @@ tabulator.panes.register( {
         // Find all members of the class which we know about
         // and sort them by an appropriate property.   @@ Move to library
         //
-        var getMembersAndSort = function(subject) {
         
-            var sortBy = {
+        var getSortKeySimple =  function(c) {         
+            var sortBy = kb.sym({
                 'http://www.w3.org/2005/01/wf/flow#Task' :
                     'http://purl.org/dc/elements/1.1/created',
                 'http://www.w3.org/ns/pim/trip#Trip' : // @@ put this into the ontologies
@@ -119,18 +123,47 @@ tabulator.panes.register( {
                 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' :
                     'http://www.w3.org/2000/10/swap/pim/qif#date',
                 'http://www.w3.org/2000/10/swap/pim/qif#SupportingDocument':
-                    'http://purl.org/dc/elements/1.1/date'} [subject.uri];
+                    'http://purl.org/dc/elements/1.1/date'} [subject.uri]);
                     
             if (!sortBy) {
                 sortBy = kb.any(subject, tabulator.ns.ui('sortBy'));
             }
+            return sortBy;
+        }
+        
+        var getSortKey = function(c) {
+            var k = getSortKeySimple(c.uri);
+            if (k) return k;
+            var sup =  kb.findSuperClassesNT(c);
+            for (var cl in sup) { // note unordered -- could be closest first
+                k = getSortKeySimple(kb.fromNT(cl).uri);
+                if (k) return k;
+            }
+            return undefined; // failure
+        }
+        
+        var getMembersAndSort = function(subject) {
+        
+            var sortBy = getSortKey(subject);
             var u, x, key, uriHash = kb.findMemberURIs(subject);
             var pairs = [], subjects = [];
             for (u in uriHash) { //@ protect against methods?
                 x = kb.sym(u);
-                key = kb.any(x, kb.sym(sortBy));
+                if (sortBy) {
+                    key = kb.any(x, sortBy);
+                    if (!key) {
+                        // complain("No key "+key+" sortby "+sortBy+" for "+x);
+                        key = "8888-12-31"
+                    } else {
+                        key = key.value;
+                    }
+                 } else {
+                    complain("No sortby "+sortBy+" for "+x);
+                    key = "9999-12-31";
+                 }
+                // key = (sortBy && kb.any(x, sortBy)) || kb.literal("9999-12-31"); // Undated appear future
                 // if (!key) complain("Sort: '"+key+"' No "+sortBy+" for "+x); // Assume just not in this year
-                if (key) pairs.push( [key, x]);
+                pairs.push( [key, x]);
             }
             pairs.sort();
             pairs.reverse(); // @@ Descending order .. made a toggle?
@@ -142,7 +175,9 @@ tabulator.panes.register( {
         
         // Set up a triage of many class members against documents or just one
         if (subject.uri ==  'http://www.w3.org/ns/pim/trip#Trip' ||
-            subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction') {
+            QU('Transaction') in kb.findSuperClassesNT(subject)
+            //subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction'
+            ) {
             multi = true;
             subjects = getMembersAndSort(subject);
         } else {
@@ -231,15 +266,15 @@ tabulator.panes.register( {
             setAttachment(s, o, !kb.holds(s, predicate, o), refresh); // @@ toggle
         };
         
-        // When you click on a subject, filter the objects connected to the subject
+        // When you click on a subject, filter the objects connected to the subject in Mode 1
         var showSubject = function(x, event, selected) {
             if (selected) {
                 currentSubject = x;
             } else {
                 currentSubject = null;
-                deselectObject();
-            }
-            showFiltered(currentMode); // Refresh the objects
+                if (currentMode === 1) deselectObject();
+            } // If all are displayed, refresh would just annoy:
+            if (currentMode !== 0) showFiltered(currentMode); // Refresh the objects
         }
         
         if (multi) {
@@ -286,9 +321,9 @@ tabulator.panes.register( {
         div.setAttribute('style', 'background-color: white; width:40cm; height:20cm;');
         
         
-        var headerButtons = function(dom, labels, callback) {
+        var headerButtons = function(dom, labels, intial, callback) {
             var head = dom.createElement('table');
-            var current = 0;
+            var current = intial;
             head.setAttribute('style', 'float: left; width: 30em; padding: 0.5em; height: 1.5em; background-color: #ddd; color: #444; font-weight: bold')
             var tr = dom.createElement('tr');
             var style0 = 'border-radius: 0.6em; text-align: center;'
@@ -318,16 +353,18 @@ tabulator.panes.register( {
         };
 
         var setMode = function (mode){
-            currentMode = mode;
-            deselectObject();
-            showFiltered(mode);
+            if (mode !== currentMode) {
+                currentMode = mode;
+                deselectObject();
+                showFiltered(mode);
+            }
         }
 
         var wrapper = dom.createElement('div');
         wrapper.setAttribute('style', ' width: 30em; height: 100%;  padding: 0em; float:left;');
         // wrapper.appendChild(head);
         div.appendChild(wrapper);
-        wrapper.appendChild(headerButtons(dom, [ 'all', 'attached', 'not attached',], setMode));
+        wrapper.appendChild(headerButtons(dom, [ 'all', 'attached', 'not attached',], currentMode, setMode));
 
         var objectList = tabulator.panes.utils.selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked);
         objectList.setAttribute('style',
@@ -339,6 +376,7 @@ tabulator.panes.register( {
         var preview = dom.createElement("div");
         preview.setAttribute('style', /*background-color: black; */ 'padding: 0em; margin: 0;  height: 100%; overflow:scroll;');
         div.appendChild(preview);
+        showFiltered(currentMode);
 
         if (subjects.length > 0 && multi) {
             var stores = {};
@@ -351,8 +389,16 @@ tabulator.panes.register( {
             //var store = findStore(kb,subjects[subjectList.length-1]);
                 var store = kb.sym(storeURI);
                 var mintBox = dom.createElement('div');
-                mintBox.setAttribute('style', 'clear: left; margin-top:2em; background-color:#ccc; border-radius: 1em; padding: 2em; font-weight: bold;');
-                mintBox.textContent = "+ New in "+storeURI;
+                mintBox.setAttribute('style', 'clear: left; width: 20em; margin-top:2em; background-color:#ccc; border-radius: 1em; padding: 1em; font-weight: bold;');
+                mintBox.textContent = "+ New " + tabulator.Util.label(subject);
+                if (true)  { // Only if > 1 store in set?
+                    mintBox.textContent += " in "+ tabulator.Util.label(store);
+                    var storeLab = dom.createElement('span');
+                    storeLab.setAttribute('style', 'font-weight: normal; font-size: 80%; color: #777;')
+                    storeLab.textContent = storeURI;
+                    mintBox.appendChild(dom.createElement('br'));
+                    mintBox.appendChild(storeLab);
+                }
                 /*
                 var mintButton = dom.createElement('img');
                 mintBox.appendChild(mintButton);

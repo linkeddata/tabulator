@@ -1560,34 +1560,67 @@ tabulator.panes.widget.twoLine[
 //       Workspace selection etc
 //
 
-
+// Returns a UI object which, if it selects a workspace,
+// will callback(workspace).
+// If necessary, will get an account, preferences file, etc.
+// In sequence
+//  - If not logged in, log in.
+//  - Load preferences file
+//  - Prompt user for workspaces
+// 
 tabulator.panes.utils.selectWorkspace = function(dom, callback) {
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
+    var box;
+    var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessage(dom, s))};
+    
     var loadPrefs = function(id) {
         var boot = kb.any(id, tabulator.ns.space('preferencesFile'));  
         if (!boot) return tabulator.panes.utils.errorMessage(dom,
-            "You have not got a preferences file for user: " + id);  
-        kb.fetcher.nowOrWhenFetched(boot, function(){
-            var w = kb.statementsMatching(me, tabulator.ns.space('workspace'),
-             undefined, boot).map(function(st){return st.object;});
-            return tabulator.panes.utils.errorMessage(dom,
-                "" + w.length + " workspaces: " + id);  
+            "You have not got a preferences file for user: " + id); 
+            
+        var docURI = $rdf.Util.uri.docpart(boot.uri);
+        var pending;
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(){
+        
+            var w = kb.statementsMatching(id, tabulator.ns.space('workspace'),
+                undefined, boot).map(function(st){return st.object;});
+    
+            if (pending !== undefined) pending.parentNode.removeChild(pending);
+            if (w.length == 1) {
+            
+                say( "Workspace used: " + w[0].uri);  
+                callback(w[0]); 
+
+            } else if (w.length == 0 ) {
+                say("You don't seem to have any workspaces. ")
+                say("@@ code me: create new workspace.")
+            } else {
+                // @@ Here should prompt for ws selection @@@@
+                say("@@@ code me: " + w.length + " workspaces: " + id);  
+            };
         });
+        
+        pending = tabulator.panes.utils.errorMessage(dom,
+            "(loading preferences " + docURI+ ")");
+        return pending;
     };
 
-    if (me) return loadPrefs(me);
-    
+    if (me) {
+        box = dom.createElement('div');
+        box.appendChild(loadPrefs(me));
+        return box;
+    }
     var listener = function(me) {
-        if (typeof id == 'undefined') return undefined;
-        var docURI = $rdf.util.uri.docPart(id.uri);
+        if (typeof me == 'undefined') return undefined;
+        var docURI = $rdf.Util.uri.docpart(me.uri);
         kb.nowOrWhenFetched(docURI, function(){
-            loadPrefs(me);
+            box.appendChild(loadPrefs(me));
         });
     };
-    var box = tabulator.panes.utils.loginStatusBox(dom, listener);
+    box = tabulator.panes.utils.loginStatusBox(dom, listener);
     return box;
 
 };

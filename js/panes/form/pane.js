@@ -38,7 +38,7 @@ tabulator.panes.register( {
         } 
 
         var complain = function complain(message, style){
-            mention(message, 'style', style ? style :'color: grey; background-color: #fdd');
+            mention(message, 'style', style ? style :'color: grey; background-color: #fdd;');
         } 
 
         var complainIfBad = function(ok,body){
@@ -69,6 +69,9 @@ tabulator.panes.register( {
         var me_uri = tabulator.preferences.get('me');
         var me = me_uri? kb.sym(me_uri) : null;
 
+        var box = dom.createElement('div');
+        box.setAttribute('class', 'formPane');
+
         if (!me) {
             mention("You are not logged in. If you log in and have \
 workspaces then you would be able to select workspace in which \
@@ -83,7 +86,55 @@ the file system (file:///) to store application data.\n")
                 //@@
             }
         }
+
+
+        // Render forms using a given store
+        
+        var renderFormsFor = function(store, subject) {
+            kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
+
+                //              Render the forms
+                
+                var forms = tabulator.panes.utils.formsFor(subject);
+                
+                // complain('Form for editing this form:');
+                for (var i=0; i<forms.length; i++) {
+                    var form = forms[i];
+                    var heading = dom.createElement('h4');
+                    box.appendChild(heading);
+                    if (form.uri) {
+                        var formStore = $rdf.Util.uri.document(form);
+                        if (formStore.uri != form.uri) {// The form is a hash-type URI
+                            var e = box.appendChild(tabulator.panes.utils.editFormButton(
+                                    dom, box, form, formStore,complainIfBad ));
+                            e.setAttribute('style', 'float: right;');
+                        }
+                    }
+                    var anchor = dom.createElement('a');
+                    anchor.setAttribute('href', form.uri);
+                    heading.appendChild(anchor)
+                    anchor.textContent = tabulator.Util.label(form, true);
+                    
+                    mention("Where will this information be stored?")
+                    var ele = dom.createElement('input');
+                    box.appendChild(ele);
+                    ele.setAttribute('type', 'text');
+                    ele.setAttribute('size', '72');
+                    ele.setAttribute('maxlength', '1024');
+                    ele.setAttribute('style', 'font-size: 80%; color:#222;');
+                    ele.value = store.uri
+                    
+                    tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
+                }
+
+            }); // end: when store loded
+        }; // renderFormsFor
+
+
+        // Figure out what store
+
         // Which places are editable and have stuff about the subject?
+
         var store = null;
 
         // 1. The document URI of the subject itself
@@ -111,51 +162,26 @@ the file system (file:///) to store application data.\n")
             }
         }
 
+        // 3. In a workspace store
 
-
-        if (!store) store = kb.sym('http://tabulator.org/wiki/2010/testformdata/common'); // fallback
-        // A fallback which gives a different store page for each ontology would be good @@
-        
-        var box = dom.createElement('div');
-        box.setAttribute('class', 'formPane');
-        kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
-
-            //              Render the forms
-            
-            var forms = tabulator.panes.utils.formsFor(subject);
-            // complain('Form for editing this form:');
-            for (var i=0; i<forms.length; i++) {
-                var form = forms[i];
-                var heading = dom.createElement('h4');
-                box.appendChild(heading);
-                if (form.uri) {
-                    var formStore = $rdf.Util.uri.document(form);
-                    if (formStore.uri != form.uri) {// The form is a hash-type URI
-                        var e = box.appendChild(tabulator.panes.utils.editFormButton(
-                                dom, box, form, formStore,complainIfBad ));
-                        e.setAttribute('style', 'float: right;');
-                    }
+        if (!store) {
+            complain("No suitable store is known, to edit <" + subject.uri + ">.");
+            var foobarbaz = tabulator.panes.utils.selectWorkspace(dom,
+                                        function(ws){
+                mention("Workspace selected OK: " + ws);
+                store = kb.any(ws, ns.link('annotationStore'));
+                if (store) {
+                    renderFormsFor(store, subject);
+                } else {
+                    complain("No annotation store in workspace: " + ws);
                 }
-                var anchor = dom.createElement('a');
-                anchor.setAttribute('href', form.uri);
-                heading.appendChild(anchor)
-                anchor.textContent = tabulator.Util.label(form, true);
-                
-                mention("Where will this information be stored?")
-                var ele = dom.createElement('input');
-                box.appendChild(ele);
-                ele.setAttribute('type', 'text');
-                ele.setAttribute('size', '72');
-                ele.setAttribute('maxlength', '1024');
-                ele.setAttribute('style', 'font-size: 80%; color:#222;');
-                ele.value = store.uri
-                
-                tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
-            }
+            })
+            box.appendChild(foobarbaz);
+        } else {
+            renderFormsFor(store, subject);
+        }
 
-
-        }); // end: when store loded
-
+        
         return box;
     }
 

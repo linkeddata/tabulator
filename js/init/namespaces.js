@@ -19,6 +19,7 @@ tabulator.ns.rdfs = $rdf.Namespace('http://www.w3.org/2000/01/rdf-schema#');
 tabulator.ns.rss = $rdf.Namespace('http://purl.org/rss/1.0/');
 tabulator.ns.sioc =  $rdf.Namespace('http://rdfs.org/sioc/ns#');
 // was - tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-');
+tabulator.ns.space = $rdf.Namespace('http://www.w3.org/ns/pim/space#');
 tabulator.ns.ui = $rdf.Namespace('http://www.w3.org/ns/ui#');
 tabulator.ns.wf = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
 tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/2001/XMLSchema#');

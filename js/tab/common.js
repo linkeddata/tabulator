@@ -316,7 +316,7 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
     else if (s.slice(-5) == '/foaf') s = s.slice(0,-5);
     
     if (1) { //   Eh? Why not do this? e.g. dc:title needs it only trim URIs, not rdfs:labels
-        var slash = s.lastIndexOf("/");
+        var slash = s.lastIndexOf("/", s.length-2); // (len-2) excludes trailing slash
         if ((slash >=0) && (slash < x.uri.length)) return cleanUp(s.slice(slash+1));
     }
     return doCap(decodeURIComponent(x.uri));

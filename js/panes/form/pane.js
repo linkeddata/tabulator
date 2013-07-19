@@ -163,24 +163,48 @@ the file system (file:///) to store application data.\n")
         }
 
         // 3. In a workspace store
+        
+        var followeach = function(kb, subject, path) {
+            if (path.length == 0) return [ subject ];
+            var oo = kb.each(subj, path[0]);
+            var res = [];
+            for (var i=0; i<oo.length; i++) {
+                res = res.concat(followeach(kb, oo[i], path.slice(1)));
+            }
+            return res;
+        }
 
-        if (!store) {
+        var date = '2013'; // @@@@@@@@@@@@ pass as parameter
+
+        
+
+       if (store) {
+            mention("@@ Ok, we have a store <" + store.uri + ">.");
+            renderFormsFor(store, subject);
+        } else {
             complain("No suitable store is known, to edit <" + subject.uri + ">.");
             var foobarbaz = tabulator.panes.utils.selectWorkspace(dom,
                                         function(ws){
                 mention("Workspace selected OK: " + ws);
-                store = kb.any(ws, ns.link('annotationStore'));
-                if (store) {
-                    renderFormsFor(store, subject);
-                } else {
-                    complain("No annotation store in workspace: " + ws);
-                }
-            })
-            box.appendChild(foobarbaz);
-        } else {
-            renderFormsFor(store, subject);
-        }
 
+                var activities = kb.each(undefined, ns.space('workspace'), ws);
+                for (var j=0; j <activities.length;i++) {
+                    var act = activities[j];
+
+                    var s = kb.any(ws, ns.space('store'));
+                    var start =  kb.any(ws, ns.ical('dtstart')).value();
+                    var end =    kb.any(ws, ns.ical('dtend')).value();
+                    if ( s && start && end &&  start <= date && end > date) {
+                        renderFormsFor(s, subject);
+                        break;
+                    } else {
+                        complain("Note no suitable annotation store in activity: " + act);
+                    }
+                }
+                
+           });
+           box.appendChild(foobarbaz);
+        };
         
         return box;
     }

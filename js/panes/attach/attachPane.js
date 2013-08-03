@@ -300,12 +300,12 @@ tabulator.panes.register( {
                 tabulator.outline.GotoSubject(x, true, undefined, false, undefined, table) 
 */
 
-                if (x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" ||
-                        x.uri.slice(-5) == ".jpeg") { // @@@ KLUDGE! use metadata after HEAD
+                if (x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" || x.uri.slice(-5) == ".html" ||
+                        x.uri.slice(-5) == ".jpeg") { // @@@@@@ MAJOR KLUDGE! use metadata after HEAD
                     preview.innerHTML = '<iframe height="100%" width="100%"src="'
                         + x.uri + '">' + x.uri + '</iframe>';
                 } else {
-                    preview.innerHTML = '';
+                    preview.innerHTML = '';  //  @@@ this doesn't seem to work
                     if (x.uri) kb.fetcher.nowOrWhenFetched(x.uri, undefined, function() {
                         var display = tabulator.outline.propertyTable(x); //  ,table, pane
                         preview.appendChild(display);                    

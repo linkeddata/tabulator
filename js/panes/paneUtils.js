@@ -1346,7 +1346,7 @@ tabulator.panes.utils.selectorPanelRefresh = function(list, dom, kb, type,
 //
 //
 
-tabulator.panes.utils.signInOrSignUpBox = function(myDocument) {
+tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -1358,8 +1358,8 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument) {
     but.setAttribute('type', 'button');
     but.setAttribute('value', 'Log in or Sign Up');
     var makeOne = function() {
-        // box.parentNode.removeChild(box); // Tip has been taken up!
         box.removeChild(box.firstChild); // Tip has been taken up!
+        box.removeChild(but); // Button has been pressed now now appropriate (unless cancel) 
         var foo = myDocument.createElement('div');
         //main.insertBefore(foo, main.firstChild);
         box.insertBefore(foo, box.firstChild);
@@ -1440,7 +1440,7 @@ web ID</a>?<br/>\
             It will typcially look something like:<br/>\
             http://www.example.com/users/gates/foaf.rdf<br/><br/>\
                  <input name=\"fileuri\" type=\"text\" size=\"80\" id=\"fileuri_input\"\
-                     value=\"http://your.isp.com/...something.../foaf.rdf\"\
+                     value=\"http://your.isp.com/...something.../foaf.nt\"\
                      />\
             <br/>\
             <input id=\"tryFoafButton\" type=\"button\" value=\"Create my new profile\" onclickOFF =\"tryFoaf()\"/>\
@@ -1456,39 +1456,55 @@ web ID</a>?<br/>\
         var button = myDocument.getElementById('tryFoafButton');
         button.addEventListener('click', function(){ return tryFoaf()}, false);
         button = myDocument.getElementById('gotOneButton');
-        button.addEventListener('click', function(){ return gotOne(foo)}, false);
+        button.addEventListener('click', function(){
+            var webid1 = myDocument.getElementById('webidField').value; // @@@
+            tabulator.preferences.set('me', webid1);
+            return gotOne(webid1);
+        }, false);
     }
     but.addEventListener('click', makeOne, false);
     return box; 
 };
 
 tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
-
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
 
-
     // If the user has no WebID that we know of
-    if (!me) {
-        return tabulator.panes.utils.signInOrSignUpBox(myDocument, listener); 
-    } else {  // We do have a webid
-        var box = myDocument.createElement('div');
-        var but = myDocument.createElement('input');
-        box.appendChild(but);
-        but.className = 'WebIDCancelButton';
-        but.setAttribute('type', 'button');
-        but.setAttribute('value', 'Web ID Logout');
-        var zapIt = function() {
-            tabulator.preferences.set('me','');
-            tabulator.log.alert('Your Web ID was '+me_uri+'. It has been forgotten.');
-            // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-            if (listener) listener(undefined);
-        }
-        but.addEventListener('click', zapIt, false);
-    }
-    return box
+    var box = myDocument.createElement('div');
+    var but = myDocument.createElement('input');
+    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
 
+    if (me) {
+        box.appendChild(but);
+    } else {
+        box.appendChild(sisu);
+    };
+    but.className = 'WebIDCancelButton';
+    but.setAttribute('type', 'button');
+    but.setAttribute('value', 'Web ID Logout');
+    var zapIt = function() {
+        tabulator.preferences.set('me','');
+        tabulator.log.alert('Your Web ID was <'+me_uri+'>. It has been forgotten.');
+        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+        box.removeChild(but);
+        sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
+        box.appendChild(sisu); 
+        if (listener) listener(undefined);
+    }
+    var setIt = function(newid) {
+        tabulator.preferences.set('me',newid);
+        tabulator.log.alert('Your Web ID is now <'+me_uri+'> .');
+        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+        box.removeChild(sisu);
+        box.appendChild(but); 
+        if (listener) listener(newid);
+    };
+    but.addEventListener('click', zapIt, false);
+    return box;
 }
+
+
 //###########################################################################
 //
 //      Small compact views of things

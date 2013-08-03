@@ -60,6 +60,7 @@ tabulator.panes.register( {
             pre.setAttribute('style', 'color: grey');
             div.appendChild(pre);
             pre.appendChild(myDocument.createTextNode(message));
+            return pre
         } 
         var thisPane = this;
         var rerender = function(div) {
@@ -352,7 +353,7 @@ tabulator.panes.register( {
 
                 var table = myDocument.createElement('table');
                 div.appendChild(table);
-                if (me) {
+                if (me_uri) {
                     var docStore = kb.any(tracker, ns.wf('messageStore'));
                     if (!docStore) docStore = stateStore;
                     var b = myDocument.createElement("button");
@@ -516,7 +517,22 @@ tabulator.panes.register( {
         } else { 
             complain("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
         }         
-        if (!me) complain("(You do not have your Web Id set. Set your Web ID to make changes.)");
+        if (!me_uri) {
+            complain("(You do not have your Web Id set. Sign in or sign up to make changes.)");
+        } else {
+            complain("(Your webid is "+ me_uri+")");
+        };
+        div.appendChild(tabulator.panes.utils.loginStatusBox(myDocument, function(webid){
+            // complaint.parent.removeChild(complaint);
+            if (webid) {
+                me_uri = webid;
+                complain("(Logged in as "+ webid+")")
+            } else {
+                me_uri = undefined;
+                complain("(Logged out)")
+            }
+            me = me_uri? kb.sym(me_uri) : null;
+        }));
 
         return div;
     }

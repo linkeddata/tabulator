@@ -68,6 +68,7 @@ Labeler.prototype={
     labelDirectory:{},
     //returns a literal term
     label: function(term){
+        if (typeof term == 'undefined') return undefined;
         var candidate=this.labelDirectory[term.hashString()];
         return candidate?candidate[0]:undefined;
     },

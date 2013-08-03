@@ -174,7 +174,7 @@ tabulator.panes.register( {
                     var usd = kb.any(trans, Q('in_USD'));
                     if (usd) index[trip]['total'] += usd; 
                     var date = kb.any(trans, Q('date'));
-                    index[trip]['transactions'].push([date, trans]); 
+                    index[trip.toNT()]['transactions'].push([date, trans]); 
                 }
             }
 /*            var byDate = function(a,b) {
@@ -183,7 +183,10 @@ tabulator.panes.register( {
             }
 */
             var list = [], x;
-            for (x in index) list.push([kb.any(trip, CAL('dtstart')), trip]);
+            for (var h1 in index) {
+                var t1 = kb.fromNT(h1);
+                list.push([kb.any(t1, CAL('dtstart')), t1]);
+            }
             list.sort();
             for (var j=0; j < list.length; j++){
                 var t2 = list[j][1];

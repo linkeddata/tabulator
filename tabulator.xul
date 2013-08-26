@@ -169,8 +169,8 @@ function openTool(url, type, width, height)
 
 
     var tGRDDL_NS = 'http://www.w3.org/2003/g/data-view#';
-    var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/rdf+n3':'N3', 'text/n3':'N3',
-                             'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'}; 
+    var tRDF_CONTENT_TYPE = {'application/rdf+xml':'XML', 'text/n3':'N3',
+                             'text/turtle':'N3', 'application/x-turtle': 'N3', 'application/n3': 'N3'};
 
 
     //This gets called when you switch tabs 

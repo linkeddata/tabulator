@@ -42,11 +42,14 @@ var tabulatorPrefObserver =
         var acceptheader = prefManager.getCharPref('network.http.accept.default');
         var value = prefManager.getBoolPref("extensions.tabulator.setheader");
         if(value) {
-          if(acceptheader.indexOf("application/rdf+xml")==-1) { //Let's prefer some application/rdf+xml!
+          if(acceptheader.indexOf("application/rdf+xml")==-1) { //Let's prefer some turtle
             acceptheader+=",application/rdf+xml;q=0.93";
           }
-          if(acceptheader.indexOf("text/rdf+n3")==-1) { //Let's prefer some text/rdf+n3
-            acceptheader+=",text/rdf+n3;q=0.5"; // low for now.
+          if(acceptheader.indexOf("text/turtle")==-1) { //Let's prefer some text/turtle
+            acceptheader+=",text/turtle;q=1.0"; 
+          }
+          if(acceptheader.indexOf("text/n3")==-1) { //Let's prefer some text/n3
+            acceptheader+=",text/n3;q=1.0"; // low for now.
           }
         } else {
           acceptheader = acceptheader.replace(/,application\/rdf\+xml;q=0\.93/,"");

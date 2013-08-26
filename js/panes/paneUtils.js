@@ -1199,8 +1199,7 @@ tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form,
     if (!editable) return box;
     
     var boxHandler = function(e) {
-        tx.className = 'pendingedit';
-        // alert('Should be greyed out')
+        tx.className = 'pendingedit'; // Grey it out
         if (this.checked) {
             toInsert = ins;
             toDelete = (del && negation) ? del : [];
@@ -1473,6 +1472,42 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     // If the user has no WebID that we know of
     var box = myDocument.createElement('div');
     var but = myDocument.createElement('input');
+    var setIt = function(newid) {
+        tabulator.preferences.set('me',newid);
+        var message = 'Your Web ID is now <'+me_uri+'> .';
+        try { 
+            tabulator.log.alert(message);
+        } catch(e) {
+            try {
+                alert(message);
+            } catch (e) {
+            };
+        }
+
+
+        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+        box.removeChild(sisu);
+        box.appendChild(but); 
+        if (listener) listener(newid);
+    };
+    var zapIt = function() {
+        tabulator.preferences.set('me','');
+        var message = 'Your Web ID was <'+me_uri+'>. It has been forgotten.';
+        try { 
+            tabulator.log.alert(message);
+        } catch(e) {
+            try {
+                alert(message);
+            } catch (e) {
+            };
+        }
+        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+        box.removeChild(but);
+        sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
+        box.appendChild(sisu); 
+        if (listener) listener(undefined);
+    }
+
     var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
 
     if (me) {
@@ -1483,23 +1518,6 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     but.className = 'WebIDCancelButton';
     but.setAttribute('type', 'button');
     but.setAttribute('value', 'Web ID Logout');
-    var zapIt = function() {
-        tabulator.preferences.set('me','');
-        tabulator.log.alert('Your Web ID was <'+me_uri+'>. It has been forgotten.');
-        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(but);
-        sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
-        box.appendChild(sisu); 
-        if (listener) listener(undefined);
-    }
-    var setIt = function(newid) {
-        tabulator.preferences.set('me',newid);
-        tabulator.log.alert('Your Web ID is now <'+me_uri+'> .');
-        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(sisu);
-        box.appendChild(but); 
-        if (listener) listener(newid);
-    };
     but.addEventListener('click', zapIt, false);
     return box;
 }

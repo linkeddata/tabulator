@@ -485,7 +485,7 @@ jQuery.rdfwidgets = function($) {
         var format = (t === "application/json" ? "json" :
                       (t === "application/jsonp" ? "jsonp" : 
                        (t === "application/rdf+xml" ? "xml" :
-                        ((t === "text/n3" || t === "text/rdf+n3") ? "text" : 
+                        ((t === "text/n3" || t === "text/turtle") ? "text" : 
                          "text") ) ) );
         try {
             requestedURIs[docpart( uri )] = true;
@@ -508,7 +508,7 @@ jQuery.rdfwidgets = function($) {
                         format = (contenttype === "application/json" ? "json" :
                                   (contenttype === "application/jsonp" ? "jsonp" : 
                                    (contenttype === "application/rdf+xml" ? "xml" :
-                                    ((contenttype === "text/n3" || contenttype === "text/rdf+n3") ? "text" : 
+                                    ((contenttype === "text/n3" || contenttype === "text/turtle") ? "text" : 
                                      null) ) ) );
                     }
                     if( xhr && xhr.status >= 400  || ( !xhr && format !== "jsonp" ) ) {

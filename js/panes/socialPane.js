@@ -388,6 +388,10 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         tr.appendChild(text(' knows '));
                         tr.appendChild(link(text('you'), me_uri));
                         tr.appendChild(text(' (unconfirmed).')); //@@
+                        tr.appendChild(text(' confirm you know '));
+                        tr.appendChild(link(text(familiar), s.uri));
+                        tr.appendChild(text('.'));
+
                     } else {
                         youAndThem();
                         tr.appendChild(text(' say you know each other.'));
@@ -556,12 +560,12 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             }
         }
 
-
+/*
         var h3 = myDocument.createElement('h3');
         h3.appendChild(myDocument.createTextNode('Look up'));
         tools.appendChild(h3);
 
-        // Experimental: Use QDOS's reverse index to get incoming links
+        // Experimental: Use QDOS's reverse index to get incoming links - defunct
         var uri = 'http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri);
         var t = myDocument.createTextNode('Qdos reverse links');
         //var a = myDocument.createElement('a');
@@ -572,7 +576,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         d.appendChild(t);
         outline.appendAccessIcon(d, uri);
         tools.appendChild(d);
-        
+*/
 
 
 

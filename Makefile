@@ -20,9 +20,10 @@ pull_submodules:
 pull: pull_submodules
 	@@git pull ${REMOTE} ${BRANCH}
 
-gh-pages: all
+gh-pages:
 	git branch -D gh-pages ||:
 	git checkout -b gh-pages
+	make -B
 	git add -f js/rdf
 	git add -f js/mashup/*.js
 	git commit -m 'gh-pages: latest build'

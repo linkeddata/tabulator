@@ -78,7 +78,7 @@ tabulator.panes.register( {
         //  Form to collect data about a New Issue
         //
         var newIssueForm = function(myDocument, kb, tracker, superIssue) {
-            var form = myDocument.createElement('form');
+            var form = myDocument.createElement('div');  // form is broken as HTML behaviour can resurface on js error
             var stateStore = kb.any(tracker, WF('stateStore'));
 
             var sendNewIssue = function() {
@@ -117,8 +117,9 @@ tabulator.panes.register( {
                 }
                 sparqlService.update([], sts, sendComplete);
             }
-            form.addEventListener('submit', sendNewIssue, false)
-            form.setAttribute('onsubmit', "function xx(){return false;}");
+            //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
+            //form.setAttribute('onsubmit', "function xx(){return false;}");
+            
             var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
@@ -128,6 +129,11 @@ tabulator.panes.register( {
             titlefield.setAttribute('size','100');
             titlefield.setAttribute('maxLength','2048');// No arbitrary limits
             titlefield.select() // focus next user input
+            titlefield.addEventListener('keyup', function(e) {
+                if(e.keyCode == 13) {
+                    sendNewIssue();
+                }
+            }, false);
             form.appendChild(titlefield);
             return form;
         };
@@ -532,6 +538,13 @@ tabulator.panes.register( {
                 complain("(Logged out)")
             }
             me = me_uri? kb.sym(me_uri) : null;
+        }));
+        
+        div.appendChild(tabulator.panes.utils.newAppInstance(myDocument, "Start your own new tracker", function(ws){
+            complain("Ready to make new instance at "+ws);
+            //  @@ Now create initial files - html skin, tracker, state. (Copy of mashlib?)
+            // @@ Now create form to edit configuation parameters
+            // @@ Optionally link new instance to list of instances
         }));
 
         return div;

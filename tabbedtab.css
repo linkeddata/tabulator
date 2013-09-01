@@ -525,10 +525,10 @@ Supposed to leave layoutunchanged. So we float it too. */
 /* log classes */
 .nrml { color: black; }
 .info { color: black; }
-.warn { color: black; background-color: yellow; }
-.eror { color: white; background-color: pink; }
+.warn { color: black; background-color: #ffd; }
+.eror { color: black; background-color: #fdd; }
 .mesg { color: green; }
-.dbug { color: black; }  /* timbl can't read grey easily */
+.dbug { color: black; background-color: #ddf;} /* Blue */
 
 /* Try to get the icons to flush right in the cell */
 

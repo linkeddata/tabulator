@@ -1609,56 +1609,132 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
     var kb = tabulator.kb;
     var box;
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessage(dom, s))};
+    var displayOptions = function(id, preferencesFile){
     
-    var loadPrefs = function(id) {
-        var boot = kb.any(id, tabulator.ns.space('preferencesFile'));  
-        if (!boot) return tabulator.panes.utils.errorMessage(dom,
-            "You have not got a preferences file for user: " + id); 
-            
-        var docURI = $rdf.Util.uri.docpart(boot.uri);
-        var pending;
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(){
-        
-            var w = kb.statementsMatching(id, tabulator.ns.space('workspace'),
-                undefined, boot).map(function(st){return st.object;});
-    
-            if (pending !== undefined) pending.parentNode.removeChild(pending);
-            if (w.length == 1) {
-            
-                say( "Workspace used: " + w[0].uri);  
-                callback(w[0]); 
+        var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
+            undefined, preferencesFile).map(function(st){return st.object;});
 
-            } else if (w.length == 0 ) {
-                say("You don't seem to have any workspaces. ")
-                say("@@ code me: create new workspace.")
-            } else {
-                // @@ Here should prompt for ws selection @@@@
-                say("@@@ code me: " + w.length + " workspaces: " + id);  
-            };
-        });
+        // if (pending !== undefined) pending.parentNode.removeChild(pending);
+        if (w.length == 1) {
         
+            say( "Workspace used: " + w[0].uri);  
+            callback(w[0]); 
+
+        } else if (w.length == 0 ) {
+            say("You don't seem to have any workspaces. ")
+            say("@@ code me: create new workspace.")
+        } else {
+        
+            // Prompt for ws selection or creation
+            // say( w.length + " workspaces for " + id + "Chose one.");
+            var table = dom.createElement('table');
+            table.setAttribute('style', 'border-collapse:separate; border-spacing: 0.5em;')
+            box.appendChild(table);
+            var row = 0;
+            w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
+                    tabulator.ns.space('MasterWorkspace')) ) });
+            var col1, col2, col3, tr, ws, style, comment;
+            var cellStyle = 'height: 3em; margin: 1em; padding: 1em white; border-radius: 0.3em;';
+            var deselectedStyle = cellStyle + 'border: 0px;'
+            var selectedStyle = cellStyle + 'border: 1px solid black;'
+            for (var i = 0; i< w.length; i++) {
+                ws = w[i];
+                tr = dom.createElement('tr');
+                if (i == 0) {
+                    col1 = dom.createElement('td');
+                    col1.setAttribute('rowspan', ''+w.length + 1);
+                    tr.appendChild(col1);
+                }
+                col2 = dom.createElement('td');
+                style = kb.any(ws, tabulator.ns.ui('style'));
+                col2.setAttribute('style', deselectedStyle + (style ? style.value : ''));
+                tr.target = ws.uri;
+                var label = kb.any(ws, tabulator.ns.rdfs('label'))
+                col2.textContent = label || "";
+                tr.appendChild(col2);
+                if (i == 0) {
+                    col3 = dom.createElement('td');
+                    col3.setAttribute('rowspan', ''+w.length + 1);
+                    tr.appendChild(col3);
+                }
+                table.appendChild(tr);
+                function foo (ws){
+                    col2.addEventListener('click', function(e){
+                        comment = kb.any(ws, tabulator.ns.rdfs('comment'));
+                        col3.textContent = comment ? comment.value : '---';
+                    });
+                }(ws);
+            }
+            tr = dom.createElement('tr');
+            col2 = dom.createElement('td')
+            col2.setAttribute('style', cellStyle);
+            tr.appendChild(col2);
+            table.appendChild(tr);
+            col1.textContent = "Chose a workspace for this:";
+            col1.setAttribute('style', 'vertical-align:middle;')
+            col2.textContent = "+ Make a new workspace";
+
+        };
+    };
+        
+    var loadPrefs = function(id) {
+        var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));  
+        if (!preferencesFile) return tabulator.panes.utils.errorMessage(dom,
+            "Can't find a preferences file for user: " + id); 
+        var docURI = $rdf.uri.docpart(preferencesFile.uri);
+        var pending;
         pending = tabulator.panes.utils.errorMessage(dom,
             "(loading preferences " + docURI+ ")");
-        return pending;
+        box.appendChild(pending);
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function() {
+            pending.parentNode.removeChild(pending);
+            displayOptions(id, preferencesFile);
+        });
+        return;
+    };
+
+    var gotIDChange = function(me) {
+        if (typeof me == 'undefined') return undefined;
+        var docURI = $rdf.Util.uri.docpart(me.uri);
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(){
+            loadPrefs(me);
+        });
     };
 
     if (me) {
         box = dom.createElement('div');
-        box.appendChild(loadPrefs(me));
+        gotIDChange(me);
         return box;
     }
-    var listener = function(me) {
-        if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.Util.uri.docpart(me.uri);
-        kb.nowOrWhenFetched(docURI, function(){
-            box.appendChild(loadPrefs(me));
-        });
-    };
-    box = tabulator.panes.utils.loginStatusBox(dom, listener);
+    box = tabulator.panes.utils.loginStatusBox(dom, gotIDChange);
     return box;
 
 };
 
+//////////////////// Craete a new instance of an app
+//
+//  An instance of an app could be an issue tracker for a given project,
+// or a chess game, or calendar, or a health/fitness record for a person.
+//
 
+
+tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
+    var gotWS = function(ws) {
+        callback(ws);
+    };
+    var div = dom.createElement('div');
+    var b = dom.createElement('button');
+    b.setAttribute('type', 'button');
+    div.appendChild(b)
+    b.innerHTML = label;
+    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+    b.addEventListener('click', function(e) {
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
+    div.appendChild(b);
+    return div;
+};
+
+
+// ends
 
 

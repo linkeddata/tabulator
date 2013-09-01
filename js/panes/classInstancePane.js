@@ -12,6 +12,7 @@ tabulator.panes.register( {
         var n = tabulator.kb.statementsMatching(
             undefined, tabulator.ns.rdf( 'type'), subject).length;
         if (n == 0) return null;  // None, suppress pane
+        if (n > 15) return null;  // @@ At the moment this pane can be slow with too many @@ fixme by using limits
         return "List "+n;     // Show how many in hover text
     },
 

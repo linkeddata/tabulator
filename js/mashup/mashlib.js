@@ -534,18 +534,19 @@ $rdf.Util.extend = function () {
 #
 */
 
-var $rdf, k, v, _base, _ref,
+var $rdf, k, v, _base, _ref, _ref1, _ref2,
   __hasProp = {}.hasOwnProperty;
 
 if (typeof $rdf === "undefined" || $rdf === null) {
   $rdf = {};
 }
 
-if ($rdf.Util == null) {
+if ((_ref = $rdf.Util) == null) {
   $rdf.Util = {};
 }
 
 $rdf.uri = (function() {
+
   function uri() {}
 
   uri.join = function(given, base) {
@@ -572,7 +573,7 @@ $rdf.uri = (function() {
       alert("Invalid base: " + base + " in join with given: " + given);
       return given;
     }
-    baseScheme = base.slice(0, +baseColon + 1 || 9e9);
+    baseScheme = base.slice(0, baseColon + 1 || 9e9);
     if (given.indexOf('//') === 0) {
       return baseScheme + given;
     }
@@ -604,7 +605,7 @@ $rdf.uri = (function() {
       return baseScheme + given;
     }
     if (lastSlash >= 0 && lastSlash < path.length - 1) {
-      path = path.slice(0, +lastSlash + 1 || 9e9);
+      path = path.slice(0, lastSlash + 1 || 9e9);
     }
     path += given;
     while (path.match(/[^\/]*\/\.\.\//)) {
@@ -613,17 +614,6 @@ $rdf.uri = (function() {
     path = path.replace(/\.\//g, '');
     path = path.replace(/\/\.$/, '/');
     return base.slice(0, baseSingle) + path;
-  };
-
-  uri.join2 = function(given, base) {
-    var baseURI, tIOService;
-    if (typeof tabulator !== "undefined" && tabulator !== null ? tabulator.isExtension : void 0) {
-      tIOService = Components.classes['@mozilla.org/network/io-service;1'].getService(Components.interfaces.nsIIOService);
-      baseURI = tIOService.newURI(base, null, null);
-      return tIOService.newURI(baseURI.resolve(given), null, null).spec;
-    } else {
-      return this.join(given, base);
-    }
   };
 
   uri.commonHost = new RegExp('^[-_a-zA-Z0-9.]+:(//[^/]*)?/[^/]*$');
@@ -639,7 +629,7 @@ $rdf.uri = (function() {
   };
 
   uri.refTo = function(base, uri) {
-    var c, i, j, k, l, n, s, _i, _j, _k, _len, _len1, _ref;
+    var c, i, j, k, l, n, s, _i, _j, _k, _len, _len1, _ref1;
     if (!base) {
       return uri;
     }
@@ -678,9 +668,9 @@ $rdf.uri = (function() {
       return uri;
     }
     n = 0;
-    _ref = base.slice(i);
-    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-      c = _ref[_j];
+    _ref1 = base.slice(i);
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      c = _ref1[_j];
       if (c === '/') {
         n++;
       }
@@ -731,13 +721,13 @@ $rdf.uri = (function() {
 $rdf.Util.uri = $rdf.uri;
 
 if ((typeof module !== "undefined" && module !== null ? module.exports : void 0) != null) {
-  if ((_base = module.exports).Util == null) {
+  if ((_ref1 = (_base = module.exports).Util) == null) {
     _base.Util = {};
   }
-  _ref = $rdf.Util;
-  for (k in _ref) {
-    if (!__hasProp.call(_ref, k)) continue;
-    v = _ref[k];
+  _ref2 = $rdf.Util;
+  for (k in _ref2) {
+    if (!__hasProp.call(_ref2, k)) continue;
+    v = _ref2[k];
     module.exports.Util[k] = v;
   }
   module.exports.uri = $rdf.uri;
@@ -764,6 +754,7 @@ if (typeof $rdf === "undefined" || $rdf === null) {
 
 
 $rdf.Node = (function() {
+
   function Node() {}
 
   return Node;
@@ -771,6 +762,7 @@ $rdf.Node = (function() {
 })();
 
 $rdf.Empty = (function() {
+
   function Empty() {}
 
   Empty.prototype.termType = 'empty';
@@ -793,6 +785,7 @@ $rdf.Empty = (function() {
 
 
 $rdf.Symbol = (function() {
+
   function Symbol(uri) {
     this.uri = uri;
     this.value = this.uri;
@@ -854,6 +847,7 @@ if ($rdf.NextId != null) {
 $rdf.NTAnonymousNodePrefix = "_:n";
 
 $rdf.BlankNode = (function() {
+
   function BlankNode(id) {
     this.id = $rdf.NextId++;
     this.value = id ? id : this.id.toString();
@@ -895,14 +889,16 @@ $rdf.BlankNode = (function() {
 })();
 
 $rdf.Literal = (function() {
+
   function Literal(value, lang, datatype) {
+    var _ref, _ref1;
     this.value = value;
     this.lang = lang;
     this.datatype = datatype;
-    if (this.lang == null) {
+    if ((_ref = this.lang) == null) {
       this.lang = void 0;
     }
-    if (this.datatype == null) {
+    if ((_ref1 = this.datatype) == null) {
       this.datatype = void 0;
     }
   }
@@ -963,6 +959,7 @@ $rdf.Literal = (function() {
 })();
 
 $rdf.Collection = (function() {
+
   function Collection() {
     this.id = $rdf.NextId++;
     this.elements = [];
@@ -1049,6 +1046,7 @@ $rdf.term = function(val) {
 };
 
 $rdf.Statement = (function() {
+
   function Statement(subject, predicate, object, why) {
     this.subject = $rdf.term(subject);
     this.predicate = $rdf.term(predicate);
@@ -1073,6 +1071,7 @@ $rdf.st = function(subject, predicate, object, why) {
 };
 
 $rdf.Formula = (function() {
+
   function Formula() {
     this.statements = [];
     this.constraints = [];
@@ -1142,10 +1141,10 @@ $rdf.Formula = (function() {
   };
 
   /*
-  transform an NTriples string format into an $rdf.Node
-  The bnode bit should not be used on program-external values; designed
-  for internal work such as storing a bnode id in an HTML attribute.
-  This will only parse the strings generated by the vaious toNT() methods.
+      transform an NTriples string format into an $rdf.Node
+      The bnode bit should not be used on program-external values; designed
+      for internal work such as storing a bnode id in an HTML attribute.
+      This will only parse the strings generated by the vaious toNT() methods.
   */
 
 
@@ -1194,22 +1193,22 @@ $rdf.Formula = (function() {
     var elt, results, sts, _i, _j, _k, _l, _len, _len1, _len2, _len3;
     results = [];
     sts = this.statementsMatching(s, p, o, w, false);
-    if (s == null) {
+    if (!(s != null)) {
       for (_i = 0, _len = sts.length; _i < _len; _i++) {
         elt = sts[_i];
         results.push(elt.subject);
       }
-    } else if (p == null) {
+    } else if (!(p != null)) {
       for (_j = 0, _len1 = sts.length; _j < _len1; _j++) {
         elt = sts[_j];
         results.push(elt.predicate);
       }
-    } else if (o == null) {
+    } else if (!(o != null)) {
       for (_k = 0, _len2 = sts.length; _k < _len2; _k++) {
         elt = sts[_k];
         results.push(elt.object);
       }
-    } else if (w == null) {
+    } else if (!(w != null)) {
       for (_l = 0, _len3 = sts.length; _l < _len3; _l++) {
         elt = sts[_l];
         results.push(elt.why);
@@ -1221,13 +1220,13 @@ $rdf.Formula = (function() {
   Formula.prototype.any = function(s, p, o, w) {
     var st;
     st = this.anyStatementMatching(s, p, o, w);
-    if (st == null) {
+    if (!(st != null)) {
       return void 0;
-    } else if (s == null) {
+    } else if (!(s != null)) {
       return st.subject;
-    } else if (p == null) {
+    } else if (!(p != null)) {
       return st.predicate;
-    } else if (o == null) {
+    } else if (!(o != null)) {
       return st.object;
     }
     return void 0;
@@ -1294,12 +1293,12 @@ $rdf.Formula = (function() {
   };
 
   /*
-  For thisClass or any subclass, anything which has it is its type
-  or is the object of something which has the type as its range, or subject
-  of something which has the type as its domain
-  We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
-  Get all the Classes of which we can RDFS-infer the subject is a member
-  @returns a hash of URIs
+      For thisClass or any subclass, anything which has it is its type
+      or is the object of something which has the type as its range, or subject
+      of something which has the type as its domain
+      We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
+      Get all the Classes of which we can RDFS-infer the subject is a member
+      @returns a hash of URIs
   */
 
 
@@ -1339,10 +1338,10 @@ $rdf.Formula = (function() {
   };
 
   /*
-  transform a collection of NTriple URIs into their URI strings
-  @param t some iterable colletion of NTriple URI strings
-  @return a collection of the URIs as strings
-  todo: explain why it is important to go through NT
+      transform a collection of NTriple URIs into their URI strings
+      @param t some iterable colletion of NTriple URI strings
+      @return a collection of the URIs as strings
+      todo: explain why it is important to go through NT
   */
 
 
@@ -1368,11 +1367,11 @@ $rdf.Formula = (function() {
   };
 
   /*
-  Get all the Classes of which we can RDFS-infer the subject is a member
-  todo: This will loop is there is a class subclass loop (Sublass loops are not illegal)
-  Returns a hash table where key is NT of type and value is statement why we think so.
-  Does NOT return terms, returns URI strings.
-  We use NT representations in this version because they handle blank nodes.
+      Get all the Classes of which we can RDFS-infer the subject is a member
+      todo: This will loop is there is a class subclass loop (Sublass loops are not illegal)
+      Returns a hash table where key is NT of type and value is statement why we think so.
+      Does NOT return terms, returns URI strings.
+      We use NT representations in this version because they handle blank nodes.
   */
 
 
@@ -1406,10 +1405,10 @@ $rdf.Formula = (function() {
   };
 
   /*
-  Get all the Classes of which we can RDFS-infer the subject is a subclass
-  Returns a hash table where key is NT of type and value is statement why we think so.
-  Does NOT return terms, returns URI strings.
-  We use NT representations in this version because they handle blank nodes.
+      Get all the Classes of which we can RDFS-infer the subject is a subclass
+      Returns a hash table where key is NT of type and value is statement why we think so.
+      Does NOT return terms, returns URI strings.
+      We use NT representations in this version because they handle blank nodes.
   */
 
 
@@ -1421,10 +1420,10 @@ $rdf.Formula = (function() {
   };
 
   /*
-  Get all the Classes of which we can RDFS-infer the subject is a superclass
-  Returns a hash table where key is NT of type and value is statement why we think so.
-  Does NOT return terms, returns URI strings.
-  We use NT representations in this version because they handle blank nodes.
+      Get all the Classes of which we can RDFS-infer the subject is a superclass
+      Returns a hash table where key is NT of type and value is statement why we think so.
+      Does NOT return terms, returns URI strings.
+      We use NT representations in this version because they handle blank nodes.
   */
 
 
@@ -1436,8 +1435,8 @@ $rdf.Formula = (function() {
   };
 
   /*
-  Find the types in the list which have no *stored* supertypes
-  We exclude the universal class, owl:Things and rdf:Resource, as it is information-free.
+      Find the types in the list which have no *stored* supertypes
+      We exclude the universal class, owl:Things and rdf:Resource, as it is information-free.
   */
 
 
@@ -1470,10 +1469,10 @@ $rdf.Formula = (function() {
   };
 
   /*
-  Find the types in the list which have no *stored* subtypes
-  These are a set of classes which provide by themselves complete
-  information -- the other classes are redundant for those who
-  know the class DAG.
+      Find the types in the list which have no *stored* subtypes
+      These are a set of classes which provide by themselves complete
+      information -- the other classes are redundant for those who
+      know the class DAG.
   */
 
 
@@ -1525,6 +1524,7 @@ $rdf.variable = $rdf.Formula.prototype.variable;
 
 
 $rdf.Variable = (function() {
+
   function Variable(rel) {
     this.base = 'varid:';
     this.uri = $rdf.Util.uri.join(rel, this.base);
@@ -1579,6 +1579,7 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
     module.exports[k] = v;
   }
 }
+/* vim: set ts=2 sts=2 sw=2 et: */
 /**
  * @fileoverview
  * TABULATOR RDF PARSER
@@ -1599,13 +1600,13 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
  * the following license. By obtaining, using and/or copying this work,
  * you (the licensee) agree that you have read, understood, and will
  * comply with the following terms and conditions.
- * 
+ *
  * Permission to copy, modify, and distribute this software and its
  * documentation, with or without modification, for any purpose and
  * without fee or royalty is hereby granted, provided that you include
  * the following on ALL copies of the software and documentation or
  * portions thereof, including modifications:
- * 
+ *
  * 1. The full text of this NOTICE in a location viewable to users of
  * the redistributed or derivative work.
  * 2. Any pre-existing intellectual property disclaimers, notices, or terms and
@@ -1615,18 +1616,18 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
  * 3. Notice of any changes or modifications to the files, including the
  * date changes were made. (We recommend you provide URIs to the location
  * from which the code is derived.)
- * 
+ *
  * THIS SOFTWARE AND DOCUMENTATION IS PROVIDED "AS IS," AND COPYRIGHT
  * HOLDERS MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS
  * FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE OR
  * DOCUMENTATION WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS,
  * TRADEMARKS OR OTHER RIGHTS.
- * 
+ *
  * COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL
  * OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR
  * DOCUMENTATION.
- * 
+ *
  * The name and trademarks of copyright holders may NOT be used in
  * advertising or publicity pertaining to the software without specific,
  * written prior permission. Title to copyright in this software and any
@@ -1635,546 +1636,568 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
  */
 /**
  * @class Class defining an RDFParser resource object tied to an RDFStore
- *  
+ *
  * @author David Sheets <dsheets@mit.edu>
  * @version 0.1
- * 
+ *
  * @constructor
  * @param {RDFStore} store An RDFStore object
  */
 $rdf.RDFParser = function (store) {
-    var RDFParser = {};
+  var RDFParser = {};
 
-    /** Standard namespaces that we know how to handle @final
-     *  @member RDFParser
-     */
-    RDFParser['ns'] = {'RDF':
-		       "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-		       'RDFS':
-		       "http://www.w3.org/2000/01/rdf-schema#"}
-    /** DOM Level 2 node type magic numbers @final
-     *  @member RDFParser
-     */
-    RDFParser['nodeType'] = {'ELEMENT': 1, 'ATTRIBUTE': 2, 'TEXT': 3,
-			     'CDATA_SECTION': 4, 'ENTITY_REFERENCE': 5,
-			     'ENTITY': 6, 'PROCESSING_INSTRUCTION': 7,
-			     'COMMENT': 8, 'DOCUMENT': 9, 'DOCUMENT_TYPE': 10,
-			     'DOCUMENT_FRAGMENT': 11, 'NOTATION': 12}
+  /** Standard namespaces that we know how to handle @final
+   *  @member RDFParser
+   */
+  RDFParser['ns'] = {
+    'RDF': "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    'RDFS': "http://www.w3.org/2000/01/rdf-schema#"
+  };
+  /** DOM Level 2 node type magic numbers @final
+   *  @member RDFParser
+   */
+  RDFParser['nodeType'] = {
+    'ELEMENT': 1, 'ATTRIBUTE': 2, 'TEXT': 3,
+    'CDATA_SECTION': 4, 'ENTITY_REFERENCE': 5,
+    'ENTITY': 6, 'PROCESSING_INSTRUCTION': 7,
+    'COMMENT': 8, 'DOCUMENT': 9, 'DOCUMENT_TYPE': 10,
+    'DOCUMENT_FRAGMENT': 11, 'NOTATION': 12
+  };
 
-    /**
-     * Frame class for namespace and base URI lookups
-     * Base lookups will always resolve because the parser knows
-     * the default base.
-     *
-     * @private
-     */
-    this['frameFactory'] = function (parser, parent, element) {
-	return {'NODE': 1,
-		'ARC': 2,
-		'parent': parent,
-		'parser': parser,
-		'store': parser['store'],
-		'element': element,
-		'lastChild': 0,
-		'base': null,
-		'lang': null,
-		'node': null,
-		'nodeType': null,
-		'listIndex': 1,
-		'rdfid': null,
-		'datatype': null,
-		'collection': false,
+  /**
+   * Frame class for namespace and base URI lookups
+   * Base lookups will always resolve because the parser knows
+   * the default base.
+   *
+   * @private
+   */
+  this['frameFactory'] = function (parser, parent, element) {
+    return {
+      'NODE': 1,
+      'ARC': 2,
+      'parent': parent,
+      'parser': parser,
+      'store': parser['store'],
+      'element': element,
+      'lastChild': 0,
+      'base': null,
+      'lang': null,
+      'node': null,
+      'nodeType': null,
+      'listIndex': 1,
+      'rdfid': null,
+      'datatype': null,
+      'collection': false,
 
-	/** Terminate the frame and notify the store that we're done */
-		'terminateFrame': function () {
-		    if (this['collection']) {
-			this['node']['close']()
-		    }
-		},
-	
-	/** Add a symbol of a certain type to the this frame */
-		'addSymbol': function (type, uri) {
-		    uri = $rdf.Util.uri.join(uri, this['base'])
-		    this['node'] = this['store']['sym'](uri)
-		    this['nodeType'] = type
-		},
-	
-	/** Load any constructed triples into the store */
-		'loadTriple': function () {
-		    if (this['parent']['parent']['collection']) {
-			this['parent']['parent']['node']['append'](this['node'])
-		    }
-		    else {
-			this['store']['add'](this['parent']['parent']['node'],
-				       this['parent']['node'],
-				       this['node'],
-				       this['parser']['why'])
-		    }
-		    if (this['parent']['rdfid'] != null) { // reify
-			var triple = this['store']['sym'](
-			    $rdf.Util.uri.join("#"+this['parent']['rdfid'],
-					  this['base']))
-			this['store']['add'](triple,
-					     this['store']['sym'](
-						 RDFParser['ns']['RDF']
-						     +"type"),
-					     this['store']['sym'](
-						 RDFParser['ns']['RDF']
-						     +"Statement"),
-					     this['parser']['why'])
-			this['store']['add'](triple,
-					     this['store']['sym'](
-						 RDFParser['ns']['RDF']
-						     +"subject"),
-					     this['parent']['parent']['node'],
-					     this['parser']['why'])
-			this['store']['add'](triple,
-					     this['store']['sym'](
-						 RDFParser['ns']['RDF']
-						     +"predicate"),
-					     this['parent']['node'],
-					     this['parser']['why'])
-			this['store']['add'](triple,
-					     this['store']['sym'](
-						 RDFParser['ns']['RDF']
-						     +"object"),
-					     this['node'],
-					     this['parser']['why'])
-		    }
-		},
+      /** Terminate the frame and notify the store that we're done */
+      'terminateFrame': function () {
+        if (this['collection']) {
+          this['node']['close']();
+        }
+      },
 
-	/** Check if it's OK to load a triple */
-		'isTripleToLoad': function () {
-		    return (this['parent'] != null
-			    && this['parent']['parent'] != null
-			    && this['nodeType'] == this['NODE']
-			    && this['parent']['nodeType'] == this['ARC']
-			    && this['parent']['parent']['nodeType']
-			    == this['NODE'])
-		},
+      /** Add a symbol of a certain type to the this frame */
+      'addSymbol': function (type, uri) {
+        uri = $rdf.Util.uri.join(uri, this['base']);
+        this['node'] = this['store']['sym'](uri);
+        this['nodeType'] = type;
+      },
 
-	/** Add a symbolic node to this frame */
-		'addNode': function (uri) {
-		    this['addSymbol'](this['NODE'],uri)
-		    if (this['isTripleToLoad']()) {
-			this['loadTriple']()
-		    }
-		},
+      /** Load any constructed triples into the store */
+      'loadTriple': function () {
+        if (this['parent']['parent']['collection']) {
+          this['parent']['parent']['node']['append'](this['node']);
+        }
+        else {
+          this['store']['add'](
+                this['parent']['parent']['node'],
+                this['parent']['node'],
+                this['node'],
+                this['parser']['why']
+              );
+        }
+        if (this['parent']['rdfid']) { // reify
+          var triple = this['store']['sym'](
+                $rdf.Util.uri.join("#"+this['parent']['rdfid'],
+                this['base'])
+              );
+          this['store']['add'](triple,
+                this['store']['sym'](
+                      RDFParser['ns']['RDF'] + "type"
+                    ),
+                this['store']['sym'](
+                      RDFParser['ns']['RDF'] + "Statement"
+                    ),
+                this['parser']['why']
+              );
+          this['store']['add'](triple,
+                this['store']['sym'](
+                      RDFParser['ns']['RDF'] + "subject"
+                    ),
+                this['parent']['parent']['node'],
+                this['parser']['why']
+              );
+          this['store']['add'](triple,
+                this['store']['sym'](
+                      RDFParser['ns']['RDF'] + "predicate"
+                    ),
+                this['parent']['node'],
+                this['parser']['why']
+              );
+          this['store']['add'](triple,
+                this['store']['sym'](
+                      RDFParser['ns']['RDF'] + "object"),
+                this['node'],
+                this['parser']['why']
+              );
+        }
+      },
 
-	/** Add a collection node to this frame */
-		'addCollection': function () {
-		    this['nodeType'] = this['NODE']
-		    this['node'] = this['store']['collection']()
-		    this['collection'] = true
-		    if (this['isTripleToLoad']()) {
-			this['loadTriple']()
-		    }
-		},
+      /** Check if it's OK to load a triple */
+      'isTripleToLoad': function () {
+        return ((this['parent']) &&
+                (this['parent']['parent']) &&
+                (this['nodeType'] === this['NODE']) &&
+                (this['parent']['nodeType'] === this['ARC']) &&
+                (this['parent']['parent']['nodeType'] === this['NODE']));
+      },
 
-	/** Add a collection arc to this frame */
-		'addCollectionArc': function () {
-		    this['nodeType'] = this['ARC']
-		},
+      /** Add a symbolic node to this frame */
+      'addNode': function (uri) {
+        this['addSymbol'](this['NODE'],uri);
+        if (this['isTripleToLoad']()) {
+          this['loadTriple']();
+        }
+      },
 
-	/** Add a bnode to this frame */
-		'addBNode': function (id) {
-		    if (id != null) {
-			if (this['parser']['bnodes'][id] != null) {
-			    this['node'] = this['parser']['bnodes'][id]
-			} else {
-			    this['node'] = this['parser']['bnodes'][id] = this['store']['bnode']()
-			}
-		    } else { this['node'] = this['store']['bnode']() }
-		    
-		    this['nodeType'] = this['NODE']
-		    if (this['isTripleToLoad']()) {
-			this['loadTriple']()
-		    }
-		},
+      /** Add a collection node to this frame */
+      'addCollection': function () {
+        this['nodeType'] = this['NODE'];
+        this['node'] = this['store']['collection']();
+        this['collection'] = true;
+        if (this['isTripleToLoad']()) {
+          this['loadTriple']();
+        }
+      },
 
-	/** Add an arc or property to this frame */
-		'addArc': function (uri) {
-		    if (uri == RDFParser['ns']['RDF']+"li") {
-			uri = RDFParser['ns']['RDF']+"_"+this['parent']['listIndex']++
-		    }
-		    this['addSymbol'](this['ARC'], uri)
-		},
+      /** Add a collection arc to this frame */
+      'addCollectionArc': function () {
+        this['nodeType'] = this['ARC'];
+      },
 
-	/** Add a literal to this frame */
-		'addLiteral': function (value) {
-		    if (this['parent']['datatype']) {
-			this['node'] = this['store']['literal'](
-			    value, "", this['store']['sym'](
-				this['parent']['datatype']))
-		    }
-		    else {
-			this['node'] = this['store']['literal'](
-			    value, this['lang'])
-		    }
-		    this['nodeType'] = this['NODE']
-		    if (this['isTripleToLoad']()) {
-			this['loadTriple']()
-		    }
-		}
-	       }
-    }
-
-    //from the OpenLayers source .. needed to get around IE problems.
-    this['getAttributeNodeNS'] = function(node, uri, name) {
-        var attributeNode = null;
-        if(node.getAttributeNodeNS) {
-            attributeNode = node.getAttributeNodeNS(uri, name);
+      /** Add a bnode to this frame */
+      'addBNode': function (id) {
+        if (id) {
+          if (this['parser']['bnodes'][id]) {
+            this['node'] = this['parser']['bnodes'][id];
+          } else {
+            this['node'] = this['parser']['bnodes'][id] = this['store']['bnode']();
+          }
         } else {
-            var attributes = node.attributes;
-            var potentialNode, fullName;
-            for(var i=0; i<attributes.length; ++i) {
-                potentialNode = attributes[i];
-                if(potentialNode.namespaceURI == uri) {
-                    fullName = (potentialNode.prefix) ?
-                               (potentialNode.prefix + ":" + name) : name;
-                    if(fullName == potentialNode.nodeName) {
-                        attributeNode = potentialNode;
-                        break;
-                    }
-                }
-            }
+          this['node'] = this['store']['bnode']();
         }
-        return attributeNode;
+
+        this['nodeType'] = this['NODE'];
+        if (this['isTripleToLoad']()) {
+          this['loadTriple']();
+        }
+      },
+
+      /** Add an arc or property to this frame */
+      'addArc': function (uri) {
+        if (uri === RDFParser['ns']['RDF']+"li") {
+          uri = RDFParser['ns']['RDF'] + "_" + this['parent']['listIndex']++;
+        }
+        this['addSymbol'](this['ARC'], uri);
+      },
+
+      /** Add a literal to this frame */
+      'addLiteral': function (value) {
+        if (this['parent']['datatype']) {
+          this['node'] = this['store']['literal'](
+                value, "",
+                this['store']['sym'](this['parent']['datatype'])
+              );
+        } else {
+          this['node'] = this['store']['literal'](value, this['lang']);
+        }
+        this['nodeType'] = this['NODE'];
+        if (this['isTripleToLoad']()) {
+          this['loadTriple']();
+        }
+      }
+    };
+  };
+
+  // from the OpenLayers source .. needed to get around IE problems.
+  this['getAttributeNodeNS'] = function(node, uri, name) {
+    var attributeNode = null;
+    if(node.getAttributeNodeNS) {
+      attributeNode = node.getAttributeNodeNS(uri, name);
+    } else {
+      var attributes = node.attributes;
+      var potentialNode, fullName;
+      for (var i = 0; i < attributes.length; i = i + 1) {
+        potentialNode = attributes[i];
+        if (potentialNode.namespaceURI === uri) {
+          fullName = (potentialNode.prefix) ?
+                     (potentialNode.prefix + ":" + name) : name;
+          if (fullName === potentialNode.nodeName) {
+            attributeNode = potentialNode;
+            break;
+          }
+        }
+      }
+    }
+    return attributeNode;
+  };
+
+  /** Our triple store reference @private */
+  this['store'] = store;
+  /** Our identified blank nodes @private */
+  this['bnodes'] = {};
+  /** A context for context-aware stores @private */
+  this['why'] = null;
+  /** Reification flag */
+  this['reify'] = false;
+
+  /**
+   * Build our initial scope frame and parse the DOM into triples
+   * @param {DOMTree} document The DOM to parse
+   * @param {String} base The base URL to use
+   * @param {Object} why The context to which this resource belongs
+   */
+  this['parse'] = function (document, base, why) {
+    var children = document['childNodes'];
+
+    // clean up for the next run
+    this['cleanParser']();
+
+    var root;
+    // figure out the root element
+    //var root = document.documentElement; //this is faster, I think, cross-browser issue? well, DOM 2
+    if (document['nodeType'] === RDFParser['nodeType']['DOCUMENT']) {
+      for (var c = 0, len = children['length']; c < len; c = c + 1) {
+        if (children[c]['nodeType'] === RDFParser['nodeType']['ELEMENT']) {
+          root = children[c];
+          break;
+        }
+      }
+    }
+    else if (document['nodeType'] === RDFParser['nodeType']['ELEMENT']) {
+      root = document;
+    }
+    else {
+      throw new Error("RDFParser: can't find root in " + base + ". Halting. ");
     }
 
-    /** Our triple store reference @private */
-    this['store'] = store
-    /** Our identified blank nodes @private */
-    this['bnodes'] = {}
-    /** A context for context-aware stores @private */
-    this['why'] = null
-    /** Reification flag */
-    this['reify'] = false
+    this['why'] = why;
 
-    /**
-     * Build our initial scope frame and parse the DOM into triples
-     * @param {DOMTree} document The DOM to parse
-     * @param {String} base The base URL to use 
-     * @param {Object} why The context to which this resource belongs
-     */
-    this['parse'] = function (document, base, why) {
-	var children = document['childNodes']
+    // our topmost frame
+    var f = this['frameFactory'](this);
+    this['base'] = base;
+    f['base'] = base;
+    f['lang'] = '';
 
-	// clean up for the next run
-	this['cleanParser']()
+    this['parseDOM'](this['buildFrame'](f,root));
+    return true;
+  };
 
-	// figure out the root element
-	//var root = document.documentElement; //this is faster, I think, cross-browser issue? well, DOM 2
-	if (document['nodeType'] == RDFParser['nodeType']['DOCUMENT']) {
-	    for (var c=0; c<children['length']; c++) {
-		if (children[c]['nodeType']
-		    == RDFParser['nodeType']['ELEMENT']) {
-		    var root = children[c]
-		    break
-		}
-	    }	    
-	}
-	else if (document['nodeType'] == RDFParser['nodeType']['ELEMENT']) {
-	    var root = document
-	}
-	else {
-	    throw new Error("RDFParser: can't find root in " + base
-			    + ". Halting. ")
-	    return false
-	}
-	
-	this['why'] = why
-        
+  this['parseDOM'] = function (frame) {
+    // a DOM utility function used in parsing
+    var elementURI = function (el) {
+      var result = "";
+      if (!el['namespaceURI']) {
+        throw new Error("RDF/XML syntax error: No namespace for " +
+                         el['localName'] + " in " + this.base);
+      } else if( el['localName'] ) {
+        result = result + el['localName'];
+      } else if( el['nodeName'] ) {
+        if (el['nodeName'].indexOf(":") >= 0) {
+          result = result + el['nodeName'].split(":")[1];
+        } else {
+          result = result + el['nodeName'];
+        }
+      } else {
+        result = result + el['namespaceURI'];
+      }
+      return result;
+    }.bind(this);
 
-	// our topmost frame
+    var dig = true; // if we'll dig down in the tree on the next iter
 
-	var f = this['frameFactory'](this)
-        this['base'] = base
-	f['base'] = base
-	f['lang'] = ''
-	
-	this['parseDOM'](this['buildFrame'](f,root))
-	return true
-    }
-    this['parseDOM'] = function (frame) {
-	// a DOM utility function used in parsing
-	var elementURI = function (el) {
-        var result = "";
-            if (el['namespaceURI'] == null) {
-                throw new Error("RDF/XML syntax error: No namespace for "
-                            +el['localName']+" in "+this.base)
+    while (frame['parent']) {
+      var dom = frame['element'];
+      var attrs = dom['attributes'];
+      var rdfid, bnid;
+
+      if ((dom['nodeType'] === RDFParser['nodeType']['TEXT']) ||
+          (dom['nodeType'] === RDFParser['nodeType']['CDATA_SECTION'])) {//we have a literal
+        frame['addLiteral'](dom['nodeValue']);
+      } else if (elementURI(dom) !== RDFParser['ns']['RDF'] + "RDF") { // not root
+        if (frame['parent'] && frame['parent']['collection']) {
+          // we're a collection element
+          frame['addCollectionArc']();
+          frame = this['buildFrame'](frame,frame['element']);
+          frame['parent']['element'] = null;
+        }
+
+        if ((!frame['parent']) ||
+            (!frame['parent']['nodeType']) ||
+            (frame['parent']['nodeType'] === frame['ARC'])) {
+          // we need a node
+          var about = this['getAttributeNodeNS'](dom,
+                RDFParser['ns']['RDF'],
+                "about"
+              );
+          rdfid = this['getAttributeNodeNS'](dom,
+                RDFParser['ns']['RDF'],
+                "ID"
+              );
+          if (about && rdfid) {
+            throw new Error("RDFParser: " + dom['nodeName'] +
+                            " has both rdf:id and rdf:about." +
+                            " Halting. Only one of these" +
+                            " properties may be specified on a" +
+                            " node.");
+          }
+
+          if ((!about) && (rdfid)) {
+            frame['addNode']("#" + rdfid['nodeValue']);
+            dom['removeAttributeNode'](rdfid);
+          } else if ((!about) && (!rdfid)) {
+            bnid = this['getAttributeNodeNS'](dom,
+                  RDFParser['ns']['RDF'],
+                  "nodeID"
+                );
+            if (bnid) {
+              frame['addBNode'](bnid['nodeValue']);
+              dom['removeAttributeNode'](bnid);
+            } else {
+              frame['addBNode']();
             }
-        if( el['namespaceURI'] ) {
-            result = result + el['namespaceURI'];
-        }
-        if( el['localName'] ) {
-            result = result + el['localName'];
-        } else if( el['nodeName'] ) {
-            if(el['nodeName'].indexOf(":")>=0)
-                result = result + el['nodeName'].split(":")[1];
-            else
-                result = result + el['nodeName'];
-        }
-	    return result;
-	}.bind(this);
-	var dig = true // if we'll dig down in the tree on the next iter
+          } else {
+            frame['addNode'](about['nodeValue']);
+            dom['removeAttributeNode'](about);
+          }
 
-	while (frame['parent']) {
-	    var dom = frame['element']
-	    var attrs = dom['attributes']
+          // Typed nodes
+          var rdftype = this['getAttributeNodeNS'](dom,
+                RDFParser['ns']['RDF'],
+                "type"
+              );
+          if (RDFParser['ns']['RDF'] + "Description" !== elementURI(dom)) {
+            rdftype = {'nodeValue': elementURI(dom)};
+          }
 
-	    if (dom['nodeType']
-		== RDFParser['nodeType']['TEXT']
-		|| dom['nodeType']
-		== RDFParser['nodeType']['CDATA_SECTION']) {//we have a literal
-		frame['addLiteral'](dom['nodeValue'])
-	    }
-	    else if (elementURI(dom)
-		     != RDFParser['ns']['RDF']+"RDF") { // not root
-		if (frame['parent'] && frame['parent']['collection']) {
-		    // we're a collection element
-		    frame['addCollectionArc']()
-		    frame = this['buildFrame'](frame,frame['element'])
-		    frame['parent']['element'] = null
-		}
-                if (!frame['parent'] || !frame['parent']['nodeType']
-		    || frame['parent']['nodeType'] == frame['ARC']) {
-		    // we need a node
-            var about =this['getAttributeNodeNS'](dom,
-			RDFParser['ns']['RDF'],"about")
-		    var rdfid =this['getAttributeNodeNS'](dom,
-			RDFParser['ns']['RDF'],"ID")
-		    if (about && rdfid) {
-			throw new Error("RDFParser: " + dom['nodeName']
-					+ " has both rdf:id and rdf:about."
-					+ " Halting. Only one of these"
-					+ " properties may be specified on a"
-					+ " node.");
-		    }
-		    if (about == null && rdfid) {
-			frame['addNode']("#"+rdfid['nodeValue'])
-			dom['removeAttributeNode'](rdfid)
-		    }
-		    else if (about == null && rdfid == null) {
-                var bnid = this['getAttributeNodeNS'](dom,
-			    RDFParser['ns']['RDF'],"nodeID")
-			if (bnid) {
-			    frame['addBNode'](bnid['nodeValue'])
-			    dom['removeAttributeNode'](bnid)
-			} else { frame['addBNode']() }
-		    }
-		    else {
-			frame['addNode'](about['nodeValue'])
-			dom['removeAttributeNode'](about)
-		    }
-		
-		    // Typed nodes
-		    var rdftype = this['getAttributeNodeNS'](dom,
-			RDFParser['ns']['RDF'],"type")
-		    if (RDFParser['ns']['RDF']+"Description"
-			!= elementURI(dom)) {
-			rdftype = {'nodeValue': elementURI(dom)}
-		    }
-		    if (rdftype != null) {
-			this['store']['add'](frame['node'],
-					     this['store']['sym'](
-						 RDFParser['ns']['RDF']+"type"),
-					     this['store']['sym'](
-						 $rdf.Util.uri.join(
-						     rdftype['nodeValue'],
-						     frame['base'])),
-					     this['why'])
-			if (rdftype['nodeName']){
-			    dom['removeAttributeNode'](rdftype)
-			}
-		    }
-		    
-		    // Property Attributes
-		    for (var x = attrs['length']-1; x >= 0; x--) {
-			this['store']['add'](frame['node'],
-					     this['store']['sym'](
-						 elementURI(attrs[x])),
-					     this['store']['literal'](
-						 attrs[x]['nodeValue'],
-						 frame['lang']),
-					     this['why'])
-		    }
-		}
-		else { // we should add an arc (or implicit bnode+arc)
-		    frame['addArc'](elementURI(dom))
+          if (rdftype) {
+            this['store']['add'](
+                  frame['node'],
+                  this['store']['sym'](
+                        RDFParser['ns']['RDF'] + "type"
+                      ),
+                  this['store']['sym'](
+                        $rdf.Util.uri.join(
+                              rdftype['nodeValue'],
+                              frame['base']
+                            )
+                      ),
+                  this['why']
+                );
+            if (rdftype['nodeName']) {
+              dom['removeAttributeNode'](rdftype);
+            }
+          }
 
-		    // save the arc's rdf:ID if it has one
-		    if (this['reify']) {
-            var rdfid = this['getAttributeNodeNS'](dom,
-			    RDFParser['ns']['RDF'],"ID")
-			if (rdfid) {
-			    frame['rdfid'] = rdfid['nodeValue']
-			    dom['removeAttributeNode'](rdfid)
-			}
-		    }
+          // Property Attributes
+          for (var x = attrs['length']-1; x >= 0; x--) {
+            this['store']['add'](
+                  frame['node'],
+                  this['store']['sym'](elementURI(attrs[x])),
+                  this['store']['literal'](
+                        attrs[x]['nodeValue'],
+                        frame['lang']
+                      ),
+                  this['why']
+                );
+          }
+        } else { // we should add an arc (or implicit bnode+arc)
+          frame['addArc'](elementURI(dom));
 
-		    var parsetype = this['getAttributeNodeNS'](dom,
-			RDFParser['ns']['RDF'],"parseType")
-		    var datatype = this['getAttributeNodeNS'](dom,
-			RDFParser['ns']['RDF'],"datatype")
-		    if (datatype) {
-			frame['datatype'] = datatype['nodeValue']
-			dom['removeAttributeNode'](datatype)
-		    }
+          // save the arc's rdf:ID if it has one
+          if (this['reify']) {
+            rdfid = this['getAttributeNodeNS'](dom,
+                  RDFParser['ns']['RDF'],
+                  "ID"
+                );
+            if (rdfid) {
+              frame['rdfid'] = rdfid['nodeValue'];
+              dom['removeAttributeNode'](rdfid);
+            }
+          }
 
-		    if (parsetype) {
-			var nv = parsetype['nodeValue']
-			if (nv == "Literal") {
-			    frame['datatype']
-				= RDFParser['ns']['RDF']+"XMLLiteral"
-			    // (this.buildFrame(frame)).addLiteral(dom)
-			    // should work but doesn't
-			    frame = this['buildFrame'](frame)
-			    frame['addLiteral'](dom)
-			    dig = false
-			}
-			else if (nv == "Resource") {
-			    frame = this['buildFrame'](frame,frame['element'])
-			    frame['parent']['element'] = null
-			    frame['addBNode']()
-			}
-			else if (nv == "Collection") {
-			    frame = this['buildFrame'](frame,frame['element'])
-			    frame['parent']['element'] = null
-			    frame['addCollection']()
-			}
-			dom['removeAttributeNode'](parsetype)
-		    }
+          var parsetype = this['getAttributeNodeNS'](dom,
+                RDFParser['ns']['RDF'],
+                "parseType"
+              );
+          var datatype = this['getAttributeNodeNS'](dom,
+                RDFParser['ns']['RDF'],
+                "datatype"
+              );
+          if (datatype) {
+            frame['datatype'] = datatype['nodeValue'];
+            dom['removeAttributeNode'](datatype);
+          }
 
-		    if (attrs['length'] != 0) {
+          if (parsetype) {
+            var nv = parsetype['nodeValue'];
+            if (nv === "Literal") {
+              frame['datatype'] = RDFParser['ns']['RDF'] + "XMLLiteral";
+              // (this.buildFrame(frame)).addLiteral(dom)
+              // should work but doesn't
+              frame = this['buildFrame'](frame);
+              frame['addLiteral'](dom);
+              dig = false;
+            } else if (nv === "Resource") {
+              frame = this['buildFrame'](frame,frame['element']);
+              frame['parent']['element'] = null;
+              frame['addBNode']();
+            } else if (nv == "Collection") {
+              frame = this['buildFrame'](frame,frame['element']);
+              frame['parent']['element'] = null;
+              frame['addCollection']();
+            }
+            dom['removeAttributeNode'](parsetype);
+          }
+
+          if (attrs['length'] !== 0) {
             var resource = this['getAttributeNodeNS'](dom,
-			    RDFParser['ns']['RDF'],"resource")
-			var bnid = this['getAttributeNodeNS'](dom,
-			    RDFParser['ns']['RDF'],"nodeID")
+                  RDFParser['ns']['RDF'],
+                  "resource"
+                );
+            bnid = this['getAttributeNodeNS'](dom,
+                  RDFParser['ns']['RDF'],
+                  "nodeID"
+                );
 
-			frame = this['buildFrame'](frame)
-			if (resource) {
-			    frame['addNode'](resource['nodeValue'])
-			    dom['removeAttributeNode'](resource)
-			} else {
-			    if (bnid) {
-				frame['addBNode'](bnid['nodeValue'])
-				dom['removeAttributeNode'](bnid)
-			    } else { frame['addBNode']() }
-			}
+            frame = this['buildFrame'](frame);
+            if (resource) {
+              frame['addNode'](resource['nodeValue']);
+              dom['removeAttributeNode'](resource);
+            } else {
+              if (bnid) {
+                frame['addBNode'](bnid['nodeValue']);
+                dom['removeAttributeNode'](bnid);
+              } else {
+                frame['addBNode']();
+              }
+            }
 
-			for (var x = attrs['length']-1; x >= 0; x--) {
-			    var f = this['buildFrame'](frame)
-			    f['addArc'](elementURI(attrs[x]))
-			    if (elementURI(attrs[x])
-				==RDFParser['ns']['RDF']+"type"){
-				(this['buildFrame'](f))['addNode'](
-				    attrs[x]['nodeValue'])
-			    } else {
-				(this['buildFrame'](f))['addLiteral'](
-				    attrs[x]['nodeValue'])
-			    }
-			}
-		    }
-		    else if (dom['childNodes']['length'] == 0) {
-			(this['buildFrame'](frame))['addLiteral']("")
-		    }
-		}
-	    } // rdf:RDF
+            for (var y = attrs['length']-1; y >= 0; y--) {
+              var f = this['buildFrame'](frame);
+              f['addArc'](elementURI(attrs[y]));
+              if (elementURI(attrs[y]) === RDFParser['ns']['RDF'] + "type") {
+                (this['buildFrame'](f))['addNode'](attrs[y]['nodeValue']);
+              } else {
+                (this['buildFrame'](f))['addLiteral'](attrs[y]['nodeValue']);
+              }
+            }
+          } else if (dom['childNodes']['length'] === 0) {
+            (this['buildFrame'](frame))['addLiteral']("");
+          }
+        }
+      } // rdf:RDF
 
-	    // dig dug
-	    dom = frame['element']
-	    while (frame['parent']) {
-		var pframe = frame
-		while (dom == null) {
-		    frame = frame['parent']
-		    dom = frame['element']
-		}
-		var candidate = dom['childNodes'][frame['lastChild']]
-		if (candidate == null || !dig) {
-		    frame['terminateFrame']()
-		    if (!(frame = frame['parent'])) { break } // done
-		    dom = frame['element']
-		    dig = true
-		}
-		else if ((candidate['nodeType']
-			  != RDFParser['nodeType']['ELEMENT']
-			  && candidate['nodeType']
-			  != RDFParser['nodeType']['TEXT']
-			  && candidate['nodeType']
-			  != RDFParser['nodeType']['CDATA_SECTION'])
-			 || ((candidate['nodeType']
-			      == RDFParser['nodeType']['TEXT']
-			      || candidate['nodeType']
-			      == RDFParser['nodeType']['CDATA_SECTION'])
-			     && dom['childNodes']['length'] != 1)) {
-		    frame['lastChild']++
-		}
-		else { // not a leaf
-		    frame['lastChild']++
-		    frame = this['buildFrame'](pframe,
-					       dom['childNodes'][frame['lastChild']-1])
-		    break
-		}
-	    }
-	} // while
-    }
+      // dig dug
+      dom = frame['element'];
+      while (frame['parent']) {
+        var pframe = frame;
+        while (!dom) {
+          frame = frame['parent'];
+          dom = frame['element'];
+        }
+        var candidate = dom['childNodes'][frame['lastChild']];
+        if ((!candidate) || (!dig)) {
+          frame['terminateFrame']();
+          if (!(frame = frame['parent'])) { break; } // done
+          dom = frame['element'];
+          dig = true;
+        } else if (((candidate['nodeType'] !== RDFParser['nodeType']['ELEMENT']) &&
+                    (candidate['nodeType'] !== RDFParser['nodeType']['TEXT']) &&
+                    (candidate['nodeType'] !== RDFParser['nodeType']['CDATA_SECTION'])) ||
+                   ((candidate['nodeType'] === RDFParser['nodeType']['TEXT']) ||
+                    (candidate['nodeType'] === RDFParser['nodeType']['CDATA_SECTION'])) &&
+                   (dom['childNodes']['length'] != 1)) {
+          frame['lastChild']++;
+        } else { // not a leaf
+          frame['lastChild']++;
+          frame = this['buildFrame'](
+                pframe,
+                dom['childNodes'][frame['lastChild'] - 1]
+              );
+          break;
+        }
+      } // while
+    } // while
 
     /**
      * Cleans out state from a previous parse run
      * @private
      */
     this['cleanParser'] = function () {
-	this['bnodes'] = {}
-	this['why'] = null
-    }
+      this['bnodes'] = {};
+      this['why'] = null;
+    };
 
     /**
-     * Builds scope frame 
+     * Builds scope frame
      * @private
      */
     this['buildFrame'] = function (parent, element) {
-	var frame = this['frameFactory'](this,parent,element)
-	if (parent) {
-	    frame['base'] = parent['base']
-	    frame['lang'] = parent['lang']
-	}
-	if (element == null
-	    || element['nodeType'] == RDFParser['nodeType']['TEXT']
-	    || element['nodeType'] == RDFParser['nodeType']['CDATA_SECTION']) {
-	    return frame
-	}
+      var frame = this['frameFactory'](this,parent,element);
+      if (parent) {
+        frame['base'] = parent['base'];
+        frame['lang'] = parent['lang'];
+      }
 
-	var attrs = element['attributes']
+      if ((!element) ||
+          (element['nodeType'] === RDFParser['nodeType']['TEXT']) ||
+          (element['nodeType'] === RDFParser['nodeType']['CDATA_SECTION'])) {
+        return frame;
+      }
 
-	var base = element['getAttributeNode']("xml:base")
-	if (base != null) {
-	    frame['base'] = base['nodeValue']
-	    element['removeAttribute']("xml:base")
-	}
-	var lang = element['getAttributeNode']("xml:lang")
-	if (lang != null) {
-	    frame['lang'] = lang['nodeValue']
-	    element['removeAttribute']("xml:lang")
-	}
+      var attrs = element['attributes'];
 
-	// remove all extraneous xml and xmlns attributes
-	for (var x = attrs['length']-1; x >= 0; x--) {
-	    if (attrs[x]['nodeName']['substr'](0,3) == "xml") {
-                if (attrs[x].name.slice(0,6)=='xmlns:') {
-                    var uri = attrs[x].nodeValue;
-                    // alert('base for namespac attr:'+this.base);
-                    if (this.base) uri = $rdf.Util.uri.join(uri, this.base);
-                    this.store.setPrefixForURI(attrs[x].name.slice(6),
-                                                uri);
-                }
-//		alert('rdfparser: xml atribute: '+attrs[x].name) //@@
-		element['removeAttributeNode'](attrs[x])
-	    }
-	}
-	return frame
-    }
-}
+      var base = element['getAttributeNode']("xml:base");
+      if (base) {
+        frame['base'] = base['nodeValue'];
+        element['removeAttribute']("xml:base");
+      }
+      var lang = element['getAttributeNode']("xml:lang");
+      if (lang) {
+        frame['lang'] = lang['nodeValue'];
+        element['removeAttribute']("xml:lang");
+      }
+
+      // remove all extraneous xml and xmlns attributes
+      for (var x = attrs['length']-1; x >= 0; x--) {
+        if (attrs[x]['nodeName']['substr'](0,3) === "xml") {
+          if (attrs[x].name.slice(0,6) === 'xmlns:') {
+            var uri = attrs[x].nodeValue;
+            // alert('base for namespac attr:'+this.base);
+            if (this.base) {
+              uri = $rdf.Util.uri.join(uri, this.base);
+            }
+            this.store.setPrefixForURI(attrs[x].name.slice(6), uri);
+          }
+          //alert('rdfparser: xml atribute: '+attrs[x].name) //@@
+          element['removeAttributeNode'](attrs[x]);
+        }
+      }
+      return frame;
+    };
+  };
+};
 /**
 *
 *  UTF-8 data encode / decode
@@ -6925,17 +6948,24 @@ if (typeof $rdf === "undefined" || $rdf === null) {
 }
 
 $rdf.UpdatesSocket = (function() {
+
   function UpdatesSocket(parent, via) {
-    var error;
     this.parent = parent;
     this.via = via;
     this.subscribe = __bind(this.subscribe, this);
+
     this.onError = __bind(this.onError, this);
+
     this.onMessage = __bind(this.onMessage, this);
+
     this.onClose = __bind(this.onClose, this);
+
     this.onOpen = __bind(this.onOpen, this);
+
     this._subscribe = __bind(this._subscribe, this);
+
     this._send = __bind(this._send, this);
+
     this.connected = false;
     this.pending = {};
     this.subscribed = {};
@@ -6946,8 +6976,7 @@ $rdf.UpdatesSocket = (function() {
       this.socket.onclose = this.onClose;
       this.socket.onmessage = this.onMessage;
       this.socket.onerror = this.onError;
-    } catch (_error) {
-      error = _error;
+    } catch (error) {
       this.onError(error);
     }
   }
@@ -7034,11 +7063,15 @@ $rdf.UpdatesSocket = (function() {
 })();
 
 $rdf.UpdatesVia = (function() {
+
   function UpdatesVia(fetcher) {
     this.fetcher = fetcher;
     this.onUpdate = __bind(this.onUpdate, this);
+
     this.onHeaders = __bind(this.onHeaders, this);
+
     this.register = __bind(this.register, this);
+
     this.graph = {};
     this.via = {};
     this.fetcher.addCallback('headers', this.onHeaders);
@@ -7054,6 +7087,9 @@ $rdf.UpdatesVia = (function() {
   UpdatesVia.prototype.onHeaders = function(d) {
     var etag, uri, via;
     if (d.headers == null) {
+      return true;
+    }
+    if (typeof WebSocket === "undefined" || WebSocket === null) {
       return true;
     }
     etag = d.headers['etag'];
@@ -7149,6 +7185,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
+                sf.addStatus(xhr.req, 'parsing soon as RDF/XML...');
                 var kb = sf.store;
                 if (!this.dom) this.dom = $rdf.Util.parseXML(xhr.responseText);
 /*                {
@@ -7462,6 +7499,8 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.recv = function(xhr) {
             xhr.handle = function(cb) {
                 // Parse the text of this non-XML file
+                $rdf.log.debug("web.js: Parsing as N3 " + xhr.uri.uri); // @@@@ comment me out 
+                sf.addStatus(xhr.req, "N3 not parsed yet...")
                 var rt = xhr.responseText
                 var p = $rdf.N3Parser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
                 //                p.loadBuf(xhr.responseText)
@@ -7469,13 +7508,13 @@ $rdf.Fetcher = function(store, timeout, async) {
                     p.loadBuf(xhr.responseText)
 
                 } catch (e) {
-                    var msg = ("Error trying to parse " + xhr.uri + ' as Notation3:\n' + e +':\n'+e.stack)
+                    var msg = ("Error trying to parse " + xhr.uri + " as Notation3:\n" + e +':\n'+e.stack)
                     // dump(msg+"\n")
                     sf.failFetch(xhr, msg)
                     return;
                 }
 
-                sf.addStatus(xhr.req, 'N3 parsed: ' + p.statementCount + ' statements in ' + p.lines + ' lines.')
+                sf.addStatus(xhr.req, "N3 parsed: " + p.statementCount + " triples in " + p.lines + " lines.")
                 sf.store.add(xhr.uri, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
                 args = [xhr.uri.uri]; // Other args needed ever?
                 sf.doneFetch(xhr, args)
@@ -7792,6 +7831,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                         kb.add(response, ns.httph(h), xhr.headers[h].trim(), response)
                     }
                 }
+
                 sf.fireCallbacks('headers', [{uri: docuri, headers: xhr.headers}]);
 
                 if (xhr.status >= 400) { // For extra dignostics, keep the reply
@@ -7864,7 +7904,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                     sf.requested[udoc] = true
                 }
 
-
                 for (var x = 0; x < sf.handlers.length; x++) {
                     if (xhr.headers['content-type'] && xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
                         handler = new sf.handlers[x]()
@@ -7891,7 +7930,11 @@ $rdf.Fetcher = function(store, timeout, async) {
 
 
                 if (handler) {
-                    handler.recv(xhr)
+                    try {
+                        handler.recv(xhr);
+                    } catch(e) { // Try to avoid silent errors
+                        sf.failFetch(xhr, "Exception handling content-type " + xhr.headers['content-type'] + ' was: '+e);
+                    };
                 } else {
                     sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']+
                             ", readyState = "+xhr.readyState);
@@ -7904,6 +7947,9 @@ $rdf.Fetcher = function(store, timeout, async) {
             // LOADING: 3
             // OPENED: 1
             // UNSENT: 0
+
+            // $rdf.log.debug("web.js: XHR " + xhr.uri.uri + ' readyState='+xhr.readyState); // @@@@ comment me out 
+
             switch (xhr.readyState) {
             case 0:
                     var uri = xhr.uri.uri, newURI;
@@ -9039,10 +9085,10 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
         possible.push(kb.fromNT(x));
         // box.appendChild(dom.createTextNode("RDFS: adding "+x));
     }; // Use rdfs
-    // tabulator.log.debug("%% Choice field: possible.length 1 = "+possible.length)
+    // tabulator.log.debug("%%% Choice field: possible.length 1 = "+possible.length)
     if (from.sameTerm(ns.rdfs('Class'))) {
         for (var p in tabulator.panes.utils.allClassURIs()) possible.push(kb.sym(p));     
-        // tabulator.log.debug("%% Choice field: possible.length 2 = "+possible.length)
+        // tabulator.log.debug("%%% Choice field: possible.length 2 = "+possible.length)
     } else if (from.sameTerm(ns.owl('ObjectProperty'))) {
         //if (tabulator.properties == undefined) 
         tabulator.panes.utils.propertyTriage();
@@ -10172,57 +10218,133 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
     var kb = tabulator.kb;
     var box;
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessage(dom, s))};
+    var displayOptions = function(id, preferencesFile){
     
-    var loadPrefs = function(id) {
-        var boot = kb.any(id, tabulator.ns.space('preferencesFile'));  
-        if (!boot) return tabulator.panes.utils.errorMessage(dom,
-            "You have not got a preferences file for user: " + id); 
-            
-        var docURI = $rdf.Util.uri.docpart(boot.uri);
-        var pending;
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(){
-        
-            var w = kb.statementsMatching(id, tabulator.ns.space('workspace'),
-                undefined, boot).map(function(st){return st.object;});
-    
-            if (pending !== undefined) pending.parentNode.removeChild(pending);
-            if (w.length == 1) {
-            
-                say( "Workspace used: " + w[0].uri);  
-                callback(w[0]); 
+        var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
+            undefined, preferencesFile).map(function(st){return st.object;});
 
-            } else if (w.length == 0 ) {
-                say("You don't seem to have any workspaces. ")
-                say("@@ code me: create new workspace.")
-            } else {
-                // @@ Here should prompt for ws selection @@@@
-                say("@@@ code me: " + w.length + " workspaces: " + id);  
-            };
-        });
+        // if (pending !== undefined) pending.parentNode.removeChild(pending);
+        if (w.length == 1) {
         
+            say( "Workspace used: " + w[0].uri);  
+            callback(w[0]); 
+
+        } else if (w.length == 0 ) {
+            say("You don't seem to have any workspaces. ")
+            say("@@ code me: create new workspace.")
+        } else {
+        
+            // Prompt for ws selection or creation
+            // say( w.length + " workspaces for " + id + "Chose one.");
+            var table = dom.createElement('table');
+            table.setAttribute('style', 'border-collapse:separate; border-spacing: 0.5em;')
+            box.appendChild(table);
+            var row = 0;
+            w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
+                    tabulator.ns.space('MasterWorkspace')) ) });
+            var col1, col2, col3, tr, ws, style, comment;
+            var cellStyle = 'height: 3em; margin: 1em; padding: 1em white; border-radius: 0.3em;';
+            var deselectedStyle = cellStyle + 'border: 0px;'
+            var selectedStyle = cellStyle + 'border: 1px solid black;'
+            for (var i = 0; i< w.length; i++) {
+                ws = w[i];
+                tr = dom.createElement('tr');
+                if (i == 0) {
+                    col1 = dom.createElement('td');
+                    col1.setAttribute('rowspan', ''+w.length + 1);
+                    tr.appendChild(col1);
+                }
+                col2 = dom.createElement('td');
+                style = kb.any(ws, tabulator.ns.ui('style'));
+                col2.setAttribute('style', deselectedStyle + (style ? style.value : ''));
+                tr.target = ws.uri;
+                var label = kb.any(ws, tabulator.ns.rdfs('label'))
+                col2.textContent = label || "";
+                tr.appendChild(col2);
+                if (i == 0) {
+                    col3 = dom.createElement('td');
+                    col3.setAttribute('rowspan', ''+w.length + 1);
+                    tr.appendChild(col3);
+                }
+                table.appendChild(tr);
+                function foo (ws){
+                    col2.addEventListener('click', function(e){
+                        comment = kb.any(ws, tabulator.ns.rdfs('comment'));
+                        col3.textContent = comment ? comment.value : '---';
+                    });
+                }(ws);
+            }
+            tr = dom.createElement('tr');
+            col2 = dom.createElement('td')
+            col2.setAttribute('style', cellStyle);
+            tr.appendChild(col2);
+            table.appendChild(tr);
+            col1.textContent = "Chose a workspace for this:";
+            col1.setAttribute('style', 'vertical-align:middle;')
+            col2.textContent = "+ Make a new workspace";
+
+        };
+    };
+        
+    var loadPrefs = function(id) {
+        var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));  
+        if (!preferencesFile) return tabulator.panes.utils.errorMessage(dom,
+            "Can't find a preferences file for user: " + id); 
+        var docURI = $rdf.uri.docpart(preferencesFile.uri);
+        var pending;
         pending = tabulator.panes.utils.errorMessage(dom,
             "(loading preferences " + docURI+ ")");
-        return pending;
+        box.appendChild(pending);
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function() {
+            pending.parentNode.removeChild(pending);
+            displayOptions(id, preferencesFile);
+        });
+        return;
+    };
+
+    var gotIDChange = function(me) {
+        if (typeof me == 'undefined') return undefined;
+        var docURI = $rdf.Util.uri.docpart(me.uri);
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(){
+            loadPrefs(me);
+        });
     };
 
     if (me) {
         box = dom.createElement('div');
-        box.appendChild(loadPrefs(me));
+        gotIDChange(me);
         return box;
     }
-    var listener = function(me) {
-        if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.Util.uri.docpart(me.uri);
-        kb.nowOrWhenFetched(docURI, function(){
-            box.appendChild(loadPrefs(me));
-        });
-    };
-    box = tabulator.panes.utils.loginStatusBox(dom, listener);
+    box = tabulator.panes.utils.loginStatusBox(dom, gotIDChange);
     return box;
 
 };
 
+//////////////////// Craete a new instance of an app
+//
+//  An instance of an app could be an issue tracker for a given project,
+// or a chess game, or calendar, or a health/fitness record for a person.
+//
 
+
+tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
+    var gotWS = function(ws) {
+        callback(ws);
+    };
+    var div = dom.createElement('div');
+    var b = dom.createElement('button');
+    b.setAttribute('type', 'button');
+    div.appendChild(b)
+    b.innerHTML = label;
+    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+    b.addEventListener('click', function(e) {
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
+    div.appendChild(b);
+    return div;
+};
+
+
+// ends
 
 
 
@@ -10313,7 +10435,7 @@ tabulator.panes.register( {
         //  Form to collect data about a New Issue
         //
         var newIssueForm = function(myDocument, kb, tracker, superIssue) {
-            var form = myDocument.createElement('form');
+            var form = myDocument.createElement('div');  // form is broken as HTML behaviour can resurface on js error
             var stateStore = kb.any(tracker, WF('stateStore'));
 
             var sendNewIssue = function() {
@@ -10352,8 +10474,9 @@ tabulator.panes.register( {
                 }
                 sparqlService.update([], sts, sendComplete);
             }
-            form.addEventListener('submit', sendNewIssue, false)
-            form.setAttribute('onsubmit', "function xx(){return false;}");
+            //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
+            //form.setAttribute('onsubmit', "function xx(){return false;}");
+            
             var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
@@ -10363,6 +10486,11 @@ tabulator.panes.register( {
             titlefield.setAttribute('size','100');
             titlefield.setAttribute('maxLength','2048');// No arbitrary limits
             titlefield.select() // focus next user input
+            titlefield.addEventListener('keyup', function(e) {
+                if(e.keyCode == 13) {
+                    sendNewIssue();
+                }
+            }, false);
             form.appendChild(titlefield);
             return form;
         };
@@ -10767,6 +10895,13 @@ tabulator.panes.register( {
                 complain("(Logged out)")
             }
             me = me_uri? kb.sym(me_uri) : null;
+        }));
+        
+        div.appendChild(tabulator.panes.utils.newAppInstance(myDocument, "Start your own new tracker", function(ws){
+            complain("Ready to make new instance at "+ws);
+            //  @@ Now create initial files - html skin, tracker, state. (Copy of mashlib?)
+            // @@ Now create form to edit configuation parameters
+            // @@ Optionally link new instance to list of instances
         }));
 
         return div;

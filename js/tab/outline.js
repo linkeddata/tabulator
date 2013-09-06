@@ -329,7 +329,10 @@ tabulator.OutlineObject = function(doc) {
               
         //set about and put 'expand' icon
         if ((obj.termType == 'symbol') || (obj.termType == 'bnode') ||
-                (obj.termType == 'literal' && obj.value.slice && obj.value.slice(0,7) == 'http://')) {
+                (obj.termType == 'literal' && obj.value.slice && (
+                    obj.value.slice(0,6) == 'ftp://' ||
+                    obj.value.slice(0,8) == 'https://' ||
+                    obj.value.slice(0,7) == 'http://'))) {
             td.setAttribute('about', obj.toNT());
             td.appendChild(tabulator.Util.AJARImage(
                 tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));

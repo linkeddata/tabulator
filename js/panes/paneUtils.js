@@ -993,7 +993,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
     var n = 0; var uris ={}; // Count them
     for (var i=0; i < possible.length; i++) {
         var sub = possible[i];
-        // tabulator.log.warn('Select element: '+ sub)
+        // tabulator.log.debug('Select element: '+ sub)
         if (sub.uri in uris) continue;
         uris[sub.uri] = true; n++;
     } // uris is now the set of possible options
@@ -1602,7 +1602,7 @@ tabulator.panes.widget.twoLine[
 //  - Load preferences file
 //  - Prompt user for workspaces
 // 
-tabulator.panes.utils.selectWorkspace = function(dom, callback) {
+tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
@@ -1618,7 +1618,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
         if (w.length == 1) {
         
             say( "Workspace used: " + w[0].uri);  
-            callback(w[0]); 
+            callbackWS(w[0]); 
 
         } else if (w.length == 0 ) {
             say("You don't seem to have any workspaces. ")
@@ -1629,6 +1629,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
             // say( w.length + " workspaces for " + id + "Chose one.");
             var table = dom.createElement('table');
             table.setAttribute('style', 'border-collapse:separate; border-spacing: 0.5em;')
+            
+            // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
@@ -1647,7 +1649,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
                 }
                 col2 = dom.createElement('td');
                 style = kb.any(ws, tabulator.ns.ui('style'));
-                col2.setAttribute('style', deselectedStyle + (style ? style.value : ''));
+                style = style ? style.value : ''
+                col2.setAttribute('style', deselectedStyle + style);
                 tr.target = ws.uri;
                 var label = kb.any(ws, tabulator.ns.rdfs('label'))
                 col2.textContent = label || "";
@@ -1655,24 +1658,51 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
                 if (i == 0) {
                     col3 = dom.createElement('td');
                     col3.setAttribute('rowspan', ''+w.length + 1);
+                    // col3.textContent = '@@@@@ remove';
+                    col3.setAttribute('style', 'width:50%;');
                     tr.appendChild(col3);
                 }
                 table.appendChild(tr);
-                function foo (ws){
-                    col2.addEventListener('click', function(e){
-                        comment = kb.any(ws, tabulator.ns.rdfs('comment'));
-                        col3.textContent = comment ? comment.value : '---';
-                    });
-                }(ws);
-            }
+
+
+
+                var addMyListener = function (container, detail,  style, ws1) {
+                    container.addEventListener('click', function(e){
+                        col3.textContent = detail;
+                        col3.setAttribute('style', style);
+                        col3.appendChild(addContinueButton(ws1));
+                    }, true); // capture vs bubble
+                    return;
+                };
+
+                var addContinueButton = function (selectedWorkspace) {
+                    var button = dom.createElement('button');
+                    button.textContent = "Continue";
+                    // button.setAttribute('style', style);
+                    button.addEventListener('click', function(e){
+                        button.disabled = true;
+                        callbackWS(selectedWorkspace);
+                        button.textContent = '---->';
+                    }, true); // capture vs bubble
+                    return button;
+                };
+
+                var comment = kb.any(ws, tabulator.ns.rdfs('comment'));
+                addMyListener(col2, comment? comment.value : '',
+                                 deselectedStyle + style, ws);
+            };
+
+            col1.textContent = "Chose a workspace for this:";
+            col1.setAttribute('style', 'vertical-align:middle;')
+
+            // last line with "Make new workspace"
             tr = dom.createElement('tr');
             col2 = dom.createElement('td')
             col2.setAttribute('style', cellStyle);
+            col2.textContent = "+ Make a new workspace";
+            addMyListener(col2, "Set up a new workspace", '');
             tr.appendChild(col2);
             table.appendChild(tr);
-            col1.textContent = "Chose a workspace for this:";
-            col1.setAttribute('style', 'vertical-align:middle;')
-            col2.textContent = "+ Make a new workspace";
 
         };
     };
@@ -1720,6 +1750,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callback) {
 
 tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     var gotWS = function(ws) {
+        //$rdf.log.debug("newAppInstance: Selected workspace = " + (ws? ws.uri : 'none'))
         callback(ws);
     };
     var div = dom.createElement('div');

@@ -217,7 +217,7 @@ tabulator.panes.register( {
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
-                say("Ready to make new instance at "+ws);
+                // say("Ready to make new instance at "+ws);
                 var sp = tabulator.ns.space;
                 var kb = tabulator.kb;
                 
@@ -240,6 +240,7 @@ tabulator.panes.register( {
                 var oldBase = here.uri.slice(0, here.uri.lastIndexOf('/')+1);
 
                 var morph = function(x) { // Move any URIs in this space into that space
+                    if (x.elements !== undefined) return x.elements.map(morph); // Morph within lists
                     if (x.uri === undefined) return x;
                     var u = x.uri;
                     if (u === stateStore.uri) return newStore; // special case
@@ -264,6 +265,9 @@ tabulator.panes.register( {
                 
                 kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, there);
                 
+                $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
+
+
                 sparqlService.put(
                     there,
                     kb.statementsMatching(undefined, undefined, undefined, there),
@@ -273,8 +277,8 @@ tabulator.panes.register( {
                             sparqlService.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
                                 if (ok) {
                                     say("Ok The tracker created OK at: " + newTracker.uri +
-                                    "\nMake a note of it, bookmark it.q+ ",
-                                     'color: #020; backgrond-color: white;');
+                                    "\nMake a note of it, bookmark it. ",
+                                     'color: #020; background-color: white;');
                                 } else {
                                     say('FAILED to set up new store at: '+ newStore.uri +' : ' + message);
                                 };

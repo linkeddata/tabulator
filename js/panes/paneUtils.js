@@ -1,6 +1,11 @@
 /**
 * Few General purpose utility functions used in the panes
 * oshani@csail.mit.edu 
+*
+* Includes form-oriented widgets, and sign-on sign-up widgets.
+*
+*  Note... For pointers to posssible text-editing code, see
+*  http://stackoverflow.com/questions/6756407/what-contenteditable-editors
 */
 
 
@@ -1743,7 +1748,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 
 //////////////////// Craete a new instance of an app
 //
-//  An instance of an app could be an issue tracker for a given project,
+//  An instance of an app could be e.g. an issue tracker for a given project,
 // or a chess game, or calendar, or a health/fitness record for a person.
 //
 

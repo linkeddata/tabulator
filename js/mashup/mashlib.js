@@ -8496,6 +8496,8 @@ tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Ic
 // ###### Expanding js/init/namespaces.js ##############
 tabulator.ns = {};
 
+
+tabulator.ns.arg = $rdf.Namespace('http://www.w3.org/ns/pim/arg#');
 tabulator.ns.cal = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
 tabulator.ns.contact = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/contact#');
 tabulator.ns.dc = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
@@ -8657,7 +8659,7 @@ tabulator.panes.field[tabulator.ns.ui('Group').uri] = function(
     already2[key] = 1;
     
     var parts = kb.each(form, ui('part'));
-    if (!parts) { box.appendChild(tabulator.panes.utils.errorMessage(dom,
+    if (!parts) { box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                 "No parts to form! ")); return dom};
     var p2 = tabulator.panes.utils.sortBySequence(parts);
     var eles = [];
@@ -8712,7 +8714,7 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
     var dependingOn = kb.any(form, ui('dependingOn'));
     if (!dependingOn) dependingOn = tabulator.ns.rdf('type'); // @@ default to type (do we want defaults?)
     var cases = kb.each(form, ui('case'));
-    if (!cases) box.appendChild(tabulator.panes.utils.errorMessage(dom,
+    if (!cases) box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                 "No cases to Options form. "));
     var values;
     if (dependingOn.sameTerm(tabulator.ns.rdf('type'))) {
@@ -8733,7 +8735,7 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
         for (var j=0; j<tests.length; j++) {
             if (values[tests[j].uri]) {
                 var field = kb.the(c, ui('use'));
-                if (!field) { box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                if (!field) { box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                 "No 'use' part for case in form "+form)); return box}
                 else tabulator.panes.utils.appendForm(dom, box, already, subject, field, store, callback);
                 break;
@@ -8757,13 +8759,13 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     container.appendChild(box);
     var property = kb.any(form, ui('property'));
     if (!property) { 
-        box.appendChild(tabulator.panes.utils.errorMessage(dom,
+        box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                 "No property to multiple: "+form)); // used for arcs in the data
         return box;
     }
     var element = kb.any(form, ui('part')); // This is the form to use for each one
     if (!element) {
-        box.appendChild(tabulator.panes.utils.errorMessage(dom,"No part to multiple: "+form));
+        box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,"No part to multiple: "+form));
         return box;
     }
 
@@ -8787,7 +8789,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
                     tabulator.sparql.update([], ins, linkDone);
                 }
             } else {
-                tr.appendChild(tabulator.panes.utils.errorMessage(dom, "Multiple: item failed: "+body));
+                tr.appendChild(tabulator.panes.utils.errorMessageBlock(dom, "Multiple: item failed: "+body));
                 callback(ok, body);
             }
         }
@@ -8926,7 +8928,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
             if (ok) {
                 field.setAttribute('style', 'color: black;');
             } else {
-                box.appendChild(tabulator.panes.utils.errorMessage(dom, body));
+                box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, body));
             }
             callback(ok, body);
         })
@@ -8944,7 +8946,7 @@ tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] = function(
     var ui = tabulator.ns.ui;
     var kb = tabulator.kb;
     var property = kb.any(form, ui('property'));
-    if (!property) return tabulator.panes.utils.errorMessage(dom,
+    if (!property) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No property to text field: "+form);
     container.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
     store = tabulator.panes.utils.fieldStore(subject, property, store);
@@ -8965,7 +8967,7 @@ tabulator.panes.field[tabulator.ns.ui('BooleanField').uri] = function(
     var ui = tabulator.ns.ui;
     var kb = tabulator.kb;
     var property = kb.any(form, ui('property'));
-    if (!property) return container.appendChild(tabulator.panes.utils.errorMessage(dom,
+    if (!property) return container.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                 "No property to boolean field: "+form)); 
     var lab = kb.any(form, ui('label'));
     if (!lab) lab = tabulator.Util.label(property, true); // Init capital
@@ -8991,7 +8993,7 @@ tabulator.panes.field[tabulator.ns.ui('Classifier').uri] = function(
                                     dom, container, already, subject, form, store, callback) {
     var kb = tabulator.kb, ui = tabulator.ns.ui, ns = tabulator.ns;
     var category = kb.any(form, ui('category'));
-    if (!category) return tabulator.panes.utils.errorMessage(dom,
+    if (!category) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No category for classifier: " + form);
     tabulator.log.debug('Classifier: store='+store);
     var checkOptions = function(ok, body) {
@@ -9035,10 +9037,10 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     var rhs = dom.createElement('td');
     box.appendChild(rhs);
     var property = kb.any(form, ui('property'));
-    if (!property) return tabulator.panes.utils.errorMessage(dom, "No property for Choice: "+form);
+    if (!property) return tabulator.panes.utils.errorMessageBlock(dom, "No property for Choice: "+form);
     lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
     var from = kb.any(form, ui('from'));
-    if (!from) return tabulator.panes.utils.errorMessage(dom,
+    if (!from) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No 'from' for Choice: "+form);
     var subForm = kb.any(form, ui('use'));  // Optional
     var possible = [];
@@ -9224,12 +9226,13 @@ tabulator.panes.utils.fieldLabel = function(dom, property) {
 **
 */
 
-tabulator.panes.utils.errorMessage = function(dom, msg) {
+tabulator.panes.utils.errorMessageBlock = function(dom, msg, backgroundColor) {
     var div = dom.createElement('div');
-    div.setAttribute('style', 'background-color: #fdd; color:black;');
-    div.appendChild(dom.createTextNode(msg));
+    div.setAttribute('style', 'padding: 0.5em; border: 0.5px solid black; background-color: ' +
+        (backgroundColor  ? backgroundColor :  '#fee') + '; color:black;');
     return div;
 }
+
 tabulator.panes.utils.bottomURI = function(x) {
     var kb = tabulator.kb;
     var ft = kb.findTypeURIs(x);
@@ -9245,7 +9248,7 @@ tabulator.panes.utils.fieldFunction = function(dom, field) {
     var fun = tabulator.panes.field[uri];
     tabulator.log.debug("paneUtils: Going to implement field "+field+" of type "+uri)
     if (!fun) return function() {
-        return tabulator.panes.utils.errorMessage(dom, "No handler for field "+field+" of type "+uri);
+        return tabulator.panes.utils.errorMessageBlock(dom, "No handler for field "+field+" of type "+uri);
     };
     return fun
 }
@@ -9483,7 +9486,7 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb); // @@ Use a common one attached to each fetcher or merge with fetcher
     var group = dom.createElement('div');
     var sts = kb.statementsMatching(subject, predicate,undefined); // Only one please
-    if (sts.length > 1) return tabulator.panes.utils.errorMessage(dom,
+    if (sts.length > 1) return tabulator.panes.utils.errorMessageBlock(dom,
                 "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject);
     var desc = sts.length? sts[0].object.value : undefined;
     var field = dom.createElement('textarea');
@@ -9519,7 +9522,7 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
                 field.setAttribute('style', style + 'color: black;');
                 field.disabled = false;
             } else {
-                group.appendChild(tabulator.panes.utils.errorMessage(dom, 
+                group.appendChild(tabulator.panes.utils.errorMessageBlock(dom, 
                 "Error (while saving change to "+store.uri+'): '+body));
             }
             if (callback) callback(ok, body);
@@ -9568,7 +9571,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         if (sub.uri in uris) continue;
         uris[sub.uri] = true; n++;
     } // uris is now the set of possible options
-    if (n==0 && !options.mint) return tabulator.panes.utils.errorMessage(dom,
+    if (n==0 && !options.mint) return tabulator.panes.utils.errorMessageBlock(dom,
                 "Can't do selector with no options, subject= "+subject+" property = "+predicate+".");
     
     tabulator.log.debug('makeSelectForOptions: store='+store);
@@ -9695,9 +9698,9 @@ tabulator.panes.utils.makeSelectForCategory = function(dom, kb, subject, categor
         subs = du.elements            
     }
     log.debug('Select list length '+ subs.length)
-    if (subs.length == 0) return tabulator.panes.utils.errorMessage(dom,
+    if (subs.length == 0) return tabulator.panes.utils.errorMessageBlock(dom,
                 "Can't do "+ (multiple?"multiple ":"")+"selector with no subclasses of category: "+category);
-    if (subs.length == 1) return tabulator.panes.utils.errorMessage(dom,
+    if (subs.length == 1) return tabulator.panes.utils.errorMessageBlock(dom,
                 "Can't do "+ (multiple?"multiple ":"")+"selector with only 1 subclass of category: "+category+":"+subs[1]);   
     return tabulator.panes.utils.makeSelectForOptions(dom, kb, subject, tabulator.ns.rdf('type'), subs,
                     { 'multiple': multiple, 'nullPrompt': "--classify--"}, store, callback);
@@ -9757,7 +9760,7 @@ tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form,
     if (del) {
         negation = kb.holds(del.subject, del.predicate, del.object, store);
         if (state && negation) {
-            box.appendChild(tabulator.panes.utils.errorMessage(dom,
+            box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                             "Inconsistent data in store!\n"+ins+" and\n"+del));
             return box;
         }
@@ -9777,7 +9780,7 @@ tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form,
             tabulator.sparql.update( del && negation? del: [], ins, function(uri,success,error_body) {
                 tx.className = 'question';
                 if (!success){
-                    box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                         "Error updating store (setting boolean) "+statement+':\n\n'+error_body));
                     input.checked = false; //rollback UI
                     return;
@@ -9792,7 +9795,7 @@ tabulator.panes.utils.buildCheckboxForm = function(dom, kb, lab, del, ins, form,
             tabulator.sparql.update( toDelete, toInsert, function(uri,success,error_body) {
                 tx.className = 'question';
                 if (!success){
-                    box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                         "Error updating store: "+statement+':\n\n'+error_body));
                     input.checked = false; //rollback UI
                     return;
@@ -10179,7 +10182,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
     var box;
-    var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessage(dom, s))};
+    var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
     var displayOptions = function(id, preferencesFile){
     
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
@@ -10280,16 +10283,16 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         
     var loadPrefs = function(id) {
         var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));  
-        if (!preferencesFile) return tabulator.panes.utils.errorMessage(dom,
+        if (!preferencesFile) return tabulator.panes.utils.errorMessageBlock(dom,
             "Can't find a preferences file for user: " + id); 
         var docURI = $rdf.uri.docpart(preferencesFile.uri);
         var pending;
-        pending = tabulator.panes.utils.errorMessage(dom,
+        pending = tabulator.panes.utils.errorMessageBlock(dom,
             "(loading preferences " + docURI+ ")");
         box.appendChild(pending);
         kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body) {
             if (!ok) {
-                box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                     "Can't load a preferences file " + docURI));
                 return;
             }
@@ -10304,7 +10307,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         var docURI = $rdf.Util.uri.docpart(me.uri);
         kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
             if (!ok) {
-                box.appendChild(tabulator.panes.utils.errorMessage(dom,
+                box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
                     "Can't load profile file " + docURI));
                 return;
             }
@@ -11013,6 +11016,73 @@ tabulator.panes.register( {
 
 
 // ###### Finished expanding js/panes/issue/pane.js ##############
+// ###### Expanding js/panes/argument/argumentPane.js ##############
+/*      View argument Pane
+**
+**  This pane shows a position and optionally the positions which
+** support or oppose it.
+*/
+
+
+tabulator.Icon.src.icon_argument = tabulator.iconPrefix + 'js/panes/argument/icon_argument.png'
+tabulator.panes.argumentPane = {
+    
+    icon:  tabulator.Icon.src.icon_argument, // @@
+    
+    name: 'argument',
+    
+    label: function(subject) {
+
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+   
+        if (t[tabulator.ns.arg('Position').uri]) return "Argument";
+        
+        return null;
+    },
+
+
+    // View the data in a file in user-friendly way
+    render: function(subject, myDocument) {
+
+        var $r = tabulator.rdf;
+        var kb = tabulator.kb;
+        var arg = tabulator.ns.arg;
+        
+        subject = kb.canon(subject);
+        var types = kb.findTypeURIs(subject);
+
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'argumentPane')
+
+        // var title = kb.any(subject, tabulator.ns.dc('title'));
+        
+        var comment = kb.any(subject, tabulator.ns.rdfs('comment'));
+        if (comment) {
+            var para = myDocument.createElement('p');
+            para.setAttribute('style', 'margin-left: 2em; font-style: italic;');
+            div.appendChild(para);
+            para.textContent = comment.value;
+        };
+        var plist = kb.statementsMatching(subject, arg('support'));
+        tabulator.outline.appendPropertyTRs(div, plist, false);
+
+        var plist = kb.statementsMatching(subject, arg('opposition'));
+        tabulator.outline.appendPropertyTRs(div, plist, false);
+
+        return div
+    }
+};
+
+tabulator.panes.register(tabulator.panes.argumentPane, false);
+
+
+
+
+//ends
+
+
+// ###### Finished expanding js/panes/argument/argumentPane.js ##############
 // ###### Expanding js/panes/transaction/pane.js ##############
 /*   Financial Transaction Pane
 **

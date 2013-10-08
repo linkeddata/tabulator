@@ -91,7 +91,8 @@ the file system (file:///) to store application data.\n")
         // Render forms using a given store
         
         var renderFormsFor = function(store, subject) {
-            kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
+            kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
+                if (!ok) return complain("Cannot load store "+store.uri + ': '+ body);
 
                 //              Render the forms
                 

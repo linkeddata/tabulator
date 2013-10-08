@@ -299,19 +299,41 @@ tabulator.panes.register( {
                 var table = dom.createElement('table');
                 tabulator.outline.GotoSubject(x, true, undefined, false, undefined, table) 
 */
+                var dispalyable = function(kb, x) {
+                    var cts = kb.fetcher.getHeader(x, 'content-type');
+                    if (cts) {
+                        var displayables = [ 'text/html', 'image/png', 'application/pdf'];
+                        for (var j=0; j<cts.length; j++) {
+                            for (var k=0; k < displayables.length; k++) {
+                                if (cts[j].indexOf(displayables[k]) >= 0) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                };
 
-                if (x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" || x.uri.slice(-5) == ".html" ||
+                preview.innerHTML = "Loading ....";
+                if (x.uri) kb.fetcher.nowOrWhenFetched(x.uri, undefined, function(ok, body) {
+                    if (!ok) {
+                        preview.textContent = "Error loading " + x.uri + ': ' + body;
+                        return;
+                    }
+                    var display = tabulator.outline.propertyTable(x); //  ,table, pane
+                    preview.innerHTML = '';
+                    preview.appendChild(display);                    
+                });
+
+
+/*                
+                if (dispalyable(kb, x) || x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" || x.uri.slice(-5) == ".html" ||
                         x.uri.slice(-5) == ".jpeg") { // @@@@@@ MAJOR KLUDGE! use metadata after HEAD
                     preview.innerHTML = '<iframe height="100%" width="100%"src="'
                         + x.uri + '">' + x.uri + '</iframe>';
                 } else {
-                    preview.innerHTML = '';  //  @@@ this doesn't seem to work
-                    if (x.uri) kb.fetcher.nowOrWhenFetched(x.uri, undefined, function() {
-                        var display = tabulator.outline.propertyTable(x); //  ,table, pane
-                        preview.appendChild(display);                    
-                    });
                 };
-
+*/
 
             } catch(e) {
                 preview.innerHTML = '<span style="background-color: pink;">' + "Error:" + e + '</span>'; // @@ enc

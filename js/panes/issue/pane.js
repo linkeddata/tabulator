@@ -265,7 +265,7 @@ tabulator.panes.register( {
                 
                 kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, there);
                 
-                $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
+                // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
                 sparqlService.put(
@@ -278,13 +278,13 @@ tabulator.panes.register( {
                                 if (ok) {
                                     say("Ok The tracker created OK at: " + newTracker.uri +
                                     "\nMake a note of it, bookmark it. ",
-                                     'color: #020; background-color: white;');
+                                     'color: #080; background-color: white;');
                                 } else {
-                                    say('FAILED to set up new store at: '+ newStore.uri +' : ' + message);
+                                    say("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
                                 };
                             });
                         } else {
-                            say('FAILED to save new tracker at: '+ there.uri +' : ' + message);
+                            say("FAILED to save new tracker at: "+ there.uri +' : ' + message);
                         };
                     }
                 );
@@ -327,8 +327,8 @@ tabulator.panes.register( {
             
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
-            tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane() {
-            
+            tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
+                if (!ok) return say("Failed to load " + trackerURI + ' '+body);
                 var ns = tabulator.ns
                 var predicateURIsDone = {};
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
@@ -473,7 +473,10 @@ tabulator.panes.register( {
                         td = myDocument.createElement('td');
                         tr.appendChild(td);
                         // Actually we only need to know it is editable - we could HEAD not GET
-                        kb.sf.nowOrWhenFetched(stateStore.uri, subject, function(){td.appendChild(newMessageForm(myDocument, kb, subject, docStore))});
+                        kb.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body){
+                            if (!ok) return say("Cannot load state store "+body);
+                            td.appendChild(newMessageForm(myDocument, kb, subject, docStore));
+                        });
                     }, false);
                 }
                 var msg = kb.any(subject, WF('message'));
@@ -594,7 +597,8 @@ tabulator.panes.register( {
                 }, false);
             
             // Table of issues - when we have the main issue list
-            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function() {
+            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
+                if (!ok) return say("Cannot load state store "+body);
                 var query = new $rdf.Query(tabulator.Util.label(subject));
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 var vars =  ['issue', 'state', 'created'];

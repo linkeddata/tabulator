@@ -1,4 +1,4 @@
-/*   User Interface hints Pane
+/*   Form building/editing Pane
 **
 */
 
@@ -88,21 +88,15 @@ tabulator.panes.register( {
         
         var pred;
         if (t[ns.rdfs('Class').uri]) { // Stuff we can do before we load the store
-            pred = ns.ui('creationForm');
-            box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
-            mention("Creation forms allow you to add information about a new thing,\
-                                in this case a new "+label+".");
-            mention("You can make a new form.");
-            box.appendChild(tabulator.panes.utils.newButton(
-                dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
-            mention("Storing new form in: "+store)
-            box.appendChild(dom.createElement('hr'));
         } 
         
         var wait = mention('(Loading data from: '+store+')');
 
-        kb.fetcher.nowOrWhenFetched(store.uri, subject, function() {
-
+        kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
+            if (!ok) {
+                complain("Cannot load store " + store + " :" + body);
+                return;
+            }
             box.removeChild(wait);
 
 //      _____________________________________________________________________
@@ -111,36 +105,66 @@ tabulator.panes.register( {
             
             if (t[ns.rdfs('Class').uri]) {
 
-                // complain('class');
-                // For each creation form, allow one to create a new trip with it, and also to edit the form.
-                var sts = kb.statementsMatching(subject, pred);
-                if (sts.length) {
-                    for (var i=0; i<sts.length; i++) {
-                        tabulator.outline.appendPropertyTRs(box,  [ sts[i] ]);
-                        var form = sts[i].object;
-                        var cell = dom.createElement('td');
-                        box.lastChild.appendChild(cell);
-                        cell.appendChild(tabulator.panes.utils.newButton(
-                            dom, kb, null, null, subject, form, store, function(ok,body){
-                            if (ok) {
-                                // tabulator.outline.GotoSubject(newThing@@, true, undefined, true, undefined);
-                                // rerender(box);   // Deleted forms at the moment
-                            }
-                            else complain("Sorry, failed to save your change:\n"+body);
-                        }) );
-                        
-                        var formdef = kb.statementsMatching(form, ns.rdf('type'));
-                        if (!formdef.length) formdef = kb.statementsMatching(form);
-                        if (!formdef.length) complain('No data about form');
-                        else tabulator.panes.utils.editFormButton(dom, box,
-                                        form, formdef[0].why, complainIfBad);
+                // For each creation form, allow one to create a new object with it, and also to edit the form.
+                var displayFormsForRelation = function displayFormsForRelation(pred, allowCreation) {
+                    var sts = kb.statementsMatching(subject, pred);
+                    if (sts.length) {
+                        for (var i=0; i<sts.length; i++) {
+                            tabulator.outline.appendPropertyTRs(box,  [ sts[i] ]);
+                            var form = sts[i].object;
+                            var cell = dom.createElement('td');
+                            box.lastChild.appendChild(cell);
+                            if (allowCreation) {
+                                cell.appendChild(tabulator.panes.utils.newButton(
+                                    dom, kb, null, null, subject, form, store, function(ok,body){
+                                    if (ok) {
+                                        // tabulator.outline.GotoSubject(newThing@@, true, undefined, true, undefined);
+                                        // rerender(box);   // Deleted forms at the moment
+                                    }
+                                    else complain("Sorry, failed to save your change:\n"+body);
+                                }) );
+                            };
+                            var formdef = kb.statementsMatching(form, ns.rdf('type'));
+                            if (!formdef.length) formdef = kb.statementsMatching(form);
+                            if (!formdef.length) complain('No data about form');
+                            else tabulator.panes.utils.editFormButton(dom, box,
+                                            form, formdef[0].why, complainIfBad);
+                        }
+                        box.appendChild(dom.createElement('hr'));
+                    } else {
+                        mention("There are currently no known forms to make a "+
+                            label+".");
                     }
-                    box.appendChild(dom.createElement('hr'));
-                } else {
-                    mention("There are no forms currently defined to make a "+
-                        label+".");
-                }
+                };
+
+
+
+                pred = ns.ui('creationForm');
+                box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
+                mention("Creation forms allow you to add information about a new thing,\
+                                    in this case a new "+label+".");                
+                displayFormsForRelation(pred, true);
                 box.appendChild(dom.createElement('hr'));
+                mention("You can make a new creation form:");
+                box.appendChild(tabulator.panes.utils.newButton(
+                    dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
+
+                box.appendChild(dom.createElement('hr'));
+
+                pred = ns.ui('annotationForm');
+                box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
+                mention("Annotaion forms allow you to add extra information about a ,\
+                                "+label+" we already know about.");                
+                displayFormsForRelation(pred, false);
+                box.appendChild(dom.createElement('hr'));
+                mention("You can make a new annotation form:");
+                box.appendChild(tabulator.panes.utils.newButton(
+                    dom, kb, subject, pred, ns.ui('Form'), null, store, complainIfBad) )
+
+                mention("(Storing new forms in: "+store+')')
+
+
+
 
 //      _____________________________________________________________________
 

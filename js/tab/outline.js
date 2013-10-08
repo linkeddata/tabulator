@@ -1704,7 +1704,11 @@ tabulator.OutlineObject = function(doc) {
             //seeAlsoStats.map(function (x) {sf.lookUpThing(x.object, subject,false);})
             var seeAlsoWhat = kb.each(subject, rdfs('seeAlso'));
             for (var i=0;i<seeAlsoWhat.length;i++){
-                if (i>10) break; //think about this later
+                if (i == 25) {
+                    tabulator.log.warn("expand: Warning: many (" +
+                        seeAlsoWhat.length + ") seeAlso links for "+ subject)
+                    // break; Not sure what limits the AJAX system has here
+                }
                 sf.lookUpThing(seeAlsoWhat[i],subject,false);
             }
         } 

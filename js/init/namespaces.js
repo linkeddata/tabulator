@@ -1,5 +1,7 @@
 tabulator.ns = {};
 
+
+tabulator.ns.arg = $rdf.Namespace('http://www.w3.org/ns/pim/arg#');
 tabulator.ns.cal = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
 tabulator.ns.contact = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/contact#');
 tabulator.ns.dc = $rdf.Namespace('http://purl.org/dc/elements/1.1/');

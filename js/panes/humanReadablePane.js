@@ -7,38 +7,53 @@ tabulator.panes.register({
     
     icon: tabulator.Icon.src.icon_visit,
     
-    name: 'humaReadable',
+    name: 'humanReadable',
     
     label: function(subject, myDocument) {
-        //recursive iframe is not allowed (eh? -tim)
+        // Prevent infinite recursion with iframe loading a web page which uses tabulator which shows iframe...
         if (tabulator.isExtension && myDocument.location == subject.uri) return null;
         var kb = tabulator.kb;
-        var request = kb.any(subject, tabulator.ns.link("request"));
-        if (!request) return null;
-        // Don't use the() when it would not be an error for there not to be any.
-        var content_type = kb.any(request, tabulator.ns.httph("content-type"));
-        if (!content_type) return null;//this hapeens when request is generated but response not ready        
-        var allowed = ['text/plain','application/x-javascript',
-                       ,'text/html','application/xhtml+xml','text/css'];
-        if (allowed.filter(function(s){return content_type.value.search(s)!=-1}).length) return "view";
-        //if (!kb.anyStatementMatching(
-        //    subject, tabulator.ns.rdf( 'type'), tabulator.ns.link( 'TextDocument')))
-        //    return null;
-        //var s = dataContentPane.label(subject);
-        // Done to stop Tab'r trying to show nestd RDF and N3 files in Firefox
-        //if (s) return null; // If a data document, don't try human readable view.  (?)
+        var ns = tabulator.ns;
+
+        //   See aslo tthe source pane, which has lower precedence.
+        
+        var allowed = ['text/plain',
+                       'text/html','application/xhtml+xml',
+                        'image/png', 'image/jpeg', 'application/pdf'];
+ 
+        var displayable = function(kb, x, displayables) {
+            var cts = kb.fetcher.getHeader(x, 'content-type');
+            if (cts) {
+                for (var j=0; j<cts.length; j++) {
+                    for (var k=0; k < displayables.length; k++) {
+                        if (cts[j].indexOf(displayables[k]) >= 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        
+        var t = kb.findTypeURIs(subject);
+        if (t[ns.link('WebPage').uri]) return "view";
+
+        if (displayable(kb, subject, allowed)) return "View";
+
         return null;
     },
     
     render: function(subject, myDocument) {
         var div = myDocument.createElement("div")
 
+        //  @@ When we can, use CSP to turn off scripts within the iframe
         div.setAttribute('class', 'docView')    
         var iframe = myDocument.createElement("IFRAME")
         iframe.setAttribute('src', subject.uri)
         iframe.setAttribute('class', 'doc')
-        iframe.setAttribute('height', '480')
-        iframe.setAttribute('width', '640')
+        iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
+//        iframe.setAttribute('height', '480')
+//        iframe.setAttribute('width', '640')
         var tr = myDocument.createElement('TR')
         tr.appendChild(iframe)
         div.appendChild(tr)

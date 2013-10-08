@@ -44,6 +44,7 @@ tabulator.loadScript("js/panes/paneUtils.js");
 */
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
+tabulator.loadScript("js/panes/argument/argumentPane.js"); // A posistion in an argumnent tree
 tabulator.loadScript("js/panes/transaction/pane.js");
 tabulator.loadScript("js/panes/trip/tripPane.js");
 tabulator.loadScript("js/panes/airPane.js");
@@ -52,7 +53,9 @@ tabulator.loadScript("js/panes/airPane.js");
 
 tabulator.loadScript("js/panes/imagePane.js");   // Basic image view
 
-tabulator.loadScript("js/panes/dataContentPane.js");  // Prefered
+tabulator.loadScript("js/panes/humanReadablePane.js"); // A web page as a web page
+
+tabulator.loadScript("js/panes/dataContentPane.js");  // Prefered for a data file
 tabulator.loadScript("js/panes/n3Pane.js");
 tabulator.loadScript("js/panes/RDFXMLPane.js");
 
@@ -75,7 +78,6 @@ tabulator.loadScript("js/panes/pubsPane.js");
 //@@ jambo commented these things out to pare things down temporarily.
 // Note must use // not /* to comment out to make sure expander sees it
 // tabulator.loadScript("js/panes/lawPane.js");
-// tabulator.loadScript("js/panes/humanReadablePane.js");
 
 tabulator.loadScript("js/panes/microblogPane/microblogPane.js");
 

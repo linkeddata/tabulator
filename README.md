@@ -20,9 +20,7 @@ make the file mashlib.js
 
 *   [
         Tabulator extension tutorial](http://dig.csail.mit.edu/2007/tab/tabtutorial.html)
-*   Screencasts:
-
-        *   [Editing data](http://dig.csail.mit.edu/2007/tab/tutorial/editing.mov)
+*   [Screencast - Editing data](http://dig.csail.mit.edu/2007/tab/tutorial/editing.mov)
 *   [
 	How to use the tabulator](http://dig.csail.mit.edu/2005/ajar/ajaw/Help.html)
 *   [

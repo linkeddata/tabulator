@@ -9,10 +9,32 @@ tabulator.panes.register( {
     
     label: function(subject) {
         var kb = tabulator.kb;
+        var ns = tabulator.ns;
+
         if (!kb.anyStatementMatching(
             subject, tabulator.ns.rdf( 'type'),
             kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
             return null;
+
+        //   See aslo the source pane, which has lower precedence.
+ 
+        var contentTypeMatch = function(kb, x, contentTypes) {
+            var cts = kb.fetcher.getHeader(x, 'content-type');
+            if (cts) {
+                for (var j=0; j<cts.length; j++) {
+                    for (var k=0; k < contentTypes.length; k++) {
+                        if (cts[j].indexOf(contentTypes[k]) >= 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        
+        var suppressed = [ 'application/pdf'];
+        if (contentTypeMatch(kb, subject, suppressed)) return null;
+
         return "view";
     },
 
@@ -21,8 +43,9 @@ tabulator.panes.register( {
         div.setAttribute('class', 'imageView')
         var img = myDocument.createElement("IMG")
         img.setAttribute('src', subject.uri) // w640 h480
-        div.style['max-width'] = '640';
-        div.style['max-height'] = '480';
+        img.setAttribute('style','max-width: 100%; max-height: 100%;')
+//        div.style['max-width'] = '640';
+//        div.style['max-height'] = '480';
         var tr = myDocument.createElement('TR')  // why need tr?
         tr.appendChild(img)
         div.appendChild(tr)

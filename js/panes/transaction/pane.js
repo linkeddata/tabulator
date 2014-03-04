@@ -114,17 +114,24 @@ tabulator.panes.register( {
             setPaneStyle();
             
             var account = kb.any(subject, Q('toAccount'));
+	    var store = null;
+	    
+            if (account == undefined) {
+                complain('(Error: There is no bank account known for this transaction <'
+                        +subject.uri+'>,\n -- every transaction needs one.)')
+            };
+	    
             var statement = kb.any(subject, Q('accordingTo'));
             if (statement == undefined) {
                 complain('(Error: There is no back link to the original data source foir this transaction <'
                         +subject.uri+'>,\nso I can\'t tell how to annotate it.)')
+            } else {
+		store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
+		if (store == undefined) {
+		    complain('(There is no annotation document for this statement\n<'
+			    +statement.uri+'>,\nso you cannot classify this transaction.)')
+		};
             };
-             var store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
-            if (store == undefined) {
-                complain('(There is no annotation document for this statement\n<'
-                        +statement.uri+'>,\nso you cannot classify this transaction.)')
-            };
-            
             var nav = myDocument.createElement('div');
             nav.setAttribute('style', 'float:right');
             div.appendChild(nav);

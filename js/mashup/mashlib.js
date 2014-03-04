@@ -131,7 +131,7 @@ tabulator.log.dumpHTML = function(){
     // see the script rdf/create-lib (this script creates one file -rdflib.js that concatenates all the js files)
 
 // ###### Expanding js/rdf/dist/rdflib.js ##############
-$rdf = function() {
+(function(root, undef) {
 /**
 * Utility functions for $rdf and the $rdf object itself
  */
@@ -1991,7 +1991,7 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
                     frame = frame.parent;
                     dom = frame.element;
                 }
-                var candidate = dom.childNodes[frame.lastChild];
+                var candidate = dom.childNodes && dom.childNodes[frame.lastChild];
                 if (!candidate || ! dig){
                     frame.terminateFrame();
                     if ( ! (frame = frame.parent)){
@@ -8013,16 +8013,6 @@ $rdf.Fetcher = function(store, timeout, async) {
             } // switch
         }; }
 
-        // Get privileges for cross-domain XHR
-        if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
-            try {
-                $rdf.Util.enablePrivilege("UniversalXPConnect UniversalBrowserRead")
-            } catch (e) {
-                //(!CORS?)
-                //this.failFetch(xhr, "Failed to get (UniversalXPConnect UniversalBrowserRead) privilege to read different web site: " + docuri);
-                //return xhr;
-            }
-        }
 
         // Map the URI to a localhost proxy if we are running on localhost
         // This is used for working offline, e.g. on planes.
@@ -8079,16 +8069,10 @@ $rdf.Fetcher = function(store, timeout, async) {
             try {
                 xhr.channel.notificationCallbacks = {
                     getInterface: function(iid) {
-                        if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
-                            $rdf.Util.enablePrivilege("UniversalXPConnect")
-                        }
                         if (iid.equals(Components.interfaces.nsIChannelEventSink)) {
                             return {
 
                                 onChannelRedirect: function(oldC, newC, flags) {
-                                    if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
-                                        $rdf.Util.enablePrivilege("UniversalXPConnect")
-                                    }
                                     if (xhr.aborted) return;
                                     var kb = sf.store;
                                     var newURI = newC.URI.spec;
@@ -8158,9 +8142,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                                 
                                 // See https://developer.mozilla.org/en/XPCOM_Interface_Reference/nsIChannelEventSink
                                 asyncOnChannelRedirect: function(oldC, newC, flags, callback) {
-                                    if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
-                                        $rdf.Util.enablePrivilege("UniversalXPConnect")
-                                    }
                                     if (xhr.aborted) return;
                                     var kb = sf.store;
                                     var newURI = newC.URI.spec;
@@ -8278,16 +8259,6 @@ $rdf.Fetcher = function(store, timeout, async) {
             this.addStatus(xhr.req, "HTTP Request sent (using jQuery)");
         }
         
-
-        // Drop privs
-        if (!(typeof tabulator != 'undefined' && tabulator.isExtension)) {
-            try {
-                $rdf.Util.disablePrivilege("UniversalXPConnect UniversalBrowserRead")
-            } catch (e) {
-                throw ("Can't drop privilege: " + e)
-            }
-        }
-
         return xhr
     }
 
@@ -8393,7 +8364,25 @@ $rdf.parse = function parse(str, kb, base, contentType) {
 
 
 // ends
-return $rdf;}()
+
+// Handle node, amd, and global systems
+if (typeof exports !== 'undefined') {
+    if (typeof module !== 'undefined' && module.exports) {
+        exports = module.exports = $rdf;
+    }
+    exports.$rdf = $rdf;
+}
+else {
+    if (typeof define === 'function' && define.amd) {
+        define('rdflib', function() {
+            return $rdf;
+        });
+    }
+
+    // Leak a global regardless of module system
+    root['$rdf'] = $rdf;
+}
+})(this);
 
 // ###### Finished expanding js/rdf/dist/rdflib.js ##############
     tabulator.rdf = $rdf;
@@ -11233,17 +11222,24 @@ tabulator.panes.register( {
             setPaneStyle();
             
             var account = kb.any(subject, Q('toAccount'));
+	    var store = null;
+	    
+            if (account == undefined) {
+                complain('(Error: There is no bank account known for this transaction <'
+                        +subject.uri+'>,\n -- every transaction needs one.)')
+            };
+	    
             var statement = kb.any(subject, Q('accordingTo'));
             if (statement == undefined) {
                 complain('(Error: There is no back link to the original data source foir this transaction <'
                         +subject.uri+'>,\nso I can\'t tell how to annotate it.)')
+            } else {
+		store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
+		if (store == undefined) {
+		    complain('(There is no annotation document for this statement\n<'
+			    +statement.uri+'>,\nso you cannot classify this transaction.)')
+		};
             };
-             var store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
-            if (store == undefined) {
-                complain('(There is no annotation document for this statement\n<'
-                        +statement.uri+'>,\nso you cannot classify this transaction.)')
-            };
-            
             var nav = myDocument.createElement('div');
             nav.setAttribute('style', 'float:right');
             div.appendChild(nav);

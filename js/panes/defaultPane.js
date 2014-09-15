@@ -60,7 +60,55 @@ tabulator.panes.defaultPane = {
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    
+    },
+    
+    sync: function(subject, myDocument, div) { // Untested  and not te best way to do it
+    // This code was cut out of outline.js
+    //    best way is to leave TRs there and add/delete any necessray extras 
+
+        tabulator.log.info('Re-expand: '+div)
+        // try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
+        // catch(e){}   // kludge... Todo: remove this (seeAlso UserInput::clearInputAndSave)
+        var row, s
+        var expandedNodes = {}
+        var parent = div
+        for (row = parent.firstChild; row; row = row.nextSibling) { // Note which p,o pairs are exppanded
+            if (row.childNodes[1]
+                && row.childNodes[1].firstChild.nodeName == 'TABLE') {
+                s = row.AJAR_statement
+                if (!expandedNodes[s.predicate.toString()]) {
+                    expandedNodes[s.predicate.toString()] = {}
+                }
+                expandedNodes[s.predicate.toString()][s.object.toString()] =
+                    row.childNodes[1].childNodes[1]
+            }
+        }
+
+        var table = propertyTable(subject, undefined, pane)  // Re-build table
+
+        for (row = table.firstChild; row; row = row.nextSibling) {
+            s = row.AJAR_statement
+            if (s) {
+                if (expandedNodes[s.predicate.toString()]) {
+                    var node =
+                        expandedNodes[s.predicate.toString()][s.object.toString()]
+                    if (node) {
+                        row.childNodes[1].replaceChild(node,
+                                        row.childNodes[1].firstChild)
+                    }
+                }
+            }
+        }
+
+        // do some other stuff here
+
+
+
+
+    
     }
+    
+    
 };
 
 tabulator.panes.register(tabulator.panes.defaultPane, true);

@@ -445,6 +445,12 @@ img.hideTillHover:hover  {
 .hideTillHover:hover a {
  visibility:visible;
 }
+.hoverControl .hoverControlHide{
+  visibility:hidden;
+}
+.hoverControl:hover .hoverControlHide {
+ visibility:visible;
+}
 
 
 /* Pane icons: */

@@ -11,6 +11,7 @@ tabulator.ns.foaf = $rdf.Namespace('http://xmlns.com/foaf/0.1/');
 tabulator.ns.http = $rdf.Namespace('http://www.w3.org/2007/ont/http#');
 tabulator.ns.httph = $rdf.Namespace('http://www.w3.org/2007/ont/httph#');
 tabulator.ns.ical = $rdf.Namespace('http://www.w3.org/2002/12/cal/icaltzd#');
+tabulator.ns.ldp = $rdf.Namespace('http://www.w3.org/ns/ldp#');
 tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = $rdf.Namespace('http://www.w3.org/2007/ont/link#');
 tabulator.ns.mo = $rdf.Namespace('http://purl.org/ontology/mo/');
 tabulator.ns.owl = $rdf.Namespace('http://www.w3.org/2002/07/owl#');

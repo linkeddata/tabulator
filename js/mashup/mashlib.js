@@ -1858,7 +1858,12 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
             var dom = frame.element;
             var attrs = dom.attributes;
             if (dom.nodeType === RDFParser.nodeType.TEXT || dom.nodeType === RDFParser.nodeType.CDATA_SECTION){
-                  //we have a literal
+                //we have a literal
+                if(frame.parent.nodeType == frame.NODE) {
+                    //must have had attributes, store as rdf:value
+                    frame.addArc(RDFParser.ns.RDF + 'value');
+                    frame = this.buildFrame(frame);
+                }
                 frame.addLiteral(dom.nodeValue);
             }
             else if (elementURI(dom)!== RDFParser.ns.RDF + "RDF"){
@@ -5452,7 +5457,7 @@ $rdf.sparqlUpdate = function() {
         bnodes.sort(); // in place sort - result may have duplicates
         bnodes2 = [];
         for (var j=0; j<bnodes.length; j++)
-            if (j==0 || !bnodes[j].sameTermAs(bnodes[j-1])) bnodes2.push(bnodes[j]);
+            if (j==0 || !bnodes[j].sameTerm(bnodes[j-1])) bnodes2.push(bnodes[j]);
         return bnodes2;
     }
 
@@ -7533,6 +7538,9 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.addStatus(xhr.req, status)
         kb.add(xhr.uri, ns.link('error'), status)
         this.requested[$rdf.uri.docpart(xhr.uri.uri)] = false
+        if (xhr.userCallback) {
+            xhr.userCallback(false, "Fetch of <" + xhr.uri.uri + "> failed: "+status)
+        };
         this.fireCallbacks('fail', [xhr.requestedURI, status])
         xhr.abort()
         return xhr
@@ -7556,12 +7564,15 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.addStatus(xhr.req, 'Done.')
         // $rdf.log.info("Done with parse, firing 'done' callbacks for " + xhr.uri)
         this.requested[xhr.uri.uri] = 'done'; //Kenny
+        if (xhr.userCallback) {
+            xhr.userCallback(true);
+        };
         this.fireCallbacks('done', args)
     }
 
     this.store.add(this.appNode, ns.rdfs('label'), this.store.literal('This Session'), this.appNode);
 
-    ['http', 'https', 'file', 'chrome'].map(this.addProtocol); // ftp?
+    ['http', 'https', 'file', 'chrome'].map(this.addProtocol); // ftp? mailto:?
     [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler, $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler, $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler, ].map(this.addHandler)
 
 
@@ -7574,7 +7585,7 @@ $rdf.Fetcher = function(store, timeout, async) {
      */
     this.nowKnownAs = function(was, now) {
         if (this.lookedUp[was.uri]) {
-            if (!this.lookedUp[now.uri]) this.lookUpThing(now, was)
+            if (!this.lookedUp[now.uri]) this.lookUpThing(now, was) //  @@@@  Transfer userCallback
         } else if (this.lookedUp[now.uri]) {
             if (!this.lookedUp[was.uri]) this.lookUpThing(was, now)
         }
@@ -7592,20 +7603,40 @@ $rdf.Fetcher = function(store, timeout, async) {
 //  term:       canonical term for the thing whose URI is to be dereferenced
 //  rterm:      the resource which refered to this (for tracking bad links)
 //  force:      Load the data even if loaded before
-//  callback:   is called as callback(uri, success, errorbody)
+//  oneDone:   is called as callback(ok, errorbody) for each one
+//  allDone:   is called as callback(ok, errorbody) for all of them
+// Returns      the number of things looked up
+//
 
-    this.lookUpThing = function(term, rterm, force, callback) {
+
+    this.lookUpThing = function(term, rterm, force, oneDone, allDone) {
         var uris = kb.uris(term) // Get all URIs
-        var failed = false;
-        var outstanding;
-        if (typeof uris != 'undefined') {
+        var success = true;
+        var errors = '';
+        var outstanding = {};
         
-            if (callback) {
-                // @@@@@@@ not implemented
-            }
+        if (typeof uris !== 'undefined') {
             for (var i = 0; i < uris.length; i++) {
-                this.lookedUp[uris[i]] = true;
-                this.requestURI($rdf.uri.docpart(uris[i]), rterm, force)
+                var u = uris[i];
+                outstanding[u] = true;
+                this.lookedUp[u] = true;
+                var sf = this;
+
+                var requestOne = function requestOne(u1){
+                    sf.requestURI($rdf.uri.docpart(u1), rterm, force, function(ok, body){
+                        if (ok) {
+                            if (oneDone) oneDone(true, u1);
+                        } else {
+                            if (oneDone) oneDone(false, body);
+                            success = false;
+                            errors += body + '\n';
+                        };
+                        delete outstanding[u];
+                        for (x in outstanding) return;
+                        if (allDone) allDone(success, errors);
+                    });
+                };
+                requestOne(u);
             }
         }
         return uris.length
@@ -7617,9 +7648,10 @@ $rdf.Fetcher = function(store, timeout, async) {
 ** Changed 2013-08-20:  Added (ok, body) params to callback
 **
 **/
-    this.nowOrWhenFetched = function(uri, referringTerm, callback) {
+    this.nowOrWhenFetched = function(uri, referringTerm, userCallback) {
         var sta = this.getState(uri);
-        if (sta == 'fetched') return callback(true);
+        if (sta == 'fetched') return userCallback(true);
+        /*
         this.addCallback('done', function(uri2) {
             if (uri2 == uri ||
                 ( $rdf.Fetcher.crossSiteProxy(uri) == uri2  )) callback(true);
@@ -7631,8 +7663,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                     false, "Asynch fetch fail: " + status + " for " + uri);
             return (uri2 != uri); // Call me again?
         });
+        */
         if (sta == 'unrequested') this.requestURI(
-        uri, referringTerm, false);
+            uri, referringTerm, false, userCallback);
     }
 
 
@@ -7668,14 +7701,15 @@ $rdf.Fetcher = function(store, timeout, async) {
      **	    term:  term for the thing whose URI is to be dereferenced
      **      rterm:  the resource which refered to this (for tracking bad links)
      **      force:  Load the data even if loaded before
+     **      userCallback:  Called with (true) or (false, errorbody) after load is done or failed
      ** Return value:
      **	    The xhr object for the HTTP access
      **      null if the protocol is not a look-up protocol,
      **              or URI has already been loaded
      */
-    this.requestURI = function(docuri, rterm, force) { //sources_request_new
+    this.requestURI = function(docuri, rterm, force, userCallback) { //sources_request_new
         if (docuri.indexOf('#') >= 0) { // hash
-            throw ("requestURI should not be called with fragid: " + uri)
+            throw ("requestURI should not be called with fragid: " + docuri);
         }
 
         var pcol = $rdf.uri.protocol(docuri);
@@ -7683,12 +7717,8 @@ $rdf.Fetcher = function(store, timeout, async) {
         var force = !! force
         var kb = this.store
         var args = arguments
-        //	var term = kb.sym(docuri)
         var docterm = kb.sym(docuri)
-        // dump("requestURI: dereferencing " + docuri)
-        //this.fireCallbacks('request',args)
         if (!force && typeof(this.requested[docuri]) != "undefined") {
-            // dump("We already have requested " + docuri + ". Skipping.\n")
             return null
         }
 
@@ -7776,7 +7806,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     //sf.fireCallbacks('done', args) // Are these args right? @@@
                     sf.requested[xhr.uri.uri] = 'redirected';
 
-                    var xhr2 = sf.requestURI(newURI, xhr.uri);
+                    var xhr2 = sf.requestURI(newURI, xhr.uri, force, userCallback);
                     xhr2.proxyUsed = true; //only try the proxy once
 
                     if (xhr2 && xhr2.req) {
@@ -7817,6 +7847,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 sf.fireCallbacks('headers', [{uri: docuri, headers: xhr.headers}]);
 
                 if (xhr.status >= 400) { // For extra dignostics, keep the reply
+                //  @@@ 401 should cause  a retry with credential son 
+                // @@@ cache the credentials flag by host ????
                     if (xhr.responseText.length > 10) { 
                         kb.add(response, ns.http('content'), kb.literal(xhr.responseText), response);
                         // dump("HTTP >= 400 responseText:\n"+xhr.responseText+"\n"); // @@@@
@@ -7888,7 +7920,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 for (var x = 0; x < sf.handlers.length; x++) {
                     if (xhr.headers['content-type'] && xhr.headers['content-type'].match(sf.handlers[x].pattern)) {
-                        handler = new sf.handlers[x]()
+                        handler = new sf.handlers[x]();
                         requestHandlers.append(sf.handlers[x].term) // FYI
                         break
                     }
@@ -7973,6 +8005,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                             xhr.aborted = true
 
                             sf.addStatus(oldreq, 'done') // why
+                            if (xhr.userCallback) {
+                                xhr.userCallback(true);
+                            };
                             sf.fireCallbacks('done', args) // Are these args right? @@@
                             sf.requested[xhr.uri.uri] = 'redirected';
 
@@ -8037,6 +8072,10 @@ $rdf.Fetcher = function(store, timeout, async) {
                 url: uri2,
                 accepts: {'*': 'text/turtle,text/n3,application/rdf+xml'},
                 processData: false,
+                xhrFields: {
+                    withCredentials: true
+                },
+                timeout: sf.timeout,
                 error: function(xhr, s, e) {
                     if (s == 'timeout')
                         sf.failFetch(xhr, "requestTimeout");
@@ -8051,6 +8090,11 @@ $rdf.Fetcher = function(store, timeout, async) {
             var xhr = $rdf.Util.XMLHTTPFactory();
             xhr.onerror = onerrorFactory(xhr);
             xhr.onreadystatechange = onreadystatechangeFactory(xhr);
+            xhr.timeout = sf.timeout;
+            xhr.withCredentials = true;
+            xhr.ontimeout = function () {
+                sf.failFetch(xhr, "requestTimeout");
+            }
             try {
                 xhr.open('GET', uri2, this.async);
             } catch (er) {
@@ -8058,6 +8102,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             }
         }
         xhr.req = req;
+        xhr.userCallback = userCallback;
         xhr.uri = docterm;
         xhr.requestedURI = uri2;
         
@@ -8190,7 +8235,12 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     xhr.abort()
                                     xhr.aborted = true
 
+
                                     sf.addStatus(oldreq, 'done') // why
+
+                                    if (xhr.userCallback) {
+                                        xhr.userCallback(true);
+                                    };
                                     sf.fireCallbacks('done', args) // Are these args right? @@@
                                     sf.requested[xhr.uri.uri] = 'redirected';
 
@@ -8218,26 +8268,27 @@ $rdf.Fetcher = function(store, timeout, async) {
                         "@@ Couldn't set callback for redirects: " + err);
             }
 
-            try {
-                var acceptstring = ""
-                for (var type in this.mediatypes) {
-                    var attrstring = ""
-                    if (acceptstring != "") {
-                        acceptstring += ", "
-                    }
-                    acceptstring += type
-                    for (var attr in this.mediatypes[type]) {
-                        acceptstring += ';' + attr + '=' + this.mediatypes[type][attr]
-                    }
-                }
-                xhr.setRequestHeader('Accept', acceptstring)
-                // $rdf.log.info('Accept: ' + acceptstring)
+        }
 
-                // See http://dig.csail.mit.edu/issues/tabulator/issue65
-                //if (requester) { xhr.setRequestHeader('Referer',requester) }
-            } catch (err) {
-                throw ("Can't set Accept header: " + err)
+        try {
+            var acceptstring = ""
+            for (var type in this.mediatypes) {
+                var attrstring = ""
+                if (acceptstring != "") {
+                    acceptstring += ", "
+                }
+                acceptstring += type
+                for (var attr in this.mediatypes[type]) {
+                    acceptstring += ';' + attr + '=' + this.mediatypes[type][attr]
+                }
             }
+            xhr.setRequestHeader('Accept', acceptstring)
+            // $rdf.log.info('Accept: ' + acceptstring)
+
+            // See http://dig.csail.mit.edu/issues/tabulator/issue65
+            //if (requester) { xhr.setRequestHeader('Referer',requester) }
+        } catch (err) {
+            throw ("Can't set Accept header: " + err)
         }
 
         // Fire
@@ -8340,7 +8391,7 @@ $rdf.parse = function parse(str, kb, base, contentType) {
         */
         if (contentType == 'text/n3' || contentType == 'text/turtle') {
             var p = $rdf.N3Parser(kb, kb, base, base, null, null, "", null)
-            p.loadBuf(str);
+            p.loadBuf(str)
             return;
         }
 
@@ -8374,7 +8425,7 @@ if (typeof exports !== 'undefined') {
 }
 else {
     if (typeof define === 'function' && define.amd) {
-        define('rdflib', function() {
+        define([], function() {
             return $rdf;
         });
     }
@@ -8385,7 +8436,9 @@ else {
 })(this);
 
 // ###### Finished expanding js/rdf/dist/rdflib.js ##############
-    tabulator.rdf = $rdf;
+    
+    tabulator.rdf = this['$rdf'];
+    $rdf = this['$rdf'];
 
     //Load the icons namespace onto tabulator.
 // ###### Expanding js/init/icons.js ##############
@@ -8529,6 +8582,7 @@ tabulator.ns.foaf = $rdf.Namespace('http://xmlns.com/foaf/0.1/');
 tabulator.ns.http = $rdf.Namespace('http://www.w3.org/2007/ont/http#');
 tabulator.ns.httph = $rdf.Namespace('http://www.w3.org/2007/ont/httph#');
 tabulator.ns.ical = $rdf.Namespace('http://www.w3.org/2002/12/cal/icaltzd#');
+tabulator.ns.ldp = $rdf.Namespace('http://www.w3.org/ns/ldp#');
 tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = $rdf.Namespace('http://www.w3.org/2007/ont/link#');
 tabulator.ns.mo = $rdf.Namespace('http://purl.org/ontology/mo/');
 tabulator.ns.owl = $rdf.Namespace('http://www.w3.org/2002/07/owl#');
@@ -8622,10 +8676,20 @@ tabulator.panes.utils.extractLogURI = function(fullURI){
     return fullURI.substring(logPos+8, rulPos); 			
 }
 
+// @@@ This needs to be changed to local time
 tabulator.panes.utils.shortDate = function(str) {
-    var now = $rdf.term(new Date()).value;
-    if (str.slice(0,10) == now.slice(0,10)) return str.slice(11,16);
-    return str.slice(0,10);
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
+    if (!str) return '???';
+    try {
+        var now = new Date();
+        var then = new Date(str);
+        var nowZ = $rdf.term(now).value;
+        var n = now.getTimezoneOffset();
+        if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
+        return str.slice(0,10);
+    } catch(e) {
+        return 'shortdate:' + e
+    }
 }
 
 tabulator.panes.utils.newThing = function(kb, store) {
@@ -8907,7 +8971,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     var property = kb.any(form, ui('property'));
     if (!property) { box.appendChild(dom.createTextNode("Error: No property given for text field: "+form)); return box};
 
-    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property, form));
     var uri = tabulator.panes.utils.bottomURI(form); 
     var params = tabulator.panes.fieldParams[uri];
     if (params == undefined) params = {}; // non-bottom field types can do this
@@ -8940,14 +9004,16 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     }, true);
     field.addEventListener("change", function(e) { // i.e. lose focus with changed data
         if (params.pattern && !field.value.match(params.pattern)) return;
+        field.disabled = true; // See if this stops getting two dates from fumbling e.g the chrome datepicker.
         field.setAttribute('style', 'color: gray;'); // pending 
-        var ds = kb.statementsMatching(subject, property);
+        var ds = kb.statementsMatching(subject, property); // remove any multiple values
         var newObj =  params.uriPrefix ? kb.sym(params.uriPrefix + field.value.replace(/ /g, ''))
                     : kb.literal(field.value, params.dt);
         var is = $rdf.st(subject, property,
                     params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
         tabulator.sparql.update(ds, is, function(uri, ok, body) {
             if (ok) {
+                field.disabled = true;
                 field.setAttribute('style', 'color: black;');
             } else {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, body));
@@ -8970,7 +9036,7 @@ tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] = function(
     var property = kb.any(form, ui('property'));
     if (!property) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No property to text field: "+form);
-    container.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    container.appendChild(tabulator.panes.utils.fieldLabel(dom, property, form));
     store = tabulator.panes.utils.fieldStore(subject, property, store);
     var box = tabulator.panes.utils.makeDescription(dom, kb, subject, property, store, callback);
     // box.appendChild(dom.createTextNode('<-@@ subj:'+subject+', prop:'+property));
@@ -9060,12 +9126,13 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     box.appendChild(rhs);
     var property = kb.any(form, ui('property'));
     if (!property) return tabulator.panes.utils.errorMessageBlock(dom, "No property for Choice: "+form);
-    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property, form));
     var from = kb.any(form, ui('from'));
     if (!from) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No 'from' for Choice: "+form);
     var subForm = kb.any(form, ui('use'));  // Optional
     var possible = [];
+    var opts = {'multiple': multiple, 'nullLabel': np, 'disambiguate': false };
     possible = kb.each(undefined, ns.rdf('type'), from);
     for (x in kb.findMembersNT(from)) {
         possible.push(kb.fromNT(x));
@@ -9075,14 +9142,22 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     if (from.sameTerm(ns.rdfs('Class'))) {
         for (var p in tabulator.panes.utils.allClassURIs()) possible.push(kb.sym(p));     
         // tabulator.log.debug("%%% Choice field: possible.length 2 = "+possible.length)
+    } else if (from.sameTerm(ns.rdf('Property'))) {
+        //if (tabulator.properties == undefined) 
+        tabulator.panes.utils.propertyTriage();
+        for (var p in tabulator.properties.op) possible.push(kb.fromNT(p));     
+        for (var p in tabulator.properties.dp) possible.push(kb.fromNT(p));
+        opts.disambiguate = true;     // This is a big class, and the labels won't be enough.
     } else if (from.sameTerm(ns.owl('ObjectProperty'))) {
         //if (tabulator.properties == undefined) 
         tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.op) possible.push(kb.fromNT(p));     
+        opts.disambiguate = true;     
     } else if (from.sameTerm(ns.owl('DatatypeProperty'))) {
         //if (tabulator.properties == undefined)
         tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.dp) possible.push(kb.fromNT(p));     
+        opts.disambiguate = true;     
     }
     var object = kb.any(subject, property);
     function addSubForm(ok, body) {
@@ -9094,7 +9169,6 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     // box.appendChild(dom.createTextNode('Choice: subForm='+subForm))
     var possible2 = tabulator.panes.utils.sortByLabel(possible);
     var np = "--"+ tabulator.Util.label(property)+"-?";
-    var opts = {'multiple': multiple, 'nullLabel': np};
     if (kb.any(form, ui('canMintNew'))) {
         opts['mint'] = "* New *"; // @@ could be better
         opts['subForm'] = subForm;
@@ -9236,11 +9310,13 @@ tabulator.panes.utils.propertyTriage = function() {
 }
 
 
-tabulator.panes.utils.fieldLabel = function(dom, property) {
+tabulator.panes.utils.fieldLabel = function(dom, property, form) {
+    var lab = tabulator.kb.any(form, tabulator.ns.ui('label'));
+    if (!lab) lab = tabulator.Util.label(property, true); // Init capital
     if (property == undefined) return dom.createTextNode('@@Internal error: undefined property');
     var anchor = dom.createElement('a');
     if (property.uri) anchor.setAttribute('href', property.uri);
-    anchor.textContent = tabulator.Util.label(property, true);
+    anchor.textContent = lab;
     return anchor
 }
 
@@ -9673,7 +9749,11 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
     for (var uri in uris) {
         var c = kb.sym(uri)
         var option = dom.createElement('option');
-        option.appendChild(dom.createTextNode(tabulator.Util.label(c, true))); // Init. cap.
+        if (options.disambiguate) {
+            option.appendChild(dom.createTextNode(tabulator.Util.labelWithOntology(c, true))); // Init. cap
+        } else {
+            option.appendChild(dom.createTextNode(tabulator.Util.label(c, true))); // Init.
+        }
         var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
         if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
         option.AJAR_uri = uri;
@@ -10061,15 +10141,81 @@ web ID</a>?<br/>\
     return box; 
 };
 
+//  Check user and set 'me' if found
+
+tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
+    return tabulator.panes.utils.checkUser(dom, doc, function(uri) {
+        var me_uri = tabulator.preferences.get('me');
+        if (uri == me_uri) return null;
+        tabulator.preferences.set('me', uri);
+        var message = "(Logged in as " + uri + " by authentication.)";
+        try {  // Ugh
+            tabulator.log.alert(message);
+        } catch(e) {
+            try {
+                alert(message);
+            } catch (e) {
+            };
+        }
+    });
+};
+
+// For a user authenticated using webid (or possibly other methods) it
+// is not immedaietly available to the client which person(a) it is.
+// One way is for the server to send the information back as a User: header.
+// This function looks for a linked 
+
+tabulator.panes.utils.checkUser = function(dom, doc, setIt) {
+    var userMirror = tabulator.kb.any(doc, tabulator.ns.link('userMirror'));
+    if (!userMirror) userMirror = doc;
+    var kb = tabulator.kb
+    kb.fetcher.nowOrWhenFetched(userMirror.uri, undefined, function(ok, body) {
+        var done = false;
+        if (ok) {
+            kb.each(undefined, tabulator.ns.link("requestedURI"), $rdf.uri.docpart(userMirror.uri))
+            .map(function(request){
+                var response = kb.any(request, tabulator.ns.link("response"));
+                if (request !== undefined) {
+                    kb.each(response, tabulator.ns.httph("user")).map(function(userHeader){
+                        setIt(userHeader.value.trim());
+                        done = true;
+                    });
+                }
+            });
+        } else {
+            var message = "checkUser: Unable to load " + userMirror.uri;
+            try {  // Ugh
+                tabulator.log.alert(message);
+            } catch(e) {
+                try {
+                    alert(message);
+                } catch (e) {
+                };
+            }
+        }
+    });
+};
+
+//              Login status box
+
 tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
+    var logoutLabel = 'Web ID Logout';
+    if (me) {
+        var nick = tabulator.kb.any(me, tabulator.ns.foaf('nick'));
+        if (nick) {
+            logoutLabel = 'Logout ' + nick.value;
+        }
+    };
 
     // If the user has no WebID that we know of
     var box = myDocument.createElement('div');
-    var but = myDocument.createElement('input');
+    var signOutButton = myDocument.createElement('input');  
     var setIt = function(newid) {
         tabulator.preferences.set('me',newid);
+        me_uri = newid;
+        me = me_uri && tabulator.kb.sym(me_uri)
         var message = 'Your Web ID is now <'+me_uri+'> .';
         try { 
             tabulator.log.alert(message);
@@ -10083,12 +10229,14 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 
         // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
         box.removeChild(sisu);
-        box.appendChild(but); 
+        box.appendChild(signOutButton); 
         if (listener) listener(newid);
     };
     var zapIt = function() {
         tabulator.preferences.set('me','');
         var message = 'Your Web ID was <'+me_uri+'>. It has been forgotten.';
+        me_uri = '';
+        me = null
         try { 
             tabulator.log.alert(message);
         } catch(e) {
@@ -10098,7 +10246,7 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
             };
         }
         // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(but);
+        box.removeChild(signOutButton);
         sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
         box.appendChild(sisu); 
         if (listener) listener(undefined);
@@ -10107,14 +10255,14 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
 
     if (me) {
-        box.appendChild(but);
+        box.appendChild(signOutButton);
     } else {
         box.appendChild(sisu);
     };
-    but.className = 'WebIDCancelButton';
-    but.setAttribute('type', 'button');
-    but.setAttribute('value', 'Web ID Logout');
-    but.addEventListener('click', zapIt, false);
+    signOutButton.className = 'WebIDCancelButton';
+    signOutButton.setAttribute('type', 'button');
+    signOutButton.setAttribute('value', logoutLabel);
+    signOutButton.addEventListener('click', zapIt, false);
     return box;
 }
 
@@ -10207,8 +10355,17 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
     var displayOptions = function(id, preferencesFile){
     
+        var status = ''; 
+
+        // A workspace specifically defined in the private preferences file:
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
             undefined, preferencesFile).map(function(st){return st.object;});
+            
+        // A workspace in a storage in the public profile:
+        var storages = kb.each(id, tabulator.ns.space('storage'));  // @@ No provenance requirement at the moment
+        storages.map(function(s){
+            w = w.concat(kb.each(s, tabulator.ns.ldp('contains')));
+        });
 
         // if (pending !== undefined) pending.parentNode.removeChild(pending);
         if (w.length == 1) {
@@ -10217,7 +10374,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             callbackWS(w[0]); 
 
         } else if (w.length == 0 ) {
-            say("You don't seem to have any workspaces. ")
+            say("You don't seem to have any workspaces. You have "+storages.length +" storages.");
             say("@@ code me: create new workspace.")
         } else {
         
@@ -10389,10 +10546,275 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
 to change its state according to an ontology, comment on it, etc.
 **
 **
-** As an experiment, I am using in places single quotes strings like 'this'
+** I am using in places single quotes strings like 'this'
 ** where internationalizatio ("i18n") is not a problem, and double quoted
-** like "this" where th string is seen by the user and so I18n is an issue.
+** like "this" where the string is seen by the user and so I18n is an issue.
 */
+
+
+tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
+    var kb = tabulator.kb;
+    var ns = tabulator.ns;
+    var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+    var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+    var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+    
+    var newestFirst = true;
+    
+    var div = dom.createElement("div")
+    var messageTable; // Shared by initial build and addMessageFromBindings
+
+    var me_uri = tabulator.preferences.get('me');
+    var me = me_uri? kb.sym(me_uri) : null;
+
+    var updater = new tabulator.rdf.sparqlUpdate(kb);
+
+    var anchor = function(text, term) {
+        var a = dom.createElement('a');
+        a.setAttribute('href', term.uri);
+        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+        a.textContent = text;
+        a.setAttribute('style', 'color: #3B5998; text-decoration: none; '); // font-weight: bold;
+        return a;
+    };
+
+    
+    //       Form for a new message
+    //
+    var newMessageForm = function() {
+        var form = dom.createElement('tr');
+        var lhs = dom.createElement('td');
+        var middle = dom.createElement('td');
+        var rhs = dom.createElement('td');
+        form.appendChild(lhs);
+        form.appendChild(middle);
+        form.appendChild(rhs);
+        form.AJAR_date = "9999-01-01T00:00:00Z"; // ISO format for field sort
+        
+        var sendMessage = function() {
+            // titlefield.setAttribute('class','pendingedit');
+            // titlefield.disabled = true;
+            field.setAttribute('class','pendingedit');
+            field.disabled = true;
+            sts = [];
+            
+            var now = new Date();
+            var timestamp = ''+ now.getTime();
+            var dateStamp = $rdf.term(now);
+            // http://www.w3schools.com/jsref/jsref_obj_date.asp
+            var message = kb.sym(messageStore.uri + '#' + 'Msg'+timestamp);
+            sts.push(new $rdf.Statement(subject, ns.wf('message'), message, messageStore));
+            // sts.push(new $rdf.Statement(message, ns.dc('title'), kb.literal(titlefield.value), messageStore))
+            sts.push(new $rdf.Statement(message, ns.sioc('content'), kb.literal(field.value), messageStore))
+            sts.push(new $rdf.Statement(message, DCT('created'), dateStamp, messageStore));
+            if (me) sts.push(new $rdf.Statement(message, ns.foaf('maker'), me, messageStore));
+
+            var sendComplete = function(uri, success, body) {
+                if (!success) {
+                    form.appendChild(tabulator.panes.utils.errorMessageBlock(
+                            dom, "Error writing message: "+ body));
+                } else {
+                    var bindings = { '?msg': message,
+                                    '?content': kb.literal(field.value),
+                                    '?date':  dateStamp,
+                                    '?creator': me};
+                    addMessageFromBindings(bindings);
+                    
+                    field.value = ''; // clear from out for reuse
+                    field.setAttribute('class','');
+                    field.disabled = false;
+                }
+            }
+            updater.update([], sts, sendComplete);
+        }
+        // form.addEventListener('submit', sendMessage, false)
+        // form.setAttribute('onsubmit', "function xx(){return false;}");
+        form.appendChild(dom.createElement('br'));
+
+        var field = dom.createElement('textarea');
+        middle.appendChild(field);
+        field.rows = 3;
+        // field.cols = 40;
+        field.setAttribute('style', 'width: 90%; font-size:100%; \
+                background-color: white; border: 0.07em solid gray; padding: 0.1em; margin: 0.1em 1em 0.1em 1em')
+
+        submit = dom.createElement('button');
+        //submit.disabled = true; // until the filled has been modified
+        submit.textContent = "Comment"; //@@ I18n
+        submit.setAttribute('style', 'float: right;');
+        submit.addEventListener('click', sendMessage, false);
+        rhs.appendChild(submit);
+
+        return form;
+    };
+    
+    var nick = function(person) {
+        var s = tabulator.kb.any(person, tabulator.ns.foaf('nick'));
+        if (s) return ''+s.value
+        return ''+tabulator.Util.label(person);
+    }
+
+    var syncMessages = function(about, messageTable) {
+        var displayed = {};
+        for (var ele = messageTable.firstChild; ele ;ele = ele.nextSibling) {
+            if (ele.AJAR_subject) {
+                displayed[ele.AJAR_subject.uri] = true;
+            };
+        }
+        var messages = kb.each(about, ns.wf('message'));
+        var stored = {};
+        messages.map(function(m){
+            stored[m.uri] = true;
+            if (!displayed[m.uri]) {
+                addMessage(m);
+            };
+        });
+
+        for (var ele = messageTable.firstChild; ele;) {
+            var ele2 = ele.nextSibling;
+            if (ele.AJAR_subject && !stored[ele.AJAR_subject.uri]) {
+                messageTable.removeChild(ele);
+            }
+            ele = ele2;
+        }
+
+
+    }
+
+    var addMessageFromBindings = function(bindings) {
+        return addMessage(bindings['?msg']);            
+    }
+    
+    var deleteMessage = function(message) {
+        deletions = kb.statementsMatching(message).concat(
+                kb.statementsMatching(undefined, undefined, message));
+        updater.update(deletions, [], function(uri, ok, body){
+            if (!ok) {
+                say("Cant delete messages:" + body);
+            } else {
+                syncMessages(subject, messageTable);
+            };
+        });
+    };
+    
+    var addMessage = function(message) {
+        var tr = dom.createElement('tr');
+        var date = kb.any(message,  DCT('created'));
+        var dateString = date.value;
+        tr.AJAR_date = dateString;
+        tr.AJAR_subject = message;
+
+        for (var ele = messageTable.firstChild;;ele = ele.nextSibling) {
+            if (!ele)  {messageTable.appendChild(tr); break;};
+            if (((dateString > ele.AJAR_date) && newestFirst) ||
+                        ((dateString < ele.AJAR_date) && !newestFirst)) {
+                messageTable.insertBefore(tr, ele);
+                break;
+            }
+        }
+        
+        var  td1 = dom.createElement('td');
+        tr.appendChild(td1);
+        
+        var creator = kb.any(message, ns.foaf('maker'));
+        var nickAnchor = td1.appendChild(anchor(nick(creator), creator));
+        tabulator.sf.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
+            nickAnchor.textContent = nick(creator);
+        });
+        td1.appendChild(dom.createElement('br'));
+        td1.appendChild(anchor(tabulator.panes.utils.shortDate(dateString), message));
+        
+        var  td2 = dom.createElement('td');
+        tr.appendChild(td2);
+        var pre = dom.createElement('p')            
+        pre.setAttribute('style', 'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  white-space: pre-wrap;')
+        td2.appendChild(pre);
+        pre.textContent = kb.any(message, ns.sioc('content')).value;  
+        
+        var td3 = dom.createElement('td');
+        tr.appendChild(td3);
+        
+        var delButton = dom.createElement('button');
+        td3.appendChild(delButton);
+        delButton.textContent = "-";
+        
+        tr.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
+        delButton.setAttribute('class', 'hoverControlHide');
+        delButton.setAttribute('style', 'color: red;');
+        delButton.addEventListener('click', function(e) {
+            td3.removeChild(delButton);  // Ask -- are you sure?
+            var cancelButton = dom.createElement('button');
+            cancelButton.textContent = "cancel";
+            td3.appendChild(cancelButton).addEventListener('click', function(e) {
+                td3.removeChild(sureButton);
+                td3.removeChild(cancelButton);
+                td3.appendChild(delButton);
+            }, false);
+            var sureButton = dom.createElement('button');
+            sureButton.textContent = "Delete message";
+            td3.appendChild(sureButton).addEventListener('click', function(e) {
+                td3.removeChild(sureButton);
+                td3.removeChild(cancelButton);
+                deleteMessage(message);   
+            }, false);
+        }, false);
+    };
+
+
+    // Messages with date, author etc
+
+    messageTable = dom.createElement('table');
+    div.appendChild(messageTable);
+
+    if (tabulator.preferences.get('me')) {
+        var tr = newMessageForm();
+        if (newestFirst) {
+            messageTable.insertBefore(tr, messageTable.firstChild); // If newestFirst
+        } else {
+            messageTable.appendChild(tr); // not newestFirst
+        }
+    };
+    
+    var msg = kb.any(subject, WF('message'));
+    if (msg != undefined) {
+        var str = ''
+        // Do this with a live query to pull in messages from web
+        var query = new $rdf.Query('Messages');
+        var v = {};
+        ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
+             query.vars.push(v[x]=$rdf.variable(x))});
+        query.pat.add(subject, WF('message'), v['msg']);
+//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
+        query.pat.add(v['msg'], ns.dct('created'), v['date']);
+        query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
+        query.pat.add(v['msg'], ns.sioc('content'), v['content']);
+        var esc = tabulator.Util.escapeForXML;
+        // dump("\nquery.pat = "+query.pat+"\n");
+
+        kb.query(query, addMessageFromBindings);
+    }
+    
+    var refreshButton = dom.createElement('button');
+    refreshButton.textContent = "refresh";
+    refreshButton.addEventListener('click', function(e) {
+        tabulator.sf.unload(messageStore);
+        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+            if (!ok) {
+                say("Cant refresh" + body);
+            } else {
+                syncMessages(subject, messageTable);
+            };
+        });
+    }, false);
+    div.appendChild(refreshButton);
+
+    return div;
+};
+
+
+
+
+
 
     
 // These used to be in js/init/icons.js but are better in the pane.
@@ -10416,13 +10838,13 @@ tabulator.panes.register( {
         return null; // No under other circumstances (while testing at least!)
     },
 
-    render: function(subject, myDocument) {
+    render: function(subject, dom) {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
         var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
         var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var div = myDocument.createElement("div")
+        var div = dom.createElement("div")
         div.setAttribute('class', 'issuePane');
         div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
 
@@ -10437,20 +10859,28 @@ tabulator.panes.register( {
             var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
             var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
             if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
-            sparqlService.update(deletions, insertions, function(uri, ok, body){});
+            updater.update(deletions, insertions, function(uri, ok, body){});
         }
 
         var say = function say(message, style){
-            var pre = myDocument.createElement("pre");
+            var pre = dom.createElement("pre");
             pre.setAttribute('style', style ? style :'color: grey');
             div.appendChild(pre);
-            pre.appendChild(myDocument.createTextNode(message));
+            pre.appendChild(dom.createTextNode(message));
             return pre
         } 
+
+        var complainIfBad = function(ok,body){
+            if (ok) {
+            }
+            else say("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
+        }
+
+
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, myDocument);
+            var div2 = thisPane.render(subject, dom);
             parent.replaceChild(div2, div);
         };
 
@@ -10460,16 +10890,11 @@ tabulator.panes.register( {
             // http://www.w3schools.com/jsref/jsref_obj_date.asp
         }
 
-        var shortDate = function(str) {
-            var now = $rdf.term(new Date()).value;
-            if (str.slice(0,10) == now.slice(0,10)) return str.slice(11,16);
-            return str.slice(0,10);
-        }
 
         //  Form to collect data about a New Issue
         //
-        var newIssueForm = function(myDocument, kb, tracker, superIssue) {
-            var form = myDocument.createElement('div');  // form is broken as HTML behaviour can resurface on js error
+        var newIssueForm = function(dom, kb, tracker, superIssue) {
+            var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
             var stateStore = kb.any(tracker, WF('stateStore'));
 
             var sendNewIssue = function() {
@@ -10497,22 +10922,28 @@ tabulator.panes.register( {
                         //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                     } else {
                         // dump('Tabulator issue pane: saved new issue\n')
-                        div.removeChild(form);
+                        form.parentNode.removeChild(form);
                         rerender(div);
                         tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
                         // tabulator.outline.GoToURI(issue.uri); // ?? or open in place?
                     }
                 }
-                sparqlService.update([], sts, sendComplete);
+                updater.update([], sts, sendComplete);
             }
             //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
             //form.setAttribute('onsubmit', "function xx(){return false;}");
+            
+            
+            
+            tabulator.sf.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
+            tabulator.sf.removeCallback('fail','expand');
+
             
             var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
                     classLabel+"</h2><p>Title of new "+classLabel+":</p>";
-            var titlefield = myDocument.createElement('input')
+            var titlefield = dom.createElement('input')
             titlefield.setAttribute('type','text');
             titlefield.setAttribute('size','100');
             titlefield.setAttribute('maxLength','2048');// No arbitrary limits
@@ -10526,79 +10957,13 @@ tabulator.panes.register( {
             return form;
         };
         
-       //       Form for a new message
-        //
-        var newMessageForm = function(myDocument, kb, about, storeDoc) {
-            var form = myDocument.createElement('form');
-            var issue = about;
-
-            var sendMessage = function() {
-                // titlefield.setAttribute('class','pendingedit');
-                // titlefield.disabled = true;
-                field.setAttribute('class','pendingedit');
-                field.disabled = true;
-                sts = [];
-                
-                var now = new Date();
-                var timestamp = ''+ now.getTime();
-                // http://www.w3schools.com/jsref/jsref_obj_date.asp
-                var message = kb.sym(storeDoc.uri + '#' + 'Msg'+timestamp);
-                sts.push(new $rdf.Statement(about, ns.wf('message'), message, storeDoc));
-                // sts.push(new $rdf.Statement(message, ns.dc('title'), kb.literal(titlefield.value), storeDoc))
-                sts.push(new $rdf.Statement(message, ns.sioc('content'), kb.literal(field.value), storeDoc))
-                sts.push(new $rdf.Statement(message, DCT('created'), new Date(), storeDoc));
-                if (me) sts.push(new $rdf.Statement(message, ns.foaf('maker'), me, storeDoc));
-
-                var sendComplete = function(uri, success, body) {
-                    if (!success) {
-                        //dump('Tabulator issue pane: can\'t save new message:\n\t'+body+'\n')
-                    } else {
-                        form.parentNode.removeChild(form);
-                        rerender(div);
-                    }
-                }
-                sparqlService.update([], sts, sendComplete);
-            }
-            form.addEventListener('submit', sendMessage, false)
-            form.setAttribute('onsubmit', "function xx(){return false;}");
-            // label = tabulator.Util.label(ns.dc('title')); // Localise
-            // form.innerHTML = "<p>"+label+":</p>";
-                    
-/*
-            var titlefield = myDocument.createElement('input')
-            titlefield.setAttribute('type','text');
-            titlefield.setAttribute('size','80');
-            titlefield.setAttribute('style', 'margin: 0.1em 1em 0.1em 1em');
-            titlefield.setAttribute('maxLength','2048');// No arbitrary limits
-            titlefield.select() // focus next user input - doesn't work @@
-            form.appendChild(titlefield);
-*/
-            form.appendChild(myDocument.createElement('br'));
-
-            var field = myDocument.createElement('textarea');
-            form.appendChild(field);
-            field.rows = 8;
-            field.cols = 80;
-            field.setAttribute('style', 'font-size:100%; \
-                    background-color: white; border: 0.07em solid gray; padding: 0.1em; margin: 0.1em 1em 0.1em 1em')
-
-            form.appendChild(myDocument.createElement('br'));
-
-            submit = myDocument.createElement('input');
-            submit.setAttribute('type', 'submit');
-            //submit.disabled = true; // until the filled has been modified
-            submit.value = "Send"; //@@ I18n
-            submit.setAttribute('style', 'float: right;');
-            form.appendChild(submit);
-
-            return form;
-        };
         
+
                                                   
         /////////////////////// Reproduction: Spawn a new instance of this app
         
         var newTrackerButton = function(thisTracker) {
-            return tabulator.panes.utils.newAppInstance(myDocument, "Start your own new tracker", function(ws){
+            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
@@ -10653,13 +11018,13 @@ tabulator.panes.register( {
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
-                sparqlService.put(
+                updater.put(
                     there,
                     kb.statementsMatching(undefined, undefined, undefined, there),
                     'text/turtle',
                     function(uri2, ok, message) {
                         if (ok) {
-                            sparqlService.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
+                            updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
                                 if (ok) {
                                     say("Ok The tracker created OK at: " + newTracker.uri +
                                     "\nMake a note of it, bookmark it. ",
@@ -10691,7 +11056,7 @@ tabulator.panes.register( {
         
         
         
-        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+        var updater = new tabulator.rdf.sparqlUpdate(kb);
 
  
         var plist = kb.statementsMatching(subject)
@@ -10721,6 +11086,8 @@ tabulator.panes.register( {
                 donePredicate(ns.dc('title'));
 
 
+
+
                 var setPaneStyle = function() {
                     var types = kb.findTypeURIs(subject);
                     var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
@@ -10738,9 +11105,12 @@ tabulator.panes.register( {
                     say('(This bug is not stored in the default state store)')
                 }
 */
+                tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+
+                
                 var states = kb.any(tracker, WF('issueClass'));
                 if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var select = tabulator.panes.utils.makeSelectForCategory(myDocument, kb, subject, states, store, function(ok,body){
+                var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
                         if (ok) {
                             setModifiedDate(store, kb, store);
                             rerender(div);
@@ -10752,7 +11122,7 @@ tabulator.panes.register( {
 
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 for (var i=0; i<cats.length; i++) {
-                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(myDocument, 
+                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
                             kb, subject, cats[i], store, function(ok,body){
                         if (ok) {
                             setModifiedDate(store, kb, store);
@@ -10762,7 +11132,7 @@ tabulator.panes.register( {
                     }));
                 }
                 
-                var a = myDocument.createElement('a');
+                var a = dom.createElement('a');
                 a.setAttribute('href',tracker.uri);
                 a.setAttribute('style', 'float:right');
                 div.appendChild(a).textContent = tabulator.Util.label(tracker);
@@ -10770,7 +11140,7 @@ tabulator.panes.register( {
                 donePredicate(ns.wf('tracker'));
 
 
-                div.appendChild(tabulator.panes.utils.makeDescription(myDocument, kb, subject, WF('description'),
+                div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
                     store, function(ok,body){
                         if (ok) setModifiedDate(store, kb, store);
                         else say("Failed to description:\n"+body);
@@ -10792,6 +11162,7 @@ tabulator.panes.register( {
                 var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
                 if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
                 if (devs.length) {
+                    devs.map(function(person){tabulator.sf.lookUpThing(person)}); // best effort async for names etc
                     var opts = { 'mint': "** Add new person **",
                                 'nullLabel': "(unassigned)",
                                 'mintStatementsFun': function(newDev) {
@@ -10799,146 +11170,82 @@ tabulator.panes.register( {
                                     if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
                                     return sts;
                                 }};
-                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(myDocument, kb,
+                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
                         subject, ns.wf('assignee'), devs, opts, store,
                         function(ok,body){
                             if (ok) setModifiedDate(store, kb, store);
                             else say("Failed to description:\n"+body);
                         }));
                 }
-
-                // Sub issues
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        if (!inverse && pred.sameTerm(WF('dependent'))) return true;
-                        return false
-                    });
-
-                // Super issues
-                tabulator.outline.appendPropertyTRs(div, qlist, true,
-                    function(pred, inverse) {
-                        if (inverse && pred.sameTerm(WF('dependent'))) return true;
-                        return false
-                    });
-                donePredicate(WF('dependent'));
+                donePredicate(ns.wf('assignee'));
 
 
-                div.appendChild(myDocument.createElement('br'));
+                var allowSubIssues = kb.any(tracker, ns.ui('allowSubIssues'));
+                if (allowSubIssues && allowSubIssues.value) {
+                    // Sub issues
+                    tabulator.outline.appendPropertyTRs(div, plist, false,
+                        function(pred, inverse) {
+                            if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                            return false
+                        });
 
-                if (stateStore) {
-                    var b = myDocument.createElement("button");
+                    // Super issues
+                    tabulator.outline.appendPropertyTRs(div, qlist, true,
+                        function(pred, inverse) {
+                            if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                            return false
+                        });
+                    donePredicate(WF('dependent'));
+                }
+
+                div.appendChild(dom.createElement('br'));
+
+                 var allowSubIssues = kb.any(tracker, ns.ui('allowSubIssues'));
+                if (allowSubIssues && allowSubIssues.value) {
+                    var b = dom.createElement("button");
                     b.setAttribute("type", "button");
                     div.appendChild(b)
                     classLabel = tabulator.Util.label(states);
                     b.innerHTML = "New sub "+classLabel;
                     b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
                     b.addEventListener('click', function(e) {
-                        div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
+                        div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
                 };
 
-                // Messages with date, author etc
-
-                var table = myDocument.createElement('table');
-                div.appendChild(table);
-                if (me_uri) {
-                    var docStore = kb.any(tracker, ns.wf('messageStore'));
-                    if (!docStore) docStore = stateStore;
-                    var b = myDocument.createElement("button");
-                    b.setAttribute("type", "button");
-                    div.insertBefore(b, table);
-                    label = tabulator.Util.label(ns.wf('message'));
-                    b.innerHTML = "New " + label;
-                    b.setAttribute('style', 'margin: 0.5em 1em;');
-                    b.addEventListener('click', function(e) {
-                        var tr = myDocument.createElement('tr')
-                        table.insertBefore(tr, table.firstChild);
-                        var td = myDocument.createElement('td');
-                        td.innerHTML = 'Title:<br><br>Your message:'
-                        tr.appendChild(td);
-                        td = myDocument.createElement('td');
-                        tr.appendChild(td);
-                        // Actually we only need to know it is editable - we could HEAD not GET
-                        kb.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body){
-                            if (!ok) return say("Cannot load state store "+body);
-                            td.appendChild(newMessageForm(myDocument, kb, subject, docStore));
-                        });
-                    }, false);
-                }
-                var msg = kb.any(subject, WF('message'));
-                if (msg != undefined) {
-                    var str = ''
-                    // Do this with a live query to pull in messages from web
-                    var query = new $rdf.Query('Messages');
-                    var v = {};
-                    ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
-                         query.vars.push(v[x]=$rdf.variable(x))});
-                    query.pat.add(subject, WF('message'), v['msg']);
-//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
-                    query.pat.add(v['msg'], ns.dct('created'), v['date']);
-                    query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
-                    query.pat.add(v['msg'], ns.sioc('content'), v['content']);
-                    var esc = tabulator.Util.escapeForXML;
-                    var nick = function(person) {
-                        var s = kb.any(person, ns.foaf('nick'));
-                        if (s) return ''+s.value
-                        return ''+tabulator.Util.label(person);
-                    }
-                    var addLine = function(bindings) {
-                        //dump("Message, date="+bindings['?date']+"\n");
-                        var date = bindings['?date'].value;
-                        var tr = myDocument.createElement('tr');
-                        for (var ele = table.firstChild;;ele = ele.nextSibling) {
-                            if (!ele)  {table.appendChild(tr); break;};
-                            if (date > ele.AJAR_date) { // newest first
-                                table.insertBefore(tr, ele);
-                                break;
-                            }
+                var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
+                if (extrasForm) {
+                    tabulator.panes.utils.appendForm(dom, div, {},
+                                subject, extrasForm, stateStore, complainIfBad);
+                    var fields = kb.each(extrasForm, ns.ui('part'));
+                    fields.map(function(field) {
+                        var p = kb.any(field, ns.ui('property'));
+                        if (p) {
+                            donePredicate(p); // Check that one off
                         }
-                        tr.AJAR_date = date;
-                        var  td1 = myDocument.createElement('td');
-                        tr.appendChild(td1);
-
-                        var a = myDocument.createElement('a');
-                        a.setAttribute('href',bindings['?msg'].uri);
-                        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                        td1.appendChild(a).textContent = shortDate(date);
-                        td1.appendChild(myDocument.createElement('br'));
-                        var a = myDocument.createElement('a');
-                        a.setAttribute('href',bindings['?creator'].uri);
-                        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                        td1.appendChild(a).textContent = nick(bindings['?creator']);
-                        
-                        var  td2 = myDocument.createElement('td');
-                        tr.appendChild(td2);
-                        var pre = myDocument.createElement('pre')
-                        
-                        pre.setAttribute('style', 'margin: 0.1em 1em 0.1em 1em')
-                        td2.appendChild(pre);
-                        pre.textContent = bindings['?content'].value;
-
-                        /* tr.innerHTML = '<td>'+esc(bindings['?date'].value)+
-                                '  '+esc(nick(bindings['?creator']))+
-                                '</td><td><pre>'+esc(bindings['?content'].value)+
-                                '</pre></td>'; */ // Doesn't work - misses out td's
-
-                        
-                    };
-                    // dump("\nquery.pat = "+query.pat+"\n");
-                    kb.query(query, addLine);
-                }
+                    });
+                    
+                };
+                
+                //   Comment/discussion area
+                
+                var messageStore = kb.any(tracker, ns.wf('messageStore'));
+                if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
+                div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
                 donePredicate(ns.wf('message'));
                 
 
-
-                // Add in simple comments about the bug
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        if (!inverse && pred.uri == 
-                            "http://www.w3.org/2000/01/rdf-schema#comment") return true;
-                        return false
-                    });
-
-                div.appendChild(myDocument.createElement('tr'))
+/*
+                // Add in simple comments about the bug - if not already in extras form.
+                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
+                    tabulator.outline.appendPropertyTRs(div, plist, false,
+                        function(pred, inverse) {
+                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
+                            return false
+                        });
+                    donePredicate(ns.rdfs('comment'));
+                };
+*/
+                div.appendChild(dom.createElement('tr'))
                             .setAttribute('style','height: 1em'); // spacer
                 
                 // Remaining properties
@@ -10952,7 +11259,7 @@ tabulator.panes.register( {
                     });
             });  // End nowOrWhenFetched tracker
 
-
+    ///////////////////////////////////////////////////////////
 
         //          Render a Tracker instance
         
@@ -10963,22 +11270,28 @@ tabulator.panes.register( {
             if (!states) throw 'This tracker has no issueClass';
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
+            
+            tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+            
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
-            var h = myDocument.createElement('h2');
+            var h = dom.createElement('h2');
             h.setAttribute('style', 'font-size: 150%');
             div.appendChild(h);
             classLabel = tabulator.Util.label(states);
-            h.appendChild(myDocument.createTextNode(classLabel+" list")); // Use class label @@I18n
+            h.appendChild(dom.createTextNode(classLabel+" list")); // Use class label @@I18n
 
             // New Issue button
-            var b = myDocument.createElement("button");
+            var b = dom.createElement("button");
+            var container = dom.createElement("div");
             b.setAttribute("type", "button");
             if (!me) b.setAttribute('disabled', 'true')
-            div.appendChild(b)
+            container.appendChild(b);
+            div.appendChild(container);
             b.innerHTML = "New "+classLabel;
             b.addEventListener('click', function(e) {
-                    div.appendChild(newIssueForm(myDocument, kb, subject));
+                    b.setAttribute('disabled', 'true');
+                    container.appendChild(newIssueForm(dom, kb, subject));
                 }, false);
             
             // Table of issues - when we have the main issue list
@@ -10988,7 +11301,7 @@ tabulator.panes.register( {
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 var vars =  ['issue', 'state', 'created'];
                 for (var i=0; i<cats.length; i++) { vars.push('_cat_'+i) };
-                var v = {};
+                var v = {}; // The RDF variable objects for each variable name
                 vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
                 query.pat.add(v['issue'], WF('tracker'), tracker);
                 //query.pat.add(v['issue'], ns.dc('title'), v['title']);
@@ -10999,33 +11312,63 @@ tabulator.panes.register( {
                     query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
                     query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
                 }
-                //say('Query pattern is:\n'+query.pat);
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query} );
+                
+                query.pat.optional = [];
+                
+                var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
+                // say('Property list: '+propertyList); //
+                if (propertyList) {
+                    properties = propertyList.elements;
+                    for (var p=0; p < properties.length; p++) {
+                        var prop = properties[p];
+                        var vname = '_prop_'+p;
+                        if (prop.uri.indexOf('#') >= 0) {
+                            vname = prop.uri.split('#')[1];
+                        }
+                        var oneOpt = new $rdf.IndexedFormula();
+                        query.pat.optional.push(oneOpt);
+                        query.vars.push(v[vname]=$rdf.variable(vname));
+                        oneOpt.add(v['issue'], prop, v[vname]);
+                    }
+                }
+                
+                // say('Query pattern is:\n'+query.pat);
+                // say('Query pattern optional is:\n'+opts); 
+                
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query} );
                 div.appendChild(tableDiv);
             });
-        // end of Tracker instance
-
+            div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
+            // end of Tracker instance
+
 
         } else { 
             say("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
         }         
-        if (!me_uri) {
+        if (!tabulator.preferences.get('me')) {
             say("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
-            say("(Your webid is "+ me_uri+")");
+            // say("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
-        div.appendChild(tabulator.panes.utils.loginStatusBox(myDocument, function(webid){
+        
+        
+        var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
             // sayt.parent.removeChild(sayt);
             if (webid) {
-                me_uri = webid;
+                tabulator.preferences.set('me', webid);
                 say("(Logged in as "+ webid+")")
+                me = kb.sym(webid);
             } else {
-                me_uri = undefined;
+                tabulator.preferences.set('me', '');
                 say("(Logged out)")
+                me = null;
             }
-            me = me_uri? kb.sym(me_uri) : null;
-        }));
+        });
+        
+        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
+
+        div.appendChild(loginOutButton);
         
         
         return div;
@@ -13397,7 +13740,7 @@ the file system (file:///) to store application data.\n")
             return res;
         }
 
-        var date = '2013'; // @@@@@@@@@@@@ pass as parameter
+        var date = '2014'; // @@@@@@@@@@@@ pass as parameter
 
         
 
@@ -14832,7 +15175,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     function literalSort(rows, column, reverse) {
         function literalToString(colValue) {
             if (colValue != null) {
-                return colValue.value;
+                if (colValue.termType == "literal") {
+                    return colValue.value.toLowerCase();
+                } else if (colValue.termType == "symbol") {
+                    return tabulator.Util.label(colValue).toLowerCase() ;
+                };
+                return colValue.value.toLowerCase();
             } else {
                 return "";
             }
@@ -14895,7 +15243,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 if (colValue.termType == "literal") {
                     literalValue = colValue.value;
                 } else if (colValue.termType == "symbol") {
-                    literalValue = colValue.uri;
+                    literalValue = tabulator.Util.label(colValue) ;
                 } else {
                     literalValue = "";
                 }
@@ -15130,13 +15478,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             if (selector != null) {
                 td.appendChild(selector);
             }
-
+/*
             // Useful debug: display URI of predicate in column header
-
-            if (false && columns[i].predicate.uri != null) {
+            if (columns[i].predicate.uri != null) {
                 td.appendChild(document.createTextNode(columns[i].predicate.uri));
             }
-
+*/
             tr.appendChild(td);
         }
 
@@ -15751,7 +16098,55 @@ tabulator.panes.defaultPane = {
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
         }        
         return div    
+    },
+    
+    sync: function(subject, myDocument, div) { // Untested  and not te best way to do it
+    // This code was cut out of outline.js
+    //    best way is to leave TRs there and add/delete any necessray extras 
+
+        tabulator.log.info('Re-expand: '+div)
+        // try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
+        // catch(e){}   // kludge... Todo: remove this (seeAlso UserInput::clearInputAndSave)
+        var row, s
+        var expandedNodes = {}
+        var parent = div
+        for (row = parent.firstChild; row; row = row.nextSibling) { // Note which p,o pairs are exppanded
+            if (row.childNodes[1]
+                && row.childNodes[1].firstChild.nodeName == 'TABLE') {
+                s = row.AJAR_statement
+                if (!expandedNodes[s.predicate.toString()]) {
+                    expandedNodes[s.predicate.toString()] = {}
+                }
+                expandedNodes[s.predicate.toString()][s.object.toString()] =
+                    row.childNodes[1].childNodes[1]
+            }
+        }
+
+        var table = propertyTable(subject, undefined, pane)  // Re-build table
+
+        for (row = table.firstChild; row; row = row.nextSibling) {
+            s = row.AJAR_statement
+            if (s) {
+                if (expandedNodes[s.predicate.toString()]) {
+                    var node =
+                        expandedNodes[s.predicate.toString()][s.object.toString()]
+                    if (node) {
+                        row.childNodes[1].replaceChild(node,
+                                        row.childNodes[1].firstChild)
+                    }
+                }
+            }
+        }
+
+        // do some other stuff here
+
+
+
+
+    
     }
+    
+    
 };
 
 tabulator.panes.register(tabulator.panes.defaultPane, true);
@@ -19435,6 +19830,90 @@ tabulator.Util.parse_headers = function(headers) {
 
 
 
+//  Make short name for ontology
+
+
+tabulator.Util.shortName = function(uri) {
+    var p = uri;
+    if ('#/'.indexOf(p[p.length-1]) >= 0) p = p.slice(0, -1);
+    var namespaces = [];
+    for (var ns in this.prefixes) {
+        namespaces[this.prefixes[ns]] = ns; // reverse index
+    }
+    var pok;
+    var hash = p.lastIndexOf('#');
+    if (hash >= 0) p = p.slice(hash-1);  // lop off localid
+    for (;;) {
+        var slash = p.lastIndexOf('/');
+        if (slash >= 0) p = p.slice(slash+1);
+        var i = 0;
+        while (i < p.length)
+            if (this.prefixchars.indexOf(p[i])) i++; else break;
+        p = p.slice(0,i);
+        if (p.length < 6 && canUse(p)) return pok; // exact i sbest
+        if (canUse(p.slice(0,3))) return pok;
+        if (canUse(p.slice(0,2))) return pok;
+        if (canUse(p.slice(0,4))) return pok;
+        if (canUse(p.slice(0,1))) return pok;
+        if (canUse(p.slice(0,5))) return pok;
+        for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
+    }
+};
+
+
+
+// Short name for an ontology
+//
+tabulator.Util.ontologyLabel = function(term) {
+    if (term.uri === undefined) return '??';
+    var s = term.uri;
+    var namespaces = [];
+    var i = s.lastIndexOf('#');
+    var part;
+    if (i >=0 ) {
+        s = s.slice(0,i+1);
+    } else {
+        i = s.lastIndexOf('/');
+        if (i >=0 ) {
+            s = s.slice(0, i+1); 
+        } else {
+            return term.uri + '?!';    // strange should have # or /
+        }; 
+    };
+    for (var ns in tabulator.ns) {
+        namespaces[tabulator.ns[ns]] = ns; // reverse index
+    }
+    try {
+        return namespaces[s];
+    } catch (e) {
+    };
+    
+    s = s.slice(0, -1); // Chop off delimiter ... now have just 
+    
+    while(s) {
+        i = s.lastIndexOf('/');
+        if (i >=0 ) {
+            part = s.slice(i+1);
+            s = s.slice(0, i); 
+            if ((part !== 'ns') && ( '0123456789'.indexOf(part[0]) < 0))
+                return part;
+        } else {
+            return term.uri + '!?';    // strange should have a nice part
+        };
+    };
+};
+
+
+tabulator.Util.labelWithOntology = function(x, initialCap) {
+    var t = tabulator.kb.findTypeURIs(x);
+    if (t[tabulator.ns.rdf('Predicate').uri] || 
+        t[tabulator.ns.rdfs('Class').uri]) {
+        return tabulator.Util.label(x, initialCap) + 
+            ' (' + tabulator.Util.ontologyLabel(x) + ')';
+    }
+    return tabulator.Util.label(x, initialCap);
+};
+
 
 // This ubiquitous function returns the best label for a thing
 //
@@ -22708,25 +23187,6 @@ tabulator.OutlineObject = function(doc) {
             var tr1 = expandedHeaderTR(subject, pane);
             table.appendChild(tr1);
             
-            /*   This should be a beautiful system not a quick kludge - timbl 
-            **   Put  link to inferenceWeb browsers for anything which is a proof
-            **    @@@ This should just be an optional pane.
-            */  
-            /*
-            var classes = kb.each(subject, rdf('type'))
-            var i=0, n=classes.length;
-            for (i=0; i<n; i++) {
-                if (classes[i].uri == 'http://inferenceweb.stanford.edu/2004/07/iw.owl#NodeSet') {
-                    var anchor = myDocument.createElement('a');
-                    anchor.setAttribute('href', "http://silo.stanford.edu/iwbrowser/NodeSetBrowser?url=" + encodeURIComponent(subject.uri)); // @@ encode
-                    anchor.setAttribute('title', "Browse in Infereence Web");
-                    anchor.appendChild(tabulator.Util.AJARImage(
-                                                 'http://iw.stanford.edu/2.0/images/iw-logo-icon.png', 'IW', 'Inference Web',myDocument));
-                    tr1.appendChild(anchor)
-                }
-            }
-            */
-//            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
                 if (typeof tabulator == 'undefined') alert('tabulator undefined')
                 var paneDiv;
@@ -22753,7 +23213,8 @@ tabulator.OutlineObject = function(doc) {
             
         } else {  // New display of existing table, keeping expanded bits
         
-            tabulator.log.info('Re-expand: '+table)
+            tabulator.log.info('Re-expand: '+table);
+            /*    /// Removed as evil.   Destroys user's work by reloading.  SHould just insert new info
             try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
             catch(e){}   // kludge... Todo: remove this (seeAlso UserInput::clearInputAndSave)
             var row, s
@@ -22786,7 +23247,7 @@ tabulator.OutlineObject = function(doc) {
                     }
                 }
             }
-    
+    */
             // do some other stuff here
             return table
         }
@@ -22949,24 +23410,8 @@ tabulator.OutlineObject = function(doc) {
             } // tr.showNobj
     
             tr.showAllobj = function(){tr.showNobj(k-dups);};
-            //tr.showAllobj();
-            /*DisplayOptions["display:block on"].setupHere(
-                    [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
-                    "appendPropertyTRs()");*/
-            tr.showNobj(10);
 
-            /*if (HCIoptions["bottom insert highlights"].enabled){
-                var holdingTr=myDocument.createElement('tr');
-                var holdingTd=myDocument.createElement('td');
-                holdingTd.setAttribute('colspan','2');
-                var bottomDiv=myDocument.createElement('div');
-                bottomDiv.className='bottom-border';
-                holdingTd.setAttribute('notSelectable','true');
-                bottomDiv.addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
-                bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
-                bottomDiv.addEventListener('click',thisOutline.UserInput.addNewPredicateObject,false);
-                parent.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
-                }*/
+            tr.showNobj(10);
         
             j += k-1  // extra push
         }
@@ -23828,7 +24273,7 @@ tabulator.OutlineObject = function(doc) {
             var relevant = function() {  // Is the loading of this URI relevam to the display of subject?
                 if (!cursubj.uri) return true;  // bnode should expand() 
                 //doc = cursubj.uri?kb.sym(tabulator.rdf.Util.uri.docpart(cursubj.uri)):cursubj
-                as = kb.uris(cursubj)
+                var as = kb.uris(cursubj)
                 if (!as) return false;
                 for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
                     for (var rd = tabulator.rdf.Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
@@ -23842,7 +24287,8 @@ tabulator.OutlineObject = function(doc) {
                 tabulator.log.success('@@ expand OK: relevant subject='+cursubj+', uri='+uri+', source='+
                     already)
                     
-                render()
+                render();
+                return false; //  @@@@@@@@@@@ Will this allow just the first
             }
             return true
         }
@@ -23850,8 +24296,8 @@ tabulator.OutlineObject = function(doc) {
         tabulator.log.debug("outline_expand: dereferencing "+subject)
         var status = myDocument.createElement("span")
         p.appendChild(status)
-        sf.addCallback('done', expand)
-        sf.addCallback('fail', expand)
+        sf.addCallback('done', expand) // @@@@@@@ This can really mess up existing work
+        sf.addCallback('fail', expand)  // Need to do if there s one a gentle resync of page with store
         /*
         sf.addCallback('request', function (u) {
                            if (u != subj_uri) { return true }
@@ -27080,5 +27526,8 @@ jQuery(function() {
     if (tabulator.rdf == undefined)
         tabulator.setup();
 });
+
+// init-mashup ends
+
 
 // ###### Finished expanding js/init/init-mashup.js ##############

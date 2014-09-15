@@ -262,6 +262,90 @@ tabulator.Util.parse_headers = function(headers) {
 
 
 
+//  Make short name for ontology
+
+
+tabulator.Util.shortName = function(uri) {
+    var p = uri;
+    if ('#/'.indexOf(p[p.length-1]) >= 0) p = p.slice(0, -1);
+    var namespaces = [];
+    for (var ns in this.prefixes) {
+        namespaces[this.prefixes[ns]] = ns; // reverse index
+    }
+    var pok;
+    var hash = p.lastIndexOf('#');
+    if (hash >= 0) p = p.slice(hash-1);  // lop off localid
+    for (;;) {
+        var slash = p.lastIndexOf('/');
+        if (slash >= 0) p = p.slice(slash+1);
+        var i = 0;
+        while (i < p.length)
+            if (this.prefixchars.indexOf(p[i])) i++; else break;
+        p = p.slice(0,i);
+        if (p.length < 6 && canUse(p)) return pok; // exact i sbest
+        if (canUse(p.slice(0,3))) return pok;
+        if (canUse(p.slice(0,2))) return pok;
+        if (canUse(p.slice(0,4))) return pok;
+        if (canUse(p.slice(0,1))) return pok;
+        if (canUse(p.slice(0,5))) return pok;
+        for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
+    }
+};
+
+
+
+// Short name for an ontology
+//
+tabulator.Util.ontologyLabel = function(term) {
+    if (term.uri === undefined) return '??';
+    var s = term.uri;
+    var namespaces = [];
+    var i = s.lastIndexOf('#');
+    var part;
+    if (i >=0 ) {
+        s = s.slice(0,i+1);
+    } else {
+        i = s.lastIndexOf('/');
+        if (i >=0 ) {
+            s = s.slice(0, i+1); 
+        } else {
+            return term.uri + '?!';    // strange should have # or /
+        }; 
+    };
+    for (var ns in tabulator.ns) {
+        namespaces[tabulator.ns[ns]] = ns; // reverse index
+    }
+    try {
+        return namespaces[s];
+    } catch (e) {
+    };
+    
+    s = s.slice(0, -1); // Chop off delimiter ... now have just 
+    
+    while(s) {
+        i = s.lastIndexOf('/');
+        if (i >=0 ) {
+            part = s.slice(i+1);
+            s = s.slice(0, i); 
+            if ((part !== 'ns') && ( '0123456789'.indexOf(part[0]) < 0))
+                return part;
+        } else {
+            return term.uri + '!?';    // strange should have a nice part
+        };
+    };
+};
+
+
+tabulator.Util.labelWithOntology = function(x, initialCap) {
+    var t = tabulator.kb.findTypeURIs(x);
+    if (t[tabulator.ns.rdf('Predicate').uri] || 
+        t[tabulator.ns.rdfs('Class').uri]) {
+        return tabulator.Util.label(x, initialCap) + 
+            ' (' + tabulator.Util.ontologyLabel(x) + ')';
+    }
+    return tabulator.Util.label(x, initialCap);
+};
+
 
 // This ubiquitous function returns the best label for a thing
 //

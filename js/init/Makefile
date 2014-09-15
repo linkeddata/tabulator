@@ -10,3 +10,4 @@ mashlib.js : expand.js init-mashup.js ../rdf/dist/rdflib.js
 update :
 	rm mashlib.js
 	make mashlib.js
+	echo "Now remind timbl run make update in /devel/WWW/2011/datastuff/init to spread the mashlib"

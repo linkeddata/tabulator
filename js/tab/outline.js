@@ -605,25 +605,6 @@ tabulator.OutlineObject = function(doc) {
             var tr1 = expandedHeaderTR(subject, pane);
             table.appendChild(tr1);
             
-            /*   This should be a beautiful system not a quick kludge - timbl 
-            **   Put  link to inferenceWeb browsers for anything which is a proof
-            **    @@@ This should just be an optional pane.
-            */  
-            /*
-            var classes = kb.each(subject, rdf('type'))
-            var i=0, n=classes.length;
-            for (i=0; i<n; i++) {
-                if (classes[i].uri == 'http://inferenceweb.stanford.edu/2004/07/iw.owl#NodeSet') {
-                    var anchor = myDocument.createElement('a');
-                    anchor.setAttribute('href', "http://silo.stanford.edu/iwbrowser/NodeSetBrowser?url=" + encodeURIComponent(subject.uri)); // @@ encode
-                    anchor.setAttribute('title', "Browse in Infereence Web");
-                    anchor.appendChild(tabulator.Util.AJARImage(
-                                                 'http://iw.stanford.edu/2.0/images/iw-logo-icon.png', 'IW', 'Inference Web',myDocument));
-                    tr1.appendChild(anchor)
-                }
-            }
-            */
-//            table.appendChild(defaultPane.render(subject));
             if (tr1.firstPane) {
                 if (typeof tabulator == 'undefined') alert('tabulator undefined')
                 var paneDiv;
@@ -650,7 +631,8 @@ tabulator.OutlineObject = function(doc) {
             
         } else {  // New display of existing table, keeping expanded bits
         
-            tabulator.log.info('Re-expand: '+table)
+            tabulator.log.info('Re-expand: '+table);
+            /*    /// Removed as evil.   Destroys user's work by reloading.  SHould just insert new info
             try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
             catch(e){}   // kludge... Todo: remove this (seeAlso UserInput::clearInputAndSave)
             var row, s
@@ -683,7 +665,7 @@ tabulator.OutlineObject = function(doc) {
                     }
                 }
             }
-    
+    */
             // do some other stuff here
             return table
         }
@@ -846,24 +828,8 @@ tabulator.OutlineObject = function(doc) {
             } // tr.showNobj
     
             tr.showAllobj = function(){tr.showNobj(k-dups);};
-            //tr.showAllobj();
-            /*DisplayOptions["display:block on"].setupHere(
-                    [tr,j,k,dups,td_p,plist,sel,inverse,parent,myDocument,thisOutline],
-                    "appendPropertyTRs()");*/
-            tr.showNobj(10);
 
-            /*if (HCIoptions["bottom insert highlights"].enabled){
-                var holdingTr=myDocument.createElement('tr');
-                var holdingTd=myDocument.createElement('td');
-                holdingTd.setAttribute('colspan','2');
-                var bottomDiv=myDocument.createElement('div');
-                bottomDiv.className='bottom-border';
-                holdingTd.setAttribute('notSelectable','true');
-                bottomDiv.addEventListener('mouseover',thisOutline.UserInput.Mouseover,false);
-                bottomDiv.addEventListener('mouseout',thisOutline.UserInput.Mouseout,false);
-                bottomDiv.addEventListener('click',thisOutline.UserInput.addNewPredicateObject,false);
-                parent.appendChild(holdingTr).appendChild(holdingTd).appendChild(bottomDiv);
-                }*/
+            tr.showNobj(10);
         
             j += k-1  // extra push
         }
@@ -1725,7 +1691,7 @@ tabulator.OutlineObject = function(doc) {
             var relevant = function() {  // Is the loading of this URI relevam to the display of subject?
                 if (!cursubj.uri) return true;  // bnode should expand() 
                 //doc = cursubj.uri?kb.sym(tabulator.rdf.Util.uri.docpart(cursubj.uri)):cursubj
-                as = kb.uris(cursubj)
+                var as = kb.uris(cursubj)
                 if (!as) return false;
                 for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
                     for (var rd = tabulator.rdf.Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
@@ -1739,7 +1705,8 @@ tabulator.OutlineObject = function(doc) {
                 tabulator.log.success('@@ expand OK: relevant subject='+cursubj+', uri='+uri+', source='+
                     already)
                     
-                render()
+                render();
+                return false; //  @@@@@@@@@@@ Will this allow just the first
             }
             return true
         }
@@ -1747,8 +1714,8 @@ tabulator.OutlineObject = function(doc) {
         tabulator.log.debug("outline_expand: dereferencing "+subject)
         var status = myDocument.createElement("span")
         p.appendChild(status)
-        sf.addCallback('done', expand)
-        sf.addCallback('fail', expand)
+        sf.addCallback('done', expand) // @@@@@@@ This can really mess up existing work
+        sf.addCallback('fail', expand)  // Need to do if there s one a gentle resync of page with store
         /*
         sf.addCallback('request', function (u) {
                            if (u != subj_uri) { return true }

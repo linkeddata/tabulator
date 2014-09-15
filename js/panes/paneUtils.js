@@ -32,10 +32,20 @@ tabulator.panes.utils.extractLogURI = function(fullURI){
     return fullURI.substring(logPos+8, rulPos); 			
 }
 
+// @@@ This needs to be changed to local time
 tabulator.panes.utils.shortDate = function(str) {
-    var now = $rdf.term(new Date()).value;
-    if (str.slice(0,10) == now.slice(0,10)) return str.slice(11,16);
-    return str.slice(0,10);
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
+    if (!str) return '???';
+    try {
+        var now = new Date();
+        var then = new Date(str);
+        var nowZ = $rdf.term(now).value;
+        var n = now.getTimezoneOffset();
+        if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
+        return str.slice(0,10);
+    } catch(e) {
+        return 'shortdate:' + e
+    }
 }
 
 tabulator.panes.utils.newThing = function(kb, store) {
@@ -317,7 +327,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     var property = kb.any(form, ui('property'));
     if (!property) { box.appendChild(dom.createTextNode("Error: No property given for text field: "+form)); return box};
 
-    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property, form));
     var uri = tabulator.panes.utils.bottomURI(form); 
     var params = tabulator.panes.fieldParams[uri];
     if (params == undefined) params = {}; // non-bottom field types can do this
@@ -350,14 +360,16 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     }, true);
     field.addEventListener("change", function(e) { // i.e. lose focus with changed data
         if (params.pattern && !field.value.match(params.pattern)) return;
+        field.disabled = true; // See if this stops getting two dates from fumbling e.g the chrome datepicker.
         field.setAttribute('style', 'color: gray;'); // pending 
-        var ds = kb.statementsMatching(subject, property);
+        var ds = kb.statementsMatching(subject, property); // remove any multiple values
         var newObj =  params.uriPrefix ? kb.sym(params.uriPrefix + field.value.replace(/ /g, ''))
                     : kb.literal(field.value, params.dt);
         var is = $rdf.st(subject, property,
                     params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
         tabulator.sparql.update(ds, is, function(uri, ok, body) {
             if (ok) {
+                field.disabled = true;
                 field.setAttribute('style', 'color: black;');
             } else {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, body));
@@ -380,7 +392,7 @@ tabulator.panes.field[tabulator.ns.ui('MultiLineTextField').uri] = function(
     var property = kb.any(form, ui('property'));
     if (!property) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No property to text field: "+form);
-    container.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    container.appendChild(tabulator.panes.utils.fieldLabel(dom, property, form));
     store = tabulator.panes.utils.fieldStore(subject, property, store);
     var box = tabulator.panes.utils.makeDescription(dom, kb, subject, property, store, callback);
     // box.appendChild(dom.createTextNode('<-@@ subj:'+subject+', prop:'+property));
@@ -470,12 +482,13 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     box.appendChild(rhs);
     var property = kb.any(form, ui('property'));
     if (!property) return tabulator.panes.utils.errorMessageBlock(dom, "No property for Choice: "+form);
-    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property));
+    lhs.appendChild(tabulator.panes.utils.fieldLabel(dom, property, form));
     var from = kb.any(form, ui('from'));
     if (!from) return tabulator.panes.utils.errorMessageBlock(dom,
                 "No 'from' for Choice: "+form);
     var subForm = kb.any(form, ui('use'));  // Optional
     var possible = [];
+    var opts = {'multiple': multiple, 'nullLabel': np, 'disambiguate': false };
     possible = kb.each(undefined, ns.rdf('type'), from);
     for (x in kb.findMembersNT(from)) {
         possible.push(kb.fromNT(x));
@@ -485,14 +498,22 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     if (from.sameTerm(ns.rdfs('Class'))) {
         for (var p in tabulator.panes.utils.allClassURIs()) possible.push(kb.sym(p));     
         // tabulator.log.debug("%%% Choice field: possible.length 2 = "+possible.length)
+    } else if (from.sameTerm(ns.rdf('Property'))) {
+        //if (tabulator.properties == undefined) 
+        tabulator.panes.utils.propertyTriage();
+        for (var p in tabulator.properties.op) possible.push(kb.fromNT(p));     
+        for (var p in tabulator.properties.dp) possible.push(kb.fromNT(p));
+        opts.disambiguate = true;     // This is a big class, and the labels won't be enough.
     } else if (from.sameTerm(ns.owl('ObjectProperty'))) {
         //if (tabulator.properties == undefined) 
         tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.op) possible.push(kb.fromNT(p));     
+        opts.disambiguate = true;     
     } else if (from.sameTerm(ns.owl('DatatypeProperty'))) {
         //if (tabulator.properties == undefined)
         tabulator.panes.utils.propertyTriage();
         for (var p in tabulator.properties.dp) possible.push(kb.fromNT(p));     
+        opts.disambiguate = true;     
     }
     var object = kb.any(subject, property);
     function addSubForm(ok, body) {
@@ -504,7 +525,6 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
     // box.appendChild(dom.createTextNode('Choice: subForm='+subForm))
     var possible2 = tabulator.panes.utils.sortByLabel(possible);
     var np = "--"+ tabulator.Util.label(property)+"-?";
-    var opts = {'multiple': multiple, 'nullLabel': np};
     if (kb.any(form, ui('canMintNew'))) {
         opts['mint'] = "* New *"; // @@ could be better
         opts['subForm'] = subForm;
@@ -646,11 +666,13 @@ tabulator.panes.utils.propertyTriage = function() {
 }
 
 
-tabulator.panes.utils.fieldLabel = function(dom, property) {
+tabulator.panes.utils.fieldLabel = function(dom, property, form) {
+    var lab = tabulator.kb.any(form, tabulator.ns.ui('label'));
+    if (!lab) lab = tabulator.Util.label(property, true); // Init capital
     if (property == undefined) return dom.createTextNode('@@Internal error: undefined property');
     var anchor = dom.createElement('a');
     if (property.uri) anchor.setAttribute('href', property.uri);
-    anchor.textContent = tabulator.Util.label(property, true);
+    anchor.textContent = lab;
     return anchor
 }
 
@@ -1083,7 +1105,11 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
     for (var uri in uris) {
         var c = kb.sym(uri)
         var option = dom.createElement('option');
-        option.appendChild(dom.createTextNode(tabulator.Util.label(c, true))); // Init. cap.
+        if (options.disambiguate) {
+            option.appendChild(dom.createTextNode(tabulator.Util.labelWithOntology(c, true))); // Init. cap
+        } else {
+            option.appendChild(dom.createTextNode(tabulator.Util.label(c, true))); // Init.
+        }
         var backgroundColor = kb.any(c, kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
         if (backgroundColor) option.setAttribute('style', "background-color: "+backgroundColor.value+"; ");
         option.AJAR_uri = uri;
@@ -1471,15 +1497,81 @@ web ID</a>?<br/>\
     return box; 
 };
 
+//  Check user and set 'me' if found
+
+tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
+    return tabulator.panes.utils.checkUser(dom, doc, function(uri) {
+        var me_uri = tabulator.preferences.get('me');
+        if (uri == me_uri) return null;
+        tabulator.preferences.set('me', uri);
+        var message = "(Logged in as " + uri + " by authentication.)";
+        try {  // Ugh
+            tabulator.log.alert(message);
+        } catch(e) {
+            try {
+                alert(message);
+            } catch (e) {
+            };
+        }
+    });
+};
+
+// For a user authenticated using webid (or possibly other methods) it
+// is not immedaietly available to the client which person(a) it is.
+// One way is for the server to send the information back as a User: header.
+// This function looks for a linked 
+
+tabulator.panes.utils.checkUser = function(dom, doc, setIt) {
+    var userMirror = tabulator.kb.any(doc, tabulator.ns.link('userMirror'));
+    if (!userMirror) userMirror = doc;
+    var kb = tabulator.kb
+    kb.fetcher.nowOrWhenFetched(userMirror.uri, undefined, function(ok, body) {
+        var done = false;
+        if (ok) {
+            kb.each(undefined, tabulator.ns.link("requestedURI"), $rdf.uri.docpart(userMirror.uri))
+            .map(function(request){
+                var response = kb.any(request, tabulator.ns.link("response"));
+                if (request !== undefined) {
+                    kb.each(response, tabulator.ns.httph("user")).map(function(userHeader){
+                        setIt(userHeader.value.trim());
+                        done = true;
+                    });
+                }
+            });
+        } else {
+            var message = "checkUser: Unable to load " + userMirror.uri;
+            try {  // Ugh
+                tabulator.log.alert(message);
+            } catch(e) {
+                try {
+                    alert(message);
+                } catch (e) {
+                };
+            }
+        }
+    });
+};
+
+//              Login status box
+
 tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
+    var logoutLabel = 'Web ID Logout';
+    if (me) {
+        var nick = tabulator.kb.any(me, tabulator.ns.foaf('nick'));
+        if (nick) {
+            logoutLabel = 'Logout ' + nick.value;
+        }
+    };
 
     // If the user has no WebID that we know of
     var box = myDocument.createElement('div');
-    var but = myDocument.createElement('input');
+    var signOutButton = myDocument.createElement('input');  
     var setIt = function(newid) {
         tabulator.preferences.set('me',newid);
+        me_uri = newid;
+        me = me_uri && tabulator.kb.sym(me_uri)
         var message = 'Your Web ID is now <'+me_uri+'> .';
         try { 
             tabulator.log.alert(message);
@@ -1493,12 +1585,14 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 
         // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
         box.removeChild(sisu);
-        box.appendChild(but); 
+        box.appendChild(signOutButton); 
         if (listener) listener(newid);
     };
     var zapIt = function() {
         tabulator.preferences.set('me','');
         var message = 'Your Web ID was <'+me_uri+'>. It has been forgotten.';
+        me_uri = '';
+        me = null
         try { 
             tabulator.log.alert(message);
         } catch(e) {
@@ -1508,7 +1602,7 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
             };
         }
         // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(but);
+        box.removeChild(signOutButton);
         sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
         box.appendChild(sisu); 
         if (listener) listener(undefined);
@@ -1517,14 +1611,14 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
 
     if (me) {
-        box.appendChild(but);
+        box.appendChild(signOutButton);
     } else {
         box.appendChild(sisu);
     };
-    but.className = 'WebIDCancelButton';
-    but.setAttribute('type', 'button');
-    but.setAttribute('value', 'Web ID Logout');
-    but.addEventListener('click', zapIt, false);
+    signOutButton.className = 'WebIDCancelButton';
+    signOutButton.setAttribute('type', 'button');
+    signOutButton.setAttribute('value', logoutLabel);
+    signOutButton.addEventListener('click', zapIt, false);
     return box;
 }
 
@@ -1617,8 +1711,17 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
     var displayOptions = function(id, preferencesFile){
     
+        var status = ''; 
+
+        // A workspace specifically defined in the private preferences file:
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
             undefined, preferencesFile).map(function(st){return st.object;});
+            
+        // A workspace in a storage in the public profile:
+        var storages = kb.each(id, tabulator.ns.space('storage'));  // @@ No provenance requirement at the moment
+        storages.map(function(s){
+            w = w.concat(kb.each(s, tabulator.ns.ldp('contains')));
+        });
 
         // if (pending !== undefined) pending.parentNode.removeChild(pending);
         if (w.length == 1) {
@@ -1627,7 +1730,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             callbackWS(w[0]); 
 
         } else if (w.length == 0 ) {
-            say("You don't seem to have any workspaces. ")
+            say("You don't seem to have any workspaces. You have "+storages.length +" storages.");
             say("@@ code me: create new workspace.")
         } else {
         

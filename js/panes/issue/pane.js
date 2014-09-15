@@ -4,10 +4,275 @@
 to change its state according to an ontology, comment on it, etc.
 **
 **
-** As an experiment, I am using in places single quotes strings like 'this'
+** I am using in places single quotes strings like 'this'
 ** where internationalizatio ("i18n") is not a problem, and double quoted
-** like "this" where th string is seen by the user and so I18n is an issue.
+** like "this" where the string is seen by the user and so I18n is an issue.
 */
+
+
+tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
+    var kb = tabulator.kb;
+    var ns = tabulator.ns;
+    var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+    var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+    var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+    
+    var newestFirst = true;
+    
+    var div = dom.createElement("div")
+    var messageTable; // Shared by initial build and addMessageFromBindings
+
+    var me_uri = tabulator.preferences.get('me');
+    var me = me_uri? kb.sym(me_uri) : null;
+
+    var updater = new tabulator.rdf.sparqlUpdate(kb);
+
+    var anchor = function(text, term) {
+        var a = dom.createElement('a');
+        a.setAttribute('href', term.uri);
+        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+        a.textContent = text;
+        a.setAttribute('style', 'color: #3B5998; text-decoration: none; '); // font-weight: bold;
+        return a;
+    };
+
+    
+    //       Form for a new message
+    //
+    var newMessageForm = function() {
+        var form = dom.createElement('tr');
+        var lhs = dom.createElement('td');
+        var middle = dom.createElement('td');
+        var rhs = dom.createElement('td');
+        form.appendChild(lhs);
+        form.appendChild(middle);
+        form.appendChild(rhs);
+        form.AJAR_date = "9999-01-01T00:00:00Z"; // ISO format for field sort
+        
+        var sendMessage = function() {
+            // titlefield.setAttribute('class','pendingedit');
+            // titlefield.disabled = true;
+            field.setAttribute('class','pendingedit');
+            field.disabled = true;
+            sts = [];
+            
+            var now = new Date();
+            var timestamp = ''+ now.getTime();
+            var dateStamp = $rdf.term(now);
+            // http://www.w3schools.com/jsref/jsref_obj_date.asp
+            var message = kb.sym(messageStore.uri + '#' + 'Msg'+timestamp);
+            sts.push(new $rdf.Statement(subject, ns.wf('message'), message, messageStore));
+            // sts.push(new $rdf.Statement(message, ns.dc('title'), kb.literal(titlefield.value), messageStore))
+            sts.push(new $rdf.Statement(message, ns.sioc('content'), kb.literal(field.value), messageStore))
+            sts.push(new $rdf.Statement(message, DCT('created'), dateStamp, messageStore));
+            if (me) sts.push(new $rdf.Statement(message, ns.foaf('maker'), me, messageStore));
+
+            var sendComplete = function(uri, success, body) {
+                if (!success) {
+                    form.appendChild(tabulator.panes.utils.errorMessageBlock(
+                            dom, "Error writing message: "+ body));
+                } else {
+                    var bindings = { '?msg': message,
+                                    '?content': kb.literal(field.value),
+                                    '?date':  dateStamp,
+                                    '?creator': me};
+                    addMessageFromBindings(bindings);
+                    
+                    field.value = ''; // clear from out for reuse
+                    field.setAttribute('class','');
+                    field.disabled = false;
+                }
+            }
+            updater.update([], sts, sendComplete);
+        }
+        // form.addEventListener('submit', sendMessage, false)
+        // form.setAttribute('onsubmit', "function xx(){return false;}");
+        form.appendChild(dom.createElement('br'));
+
+        var field = dom.createElement('textarea');
+        middle.appendChild(field);
+        field.rows = 3;
+        // field.cols = 40;
+        field.setAttribute('style', 'width: 90%; font-size:100%; \
+                background-color: white; border: 0.07em solid gray; padding: 0.1em; margin: 0.1em 1em 0.1em 1em')
+
+        submit = dom.createElement('button');
+        //submit.disabled = true; // until the filled has been modified
+        submit.textContent = "Comment"; //@@ I18n
+        submit.setAttribute('style', 'float: right;');
+        submit.addEventListener('click', sendMessage, false);
+        rhs.appendChild(submit);
+
+        return form;
+    };
+    
+    var nick = function(person) {
+        var s = tabulator.kb.any(person, tabulator.ns.foaf('nick'));
+        if (s) return ''+s.value
+        return ''+tabulator.Util.label(person);
+    }
+
+    var syncMessages = function(about, messageTable) {
+        var displayed = {};
+        for (var ele = messageTable.firstChild; ele ;ele = ele.nextSibling) {
+            if (ele.AJAR_subject) {
+                displayed[ele.AJAR_subject.uri] = true;
+            };
+        }
+        var messages = kb.each(about, ns.wf('message'));
+        var stored = {};
+        messages.map(function(m){
+            stored[m.uri] = true;
+            if (!displayed[m.uri]) {
+                addMessage(m);
+            };
+        });
+
+        for (var ele = messageTable.firstChild; ele;) {
+            var ele2 = ele.nextSibling;
+            if (ele.AJAR_subject && !stored[ele.AJAR_subject.uri]) {
+                messageTable.removeChild(ele);
+            }
+            ele = ele2;
+        }
+
+
+    }
+
+    var addMessageFromBindings = function(bindings) {
+        return addMessage(bindings['?msg']);            
+    }
+    
+    var deleteMessage = function(message) {
+        deletions = kb.statementsMatching(message).concat(
+                kb.statementsMatching(undefined, undefined, message));
+        updater.update(deletions, [], function(uri, ok, body){
+            if (!ok) {
+                say("Cant delete messages:" + body);
+            } else {
+                syncMessages(subject, messageTable);
+            };
+        });
+    };
+    
+    var addMessage = function(message) {
+        var tr = dom.createElement('tr');
+        var date = kb.any(message,  DCT('created'));
+        var dateString = date.value;
+        tr.AJAR_date = dateString;
+        tr.AJAR_subject = message;
+
+        for (var ele = messageTable.firstChild;;ele = ele.nextSibling) {
+            if (!ele)  {messageTable.appendChild(tr); break;};
+            if (((dateString > ele.AJAR_date) && newestFirst) ||
+                        ((dateString < ele.AJAR_date) && !newestFirst)) {
+                messageTable.insertBefore(tr, ele);
+                break;
+            }
+        }
+        
+        var  td1 = dom.createElement('td');
+        tr.appendChild(td1);
+        
+        var creator = kb.any(message, ns.foaf('maker'));
+        var nickAnchor = td1.appendChild(anchor(nick(creator), creator));
+        tabulator.sf.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
+            nickAnchor.textContent = nick(creator);
+        });
+        td1.appendChild(dom.createElement('br'));
+        td1.appendChild(anchor(tabulator.panes.utils.shortDate(dateString), message));
+        
+        var  td2 = dom.createElement('td');
+        tr.appendChild(td2);
+        var pre = dom.createElement('p')            
+        pre.setAttribute('style', 'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  white-space: pre-wrap;')
+        td2.appendChild(pre);
+        pre.textContent = kb.any(message, ns.sioc('content')).value;  
+        
+        var td3 = dom.createElement('td');
+        tr.appendChild(td3);
+        
+        var delButton = dom.createElement('button');
+        td3.appendChild(delButton);
+        delButton.textContent = "-";
+        
+        tr.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
+        delButton.setAttribute('class', 'hoverControlHide');
+        delButton.setAttribute('style', 'color: red;');
+        delButton.addEventListener('click', function(e) {
+            td3.removeChild(delButton);  // Ask -- are you sure?
+            var cancelButton = dom.createElement('button');
+            cancelButton.textContent = "cancel";
+            td3.appendChild(cancelButton).addEventListener('click', function(e) {
+                td3.removeChild(sureButton);
+                td3.removeChild(cancelButton);
+                td3.appendChild(delButton);
+            }, false);
+            var sureButton = dom.createElement('button');
+            sureButton.textContent = "Delete message";
+            td3.appendChild(sureButton).addEventListener('click', function(e) {
+                td3.removeChild(sureButton);
+                td3.removeChild(cancelButton);
+                deleteMessage(message);   
+            }, false);
+        }, false);
+    };
+
+
+    // Messages with date, author etc
+
+    messageTable = dom.createElement('table');
+    div.appendChild(messageTable);
+
+    if (tabulator.preferences.get('me')) {
+        var tr = newMessageForm();
+        if (newestFirst) {
+            messageTable.insertBefore(tr, messageTable.firstChild); // If newestFirst
+        } else {
+            messageTable.appendChild(tr); // not newestFirst
+        }
+    };
+    
+    var msg = kb.any(subject, WF('message'));
+    if (msg != undefined) {
+        var str = ''
+        // Do this with a live query to pull in messages from web
+        var query = new $rdf.Query('Messages');
+        var v = {};
+        ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
+             query.vars.push(v[x]=$rdf.variable(x))});
+        query.pat.add(subject, WF('message'), v['msg']);
+//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
+        query.pat.add(v['msg'], ns.dct('created'), v['date']);
+        query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
+        query.pat.add(v['msg'], ns.sioc('content'), v['content']);
+        var esc = tabulator.Util.escapeForXML;
+        // dump("\nquery.pat = "+query.pat+"\n");
+
+        kb.query(query, addMessageFromBindings);
+    }
+    
+    var refreshButton = dom.createElement('button');
+    refreshButton.textContent = "refresh";
+    refreshButton.addEventListener('click', function(e) {
+        tabulator.sf.unload(messageStore);
+        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+            if (!ok) {
+                say("Cant refresh" + body);
+            } else {
+                syncMessages(subject, messageTable);
+            };
+        });
+    }, false);
+    div.appendChild(refreshButton);
+
+    return div;
+};
+
+
+
+
+
 
     
 // These used to be in js/init/icons.js but are better in the pane.
@@ -31,13 +296,13 @@ tabulator.panes.register( {
         return null; // No under other circumstances (while testing at least!)
     },
 
-    render: function(subject, myDocument) {
+    render: function(subject, dom) {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
         var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
         var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var div = myDocument.createElement("div")
+        var div = dom.createElement("div")
         div.setAttribute('class', 'issuePane');
         div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
 
@@ -52,20 +317,28 @@ tabulator.panes.register( {
             var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
             var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
             if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
-            sparqlService.update(deletions, insertions, function(uri, ok, body){});
+            updater.update(deletions, insertions, function(uri, ok, body){});
         }
 
         var say = function say(message, style){
-            var pre = myDocument.createElement("pre");
+            var pre = dom.createElement("pre");
             pre.setAttribute('style', style ? style :'color: grey');
             div.appendChild(pre);
-            pre.appendChild(myDocument.createTextNode(message));
+            pre.appendChild(dom.createTextNode(message));
             return pre
         } 
+
+        var complainIfBad = function(ok,body){
+            if (ok) {
+            }
+            else say("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
+        }
+
+
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, myDocument);
+            var div2 = thisPane.render(subject, dom);
             parent.replaceChild(div2, div);
         };
 
@@ -75,16 +348,11 @@ tabulator.panes.register( {
             // http://www.w3schools.com/jsref/jsref_obj_date.asp
         }
 
-        var shortDate = function(str) {
-            var now = $rdf.term(new Date()).value;
-            if (str.slice(0,10) == now.slice(0,10)) return str.slice(11,16);
-            return str.slice(0,10);
-        }
 
         //  Form to collect data about a New Issue
         //
-        var newIssueForm = function(myDocument, kb, tracker, superIssue) {
-            var form = myDocument.createElement('div');  // form is broken as HTML behaviour can resurface on js error
+        var newIssueForm = function(dom, kb, tracker, superIssue) {
+            var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
             var stateStore = kb.any(tracker, WF('stateStore'));
 
             var sendNewIssue = function() {
@@ -112,22 +380,28 @@ tabulator.panes.register( {
                         //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                     } else {
                         // dump('Tabulator issue pane: saved new issue\n')
-                        div.removeChild(form);
+                        form.parentNode.removeChild(form);
                         rerender(div);
                         tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
                         // tabulator.outline.GoToURI(issue.uri); // ?? or open in place?
                     }
                 }
-                sparqlService.update([], sts, sendComplete);
+                updater.update([], sts, sendComplete);
             }
             //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
             //form.setAttribute('onsubmit', "function xx(){return false;}");
+            
+            
+            
+            tabulator.sf.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
+            tabulator.sf.removeCallback('fail','expand');
+
             
             var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
                     classLabel+"</h2><p>Title of new "+classLabel+":</p>";
-            var titlefield = myDocument.createElement('input')
+            var titlefield = dom.createElement('input')
             titlefield.setAttribute('type','text');
             titlefield.setAttribute('size','100');
             titlefield.setAttribute('maxLength','2048');// No arbitrary limits
@@ -141,79 +415,13 @@ tabulator.panes.register( {
             return form;
         };
         
-       //       Form for a new message
-        //
-        var newMessageForm = function(myDocument, kb, about, storeDoc) {
-            var form = myDocument.createElement('form');
-            var issue = about;
-
-            var sendMessage = function() {
-                // titlefield.setAttribute('class','pendingedit');
-                // titlefield.disabled = true;
-                field.setAttribute('class','pendingedit');
-                field.disabled = true;
-                sts = [];
-                
-                var now = new Date();
-                var timestamp = ''+ now.getTime();
-                // http://www.w3schools.com/jsref/jsref_obj_date.asp
-                var message = kb.sym(storeDoc.uri + '#' + 'Msg'+timestamp);
-                sts.push(new $rdf.Statement(about, ns.wf('message'), message, storeDoc));
-                // sts.push(new $rdf.Statement(message, ns.dc('title'), kb.literal(titlefield.value), storeDoc))
-                sts.push(new $rdf.Statement(message, ns.sioc('content'), kb.literal(field.value), storeDoc))
-                sts.push(new $rdf.Statement(message, DCT('created'), new Date(), storeDoc));
-                if (me) sts.push(new $rdf.Statement(message, ns.foaf('maker'), me, storeDoc));
-
-                var sendComplete = function(uri, success, body) {
-                    if (!success) {
-                        //dump('Tabulator issue pane: can\'t save new message:\n\t'+body+'\n')
-                    } else {
-                        form.parentNode.removeChild(form);
-                        rerender(div);
-                    }
-                }
-                sparqlService.update([], sts, sendComplete);
-            }
-            form.addEventListener('submit', sendMessage, false)
-            form.setAttribute('onsubmit', "function xx(){return false;}");
-            // label = tabulator.Util.label(ns.dc('title')); // Localise
-            // form.innerHTML = "<p>"+label+":</p>";
-                    
-/*
-            var titlefield = myDocument.createElement('input')
-            titlefield.setAttribute('type','text');
-            titlefield.setAttribute('size','80');
-            titlefield.setAttribute('style', 'margin: 0.1em 1em 0.1em 1em');
-            titlefield.setAttribute('maxLength','2048');// No arbitrary limits
-            titlefield.select() // focus next user input - doesn't work @@
-            form.appendChild(titlefield);
-*/
-            form.appendChild(myDocument.createElement('br'));
-
-            var field = myDocument.createElement('textarea');
-            form.appendChild(field);
-            field.rows = 8;
-            field.cols = 80;
-            field.setAttribute('style', 'font-size:100%; \
-                    background-color: white; border: 0.07em solid gray; padding: 0.1em; margin: 0.1em 1em 0.1em 1em')
-
-            form.appendChild(myDocument.createElement('br'));
-
-            submit = myDocument.createElement('input');
-            submit.setAttribute('type', 'submit');
-            //submit.disabled = true; // until the filled has been modified
-            submit.value = "Send"; //@@ I18n
-            submit.setAttribute('style', 'float: right;');
-            form.appendChild(submit);
-
-            return form;
-        };
         
+
                                                   
         /////////////////////// Reproduction: Spawn a new instance of this app
         
         var newTrackerButton = function(thisTracker) {
-            return tabulator.panes.utils.newAppInstance(myDocument, "Start your own new tracker", function(ws){
+            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
@@ -268,13 +476,13 @@ tabulator.panes.register( {
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
-                sparqlService.put(
+                updater.put(
                     there,
                     kb.statementsMatching(undefined, undefined, undefined, there),
                     'text/turtle',
                     function(uri2, ok, message) {
                         if (ok) {
-                            sparqlService.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
+                            updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
                                 if (ok) {
                                     say("Ok The tracker created OK at: " + newTracker.uri +
                                     "\nMake a note of it, bookmark it. ",
@@ -306,7 +514,7 @@ tabulator.panes.register( {
         
         
         
-        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+        var updater = new tabulator.rdf.sparqlUpdate(kb);
 
  
         var plist = kb.statementsMatching(subject)
@@ -336,6 +544,8 @@ tabulator.panes.register( {
                 donePredicate(ns.dc('title'));
 
 
+
+
                 var setPaneStyle = function() {
                     var types = kb.findTypeURIs(subject);
                     var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
@@ -353,9 +563,12 @@ tabulator.panes.register( {
                     say('(This bug is not stored in the default state store)')
                 }
 */
+                tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+
+                
                 var states = kb.any(tracker, WF('issueClass'));
                 if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var select = tabulator.panes.utils.makeSelectForCategory(myDocument, kb, subject, states, store, function(ok,body){
+                var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
                         if (ok) {
                             setModifiedDate(store, kb, store);
                             rerender(div);
@@ -367,7 +580,7 @@ tabulator.panes.register( {
 
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 for (var i=0; i<cats.length; i++) {
-                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(myDocument, 
+                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
                             kb, subject, cats[i], store, function(ok,body){
                         if (ok) {
                             setModifiedDate(store, kb, store);
@@ -377,7 +590,7 @@ tabulator.panes.register( {
                     }));
                 }
                 
-                var a = myDocument.createElement('a');
+                var a = dom.createElement('a');
                 a.setAttribute('href',tracker.uri);
                 a.setAttribute('style', 'float:right');
                 div.appendChild(a).textContent = tabulator.Util.label(tracker);
@@ -385,7 +598,7 @@ tabulator.panes.register( {
                 donePredicate(ns.wf('tracker'));
 
 
-                div.appendChild(tabulator.panes.utils.makeDescription(myDocument, kb, subject, WF('description'),
+                div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
                     store, function(ok,body){
                         if (ok) setModifiedDate(store, kb, store);
                         else say("Failed to description:\n"+body);
@@ -407,6 +620,7 @@ tabulator.panes.register( {
                 var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
                 if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
                 if (devs.length) {
+                    devs.map(function(person){tabulator.sf.lookUpThing(person)}); // best effort async for names etc
                     var opts = { 'mint': "** Add new person **",
                                 'nullLabel': "(unassigned)",
                                 'mintStatementsFun': function(newDev) {
@@ -414,146 +628,82 @@ tabulator.panes.register( {
                                     if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
                                     return sts;
                                 }};
-                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(myDocument, kb,
+                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
                         subject, ns.wf('assignee'), devs, opts, store,
                         function(ok,body){
                             if (ok) setModifiedDate(store, kb, store);
                             else say("Failed to description:\n"+body);
                         }));
                 }
-
-                // Sub issues
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        if (!inverse && pred.sameTerm(WF('dependent'))) return true;
-                        return false
-                    });
-
-                // Super issues
-                tabulator.outline.appendPropertyTRs(div, qlist, true,
-                    function(pred, inverse) {
-                        if (inverse && pred.sameTerm(WF('dependent'))) return true;
-                        return false
-                    });
-                donePredicate(WF('dependent'));
+                donePredicate(ns.wf('assignee'));
 
 
-                div.appendChild(myDocument.createElement('br'));
+                var allowSubIssues = kb.any(tracker, ns.ui('allowSubIssues'));
+                if (allowSubIssues && allowSubIssues.value) {
+                    // Sub issues
+                    tabulator.outline.appendPropertyTRs(div, plist, false,
+                        function(pred, inverse) {
+                            if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                            return false
+                        });
 
-                if (stateStore) {
-                    var b = myDocument.createElement("button");
+                    // Super issues
+                    tabulator.outline.appendPropertyTRs(div, qlist, true,
+                        function(pred, inverse) {
+                            if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                            return false
+                        });
+                    donePredicate(WF('dependent'));
+                }
+
+                div.appendChild(dom.createElement('br'));
+
+                 var allowSubIssues = kb.any(tracker, ns.ui('allowSubIssues'));
+                if (allowSubIssues && allowSubIssues.value) {
+                    var b = dom.createElement("button");
                     b.setAttribute("type", "button");
                     div.appendChild(b)
                     classLabel = tabulator.Util.label(states);
                     b.innerHTML = "New sub "+classLabel;
                     b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
                     b.addEventListener('click', function(e) {
-                        div.appendChild(newIssueForm(myDocument, kb, tracker, subject))}, false);
+                        div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
                 };
 
-                // Messages with date, author etc
-
-                var table = myDocument.createElement('table');
-                div.appendChild(table);
-                if (me_uri) {
-                    var docStore = kb.any(tracker, ns.wf('messageStore'));
-                    if (!docStore) docStore = stateStore;
-                    var b = myDocument.createElement("button");
-                    b.setAttribute("type", "button");
-                    div.insertBefore(b, table);
-                    label = tabulator.Util.label(ns.wf('message'));
-                    b.innerHTML = "New " + label;
-                    b.setAttribute('style', 'margin: 0.5em 1em;');
-                    b.addEventListener('click', function(e) {
-                        var tr = myDocument.createElement('tr')
-                        table.insertBefore(tr, table.firstChild);
-                        var td = myDocument.createElement('td');
-                        td.innerHTML = 'Title:<br><br>Your message:'
-                        tr.appendChild(td);
-                        td = myDocument.createElement('td');
-                        tr.appendChild(td);
-                        // Actually we only need to know it is editable - we could HEAD not GET
-                        kb.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body){
-                            if (!ok) return say("Cannot load state store "+body);
-                            td.appendChild(newMessageForm(myDocument, kb, subject, docStore));
-                        });
-                    }, false);
-                }
-                var msg = kb.any(subject, WF('message'));
-                if (msg != undefined) {
-                    var str = ''
-                    // Do this with a live query to pull in messages from web
-                    var query = new $rdf.Query('Messages');
-                    var v = {};
-                    ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
-                         query.vars.push(v[x]=$rdf.variable(x))});
-                    query.pat.add(subject, WF('message'), v['msg']);
-//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
-                    query.pat.add(v['msg'], ns.dct('created'), v['date']);
-                    query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
-                    query.pat.add(v['msg'], ns.sioc('content'), v['content']);
-                    var esc = tabulator.Util.escapeForXML;
-                    var nick = function(person) {
-                        var s = kb.any(person, ns.foaf('nick'));
-                        if (s) return ''+s.value
-                        return ''+tabulator.Util.label(person);
-                    }
-                    var addLine = function(bindings) {
-                        //dump("Message, date="+bindings['?date']+"\n");
-                        var date = bindings['?date'].value;
-                        var tr = myDocument.createElement('tr');
-                        for (var ele = table.firstChild;;ele = ele.nextSibling) {
-                            if (!ele)  {table.appendChild(tr); break;};
-                            if (date > ele.AJAR_date) { // newest first
-                                table.insertBefore(tr, ele);
-                                break;
-                            }
+                var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
+                if (extrasForm) {
+                    tabulator.panes.utils.appendForm(dom, div, {},
+                                subject, extrasForm, stateStore, complainIfBad);
+                    var fields = kb.each(extrasForm, ns.ui('part'));
+                    fields.map(function(field) {
+                        var p = kb.any(field, ns.ui('property'));
+                        if (p) {
+                            donePredicate(p); // Check that one off
                         }
-                        tr.AJAR_date = date;
-                        var  td1 = myDocument.createElement('td');
-                        tr.appendChild(td1);
-
-                        var a = myDocument.createElement('a');
-                        a.setAttribute('href',bindings['?msg'].uri);
-                        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                        td1.appendChild(a).textContent = shortDate(date);
-                        td1.appendChild(myDocument.createElement('br'));
-                        var a = myDocument.createElement('a');
-                        a.setAttribute('href',bindings['?creator'].uri);
-                        a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                        td1.appendChild(a).textContent = nick(bindings['?creator']);
-                        
-                        var  td2 = myDocument.createElement('td');
-                        tr.appendChild(td2);
-                        var pre = myDocument.createElement('pre')
-                        
-                        pre.setAttribute('style', 'margin: 0.1em 1em 0.1em 1em')
-                        td2.appendChild(pre);
-                        pre.textContent = bindings['?content'].value;
-
-                        /* tr.innerHTML = '<td>'+esc(bindings['?date'].value)+
-                                '  '+esc(nick(bindings['?creator']))+
-                                '</td><td><pre>'+esc(bindings['?content'].value)+
-                                '</pre></td>'; */ // Doesn't work - misses out td's
-
-                        
-                    };
-                    // dump("\nquery.pat = "+query.pat+"\n");
-                    kb.query(query, addLine);
-                }
+                    });
+                    
+                };
+                
+                //   Comment/discussion area
+                
+                var messageStore = kb.any(tracker, ns.wf('messageStore'));
+                if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
+                div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
                 donePredicate(ns.wf('message'));
                 
 
-
-                // Add in simple comments about the bug
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        if (!inverse && pred.uri == 
-                            "http://www.w3.org/2000/01/rdf-schema#comment") return true;
-                        return false
-                    });
-
-                div.appendChild(myDocument.createElement('tr'))
+/*
+                // Add in simple comments about the bug - if not already in extras form.
+                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
+                    tabulator.outline.appendPropertyTRs(div, plist, false,
+                        function(pred, inverse) {
+                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
+                            return false
+                        });
+                    donePredicate(ns.rdfs('comment'));
+                };
+*/
+                div.appendChild(dom.createElement('tr'))
                             .setAttribute('style','height: 1em'); // spacer
                 
                 // Remaining properties
@@ -567,7 +717,7 @@ tabulator.panes.register( {
                     });
             });  // End nowOrWhenFetched tracker
 
-
+    ///////////////////////////////////////////////////////////
 
         //          Render a Tracker instance
         
@@ -578,22 +728,28 @@ tabulator.panes.register( {
             if (!states) throw 'This tracker has no issueClass';
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
+            
+            tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+            
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
-            var h = myDocument.createElement('h2');
+            var h = dom.createElement('h2');
             h.setAttribute('style', 'font-size: 150%');
             div.appendChild(h);
             classLabel = tabulator.Util.label(states);
-            h.appendChild(myDocument.createTextNode(classLabel+" list")); // Use class label @@I18n
+            h.appendChild(dom.createTextNode(classLabel+" list")); // Use class label @@I18n
 
             // New Issue button
-            var b = myDocument.createElement("button");
+            var b = dom.createElement("button");
+            var container = dom.createElement("div");
             b.setAttribute("type", "button");
             if (!me) b.setAttribute('disabled', 'true')
-            div.appendChild(b)
+            container.appendChild(b);
+            div.appendChild(container);
             b.innerHTML = "New "+classLabel;
             b.addEventListener('click', function(e) {
-                    div.appendChild(newIssueForm(myDocument, kb, subject));
+                    b.setAttribute('disabled', 'true');
+                    container.appendChild(newIssueForm(dom, kb, subject));
                 }, false);
             
             // Table of issues - when we have the main issue list
@@ -603,7 +759,7 @@ tabulator.panes.register( {
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 var vars =  ['issue', 'state', 'created'];
                 for (var i=0; i<cats.length; i++) { vars.push('_cat_'+i) };
-                var v = {};
+                var v = {}; // The RDF variable objects for each variable name
                 vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
                 query.pat.add(v['issue'], WF('tracker'), tracker);
                 //query.pat.add(v['issue'], ns.dc('title'), v['title']);
@@ -614,33 +770,63 @@ tabulator.panes.register( {
                     query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
                     query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
                 }
-                //say('Query pattern is:\n'+query.pat);
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query} );
+                
+                query.pat.optional = [];
+                
+                var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
+                // say('Property list: '+propertyList); //
+                if (propertyList) {
+                    properties = propertyList.elements;
+                    for (var p=0; p < properties.length; p++) {
+                        var prop = properties[p];
+                        var vname = '_prop_'+p;
+                        if (prop.uri.indexOf('#') >= 0) {
+                            vname = prop.uri.split('#')[1];
+                        }
+                        var oneOpt = new $rdf.IndexedFormula();
+                        query.pat.optional.push(oneOpt);
+                        query.vars.push(v[vname]=$rdf.variable(vname));
+                        oneOpt.add(v['issue'], prop, v[vname]);
+                    }
+                }
+                
+                // say('Query pattern is:\n'+query.pat);
+                // say('Query pattern optional is:\n'+opts); 
+                
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query} );
                 div.appendChild(tableDiv);
             });
-        // end of Tracker instance
-
+            div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
+            // end of Tracker instance
+
 
         } else { 
             say("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
         }         
-        if (!me_uri) {
+        if (!tabulator.preferences.get('me')) {
             say("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
-            say("(Your webid is "+ me_uri+")");
+            // say("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
-        div.appendChild(tabulator.panes.utils.loginStatusBox(myDocument, function(webid){
+        
+        
+        var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
             // sayt.parent.removeChild(sayt);
             if (webid) {
-                me_uri = webid;
+                tabulator.preferences.set('me', webid);
                 say("(Logged in as "+ webid+")")
+                me = kb.sym(webid);
             } else {
-                me_uri = undefined;
+                tabulator.preferences.set('me', '');
                 say("(Logged out)")
+                me = null;
             }
-            me = me_uri? kb.sym(me_uri) : null;
-        }));
+        });
+        
+        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
+
+        div.appendChild(loginOutButton);
         
         
         return div;

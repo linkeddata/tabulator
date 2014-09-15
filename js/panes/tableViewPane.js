@@ -922,7 +922,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     function literalSort(rows, column, reverse) {
         function literalToString(colValue) {
             if (colValue != null) {
-                return colValue.value;
+                if (colValue.termType == "literal") {
+                    return colValue.value.toLowerCase();
+                } else if (colValue.termType == "symbol") {
+                    return tabulator.Util.label(colValue).toLowerCase() ;
+                };
+                return colValue.value.toLowerCase();
             } else {
                 return "";
             }
@@ -985,7 +990,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 if (colValue.termType == "literal") {
                     literalValue = colValue.value;
                 } else if (colValue.termType == "symbol") {
-                    literalValue = colValue.uri;
+                    literalValue = tabulator.Util.label(colValue) ;
                 } else {
                     literalValue = "";
                 }
@@ -1220,13 +1225,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             if (selector != null) {
                 td.appendChild(selector);
             }
-
+/*
             // Useful debug: display URI of predicate in column header
-
-            if (false && columns[i].predicate.uri != null) {
+            if (columns[i].predicate.uri != null) {
                 td.appendChild(document.createTextNode(columns[i].predicate.uri));
             }
-
+*/
             tr.appendChild(td);
         }
 

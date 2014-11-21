@@ -36,12 +36,17 @@ tabulator.panes.utils.extractLogURI = function(fullURI){
 tabulator.panes.utils.shortDate = function(str) {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
     if (!str) return '???';
+    var month = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
     try {
         var now = new Date();
         var then = new Date(str);
         var nowZ = $rdf.term(now).value;
-        var n = now.getTimezoneOffset();
+        var n = now.getTimezoneOffset(); // Minutes
         if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
+        if (str.slice(0,4) == nowZ.slice(0,4)) {
+            return ( month[parseInt(str.slice(5,7))] + ' ' + parseInt(str.slice(8,10)));
+        }
         return str.slice(0,10);
     } catch(e) {
         return 'shortdate:' + e
@@ -939,10 +944,12 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
 tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, store, callback) {
     if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb); // @@ Use a common one attached to each fetcher or merge with fetcher
     var group = dom.createElement('div');
+    
     var sts = kb.statementsMatching(subject, predicate,undefined); // Only one please
     if (sts.length > 1) return tabulator.panes.utils.errorMessageBlock(dom,
                 "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject);
     var desc = sts.length? sts[0].object.value : undefined;
+    
     var field = dom.createElement('textarea');
     group.appendChild(field);
     field.rows = desc? desc.split('\n').length + 2 : 2;
@@ -952,10 +959,19 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     field.setAttribute('style', style)
     if (sts.length) field.value = desc 
     else {
-        field.value = tabulator.Util.label(predicate); // Was"enter a description here"
+        // Unless you can make the predicate label disappear with the first click then this is over-cute
+        // field.value = tabulator.Util.label(predicate); // Was"enter a description here"
         field.select(); // Select it ready for user input -- doesn't work
     }
 
+    group.refresh = function() {
+        var v = kb.any(subject, predicate);
+        if (v && (v.value !== field.value)) {
+            field.value = v.value; // don't touch widget if no change
+            // @@ this is the place to color the field from the user who chanaged it
+        } 
+    };
+    
     var br = dom.createElement('br');
     group.appendChild(br);
     var submit = dom.createElement('input');
@@ -1503,8 +1519,13 @@ tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
     return tabulator.panes.utils.checkUser(dom, doc, function(uri) {
         var me_uri = tabulator.preferences.get('me');
         if (uri == me_uri) return null;
-        tabulator.preferences.set('me', uri);
-        var message = "(Logged in as " + uri + " by authentication.)";
+        var message;
+        if (!uri) {
+            message = "(Log in by auth with no URI - ignored)";
+        } else {
+            tabulator.preferences.set('me', uri);
+            message = "(Logged in as " + uri + " by authentication.)";
+        };
         try {  // Ugh
             tabulator.log.alert(message);
         } catch(e) {

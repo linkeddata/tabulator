@@ -177,7 +177,7 @@ tabulator.OutlineObject = function(doc) {
 
     this.appendAccessIcon = function(node, uri) {
         if (!uri) return '';
-        var docuri = tabulator.rdf.Util.uri.docpart(uri);
+        var docuri = tabulator.rdf.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
         var state = sf.getState(docuri);
         var icon, alt;
@@ -873,7 +873,7 @@ tabulator.OutlineObject = function(doc) {
             // ignore first '?' and everything after it //Kenny doesn't know what this is for
             try{var baseURI = myDocument.location.href.split('?')[0];}
             catch(e){ dump(e);var baseURI="";}
-            var relativeIconSrc = tabulator.rdf.Util.uri.join(icon.src,baseURI);
+            var relativeIconSrc = tabulator.rdf.uri.join(icon.src,baseURI);
             if (eltSrc == relativeIconSrc) {
                 iconTD.removeChild(elt);
             }
@@ -1524,13 +1524,13 @@ tabulator.OutlineObject = function(doc) {
             case tabulator.Icon.src.icon_failed:
             case tabulator.Icon.src.icon_fetched:
                 var uri = target.getAttribute('uri'); // Put on access buttons
-                sf.refresh(kb.sym(tabulator.rdf.Util.uri.docpart(uri))); // just one
+                sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
                 // sf.objectRefresh(subject);
                 break;
             case tabulator.Icon.src.icon_unrequested:
                 var uri = target.getAttribute('uri'); // Put on access buttons
                 if (!uri) alert('Interal error: No URI on unrequested icon! @@');
-                sf.requestURI(tabulator.rdf.Util.uri.docpart(uri))
+                sf.requestURI(tabulator.rdf.uri.docpart(uri))
                 // if (subject.uri) sf.lookUpThing(subject);
                 break;
             case tabulator.Icon.src.icon_opton:
@@ -1633,8 +1633,8 @@ tabulator.OutlineObject = function(doc) {
         sf.removeCallback('fail','expand');
         
         var subject = kb.canon(subject1)
-        var requTerm = subject.uri?kb.sym(tabulator.rdf.Util.uri.docpart(subject.uri)):subject
-        var subj_uri = subject.uri
+        var requTerm = subject.uri?kb.sym(tabulator.rdf.uri.docpart(subject.uri)):subject
+        var subj_uri = subject.uri;  // || subject.value;  // Normally .uri but in internals pane, for the URI of something, .value
         var already = !!already
         
         function render() {
@@ -1684,17 +1684,17 @@ tabulator.OutlineObject = function(doc) {
             var cursubj = kb.canon(subject);  // canonical identifier may have changed
                 tabulator.log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
             var term = kb.sym(uri)
-            var docTerm = kb.sym(tabulator.rdf.Util.uri.docpart(uri))
+            var docTerm = kb.sym(tabulator.rdf.uri.docpart(uri))
             if (uri.indexOf('#') >= 0) 
                 throw "Internal error: hash in "+uri;
             
             var relevant = function() {  // Is the loading of this URI relevam to the display of subject?
                 if (!cursubj.uri) return true;  // bnode should expand() 
-                //doc = cursubj.uri?kb.sym(tabulator.rdf.Util.uri.docpart(cursubj.uri)):cursubj
+                //doc = cursubj.uri?kb.sym(tabulator.rdf.uri.docpart(cursubj.uri)):cursubj
                 var as = kb.uris(cursubj)
                 if (!as) return false;
                 for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
-                    for (var rd = tabulator.rdf.Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
+                    for (var rd = tabulator.rdf.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
                         if (uri == rd) return true;
                     }
                 }
@@ -1750,9 +1750,24 @@ tabulator.OutlineObject = function(doc) {
                 return;
             }
         }
-        sf.lookUpThing(subject);
-        render()  // inital open, or else full if re-open
-        tabulator.log.debug('outline 1821')
+        if (subj_uri) {
+            var doc = tabulator.rdf.uri.docpart(subj_uri);
+            // Wait till at least the main URI is loaded before expanding:
+            sf.nowOrWhenFetched(doc, undefined, function(ok, body) {
+                if (ok) {
+                    sf.lookUpThing(subject);
+                    render()  // inital open, or else full if re-open
+                    tabulator.log.debug('outline 1821')
+                } else {
+                    var message = myDocument.createElement("pre");
+                    message.textContent = body;
+                    message.setAttribute('style', 'background-color: #fee;');
+                    p.appendChild(message);
+                }
+            });
+        } else {
+            render();
+        };
     
     } //outline_expand
     
@@ -1816,6 +1831,7 @@ tabulator.OutlineObject = function(doc) {
     outline.outline_refocus = outline_refocus;
     
     // Inversion is turning the outline view inside-out
+    // It may be called eversion
     function outline_inversion(p, subject) { // re-root at subject
     
         function move_root(rootTR, childTR) { // swap root with child

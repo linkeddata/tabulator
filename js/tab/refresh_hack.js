@@ -27,7 +27,9 @@ window.addEventListener("load", function(){
 			}
 		}
 	}
-	reload.addEventListener("click",RDF_reload, false);
+	if (reload) {
+            reload.addEventListener("click",RDF_reload, false);
+        };
 },false);
 
 

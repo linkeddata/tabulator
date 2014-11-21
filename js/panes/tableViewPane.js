@@ -50,6 +50,11 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         "http://www.w3.org/2001/XMLSchema#unsignedByte": true
     };
 
+    var XSD_DATE_TYPES = {
+        "http://www.w3.org/2001/XMLSchema#dateTime": true,
+        "http://www.w3.org/2001/XMLSchema#date": true
+    };
+
     // Classes that indicate an image:
 
     var IMAGE_TYPES = {
@@ -76,6 +81,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // The last SPARQL query used:
     var lastQuery = null;
+    var mostCommonType = null;
 
     var resultDiv = doc.createElement("div");
     resultDiv.className = "tableViewPane";
@@ -86,12 +92,20 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     resultDiv.appendChild(tableDiv);
 
 
+    // Save a refresh function for use by caller
+    resultDiv.refresh = function() {
+        updateTable(givenQuery, mostCommonType); // This could be a lot more incremental and efficient
+    }
+
+
     // A specifically asked-for query
     if (givenQuery) {
     
         var table = renderTableForQuery(givenQuery);
         //lastQuery = givenQuery;
         tableDiv.appendChild(table);
+
+        
         
     } else {
 
@@ -101,7 +115,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         if (!tableClass) typeSelectorDiv.appendChild(
             generateTypeSelector(allType, types));
 
-        var mostCommonType = getMostCommonType(types);
+        mostCommonType = getMostCommonType(types);
 
         if (mostCommonType != null) {
             buildFilteredTable(mostCommonType);
@@ -293,6 +307,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // Save the query for the edit dialog.
 
         lastQuery = query;
+        
+        
     }
 
     // Remove all subelements of the specified element.
@@ -858,17 +874,19 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
         // Remove all rows from the table:
 
-        var parentTable = rows[0]._htmlRow.parentNode;
+        if (rows.length) {
+            var parentTable = rows[0]._htmlRow.parentNode;
 
-        for (var i=0; i<rows.length; ++i) {
-            parentTable.removeChild(rows[i]._htmlRow);
-        }
+            for (var i=0; i<rows.length; ++i) {
+                parentTable.removeChild(rows[i]._htmlRow);
+            }
 
-        // Add back the rows in the new sorted order:
+            // Add back the rows in the new sorted order:
 
-        for (var i=0; i<rows.length; ++i) {
-            parentTable.appendChild(rows[i]._htmlRow);
-        }
+            for (var i=0; i<rows.length; ++i) {
+                parentTable.appendChild(rows[i]._htmlRow);
+            }
+        };
     }
 
     // Filter the list of rows based on the selectors for the 
@@ -1025,19 +1043,28 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         var doMultiple = true;
         var result = doc.createElement("div");
         var dropdown = doc.createElement("select");
+
+        var searchValue = {}; // Defualt to all enabled
+        for (var i=0; i<list.length; ++i) {
+            var value = list[i];
+            searchValue[value.uri] = true;
+        }
         
+        var initialSelection = hints(column).initialSelection;
+        if (initialSelection) searchValue = initialSelection;
+
         if (doMultiple) dropdown.setAttribute('multiple', 'true');
         else dropdown.appendChild(optionElement("(All)", "-1"));
         
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
-            dropdown.appendChild(optionElement(tabulator.Util.label(value), i));
+            var ele = optionElement(tabulator.Util.label(value), i);
+            if (searchValue[value.uri]) ele.selected = true;
+            dropdown.appendChild(ele);
         }
         result.appendChild(dropdown);
 
         // Select based on an enum value.
-
-        var searchValue = null;
 
         column.filterFunction = function(colValue) {
             return searchValue == null ||
@@ -1059,9 +1086,9 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 // dump('searchValue:'); for (var x in searchValue) dump(' '+x+': '+searchValue[x]+'; '); // @@TBL
                 // dump('\n'); // @@TBL
                 
-            } else {
-                if (index < 0) { // All
-                    searchValue = null;
+                } else {
+                    if (index < 0) { // All
+                        searchValue = null;
                 } else {
                     var index = new Number(dropdown.value);
                     searchValue = {}
@@ -1273,26 +1300,58 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // Render an individual RDF object to an HTML object displayed
     // in a table cell.
+    
+    function hints(column) {
+        if (options && options.hints && column.variable && options.hints[column.variable.toNT()]) {
+            return options.hints[column.variable.toNT()];
+        }
+        return {};
+    }
 
-    function renderValue(obj, column) {
-        if (obj.termType == "literal") {
-            return doc.createTextNode(obj.value);
-        } else if (obj.termType == "symbol" && column.isImageColumn()) {
-            return renderImage(obj);
-        } else if (obj.termType == "symbol" || obj.termType == "bnode") {
-            return linkToObject(obj);
-        } else if (obj.termType == "collection") {
-            var span = doc.createElement('span');
-            span.appendChild(doc.createTextNode('['));
-            obj.elements.map(function(x){
-                span.appendChild(renderValue(x, column));
-                span.appendChild(doc.createTextNode(', '));
-            });
-            span.removeChild(span.lastChild);
-            span.appendChild(doc.createTextNode(']'));
-            return span;
+    function renderValue(obj, column) { // hint
+
+        var cellFormat = hints(column).cellFormat;
+        var span;
+        if (cellFormat) {
+            switch(cellFormat) {
+            case 'shortDate':
+                return doc.createTextNode(tabulator.panes.utils.shortDate(obj.value));
+                break;
+                
+            default:
+                // drop through
+            
+            }
         } else {
-            return doc.createTextNode("unknown termtype '"+obj.termType+"'!");
+            if (obj.termType == "literal") {
+                if (obj.datatype) {
+                    if (XSD_DATE_TYPES[obj.datatype.uri]) {
+                        return doc.createTextNode(tabulator.panes.utils.shortDate(obj.value));
+                    } else if (XSD_NUMBER_TYPES[obj.datatype.uri]) {
+                        var span = doc.createElement('span');
+                        span.textContent = obj.value;
+                        span.setAttribute('style', 'text-align: right');
+                        return span;
+                    }
+                }
+                return doc.createTextNode(obj.value);
+            } else if (obj.termType == "symbol" && column.isImageColumn()) {
+                return renderImage(obj);
+            } else if (obj.termType == "symbol" || obj.termType == "bnode") {
+                return linkToObject(obj);
+            } else if (obj.termType == "collection") {
+                var span = doc.createElement('span');
+                span.appendChild(doc.createTextNode('['));
+                obj.elements.map(function(x){
+                    span.appendChild(renderValue(x, column));
+                    span.appendChild(doc.createTextNode(', '));
+                });
+                span.removeChild(span.lastChild);
+                span.appendChild(doc.createTextNode(']'));
+                return span;
+            } else {
+                return doc.createTextNode("unknown termtype '"+obj.termType+"'!");
+            }
         }
     }
 
@@ -1488,6 +1547,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         
         var onDone = function() {
             progressMessage.parentNode.removeChild(progressMessage);
+            applyColumnFilters(rows, columns); // @@ TBL added this
             // Here add table clean-up, remove "loading" message etc.
             if (options.onDone) options.onDone();
         }
@@ -1592,7 +1652,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // query runs in the background and this call does not block.
 
         runQuery(query, rows, columns, table);
-
+        
         return table;
     }
 

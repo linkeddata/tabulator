@@ -49,8 +49,10 @@ tabulator.panes.register({
         //  @@ When we can, use CSP to turn off scripts within the iframe
         div.setAttribute('class', 'docView')    
         var iframe = myDocument.createElement("IFRAME")
-        iframe.setAttribute('src', subject.uri)
+        iframe.setAttribute('src', subject.uri)    // allow-same-origin
         iframe.setAttribute('class', 'doc')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-forms'); // allow-scripts ?? no documents should be static
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
         iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
 //        iframe.setAttribute('height', '480')
 //        iframe.setAttribute('width', '640')

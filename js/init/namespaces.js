@@ -15,6 +15,7 @@ tabulator.ns.ldp = $rdf.Namespace('http://www.w3.org/ns/ldp#');
 tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = $rdf.Namespace('http://www.w3.org/2007/ont/link#');
 tabulator.ns.mo = $rdf.Namespace('http://purl.org/ontology/mo/');
 tabulator.ns.owl = $rdf.Namespace('http://www.w3.org/2002/07/owl#');
+tabulator.ns.patch = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
 tabulator.ns.qu = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
 tabulator.ns.trip = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
 tabulator.ns.rdf = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#');

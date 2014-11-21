@@ -22,12 +22,20 @@ update :
 	(cd /devel/dvcs.w3.org/read-write-web; hg commit -m "New mashlib.js -- see http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/js/mashup/Makefile")
 
 
+alpha :
+	(cd $J/rdf; make dist/rdflib.js)
+	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib-alpha.js
+	cp mashlib-alpha.js ~/Documents/Automation/Library/Mashup/mashlib-alpha.js
+	cp ../../tabbedtab.css ~/Documents/Automation/Library/Mashup/tabbedtab.css
+	hg commit -m "Test mashup - see mashup makefile"  ~/Documents/Automation/Library/Mashup
+	(cd ~/Documents/Automation/Library/Mashup/; hg push)
+
 dist :
 	(cd $J/rdf; make dist/rdflib.js)
 	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib.js
 	cp mashlib.js ~/Documents/Automation/Library/Mashup/mashlib.js
 	cp ../../tabbedtab.css ~/Documents/Automation/Library/Mashup/tabbedtab.css
-	hg commit -m "Test mashup - see mashup makefile"  ~/Documents/Automation/Library/Mashup
+	hg commit -m "Distribute mashup - see content/js/mashup/Makefile"  ~/Documents/Automation/Library/Mashup
 	(cd ~/Documents/Automation/Library/Mashup/; hg push)
 
 distribute12 : mashlib.js

@@ -5,9 +5,209 @@ to change its state according to an ontology, comment on it, etc.
 **
 **
 ** I am using in places single quotes strings like 'this'
-** where internationalizatio ("i18n") is not a problem, and double quoted
+** where internationalization ("i18n") is not a problem, and double quoted
 ** like "this" where the string is seen by the user and so I18n is an issue.
 */
+
+
+
+
+
+
+//////////////////////////////////////////////////////  SUBCRIPTIONS
+
+$rdf.subscription =  function(options, doc, onChange) {
+
+
+    //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
+    var linkRels = function(doc) {
+        var links = {}; // map relationship to uri
+        var linkHeaders = tabulator.sf.getHeader(doc, 'link');
+        if (!linkHeaders) return null;
+        linkHeaders.map(function(headerValue){
+            var arg = headerValue.trim().split(';');
+            var uri = arg[0];
+            arg.slice(1).map(function(a){
+                var key = a.split('=')[0].trim();
+                var val = a.split('=')[1].trim();
+                if (key ==='rel') {
+                    links[val] = uri.trim();
+                }
+            });        
+        });
+        return links;
+    };
+
+
+    var getChangesURI = function(doc, rel) {
+        var links = linkRels(doc);
+        if (!links[rel]) {
+            console.log("No link header rel=" + rel + " on " + doc.uri)
+            return null;
+        }
+        var changesURI = $rdf.uri.join(links[rel], doc.uri);
+        console.log("Found rel=" + rel + " URI: " + changesURI);
+        return changesURI;
+    };
+
+
+
+
+///////////////  Subscribe to changes by SSE
+
+
+    var getChanges_SSE = function(doc, onChange) {
+        var streamURI = getChangesURI(doc, 'events');
+        if (!streamURI) return;
+        var source = new EventSource(streamURI); // @@@  just path??
+        console.log("Server Side Source");   
+
+        source.addEventListener('message', function(e) {
+            console.log("Server Side Event: " + e);   
+            alert("SSE: " + e)  
+            // $('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
+        }, false);
+    };
+
+ 
+    
+
+    //////////////// Subscribe to changes websocket
+
+    // This implementation uses web sockets using update-via
+    
+    var getChanges_WS2 = function(doc, onChange) {
+        var router = new $rdf.UpdatesVia(tabulator.sf); // Pass fetcher do it can subscribe to headers
+        var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+        router.register(wsuri, doc.uri);
+    };
+    
+    var getChanges_WS = function(doc, onChange) {
+        var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
+        var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
+        var socket;
+        try {
+            socket = new WebSocket(changesURI);
+        } catch(e) {
+            socket = new MozWebSocket(changesURI);
+        };
+        
+        socket.onopen = function(event){
+            console.log("socket opened");
+        };
+        
+        socket.onmessage = function (event) {
+            console.log("socket received: " +event.data);
+            var patchText = event.data;
+            console.log("Success: patch received:" + patchText);
+            
+            // @@ check integrity of entire patch
+            var patchKB = $rdf.graph();
+            var sts;
+            try {
+                $rdf.parse(patchText, patchKB, doc.uri, 'text/n3');
+            } catch(e) {
+                console.log("Parse error in patch: "+e);
+            };
+            clauses = {};
+            ['where', 'insert', 'delete'].map(function(pred){
+                sts = patchKB.statementsMatching(undefined, SQNS(pred), undefined);
+                if (sts) clauses[pred] = sts[0].object;
+            });
+            console.log("Performing patch!");
+            kb.applyPatch(clauses, doc, function(err){
+                if (err) {
+                    console.log("Incoming patch failed!!!\n" + err)
+                    alert("Incoming patch failed!!!\n" + err)
+                    socket.close();
+                } else {
+                    console.log("Incoming patch worked!!!!!!\n" + err)
+                    onChange(); // callback user
+                };
+            });
+        };
+
+    }; // end getChanges
+    
+
+    ////////////////////////// Subscribe to changes using Long Poll
+
+    // This implementation uses link headers and a diff returned by plain HTTP
+    
+    var getChanges_LongPoll = function(doc, onChange) {
+        var changesURI = getChangesURI(doc, 'changes');
+        if (!changesURI) return "No advertized long poll URI";
+        var xhr = $rdf.Util.XMLHTTPFactory();
+        xhr.alreadyProcessed = 0;
+
+        xhr.onreadystatechange = function(){
+            switch (xhr.readyState) {
+            case 0:
+            case 1:
+                return;
+            case 3:
+                console.log("Mid delta stream (" + xhr.responseText.length + ") "+ changesURI);
+                handlePartial();
+                break;
+            case 4:
+                handlePartial();
+                console.log("End of delta stream " + changesURI);
+                break;
+             }   
+        };
+
+        try {
+            xhr.open('GET', changesURI);
+        } catch (er) {
+            console.log("XHR open for GET changes failed <"+changesURI+">:\n\t" + er);
+        }
+        try {
+            xhr.send();
+        } catch (er) {
+            console.log("XHR send failed <"+changesURI+">:\n\t" + er);
+        }
+
+        var handlePartial = function() {
+            // @@ check content type is text/n3
+
+            if (xhr.status >= 400) {
+                console.log("HTTP (" + xhr.readyState + ") error " + xhr.status + "on change stream:" + xhr.statusText);
+                console.log("     error body: " + xhr.responseText);
+                xhr.abort();
+                return;
+            } 
+            if (xhr.responseText.length > xhr.alreadyProcessed) {
+                var patchText = xhr.responseText.slice(xhr.alreadyProcessed);
+                xhr.alreadyProcessed = xhr.responseText.length;
+                
+                xhr.headers = $rdf.Util.getHTTPHeaders(xhr);
+                try {
+                    onChange(patchText);
+                } catch (e) {
+                    console.log("Exception in patch update handler: " + e)
+                    // @@ Where to report error e?
+                }
+                getChanges_LongPoll(doc, onChange); // Queue another one
+                
+            }        
+        };
+        return null; // No error
+
+    }; // end getChanges_LongPoll
+    
+    if (options.longPoll ) {
+        getChanges_LongPoll(doc, onChange);
+    }
+    if (options.SSE) {
+        getChanges_SSE(doc, onChange);
+    }
+    if (options.websockets) {
+        getChanges_WS(doc, onChange);
+    }
+
+}; // subscription
+
+///////////////////////////////// End of subscription stufff 
 
 
 tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
@@ -34,6 +234,20 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         a.textContent = text;
         a.setAttribute('style', 'color: #3B5998; text-decoration: none; '); // font-weight: bold;
         return a;
+    };
+
+    var mention = function mention(message, style){
+        var pre = dom.createElement("pre");
+        pre.setAttribute('style', style ? style :'color: grey');
+        div.appendChild(pre);
+        pre.appendChild(dom.createTextNode(message));
+        return pre
+    } 
+    
+    var console = {
+        log: function(message) {mention(message, 'color: #111;')},
+        warn: function(message) {mention(message, 'color: #880;')},
+        error: function(message) {mention(message, 'color: #800;')}
     };
 
     
@@ -112,6 +326,8 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         return ''+tabulator.Util.label(person);
     }
 
+/////////////////////////////////////////////////////////////////////////
+    
     var syncMessages = function(about, messageTable) {
         var displayed = {};
         for (var ele = messageTable.firstChild; ele ;ele = ele.nextSibling) {
@@ -148,7 +364,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
                 kb.statementsMatching(undefined, undefined, message));
         updater.update(deletions, [], function(uri, ok, body){
             if (!ok) {
-                say("Cant delete messages:" + body);
+                console.log("Cant delete messages:" + body);
             } else {
                 syncMessages(subject, messageTable);
             };
@@ -251,20 +467,25 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 
         kb.query(query, addMessageFromBindings);
     }
-    
+/*
     var refreshButton = dom.createElement('button');
     refreshButton.textContent = "refresh";
     refreshButton.addEventListener('click', function(e) {
         tabulator.sf.unload(messageStore);
-        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+        tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
             if (!ok) {
-                say("Cant refresh" + body);
+                console.log("Cant refresh messages" + body);
             } else {
                 syncMessages(subject, messageTable);
             };
         });
     }, false);
     div.appendChild(refreshButton);
+*/    
+    div.refresh = function() {
+        syncMessages(subject, messageTable);
+    };
+    
 
     return div;
 };
@@ -331,7 +552,7 @@ tabulator.panes.register( {
         var complainIfBad = function(ok,body){
             if (ok) {
             }
-            else say("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
+            else console.log("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
         }
 
 
@@ -369,14 +590,14 @@ tabulator.panes.register( {
                 sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
 
                 var initialStates = kb.each(tracker, WF('initialState'));
-                if (initialStates.length == 0) say('This tracker has no initialState');
+                if (initialStates.length == 0) console.log('This tracker has no initialState');
                 for (var i=0; i<initialStates.length; i++) {
                     sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialStates[i], stateStore))
                 }
                 if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
                 var sendComplete = function(uri, success, body) {
                     if (!success) {
-                         say("Error: can\'t save new issue:" + body);
+                         console.log("Error: can\'t save new issue:" + body);
                         //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                     } else {
                         // dump('Tabulator issue pane: saved new issue\n')
@@ -425,7 +646,7 @@ tabulator.panes.register( {
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
-                // say("Ready to make new instance at "+ws);
+                // console.log("Ready to make new instance at "+ws);
                 var sp = tabulator.ns.space;
                 var kb = tabulator.kb;
                 
@@ -484,15 +705,14 @@ tabulator.panes.register( {
                         if (ok) {
                             updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
                                 if (ok) {
-                                    say("Ok The tracker created OK at: " + newTracker.uri +
-                                    "\nMake a note of it, bookmark it. ",
-                                     'color: #080; background-color: white;');
+                                    console.info("Ok The tracker created OK at: " + newTracker.uri +
+                                    "\nMake a note of it, bookmark it. ");
                                 } else {
-                                    say("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
+                                    console.log("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
                                 };
                             });
                         } else {
-                            say("FAILED to save new tracker at: "+ there.uri +' : ' + message);
+                            console.log("FAILED to save new tracker at: "+ there.uri +' : ' + message);
                         };
                     }
                 );
@@ -526,6 +746,35 @@ tabulator.panes.register( {
         var me = me_uri? kb.sym(me_uri) : null;
 
 
+        // Reload resorce then
+        
+        var reloadStore = function(store, callBack) {
+            tabulator.sf.unload(store);
+            tabulator.sf.nowOrWhenFetched(store.uri, undefined, function(ok, body){
+                if (!ok) {
+                    console.log("Cant refresh data:" + body);
+                } else {
+                    callBack();
+                };
+            });
+        };
+
+
+
+        // Refresh the DOM tree
+      
+        refreshTree = function(root) {
+            if (root.refresh) {
+                root.refresh();
+                return;
+            }
+            for (var i=0; i < root.children.length; i++) {
+                refreshTree(root.children[i]);
+            }
+        }
+
+
+
         //              Render a single issue
         
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
@@ -536,7 +785,7 @@ tabulator.panes.register( {
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
             tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
-                if (!ok) return say("Failed to load " + trackerURI + ' '+body);
+                if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
                 var ns = tabulator.ns
                 var predicateURIsDone = {};
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
@@ -560,9 +809,32 @@ tabulator.panes.register( {
                 var stateStore = kb.any(tracker, WF('stateStore'));
                 var store = kb.sym(subject.uri.split('#')[0]);
 /*                if (stateStore != undefined && store.uri != stateStore.uri) {
-                    say('(This bug is not stored in the default state store)')
+                    console.log('(This bug is not stored in the default state store)')
                 }
 */
+
+                // Unfinished -- need this for speed to save the reloadStore below
+                var incommingPatch = function(text) {
+                    var contentType = xhr.headers['content-type'].trim();
+                    var patchKB = $rdf.graph();
+                    $rdf.parse(patchText, patchKB, doc.uri, contentType);
+                    // @@ TBC: check this patch isn't one of ours
+                    // @@ TBC: kb.applyPatch();  @@@@@ code me
+                    refreshTree(div);
+                    say("Tree Refreshed!!!");
+                }
+
+
+                var subopts = { 'longPoll': true };
+                $rdf.subscription(subopts, stateStore, function() {
+                    reloadStore(stateStore, function(deltaText) {
+                        refreshTree(div);
+                        say("Tree Refreshed!!!");
+                    });
+                });
+
+
+
                 tabulator.panes.utils.checkUserSetMe(dom, stateStore);
 
                 
@@ -573,7 +845,7 @@ tabulator.panes.register( {
                             setModifiedDate(store, kb, store);
                             rerender(div);
                         }
-                        else say("Failed to change state:\n"+body);
+                        else console.log("Failed to change state:\n"+body);
                     })
                 div.appendChild(select);
 
@@ -586,7 +858,7 @@ tabulator.panes.register( {
                             setModifiedDate(store, kb, store);
                             rerender(div);
                         }
-                        else say("Failed to change category:\n"+body);
+                        else console.log("Failed to change category:\n"+body);
                     }));
                 }
                 
@@ -601,7 +873,7 @@ tabulator.panes.register( {
                 div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
                     store, function(ok,body){
                         if (ok) setModifiedDate(store, kb, store);
-                        else say("Failed to description:\n"+body);
+                        else console.log("Failed to description:\n"+body);
                     }));
                 donePredicate(WF('description'));
 
@@ -632,7 +904,7 @@ tabulator.panes.register( {
                         subject, ns.wf('assignee'), devs, opts, store,
                         function(ok,body){
                             if (ok) setModifiedDate(store, kb, store);
-                            else say("Failed to description:\n"+body);
+                            else console.log("Failed to description:\n"+body);
                         }));
                 }
                 donePredicate(ns.wf('assignee'));
@@ -715,6 +987,25 @@ tabulator.panes.register( {
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                     });
+                    
+                var refreshButton = dom.createElement('button');
+                refreshButton.textContent = "refresh";
+                refreshButton.addEventListener('click', function(e) {
+                    tabulator.sf.unload(messageStore);
+                    tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+                        if (!ok) {
+                            console.log("Cant refresh messages" + body);
+                        } else {
+                            refreshTree(div);
+                            // syncMessages(subject, messageTable);
+                        };
+                    });
+                }, false);
+                div.appendChild(refreshButton);
+
+
+
+                    
             });  // End nowOrWhenFetched tracker
 
     ///////////////////////////////////////////////////////////
@@ -754,7 +1045,7 @@ tabulator.panes.register( {
             
             // Table of issues - when we have the main issue list
             tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
-                if (!ok) return say("Cannot load state store "+body);
+                if (!ok) return console.log("Cannot load state store "+body);
                 var query = new $rdf.Query(tabulator.Util.label(subject));
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 var vars =  ['issue', 'state', 'created'];
@@ -774,7 +1065,7 @@ tabulator.panes.register( {
                 query.pat.optional = [];
                 
                 var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
-                // say('Property list: '+propertyList); //
+                // console.log('Property list: '+propertyList); //
                 if (propertyList) {
                     properties = propertyList.elements;
                     for (var p=0; p < properties.length; p++) {
@@ -790,11 +1081,47 @@ tabulator.panes.register( {
                     }
                 }
                 
-                // say('Query pattern is:\n'+query.pat);
-                // say('Query pattern optional is:\n'+opts); 
+            
+                // console.log('Query pattern is:\n'+query.pat);
+                // console.log('Query pattern optional is:\n'+opts); 
+            
+                var selectedStates = {};
+                var possible = kb.each(undefined, ns.rdfs('subClassOf'), states);
+                possible.map(function(s){
+                    if (kb.holds(s, ns.rdfs('subClassOf'), WF('Open')) || s.sameTerm(WF('Open'))) {
+                        selectedStates[s.uri] = true;
+                        // console.log('on '+s.uri); // @@
+                    };
+                });
                 
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query} );
+                        
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
+                    'hints': {
+                        '?created': { 'cellFormat': 'shortDate'},
+                        '?state': { 'initialSelection': selectedStates }}} );
                 div.appendChild(tableDiv);
+
+                if (tableDiv.refresh) { // Refresh function
+                    var refreshButton = dom.createElement('button');
+                    refreshButton.textContent = "refresh";
+                    refreshButton.addEventListener('click', function(e) {
+                        tabulator.sf.unload(stateStore);
+                        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+                            if (!ok) {
+                                console.log("Cant refresh data:" + body);
+                            } else {
+                                tableDiv.refresh();
+                            };
+                        });
+                    }, false);
+                    div.appendChild(refreshButton);
+                } else {
+                    console.log('No refresh function?!');
+                }
+                            
+                
+                
+                
             });
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
@@ -802,12 +1129,12 @@ tabulator.panes.register( {
 
 
         } else { 
-            say("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
+            console.log("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
         }         
         if (!tabulator.preferences.get('me')) {
-            say("(You do not have your Web Id set. Sign in or sign up to make changes.)");
+            console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
-            // say("(Your webid is "+ tabulator.preferences.get('me')+")");
+            // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
         
         
@@ -815,11 +1142,11 @@ tabulator.panes.register( {
             // sayt.parent.removeChild(sayt);
             if (webid) {
                 tabulator.preferences.set('me', webid);
-                say("(Logged in as "+ webid+")")
+                console.log("(Logged in as "+ webid+")")
                 me = kb.sym(webid);
             } else {
                 tabulator.preferences.set('me', '');
-                say("(Logged out)")
+                console.log("(Logged out)")
                 me = null;
             }
         });

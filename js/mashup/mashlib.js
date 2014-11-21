@@ -3,8 +3,28 @@
 
 tabulator = {};
 tabulator.isExtension = false;
-//tabulator.scriptBase = 'http://linkeddata.github.com/tabulator/';
+
+// base for icons etc
 tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/';
+
+/*
+tabulator.getScriptName = function () {
+    var error = new Error()
+      , source
+      , lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
+      , currentStackFrameRegex = new RegExp(/getScriptName \(.+\/(.*):\d+:\d+\)/);
+
+    if((source = lastStackFrameRegex.exec(error.stack.trim())) && source[1] != "")
+        return source[1];
+    else if((source = currentStackFrameRegex.exec(error.stack.trim())))
+        return source[1];
+    else if(error.fileName != undefined)
+        return error.fileName;
+}
+*/
+// tabulator.scriptBase = tabulato.getScriptName();
+// tabulator.scriptBase = tabulator.scriptBase.split('/').slice(0,-1).join('/') + '/';
+
 tabulator.iconPrefix = tabulator.scriptBase;
 
 // Dump exists in ff but not safari.
@@ -408,6 +428,65 @@ $rdf.Util = {
     
 };
 
+
+////////////////// find the variables in a graph
+//  SHALLOW
+//  used?
+//
+$rdf.Util.variablesIn = function(g) {
+    for (var i=0; i<g.statements.length; i++) {
+        var st = g.statatements[i];
+        var vars = {}
+        if (st.subject instanceof $rdf.Variable) {
+            vars[st.subject.toNT()] = true;
+        }
+        if (st.predicate instanceof $rdf.Variable) {
+            vars[st.predicate.toNT()] = true;
+        }
+        if (st.object instanceof $rdf.Variable) {
+            vars[st.object.toNT()] = true;
+        }
+    }
+    return vars;
+};
+
+//   Heavy comparison is for repeatable canonical ordering
+$rdf.Util.heavyCompare = function(x, y, g) {
+    var nonBlank = function(x) {
+        return (x.termType === 'bnode') ?  null : x; 
+    }
+    var signature = function(b) {
+        var lis = g.statementsMatching(x).map(function(st){
+            return ('' + nonBlank(st.subject) + ' ' + nonBlank(st.predicate)
+                + ' ' + nonBlank(st.object));
+        }).concat(g.statementsMatching(undefined, undefined, x).map(function(st){
+            return ('' + nonBlank(st.subject) + ' ' + nonBlank(st.predicate)
+                + ' ' + nonBlank(st.object));
+        }))
+        lis.sort();
+        return lis.join('\n');
+    }
+    if ((x.termType === 'bnode') || (y.termType === 'bnode')) {
+        if (x.compareTerm(y) === 0) return 0; // Same
+        if (signature(x) > signature(y)) return +1; 
+        if (signature(x) < signature(y)) return -1;
+        return x.compareTerm(y); // Too bad -- this order not canonical.
+        //throw "different bnodes indistinquishable for sorting" 
+    } else {
+        return x.compareTerm(y);
+    }
+};
+
+$rdf.Util.heavyCompareSPO = function(x, y, g) {
+    var comp = $rdf.Util.heavyCompare;
+    var d = comp(x.subject, y.subject, g);
+    if (d) return d;
+    d = comp(x.predicate, y.predicate, g);
+    if (d) return d;
+    return comp(x.object, y.object, g);
+};
+
+
 ///////////////////// Parse XML
 //
 // Returns: A DOM
@@ -736,10 +815,13 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
 # These are the classes corresponding to the RDF and N3 data models
 #
 # Designed to look like rdflib and cwm
+#
+# This is coffee see http://coffeescript.org
 */
 
 var $rdf, k, v,
   __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 if (typeof $rdf === "undefined" || $rdf === null) {
@@ -757,13 +839,21 @@ $rdf.Node = (function() {
 
   function Node() {}
 
+  Node.prototype.substitute = function(bindings) {
+    return this;
+  };
+
   return Node;
 
 })();
 
-$rdf.Empty = (function() {
+$rdf.Empty = (function(_super) {
 
-  function Empty() {}
+  __extends(Empty, _super);
+
+  function Empty() {
+    return Empty.__super__.constructor.apply(this, arguments);
+  }
 
   Empty.prototype.termType = 'empty';
 
@@ -775,7 +865,7 @@ $rdf.Empty = (function() {
 
   return Empty;
 
-})();
+})($rdf.Node);
 
 /*
    A named node in an RDF graph
@@ -786,7 +876,9 @@ $rdf.Empty = (function() {
 */
 
 
-$rdf.Symbol = (function() {
+$rdf.Symbol = (function(_super) {
+
+  __extends(Symbol, _super);
 
   function Symbol(uri) {
     this.uri = uri;
@@ -838,7 +930,7 @@ $rdf.Symbol = (function() {
 
   return Symbol;
 
-})();
+})($rdf.Node);
 
 if ($rdf.NextId != null) {
   $rdf.log.error("Attempt to re-zero existing blank node id counter at " + $rdf.NextId);
@@ -848,7 +940,9 @@ if ($rdf.NextId != null) {
 
 $rdf.NTAnonymousNodePrefix = "_:n";
 
-$rdf.BlankNode = (function() {
+$rdf.BlankNode = (function(_super) {
+
+  __extends(BlankNode, _super);
 
   function BlankNode(id) {
     this.id = $rdf.NextId++;
@@ -888,9 +982,11 @@ $rdf.BlankNode = (function() {
 
   return BlankNode;
 
-})();
+})($rdf.Node);
 
-$rdf.Literal = (function() {
+$rdf.Literal = (function(_super) {
+
+  __extends(Literal, _super);
 
   function Literal(value, lang, datatype) {
     var _ref, _ref1;
@@ -958,14 +1054,23 @@ $rdf.Literal = (function() {
 
   return Literal;
 
-})();
+})($rdf.Node);
 
-$rdf.Collection = (function() {
+$rdf.Collection = (function(_super) {
 
-  function Collection() {
+  __extends(Collection, _super);
+
+  function Collection(initial) {
+    var s, _i, _len;
     this.id = $rdf.NextId++;
     this.elements = [];
     this.closed = false;
+    if (typeof initial !== 'undefined') {
+      for (_i = 0, _len = initial.length; _i < _len; _i++) {
+        s = initial[_i];
+        this.elements.push($rdf.term(s));
+      }
+    }
   }
 
   Collection.prototype.termType = 'collection';
@@ -976,6 +1081,20 @@ $rdf.Collection = (function() {
 
   Collection.prototype.toString = function() {
     return '(' + this.elements.join(' ') + ')';
+  };
+
+  Collection.prototype.substitute = function(bindings) {
+    var s;
+    return new $rdf.Collection((function() {
+      var _i, _len, _ref, _results;
+      _ref = this.elements;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        s = _ref[_i];
+        _results.push(s.substitute(bindings));
+      }
+      return _results;
+    }).call(this));
   };
 
   Collection.prototype.append = function(el) {
@@ -996,7 +1115,7 @@ $rdf.Collection = (function() {
 
   return Collection;
 
-})();
+})($rdf.Node);
 
 $rdf.Collection.prototype.sameTerm = $rdf.BlankNode.prototype.sameTerm;
 
@@ -1064,6 +1183,10 @@ $rdf.Statement = (function() {
 
   Statement.prototype.toString = Statement.prototype.toNT;
 
+  Statement.prototype.substitute = function(bindings) {
+    return new $rdf.Statement(this.subject.substitute(bindings), this.predicate.substitute(bindings), this.object.substitute(bindings), this.why);
+  };
+
   return Statement;
 
 })();
@@ -1072,7 +1195,9 @@ $rdf.st = function(subject, predicate, object, why) {
   return new $rdf.Statement(subject, predicate, object, why);
 };
 
-$rdf.Formula = (function() {
+$rdf.Formula = (function(_super) {
+
+  __extends(Formula, _super);
 
   function Formula() {
     this.statements = [];
@@ -1091,6 +1216,21 @@ $rdf.Formula = (function() {
 
   Formula.prototype.add = function(s, p, o, why) {
     return this.statements.push(new $rdf.Statement(s, p, o, why));
+  };
+
+  Formula.prototype.addStatement = function(st) {
+    return this.add(st.subject, st.predicate, st.object, st.why);
+  };
+
+  Formula.prototype.substitute = function(bindings) {
+    var g, s, _i, _len, _ref;
+    g = new $rdf.Formula;
+    _ref = this.statements;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      s = _ref[_i];
+      g.addStatement(s.substitute(bindings));
+    }
+    return g;
   };
 
   Formula.prototype.sym = function(uri, name) {
@@ -1500,9 +1640,33 @@ $rdf.Formula = (function() {
     return bots;
   };
 
+  Formula.prototype.serialize = function(base, contentType, provenance) {
+    var documentString, sts, sz;
+    sz = $rdf.Serializer(this);
+    sz.suggestNamespaces(this.namespaces);
+    sz.setBase(base);
+    if (provenance) {
+      sts = this.statementsMatching(void 0, void 0, void 0, provenance);
+    } else {
+      sts = this.statements;
+    }
+    switch (contentType != null ? contentType : 'text/n3') {
+      case 'application/rdf+xml':
+        documentString = sz.statementsToXML(sts);
+        break;
+      case 'text/n3':
+      case 'text/turtle':
+        documentString = sz.statementsToN3(sts);
+        break;
+      default:
+        throw "serialize: Content-type " + contentType(+" not supported.");
+    }
+    return documentString;
+  };
+
   return Formula;
 
-})();
+})($rdf.Node);
 
 $rdf.sym = function(uri) {
   return new $rdf.Symbol(uri);
@@ -1525,7 +1689,9 @@ $rdf.variable = $rdf.Formula.prototype.variable;
 */
 
 
-$rdf.Variable = (function() {
+$rdf.Variable = (function(_super) {
+
+  __extends(Variable, _super);
 
   function Variable(rel) {
     this.base = 'varid:';
@@ -1545,6 +1711,11 @@ $rdf.Variable = (function() {
 
   Variable.prototype.hashString = Variable.prototype.toNT;
 
+  Variable.prototype.substitute = function(bindings) {
+    var _ref;
+    return (_ref = bindings[this.toNT()]) != null ? _ref : this;
+  };
+
   Variable.prototype.sameTerm = function(other) {
     if (!other) {
       false;
@@ -1554,7 +1725,7 @@ $rdf.Variable = (function() {
 
   return Variable;
 
-})();
+})($rdf.Node);
 
 $rdf.Literal.prototype.classOrder = 1;
 
@@ -3191,28 +3362,39 @@ __SinkParser.prototype.skipSpace = function(str, i) {
     /*
     Skip white space, newlines and comments.
     return -1 if EOF, else position of first non-ws character*/
-    var tmp = str;
+
     var whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
     for (var j = (i ? i : 0); j < str.length; j++) {
-        if (whitespace.indexOf(str.charAt(j)) === -1) {
+        var ch = str.charAt(j);
+        // console.log("    skipspace j= "+j + " i= " + i + " n= " + str.length);
+        // console.log(" skipspace ch <" + ch + ">");
+        if (whitespace.indexOf(ch) < 0 ) { //not ws
+            // console.log(" skipspace 2 ch <" + ch + ">");
             if( str.charAt(j)==='#' ) {
-                str = str.slice(i).replace(/^[^\n]*\n/,"");
-                i=0;
-                j=-1;
-            } else {
-                break;
+                for (;; j++) {
+                    // console.log("    skipspace2 j= "+j + " i= " + i + " n= " + str.length);
+                    if (j === str.length) {
+                        return -1; // EOF
+                    }
+                    if (str.charAt(j) === '\n') {
+                        this.lines = this.lines + 1;
+                        break;
+                    }
+                }; 
+            } else { // Not hash - something interesting
+                // console.log(" skipspace 3 ch <" + ch + ">");
+                return j
+            }
+        } else { // Whitespace
+            // console.log(" skipspace 5 ch <" + ch + ">");
+            if (str.charAt(j) === '\n') {
+                this.lines = this.lines + 1;
             }
         }
-	if (str.charAt(j) == '\n') {
-	    this.lines = this.lines + 1;
-	}
-    }
-    var val = (tmp.length - str.length) + j;
-    if( val === tmp.length ) {
-        return -1;
-    }
-    return val;
+    } // next j
+    return -1; // EOF
 };
+
 __SinkParser.prototype.variable = function(str, i, res) {
     /*
     ?abc -> variable(:abc)
@@ -4119,6 +4301,1090 @@ $rdf.IndexedFormula.prototype.hashString = $rdf.IndexedFormula.prototype.toNT;
 return $rdf.IndexedFormula;
 
 }();
+// ends
+
+RDFaProcessor.prototype = new Object();
+//RDFaProcessor.prototype = new URIResolver();
+
+RDFaProcessor.prototype.constructor=RDFaProcessor;
+function RDFaProcessor(targetObject) {
+   if (targetObject) {
+      this.target = targetObject;
+   } else {
+      this.target = {
+         graph: {
+            subjects: {},
+            prefixes: {},
+            terms: {}
+         }
+      };
+   }
+   this.theOne = "_:"+(new Date()).getTime();
+   this.language = null;
+   this.vocabulary = null;
+   this.blankCounter = 0;
+   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" } ];
+   this.inXHTMLMode = false;
+   this.absURIRE = /[\w\_\-]+:\S+/;
+   this.finishedHandlers = [];
+   this.init();
+}
+
+RDFaProcessor.prototype.newBlankNode = function() {
+   this.blankCounter++;
+   return "_:"+this.blankCounter;
+}
+
+RDFaProcessor.XMLLiteralURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral"; 
+RDFaProcessor.HTMLLiteralURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML"; 
+RDFaProcessor.PlainLiteralURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral";
+RDFaProcessor.objectURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#object";
+RDFaProcessor.typeURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
+RDFaProcessor.nameChar = '[-A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u10000-\uEFFFF\.0-9\u00B7\u0300-\u036F\u203F-\u2040]';
+RDFaProcessor.nameStartChar = '[\u0041-\u005A\u0061-\u007A\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\u0100-\u0131\u0134-\u013E\u0141-\u0148\u014A-\u017E\u0180-\u01C3\u01CD-\u01F0\u01F4-\u01F5\u01FA-\u0217\u0250-\u02A8\u02BB-\u02C1\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03CE\u03D0-\u03D6\u03DA\u03DC\u03DE\u03E0\u03E2-\u03F3\u0401-\u040C\u040E-\u044F\u0451-\u045C\u045E-\u0481\u0490-\u04C4\u04C7-\u04C8\u04CB-\u04CC\u04D0-\u04EB\u04EE-\u04F5\u04F8-\u04F9\u0531-\u0556\u0559\u0561-\u0586\u05D0-\u05EA\u05F0-\u05F2\u0621-\u063A\u0641-\u064A\u0671-\u06B7\u06BA-\u06BE\u06C0-\u06CE\u06D0-\u06D3\u06D5\u06E5-\u06E6\u0905-\u0939\u093D\u0958-\u0961\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09DC-\u09DD\u09DF-\u09E1\u09F0-\u09F1\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8B\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABD\u0AE0\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B36-\u0B39\u0B3D\u0B5C-\u0B5D\u0B5F-\u0B61\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB5\u0BB7-\u0BB9\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C60-\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CDE\u0CE0-\u0CE1\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D28\u0D2A-\u0D39\u0D60-\u0D61\u0E01-\u0E2E\u0E30\u0E32-\u0E33\u0E40-\u0E45\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EAE\u0EB0\u0EB2-\u0EB3\u0EBD\u0EC0-\u0EC4\u0F40-\u0F47\u0F49-\u0F69\u10A0-\u10C5\u10D0-\u10F6\u1100\u1102-\u1103\u1105-\u1107\u1109\u110B-\u110C\u110E-\u1112\u113C\u113E\u1140\u114C\u114E\u1150\u1154-\u1155\u1159\u115F-\u1161\u1163\u1165\u1167\u1169\u116D-\u116E\u1172-\u1173\u1175\u119E\u11A8\u11AB\u11AE-\u11AF\u11B7-\u11B8\u11BA\u11BC-\u11C2\u11EB\u11F0\u11F9\u1E00-\u1E9B\u1EA0-\u1EF9\u1F00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2126\u212A-\u212B\u212E\u2180-\u2182\u3041-\u3094\u30A1-\u30FA\u3105-\u312C\uAC00-\uD7A3\u4E00-\u9FA5\u3007\u3021-\u3029_]';
+RDFaProcessor.NCNAME = new RegExp('^' + RDFaProcessor.nameStartChar + RDFaProcessor.nameChar + '*$');
+
+RDFaProcessor.trim = function(str) {
+   return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+}
+
+RDFaProcessor.prototype.tokenize = function(str) {
+   return RDFaProcessor.trim(str).split(/\s+/);
+}
+
+
+RDFaProcessor.prototype.parseSafeCURIEOrCURIEOrURI = function(value,prefixes,base) {
+   value = RDFaProcessor.trim(value);
+   if (value.charAt(0)=='[' && value.charAt(value.length-1)==']') {
+      value = value.substring(1,value.length-1);
+      value = value.trim(value);
+      if (value.length==0) {
+         return null;
+      }
+      if (value=="_:") {
+         // the one node
+         return this.theOne;
+      }
+      return this.parseCURIE(value,prefixes,base);
+   } else {
+      return this.parseCURIEOrURI(value,prefixes,base);
+   }
+}
+
+RDFaProcessor.prototype.parseCURIE = function(value,prefixes,base) {
+   var colon = value.indexOf(":");
+   if (colon>=0) {
+      var prefix = value.substring(0,colon);
+      if (prefix=="") {
+         // default prefix
+         var uri = prefixes[""];
+         return uri ? uri+value.substring(colon+1) : null;
+      } else if (prefix=="_") {
+         // blank node
+         return "_:"+value.substring(colon+1);
+      } else if (RDFaProcessor.NCNAME.test(prefix)) {
+         var uri = prefixes[prefix];
+         if (uri) {
+            return uri+value.substring(colon+1);
+         }
+      }
+   }
+   return null;
+}
+
+RDFaProcessor.prototype.parseCURIEOrURI = function(value,prefixes,base) {
+   var curie = this.parseCURIE(value,prefixes,base);
+   if (curie) {
+      return curie;
+   }
+   return this.resolveAndNormalize(base,value);
+}
+
+RDFaProcessor.prototype.parsePredicate = function(value,defaultVocabulary,terms,prefixes,base,ignoreTerms) {
+   if (value=="") {
+      return null;
+   }
+   var predicate = this.parseTermOrCURIEOrAbsURI(value,defaultVocabulary,ignoreTerms ? null : terms,prefixes,base);
+   if (predicate && predicate.indexOf("_:")==0) {
+      return null;
+   }
+   return predicate;
+}
+
+RDFaProcessor.prototype.parseTermOrCURIEOrURI = function(value,defaultVocabulary,terms,prefixes,base) {
+   //alert("Parsing "+value+" with default vocab "+defaultVocabulary);
+   value = RDFaProcessor.trim(value);
+   var curie = this.parseCURIE(value,prefixes,base);
+   if (curie) {
+      return curie;
+   } else {
+       var term = terms[value];
+       if (term) {
+          return term;
+       }
+       var lcvalue = value.toLowerCase();
+       term = terms[lcvalue];
+       if (term) {
+          return term;
+       }
+       if (defaultVocabulary && !this.absURIRE.exec(value)) {
+          return defaultVocabulary+value
+       }
+   }
+   return this.resolveAndNormalize(base,value);
+}
+
+RDFaProcessor.prototype.parseTermOrCURIEOrAbsURI = function(value,defaultVocabulary,terms,prefixes,base) {
+   //alert("Parsing "+value+" with default vocab "+defaultVocabulary);
+   value = RDFaProcessor.trim(value);
+   var curie = this.parseCURIE(value,prefixes,base);
+   if (curie) {
+      return curie;
+   } else if (terms) {
+       if (defaultVocabulary && !this.absURIRE.exec(value)) {
+          return defaultVocabulary+value
+       }
+       var term = terms[value];
+       if (term) {
+          return term;
+       }
+       var lcvalue = value.toLowerCase();
+       term = terms[lcvalue];
+       if (term) {
+          return term;
+       }
+   }
+   if (this.absURIRE.exec(value)) {
+      return this.resolveAndNormalize(base,value);
+   }
+   return null;
+}
+
+RDFaProcessor.prototype.resolveAndNormalize = function(base,href) {
+    return $rdf.uri.join(href, base);
+/*
+   var u = base.resolve(href);
+   var parsed = this.parseURI(u);
+   parsed.normalize();
+   return parsed.spec;
+*/
+}
+
+RDFaProcessor.prototype.parsePrefixMappings = function(str,target) {
+   var values = this.tokenize(str);
+   var prefix = null;
+   var uri = null;
+   for (var i=0; i<values.length; i++) {
+      if (values[i][values[i].length-1]==':') {
+         prefix = values[i].substring(0,values[i].length-1);
+      } else if (prefix) {
+         target[prefix] = this.target.baseURI ? this.target.baseURI.resolve(values[i]) : values[i];
+         prefix = null;
+      }
+   }
+}
+
+RDFaProcessor.prototype.copyMappings = function(mappings) {
+   var newMappings = {};
+   for (var k in mappings) {
+      newMappings[k] = mappings[k];
+   }
+   return newMappings;
+}
+
+RDFaProcessor.prototype.ancestorPath = function(node) {
+   var path = "";
+   while (node && node.nodeType!=Node.DOCUMENT_NODE) {
+      path = "/"+node.localName+path;
+      node = node.parentNode;
+   }
+   return path;
+}
+
+RDFaProcessor.prototype.setContext = function(node) {
+
+   // We only recognized XHTML+RDFa 1.1 if the version is set propertyly
+   if (node.localName=="html" && node.getAttribute("version")=="XHTML+RDFa 1.1") {
+      this.setXHTMLContext();
+   } else if (node.localName=="html" || node.namespaceURI=="http://www.w3.org/1999/xhtml") {
+      if (document.doctype) {
+         if (document.doctype.publicId=="-//W3C//DTD XHTML+RDFa 1.0//EN" && document.doctype.systemId=="http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd") {
+            console.log("WARNING: RDF 1.0 is not supported.  Defaulting to HTML5 mode.");
+            this.setHTMLContext();
+         } else if (document.doctype.publicId=="-//W3C//DTD XHTML+RDFa 1.1//EN" && document.doctype.systemId=="http://www.w3.org/MarkUp/DTD/xhtml-rdfa-2.dtd") {
+            this.setXHTMLContext();
+         } else {
+            this.setHTMLContext();
+         }
+      } else {
+         this.setHTMLContext();
+      }
+   } else {
+      this.setXMLContext();
+   }
+
+}
+
+RDFaProcessor.prototype.setInitialContext = function() {
+   this.vocabulary = null;
+   // By default, the prefixes are terms are loaded to the RDFa 1.1. standard within the graph constructor
+   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" } ];
+}
+
+RDFaProcessor.prototype.setXMLContext = function() {
+   this.setInitialContext();
+   this.inXHTMLMode = false;
+   this.inHTMLMode = false;
+}
+
+RDFaProcessor.prototype.setHTMLContext = function() {
+   this.setInitialContext();
+   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" },
+                           { namespaceURI: null, localName: "lang" }];
+   this.inXHTMLMode = false;
+   this.inHTMLMode = true;
+}
+
+RDFaProcessor.prototype.setXHTMLContext = function() {
+
+   this.setInitialContext();
+   
+   this.inXHTMLMode = true;
+   this.inHTMLMode = false;
+   
+   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" },
+                           { namespaceURI: null, localName: "lang" }];
+
+   // From http://www.w3.org/2011/rdfa-context/xhtml-rdfa-1.1
+   this.target.graph.terms["alternate"] = "http://www.w3.org/1999/xhtml/vocab#alternate";
+   this.target.graph.terms["appendix"] = "http://www.w3.org/1999/xhtml/vocab#appendix";
+   this.target.graph.terms["bookmark"] = "http://www.w3.org/1999/xhtml/vocab#bookmark";
+   this.target.graph.terms["cite"] = "http://www.w3.org/1999/xhtml/vocab#cite"
+   this.target.graph.terms["chapter"] = "http://www.w3.org/1999/xhtml/vocab#chapter";
+   this.target.graph.terms["contents"] = "http://www.w3.org/1999/xhtml/vocab#contents";
+   this.target.graph.terms["copyright"] = "http://www.w3.org/1999/xhtml/vocab#copyright";
+   this.target.graph.terms["first"] = "http://www.w3.org/1999/xhtml/vocab#first";
+   this.target.graph.terms["glossary"] = "http://www.w3.org/1999/xhtml/vocab#glossary";
+   this.target.graph.terms["help"] = "http://www.w3.org/1999/xhtml/vocab#help";
+   this.target.graph.terms["icon"] = "http://www.w3.org/1999/xhtml/vocab#icon";
+   this.target.graph.terms["index"] = "http://www.w3.org/1999/xhtml/vocab#index";
+   this.target.graph.terms["last"] = "http://www.w3.org/1999/xhtml/vocab#last";
+   this.target.graph.terms["license"] = "http://www.w3.org/1999/xhtml/vocab#license";
+   this.target.graph.terms["meta"] = "http://www.w3.org/1999/xhtml/vocab#meta";
+   this.target.graph.terms["next"] = "http://www.w3.org/1999/xhtml/vocab#next";
+   this.target.graph.terms["prev"] = "http://www.w3.org/1999/xhtml/vocab#prev";
+   this.target.graph.terms["previous"] = "http://www.w3.org/1999/xhtml/vocab#previous";
+   this.target.graph.terms["section"] = "http://www.w3.org/1999/xhtml/vocab#section";
+   this.target.graph.terms["stylesheet"] = "http://www.w3.org/1999/xhtml/vocab#stylesheet";
+   this.target.graph.terms["subsection"] = "http://www.w3.org/1999/xhtml/vocab#subsection";
+   this.target.graph.terms["start"] = "http://www.w3.org/1999/xhtml/vocab#start";
+   this.target.graph.terms["top"] = "http://www.w3.org/1999/xhtml/vocab#top";
+   this.target.graph.terms["up"] = "http://www.w3.org/1999/xhtml/vocab#up";
+   this.target.graph.terms["p3pv1"] = "http://www.w3.org/1999/xhtml/vocab#p3pv1";
+
+   // other
+   this.target.graph.terms["related"] = "http://www.w3.org/1999/xhtml/vocab#related";
+   this.target.graph.terms["role"] = "http://www.w3.org/1999/xhtml/vocab#role";
+   this.target.graph.terms["transformation"] = "http://www.w3.org/1999/xhtml/vocab#transformation";
+}
+
+RDFaProcessor.prototype.init = function() {
+}
+
+RDFaProcessor.prototype.newSubjectOrigin = function(origin,subject) {
+}
+
+RDFaProcessor.prototype.addTriple = function(origin,subject,predicate,object) {
+}
+
+RDFaProcessor.dateTimeTypes = [
+   { pattern: /-?P(?:[0-9]+Y)?(?:[0-9]+M)?(?:[0-9]+D)?(?:T(?:[0-9]+H)?(?:[0-9]+M)?(?:[0-9]+(?:\.[0-9]+)?S)?)?/,
+     type: "http://www.w3.org/2001/XMLSchema#duration" },
+   { pattern: /-?(?:[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9])-[0-9][0-9]-[0-9][0-9]T(?:[0-1][0-9]|2[0-4]):[0-5][0-9]:[0-5][0-9](?:\.[0-9]+)?(?:Z|[+\-][0-9][0-9]:[0-9][0-9])?/,
+     type: "http://www.w3.org/2001/XMLSchema#dateTime" },
+   { pattern: /-?(?:[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9])-[0-9][0-9]-[0-9][0-9](?:Z|[+\-][0-9][0-9]:[0-9][0-9])?/,
+     type: "http://www.w3.org/2001/XMLSchema#date" },
+   { pattern: /(?:[0-1][0-9]|2[0-4]):[0-5][0-9]:[0-5][0-9](?:\.[0-9]+)?(?:Z|[+\-][0-9][0-9]:[0-9][0-9])?/,
+     type: "http://www.w3.org/2001/XMLSchema#time" },
+   { pattern: /-?(?:[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9])-[0-9][0-9]/,
+     type: "http://www.w3.org/2001/XMLSchema#gYearMonth" },
+   { pattern: /-?[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9]/,
+     type: "http://www.w3.org/2001/XMLSchema#gYear" }
+];
+
+RDFaProcessor.deriveDateTimeType = function(value) {
+   for (var i=0; i<RDFaProcessor.dateTimeTypes.length; i++) {
+      //console.log("Checking "+value+" against "+RDFaProcessor.dateTimeTypes[i].type);
+      var matched = RDFaProcessor.dateTimeTypes[i].pattern.exec(value);
+      if (matched && matched[0].length==value.length) {
+         //console.log("Matched!");
+         return RDFaProcessor.dateTimeTypes[i].type;
+      }
+   }
+   return null;
+}
+
+RDFaProcessor.prototype.process = function(node,options) {
+
+   /*
+   if (!window.console) {
+      window.console = { log: function() {} };
+   }*/
+   if (node.nodeType==Node.DOCUMENT_NODE) {
+      node = node.documentElement;
+      this.setContext(node);
+   } else if (node.parentNode.nodeType==Node.DOCUMENT_NODE) {
+      this.setContext(node);
+   } 
+   var queue = [];
+   // Fix for Firefox that includes the hash in the base URI
+   var removeHash = function(baseURI) {
+      var hash = baseURI.indexOf("#");
+      if (hash>=0) {
+         baseURI = baseURI.substring(0,hash);
+      }
+      if (options && options.baseURIMap) {
+         baseURI = options.baseURIMap(baseURI);
+      }
+      return baseURI;
+   }
+   queue.push({ current: node, context: this.push(null,removeHash(node.baseURI))});
+   while (queue.length>0) {
+      var item = queue.shift();
+      if (item.parent) {
+         // Sequence Step 14: list triple generation
+         if (item.context.parent && item.context.parent.listMapping==item.listMapping) {
+            // Skip a child context with exactly the same mapping
+            continue;
+         }
+         //console.log("Generating lists for "+item.subject+", tag "+item.parent.localName);
+         for (var predicate in item.listMapping) {
+            var list = item.listMapping[predicate];
+            if (list.length==0) {
+               this.addTriple(item.parent,item.subject,predicate,{ type: RDFaProcessor.objectURI, value: "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" });
+               continue;
+            }
+            var bnodes = [];
+            for (var i=0; i<list.length; i++) {
+               bnodes.push(this.newBlankNode());
+               //this.newSubject(item.parent,bnodes[i]);
+            }   // @@@@@@   Below this needs to be a new collection not first and rest
+            for (var i=0; i<bnodes.length; i++) {
+               this.addTriple(item.parent,bnodes[i],"http://www.w3.org/1999/02/22-rdf-syntax-ns#first",list[i]);
+               this.addTriple(item.parent,bnodes[i],"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",{ type: RDFaProcessor.objectURI , value: (i+1)<bnodes.length ? bnodes[i+1] : "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" });
+            }
+            this.addTriple(item.parent,item.subject,predicate,{ type: RDFaProcessor.objectURI, value: bnodes[0] });
+         }
+         continue;
+      }
+      var current = item.current;
+      var context = item.context;
+
+      //console.log("Tag: "+current.localName+", listMapping="+JSON.stringify(context.listMapping));
+
+      // Sequence Step 1
+      var skip = false;
+      var newSubject = null;
+      var currentObjectResource = null;
+      var typedResource = null;
+      var prefixes = context.prefixes;
+      var prefixesCopied = false;
+      var incomplete = [];
+      var listMapping = context.listMapping;
+      var listMappingDifferent = context.parent ? false : true;
+      var language = context.language;
+      var vocabulary = context.vocabulary;
+
+      // TODO: the "base" element may be used for HTML+RDFa 1.1
+      var base = this.parseURI(removeHash(current.baseURI));
+      current.item = null;
+
+      // Sequence Step 2: set the default vocabulary
+      var vocabAtt = current.getAttributeNode("vocab");
+      if (vocabAtt) {
+         var value = RDFaProcessor.trim(vocabAtt.value);
+         if (value.length>0) {
+            vocabulary = value;
+            var baseSubject = base.spec;
+            //this.newSubject(current,baseSubject);
+            this.addTriple(current,baseSubject,"http://www.w3.org/ns/rdfa#usesVocabulary",{ type: RDFaProcessor.objectURI , value: vocabulary});
+         } else {
+            vocabulary = this.vocabulary;
+         }
+      }
+
+      // Sequence Step 3: IRI mappings
+      // handle xmlns attributes
+      for (var i=0; i<current.attributes.length; i++) {
+         var att = current.attributes[i];
+         //if (att.namespaceURI=="http://www.w3.org/2000/xmlns/") {
+         if (att.nodeName.charAt(0)=="x" && att.nodeName.indexOf("xmlns:")==0) {
+            if (!prefixesCopied) {
+               prefixes = this.copyMappings(prefixes);
+               prefixesCopied = true;
+            }
+            var prefix = att.nodeName.substring(6);
+            // TODO: resolve relative?
+            var ref = RDFaProcessor.trim(att.value);
+            prefixes[prefix] = this.target.baseURI ? this.target.baseURI.resolve(ref) : ref;
+         }
+      }
+      // Handle prefix mappings (@prefix)
+      var prefixAtt = current.getAttributeNode("prefix");
+      if (prefixAtt) {
+         if (!prefixesCopied) {
+            prefixes = this.copyMappings(prefixes);
+            prefixesCopied = true;
+         }
+         this.parsePrefixMappings(prefixAtt.value,prefixes);
+      }
+
+
+      // Sequence Step 4: language
+      var xmlLangAtt = null;
+      for (var i=0; !xmlLangAtt && i<this.langAttributes.length; i++) {
+         xmlLangAtt = current.getAttributeNodeNS(this.langAttributes[i].namespaceURI,this.langAttributes[i].localName);
+      }
+      if (xmlLangAtt) {
+         var value = RDFaProcessor.trim(xmlLangAtt.value);
+         if (value.length>0) {
+            language = value;
+         } else {
+            language = null;
+         }
+      }
+
+      var relAtt = current.getAttributeNode("rel");
+      var revAtt = current.getAttributeNode("rev");
+      var typeofAtt = current.getAttributeNode("typeof");
+      var propertyAtt = current.getAttributeNode("property");
+      var datatypeAtt = current.getAttributeNode("datatype");
+      var datetimeAtt = this.inHTMLMode ? current.getAttributeNode("datetime") : null;
+      var contentAtt = current.getAttributeNode("content");
+      var aboutAtt = current.getAttributeNode("about");
+      var srcAtt = current.getAttributeNode("src");
+      var resourceAtt = current.getAttributeNode("resource");
+      var hrefAtt = current.getAttributeNode("href");
+      var inlistAtt = current.getAttributeNode("inlist");
+      
+      var relAttPredicates = [];
+      if (relAtt) {
+         var values = this.tokenize(relAtt.value);
+         for (var i=0; i<values.length; i++) {
+            var predicate = this.parsePredicate(values[i],vocabulary,context.terms,prefixes,base,this.inHTMLMode && propertyAtt!=null);
+            if (predicate) {
+               relAttPredicates.push(predicate);
+            }
+         }
+      }
+      var revAttPredicates = [];
+      if (revAtt) {
+         var values = this.tokenize(revAtt.value);
+         for (var i=0; i<values.length; i++) {
+            var predicate = this.parsePredicate(values[i],vocabulary,context.terms,prefixes,base,this.inHTMLMode && propertyAtt!=null);
+            if (predicate) {
+               revAttPredicates.push(predicate);
+            }
+         }
+      }
+      
+      // Section 3.1, bullet 7
+      if (this.inHTMLMode && (relAtt!=null || revAtt!=null) && propertyAtt!=null) {
+         if (relAttPredicates.length==0) {
+            relAtt = null;
+         }
+         if (revAttPredicates.length==0) {
+            revAtt = null;
+         }
+      }
+
+      if (relAtt || revAtt) {
+         // Sequence Step 6: establish new subject and value
+         if (aboutAtt) {
+            newSubject = this.parseSafeCURIEOrCURIEOrURI(aboutAtt.value,prefixes,base);
+         }
+         if (typeofAtt) {
+            typedResource = newSubject;
+         }
+         if (!newSubject) {
+            if (current.parentNode.nodeType==Node.DOCUMENT_NODE) {
+               newSubject = removeHash(current.baseURI);
+            } else if (context.parentObject) {
+               // TODO: Verify: If the xml:base has been set and the parentObject is the baseURI of the parent, then the subject needs to be the new base URI
+               newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
+            }
+         }
+         if (resourceAtt) {
+            currentObjectResource = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
+         }
+         
+         if (!currentObjectResource) {
+            if (hrefAtt) {
+               currentObjectResource = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
+            } else if (srcAtt) {
+               currentObjectResource = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
+            } else if (typeofAtt && !aboutAtt && !(this.inXHTMLMode && (current.localName=="head" || current.localName=="body"))) {
+               currentObjectResource = this.newBlankNode();
+            }
+         }
+         if (typeofAtt && !aboutAtt && this.inXHTMLMode && (current.localName=="head" || current.localName=="body")) {
+            typedResource = newSubject;
+         } else if (typeofAtt && !aboutAtt) {
+            typedResource = currentObjectResource;
+         }
+
+      } else if (propertyAtt && !contentAtt && !datatypeAtt) {
+         // Sequence Step 5.1: establish a new subject
+         if (aboutAtt) {
+            newSubject = this.parseSafeCURIEOrCURIEOrURI(aboutAtt.value,prefixes,base);
+            if (typeofAtt) {
+               typedResource = newSubject;
+            }
+         }
+         if (!newSubject && current.parentNode.nodeType==Node.DOCUMENT_NODE) {
+            newSubject = removeHash(current.baseURI);
+            if (typeofAtt) {
+               typedResource = newSubject;
+            }
+         } else if (!newSubject && context.parentObject) {
+            // TODO: Verify: If the xml:base has been set and the parentObject is the baseURI of the parent, then the subject needs to be the new base URI
+            newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
+         }
+         if (typeofAtt && !typedResource) {
+            if (resourceAtt) {
+               typedResource = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
+            }
+            if (!typedResource &&hrefAtt) {
+               typedResource = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
+            }
+            if (!typedResource && srcAtt) {
+               typedResource = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
+            }
+            if (!typedResource && (this.inXHTMLMode || this.inHTMLMode) && (current.localName=="head" || current.localName=="body")) {
+               typedResource = newSubject;
+            }
+            if (!typedResource) {
+               typedResource = this.newBlankNode();
+            }
+            currentObjectResource = typedResource;
+         }
+         //console.log(current.localName+", newSubject="+newSubject+", typedResource="+typedResource+", currentObjectResource="+currentObjectResource);
+      } else {
+         // Sequence Step 5.2: establish a new subject
+         if (aboutAtt) {
+            newSubject = this.parseSafeCURIEOrCURIEOrURI(aboutAtt.value,prefixes,base);
+         }
+         if (!newSubject && resourceAtt) {
+            newSubject = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
+         }
+         if (!newSubject && hrefAtt) {
+            newSubject = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
+         }
+         if (!newSubject && srcAtt) {
+            newSubject = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
+         }
+         if (!newSubject) {
+            if (current.parentNode.nodeType==Node.DOCUMENT_NODE) {
+               newSubject = removeHash(current.baseURI);
+            } else if ((this.inXHTMLMode || this.inHTMLMode) && (current.localName=="head" || current.localName=="body")) {
+               newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
+            } else if (typeofAtt) {
+               newSubject = this.newBlankNode();
+            } else if (context.parentObject) {
+               // TODO: Verify: If the xml:base has been set and the parentObject is the baseURI of the parent, then the subject needs to be the new base URI
+               newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
+               if (!propertyAtt) {
+                  skip = true;
+               }
+            }
+         }
+         if (typeofAtt) {
+            typedResource = newSubject;
+         }
+      }
+
+      //console.log(current.tagName+": newSubject="+newSubject+", currentObjectResource="+currentObjectResource+", typedResource="+typedResource+", skip="+skip);
+
+      var rdfaData = null;
+      if (newSubject) {
+         //this.newSubject(current,newSubject);
+         if (aboutAtt || resourceAtt || typedResource) {
+            var id = newSubject;
+            if (typeofAtt && !aboutAtt && !resourceAtt && currentObjectResource) {
+               id = currentObjectResource;
+            }
+            //console.log("Setting data attribute for "+current.localName+" for subject "+id);
+            this.newSubjectOrigin(current,id);
+         }
+      }
+      
+      // Sequence Step 7: generate type triple
+      if (typedResource) {
+         var values = this.tokenize(typeofAtt.value);
+         for (var i=0; i<values.length; i++) {
+            var object = this.parseTermOrCURIEOrAbsURI(values[i],vocabulary,context.terms,prefixes,base);
+            if (object) {
+               this.addTriple(current,typedResource,RDFaProcessor.typeURI,{ type: RDFaProcessor.objectURI , value: object});
+            }
+         }
+      }
+
+      // Sequence Step 8: new list mappings if there is a new subject
+      //console.log("Step 8: newSubject="+newSubject+", context.parentObject="+context.parentObject);
+      if (newSubject && newSubject!=context.parentObject) {
+         //console.log("Generating new list mapping for "+newSubject);
+         listMapping = {};
+         listMappingDifferent = true;
+      }
+
+      // Sequence Step 9: generate object triple
+      if (currentObjectResource) {
+         if (relAtt && inlistAtt) {
+            for (var i=0; i<relAttPredicates.length; i++) {
+               var list = listMapping[relAttPredicates[i]];
+               if (!list) {
+                  list = [];
+                  listMapping[relAttPredicates[i]] = list;
+               }
+               list.push({ type: RDFaProcessor.objectURI, value: currentObjectResource });
+            }
+         } else if (relAtt) {
+            for (var i=0; i<relAttPredicates.length; i++) {
+               this.addTriple(current,newSubject,relAttPredicates[i],{ type: RDFaProcessor.objectURI, value: currentObjectResource});
+            }
+         }
+         if (revAtt) {
+            for (var i=0; i<revAttPredicates.length; i++) {
+               this.addTriple(current,currentObjectResource, revAttPredicates[i], { type: RDFaProcessor.objectURI, value: newSubject});
+            }
+         }
+      } else {
+         // Sequence Step 10: incomplete triples
+         if (newSubject && !currentObjectResource && (relAtt || revAtt)) {
+            currentObjectResource = this.newBlankNode();
+            //alert(current.tagName+": generated blank node, newSubject="+newSubject+" currentObjectResource="+currentObjectResource);
+         }
+         if (relAtt && inlistAtt) {
+            for (var i=0; i<relAttPredicates.length; i++) {
+               var list = listMapping[relAttPredicates[i]];
+               if (!list) {
+                  list = [];
+                  listMapping[predicate] = list;
+               }
+               //console.log("Adding incomplete list for "+predicate);
+               incomplete.push({ predicate: relAttPredicates[i], list: list });
+            }
+         } else if (relAtt) {
+            for (var i=0; i<relAttPredicates.length; i++) {
+               incomplete.push({ predicate: relAttPredicates[i], forward: true });
+            }
+         }
+         if (revAtt) {
+            for (var i=0; i<revAttPredicates.length; i++) {
+               incomplete.push({ predicate: revAttPredicates[i], forward: false });
+            }
+         }
+      }
+
+      // Step 11: Current property values
+      if (propertyAtt) {
+         var datatype = null;
+         var content = null; 
+         if (datatypeAtt) {
+            datatype = datatypeAtt.value=="" ? RDFaProcessor.PlainLiteralURI : this.parseTermOrCURIEOrAbsURI(datatypeAtt.value,vocabulary,context.terms,prefixes,base);
+            if (datetimeAtt && !contentAtt) {
+               content = datetimeAtt.value;
+            } else {
+               content = datatype==RDFaProcessor.XMLLiteralURI || datatype==RDFaProcessor.HTMLLiteralURI ? null : (contentAtt ? contentAtt.value : current.textContent);
+            }
+         } else if (contentAtt) {
+            datatype = RDFaProcessor.PlainLiteralURI;
+            content = contentAtt.value;
+         } else if (datetimeAtt) {
+            content = datetimeAtt.value;
+            datatype = RDFaProcessor.deriveDateTimeType(content);
+            if (!datatype) {
+               datatype = RDFaProcessor.PlainLiteralURI;
+            }
+         } else if (!relAtt && !revAtt) {
+            if (resourceAtt) {
+               content = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
+            }
+            if (!content && hrefAtt) {
+               content = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
+            } else if (!content && srcAtt) {
+               content = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
+            }
+            if (content) {
+               datatype = RDFaProcessor.objectURI;
+            }
+         }
+         if (!datatype) {
+            if (typeofAtt && !aboutAtt) {
+               datatype = RDFaProcessor.objectURI;
+               content = typedResource;
+            } else {
+               content = current.textContent;
+               if (this.inHTMLMode && current.localName=="time") {
+                  datatype = RDFaProcessor.deriveDateTimeType(content);
+               }
+               if (!datatype) {
+                  datatype = RDFaProcessor.PlainLiteralURI;
+               }
+            }
+         }
+         var values = this.tokenize(propertyAtt.value);
+         for (var i=0; i<values.length; i++) {
+            var predicate = this.parsePredicate(values[i],vocabulary,context.terms,prefixes,base);
+            if (predicate) {
+               if (inlistAtt) {
+                  var list = listMapping[predicate];
+                  if (!list) {
+                     list = [];
+                     listMapping[predicate] = list;
+                  }
+                  list.push((datatype==RDFaProcessor.XMLLiteralURI || datatype==RDFaProcessor.HTMLLiteralURI) ? { type: datatype, value: current.childNodes} : { type: datatype ? datatype : RDFaProcessor.PlainLiteralURI, value: content, language: language});
+               } else {
+                  if (datatype==RDFaProcessor.XMLLiteralURI || datatype==RDFaProcessor.HTMLLiteralURI) {
+                     this.addTriple(current,newSubject,predicate,{ type: datatype, value: current.childNodes});
+                  } else {
+                     this.addTriple(current,newSubject,predicate,{ type: datatype ? datatype : RDFaProcessor.PlainLiteralURI, value: content, language: language});
+                     //console.log(newSubject+" "+predicate+"="+content);
+                  }
+               }
+            }
+         }
+      }
+
+      // Sequence Step 12: complete incomplete triples with new subject
+      if (newSubject && !skip) {
+         for (var i=0; i<context.incomplete.length; i++) {
+            if (context.incomplete[i].list) {
+               //console.log("Adding subject "+newSubject+" to list for "+context.incomplete[i].predicate);
+               // TODO: it is unclear what to do here
+               context.incomplete[i].list.push({ type: RDFaProcessor.objectURI, value: newSubject });
+            } else if (context.incomplete[i].forward) {
+               //console.log(current.tagName+": completing forward triple "+context.incomplete[i].predicate+" with object="+newSubject);
+               this.addTriple(current,context.subject,context.incomplete[i].predicate, { type: RDFaProcessor.objectURI, value: newSubject});
+            } else {
+               //console.log(current.tagName+": completing reverse triple with object="+context.subject);
+               this.addTriple(current,newSubject,context.incomplete[i].predicate,{ type: RDFaProcessor.objectURI, value: context.subject});
+            }
+         }
+      }
+
+      var childContext = null;
+      var listSubject = newSubject;
+      if (skip) {
+         // TODO: should subject be null?
+         childContext = this.push(context,context.subject);
+         // TODO: should the entObject be passed along?  If not, then intermediary children will keep properties from being associated with incomplete triples.
+         // TODO: Verify: if the current baseURI has changed and the parentObject is the parent's base URI, then the baseURI should change
+         childContext.parentObject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
+         childContext.incomplete = context.incomplete;
+         childContext.language = language;
+         childContext.prefixes = prefixes;
+         childContext.vocabulary = vocabulary;
+      } else {
+         childContext = this.push(context,newSubject);
+         childContext.parentObject = currentObjectResource ? currentObjectResource : (newSubject ? newSubject : context.subject);
+         childContext.prefixes = prefixes;
+         childContext.incomplete = incomplete;
+         if (currentObjectResource) {
+            //console.log("Generating new list mapping for "+currentObjectResource);
+            listSubject = currentObjectResource;
+            listMapping = {};
+            listMappingDifferent = true;
+         }
+         childContext.listMapping = listMapping;
+         childContext.language = language;
+         childContext.vocabulary = vocabulary;
+      }
+      if (listMappingDifferent) {
+         //console.log("Pushing list parent "+current.localName);
+         queue.unshift({ parent: current, context: context, subject: listSubject, listMapping: listMapping});
+      }
+      for (var child = current.lastChild; child; child = child.previousSibling) {
+         if (child.nodeType==Node.ELEMENT_NODE) {
+            //console.log("Pushing child "+child.localName);
+            queue.unshift({ current: child, context: childContext});
+         }
+      }
+   }
+   
+   if (this.inHTMLMode) {
+      this.copyProperties();
+   }
+
+   for (var i=0; i<this.finishedHandlers.length; i++) {
+      this.finishedHandlers[i](node);
+   }
+}
+
+RDFaProcessor.prototype.copyProperties = function() {
+}
+
+
+RDFaProcessor.prototype.push = function(parent,subject) {
+   return {
+      parent: parent,
+      subject: subject ? subject : (parent ? parent.subject : null),
+      parentObject: null,
+      incomplete: [],
+      listMapping: parent ? parent.listMapping : {},
+      language: parent ? parent.language : this.language,
+      prefixes: parent ? parent.prefixes : this.target.graph.prefixes,
+      terms: parent ? parent.terms : this.target.graph.terms,
+      vocabulary: parent ? parent.vocabulary : this.vocabulary
+   };
+};
+
+//   RDFa processor shell for  rdflib.js to use RDFaProcessor.js 
+//  from green-turtle
+//
+
+GraphRDFaProcessor = new Object(); // @@@
+
+GraphRDFaProcessor.prototype = new RDFaProcessor();
+GraphRDFaProcessor.prototype.constructor=RDFaProcessor;
+
+GraphRDFaProcessor = function(kb, doc) {
+   RDFaProcessor.call(this,kb);
+   this.doc = doc;
+}
+
+/*
+GraphRDFaProcessor.prototype.getObjectSize = function(obj) {
+   var size = 0;
+   for (var key in obj) {
+      if (obj.hasOwnProperty(key)) {
+         size++;
+      }
+   }
+   return size;
+};
+*/
+
+GraphRDFaProcessor.prototype.init = function() {
+   var thisObj = this;
+   this.finishedHandlers.push(function(node) {
+      for (var subject in thisObj.target.graph.subjects) {
+         var snode = thisObj.target.graph.subjects[subject];
+         if (thisObj.getObjectSize(snode.predicates)==0) {
+            delete thisObj.target.graph.subjects[subject];
+         }
+      }
+   });
+}
+
+GraphRDFaProcessor.prototype.newBlankNode = function() {
+   return this.kb.bnode();
+}
+
+GraphRDFaProcessor.prototype.newSubjectOrigin = function(origin,subject) {
+    console.log(' newSubjectOrigin '+ origin + subject );
+}
+
+GraphRDFaProcessor.prototype.newSubject = function(origin,subject) {
+   return this.sym(subject);
+}
+
+
+GraphRDFaProcessor.prototype.addTriple = function(origin,subject,predicate,object) {
+    this.kb.add(subject, kb.sym(predicate), $rdf.literal(object.value, $rdf.sym(object.type)), this.doc);
+    return;
+}
+
+/*
+GraphRDFaProcessor.rdfaCopyPredicate = "http://www.w3.org/ns/rdfa#copy";
+GraphRDFaProcessor.rdfaPatternType = "http://www.w3.org/ns/rdfa#Pattern";
+*/
+GraphRDFaProcessor.prototype.copyProperties = function() {
+    // @@ check not needed  -- olnly in HTML mode
+};
+
+$rdf.parseDOM_RDFa = function(dom, kb, doc, options) {
+    var p = new GraphRDFaProcessor(kb, doc);
+    p.process(dom, options);
+}
+// Parse a simple SPARL-Update subset syntax for patches.
+// 
+//  This parses 
+//   WHERE {xxx} DELETE {yyy} INSERT DATA {zzz} 
+// (not necessarily in that order)
+// as though it were the n3
+//   <#query> patch:where {xxx}; patch:delete {yyy}; patch:insert {zzz}.
+
+$rdf.sparqlUpdateParser = function(str, kb, base) {
+    var i,j,k;
+    var keywords = [ 'INSERT', 'DELETE', 'WHERE' ]
+    var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
+    var p = $rdf.N3Parser(kb, kb, base, base, null, null, "", null);
+    var clauses = {};
+    
+    var badSyntax = function (uri, lines, str, i, why) {
+        return  ("Line " +  ( lines + 1 ) + " of <" + uri + ">: Bad syntax:\n   " +
+                why + "\n   at: \"" + str.slice(i, (i + 30))  + "\"" ) ;
+    };
+    
+    var check = function(next, last, message) {
+        if (next < 0) {
+            throw badSyntax(p._thisDoc, p.lines, str, j, last, message);
+        };
+        return next;
+    };
+ 
+    
+    i = 0;
+    var query = kb.sym(base+ '#query');  // Invent a URI for the query
+    clauses['query'] = query; // A way of accessing it in its N3 model.
+    
+    while (true) {
+        // console.log("A Now at i = " + i)
+        var j = p.skipSpace(str, i);
+        if (j < 0) {
+            return clauses
+        }
+        // console.log("B After space at j= " + j)
+        if (str[j] === ';') {
+            i = p.skipSpace(str, j + 1);
+            if ( i < 0) {
+                return clauses ; // Allow end in a ;
+            }
+            j = i;
+        }
+        var found = false;
+        for (k=0;  k< keywords.length; k++) {
+            key = keywords[k];
+            if (str.slice(j, j + key.length) === key) {
+                // console.log("C got one " + key);
+                i = p.skipSpace(str, j+ key.length);
+                // console.log("D after space at i= " + i);
+                if (i < 0) {
+                    throw badSyntax(p._thisDoc, p.lines, str, j+ key.length, "found EOF, needed {...} after "+key);
+                };
+                if (((key === 'INSERT') || (key === 'DELETE')) && str.slice(i, i+4) === 'DATA') { // Some wanted 'DATA'. Whatever
+                    j = p.skipSpace(str, i+4);
+                    if (j < 0) {
+                        throw badSyntax(p._thisDoc, p.lines, str, i+4, "needed {...} after INSERT DATA "+key);
+                    };
+                    i = j;
+                }
+                var res2 = [];
+                var j = p.node(str, i, res2);
+                // console.log("M Now at j= " + j + " i= " + i)
+                
+                if (j < 0) {
+                    throw badSyntax(p._thisDoc, p.lines, str, i,
+                            "bad syntax or EOF in {...} after " + key);
+                }
+                clauses[key.toLowerCase()] = res2[0];
+                // print("res2[0] for "+key+ " is " + res2[0]);  //   @@ debug @@@@@@
+                kb.add(query, SQNS(key.toLowerCase()), res2[0]);
+                // key is the keyword and res2 has the contents
+                found = true;
+                i = j;
+            }
+        };
+        if (!found  && str.slice(j, j+7) === '@prefix') {
+            var i = p.directive(str, j);
+            if (i < 0) {
+            throw badSyntax(p._thisDoc, p.lines, str, i,
+                    "bad syntax or EOF after @prefix ");
+            }
+            // console.log("P before dot i= " + i)
+            i = p.checkDot(str, i);
+            // console.log("Q after dot i= " + i)
+            found = true;
+        } 
+        if (!found) {
+            // console.log("Bad syntax " + j)
+            throw badSyntax(p._thisDoc, p.lines, str, j,
+                    "Unknown syntax at start of statememt: '" + str.slice(j).slice(0,20) +"'")
+        }
+        
+    } // while
+    //return clauses
+
+}; // End of spaqlUpdateParser
+
+
+//////////////// Apply a patch
+
+$rdf.IndexedFormula.prototype.applyPatch = function(patch, target, patchCallback) { // patchCallback(err)
+    var targetKB = this;
+    var doPatch = function(onDonePatch) {
+        // $rdf.log.info("doPatch ...")
+        
+        if (patch['delete']) {
+            // $rdf.log.info("doPatch delete "+patch['delete'])
+            var ds =  patch['delete']
+            if (bindings) ds = ds.substitute(bindings);
+            ds = ds.statements;
+            var bad = [];
+            var ds2 = ds.map(function(st){ // Find the actual statemnts in the store
+                var sts = targetKB.statementsMatching(st.subject, st.predicate, st.object, target);
+                if (sts.length === 0) {
+                    // $rdf.log.info("NOT FOUND deletable " + st);
+                    bad.push(st);
+                } else {
+                    // $rdf.log.info("Found deletable " + st);
+                    return sts[0]
+                }
+            });
+            if (bad.length) {
+                return patchCallback("Couldn't find to delete: " + bad[0])
+            }
+            ds2.map(function(st){
+                targetKB.remove(st);
+            });
+        };
+        
+        if (patch['insert']) {
+            // $rdf.log.info("doPatch insert "+patch['insert'])
+            var ds =  patch['insert'];
+            if (bindings) ds = ds.substitute(bindings);
+            ds = ds.statements;
+            ds.map(function(st){st.why = target;
+                // $rdf.log.info("Adding: " + st);
+                targetKB.add(st.subject, st.predicate, st.object, st.why)});
+        };
+        onDonePatch();
+    };
+
+    var bindings = null;
+    if (patch.where) {
+        // $rdf.log.info("Processing WHERE: " + patch.where + '\n');
+
+        var query = new $rdf.Query('patch');
+        query.pat = patch.where;
+        query.pat.statements.map(function(st){st.why = target});
+
+        var bindingsFound = [];
+        // $rdf.log.info("Processing WHERE - launching query: " + query.pat);
+
+        targetKB.query(query, function onBinding(binding) {
+            bindingsFound.push(binding)
+        },
+        targetKB.fetcher,
+        function onDone() {
+            if (bindingsFound.length == 0) {
+                return patchCallback("No match found to be patched:" + patch.where);
+            }
+            if (bindingsFound.length > 1) {
+                return patchCallback("Patch ambiguous. No patch done.");
+            }
+            bindings = bindingsFound[0];
+            doPatch(patchCallback);
+        });
+    } else {
+        doPatch(patchCallback)
+    };
+};
+
+
+
 // ends
 // Matching a formula against another formula
 // Assync as well as Synchronously
@@ -6023,6 +7289,8 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     
     function canUse(pp) {
         if (namespaces[pp]) return false; // already used
+        if (! __Serializer.prototype.validPrefix.test(pp)) return false; // bad format
+        if (pp === 'ns') return false; // boring 
         this.prefixes[uri] = pp;
         pok = pp;
         return true
@@ -6044,6 +7312,9 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     if (canUse(p.slice(0,4))) return pok;
     if (canUse(p.slice(0,1))) return pok;
     if (canUse(p.slice(0,5))) return pok;
+    if (! __Serializer.prototype.validPrefix.test(p)) {
+        p = 'n';  // Otherwise the loop below may never termimnate
+    }
     for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
 }
 
@@ -6233,7 +7504,8 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         for (var i=0; i<tree.length; i++) {
             var branch = tree[i];
             var s2 = (typeof branch == 'string') ? branch : treeToLine(branch);
-            if (i!=0 && s2 != ',' && s2 != ';' && s2 != '.') str += ' ';
+             // Note the space before the dot in case statement ends 123. which is in fact allowed but be conservative.
+            if (i!=0 && s2 != ',' && s2 != ';') str += ' '; // was also:  && s2 != '.'
             str += s2;
         }
         return str;
@@ -6308,9 +7580,9 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     // The tree for a subject
     function subjectTree(subject, stats) {
         if (subject.termType == 'bnode' && !stats.incoming[subject])
-            return objectTree(subject, stats, true).concat(["."]); // Anonymous bnode subject
-        return [ termToN3(subject, stats) ].concat([propertyTree(subject, stats)]).concat(["."]);
-    }
+            return objectTree(subject, stats, true).concat(['.']); // Anonymous bnode subject
+        return [ termToN3(subject, stats) ].concat([propertyTree(subject, stats)]).concat(['.']); 
+    } 
     
 
     // The property tree for a single subject or anonymous node
@@ -6322,7 +7594,12 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         if (typeof sts == 'undefined') {
             throw('Cant find statements for '+subject);
         }
-        sts.sort();
+        
+        var SPO = function(x, y) {
+            return $rdf.Util.heavyCompareSPO(x, y, this.store)
+        }
+        sts.sort(); // 2014-09-30
+//        sts.sort(SPO); // 2014-09-30
         var objects = [];
         for (var i=0; i<sts.length; i++) {
             var st = sts[i];
@@ -6432,6 +7709,8 @@ __Serializer.prototype.atomicTermToN3 = function atomicTermToN3(expr, stats) {
 
     //  stringToN3:  String escaping for N3
 
+__Serializer.prototype.validPrefix = new RegExp(/^[a-zA-Z][a-zA-Z0-9]*$/);
+
 __Serializer.prototype.forbidden1 = new RegExp(/[\\"\b\f\r\v\t\n\u0080-\uffff]/gm);
 __Serializer.prototype.forbidden3 = new RegExp(/[\\"\b\f\r\v\u0080-\uffff]/gm);
 __Serializer.prototype.stringToN3 = function stringToN3(str, flags) {
@@ -6499,6 +7778,10 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
                 canSplit = false; break;
             }
         }
+
+        if (uri.slice(0, j) == this.base) { // base-relative
+            return '<#' + uri.slice(j+1) + '>';
+        }
         if (canSplit) {
             var localid = uri.slice(j+1);
             var namesp = uri.slice(0,j+1);
@@ -6510,12 +7793,11 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
                 return ':' + localid;
             }
             var prefix = this.prefixes[namesp];
+            if (!prefix) prefix = this.makeUpPrefix(namesp);
             if (prefix) {
                 this.namespacesUsed[namesp] = true;
                 return prefix + ':' + localid;
             }
-            if (uri.slice(0, j) == this.base)
-                return '<#' + localid + '>';
             // Fall though if can't do qname
         }
     }
@@ -6888,9 +8170,8 @@ return Serializer;
 
 }();
 /*
-# Updates-Via
-*/
-
+ * Updates-Via
+ */
 var $rdf, k, v,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __hasProp = {}.hasOwnProperty;
@@ -6900,24 +8181,17 @@ if (typeof $rdf === "undefined" || $rdf === null) {
 }
 
 $rdf.UpdatesSocket = (function() {
-
   function UpdatesSocket(parent, via) {
+    var error;
     this.parent = parent;
     this.via = via;
     this.subscribe = __bind(this.subscribe, this);
-
     this.onError = __bind(this.onError, this);
-
     this.onMessage = __bind(this.onMessage, this);
-
     this.onClose = __bind(this.onClose, this);
-
     this.onOpen = __bind(this.onOpen, this);
-
     this._subscribe = __bind(this._subscribe, this);
-
     this._send = __bind(this._send, this);
-
     this.connected = false;
     this.pending = {};
     this.subscribed = {};
@@ -6928,7 +8202,8 @@ $rdf.UpdatesSocket = (function() {
       this.socket.onclose = this.onClose;
       this.socket.onmessage = this.onMessage;
       this.socket.onerror = this.onError;
-    } catch (error) {
+    } catch (_error) {
+      error = _error;
       this.onError(error);
     }
   }
@@ -6999,7 +8274,7 @@ $rdf.UpdatesSocket = (function() {
   };
 
   UpdatesSocket.prototype.onError = function(e) {
-    return console.log([this, 'onError', arguments]);
+    throw 'onError' + e;
   };
 
   UpdatesSocket.prototype.subscribe = function(uri) {
@@ -7015,18 +8290,13 @@ $rdf.UpdatesSocket = (function() {
 })();
 
 $rdf.UpdatesVia = (function() {
-
   function UpdatesVia(fetcher) {
     this.fetcher = fetcher;
     this.onUpdate = __bind(this.onUpdate, this);
-
     this.onHeaders = __bind(this.onHeaders, this);
-
     this.register = __bind(this.register, this);
-
     this.graph = {};
     this.via = {};
-    this.fetcher.addCallback('headers', this.onHeaders);
   }
 
   UpdatesVia.prototype.register = function(via, uri) {
@@ -7074,7 +8344,7 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
 }
 /************************************************************
  * 
- * Project: rdflib.js, part of Tabulator project
+ * Project: rdflib.js, originally part of Tabulator project
  * 
  * File: web.js
  * 
@@ -7099,6 +8369,8 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
 /**
  * Things to test: callbacks on request, refresh, retract
  *   loading from HTTP, HTTPS, FTP, FILE, others?
+ * To do:
+ * Firing up a mail client for mid:  (message:) URLs
  */
 
 $rdf.Fetcher = function(store, timeout, async) {
@@ -7651,21 +8923,10 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.nowOrWhenFetched = function(uri, referringTerm, userCallback) {
         var sta = this.getState(uri);
         if (sta == 'fetched') return userCallback(true);
-        /*
-        this.addCallback('done', function(uri2) {
-            if (uri2 == uri ||
-                ( $rdf.Fetcher.crossSiteProxy(uri) == uri2  )) callback(true);
-            return (uri2 != uri); // Call me again?
-        });
-        this.addCallback('fail', function(uri2, status) {
-            if (uri2 == uri ||
-                ( $rdf.Fetcher.crossSiteProxy(uri) == uri2  )) callback(
-                    false, "Asynch fetch fail: " + status + " for " + uri);
-            return (uri2 != uri); // Call me again?
-        });
-        */
-        if (sta == 'unrequested') this.requestURI(
-            uri, referringTerm, false, userCallback);
+        
+        // If it is 'failed', then shoulkd we try again?  I think so so an old error doens't get stuck
+        //if (sta == 'unrequested')
+        this.requestURI(uri, referringTerm, false, userCallback);
     }
 
 
@@ -7783,8 +9044,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                     kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), oldreq);
 
 
-                    ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
-                    var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
+                    ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate of what will be done by requestURI below
+                    /* var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
                     kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
 
                     var now = new Date();
@@ -7795,6 +9056,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                     var response = kb.bnode();
                     kb.add(oldreq, ns.link('response'), response);
+                    */
                     // kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
                     // if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
@@ -7803,7 +9065,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                     sf.addStatus(oldreq, 'done - redirected') // why
                     //the callback throws an exception when called from xhr.onerror (so removed)
-                    //sf.fireCallbacks('done', args) // Are these args right? @@@
+                    //sf.fireCallbacks('done', args) // Are these args right? @@@   Noit done yet! done means success
                     sf.requested[xhr.uri.uri] = 'redirected';
 
                     var xhr2 = sf.requestURI(newURI, xhr.uri, force, userCallback);
@@ -7818,7 +9080,14 @@ $rdf.Fetcher = function(store, timeout, async) {
                     }
                 }
             } else {
-                sf.failFetch(xhr, "XHR Error: "+event)
+                if (xhr.withCredentials) {
+                    xhr.abort();
+                    xhr.withCredentials = false;
+                    sf.addStatus(xhr.req, "Credentials SUPPRESSED to see if that helps");
+                    xhr.send(); // try again                
+                } else {
+                    sf.failFetch(xhr, "XHR Error: "+event); // Alas we get no error message
+                }
             }
         }; }
         
@@ -8064,7 +9333,12 @@ $rdf.Fetcher = function(store, timeout, async) {
         } else {
             // $rdf.log.warn("Localhost kludge OFF offline use: actually getting <" + uri2 + ">");
         }
-        
+        // 2014 probelm:
+        // XMLHttpRequest cannot load http://www.w3.org/People/Berners-Lee/card. 
+        // A wildcard '*' cannot be used in the 'Access-Control-Allow-Origin' header when the credentials flag is true. 
+
+        // @ Many ontology files under http: and need CORD wildcard -> can't have withCredentials
+        var withCredentials = ( uri2.slice(0,6) === 'https:'); // @@ Kludge -- need for webid which typically is served from https
 
         // Setup the request
         if (typeof jQuery !== 'undefined' && jQuery.ajax) {
@@ -8073,25 +9347,51 @@ $rdf.Fetcher = function(store, timeout, async) {
                 accepts: {'*': 'text/turtle,text/n3,application/rdf+xml'},
                 processData: false,
                 xhrFields: {
-                    withCredentials: true
+                    withCredentials: withCredentials,
                 },
                 timeout: sf.timeout,
                 error: function(xhr, s, e) {
+
+                    xhr.req = req;   // Add these in case fails before .ajax returns
+                    xhr.userCallback = userCallback;
+                    xhr.uri = docterm;
+                    xhr.requestedURI = uri2;
+
+
                     if (s == 'timeout')
                         sf.failFetch(xhr, "requestTimeout");
                     else
                         onerrorFactory(xhr)(e);
                 },
                 success: function(d, s, xhr) {
+
+                    xhr.req = req;
+                    xhr.userCallback = userCallback;
+                    xhr.uri = docterm;
+                    xhr.requestedURI = uri2;
+
                     onreadystatechangeFactory(xhr)();
                 }
             });
+
+            xhr.req = req;
+            xhr.userCallback = userCallback;
+            xhr.uri = docterm;
+            xhr.requestedURI = uri2;
+
+
         } else {
             var xhr = $rdf.Util.XMLHTTPFactory();
             xhr.onerror = onerrorFactory(xhr);
             xhr.onreadystatechange = onreadystatechangeFactory(xhr);
             xhr.timeout = sf.timeout;
-            xhr.withCredentials = true;
+            xhr.withCredentials = withCredentials;
+
+            xhr.req = req;
+            xhr.userCallback = userCallback;
+            xhr.uri = docterm;
+            xhr.requestedURI = uri2;
+
             xhr.ontimeout = function () {
                 sf.failFetch(xhr, "requestTimeout");
             }
@@ -8101,10 +9401,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                 return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
             }
         }
-        xhr.req = req;
-        xhr.userCallback = userCallback;
-        xhr.uri = docterm;
-        xhr.requestedURI = uri2;
         
         // Set redirect callback and request headers -- alas Firefox Extension Only
         
@@ -8406,6 +9702,16 @@ $rdf.parse = function parse(str, kb, base, contentType) {
                 $rdf.rdfa.parse($rdf.Util.parseXML(str), kb, base);
             return;
         }
+        
+        if (contentType == 'application/sparql-update') {  // @@ we handle a subset
+            spaqlUpdateParser(store, str, base)
+
+            if ($rdf.rdfa && $rdf.rdfa.parse)
+                $rdf.rdfa.parse($rdf.Util.parseXML(str), kb, base);
+            return;
+        }
+        
+
     } catch(e) {
         throw "Error trying to parse <"+base+"> as "+contentType+":\n"+e +':\n'+e.stack;
     }
@@ -8413,6 +9719,29 @@ $rdf.parse = function parse(str, kb, base, contentType) {
 
 };
 
+//   Serialize to the appropriate format
+// 
+$rdf.serialize = function(target, kb, base, contentType) {
+    var documentString;
+    var sz = $rdf.Serializer(kb);
+    var newSts = kb.statementsMatching(undefined, undefined, undefined, target);
+    sz.suggestNamespaces(kb.namespaces);
+    sz.setBase(base);                   
+    switch(contentType){
+        case 'application/rdf+xml': 
+            documentString = sz.statementsToXML(newSts);
+            break;
+        case 'text/n3':
+        case 'text/turtle':
+        case 'application/x-turtle': // Legacy
+        case 'application/n3': // Legacy
+            documentString = sz.statementsToN3(newSts);
+            break;
+        default:
+            throw "serialise: Content-type "+content_type +" not supported for data write";                                                                            
+    }
+    return documentString;
+};
 
 // ends
 
@@ -8586,6 +9915,7 @@ tabulator.ns.ldp = $rdf.Namespace('http://www.w3.org/ns/ldp#');
 tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = $rdf.Namespace('http://www.w3.org/2007/ont/link#');
 tabulator.ns.mo = $rdf.Namespace('http://purl.org/ontology/mo/');
 tabulator.ns.owl = $rdf.Namespace('http://www.w3.org/2002/07/owl#');
+tabulator.ns.patch = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
 tabulator.ns.qu = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
 tabulator.ns.trip = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
 tabulator.ns.rdf = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
@@ -8680,12 +10010,17 @@ tabulator.panes.utils.extractLogURI = function(fullURI){
 tabulator.panes.utils.shortDate = function(str) {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
     if (!str) return '???';
+    var month = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
     try {
         var now = new Date();
         var then = new Date(str);
         var nowZ = $rdf.term(now).value;
-        var n = now.getTimezoneOffset();
+        var n = now.getTimezoneOffset(); // Minutes
         if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
+        if (str.slice(0,4) == nowZ.slice(0,4)) {
+            return ( month[parseInt(str.slice(5,7))] + ' ' + parseInt(str.slice(8,10)));
+        }
         return str.slice(0,10);
     } catch(e) {
         return 'shortdate:' + e
@@ -9138,10 +10473,10 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
         possible.push(kb.fromNT(x));
         // box.appendChild(dom.createTextNode("RDFS: adding "+x));
     }; // Use rdfs
-    // tabulator.log.debug("%%% Choice field: possible.length 1 = "+possible.length)
+    // tabulator.log.debug("%% Choice field: possible.length 1 = "+possible.length)
     if (from.sameTerm(ns.rdfs('Class'))) {
         for (var p in tabulator.panes.utils.allClassURIs()) possible.push(kb.sym(p));     
-        // tabulator.log.debug("%%% Choice field: possible.length 2 = "+possible.length)
+        // tabulator.log.debug("%% Choice field: possible.length 2 = "+possible.length)
     } else if (from.sameTerm(ns.rdf('Property'))) {
         //if (tabulator.properties == undefined) 
         tabulator.panes.utils.propertyTriage();
@@ -9583,10 +10918,12 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
 tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, store, callback) {
     if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb); // @@ Use a common one attached to each fetcher or merge with fetcher
     var group = dom.createElement('div');
+    
     var sts = kb.statementsMatching(subject, predicate,undefined); // Only one please
     if (sts.length > 1) return tabulator.panes.utils.errorMessageBlock(dom,
                 "Should not be "+sts.length+" i.e. >1 "+predicate+" of "+subject);
     var desc = sts.length? sts[0].object.value : undefined;
+    
     var field = dom.createElement('textarea');
     group.appendChild(field);
     field.rows = desc? desc.split('\n').length + 2 : 2;
@@ -9596,10 +10933,19 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     field.setAttribute('style', style)
     if (sts.length) field.value = desc 
     else {
-        field.value = tabulator.Util.label(predicate); // Was"enter a description here"
+        // Unless you can make the predicate label disappear with the first click then this is over-cute
+        // field.value = tabulator.Util.label(predicate); // Was"enter a description here"
         field.select(); // Select it ready for user input -- doesn't work
     }
 
+    group.refresh = function() {
+        var v = kb.any(subject, predicate);
+        if (v && (v.value !== field.value)) {
+            field.value = v.value; // don't touch widget if no change
+            // @@ this is the place to color the field from the user who chanaged it
+        } 
+    };
+    
     var br = dom.createElement('br');
     group.appendChild(br);
     var submit = dom.createElement('input');
@@ -10147,8 +11493,13 @@ tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
     return tabulator.panes.utils.checkUser(dom, doc, function(uri) {
         var me_uri = tabulator.preferences.get('me');
         if (uri == me_uri) return null;
-        tabulator.preferences.set('me', uri);
-        var message = "(Logged in as " + uri + " by authentication.)";
+        var message;
+        if (!uri) {
+            message = "(Log in by auth with no URI - ignored)";
+        } else {
+            tabulator.preferences.set('me', uri);
+            message = "(Logged in as " + uri + " by authentication.)";
+        };
         try {  // Ugh
             tabulator.log.alert(message);
         } catch(e) {
@@ -10547,9 +11898,209 @@ to change its state according to an ontology, comment on it, etc.
 **
 **
 ** I am using in places single quotes strings like 'this'
-** where internationalizatio ("i18n") is not a problem, and double quoted
+** where internationalization ("i18n") is not a problem, and double quoted
 ** like "this" where the string is seen by the user and so I18n is an issue.
 */
+
+
+
+
+
+
+//////////////////////////////////////////////////////  SUBCRIPTIONS
+
+$rdf.subscription =  function(options, doc, onChange) {
+
+
+    //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
+    var linkRels = function(doc) {
+        var links = {}; // map relationship to uri
+        var linkHeaders = tabulator.sf.getHeader(doc, 'link');
+        if (!linkHeaders) return null;
+        linkHeaders.map(function(headerValue){
+            var arg = headerValue.trim().split(';');
+            var uri = arg[0];
+            arg.slice(1).map(function(a){
+                var key = a.split('=')[0].trim();
+                var val = a.split('=')[1].trim();
+                if (key ==='rel') {
+                    links[val] = uri.trim();
+                }
+            });        
+        });
+        return links;
+    };
+
+
+    var getChangesURI = function(doc, rel) {
+        var links = linkRels(doc);
+        if (!links[rel]) {
+            console.log("No link header rel=" + rel + " on " + doc.uri)
+            return null;
+        }
+        var changesURI = $rdf.uri.join(links[rel], doc.uri);
+        console.log("Found rel=" + rel + " URI: " + changesURI);
+        return changesURI;
+    };
+
+
+
+
+///////////////  Subscribe to changes by SSE
+
+
+    var getChanges_SSE = function(doc, onChange) {
+        var streamURI = getChangesURI(doc, 'events');
+        if (!streamURI) return;
+        var source = new EventSource(streamURI); // @@@  just path??
+        console.log("Server Side Source");   
+
+        source.addEventListener('message', function(e) {
+            console.log("Server Side Event: " + e);   
+            alert("SSE: " + e)  
+            // $('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
+        }, false);
+    };
+
+ 
+    
+
+    //////////////// Subscribe to changes websocket
+
+    // This implementation uses web sockets using update-via
+    
+    var getChanges_WS2 = function(doc, onChange) {
+        var router = new $rdf.UpdatesVia(tabulator.sf); // Pass fetcher do it can subscribe to headers
+        var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+        router.register(wsuri, doc.uri);
+    };
+    
+    var getChanges_WS = function(doc, onChange) {
+        var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
+        var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
+        var socket;
+        try {
+            socket = new WebSocket(changesURI);
+        } catch(e) {
+            socket = new MozWebSocket(changesURI);
+        };
+        
+        socket.onopen = function(event){
+            console.log("socket opened");
+        };
+        
+        socket.onmessage = function (event) {
+            console.log("socket received: " +event.data);
+            var patchText = event.data;
+            console.log("Success: patch received:" + patchText);
+            
+            // @@ check integrity of entire patch
+            var patchKB = $rdf.graph();
+            var sts;
+            try {
+                $rdf.parse(patchText, patchKB, doc.uri, 'text/n3');
+            } catch(e) {
+                console.log("Parse error in patch: "+e);
+            };
+            clauses = {};
+            ['where', 'insert', 'delete'].map(function(pred){
+                sts = patchKB.statementsMatching(undefined, SQNS(pred), undefined);
+                if (sts) clauses[pred] = sts[0].object;
+            });
+            console.log("Performing patch!");
+            kb.applyPatch(clauses, doc, function(err){
+                if (err) {
+                    console.log("Incoming patch failed!!!\n" + err)
+                    alert("Incoming patch failed!!!\n" + err)
+                    socket.close();
+                } else {
+                    console.log("Incoming patch worked!!!!!!\n" + err)
+                    onChange(); // callback user
+                };
+            });
+        };
+
+    }; // end getChanges
+    
+
+    ////////////////////////// Subscribe to changes using Long Poll
+
+    // This implementation uses link headers and a diff returned by plain HTTP
+    
+    var getChanges_LongPoll = function(doc, onChange) {
+        var changesURI = getChangesURI(doc, 'changes');
+        if (!changesURI) return "No advertized long poll URI";
+        var xhr = $rdf.Util.XMLHTTPFactory();
+        xhr.alreadyProcessed = 0;
+
+        xhr.onreadystatechange = function(){
+            switch (xhr.readyState) {
+            case 0:
+            case 1:
+                return;
+            case 3:
+                console.log("Mid delta stream (" + xhr.responseText.length + ") "+ changesURI);
+                handlePartial();
+                break;
+            case 4:
+                handlePartial();
+                console.log("End of delta stream " + changesURI);
+                break;
+             }   
+        };
+
+        try {
+            xhr.open('GET', changesURI);
+        } catch (er) {
+            console.log("XHR open for GET changes failed <"+changesURI+">:\n\t" + er);
+        }
+        try {
+            xhr.send();
+        } catch (er) {
+            console.log("XHR send failed <"+changesURI+">:\n\t" + er);
+        }
+
+        var handlePartial = function() {
+            // @@ check content type is text/n3
+
+            if (xhr.status >= 400) {
+                console.log("HTTP (" + xhr.readyState + ") error " + xhr.status + "on change stream:" + xhr.statusText);
+                console.log("     error body: " + xhr.responseText);
+                xhr.abort();
+                return;
+            } 
+            if (xhr.responseText.length > xhr.alreadyProcessed) {
+                var patchText = xhr.responseText.slice(xhr.alreadyProcessed);
+                xhr.alreadyProcessed = xhr.responseText.length;
+                
+                xhr.headers = $rdf.Util.getHTTPHeaders(xhr);
+                try {
+                    onChange(patchText);
+                } catch (e) {
+                    console.log("Exception in patch update handler: " + e)
+                    // @@ Where to report error e?
+                }
+                getChanges_LongPoll(doc, onChange); // Queue another one
+                
+            }        
+        };
+        return null; // No error
+
+    }; // end getChanges_LongPoll
+    
+    if (options.longPoll ) {
+        getChanges_LongPoll(doc, onChange);
+    }
+    if (options.SSE) {
+        getChanges_SSE(doc, onChange);
+    }
+    if (options.websockets) {
+        getChanges_WS(doc, onChange);
+    }
+
+}; // subscription
+
+///////////////////////////////// End of subscription stufff 
 
 
 tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
@@ -10576,6 +12127,20 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         a.textContent = text;
         a.setAttribute('style', 'color: #3B5998; text-decoration: none; '); // font-weight: bold;
         return a;
+    };
+
+    var mention = function mention(message, style){
+        var pre = dom.createElement("pre");
+        pre.setAttribute('style', style ? style :'color: grey');
+        div.appendChild(pre);
+        pre.appendChild(dom.createTextNode(message));
+        return pre
+    } 
+    
+    var console = {
+        log: function(message) {mention(message, 'color: #111;')},
+        warn: function(message) {mention(message, 'color: #880;')},
+        error: function(message) {mention(message, 'color: #800;')}
     };
 
     
@@ -10654,6 +12219,8 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         return ''+tabulator.Util.label(person);
     }
 
+/////////////////////////////////////////////////////////////////////////
+    
     var syncMessages = function(about, messageTable) {
         var displayed = {};
         for (var ele = messageTable.firstChild; ele ;ele = ele.nextSibling) {
@@ -10690,7 +12257,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
                 kb.statementsMatching(undefined, undefined, message));
         updater.update(deletions, [], function(uri, ok, body){
             if (!ok) {
-                say("Cant delete messages:" + body);
+                console.log("Cant delete messages:" + body);
             } else {
                 syncMessages(subject, messageTable);
             };
@@ -10793,20 +12360,25 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 
         kb.query(query, addMessageFromBindings);
     }
-    
+/*
     var refreshButton = dom.createElement('button');
     refreshButton.textContent = "refresh";
     refreshButton.addEventListener('click', function(e) {
         tabulator.sf.unload(messageStore);
-        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+        tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
             if (!ok) {
-                say("Cant refresh" + body);
+                console.log("Cant refresh messages" + body);
             } else {
                 syncMessages(subject, messageTable);
             };
         });
     }, false);
     div.appendChild(refreshButton);
+*/    
+    div.refresh = function() {
+        syncMessages(subject, messageTable);
+    };
+    
 
     return div;
 };
@@ -10873,7 +12445,7 @@ tabulator.panes.register( {
         var complainIfBad = function(ok,body){
             if (ok) {
             }
-            else say("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
+            else console.log("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
         }
 
 
@@ -10911,14 +12483,14 @@ tabulator.panes.register( {
                 sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
 
                 var initialStates = kb.each(tracker, WF('initialState'));
-                if (initialStates.length == 0) say('This tracker has no initialState');
+                if (initialStates.length == 0) console.log('This tracker has no initialState');
                 for (var i=0; i<initialStates.length; i++) {
                     sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialStates[i], stateStore))
                 }
                 if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
                 var sendComplete = function(uri, success, body) {
                     if (!success) {
-                         say("Error: can\'t save new issue:" + body);
+                         console.log("Error: can\'t save new issue:" + body);
                         //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
                     } else {
                         // dump('Tabulator issue pane: saved new issue\n')
@@ -10967,7 +12539,7 @@ tabulator.panes.register( {
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
-                // say("Ready to make new instance at "+ws);
+                // console.log("Ready to make new instance at "+ws);
                 var sp = tabulator.ns.space;
                 var kb = tabulator.kb;
                 
@@ -11026,15 +12598,14 @@ tabulator.panes.register( {
                         if (ok) {
                             updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
                                 if (ok) {
-                                    say("Ok The tracker created OK at: " + newTracker.uri +
-                                    "\nMake a note of it, bookmark it. ",
-                                     'color: #080; background-color: white;');
+                                    console.info("Ok The tracker created OK at: " + newTracker.uri +
+                                    "\nMake a note of it, bookmark it. ");
                                 } else {
-                                    say("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
+                                    console.log("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
                                 };
                             });
                         } else {
-                            say("FAILED to save new tracker at: "+ there.uri +' : ' + message);
+                            console.log("FAILED to save new tracker at: "+ there.uri +' : ' + message);
                         };
                     }
                 );
@@ -11068,6 +12639,35 @@ tabulator.panes.register( {
         var me = me_uri? kb.sym(me_uri) : null;
 
 
+        // Reload resorce then
+        
+        var reloadStore = function(store, callBack) {
+            tabulator.sf.unload(store);
+            tabulator.sf.nowOrWhenFetched(store.uri, undefined, function(ok, body){
+                if (!ok) {
+                    console.log("Cant refresh data:" + body);
+                } else {
+                    callBack();
+                };
+            });
+        };
+
+
+
+        // Refresh the DOM tree
+      
+        refreshTree = function(root) {
+            if (root.refresh) {
+                root.refresh();
+                return;
+            }
+            for (var i=0; i < root.children.length; i++) {
+                refreshTree(root.children[i]);
+            }
+        }
+
+
+
         //              Render a single issue
         
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
@@ -11078,7 +12678,7 @@ tabulator.panes.register( {
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
             tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
-                if (!ok) return say("Failed to load " + trackerURI + ' '+body);
+                if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
                 var ns = tabulator.ns
                 var predicateURIsDone = {};
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
@@ -11102,9 +12702,32 @@ tabulator.panes.register( {
                 var stateStore = kb.any(tracker, WF('stateStore'));
                 var store = kb.sym(subject.uri.split('#')[0]);
 /*                if (stateStore != undefined && store.uri != stateStore.uri) {
-                    say('(This bug is not stored in the default state store)')
+                    console.log('(This bug is not stored in the default state store)')
                 }
 */
+
+                // Unfinished -- need this for speed to save the reloadStore below
+                var incommingPatch = function(text) {
+                    var contentType = xhr.headers['content-type'].trim();
+                    var patchKB = $rdf.graph();
+                    $rdf.parse(patchText, patchKB, doc.uri, contentType);
+                    // @@ TBC: check this patch isn't one of ours
+                    // @@ TBC: kb.applyPatch();  @@@@@ code me
+                    refreshTree(div);
+                    say("Tree Refreshed!!!");
+                }
+
+
+                var subopts = { 'longPoll': true };
+                $rdf.subscription(subopts, stateStore, function() {
+                    reloadStore(stateStore, function(deltaText) {
+                        refreshTree(div);
+                        say("Tree Refreshed!!!");
+                    });
+                });
+
+
+
                 tabulator.panes.utils.checkUserSetMe(dom, stateStore);
 
                 
@@ -11115,7 +12738,7 @@ tabulator.panes.register( {
                             setModifiedDate(store, kb, store);
                             rerender(div);
                         }
-                        else say("Failed to change state:\n"+body);
+                        else console.log("Failed to change state:\n"+body);
                     })
                 div.appendChild(select);
 
@@ -11128,7 +12751,7 @@ tabulator.panes.register( {
                             setModifiedDate(store, kb, store);
                             rerender(div);
                         }
-                        else say("Failed to change category:\n"+body);
+                        else console.log("Failed to change category:\n"+body);
                     }));
                 }
                 
@@ -11143,7 +12766,7 @@ tabulator.panes.register( {
                 div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
                     store, function(ok,body){
                         if (ok) setModifiedDate(store, kb, store);
-                        else say("Failed to description:\n"+body);
+                        else console.log("Failed to description:\n"+body);
                     }));
                 donePredicate(WF('description'));
 
@@ -11174,7 +12797,7 @@ tabulator.panes.register( {
                         subject, ns.wf('assignee'), devs, opts, store,
                         function(ok,body){
                             if (ok) setModifiedDate(store, kb, store);
-                            else say("Failed to description:\n"+body);
+                            else console.log("Failed to description:\n"+body);
                         }));
                 }
                 donePredicate(ns.wf('assignee'));
@@ -11257,6 +12880,25 @@ tabulator.panes.register( {
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                     });
+                    
+                var refreshButton = dom.createElement('button');
+                refreshButton.textContent = "refresh";
+                refreshButton.addEventListener('click', function(e) {
+                    tabulator.sf.unload(messageStore);
+                    tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+                        if (!ok) {
+                            console.log("Cant refresh messages" + body);
+                        } else {
+                            refreshTree(div);
+                            // syncMessages(subject, messageTable);
+                        };
+                    });
+                }, false);
+                div.appendChild(refreshButton);
+
+
+
+                    
             });  // End nowOrWhenFetched tracker
 
     ///////////////////////////////////////////////////////////
@@ -11296,7 +12938,7 @@ tabulator.panes.register( {
             
             // Table of issues - when we have the main issue list
             tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
-                if (!ok) return say("Cannot load state store "+body);
+                if (!ok) return console.log("Cannot load state store "+body);
                 var query = new $rdf.Query(tabulator.Util.label(subject));
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
                 var vars =  ['issue', 'state', 'created'];
@@ -11316,7 +12958,7 @@ tabulator.panes.register( {
                 query.pat.optional = [];
                 
                 var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
-                // say('Property list: '+propertyList); //
+                // console.log('Property list: '+propertyList); //
                 if (propertyList) {
                     properties = propertyList.elements;
                     for (var p=0; p < properties.length; p++) {
@@ -11332,11 +12974,47 @@ tabulator.panes.register( {
                     }
                 }
                 
-                // say('Query pattern is:\n'+query.pat);
-                // say('Query pattern optional is:\n'+opts); 
+            
+                // console.log('Query pattern is:\n'+query.pat);
+                // console.log('Query pattern optional is:\n'+opts); 
+            
+                var selectedStates = {};
+                var possible = kb.each(undefined, ns.rdfs('subClassOf'), states);
+                possible.map(function(s){
+                    if (kb.holds(s, ns.rdfs('subClassOf'), WF('Open')) || s.sameTerm(WF('Open'))) {
+                        selectedStates[s.uri] = true;
+                        // console.log('on '+s.uri); // @@
+                    };
+                });
                 
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query} );
+                        
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
+                    'hints': {
+                        '?created': { 'cellFormat': 'shortDate'},
+                        '?state': { 'initialSelection': selectedStates }}} );
                 div.appendChild(tableDiv);
+
+                if (tableDiv.refresh) { // Refresh function
+                    var refreshButton = dom.createElement('button');
+                    refreshButton.textContent = "refresh";
+                    refreshButton.addEventListener('click', function(e) {
+                        tabulator.sf.unload(stateStore);
+                        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+                            if (!ok) {
+                                console.log("Cant refresh data:" + body);
+                            } else {
+                                tableDiv.refresh();
+                            };
+                        });
+                    }, false);
+                    div.appendChild(refreshButton);
+                } else {
+                    console.log('No refresh function?!');
+                }
+                            
+                
+                
+                
             });
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
@@ -11344,12 +13022,12 @@ tabulator.panes.register( {
 
 
         } else { 
-            say("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
+            console.log("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
         }         
         if (!tabulator.preferences.get('me')) {
-            say("(You do not have your Web Id set. Sign in or sign up to make changes.)");
+            console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
-            // say("(Your webid is "+ tabulator.preferences.get('me')+")");
+            // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
         
         
@@ -11357,11 +13035,11 @@ tabulator.panes.register( {
             // sayt.parent.removeChild(sayt);
             if (webid) {
                 tabulator.preferences.set('me', webid);
-                say("(Logged in as "+ webid+")")
+                console.log("(Logged in as "+ webid+")")
                 me = kb.sym(webid);
             } else {
                 tabulator.preferences.set('me', '');
-                say("(Logged out)")
+                console.log("(Logged out)")
                 me = null;
             }
         });
@@ -13169,8 +14847,10 @@ tabulator.panes.register({
         //  @@ When we can, use CSP to turn off scripts within the iframe
         div.setAttribute('class', 'docView')    
         var iframe = myDocument.createElement("IFRAME")
-        iframe.setAttribute('src', subject.uri)
+        iframe.setAttribute('src', subject.uri)    // allow-same-origin
         iframe.setAttribute('class', 'doc')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-forms'); // allow-scripts ?? no documents should be static
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
         iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
 //        iframe.setAttribute('height', '480')
 //        iframe.setAttribute('width', '640')
@@ -14303,6 +15983,11 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         "http://www.w3.org/2001/XMLSchema#unsignedByte": true
     };
 
+    var XSD_DATE_TYPES = {
+        "http://www.w3.org/2001/XMLSchema#dateTime": true,
+        "http://www.w3.org/2001/XMLSchema#date": true
+    };
+
     // Classes that indicate an image:
 
     var IMAGE_TYPES = {
@@ -14329,6 +16014,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // The last SPARQL query used:
     var lastQuery = null;
+    var mostCommonType = null;
 
     var resultDiv = doc.createElement("div");
     resultDiv.className = "tableViewPane";
@@ -14339,12 +16025,20 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     resultDiv.appendChild(tableDiv);
 
 
+    // Save a refresh function for use by caller
+    resultDiv.refresh = function() {
+        updateTable(givenQuery, mostCommonType); // This could be a lot more incremental and efficient
+    }
+
+
     // A specifically asked-for query
     if (givenQuery) {
     
         var table = renderTableForQuery(givenQuery);
         //lastQuery = givenQuery;
         tableDiv.appendChild(table);
+
+        
         
     } else {
 
@@ -14354,7 +16048,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         if (!tableClass) typeSelectorDiv.appendChild(
             generateTypeSelector(allType, types));
 
-        var mostCommonType = getMostCommonType(types);
+        mostCommonType = getMostCommonType(types);
 
         if (mostCommonType != null) {
             buildFilteredTable(mostCommonType);
@@ -14546,6 +16240,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // Save the query for the edit dialog.
 
         lastQuery = query;
+        
+        
     }
 
     // Remove all subelements of the specified element.
@@ -15111,17 +16807,19 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
         // Remove all rows from the table:
 
-        var parentTable = rows[0]._htmlRow.parentNode;
+        if (rows.length) {
+            var parentTable = rows[0]._htmlRow.parentNode;
 
-        for (var i=0; i<rows.length; ++i) {
-            parentTable.removeChild(rows[i]._htmlRow);
-        }
+            for (var i=0; i<rows.length; ++i) {
+                parentTable.removeChild(rows[i]._htmlRow);
+            }
 
-        // Add back the rows in the new sorted order:
+            // Add back the rows in the new sorted order:
 
-        for (var i=0; i<rows.length; ++i) {
-            parentTable.appendChild(rows[i]._htmlRow);
-        }
+            for (var i=0; i<rows.length; ++i) {
+                parentTable.appendChild(rows[i]._htmlRow);
+            }
+        };
     }
 
     // Filter the list of rows based on the selectors for the 
@@ -15278,19 +16976,28 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         var doMultiple = true;
         var result = doc.createElement("div");
         var dropdown = doc.createElement("select");
+
+        var searchValue = {}; // Defualt to all enabled
+        for (var i=0; i<list.length; ++i) {
+            var value = list[i];
+            searchValue[value.uri] = true;
+        }
         
+        var initialSelection = hints(column).initialSelection;
+        if (initialSelection) searchValue = initialSelection;
+
         if (doMultiple) dropdown.setAttribute('multiple', 'true');
         else dropdown.appendChild(optionElement("(All)", "-1"));
         
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
-            dropdown.appendChild(optionElement(tabulator.Util.label(value), i));
+            var ele = optionElement(tabulator.Util.label(value), i);
+            if (searchValue[value.uri]) ele.selected = true;
+            dropdown.appendChild(ele);
         }
         result.appendChild(dropdown);
 
         // Select based on an enum value.
-
-        var searchValue = null;
 
         column.filterFunction = function(colValue) {
             return searchValue == null ||
@@ -15312,9 +17019,9 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 // dump('searchValue:'); for (var x in searchValue) dump(' '+x+': '+searchValue[x]+'; '); // @@TBL
                 // dump('\n'); // @@TBL
                 
-            } else {
-                if (index < 0) { // All
-                    searchValue = null;
+                } else {
+                    if (index < 0) { // All
+                        searchValue = null;
                 } else {
                     var index = new Number(dropdown.value);
                     searchValue = {}
@@ -15526,26 +17233,58 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // Render an individual RDF object to an HTML object displayed
     // in a table cell.
+    
+    function hints(column) {
+        if (options && options.hints && column.variable && options.hints[column.variable.toNT()]) {
+            return options.hints[column.variable.toNT()];
+        }
+        return {};
+    }
 
-    function renderValue(obj, column) {
-        if (obj.termType == "literal") {
-            return doc.createTextNode(obj.value);
-        } else if (obj.termType == "symbol" && column.isImageColumn()) {
-            return renderImage(obj);
-        } else if (obj.termType == "symbol" || obj.termType == "bnode") {
-            return linkToObject(obj);
-        } else if (obj.termType == "collection") {
-            var span = doc.createElement('span');
-            span.appendChild(doc.createTextNode('['));
-            obj.elements.map(function(x){
-                span.appendChild(renderValue(x, column));
-                span.appendChild(doc.createTextNode(', '));
-            });
-            span.removeChild(span.lastChild);
-            span.appendChild(doc.createTextNode(']'));
-            return span;
+    function renderValue(obj, column) { // hint
+
+        var cellFormat = hints(column).cellFormat;
+        var span;
+        if (cellFormat) {
+            switch(cellFormat) {
+            case 'shortDate':
+                return doc.createTextNode(tabulator.panes.utils.shortDate(obj.value));
+                break;
+                
+            default:
+                // drop through
+            
+            }
         } else {
-            return doc.createTextNode("unknown termtype '"+obj.termType+"'!");
+            if (obj.termType == "literal") {
+                if (obj.datatype) {
+                    if (XSD_DATE_TYPES[obj.datatype.uri]) {
+                        return doc.createTextNode(tabulator.panes.utils.shortDate(obj.value));
+                    } else if (XSD_NUMBER_TYPES[obj.datatype.uri]) {
+                        var span = doc.createElement('span');
+                        span.textContent = obj.value;
+                        span.setAttribute('style', 'text-align: right');
+                        return span;
+                    }
+                }
+                return doc.createTextNode(obj.value);
+            } else if (obj.termType == "symbol" && column.isImageColumn()) {
+                return renderImage(obj);
+            } else if (obj.termType == "symbol" || obj.termType == "bnode") {
+                return linkToObject(obj);
+            } else if (obj.termType == "collection") {
+                var span = doc.createElement('span');
+                span.appendChild(doc.createTextNode('['));
+                obj.elements.map(function(x){
+                    span.appendChild(renderValue(x, column));
+                    span.appendChild(doc.createTextNode(', '));
+                });
+                span.removeChild(span.lastChild);
+                span.appendChild(doc.createTextNode(']'));
+                return span;
+            } else {
+                return doc.createTextNode("unknown termtype '"+obj.termType+"'!");
+            }
         }
     }
 
@@ -15741,6 +17480,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         
         var onDone = function() {
             progressMessage.parentNode.removeChild(progressMessage);
+            applyColumnFilters(rows, columns); // @@ TBL added this
             // Here add table clean-up, remove "loading" message etc.
             if (options.onDone) options.onDone();
         }
@@ -15845,7 +17585,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // query runs in the background and this call does not block.
 
         runQuery(query, rows, columns, table);
-
+        
         return table;
     }
 
@@ -22759,7 +24499,7 @@ tabulator.OutlineObject = function(doc) {
 
     this.appendAccessIcon = function(node, uri) {
         if (!uri) return '';
-        var docuri = tabulator.rdf.Util.uri.docpart(uri);
+        var docuri = tabulator.rdf.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
         var state = sf.getState(docuri);
         var icon, alt;
@@ -23455,7 +25195,7 @@ tabulator.OutlineObject = function(doc) {
             // ignore first '?' and everything after it //Kenny doesn't know what this is for
             try{var baseURI = myDocument.location.href.split('?')[0];}
             catch(e){ dump(e);var baseURI="";}
-            var relativeIconSrc = tabulator.rdf.Util.uri.join(icon.src,baseURI);
+            var relativeIconSrc = tabulator.rdf.uri.join(icon.src,baseURI);
             if (eltSrc == relativeIconSrc) {
                 iconTD.removeChild(elt);
             }
@@ -24106,13 +25846,13 @@ tabulator.OutlineObject = function(doc) {
             case tabulator.Icon.src.icon_failed:
             case tabulator.Icon.src.icon_fetched:
                 var uri = target.getAttribute('uri'); // Put on access buttons
-                sf.refresh(kb.sym(tabulator.rdf.Util.uri.docpart(uri))); // just one
+                sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
                 // sf.objectRefresh(subject);
                 break;
             case tabulator.Icon.src.icon_unrequested:
                 var uri = target.getAttribute('uri'); // Put on access buttons
                 if (!uri) alert('Interal error: No URI on unrequested icon! @@');
-                sf.requestURI(tabulator.rdf.Util.uri.docpart(uri))
+                sf.requestURI(tabulator.rdf.uri.docpart(uri))
                 // if (subject.uri) sf.lookUpThing(subject);
                 break;
             case tabulator.Icon.src.icon_opton:
@@ -24215,8 +25955,8 @@ tabulator.OutlineObject = function(doc) {
         sf.removeCallback('fail','expand');
         
         var subject = kb.canon(subject1)
-        var requTerm = subject.uri?kb.sym(tabulator.rdf.Util.uri.docpart(subject.uri)):subject
-        var subj_uri = subject.uri
+        var requTerm = subject.uri?kb.sym(tabulator.rdf.uri.docpart(subject.uri)):subject
+        var subj_uri = subject.uri;  // || subject.value;  // Normally .uri but in internals pane, for the URI of something, .value
         var already = !!already
         
         function render() {
@@ -24266,17 +26006,17 @@ tabulator.OutlineObject = function(doc) {
             var cursubj = kb.canon(subject);  // canonical identifier may have changed
                 tabulator.log.info('@@ expand: relevant subject='+cursubj+', uri='+uri+', already='+already)
             var term = kb.sym(uri)
-            var docTerm = kb.sym(tabulator.rdf.Util.uri.docpart(uri))
+            var docTerm = kb.sym(tabulator.rdf.uri.docpart(uri))
             if (uri.indexOf('#') >= 0) 
                 throw "Internal error: hash in "+uri;
             
             var relevant = function() {  // Is the loading of this URI relevam to the display of subject?
                 if (!cursubj.uri) return true;  // bnode should expand() 
-                //doc = cursubj.uri?kb.sym(tabulator.rdf.Util.uri.docpart(cursubj.uri)):cursubj
+                //doc = cursubj.uri?kb.sym(tabulator.rdf.uri.docpart(cursubj.uri)):cursubj
                 var as = kb.uris(cursubj)
                 if (!as) return false;
                 for (var i=0; i<as.length; i++) {  // canon'l uri or any alias
-                    for (var rd = tabulator.rdf.Util.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
+                    for (var rd = tabulator.rdf.uri.docpart(as[i]); rd; rd = kb.HTTPRedirects[rd]) {
                         if (uri == rd) return true;
                     }
                 }
@@ -24332,9 +26072,24 @@ tabulator.OutlineObject = function(doc) {
                 return;
             }
         }
-        sf.lookUpThing(subject);
-        render()  // inital open, or else full if re-open
-        tabulator.log.debug('outline 1821')
+        if (subj_uri) {
+            var doc = tabulator.rdf.uri.docpart(subj_uri);
+            // Wait till at least the main URI is loaded before expanding:
+            sf.nowOrWhenFetched(doc, undefined, function(ok, body) {
+                if (ok) {
+                    sf.lookUpThing(subject);
+                    render()  // inital open, or else full if re-open
+                    tabulator.log.debug('outline 1821')
+                } else {
+                    var message = myDocument.createElement("pre");
+                    message.textContent = body;
+                    message.setAttribute('style', 'background-color: #fee;');
+                    p.appendChild(message);
+                }
+            });
+        } else {
+            render();
+        };
     
     } //outline_expand
     
@@ -24398,6 +26153,7 @@ tabulator.OutlineObject = function(doc) {
     outline.outline_refocus = outline_refocus;
     
     // Inversion is turning the outline view inside-out
+    // It may be called eversion
     function outline_inversion(p, subject) { // re-root at subject
     
         function move_root(rootTR, childTR) { // swap root with child

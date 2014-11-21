@@ -2,8 +2,28 @@
 
 tabulator = {};
 tabulator.isExtension = false;
-//tabulator.scriptBase = 'http://linkeddata.github.com/tabulator/';
+
+// base for icons etc
 tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/';
+
+/*
+tabulator.getScriptName = function () {
+    var error = new Error()
+      , source
+      , lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
+      , currentStackFrameRegex = new RegExp(/getScriptName \(.+\/(.*):\d+:\d+\)/);
+
+    if((source = lastStackFrameRegex.exec(error.stack.trim())) && source[1] != "")
+        return source[1];
+    else if((source = currentStackFrameRegex.exec(error.stack.trim())))
+        return source[1];
+    else if(error.fileName != undefined)
+        return error.fileName;
+}
+*/
+// tabulator.scriptBase = tabulato.getScriptName();
+// tabulator.scriptBase = tabulator.scriptBase.split('/').slice(0,-1).join('/') + '/';
+
 tabulator.iconPrefix = tabulator.scriptBase;
 
 // Dump exists in ff but not safari.

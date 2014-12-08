@@ -32,7 +32,7 @@ tabulator.panes.utils.extractLogURI = function(fullURI){
     return fullURI.substring(logPos+8, rulPos); 			
 }
 
-// @@@ This needs to be changed to local time
+// @@@ This needs to be changed to local timee
 tabulator.panes.utils.shortDate = function(str) {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
     if (!str) return '???';
@@ -53,28 +53,31 @@ tabulator.panes.utils.shortDate = function(str) {
     }
 }
 
-tabulator.panes.utils.newThing = function(kb, store) {
-    var now = new Date();
-    // http://www.w3schools.com/jsref/jsref_obj_date.asp
-    return kb.sym(store.uri + '#' + 'id'+(''+ now.getTime()));
+
+tabulator.panes.utils.formatDateTime = function(date, format) {
+    return format.split('{').map(function(s){
+        var k = s.split('}')[0];
+        var width = {'Milliseconds':3, 'FullYear':4};  
+        var d = {'Month': 1};                  
+        return s?  ( '000' + (date['get' + k]() + (d[k]|| 0))).slice(-(width[k]||2)) + s.split('}')[1] : '';
+    }).join('');
+};
+
+tabulator.panes.utils.timestamp = function() {
+    return tabulator.panes.utils.formatDateTime(new Date(), '{FullYear}-{Month}-{Date}T{Hours}:{Minutes}:{Seconds}.{Milliseconds}');
+}
+tabulator.panes.utils.shortTime = function() {
+    return tabulator.panes.utils.formatDateTime(new Date(), '{Hours}:{Minutes}:{Seconds}.{Milliseconds}');
 }
 
-	
-//These are horrible global vars. To minimize the chance of an unintended name collision
-//these are prefixed with 'ap_' (short for air pane) - Oshani
-var ap_air = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
-var ap_tms = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
-var ap_compliant = ap_air('compliant-with');
-var ap_nonCompliant = ap_air('non-compliant-with');
-var ap_antcExpr = ap_tms('antecedent-expr');
-var ap_just = ap_tms('justification');
-var ap_subExpr = ap_tms('sub-expr');
-var ap_description = ap_tms('description');
-var ap_ruleName = ap_tms('rule-name');
-var ap_prem = ap_tms('premise');
-var ap_instanceOf = ap_air('instanceOf');
-var justificationsArr = [];
 
+tabulator.panes.utils.newThing = function(store) {
+    var now = new Date();
+    // http://www.w3schools.com/jsref/jsref_obj_date.asp
+    return $rdf.sym(store.uri + '#' + 'id'+(''+ now.getTime()));
+}
+
+/////////////////////////////////////////////////////////////////////////
 
 
 /*                                  Form Field implementations
@@ -169,13 +172,14 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
     } else { 
         var value = kb.any(subject, dependingOn);
         if (value == undefined) { 
-            // complain?
+            box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
+                "Can't select subform as no value of: " + dependingOn));
         } else {
             values = {};
             values[value.uri] = true;
         }
     }
-
+    // @@ Add box.refresh() to sync fields with values
     for (var i=0; i<cases.length; i++) {
         var c = cases[i];
         var tests = kb.each(c, ui('for')); // There can be multiple 'for'
@@ -203,6 +207,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     // We don't indent multiple as it is a sort of a prefix o fthe next field and has contents of one.
     // box.setAttribute('style', 'padding-left: 2em; border: 0.05em solid green;');  // Indent a multiple
     var ui = tabulator.ns.ui;
+    var i;
     container.appendChild(box);
     var property = kb.any(form, ui('property'));
     if (!property) { 
@@ -210,6 +215,11 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
                 "No property to multiple: "+form)); // used for arcs in the data
         return box;
     }
+    var min = kb.any(form, ui('min')); // This is the minimum number -- default 0
+    min = min ? min.value : 0;
+    var max = kb.any(form, ui('max')); // This is the minimum number
+    max = max ? max.value : 99999999;
+
     var element = kb.any(form, ui('part')); // This is the form to use for each one
     if (!element) {
         box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,"No part to multiple: "+form));
@@ -217,7 +227,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     }
 
     var count = 0;
-    // box.appendChild(dom.createElement('h3')).textContents = "Fields:".
+    // box.appendChild(dom.createElement('h3')).textContent = "Fields:".
     var body = box.appendChild(dom.createElement('tr'));
     var tail = box.appendChild(dom.createElement('tr'));
     var img = tail.appendChild(dom.createElement('img'));
@@ -227,7 +237,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     var addItem = function(e, object) {
         tabulator.log.debug('Multiple add: '+object);
         var num = ++count;
-        if (!object) object = tabulator.panes.utils.newThing(kb, store);
+        if (!object) object = tabulator.panes.utils.newThing(store);
         var tr = box.insertBefore(dom.createElement('tr'), tail);
         var itemDone = function(ok, body) {
             if (ok) { // @@@ Check IT hasnt alreday been written in
@@ -249,6 +259,10 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     }
         
     kb.each(subject, property).map(function(obj){addItem(null, obj)});
+
+    for (i = kb.each(subject, property).length; i < min; i++) {
+        addItem(); // Add blanks if less than minimum
+    }
 
     img.addEventListener('click', addItem, true);
     return box
@@ -374,7 +388,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
                     params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
         tabulator.sparql.update(ds, is, function(uri, ok, body) {
             if (ok) {
-                field.disabled = true;
+                field.disabled = false;
                 field.setAttribute('style', 'color: black;');
             } else {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, body));
@@ -689,6 +703,7 @@ tabulator.panes.utils.errorMessageBlock = function(dom, msg, backgroundColor) {
     var div = dom.createElement('div');
     div.setAttribute('style', 'padding: 0.5em; border: 0.5px solid black; background-color: ' +
         (backgroundColor  ? backgroundColor :  '#fee') + '; color:black;');
+    div.textContent = msg;
     return div;
 }
 
@@ -804,7 +819,7 @@ tabulator.panes.utils.findClosest = function findClosest(kb, cla, prop) {
     return [];
 }
 
-// Which forms apply to a given subject?
+// Which forms apply to a given existing subject?
 
 tabulator.panes.utils.formsFor = function(subject) {
     var ns = tabulator.ns;
@@ -819,6 +834,7 @@ tabulator.panes.utils.formsFor = function(subject) {
         // Find the most specific
         tabulator.log.debug("formsFor: trying bottom type ="+b);
         forms = forms.concat(tabulator.panes.utils.findClosest(kb, b, ns.ui('creationForm')));
+        forms = forms.concat(tabulator.panes.utils.findClosest(kb, b, ns.ui('annotationForm')));
     }
     tabulator.log.debug("formsFor: subject="+subject+", forms=");
     return forms;
@@ -902,7 +918,7 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
 
                         
     var formFunction = tabulator.panes.utils.fieldFunction(dom, form);
-    var object = tabulator.panes.utils.newThing(kb, store);
+    var object = tabulator.panes.utils.newThing(store);
     var gotButton = false;
     var itemDone = function(ok, body) {
         if (!ok) return callback(ok, body);
@@ -977,12 +993,13 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     var submit = dom.createElement('input');
     submit.setAttribute('type', 'submit');
     submit.disabled = true; // until the filled has been modified
+    submit.setAttribute('style', 'visibility: hidden; float: right;'); // Keep UI clean
     submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
-    submit.setAttribute('style', 'float: right;');
     group.appendChild(submit);
 
     var saveChange = function(e) {
         submit.disabled = true;
+        submit.setAttribute('style', 'visibility: hidden; float: right;'); // Keep UI clean
         field.disabled = true;
         field.setAttribute('style', style + 'color: gray;'); // pending 
         var ds = kb.statementsMatching(subject, predicate);
@@ -991,6 +1008,7 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
             if (ok) {
                 field.setAttribute('style', style + 'color: black;');
                 field.disabled = false;
+                
             } else {
                 group.appendChild(tabulator.panes.utils.errorMessageBlock(dom, 
                 "Error (while saving change to "+store.uri+'): '+body));
@@ -1001,7 +1019,10 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
 
     field.addEventListener('keyup', function(e) { // Green means has been changed, not saved yet
         field.setAttribute('style', style + 'color: green;');
-        if (submit) submit.disabled = false;
+        if (submit) {
+            submit.disabled = false;
+            submit.setAttribute('style', 'float: right;'); // Remove visibility: hidden
+        }
     }, true);
 
     field.addEventListener('change', saveChange, true);
@@ -1045,14 +1066,25 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 "Can't do selector with no options, subject= "+subject+" property = "+predicate+".");
     
     tabulator.log.debug('makeSelectForOptions: store='+store);
-    var actual = {};
-    if (predicate.sameTerm(tabulator.ns.rdf('type'))) actual = kb.findTypeURIs(subject);
-    else kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+    
+    var getActual = function() {
+        actual = {};
+        if (predicate.sameTerm(tabulator.ns.rdf('type'))) actual = kb.findTypeURIs(subject);
+        else kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+        return actual;
+    };
+    var actual = getActual();
+    
     var newObject = null;
     
     var onChange = function(e) {
         select.disabled = true; // until data written back - gives user feedback too
         var ds = [], is = [];
+        var removeValue = function(t) {
+            if (kb.holds(subject, predicate, t, store)) {
+                ds.push($rdf.st(subject, predicate, t, store));
+            }
+        }
         for (var i =0; i< select.options.length; i++) {
             var opt = select.options[i];
             if (opt.selected && opt.AJAR_mint) {
@@ -1066,7 +1098,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                     select.parentNode.appendChild(thisForm);
                     newObject = thisForm.AJAR_subject;
                 } else {
-                    newObject = tabulator.panes.utils.newThing(kb, store);
+                    newObject = tabulator.panes.utils.newThing(store);
                 }
                 is.push($rdf.st(subject, predicate, newObject, store));
                 if (options.mintStatementsFun) is = is.concat(options.mintStatementsFun(newObject));
@@ -1076,23 +1108,19 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 is.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
             }
             if (!opt.selected && opt.AJAR_uri in actual) {  // old class
-                ds.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
+                removeValue(kb.sym(opt.AJAR_uri));
+                //ds.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
             }
             if (opt.selected) select.currentURI =  opt.AJAR_uri;                      
         }
-        var removeType = function(t) {
-            if (kb.holds(subject, predicate, t, store)) {
-                ds.push($rdf.st(subject, predicate, t, store));
-            }
-        }
         var sel = select.subSelect; // All subclasses must also go
         while (sel && sel.currentURI) {
-            removeType(kb.sym(sel.currentURI));
+            removeValue(kb.sym(sel.currentURI));
             sel = sel.subSelect;
         }
         var sel = select.superSelect; // All superclasses are redundant
         while (sel && sel.currentURI) {
-            removeType(kb.sym(sel.currentURI));
+            removeValue(kb.sym(sel.currentURI));
             sel = sel.superSelect;
         }
         function doneNew(ok, body) {
@@ -1101,8 +1129,8 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         tabulator.log.info('selectForOptions: stote = ' + store );
         tabulator.sparql.update(ds, is,
             function(uri, ok, body) {
-                actual = {}; // refresh
-                kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+                actual = getActual(); // refresh
+                //kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
                 if (ok) {
                     select.disabled = false; // data written back
                     if (newObject) {
@@ -1112,12 +1140,24 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 }
                 if (callback) callback(ok, body);
             });
-    }
+    };
     
     var select = dom.createElement('select');
     select.setAttribute('style', 'margin: 0.6em 1.5em;')
     if (options.multiple) select.setAttribute('multiple', 'true');
     select.currentURI = null;
+
+    select.refresh = function() {
+        actual = getActual(); // refresh
+        for (var i=0; i < select.children.length; i++) {
+            var option = select.children[i];
+            if (option.AJAR_uri) {
+                option.selected = (option.AJAR_uri in actual);
+            }
+        }
+        select.disabled = false; // unlocked any conflict we had got into
+    }
+    
     for (var uri in uris) {
         var c = kb.sym(uri)
         var option = dom.createElement('option');
@@ -1521,7 +1561,9 @@ tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
         if (uri == me_uri) return null;
         var message;
         if (!uri) {
-            message = "(Log in by auth with no URI - ignored)";
+            // message = "(Log in by auth with no URI - ignored)";
+            return;
+            // This may be happen a http://localhost/ test enviroment
         } else {
             tabulator.preferences.set('me', uri);
             message = "(Logged in as " + uri + " by authentication.)";
@@ -1826,13 +1868,13 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             col1.setAttribute('style', 'vertical-align:middle;')
 
             // last line with "Make new workspace"
-            tr = dom.createElement('tr');
+            tr_last = dom.createElement('tr');
             col2 = dom.createElement('td')
             col2.setAttribute('style', cellStyle);
             col2.textContent = "+ Make a new workspace";
             addMyListener(col2, "Set up a new workspace", '');
-            tr.appendChild(col2);
-            table.appendChild(tr);
+            tr_last.appendChild(col2);
+            table.appendChild(tr_last);
 
         };
     };

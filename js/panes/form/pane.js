@@ -116,6 +116,7 @@ the file system (file:///) to store application data.\n")
                     heading.appendChild(anchor)
                     anchor.textContent = tabulator.Util.label(form, true);
                     
+                    /*  Keep tis as a reminder to let a New one have its URI given by user
                     mention("Where will this information be stored?")
                     var ele = dom.createElement('input');
                     box.appendChild(ele);
@@ -124,6 +125,7 @@ the file system (file:///) to store application data.\n")
                     ele.setAttribute('maxlength', '1024');
                     ele.setAttribute('style', 'font-size: 80%; color:#222;');
                     ele.value = store.uri
+                    */
                     
                     tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
                 }
@@ -180,7 +182,7 @@ the file system (file:///) to store application data.\n")
         
 
        if (store) {
-            mention("@@ Ok, we have a store <" + store.uri + ">.");
+            // mention("@@ Ok, we have a store <" + store.uri + ">.");
             renderFormsFor(store, subject);
         } else {
             complain("No suitable store is known, to edit <" + subject.uri + ">.");

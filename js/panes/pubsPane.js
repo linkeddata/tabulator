@@ -90,7 +90,7 @@ tabulator.panes.pubsPane = {
         
         // Creates "tag" thing as a child under "p"
         function newElement(tag, p){
-            x = myDocument.createElement(tag);
+            var x = myDocument.createElement(tag);
             x['child'] = function(tag){return newElement(tag,x)};
             if(!p){ pubsPane.appendChild(x); }
             else{ p.appendChild(x); }

@@ -4,6 +4,30 @@
  * air reasoner output
  * oshani@csail.mit.edu
  */
+
+
+
+
+	
+//These are horrible global vars. To minimize the chance of an unintended name collision
+//these are prefixed with 'ap_' (short for air pane) - Oshani
+// moved to airpane.js from paneutils.js 2014 tbl
+
+var ap_air = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+var ap_tms = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
+var ap_compliant = ap_air('compliant-with');
+var ap_nonCompliant = ap_air('non-compliant-with');
+var ap_antcExpr = ap_tms('antecedent-expr');
+var ap_just = ap_tms('justification');
+var ap_subExpr = ap_tms('sub-expr');
+var ap_description = ap_tms('description');
+var ap_ruleName = ap_tms('rule-name');
+var ap_prem = ap_tms('premise');
+var ap_instanceOf = ap_air('instanceOf');
+var justificationsArr = [];
+
+
+
  
 airPane = {};
 airPane.name = 'air';

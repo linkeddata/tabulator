@@ -36,8 +36,17 @@ The default panes take little precedence, except the internals pane
 is lower as normally it is just for diagnostics.
 Also lower could be optional tools for various classes.
 */
-/* First we load the utils so panes can add them (while developing) as well as use them */
-tabulator.loadScript("js/panes/paneUtils.js");
+/* First we load the common utilities so panes can add them (while developing) as well as use them */
+// Pattern of adding code where it used then moving it back out into a common code.
+
+// Form and general UI widgets 
+tabulator.loadScript("js/panes/common/widgets.js");
+// A discussion area for discussing anything
+tabulator.loadScript("js/panes/common/discussion.js");
+// A relationsal table widget
+tabulator.loadScript("js/panes/common/table.js");
+// A 2-D matrix of values 
+tabulator.loadScript("js/panes/common/matrix.js");
 
 /*  Note that hte earliest panes have priority. So the most specific ones are first.
 **

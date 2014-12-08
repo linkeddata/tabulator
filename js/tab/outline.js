@@ -94,7 +94,7 @@ tabulator.OutlineObject = function(doc) {
     function saveQuery() {
         var qs = tabulator.qs;
         var q= new tabulator.rdf.Query()
-        var i, n=selection.length, j, m, tr, sel, st;
+        var i, n=selection.length, j, m, tr, sel, st, tr;
         for (i=0; i<n; i++) {
             sel = selection[i]
             tr = sel.parentNode
@@ -840,10 +840,10 @@ tabulator.OutlineObject = function(doc) {
 /*   termWidget
 **
 */  
-    termWidget={}
+    termWidget={} // @@@@@@ global
     termWidget.construct = function (myDocument) {
         myDocument = myDocument||document;                              
-        td = myDocument.createElement('TD')
+        var td = myDocument.createElement('TD')
         td.setAttribute('class','iconTD')
         td.setAttribute('notSelectable','true')
         td.style.width = '0px';
@@ -911,7 +911,7 @@ tabulator.OutlineObject = function(doc) {
     }
     
     var queries = [];
-    myQuery=queries[0]=new queryObj();
+    var myQuery = queries[0] = new queryObj();
 
     function query_save() {
         queries.push(queries[0]);

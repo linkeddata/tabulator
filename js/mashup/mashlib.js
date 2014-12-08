@@ -365,7 +365,7 @@ $rdf.Util = {
                 return;
             }
         }
-        throw "RDFArrayRemove: Array did not contain " + x;
+        throw "RDFArrayRemove: Array did not contain " + x + " " +  x.why;
     },
 
     'string_startswith': function(str, pref) { // missing library routines
@@ -4219,6 +4219,62 @@ $rdf.IndexedFormula.prototype.remove = function (st) {
     $rdf.Util.RDFArrayRemove(this.statements, st);
 }; //remove
 
+
+
+//////////////////// Self-consistency checking for diagnostis only
+
+
+// Is each statement properly indexed?
+$rdf.IndexedFormula.prototype.checkStatementList = function(sts, from) {
+    var names = ['subject', 'predicate', 'object', 'why'];
+    var origin = " found in " + names[from] + " index.";
+    for (var j=0; j < sts.length; j++) {
+        st = sts[j];
+        var term = [ st.subject, st.predicate, st.object, st.why];
+
+        var arrayContains = function(a, x) {
+            for(var i=0; i<a.length; i++) {
+            if (a[i].subject.sameTerm( x.subject ) && 
+                a[i].predicate.sameTerm( x.predicate ) && 
+                a[i].object.sameTerm( x.object ) &&
+                a[i].why.sameTerm( x.why )) {
+                    return true;
+                }
+            };
+        };
+
+        for (var p=0; p<4; p++) {
+            var c = this.canon(term[p]);
+            var h = c.hashString();
+            if (this.index[p][h] == undefined) {
+                throw new Error("No " + name[p] + " index for statement " + st + "@" + st.why + origin)
+            } else {
+                if (!arrayContains(this.index[p][h], st)) {
+                    throw new Error("Index for " + name[p] + " does not have statement " + st + "@" + st.why + origin)
+                }
+            }
+        };
+        if (!arrayContains(this.statements, st)) {
+            throw new Error("Statement list does not statement " + st + "@" + st.why + origin)
+        
+        }
+    };
+}
+
+$rdf.IndexedFormula.prototype.check = function() {
+    this.checkStatementList(this.statements);
+    for (var p=0; p<4; p++) {
+        var ix = this.index[p];
+        for (var key in ix) {
+            if (ix.hasOwnProperty(key)) {
+                this.checkStatementList(ix[key], p);
+            }
+        };
+    };
+ };   
+
+
+
 /** remove all statements matching args (within limit) **/
 $rdf.IndexedFormula.prototype.removeMany = function (subj, pred, obj, why, limit) {
     //$rdf.log.debug("entering removeMany w/ subj,pred,obj,why,limit = " + subj +", "+ pred+", " + obj+", " + why+", " + limit);
@@ -4302,912 +4358,6 @@ return $rdf.IndexedFormula;
 
 }();
 // ends
-
-RDFaProcessor.prototype = new Object();
-//RDFaProcessor.prototype = new URIResolver();
-
-RDFaProcessor.prototype.constructor=RDFaProcessor;
-function RDFaProcessor(targetObject) {
-   if (targetObject) {
-      this.target = targetObject;
-   } else {
-      this.target = {
-         graph: {
-            subjects: {},
-            prefixes: {},
-            terms: {}
-         }
-      };
-   }
-   this.theOne = "_:"+(new Date()).getTime();
-   this.language = null;
-   this.vocabulary = null;
-   this.blankCounter = 0;
-   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" } ];
-   this.inXHTMLMode = false;
-   this.absURIRE = /[\w\_\-]+:\S+/;
-   this.finishedHandlers = [];
-   this.init();
-}
-
-RDFaProcessor.prototype.newBlankNode = function() {
-   this.blankCounter++;
-   return "_:"+this.blankCounter;
-}
-
-RDFaProcessor.XMLLiteralURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral"; 
-RDFaProcessor.HTMLLiteralURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML"; 
-RDFaProcessor.PlainLiteralURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral";
-RDFaProcessor.objectURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#object";
-RDFaProcessor.typeURI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-
-RDFaProcessor.nameChar = '[-A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\u10000-\uEFFFF\.0-9\u00B7\u0300-\u036F\u203F-\u2040]';
-RDFaProcessor.nameStartChar = '[\u0041-\u005A\u0061-\u007A\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\u0100-\u0131\u0134-\u013E\u0141-\u0148\u014A-\u017E\u0180-\u01C3\u01CD-\u01F0\u01F4-\u01F5\u01FA-\u0217\u0250-\u02A8\u02BB-\u02C1\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03CE\u03D0-\u03D6\u03DA\u03DC\u03DE\u03E0\u03E2-\u03F3\u0401-\u040C\u040E-\u044F\u0451-\u045C\u045E-\u0481\u0490-\u04C4\u04C7-\u04C8\u04CB-\u04CC\u04D0-\u04EB\u04EE-\u04F5\u04F8-\u04F9\u0531-\u0556\u0559\u0561-\u0586\u05D0-\u05EA\u05F0-\u05F2\u0621-\u063A\u0641-\u064A\u0671-\u06B7\u06BA-\u06BE\u06C0-\u06CE\u06D0-\u06D3\u06D5\u06E5-\u06E6\u0905-\u0939\u093D\u0958-\u0961\u0985-\u098C\u098F-\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09DC-\u09DD\u09DF-\u09E1\u09F0-\u09F1\u0A05-\u0A0A\u0A0F-\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32-\u0A33\u0A35-\u0A36\u0A38-\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8B\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2-\u0AB3\u0AB5-\u0AB9\u0ABD\u0AE0\u0B05-\u0B0C\u0B0F-\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32-\u0B33\u0B36-\u0B39\u0B3D\u0B5C-\u0B5D\u0B5F-\u0B61\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99-\u0B9A\u0B9C\u0B9E-\u0B9F\u0BA3-\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB5\u0BB7-\u0BB9\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C33\u0C35-\u0C39\u0C60-\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CDE\u0CE0-\u0CE1\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D28\u0D2A-\u0D39\u0D60-\u0D61\u0E01-\u0E2E\u0E30\u0E32-\u0E33\u0E40-\u0E45\u0E81-\u0E82\u0E84\u0E87-\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA-\u0EAB\u0EAD-\u0EAE\u0EB0\u0EB2-\u0EB3\u0EBD\u0EC0-\u0EC4\u0F40-\u0F47\u0F49-\u0F69\u10A0-\u10C5\u10D0-\u10F6\u1100\u1102-\u1103\u1105-\u1107\u1109\u110B-\u110C\u110E-\u1112\u113C\u113E\u1140\u114C\u114E\u1150\u1154-\u1155\u1159\u115F-\u1161\u1163\u1165\u1167\u1169\u116D-\u116E\u1172-\u1173\u1175\u119E\u11A8\u11AB\u11AE-\u11AF\u11B7-\u11B8\u11BA\u11BC-\u11C2\u11EB\u11F0\u11F9\u1E00-\u1E9B\u1EA0-\u1EF9\u1F00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2126\u212A-\u212B\u212E\u2180-\u2182\u3041-\u3094\u30A1-\u30FA\u3105-\u312C\uAC00-\uD7A3\u4E00-\u9FA5\u3007\u3021-\u3029_]';
-RDFaProcessor.NCNAME = new RegExp('^' + RDFaProcessor.nameStartChar + RDFaProcessor.nameChar + '*$');
-
-RDFaProcessor.trim = function(str) {
-   return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
-}
-
-RDFaProcessor.prototype.tokenize = function(str) {
-   return RDFaProcessor.trim(str).split(/\s+/);
-}
-
-
-RDFaProcessor.prototype.parseSafeCURIEOrCURIEOrURI = function(value,prefixes,base) {
-   value = RDFaProcessor.trim(value);
-   if (value.charAt(0)=='[' && value.charAt(value.length-1)==']') {
-      value = value.substring(1,value.length-1);
-      value = value.trim(value);
-      if (value.length==0) {
-         return null;
-      }
-      if (value=="_:") {
-         // the one node
-         return this.theOne;
-      }
-      return this.parseCURIE(value,prefixes,base);
-   } else {
-      return this.parseCURIEOrURI(value,prefixes,base);
-   }
-}
-
-RDFaProcessor.prototype.parseCURIE = function(value,prefixes,base) {
-   var colon = value.indexOf(":");
-   if (colon>=0) {
-      var prefix = value.substring(0,colon);
-      if (prefix=="") {
-         // default prefix
-         var uri = prefixes[""];
-         return uri ? uri+value.substring(colon+1) : null;
-      } else if (prefix=="_") {
-         // blank node
-         return "_:"+value.substring(colon+1);
-      } else if (RDFaProcessor.NCNAME.test(prefix)) {
-         var uri = prefixes[prefix];
-         if (uri) {
-            return uri+value.substring(colon+1);
-         }
-      }
-   }
-   return null;
-}
-
-RDFaProcessor.prototype.parseCURIEOrURI = function(value,prefixes,base) {
-   var curie = this.parseCURIE(value,prefixes,base);
-   if (curie) {
-      return curie;
-   }
-   return this.resolveAndNormalize(base,value);
-}
-
-RDFaProcessor.prototype.parsePredicate = function(value,defaultVocabulary,terms,prefixes,base,ignoreTerms) {
-   if (value=="") {
-      return null;
-   }
-   var predicate = this.parseTermOrCURIEOrAbsURI(value,defaultVocabulary,ignoreTerms ? null : terms,prefixes,base);
-   if (predicate && predicate.indexOf("_:")==0) {
-      return null;
-   }
-   return predicate;
-}
-
-RDFaProcessor.prototype.parseTermOrCURIEOrURI = function(value,defaultVocabulary,terms,prefixes,base) {
-   //alert("Parsing "+value+" with default vocab "+defaultVocabulary);
-   value = RDFaProcessor.trim(value);
-   var curie = this.parseCURIE(value,prefixes,base);
-   if (curie) {
-      return curie;
-   } else {
-       var term = terms[value];
-       if (term) {
-          return term;
-       }
-       var lcvalue = value.toLowerCase();
-       term = terms[lcvalue];
-       if (term) {
-          return term;
-       }
-       if (defaultVocabulary && !this.absURIRE.exec(value)) {
-          return defaultVocabulary+value
-       }
-   }
-   return this.resolveAndNormalize(base,value);
-}
-
-RDFaProcessor.prototype.parseTermOrCURIEOrAbsURI = function(value,defaultVocabulary,terms,prefixes,base) {
-   //alert("Parsing "+value+" with default vocab "+defaultVocabulary);
-   value = RDFaProcessor.trim(value);
-   var curie = this.parseCURIE(value,prefixes,base);
-   if (curie) {
-      return curie;
-   } else if (terms) {
-       if (defaultVocabulary && !this.absURIRE.exec(value)) {
-          return defaultVocabulary+value
-       }
-       var term = terms[value];
-       if (term) {
-          return term;
-       }
-       var lcvalue = value.toLowerCase();
-       term = terms[lcvalue];
-       if (term) {
-          return term;
-       }
-   }
-   if (this.absURIRE.exec(value)) {
-      return this.resolveAndNormalize(base,value);
-   }
-   return null;
-}
-
-RDFaProcessor.prototype.resolveAndNormalize = function(base,href) {
-    return $rdf.uri.join(href, base);
-/*
-   var u = base.resolve(href);
-   var parsed = this.parseURI(u);
-   parsed.normalize();
-   return parsed.spec;
-*/
-}
-
-RDFaProcessor.prototype.parsePrefixMappings = function(str,target) {
-   var values = this.tokenize(str);
-   var prefix = null;
-   var uri = null;
-   for (var i=0; i<values.length; i++) {
-      if (values[i][values[i].length-1]==':') {
-         prefix = values[i].substring(0,values[i].length-1);
-      } else if (prefix) {
-         target[prefix] = this.target.baseURI ? this.target.baseURI.resolve(values[i]) : values[i];
-         prefix = null;
-      }
-   }
-}
-
-RDFaProcessor.prototype.copyMappings = function(mappings) {
-   var newMappings = {};
-   for (var k in mappings) {
-      newMappings[k] = mappings[k];
-   }
-   return newMappings;
-}
-
-RDFaProcessor.prototype.ancestorPath = function(node) {
-   var path = "";
-   while (node && node.nodeType!=Node.DOCUMENT_NODE) {
-      path = "/"+node.localName+path;
-      node = node.parentNode;
-   }
-   return path;
-}
-
-RDFaProcessor.prototype.setContext = function(node) {
-
-   // We only recognized XHTML+RDFa 1.1 if the version is set propertyly
-   if (node.localName=="html" && node.getAttribute("version")=="XHTML+RDFa 1.1") {
-      this.setXHTMLContext();
-   } else if (node.localName=="html" || node.namespaceURI=="http://www.w3.org/1999/xhtml") {
-      if (document.doctype) {
-         if (document.doctype.publicId=="-//W3C//DTD XHTML+RDFa 1.0//EN" && document.doctype.systemId=="http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd") {
-            console.log("WARNING: RDF 1.0 is not supported.  Defaulting to HTML5 mode.");
-            this.setHTMLContext();
-         } else if (document.doctype.publicId=="-//W3C//DTD XHTML+RDFa 1.1//EN" && document.doctype.systemId=="http://www.w3.org/MarkUp/DTD/xhtml-rdfa-2.dtd") {
-            this.setXHTMLContext();
-         } else {
-            this.setHTMLContext();
-         }
-      } else {
-         this.setHTMLContext();
-      }
-   } else {
-      this.setXMLContext();
-   }
-
-}
-
-RDFaProcessor.prototype.setInitialContext = function() {
-   this.vocabulary = null;
-   // By default, the prefixes are terms are loaded to the RDFa 1.1. standard within the graph constructor
-   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" } ];
-}
-
-RDFaProcessor.prototype.setXMLContext = function() {
-   this.setInitialContext();
-   this.inXHTMLMode = false;
-   this.inHTMLMode = false;
-}
-
-RDFaProcessor.prototype.setHTMLContext = function() {
-   this.setInitialContext();
-   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" },
-                           { namespaceURI: null, localName: "lang" }];
-   this.inXHTMLMode = false;
-   this.inHTMLMode = true;
-}
-
-RDFaProcessor.prototype.setXHTMLContext = function() {
-
-   this.setInitialContext();
-   
-   this.inXHTMLMode = true;
-   this.inHTMLMode = false;
-   
-   this.langAttributes = [ { namespaceURI: "http://www.w3.org/XML/1998/namespace", localName: "lang" },
-                           { namespaceURI: null, localName: "lang" }];
-
-   // From http://www.w3.org/2011/rdfa-context/xhtml-rdfa-1.1
-   this.target.graph.terms["alternate"] = "http://www.w3.org/1999/xhtml/vocab#alternate";
-   this.target.graph.terms["appendix"] = "http://www.w3.org/1999/xhtml/vocab#appendix";
-   this.target.graph.terms["bookmark"] = "http://www.w3.org/1999/xhtml/vocab#bookmark";
-   this.target.graph.terms["cite"] = "http://www.w3.org/1999/xhtml/vocab#cite"
-   this.target.graph.terms["chapter"] = "http://www.w3.org/1999/xhtml/vocab#chapter";
-   this.target.graph.terms["contents"] = "http://www.w3.org/1999/xhtml/vocab#contents";
-   this.target.graph.terms["copyright"] = "http://www.w3.org/1999/xhtml/vocab#copyright";
-   this.target.graph.terms["first"] = "http://www.w3.org/1999/xhtml/vocab#first";
-   this.target.graph.terms["glossary"] = "http://www.w3.org/1999/xhtml/vocab#glossary";
-   this.target.graph.terms["help"] = "http://www.w3.org/1999/xhtml/vocab#help";
-   this.target.graph.terms["icon"] = "http://www.w3.org/1999/xhtml/vocab#icon";
-   this.target.graph.terms["index"] = "http://www.w3.org/1999/xhtml/vocab#index";
-   this.target.graph.terms["last"] = "http://www.w3.org/1999/xhtml/vocab#last";
-   this.target.graph.terms["license"] = "http://www.w3.org/1999/xhtml/vocab#license";
-   this.target.graph.terms["meta"] = "http://www.w3.org/1999/xhtml/vocab#meta";
-   this.target.graph.terms["next"] = "http://www.w3.org/1999/xhtml/vocab#next";
-   this.target.graph.terms["prev"] = "http://www.w3.org/1999/xhtml/vocab#prev";
-   this.target.graph.terms["previous"] = "http://www.w3.org/1999/xhtml/vocab#previous";
-   this.target.graph.terms["section"] = "http://www.w3.org/1999/xhtml/vocab#section";
-   this.target.graph.terms["stylesheet"] = "http://www.w3.org/1999/xhtml/vocab#stylesheet";
-   this.target.graph.terms["subsection"] = "http://www.w3.org/1999/xhtml/vocab#subsection";
-   this.target.graph.terms["start"] = "http://www.w3.org/1999/xhtml/vocab#start";
-   this.target.graph.terms["top"] = "http://www.w3.org/1999/xhtml/vocab#top";
-   this.target.graph.terms["up"] = "http://www.w3.org/1999/xhtml/vocab#up";
-   this.target.graph.terms["p3pv1"] = "http://www.w3.org/1999/xhtml/vocab#p3pv1";
-
-   // other
-   this.target.graph.terms["related"] = "http://www.w3.org/1999/xhtml/vocab#related";
-   this.target.graph.terms["role"] = "http://www.w3.org/1999/xhtml/vocab#role";
-   this.target.graph.terms["transformation"] = "http://www.w3.org/1999/xhtml/vocab#transformation";
-}
-
-RDFaProcessor.prototype.init = function() {
-}
-
-RDFaProcessor.prototype.newSubjectOrigin = function(origin,subject) {
-}
-
-RDFaProcessor.prototype.addTriple = function(origin,subject,predicate,object) {
-}
-
-RDFaProcessor.dateTimeTypes = [
-   { pattern: /-?P(?:[0-9]+Y)?(?:[0-9]+M)?(?:[0-9]+D)?(?:T(?:[0-9]+H)?(?:[0-9]+M)?(?:[0-9]+(?:\.[0-9]+)?S)?)?/,
-     type: "http://www.w3.org/2001/XMLSchema#duration" },
-   { pattern: /-?(?:[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9])-[0-9][0-9]-[0-9][0-9]T(?:[0-1][0-9]|2[0-4]):[0-5][0-9]:[0-5][0-9](?:\.[0-9]+)?(?:Z|[+\-][0-9][0-9]:[0-9][0-9])?/,
-     type: "http://www.w3.org/2001/XMLSchema#dateTime" },
-   { pattern: /-?(?:[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9])-[0-9][0-9]-[0-9][0-9](?:Z|[+\-][0-9][0-9]:[0-9][0-9])?/,
-     type: "http://www.w3.org/2001/XMLSchema#date" },
-   { pattern: /(?:[0-1][0-9]|2[0-4]):[0-5][0-9]:[0-5][0-9](?:\.[0-9]+)?(?:Z|[+\-][0-9][0-9]:[0-9][0-9])?/,
-     type: "http://www.w3.org/2001/XMLSchema#time" },
-   { pattern: /-?(?:[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9])-[0-9][0-9]/,
-     type: "http://www.w3.org/2001/XMLSchema#gYearMonth" },
-   { pattern: /-?[1-9][0-9][0-9][0-9]|0[1-9][0-9][0-9]|00[1-9][0-9]|000[1-9]/,
-     type: "http://www.w3.org/2001/XMLSchema#gYear" }
-];
-
-RDFaProcessor.deriveDateTimeType = function(value) {
-   for (var i=0; i<RDFaProcessor.dateTimeTypes.length; i++) {
-      //console.log("Checking "+value+" against "+RDFaProcessor.dateTimeTypes[i].type);
-      var matched = RDFaProcessor.dateTimeTypes[i].pattern.exec(value);
-      if (matched && matched[0].length==value.length) {
-         //console.log("Matched!");
-         return RDFaProcessor.dateTimeTypes[i].type;
-      }
-   }
-   return null;
-}
-
-RDFaProcessor.prototype.process = function(node,options) {
-
-   /*
-   if (!window.console) {
-      window.console = { log: function() {} };
-   }*/
-   if (node.nodeType==Node.DOCUMENT_NODE) {
-      node = node.documentElement;
-      this.setContext(node);
-   } else if (node.parentNode.nodeType==Node.DOCUMENT_NODE) {
-      this.setContext(node);
-   } 
-   var queue = [];
-   // Fix for Firefox that includes the hash in the base URI
-   var removeHash = function(baseURI) {
-      var hash = baseURI.indexOf("#");
-      if (hash>=0) {
-         baseURI = baseURI.substring(0,hash);
-      }
-      if (options && options.baseURIMap) {
-         baseURI = options.baseURIMap(baseURI);
-      }
-      return baseURI;
-   }
-   queue.push({ current: node, context: this.push(null,removeHash(node.baseURI))});
-   while (queue.length>0) {
-      var item = queue.shift();
-      if (item.parent) {
-         // Sequence Step 14: list triple generation
-         if (item.context.parent && item.context.parent.listMapping==item.listMapping) {
-            // Skip a child context with exactly the same mapping
-            continue;
-         }
-         //console.log("Generating lists for "+item.subject+", tag "+item.parent.localName);
-         for (var predicate in item.listMapping) {
-            var list = item.listMapping[predicate];
-            if (list.length==0) {
-               this.addTriple(item.parent,item.subject,predicate,{ type: RDFaProcessor.objectURI, value: "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" });
-               continue;
-            }
-            var bnodes = [];
-            for (var i=0; i<list.length; i++) {
-               bnodes.push(this.newBlankNode());
-               //this.newSubject(item.parent,bnodes[i]);
-            }   // @@@@@@   Below this needs to be a new collection not first and rest
-            for (var i=0; i<bnodes.length; i++) {
-               this.addTriple(item.parent,bnodes[i],"http://www.w3.org/1999/02/22-rdf-syntax-ns#first",list[i]);
-               this.addTriple(item.parent,bnodes[i],"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",{ type: RDFaProcessor.objectURI , value: (i+1)<bnodes.length ? bnodes[i+1] : "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" });
-            }
-            this.addTriple(item.parent,item.subject,predicate,{ type: RDFaProcessor.objectURI, value: bnodes[0] });
-         }
-         continue;
-      }
-      var current = item.current;
-      var context = item.context;
-
-      //console.log("Tag: "+current.localName+", listMapping="+JSON.stringify(context.listMapping));
-
-      // Sequence Step 1
-      var skip = false;
-      var newSubject = null;
-      var currentObjectResource = null;
-      var typedResource = null;
-      var prefixes = context.prefixes;
-      var prefixesCopied = false;
-      var incomplete = [];
-      var listMapping = context.listMapping;
-      var listMappingDifferent = context.parent ? false : true;
-      var language = context.language;
-      var vocabulary = context.vocabulary;
-
-      // TODO: the "base" element may be used for HTML+RDFa 1.1
-      var base = this.parseURI(removeHash(current.baseURI));
-      current.item = null;
-
-      // Sequence Step 2: set the default vocabulary
-      var vocabAtt = current.getAttributeNode("vocab");
-      if (vocabAtt) {
-         var value = RDFaProcessor.trim(vocabAtt.value);
-         if (value.length>0) {
-            vocabulary = value;
-            var baseSubject = base.spec;
-            //this.newSubject(current,baseSubject);
-            this.addTriple(current,baseSubject,"http://www.w3.org/ns/rdfa#usesVocabulary",{ type: RDFaProcessor.objectURI , value: vocabulary});
-         } else {
-            vocabulary = this.vocabulary;
-         }
-      }
-
-      // Sequence Step 3: IRI mappings
-      // handle xmlns attributes
-      for (var i=0; i<current.attributes.length; i++) {
-         var att = current.attributes[i];
-         //if (att.namespaceURI=="http://www.w3.org/2000/xmlns/") {
-         if (att.nodeName.charAt(0)=="x" && att.nodeName.indexOf("xmlns:")==0) {
-            if (!prefixesCopied) {
-               prefixes = this.copyMappings(prefixes);
-               prefixesCopied = true;
-            }
-            var prefix = att.nodeName.substring(6);
-            // TODO: resolve relative?
-            var ref = RDFaProcessor.trim(att.value);
-            prefixes[prefix] = this.target.baseURI ? this.target.baseURI.resolve(ref) : ref;
-         }
-      }
-      // Handle prefix mappings (@prefix)
-      var prefixAtt = current.getAttributeNode("prefix");
-      if (prefixAtt) {
-         if (!prefixesCopied) {
-            prefixes = this.copyMappings(prefixes);
-            prefixesCopied = true;
-         }
-         this.parsePrefixMappings(prefixAtt.value,prefixes);
-      }
-
-
-      // Sequence Step 4: language
-      var xmlLangAtt = null;
-      for (var i=0; !xmlLangAtt && i<this.langAttributes.length; i++) {
-         xmlLangAtt = current.getAttributeNodeNS(this.langAttributes[i].namespaceURI,this.langAttributes[i].localName);
-      }
-      if (xmlLangAtt) {
-         var value = RDFaProcessor.trim(xmlLangAtt.value);
-         if (value.length>0) {
-            language = value;
-         } else {
-            language = null;
-         }
-      }
-
-      var relAtt = current.getAttributeNode("rel");
-      var revAtt = current.getAttributeNode("rev");
-      var typeofAtt = current.getAttributeNode("typeof");
-      var propertyAtt = current.getAttributeNode("property");
-      var datatypeAtt = current.getAttributeNode("datatype");
-      var datetimeAtt = this.inHTMLMode ? current.getAttributeNode("datetime") : null;
-      var contentAtt = current.getAttributeNode("content");
-      var aboutAtt = current.getAttributeNode("about");
-      var srcAtt = current.getAttributeNode("src");
-      var resourceAtt = current.getAttributeNode("resource");
-      var hrefAtt = current.getAttributeNode("href");
-      var inlistAtt = current.getAttributeNode("inlist");
-      
-      var relAttPredicates = [];
-      if (relAtt) {
-         var values = this.tokenize(relAtt.value);
-         for (var i=0; i<values.length; i++) {
-            var predicate = this.parsePredicate(values[i],vocabulary,context.terms,prefixes,base,this.inHTMLMode && propertyAtt!=null);
-            if (predicate) {
-               relAttPredicates.push(predicate);
-            }
-         }
-      }
-      var revAttPredicates = [];
-      if (revAtt) {
-         var values = this.tokenize(revAtt.value);
-         for (var i=0; i<values.length; i++) {
-            var predicate = this.parsePredicate(values[i],vocabulary,context.terms,prefixes,base,this.inHTMLMode && propertyAtt!=null);
-            if (predicate) {
-               revAttPredicates.push(predicate);
-            }
-         }
-      }
-      
-      // Section 3.1, bullet 7
-      if (this.inHTMLMode && (relAtt!=null || revAtt!=null) && propertyAtt!=null) {
-         if (relAttPredicates.length==0) {
-            relAtt = null;
-         }
-         if (revAttPredicates.length==0) {
-            revAtt = null;
-         }
-      }
-
-      if (relAtt || revAtt) {
-         // Sequence Step 6: establish new subject and value
-         if (aboutAtt) {
-            newSubject = this.parseSafeCURIEOrCURIEOrURI(aboutAtt.value,prefixes,base);
-         }
-         if (typeofAtt) {
-            typedResource = newSubject;
-         }
-         if (!newSubject) {
-            if (current.parentNode.nodeType==Node.DOCUMENT_NODE) {
-               newSubject = removeHash(current.baseURI);
-            } else if (context.parentObject) {
-               // TODO: Verify: If the xml:base has been set and the parentObject is the baseURI of the parent, then the subject needs to be the new base URI
-               newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
-            }
-         }
-         if (resourceAtt) {
-            currentObjectResource = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
-         }
-         
-         if (!currentObjectResource) {
-            if (hrefAtt) {
-               currentObjectResource = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
-            } else if (srcAtt) {
-               currentObjectResource = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
-            } else if (typeofAtt && !aboutAtt && !(this.inXHTMLMode && (current.localName=="head" || current.localName=="body"))) {
-               currentObjectResource = this.newBlankNode();
-            }
-         }
-         if (typeofAtt && !aboutAtt && this.inXHTMLMode && (current.localName=="head" || current.localName=="body")) {
-            typedResource = newSubject;
-         } else if (typeofAtt && !aboutAtt) {
-            typedResource = currentObjectResource;
-         }
-
-      } else if (propertyAtt && !contentAtt && !datatypeAtt) {
-         // Sequence Step 5.1: establish a new subject
-         if (aboutAtt) {
-            newSubject = this.parseSafeCURIEOrCURIEOrURI(aboutAtt.value,prefixes,base);
-            if (typeofAtt) {
-               typedResource = newSubject;
-            }
-         }
-         if (!newSubject && current.parentNode.nodeType==Node.DOCUMENT_NODE) {
-            newSubject = removeHash(current.baseURI);
-            if (typeofAtt) {
-               typedResource = newSubject;
-            }
-         } else if (!newSubject && context.parentObject) {
-            // TODO: Verify: If the xml:base has been set and the parentObject is the baseURI of the parent, then the subject needs to be the new base URI
-            newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
-         }
-         if (typeofAtt && !typedResource) {
-            if (resourceAtt) {
-               typedResource = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
-            }
-            if (!typedResource &&hrefAtt) {
-               typedResource = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
-            }
-            if (!typedResource && srcAtt) {
-               typedResource = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
-            }
-            if (!typedResource && (this.inXHTMLMode || this.inHTMLMode) && (current.localName=="head" || current.localName=="body")) {
-               typedResource = newSubject;
-            }
-            if (!typedResource) {
-               typedResource = this.newBlankNode();
-            }
-            currentObjectResource = typedResource;
-         }
-         //console.log(current.localName+", newSubject="+newSubject+", typedResource="+typedResource+", currentObjectResource="+currentObjectResource);
-      } else {
-         // Sequence Step 5.2: establish a new subject
-         if (aboutAtt) {
-            newSubject = this.parseSafeCURIEOrCURIEOrURI(aboutAtt.value,prefixes,base);
-         }
-         if (!newSubject && resourceAtt) {
-            newSubject = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
-         }
-         if (!newSubject && hrefAtt) {
-            newSubject = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
-         }
-         if (!newSubject && srcAtt) {
-            newSubject = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
-         }
-         if (!newSubject) {
-            if (current.parentNode.nodeType==Node.DOCUMENT_NODE) {
-               newSubject = removeHash(current.baseURI);
-            } else if ((this.inXHTMLMode || this.inHTMLMode) && (current.localName=="head" || current.localName=="body")) {
-               newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
-            } else if (typeofAtt) {
-               newSubject = this.newBlankNode();
-            } else if (context.parentObject) {
-               // TODO: Verify: If the xml:base has been set and the parentObject is the baseURI of the parent, then the subject needs to be the new base URI
-               newSubject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
-               if (!propertyAtt) {
-                  skip = true;
-               }
-            }
-         }
-         if (typeofAtt) {
-            typedResource = newSubject;
-         }
-      }
-
-      //console.log(current.tagName+": newSubject="+newSubject+", currentObjectResource="+currentObjectResource+", typedResource="+typedResource+", skip="+skip);
-
-      var rdfaData = null;
-      if (newSubject) {
-         //this.newSubject(current,newSubject);
-         if (aboutAtt || resourceAtt || typedResource) {
-            var id = newSubject;
-            if (typeofAtt && !aboutAtt && !resourceAtt && currentObjectResource) {
-               id = currentObjectResource;
-            }
-            //console.log("Setting data attribute for "+current.localName+" for subject "+id);
-            this.newSubjectOrigin(current,id);
-         }
-      }
-      
-      // Sequence Step 7: generate type triple
-      if (typedResource) {
-         var values = this.tokenize(typeofAtt.value);
-         for (var i=0; i<values.length; i++) {
-            var object = this.parseTermOrCURIEOrAbsURI(values[i],vocabulary,context.terms,prefixes,base);
-            if (object) {
-               this.addTriple(current,typedResource,RDFaProcessor.typeURI,{ type: RDFaProcessor.objectURI , value: object});
-            }
-         }
-      }
-
-      // Sequence Step 8: new list mappings if there is a new subject
-      //console.log("Step 8: newSubject="+newSubject+", context.parentObject="+context.parentObject);
-      if (newSubject && newSubject!=context.parentObject) {
-         //console.log("Generating new list mapping for "+newSubject);
-         listMapping = {};
-         listMappingDifferent = true;
-      }
-
-      // Sequence Step 9: generate object triple
-      if (currentObjectResource) {
-         if (relAtt && inlistAtt) {
-            for (var i=0; i<relAttPredicates.length; i++) {
-               var list = listMapping[relAttPredicates[i]];
-               if (!list) {
-                  list = [];
-                  listMapping[relAttPredicates[i]] = list;
-               }
-               list.push({ type: RDFaProcessor.objectURI, value: currentObjectResource });
-            }
-         } else if (relAtt) {
-            for (var i=0; i<relAttPredicates.length; i++) {
-               this.addTriple(current,newSubject,relAttPredicates[i],{ type: RDFaProcessor.objectURI, value: currentObjectResource});
-            }
-         }
-         if (revAtt) {
-            for (var i=0; i<revAttPredicates.length; i++) {
-               this.addTriple(current,currentObjectResource, revAttPredicates[i], { type: RDFaProcessor.objectURI, value: newSubject});
-            }
-         }
-      } else {
-         // Sequence Step 10: incomplete triples
-         if (newSubject && !currentObjectResource && (relAtt || revAtt)) {
-            currentObjectResource = this.newBlankNode();
-            //alert(current.tagName+": generated blank node, newSubject="+newSubject+" currentObjectResource="+currentObjectResource);
-         }
-         if (relAtt && inlistAtt) {
-            for (var i=0; i<relAttPredicates.length; i++) {
-               var list = listMapping[relAttPredicates[i]];
-               if (!list) {
-                  list = [];
-                  listMapping[predicate] = list;
-               }
-               //console.log("Adding incomplete list for "+predicate);
-               incomplete.push({ predicate: relAttPredicates[i], list: list });
-            }
-         } else if (relAtt) {
-            for (var i=0; i<relAttPredicates.length; i++) {
-               incomplete.push({ predicate: relAttPredicates[i], forward: true });
-            }
-         }
-         if (revAtt) {
-            for (var i=0; i<revAttPredicates.length; i++) {
-               incomplete.push({ predicate: revAttPredicates[i], forward: false });
-            }
-         }
-      }
-
-      // Step 11: Current property values
-      if (propertyAtt) {
-         var datatype = null;
-         var content = null; 
-         if (datatypeAtt) {
-            datatype = datatypeAtt.value=="" ? RDFaProcessor.PlainLiteralURI : this.parseTermOrCURIEOrAbsURI(datatypeAtt.value,vocabulary,context.terms,prefixes,base);
-            if (datetimeAtt && !contentAtt) {
-               content = datetimeAtt.value;
-            } else {
-               content = datatype==RDFaProcessor.XMLLiteralURI || datatype==RDFaProcessor.HTMLLiteralURI ? null : (contentAtt ? contentAtt.value : current.textContent);
-            }
-         } else if (contentAtt) {
-            datatype = RDFaProcessor.PlainLiteralURI;
-            content = contentAtt.value;
-         } else if (datetimeAtt) {
-            content = datetimeAtt.value;
-            datatype = RDFaProcessor.deriveDateTimeType(content);
-            if (!datatype) {
-               datatype = RDFaProcessor.PlainLiteralURI;
-            }
-         } else if (!relAtt && !revAtt) {
-            if (resourceAtt) {
-               content = this.parseSafeCURIEOrCURIEOrURI(resourceAtt.value,prefixes,base);
-            }
-            if (!content && hrefAtt) {
-               content = this.resolveAndNormalize(base,encodeURI(hrefAtt.value));
-            } else if (!content && srcAtt) {
-               content = this.resolveAndNormalize(base,encodeURI(srcAtt.value));
-            }
-            if (content) {
-               datatype = RDFaProcessor.objectURI;
-            }
-         }
-         if (!datatype) {
-            if (typeofAtt && !aboutAtt) {
-               datatype = RDFaProcessor.objectURI;
-               content = typedResource;
-            } else {
-               content = current.textContent;
-               if (this.inHTMLMode && current.localName=="time") {
-                  datatype = RDFaProcessor.deriveDateTimeType(content);
-               }
-               if (!datatype) {
-                  datatype = RDFaProcessor.PlainLiteralURI;
-               }
-            }
-         }
-         var values = this.tokenize(propertyAtt.value);
-         for (var i=0; i<values.length; i++) {
-            var predicate = this.parsePredicate(values[i],vocabulary,context.terms,prefixes,base);
-            if (predicate) {
-               if (inlistAtt) {
-                  var list = listMapping[predicate];
-                  if (!list) {
-                     list = [];
-                     listMapping[predicate] = list;
-                  }
-                  list.push((datatype==RDFaProcessor.XMLLiteralURI || datatype==RDFaProcessor.HTMLLiteralURI) ? { type: datatype, value: current.childNodes} : { type: datatype ? datatype : RDFaProcessor.PlainLiteralURI, value: content, language: language});
-               } else {
-                  if (datatype==RDFaProcessor.XMLLiteralURI || datatype==RDFaProcessor.HTMLLiteralURI) {
-                     this.addTriple(current,newSubject,predicate,{ type: datatype, value: current.childNodes});
-                  } else {
-                     this.addTriple(current,newSubject,predicate,{ type: datatype ? datatype : RDFaProcessor.PlainLiteralURI, value: content, language: language});
-                     //console.log(newSubject+" "+predicate+"="+content);
-                  }
-               }
-            }
-         }
-      }
-
-      // Sequence Step 12: complete incomplete triples with new subject
-      if (newSubject && !skip) {
-         for (var i=0; i<context.incomplete.length; i++) {
-            if (context.incomplete[i].list) {
-               //console.log("Adding subject "+newSubject+" to list for "+context.incomplete[i].predicate);
-               // TODO: it is unclear what to do here
-               context.incomplete[i].list.push({ type: RDFaProcessor.objectURI, value: newSubject });
-            } else if (context.incomplete[i].forward) {
-               //console.log(current.tagName+": completing forward triple "+context.incomplete[i].predicate+" with object="+newSubject);
-               this.addTriple(current,context.subject,context.incomplete[i].predicate, { type: RDFaProcessor.objectURI, value: newSubject});
-            } else {
-               //console.log(current.tagName+": completing reverse triple with object="+context.subject);
-               this.addTriple(current,newSubject,context.incomplete[i].predicate,{ type: RDFaProcessor.objectURI, value: context.subject});
-            }
-         }
-      }
-
-      var childContext = null;
-      var listSubject = newSubject;
-      if (skip) {
-         // TODO: should subject be null?
-         childContext = this.push(context,context.subject);
-         // TODO: should the entObject be passed along?  If not, then intermediary children will keep properties from being associated with incomplete triples.
-         // TODO: Verify: if the current baseURI has changed and the parentObject is the parent's base URI, then the baseURI should change
-         childContext.parentObject = removeHash(current.parentNode.baseURI)==context.parentObject ? removeHash(current.baseURI) : context.parentObject;
-         childContext.incomplete = context.incomplete;
-         childContext.language = language;
-         childContext.prefixes = prefixes;
-         childContext.vocabulary = vocabulary;
-      } else {
-         childContext = this.push(context,newSubject);
-         childContext.parentObject = currentObjectResource ? currentObjectResource : (newSubject ? newSubject : context.subject);
-         childContext.prefixes = prefixes;
-         childContext.incomplete = incomplete;
-         if (currentObjectResource) {
-            //console.log("Generating new list mapping for "+currentObjectResource);
-            listSubject = currentObjectResource;
-            listMapping = {};
-            listMappingDifferent = true;
-         }
-         childContext.listMapping = listMapping;
-         childContext.language = language;
-         childContext.vocabulary = vocabulary;
-      }
-      if (listMappingDifferent) {
-         //console.log("Pushing list parent "+current.localName);
-         queue.unshift({ parent: current, context: context, subject: listSubject, listMapping: listMapping});
-      }
-      for (var child = current.lastChild; child; child = child.previousSibling) {
-         if (child.nodeType==Node.ELEMENT_NODE) {
-            //console.log("Pushing child "+child.localName);
-            queue.unshift({ current: child, context: childContext});
-         }
-      }
-   }
-   
-   if (this.inHTMLMode) {
-      this.copyProperties();
-   }
-
-   for (var i=0; i<this.finishedHandlers.length; i++) {
-      this.finishedHandlers[i](node);
-   }
-}
-
-RDFaProcessor.prototype.copyProperties = function() {
-}
-
-
-RDFaProcessor.prototype.push = function(parent,subject) {
-   return {
-      parent: parent,
-      subject: subject ? subject : (parent ? parent.subject : null),
-      parentObject: null,
-      incomplete: [],
-      listMapping: parent ? parent.listMapping : {},
-      language: parent ? parent.language : this.language,
-      prefixes: parent ? parent.prefixes : this.target.graph.prefixes,
-      terms: parent ? parent.terms : this.target.graph.terms,
-      vocabulary: parent ? parent.vocabulary : this.vocabulary
-   };
-};
-
-//   RDFa processor shell for  rdflib.js to use RDFaProcessor.js 
-//  from green-turtle
-//
-
-GraphRDFaProcessor = new Object(); // @@@
-
-GraphRDFaProcessor.prototype = new RDFaProcessor();
-GraphRDFaProcessor.prototype.constructor=RDFaProcessor;
-
-GraphRDFaProcessor = function(kb, doc) {
-   RDFaProcessor.call(this,kb);
-   this.doc = doc;
-}
-
-/*
-GraphRDFaProcessor.prototype.getObjectSize = function(obj) {
-   var size = 0;
-   for (var key in obj) {
-      if (obj.hasOwnProperty(key)) {
-         size++;
-      }
-   }
-   return size;
-};
-*/
-
-GraphRDFaProcessor.prototype.init = function() {
-   var thisObj = this;
-   this.finishedHandlers.push(function(node) {
-      for (var subject in thisObj.target.graph.subjects) {
-         var snode = thisObj.target.graph.subjects[subject];
-         if (thisObj.getObjectSize(snode.predicates)==0) {
-            delete thisObj.target.graph.subjects[subject];
-         }
-      }
-   });
-}
-
-GraphRDFaProcessor.prototype.newBlankNode = function() {
-   return this.kb.bnode();
-}
-
-GraphRDFaProcessor.prototype.newSubjectOrigin = function(origin,subject) {
-    console.log(' newSubjectOrigin '+ origin + subject );
-}
-
-GraphRDFaProcessor.prototype.newSubject = function(origin,subject) {
-   return this.sym(subject);
-}
-
-
-GraphRDFaProcessor.prototype.addTriple = function(origin,subject,predicate,object) {
-    this.kb.add(subject, kb.sym(predicate), $rdf.literal(object.value, $rdf.sym(object.type)), this.doc);
-    return;
-}
-
-/*
-GraphRDFaProcessor.rdfaCopyPredicate = "http://www.w3.org/ns/rdfa#copy";
-GraphRDFaProcessor.rdfaPatternType = "http://www.w3.org/ns/rdfa#Pattern";
-*/
-GraphRDFaProcessor.prototype.copyProperties = function() {
-    // @@ check not needed  -- olnly in HTML mode
-};
-
-$rdf.parseDOM_RDFa = function(dom, kb, doc, options) {
-    var p = new GraphRDFaProcessor(kb, doc);
-    p.process(dom, options);
-}
 // Parse a simple SPARL-Update subset syntax for patches.
 // 
 //  This parses 
@@ -5256,7 +4406,7 @@ $rdf.sparqlUpdateParser = function(str, kb, base) {
         }
         var found = false;
         for (k=0;  k< keywords.length; k++) {
-            key = keywords[k];
+            var key = keywords[k];
             if (str.slice(j, j + key.length) === key) {
                 // console.log("C got one " + key);
                 i = p.skipSpace(str, j+ key.length);
@@ -5272,7 +4422,7 @@ $rdf.sparqlUpdateParser = function(str, kb, base) {
                     i = j;
                 }
                 var res2 = [];
-                var j = p.node(str, i, res2);
+                j = p.node(str, i, res2);
                 // console.log("M Now at j= " + j + " i= " + i)
                 
                 if (j < 0) {
@@ -5328,6 +4478,7 @@ $rdf.IndexedFormula.prototype.applyPatch = function(patch, target, patchCallback
                 if (sts.length === 0) {
                     // $rdf.log.info("NOT FOUND deletable " + st);
                     bad.push(st);
+                    return null;
                 } else {
                     // $rdf.log.info("Found deletable " + st);
                     return sts[0]
@@ -5347,8 +4498,8 @@ $rdf.IndexedFormula.prototype.applyPatch = function(patch, target, patchCallback
             if (bindings) ds = ds.substitute(bindings);
             ds = ds.statements;
             ds.map(function(st){st.why = target;
-                // $rdf.log.info("Adding: " + st);
-                targetKB.add(st.subject, st.predicate, st.object, st.why)});
+                targetKB.add(st.subject, st.predicate, st.object, st.why);
+            });
         };
         onDonePatch();
     };
@@ -5418,7 +4569,7 @@ $rdf.Query = function (name, id) {
 //    this.orderBy = []; // Not used yet
     this.name = name;
     this.id = id;
-}
+};
 
 /**The QuerySource object stores a set of listeners and a set of queries.
  * It keeps the listeners aware of those queries that the source currently
@@ -5443,13 +4594,15 @@ $rdf.QuerySource = function() {
      */
     this.addQuery = function(q) {
         var i;
-        if(q.name==null || q.name=="")
+        if(q.name === null || q.name === "") {
 				    q.name="Query #"+(this.queries.length+1);
+        }
         q.id=this.queries.length;
         this.queries.push(q);
         for(i=0; i<this.listeners.length; i++) {
-            if(this.listeners[i]!=null)
+            if(this.listeners[i] !== null) {
                 this.listeners[i].addQuery(q);
+            }
         }
     };
 
@@ -5459,11 +4612,13 @@ $rdf.QuerySource = function() {
     this.removeQuery = function(q) {
         var i;
         for(i=0; i<this.listeners.length; i++) {
-            if(this.listeners[i]!=null)
+            if(this.listeners[i] !== null) {
                 this.listeners[i].removeQuery(q);
+            }
         }
-        if(this.queries[q.id]!=null)
+        if(this.queries[q.id] !== null) {
             delete this.queries[q.id];
+        }
     };
 
     /**adds a "Listener" to this QuerySource - that is, an object
@@ -5475,8 +4630,9 @@ $rdf.QuerySource = function() {
         var i;
         this.listeners.push(listener);
         for(i=0; i<this.queries.length; i++) {
-            if(this.queries[i]!=null)
+            if (this.queries[i] !== null) {
                 listener.addQuery(this.queries[i]);
+            }
         }
     };
     /**removes listener from the array of listeners, if it exists! Also takes
@@ -5485,17 +4641,18 @@ $rdf.QuerySource = function() {
     this.removeListener = function(listener) {
         var i;
         for(i=0; i<this.queries.length; i++) {
-            if(this.queries[i]!=null)
+            if(this.queries[i] !== null) {
                 listener.removeQuery(this.queries[i]);
+            }
         }
 
         for(i=0; i<this.listeners.length; i++) {
-            if(this.listeners[i]===listener) {
+            if(this.listeners[i] === listener) {
                 delete this.listeners[i];
             }
         } 
     };
-}
+};
 
 $rdf.Variable.prototype.isVar = 1;
 $rdf.BlankNode.prototype.isVar = 1;
@@ -5524,27 +4681,29 @@ $rdf.Collection.prototype.isVar = 0;
 $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDone) {
     var kb = this;
     $rdf.log.info("Query:"+myQuery.pat+", fetcher="+fetcher+"\n");
-        $rdf.log.error("@@@@ query.js 4: "+$rdf.log.error); // @@ works
+        $rdf.log.error("@@@@ query.js 4: " + $rdf.log.error); // @@ works
         $rdf.log.error("@@@@ query.js 5");  // @@
 
     ///////////// Debug strings
 
-    function bindingsDebug(nbs) {
+    var bindingDebug = function (b) {
+            var str = "", v;
+            for (v in b) {
+               if (b.hasOwnProperty(v)) {
+                   str += "    "+v+" -> "+b[v];
+                }
+            }
+            return str;
+    };
+
+    var bindingsDebug = function (nbs) {
         var str = "Bindings: ";
         var i, n=nbs.length;
         for (i=0; i<n; i++) {
             str+= bindingDebug(nbs[i][0])+';\n\t';
-        };
+        }
         return str;
-    } //bindingsDebug
-
-    function bindingDebug(b) {
-            var str = "", v;
-            for (v in b) {
-                str += "    "+v+" -> "+b[v];
-            }
-            return str;
-    }
+    }; //bindingsDebug
 
 
 // Unification: see also 
@@ -5557,9 +4716,9 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
 //  mapping variuable to value.
 
 
-    function RDFUnifyTerm(self, other, bindings, formula) {
+    var unifyTerm = function (self, other, bindings, formula) {
         var actual = bindings[self];
-        if (typeof actual == 'undefined') { // Not mapped
+        if (actual === undefined) { // Not mapped
             if (self.isVar) {
                     /*if (self.isBlank)  //bnodes are existential variables
                     {
@@ -5573,46 +4732,73 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
             actual = self;
         }
         if (!actual.complexType) {
-            if (formula.redirections[actual]) actual = formula.redirections[actual];
-            if (formula.redirections[other])  other  = formula.redirections[other];
-            if (actual.sameTerm(other)) return [[ [], null]];
+            if (formula.redirections[actual]) {
+                actual = formula.redirections[actual];
+            }
+            if (formula.redirections[other])  {
+                other  = formula.redirections[other];
+            }
+            if (actual.sameTerm(other)) {
+                return [[ [], null]];
+            }
             return [];
         }
         if (self instanceof Array) {
-            if (!(other instanceof Array)) return [];
-            return RDFArrayUnifyContents(self, other, bindings)
-        };
+            if (!(other instanceof Array)) {
+                return [];
+            }
+            return unifyContents(self, other, bindings);
+        }
         throw("query.js: oops - code not written yet");
-        return undefined;  // for lint 
+        // return undefined;  // for lint - no jslint objects to unreachables
     //    return actual.unifyContents(other, bindings)
-    }; //RDFUnifyTerm
+    }; //unifyTerm
 
 
 
-    function RDFArrayUnifyContents(self, other, bindings, formula) {
-        if (self.length != other.length) return []; // no way
-        if (!self.length) return [[ [], null ]]; // Success
-        var nbs = RDFUnifyTerm(self[0], other[0], bindings, formula);
-        if (nbs == []) return nbs;
+    var unifyContents = function (self, other, bindings, formula) {
+        var nbs2;
+        if (self.length !== other.length) {
+            return []; // no way
+        }
+        if (!self.length) {
+            return [[ [], null ]]; // Success
+        }
+        var nbs = unifyTerm(self[0], other[0], bindings, formula);
+        if (nbs.length === 0) {
+            return nbs;
+        }
         var res = [];
-        var i, n=nbs.length, nb, b2, j, m, v, nb2;
+        var i, n = nbs.length, nb, j, m, v, nb2, bindings2;
         for (i=0; i<n; i++) { // for each possibility from the first term
             nb = nbs[i][0]; // new bindings
-            var bindings2 = [];
+            bindings2 = [];
             for (v in nb) {
-                bindings2[v] = nb[v]; // copy
+                if (nb.hasOwnProperty(v)) {
+                    bindings2[v] = nb[v]; // copy
+                }
             }
-            for (v in bindings) bindings2[v] = bindings[v]; // copy
-            var nbs2 = RDFArrayUnifyContents(self.slice(1), other.slice(1), bindings2, formula);
+            for (v in bindings) {
+                if (bindings.hasOwnProperty(v)) {
+                    bindings2[v] = bindings[v]; // copy
+                }
+            }
+            nbs2 = unifyContents(self.slice(1), other.slice(1), bindings2, formula);
             m = nbs2.length;
             for (j=0; j<m; j++) {
-                var nb2 = nbs2[j][0];   //@@@@ no idea whether this is used or right
-                for (v in nb) nb2[v]=nb[v];
+                nb2 = nbs2[j][0];   //@@@@ no idea whether this is used or right
+                for (v in nb) {
+                    if (nb.hasOwnProperty(v)) {
+                        nb2[v] = nb[v];
+                    }
+                }
                 res.push([nb2, null]);
             }
         }
         return res;
-    } // RDFArrayUnifyContents
+    }; // unifyContents
+
+
 
 
 
@@ -5622,11 +4808,133 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
     // to one term it is equal to the other term.  We only match formulae.
 
     /** if x is not in the bindings array, return the var; otherwise, return the bindings **/
-    function RDFBind(x, binding) {
+    var bind = function (x, binding) {
         var y = binding[x];
-        if (typeof y == 'undefined') return x;
+        if (y === undefined) {
+            return x;
+        }
         return y;
-    }
+    };
+
+
+
+
+
+
+    // When there are OPTIONAL clauses, we must return bindings without them if none of them
+    // succeed. However, if any of them do succeed, we should not.  (This is what branchCount()
+    // tracked. The problem currently is (2011/7) that when several optionals exist, and they
+    // all match, multiple sets of bindings are returned, each with one optional filled in.)
+    
+    var union = function(a,b) {
+       var c= {};
+       var x;
+       for (x in a) {
+            if (a.hasOwnProperty(x)) {
+                c[x] = a[x];
+            }
+        }
+       for (x in b) {
+            if (b.hasOwnProperty(x)) {
+                c[x] = b[x];
+            }
+        }
+        return c;
+    };
+    
+    var OptionalBranchJunction = function(originalCallback, trunkBindings) {
+        this.trunkBindings = trunkBindings;
+        this.originalCallback = originalCallback;
+        this.branches = [];
+        //this.results = []; // result[i] is an array of bindings for branch i
+        //this.done = {};  // done[i] means all/any results are in for branch i
+        //this.count = {};
+        return this;
+    };
+
+    OptionalBranchJunction.prototype.checkAllDone = function() {
+        var i;
+        for (i=0; i<this.branches.length; i++) {
+            if (!this.branches[i].done) {
+                return;
+            }
+        }
+        $rdf.log.debug("OPTIONAL BIDNINGS ALL DONE:");
+        this.doCallBacks(this.branches.length-1, this.trunkBindings);
+    
+    };
+    // Recrursively generate the cross product of the bindings
+    OptionalBranchJunction.prototype.doCallBacks = function(b, bindings) {
+        var j;
+        if (b < 0) {
+            return this.originalCallback(bindings); 
+        }
+        for (j=0; j < this.branches[b].results.length; j++) {
+            this.doCallBacks(b-1, union(bindings, this.branches[b].results[j]));
+        }
+    };
+    
+    // A mandatory branch is the normal one, where callbacks
+    // are made immediately and no junction is needed.
+    // Might be useful for onFinsihed callback for query API.
+    var MandatoryBranch = function (callback, onDone) {
+        this.count = 0;
+        this.success = false;
+        this.done = false;
+        // this.results = [];
+        this.callback = callback;
+        this.onDone = onDone;
+        // this.junction = junction;
+        // junction.branches.push(this);
+        return this;
+    };
+    
+    MandatoryBranch.prototype.reportMatch = function(bindings) {
+        // $rdf.log.error("@@@@ query.js 1"); // @@
+        this.callback(bindings);
+        this.success = true;
+    };
+
+    MandatoryBranch.prototype.reportDone = function() {
+        this.done = true;
+        $rdf.log.info("Mandatory query branch finished.***");
+        if (this.onDone !== undefined) {
+            this.onDone();
+        }
+    };
+
+
+    // An optional branch hoards its results.
+    var OptionalBranch = function (junction) {
+        this.count = 0;
+        this.done = false;
+        this.results = [];
+        this.junction = junction;
+        junction.branches.push(this);
+        return this;
+    };
+    
+    OptionalBranch.prototype.reportMatch = function(bindings) {
+        this.results.push(bindings);
+    };
+
+    OptionalBranch.prototype.reportDone = function() {
+        $rdf.log.debug("Optional branch finished - results.length = "+this.results.length);
+        if (this.results.length === 0) {// This is what optional means: if no hits,
+            this.results.push({});  // mimic success, but with no bindings
+            $rdf.log.debug("Optional branch FAILED - that's OK.");
+        }
+        this.done = true;
+        this.junction.checkAllDone();
+    };
+
+
+
+
+
+
+
+
 
 
 
@@ -5635,43 +4943,50 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
         * @param item - an Statement, possibly w/ vars in it
         * @param bindings - 
     * @returns true if the query fails -- there are no items that match **/
-    function prepare(f, item, bindings) {
+    var prepare = function (f, item, bindings) {
+        var t, terms, termIndex, i, ind;
         item.nvars = 0;
         item.index = null;
         // if (!f.statements) $rdf.log.warn("@@@ prepare: f is "+f);
     //    $rdf.log.debug("Prepare: f has "+ f.statements.length);
         //$rdf.log.debug("Prepare: Kb size "+f.statements.length+" Preparing "+item);
         
-        var t,c,terms = [item.subject,item.predicate,item.object],ind = [f.subjectIndex,f.predicateIndex,f.objectIndex];
-        for (i=0;i<3;i++)
-        {
+        terms = [item.subject,item.predicate,item.object];
+        ind = [f.subjectIndex,f.predicateIndex,f.objectIndex];
+        for (i=0; i<3; i++) {
             //alert("Prepare "+terms[i]+" "+(terms[i] in bindings));
-            if (terms[i].isVar && !(terms[i] in bindings)) {
-                    item.nvars++;
+            if (terms[i].isVar && !(bindings[terms[i]] !== undefined)) {
+                item.nvars++;
             } else {
-                    var t = RDFBind(terms[i], bindings); //returns the RDF binding if bound, otherwise itself
-                    //if (terms[i]!=RDFBind(terms[i],bindings) alert("Term: "+terms[i]+"Binding: "+RDFBind(terms[i], bindings));
-                    if (f.redirections[t.hashString()]) t = f.redirections[t.hashString()]; //redirect
-                    termIndex=ind[i]
-                    item.index = termIndex[t.hashString()];
-                    if (typeof item.index == 'undefined') {
+                t = bind(terms[i], bindings); //returns the RDF binding if bound, otherwise itself
+                //if (terms[i]!=bind(terms[i],bindings) alert("Term: "+terms[i]+"Binding: "+bind(terms[i], bindings));
+                if (f.redirections[t.hashString()]) {
+                    t = f.redirections[t.hashString()]; //redirect
+                }
+                termIndex = ind[i];
+                item.index = termIndex[t.hashString()];
+                if (item.index === undefined) {
                     // $rdf.log.debug("prepare: no occurrence [yet?] of term: "+ t);
                     item.index = [];
-                    }
+                }
             }
         }
             
-        if (item.index == null) item.index = f.statements;
+        if (item.index === null) {
+            item.index = f.statements;
+        }
         // $rdf.log.debug("Prep: index length="+item.index.length+" for "+item)
         // $rdf.log.debug("prepare: index length "+item.index.length +" for "+ item);
         return false;
-    } //prepare
+    }; //prepare
         
     /** sorting function -- negative if self is easier **/
     // We always prefer to start with a URI to be able to browse a graph
     // this is why we put off items with more variables till later.
     function easiestQuery(self, other) {
-        if (self.nvars != other.nvars) return self.nvars - other.nvars;
+        if (self.nvars !== other.nvars) {
+            return self.nvars - other.nvars;
+        }
         return self.index.length - other.index.length;
     }
 
@@ -5688,18 +5003,20 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
     *
     * Will fetch linked data from the web iff the knowledge base an associated source fetcher (f.sf)
     ***/
-    function match(f, g, bindingsSoFar, level, fetcher, localCallback, branch) {
+    var match = function (f, g, bindingsSoFar, level, fetcher, localCallback, branch) {
         $rdf.log.debug("Match begins, Branch count now: "+branch.count+" for "+branch.pattern_debug);
         var sf = null;
-        if( typeof f.sf != 'undefined' ) {
+        if(f.sf !== undefined) {
             sf = f.sf;
         }
         //$rdf.log.debug("match: f has "+f.statements.length+", g has "+g.statements.length)
         var pattern = g.statements;
-        if (pattern.length == 0) { //when it's satisfied all the pattern triples
+        if (pattern.length === 0) { //when it's satisfied all the pattern triples
 
             $rdf.log.debug("FOUND MATCH WITH BINDINGS:"+bindingDebug(bindingsSoFar));
-            if (g.optional.length==0) branch.reportMatch(bindingsSoFar);
+            if (g.optional.length === 0) {
+                branch.reportMatch(bindingsSoFar);
+            }
             else {
                 $rdf.log.debug("OPTIONAL: "+g.optional);
                 var junction = new OptionalBranchJunction(callback, bindingsSoFar); // @@ won't work with nested optionals? nest callbacks
@@ -5708,7 +5025,7 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
                     br[b] = new OptionalBranch(junction); // Allocate branches to prevent premature ending
                     br[b].pattern_debug = g.optional[b]; // for diagnotics only
                 }
-                for (b =0; b < g.optional.length; b++) {
+                for (b = 0; b < g.optional.length; b++) {
                     br[b].count =  br[b].count + 1;  // Count how many matches we have yet to complete
                     match(f, g.optional[b], bindingsSoFar, '', fetcher, callback, br[b]);
                 }
@@ -5726,54 +5043,73 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
             var id = "match" + match_index++;
             var fetchResource = function (requestedTerm, id) {
                 var path = requestedTerm.uri;
-                if(path.indexOf("#")!=-1) {
+                if(path.indexOf("#") !== -1) {
                     path=path.split("#")[0];
                 }
                 if( sf ) {
                     sf.addCallback('done', function(uri) {
-                        if ((kb.canon(kb.sym(uri)).uri != path) && (uri != kb.canon(kb.sym(path)))) {
-                            return true
+                        if ((kb.canon(kb.sym(uri)).uri !== path) && (uri !== kb.canon(kb.sym(path)))) {
+                            return true;
                         }
-
                         match(f, g, bindingsSoFar, level, fetcher, // match not match2 to look up any others necessary.
                                           localCallback, branch);
                         return false;
-                    })
+                    });
                 }
-                fetcher(requestedTerm, id)	    
-            }
+                fetcher(requestedTerm, id);	    
+            };
             for (i=0; i<n; i++) {
                 item = pattern[i];  //for each of the triples in the query
-                if (item.subject in bindingsSoFar 
+                if ((bindingsSoFar[item.subject] !== undefined) 
                     && bindingsSoFar[item.subject].uri
-                    && sf && sf.getState($rdf.Util.uri.docpart(bindingsSoFar[item.subject].uri)) == "unrequested") {
+                    && sf && sf.getState($rdf.Util.uri.docpart(bindingsSoFar[item.subject].uri)) === "unrequested") {
                     //fetch the subject info and return to id
-                    fetchResource(bindingsSoFar[item.subject],id)
+                    fetchResource(bindingsSoFar[item.subject],id);
                     return; // only look up one per line this time, but we will come back again though match
-                } else if (item.object in bindingsSoFar
+                }    
+                if (bindingsSoFar[item.object] !== undefined
                            && bindingsSoFar[item.object].uri
-                           && sf && sf.getState($rdf.Util.uri.docpart(bindingsSoFar[item.object].uri)) == "unrequested") {
-                    fetchResource(bindingsSoFar[item.object], id)
+                           && sf && sf.getState($rdf.Util.uri.docpart(bindingsSoFar[item.object].uri)) === "unrequested") {
+                    fetchResource(bindingsSoFar[item.object], id);
                     return;
                 }
             }
         } // if fetcher
-        match2(f, g, bindingsSoFar, level, fetcher, localCallback, branch)        
+        match2(f, g, bindingsSoFar, level, fetcher, localCallback, branch);     
         return;
-    } // match
+    }; // match
+
+
+    var constraintsSatisfied = function (bindings,constraints)
+    {
+        var res = true, x, test;
+        for (x in bindings) {
+            if (bindings.hasOwnProperty(x)) {
+                if (constraints[x]) {
+                    test = constraints[x].test;
+                    if (test && !test(bindings[x])) {
+                            res=false;
+                    }
+                }
+            }
+        }
+        return res;
+    };
+
+
 
     /** match2 -- stuff after the fetch **/
-    function match2(f, g, bindingsSoFar, level, fetcher, callback, branch) //post-fetch
-    {
-        var pattern = g.statements, n = pattern.length, i;
+    var match2 = function (f, g, bindingsSoFar, level, fetcher, callback, branch) { // post fetch
+        var pattern = g.statements, n = pattern.length, i,
+            k, nk, v, bindings2, newBindings1, item;
         for (i=0; i<n; i++) {  //For each statement left in the query, run prepare
             item = pattern[i];
             $rdf.log.info("match2: item=" + item + ", bindingsSoFar=" + bindingDebug(bindingsSoFar));
             prepare(f, item, bindingsSoFar);
         }
         pattern.sort(easiestQuery);
+        item = pattern[0];
         // $rdf.log.debug("Sorted pattern:\n"+pattern)
-        var item = pattern[0];
         var rest = f.formula();
         rest.optional = g.optional;
         rest.constraints = g.constraints;
@@ -5781,66 +5117,60 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
         $rdf.log.debug(level + "match2 searching "+item.index.length+ " for "+item+
                 "; bindings so far="+bindingDebug(bindingsSoFar));
         //var results = [];
-        var c, nc=item.index.length, nbs1;
+        var c, nc=item.index.length, nbs1, st, onward = 0;
         //var x;
         for (c=0; c<nc; c++) {   // For each candidate statement
-            var st = item.index[c]; //for each statement in the item's index, spawn a new match with that binding 
-            nbs1 = RDFArrayUnifyContents(
+            st = item.index[c]; //for each statement in the item's index, spawn a new match with that binding 
+            nbs1 = unifyContents(
                     [item.subject, item.predicate, item.object],
             [st.subject, st.predicate, st.object], bindingsSoFar, f);
-            $rdf.log.info(level+" From first: "+nbs1.length+": "+bindingsDebug(nbs1))
-            var k, nk=nbs1.length, nb1, v;
+            $rdf.log.info(level+" From first: "+nbs1.length+": "+bindingsDebug(nbs1));
+            nk=nbs1.length;
             //branch.count += nk;
             //$rdf.log.debug("Branch count bumped "+nk+" to: "+branch.count);
             for (k=0; k<nk; k++) {  // For each way that statement binds
-                var bindings2 = [];
-                var newBindings1 = nbs1[k][0]; 
+                bindings2 = [];
+                newBindings1 = nbs1[k][0]; 
                 if (!constraintsSatisfied(newBindings1,g.constraints)) {
                     //branch.count--;
                     $rdf.log.debug("Branch count CS: "+branch.count);
-                    continue;}
-                for (var v in newBindings1){
-                    bindings2[v] = newBindings1[v]; // copy
+                } else {
+                    for (v in newBindings1){
+                        if (newBindings1.hasOwnProperty(v)) {
+                            bindings2[v] = newBindings1[v]; // copy
+                        }
+                    }
+                    for (v in bindingsSoFar) {
+                        if (bindingsSoFar.hasOwnProperty(v)) {
+                            bindings2[v] = bindingsSoFar[v]; // copy
+                        }
+                    }
+                    
+                    branch.count++;  // Count how many matches we have yet to complete
+                    onward ++;
+                    match(f, rest, bindings2, level+ '  ', fetcher, callback, branch); //call match
                 }
-                for (var v in bindingsSoFar) {
-                    bindings2[v] = bindingsSoFar[v]; // copy
-                }
-                
-                branch.count++;  // Count how many matches we have yet to complete
-                match(f, rest, bindings2, level+ '  ', fetcher, callback, branch); //call match
             }
         }
         branch.count--;
+        if (onward === 0) {
+            $rdf.log.debug("Match2 fails completely on " + item);
+        }
         $rdf.log.debug("Match2 ends, Branch count: "+branch.count +" for "+branch.pattern_debug);
-        if (branch.count == 0)
-        {
+        if (branch.count === 0) {
             $rdf.log.debug("Branch finished.");
-            branch.reportDone(branch);
+            branch.reportDone();
         }
-    } //match2
-
-    function constraintsSatisfied(bindings,constraints)
-    {
-        var res=true;
-        for (var x in bindings) {
-            if (constraints[x]) {
-                var test = constraints[x].test;
-                if (test && !test(bindings[x]))
-                        res=false;
-            }
-        }
-        return res;
-    }
+    }; //match2
 
     //////////////////////////// Body of query()  ///////////////////////
     
     if(!fetcher) {
         fetcher=function (x, requestedBy) {
-            if (x == null) {
+            if (x === null) {
                 return;
-            } else {
-                $rdf.Util.AJAR_handleNewTerm(kb, x, requestedBy);
             }
+            $rdf.Util.AJAR_handleNewTerm(kb, x, requestedBy);
         };
     } 
     //prepare, oncallback: match1
@@ -5848,101 +5178,12 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
     //match2, oncallback: populatetable
     //    $rdf.log.debug("Query F length"+this.statements.length+" G="+myQuery)
     var f = this;
-    $rdf.log.debug("Query on "+this.statements.length)
-//    if (kb != this) alert("@@@@??? this="+ this)
+    $rdf.log.debug("Query on "+this.statements.length);
+    
     
     //kb.remoteQuery(myQuery,'http://jena.hpl.hp.com:3040/backstage',callback);
     //return;
 
-
-    // When there are OPTIONAL clauses, we must return bindings without them if none of them
-    // succeed. However, if any of them do succeed, we should not.  (This is what branchCount()
-    // tracked. The problem currently is (2011/7) that when several optionals exist, and they
-    // all match, multiple sets of bindings are returned, each with one optional filled in.)
-    
-    union = function(a,b) {
-       var c= {};
-       var x;
-       for (x in a) c[x] = a[x];
-       for (x in b) c[x] = b[x];
-       return c
-    }
-    
-    function OptionalBranchJunction(originalCallback, trunkBindings) {
-        this.trunkBindings = trunkBindings;
-        this.originalCallback = originalCallback;
-        this.branches = [];
-        //this.results = []; // result[i] is an array of bindings for branch i
-        //this.done = {};  // done[i] means all/any results are in for branch i
-        //this.count = {};
-        return this;
-    }
-
-    OptionalBranchJunction.prototype.checkAllDone = function() {
-        for (var i=0; i<this.branches.length; i++) if (!this.branches[i].done) return;
-        $rdf.log.debug("OPTIONAL BIDNINGS ALL DONE:");
-        this.doCallBacks(this.branches.length-1, this.trunkBindings);
-    
-    };
-    // Recrursively generate the cross product of the bindings
-    OptionalBranchJunction.prototype.doCallBacks = function(b, bindings) {
-        if (b < 0) return this.originalCallback(bindings); 
-        for (var j=0; j < this.branches[b].results.length; j++) {
-            this.doCallBacks(b-1, union(bindings, this.branches[b].results[j]));
-        }
-    };
-    
-    // A mandatory branch is the normal one, where callbacks
-    // are made immediately and no junction is needed.
-    // Might be useful for onFinsihed callback for query API.
-    function MandatoryBranch(callback, onDone) {
-        this.count = 0;
-        this.success = false;
-        this.done = false;
-        // this.results = [];
-        this.callback = callback;
-        this.onDone = onDone;
-        // this.junction = junction;
-        // junction.branches.push(this);
-        return this;
-    }
-    
-    MandatoryBranch.prototype.reportMatch = function(bindings) {
-        // $rdf.log.error("@@@@ query.js 1"); // @@
-        this.callback(bindings);
-        this.success = true;
-    };
-
-    MandatoryBranch.prototype.reportDone = function(b) {
-        this.done = true;
-        $rdf.log.info("Mandatory query branch finished.***")
-        if (this.onDone != undefined) this.onDone();
-    };
-
-
-    // An optional branch hoards its results.
-    function OptionalBranch(junction) {
-        this.count = 0;
-        this.done = false;
-        this.results = [];
-        this.junction = junction;
-        junction.branches.push(this);
-        return this;
-    }
-    
-    OptionalBranch.prototype.reportMatch = function(bindings) {
-        this.results.push(bindings);
-    };
-
-    OptionalBranch.prototype.reportDone = function() {
-        $rdf.log.debug("Optional branch finished - results.length = "+this.results.length);
-        if (this.results.length == 0) {// This is what optional means: if no hits,
-            this.results.push({});  // mimic success, but with no bindings
-            $rdf.log.debug("Optional branch FAILED - that's OK.");
-        }
-        this.done = true;
-        this.junction.checkAllDone();
-    };
 
     var trunck = new MandatoryBranch(callback, onDone);
     trunck.count++; // count one branch to complete at the moment
@@ -5950,6 +5191,8 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
     
     return; //returns nothing; callback does the work
 }; //query
+
+// ENDS
 //Converting between SPARQL queries and the $rdf query API
 
 /*
@@ -6620,18 +5863,6 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 
 $rdf.sparqlUpdate = function() {
 
-    var anonymize = function (obj) {
-        return (obj.toNT().substr(0,2) == "_:")
-        ? "?" + obj.toNT().substr(2)
-        : obj.toNT();
-    }
-
-    var anonymizeNT = function(stmt) {
-        return anonymize(stmt.subject) + " " +
-        anonymize(stmt.predicate) + " " +
-        anonymize(stmt.object) + " .";
-    }
-
     var sparql = function(store) {
         this.store = store;
         this.ifps = {};
@@ -6713,10 +5944,27 @@ $rdf.sparqlUpdate = function() {
 
     ///////////  The identification of bnodes
 
+
+    sparql.prototype.anonymize = function (obj) {
+        return (obj.toNT().substr(0,2) == "_:" && this._mentioned(obj))
+        ? "?" + obj.toNT().substr(2)
+        : obj.toNT();
+    }
+
+    sparql.prototype.anonymizeNT = function(stmt) {
+        return this.anonymize(stmt.subject) + " " +
+        this.anonymize(stmt.predicate) + " " +
+        this.anonymize(stmt.object) + " .";
+    }
+
+
+
+    // A list of all bnodes occuring in a statement
     sparql.prototype._statement_bnodes = function(st) {
         return [st.subject, st.predicate, st.object].filter(function(x){return x.isBlank});
     }
 
+    // A list of all bnodes occuring in a list of statements
     sparql.prototype._statement_array_bnodes = function(sts) {
         var bnodes = [];
         for (var i=0; i<sts.length;i++) bnodes = bnodes.concat(this._statement_bnodes(sts[i]));
@@ -6742,6 +5990,7 @@ $rdf.sparqlUpdate = function() {
         }
     }
 
+    // Returns a context to bind a given node, up to a given depth
     sparql.prototype._bnode_context2 = function(x, source, depth) {
         // Return a list of statements which indirectly identify a node
         //  Depth > 1 if try further indirection.
@@ -6775,17 +6024,38 @@ $rdf.sparqlUpdate = function() {
         return null; // Failure
     }
 
-
-    sparql.prototype._bnode_context = function(x, source) {
+    // Returns the smallest context to bind a given single bnode
+    sparql.prototype._bnode_context_1 = function(x, source) {
         // Return a list of statements which indirectly identify a node
         //   Breadth-first
         for (var depth = 0; depth < 3; depth++) { // Try simple first 
             var con = this._bnode_context2(x, source, depth);
-            if (con != null) return con;
+            if (con !== null) return con;
         }
         throw ('Unable to uniquely identify bnode: '+ x.toNT());
     }
+    
+    sparql.prototype._mentioned = function(x) {
+        return (this.store.statementsMatching(x).length !== 0) || // Don't pin fresh bnodes
+                (this.store.statementsMatching(undefined, x).length !== 0) ||
+                (this.store.statementsMatching(undefined, undefined, x).length !== 0);    
+    
+    }
 
+    sparql.prototype._bnode_context = function(bnodes, doc) {
+        var context = [];
+        if (bnodes.length) {
+            this._cache_ifps();
+            for (var i = 0; i < bnodes.length; i++) { // Does this occur in old graph?
+                var bnode = bnodes[i];
+                if (!this._mentioned(bnode)) continue;                   
+                context = context.concat(this._bnode_context_1(bnode, doc));
+            }
+        }
+        return context;
+    }
+    
+/*  Weird code does not make sense -- some code corruption along the line -- st undefined -- weird
     sparql.prototype._bnode_context = function(bnodes) {
         var context = [];
         if (bnodes.length) {
@@ -6797,22 +6067,24 @@ $rdf.sparqlUpdate = function() {
             } else {
                 this._cache_ifps();
                 for (x in bnodes) {
-                    context = context.concat(this._bnode_context(bnodes[x], st.why));
+                    context = context.concat(this._bnode_context_1(bnodes[x], st.why));
                 }
             }
         }
         return context;
     }
-
+*/
+    // Returns the best context for a single statement
     sparql.prototype._statement_context = function(st) {
         var bnodes = this._statement_bnodes(st);
-        return this._bnode_context(bnodes);
+        return this._bnode_context(bnodes, st.why);
     }
 
     sparql.prototype._context_where = function(context) {
+            var sparql = this;
             return (context == undefined || context.length == 0)
             ? ""
-            : "WHERE { " + context.map(anonymizeNT).join("\n") + " }\n";
+            : "WHERE { " + context.map(function(x){ return sparql.anonymizeNT(x)}).join("\n") + " }\n";
     }
 
     sparql.prototype._fire = function(uri, query, callback) {
@@ -6856,16 +6128,16 @@ $rdf.sparqlUpdate = function() {
 
         return {
             statement: statement?[statement.subject, statement.predicate, statement.object, statement.why]:undefined,
-            statementNT: statement?anonymizeNT(statement):undefined,
+            statementNT: statement ? this.anonymizeNT(statement):undefined,
             where: sparql._context_where(context),
 
             set_object: function(obj, callback) {
                 query = this.where;
                 query += "DELETE DATA { " + this.statementNT + " } ;\n";
                 query += "INSERT DATA { " +
-                    anonymize(this.statement[0]) + " " +
-                    anonymize(this.statement[1]) + " " +
-                    anonymize(obj) + " " + " . }\n";
+                    this.anonymize(this.statement[0]) + " " +
+                    this.anonymize(this.statement[1]) + " " +
+                    this.anonymize(obj) + " " + " . }\n";
      
                 sparql._fire(this.statement[3].uri, query, callback);
             }
@@ -6882,9 +6154,9 @@ $rdf.sparqlUpdate = function() {
             query += "INSERT DATA { " + stText + " }\n";
         } else {
             query += "INSERT DATA { " +
-                anonymize(st.subject) + " " +
-                anonymize(st.predicate) + " " +
-                anonymize(st.object) + " " + " . }\n";
+                this.anonymize(st.subject) + " " +
+                this.anonymize(st.predicate) + " " +
+                this.anonymize(st.object) + " " + " . }\n";
         }
         
         this._fire(st0.why.uri, query, callback);
@@ -6901,9 +6173,9 @@ $rdf.sparqlUpdate = function() {
             query += "DELETE DATA { " + stText + " }\n";
         } else {
             query += "DELETE DATA { " +
-                anonymize(st.subject) + " " +
-                anonymize(st.predicate) + " " +
-                anonymize(st.object) + " " + " . }\n";
+                this.anonymize(st.subject) + " " +
+                this.anonymize(st.predicate) + " " +
+                this.anonymize(st.object) + " " + " . }\n";
         }
         
         this._fire(st0.why.uri, query, callback);
@@ -6938,31 +6210,31 @@ $rdf.sparqlUpdate = function() {
             var bnodes = []
             if (ds.length) bnodes = this._statement_array_bnodes(ds);
             if (is.length) bnodes = bnodes.concat(this._statement_array_bnodes(is));
-            var context = this._bnode_context(bnodes);
+            var context = this._bnode_context(bnodes, doc);
             var whereClause = this._context_where(context);
             var query = ""
             if (whereClause.length) { // Is there a WHERE clause?
                 if (ds.length) {
                     query += "DELETE { ";
-                    for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
+                    for (var i=0; i<ds.length;i++) query+= this.anonymizeNT(ds[i])+"\n";
                     query += " }\n";
                 }
                 if (is.length) {
                     query += "INSERT { ";
-                    for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
+                    for (var i=0; i<is.length;i++) query+= this.anonymizeNT(is[i])+"\n";
                     query += " }\n";
                 }
                 query += whereClause;
             } else { // no where clause
                 if (ds.length) {
                     query += "DELETE DATA { ";
-                    for (var i=0; i<ds.length;i++) query+= anonymizeNT(ds[i])+"\n";
+                    for (var i=0; i<ds.length;i++) query+= this.anonymizeNT(ds[i])+"\n";
                     query += " } \n";
                 }
                 if (is.length) {
                     if (ds.length) query += " ; ";
                     query += "INSERT DATA { ";
-                    for (var i=0; i<is.length;i++) query+= anonymizeNT(is[i])+"\n";
+                    for (var i=0; i<is.length;i++) query+= this.anonymizeNT(is[i])+"\n";
                     query += " }\n";
                 }
             }
@@ -7660,7 +6932,8 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         for (var ns in this.prefixes) {
             if (!this.prefixes.hasOwnProperty(ns)) continue;
             if (!this.namespacesUsed[ns]) continue;
-            str += '@prefix ' + this.prefixes[ns] + ': <'+ns+'>.\n';
+            str += '@prefix ' + this.prefixes[ns] + ': <' + 
+                 $rdf.uri.refTo(this.base, ns) + '>.\n';
         }
         return str + '\n';
     }
@@ -7802,7 +7075,7 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
         }
     }
     if (this.flags.indexOf('r') < 0 && this.base)
-        uri = $rdf.Util.uri.refTo(this.base, uri);
+        uri = $rdf.uri.refTo(this.base, uri);
     else if (this.flags.indexOf('u') >= 0)
         uri = backslashUify(uri);
     else uri = hexify(uri);
@@ -8941,7 +8214,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         var kb = this.store;
         var requests = kb.each(undefined, tabulator.ns.link("requestedURI"), doc.uri);
         for (var r=0; r<requests.length; r++) {
-            request = requests[r];
+            var request = requests[r];
             if (request !== undefined) {
                 var response = kb.any(request, tabulator.ns.link("response"));
                 if (request !== undefined) {
@@ -9970,8 +9243,11 @@ The default panes take little precedence, except the internals pane
 is lower as normally it is just for diagnostics.
 Also lower could be optional tools for various classes.
 */
-/* First we load the utils so panes can add them (while developing) as well as use them */
-// ###### Expanding js/panes/paneUtils.js ##############
+/* First we load the common utilities so panes can add them (while developing) as well as use them */
+// Pattern of adding code where it used then moving it back out into a common code.
+
+// Form and general UI widgets 
+// ###### Expanding js/panes/common/widgets.js ##############
 /**
 * Few General purpose utility functions used in the panes
 * oshani@csail.mit.edu 
@@ -10006,7 +9282,7 @@ tabulator.panes.utils.extractLogURI = function(fullURI){
     return fullURI.substring(logPos+8, rulPos); 			
 }
 
-// @@@ This needs to be changed to local time
+// @@@ This needs to be changed to local timee
 tabulator.panes.utils.shortDate = function(str) {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
     if (!str) return '???';
@@ -10027,28 +9303,31 @@ tabulator.panes.utils.shortDate = function(str) {
     }
 }
 
-tabulator.panes.utils.newThing = function(kb, store) {
-    var now = new Date();
-    // http://www.w3schools.com/jsref/jsref_obj_date.asp
-    return kb.sym(store.uri + '#' + 'id'+(''+ now.getTime()));
+
+tabulator.panes.utils.formatDateTime = function(date, format) {
+    return format.split('{').map(function(s){
+        var k = s.split('}')[0];
+        var width = {'Milliseconds':3, 'FullYear':4};  
+        var d = {'Month': 1};                  
+        return s?  ( '000' + (date['get' + k]() + (d[k]|| 0))).slice(-(width[k]||2)) + s.split('}')[1] : '';
+    }).join('');
+};
+
+tabulator.panes.utils.timestamp = function() {
+    return tabulator.panes.utils.formatDateTime(new Date(), '{FullYear}-{Month}-{Date}T{Hours}:{Minutes}:{Seconds}.{Milliseconds}');
+}
+tabulator.panes.utils.shortTime = function() {
+    return tabulator.panes.utils.formatDateTime(new Date(), '{Hours}:{Minutes}:{Seconds}.{Milliseconds}');
 }
 
-	
-//These are horrible global vars. To minimize the chance of an unintended name collision
-//these are prefixed with 'ap_' (short for air pane) - Oshani
-var ap_air = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
-var ap_tms = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
-var ap_compliant = ap_air('compliant-with');
-var ap_nonCompliant = ap_air('non-compliant-with');
-var ap_antcExpr = ap_tms('antecedent-expr');
-var ap_just = ap_tms('justification');
-var ap_subExpr = ap_tms('sub-expr');
-var ap_description = ap_tms('description');
-var ap_ruleName = ap_tms('rule-name');
-var ap_prem = ap_tms('premise');
-var ap_instanceOf = ap_air('instanceOf');
-var justificationsArr = [];
 
+tabulator.panes.utils.newThing = function(store) {
+    var now = new Date();
+    // http://www.w3schools.com/jsref/jsref_obj_date.asp
+    return $rdf.sym(store.uri + '#' + 'id'+(''+ now.getTime()));
+}
+
+/////////////////////////////////////////////////////////////////////////
 
 
 /*                                  Form Field implementations
@@ -10143,13 +9422,14 @@ tabulator.panes.field[tabulator.ns.ui('Options').uri] = function(
     } else { 
         var value = kb.any(subject, dependingOn);
         if (value == undefined) { 
-            // complain?
+            box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
+                "Can't select subform as no value of: " + dependingOn));
         } else {
             values = {};
             values[value.uri] = true;
         }
     }
-
+    // @@ Add box.refresh() to sync fields with values
     for (var i=0; i<cases.length; i++) {
         var c = cases[i];
         var tests = kb.each(c, ui('for')); // There can be multiple 'for'
@@ -10177,6 +9457,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     // We don't indent multiple as it is a sort of a prefix o fthe next field and has contents of one.
     // box.setAttribute('style', 'padding-left: 2em; border: 0.05em solid green;');  // Indent a multiple
     var ui = tabulator.ns.ui;
+    var i;
     container.appendChild(box);
     var property = kb.any(form, ui('property'));
     if (!property) { 
@@ -10184,6 +9465,11 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
                 "No property to multiple: "+form)); // used for arcs in the data
         return box;
     }
+    var min = kb.any(form, ui('min')); // This is the minimum number -- default 0
+    min = min ? min.value : 0;
+    var max = kb.any(form, ui('max')); // This is the minimum number
+    max = max ? max.value : 99999999;
+
     var element = kb.any(form, ui('part')); // This is the form to use for each one
     if (!element) {
         box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,"No part to multiple: "+form));
@@ -10191,7 +9477,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     }
 
     var count = 0;
-    // box.appendChild(dom.createElement('h3')).textContents = "Fields:".
+    // box.appendChild(dom.createElement('h3')).textContent = "Fields:".
     var body = box.appendChild(dom.createElement('tr'));
     var tail = box.appendChild(dom.createElement('tr'));
     var img = tail.appendChild(dom.createElement('img'));
@@ -10201,7 +9487,7 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     var addItem = function(e, object) {
         tabulator.log.debug('Multiple add: '+object);
         var num = ++count;
-        if (!object) object = tabulator.panes.utils.newThing(kb, store);
+        if (!object) object = tabulator.panes.utils.newThing(store);
         var tr = box.insertBefore(dom.createElement('tr'), tail);
         var itemDone = function(ok, body) {
             if (ok) { // @@@ Check IT hasnt alreday been written in
@@ -10223,6 +9509,10 @@ tabulator.panes.field[tabulator.ns.ui('Multiple').uri] = function(
     }
         
     kb.each(subject, property).map(function(obj){addItem(null, obj)});
+
+    for (i = kb.each(subject, property).length; i < min; i++) {
+        addItem(); // Add blanks if less than minimum
+    }
 
     img.addEventListener('click', addItem, true);
     return box
@@ -10348,7 +9638,7 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
                     params.parse? params.parse(field.value) : field.value, store);// @@ Explicitly put the datatype in.
         tabulator.sparql.update(ds, is, function(uri, ok, body) {
             if (ok) {
-                field.disabled = true;
+                field.disabled = false;
                 field.setAttribute('style', 'color: black;');
             } else {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, body));
@@ -10663,6 +9953,7 @@ tabulator.panes.utils.errorMessageBlock = function(dom, msg, backgroundColor) {
     var div = dom.createElement('div');
     div.setAttribute('style', 'padding: 0.5em; border: 0.5px solid black; background-color: ' +
         (backgroundColor  ? backgroundColor :  '#fee') + '; color:black;');
+    div.textContent = msg;
     return div;
 }
 
@@ -10778,7 +10069,7 @@ tabulator.panes.utils.findClosest = function findClosest(kb, cla, prop) {
     return [];
 }
 
-// Which forms apply to a given subject?
+// Which forms apply to a given existing subject?
 
 tabulator.panes.utils.formsFor = function(subject) {
     var ns = tabulator.ns;
@@ -10793,6 +10084,7 @@ tabulator.panes.utils.formsFor = function(subject) {
         // Find the most specific
         tabulator.log.debug("formsFor: trying bottom type ="+b);
         forms = forms.concat(tabulator.panes.utils.findClosest(kb, b, ns.ui('creationForm')));
+        forms = forms.concat(tabulator.panes.utils.findClosest(kb, b, ns.ui('annotationForm')));
     }
     tabulator.log.debug("formsFor: subject="+subject+", forms=");
     return forms;
@@ -10876,7 +10168,7 @@ tabulator.panes.utils.promptForNew = function(dom, kb, subject, predicate, theCl
 
                         
     var formFunction = tabulator.panes.utils.fieldFunction(dom, form);
-    var object = tabulator.panes.utils.newThing(kb, store);
+    var object = tabulator.panes.utils.newThing(store);
     var gotButton = false;
     var itemDone = function(ok, body) {
         if (!ok) return callback(ok, body);
@@ -10951,12 +10243,13 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
     var submit = dom.createElement('input');
     submit.setAttribute('type', 'submit');
     submit.disabled = true; // until the filled has been modified
+    submit.setAttribute('style', 'visibility: hidden; float: right;'); // Keep UI clean
     submit.value = "Save "+tabulator.Util.label(predicate); //@@ I18n
-    submit.setAttribute('style', 'float: right;');
     group.appendChild(submit);
 
     var saveChange = function(e) {
         submit.disabled = true;
+        submit.setAttribute('style', 'visibility: hidden; float: right;'); // Keep UI clean
         field.disabled = true;
         field.setAttribute('style', style + 'color: gray;'); // pending 
         var ds = kb.statementsMatching(subject, predicate);
@@ -10965,6 +10258,7 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
             if (ok) {
                 field.setAttribute('style', style + 'color: black;');
                 field.disabled = false;
+                
             } else {
                 group.appendChild(tabulator.panes.utils.errorMessageBlock(dom, 
                 "Error (while saving change to "+store.uri+'): '+body));
@@ -10975,7 +10269,10 @@ tabulator.panes.utils.makeDescription = function(dom, kb, subject, predicate, st
 
     field.addEventListener('keyup', function(e) { // Green means has been changed, not saved yet
         field.setAttribute('style', style + 'color: green;');
-        if (submit) submit.disabled = false;
+        if (submit) {
+            submit.disabled = false;
+            submit.setAttribute('style', 'float: right;'); // Remove visibility: hidden
+        }
     }, true);
 
     field.addEventListener('change', saveChange, true);
@@ -11019,14 +10316,25 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 "Can't do selector with no options, subject= "+subject+" property = "+predicate+".");
     
     tabulator.log.debug('makeSelectForOptions: store='+store);
-    var actual = {};
-    if (predicate.sameTerm(tabulator.ns.rdf('type'))) actual = kb.findTypeURIs(subject);
-    else kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+    
+    var getActual = function() {
+        actual = {};
+        if (predicate.sameTerm(tabulator.ns.rdf('type'))) actual = kb.findTypeURIs(subject);
+        else kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+        return actual;
+    };
+    var actual = getActual();
+    
     var newObject = null;
     
     var onChange = function(e) {
         select.disabled = true; // until data written back - gives user feedback too
         var ds = [], is = [];
+        var removeValue = function(t) {
+            if (kb.holds(subject, predicate, t, store)) {
+                ds.push($rdf.st(subject, predicate, t, store));
+            }
+        }
         for (var i =0; i< select.options.length; i++) {
             var opt = select.options[i];
             if (opt.selected && opt.AJAR_mint) {
@@ -11040,7 +10348,7 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                     select.parentNode.appendChild(thisForm);
                     newObject = thisForm.AJAR_subject;
                 } else {
-                    newObject = tabulator.panes.utils.newThing(kb, store);
+                    newObject = tabulator.panes.utils.newThing(store);
                 }
                 is.push($rdf.st(subject, predicate, newObject, store));
                 if (options.mintStatementsFun) is = is.concat(options.mintStatementsFun(newObject));
@@ -11050,23 +10358,19 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 is.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
             }
             if (!opt.selected && opt.AJAR_uri in actual) {  // old class
-                ds.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
+                removeValue(kb.sym(opt.AJAR_uri));
+                //ds.push($rdf.st(subject, predicate, kb.sym(opt.AJAR_uri), store ));
             }
             if (opt.selected) select.currentURI =  opt.AJAR_uri;                      
         }
-        var removeType = function(t) {
-            if (kb.holds(subject, predicate, t, store)) {
-                ds.push($rdf.st(subject, predicate, t, store));
-            }
-        }
         var sel = select.subSelect; // All subclasses must also go
         while (sel && sel.currentURI) {
-            removeType(kb.sym(sel.currentURI));
+            removeValue(kb.sym(sel.currentURI));
             sel = sel.subSelect;
         }
         var sel = select.superSelect; // All superclasses are redundant
         while (sel && sel.currentURI) {
-            removeType(kb.sym(sel.currentURI));
+            removeValue(kb.sym(sel.currentURI));
             sel = sel.superSelect;
         }
         function doneNew(ok, body) {
@@ -11075,8 +10379,8 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
         tabulator.log.info('selectForOptions: stote = ' + store );
         tabulator.sparql.update(ds, is,
             function(uri, ok, body) {
-                actual = {}; // refresh
-                kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
+                actual = getActual(); // refresh
+                //kb.each(subject, predicate).map(function(x){actual[x.uri] = true});
                 if (ok) {
                     select.disabled = false; // data written back
                     if (newObject) {
@@ -11086,12 +10390,24 @@ tabulator.panes.utils.makeSelectForOptions = function(dom, kb, subject, predicat
                 }
                 if (callback) callback(ok, body);
             });
-    }
+    };
     
     var select = dom.createElement('select');
     select.setAttribute('style', 'margin: 0.6em 1.5em;')
     if (options.multiple) select.setAttribute('multiple', 'true');
     select.currentURI = null;
+
+    select.refresh = function() {
+        actual = getActual(); // refresh
+        for (var i=0; i < select.children.length; i++) {
+            var option = select.children[i];
+            if (option.AJAR_uri) {
+                option.selected = (option.AJAR_uri in actual);
+            }
+        }
+        select.disabled = false; // unlocked any conflict we had got into
+    }
+    
     for (var uri in uris) {
         var c = kb.sym(uri)
         var option = dom.createElement('option');
@@ -11495,7 +10811,9 @@ tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
         if (uri == me_uri) return null;
         var message;
         if (!uri) {
-            message = "(Log in by auth with no URI - ignored)";
+            // message = "(Log in by auth with no URI - ignored)";
+            return;
+            // This may be happen a http://localhost/ test enviroment
         } else {
             tabulator.preferences.set('me', uri);
             message = "(Logged in as " + uri + " by authentication.)";
@@ -11800,13 +11118,13 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             col1.setAttribute('style', 'vertical-align:middle;')
 
             // last line with "Make new workspace"
-            tr = dom.createElement('tr');
+            tr_last = dom.createElement('tr');
             col2 = dom.createElement('td')
             col2.setAttribute('style', cellStyle);
             col2.textContent = "+ Make a new workspace";
             addMyListener(col2, "Set up a new workspace", '');
-            tr.appendChild(col2);
-            table.appendChild(tr);
+            tr_last.appendChild(col2);
+            table.appendChild(tr_last);
 
         };
     };
@@ -11884,224 +11202,11 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
 
 
 
-// ###### Finished expanding js/panes/paneUtils.js ##############
-
-/*  Note that hte earliest panes have priority. So the most specific ones are first.
-**
-*/
-// Developer designed:
-// ###### Expanding js/panes/issue/pane.js ##############
-/*   Issue Tracker Pane
-**
-**  This outline pane allows a user to interact with an issue,
-to change its state according to an ontology, comment on it, etc.
-**
-**
-** I am using in places single quotes strings like 'this'
-** where internationalization ("i18n") is not a problem, and double quoted
-** like "this" where the string is seen by the user and so I18n is an issue.
-*/
-
-
-
-
-
-
-//////////////////////////////////////////////////////  SUBCRIPTIONS
-
-$rdf.subscription =  function(options, doc, onChange) {
-
-
-    //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
-    var linkRels = function(doc) {
-        var links = {}; // map relationship to uri
-        var linkHeaders = tabulator.sf.getHeader(doc, 'link');
-        if (!linkHeaders) return null;
-        linkHeaders.map(function(headerValue){
-            var arg = headerValue.trim().split(';');
-            var uri = arg[0];
-            arg.slice(1).map(function(a){
-                var key = a.split('=')[0].trim();
-                var val = a.split('=')[1].trim();
-                if (key ==='rel') {
-                    links[val] = uri.trim();
-                }
-            });        
-        });
-        return links;
-    };
-
-
-    var getChangesURI = function(doc, rel) {
-        var links = linkRels(doc);
-        if (!links[rel]) {
-            console.log("No link header rel=" + rel + " on " + doc.uri)
-            return null;
-        }
-        var changesURI = $rdf.uri.join(links[rel], doc.uri);
-        console.log("Found rel=" + rel + " URI: " + changesURI);
-        return changesURI;
-    };
-
-
-
-
-///////////////  Subscribe to changes by SSE
-
-
-    var getChanges_SSE = function(doc, onChange) {
-        var streamURI = getChangesURI(doc, 'events');
-        if (!streamURI) return;
-        var source = new EventSource(streamURI); // @@@  just path??
-        console.log("Server Side Source");   
-
-        source.addEventListener('message', function(e) {
-            console.log("Server Side Event: " + e);   
-            alert("SSE: " + e)  
-            // $('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
-        }, false);
-    };
-
- 
-    
-
-    //////////////// Subscribe to changes websocket
-
-    // This implementation uses web sockets using update-via
-    
-    var getChanges_WS2 = function(doc, onChange) {
-        var router = new $rdf.UpdatesVia(tabulator.sf); // Pass fetcher do it can subscribe to headers
-        var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
-        router.register(wsuri, doc.uri);
-    };
-    
-    var getChanges_WS = function(doc, onChange) {
-        var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
-        var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
-        var socket;
-        try {
-            socket = new WebSocket(changesURI);
-        } catch(e) {
-            socket = new MozWebSocket(changesURI);
-        };
-        
-        socket.onopen = function(event){
-            console.log("socket opened");
-        };
-        
-        socket.onmessage = function (event) {
-            console.log("socket received: " +event.data);
-            var patchText = event.data;
-            console.log("Success: patch received:" + patchText);
-            
-            // @@ check integrity of entire patch
-            var patchKB = $rdf.graph();
-            var sts;
-            try {
-                $rdf.parse(patchText, patchKB, doc.uri, 'text/n3');
-            } catch(e) {
-                console.log("Parse error in patch: "+e);
-            };
-            clauses = {};
-            ['where', 'insert', 'delete'].map(function(pred){
-                sts = patchKB.statementsMatching(undefined, SQNS(pred), undefined);
-                if (sts) clauses[pred] = sts[0].object;
-            });
-            console.log("Performing patch!");
-            kb.applyPatch(clauses, doc, function(err){
-                if (err) {
-                    console.log("Incoming patch failed!!!\n" + err)
-                    alert("Incoming patch failed!!!\n" + err)
-                    socket.close();
-                } else {
-                    console.log("Incoming patch worked!!!!!!\n" + err)
-                    onChange(); // callback user
-                };
-            });
-        };
-
-    }; // end getChanges
-    
-
-    ////////////////////////// Subscribe to changes using Long Poll
-
-    // This implementation uses link headers and a diff returned by plain HTTP
-    
-    var getChanges_LongPoll = function(doc, onChange) {
-        var changesURI = getChangesURI(doc, 'changes');
-        if (!changesURI) return "No advertized long poll URI";
-        var xhr = $rdf.Util.XMLHTTPFactory();
-        xhr.alreadyProcessed = 0;
-
-        xhr.onreadystatechange = function(){
-            switch (xhr.readyState) {
-            case 0:
-            case 1:
-                return;
-            case 3:
-                console.log("Mid delta stream (" + xhr.responseText.length + ") "+ changesURI);
-                handlePartial();
-                break;
-            case 4:
-                handlePartial();
-                console.log("End of delta stream " + changesURI);
-                break;
-             }   
-        };
-
-        try {
-            xhr.open('GET', changesURI);
-        } catch (er) {
-            console.log("XHR open for GET changes failed <"+changesURI+">:\n\t" + er);
-        }
-        try {
-            xhr.send();
-        } catch (er) {
-            console.log("XHR send failed <"+changesURI+">:\n\t" + er);
-        }
-
-        var handlePartial = function() {
-            // @@ check content type is text/n3
-
-            if (xhr.status >= 400) {
-                console.log("HTTP (" + xhr.readyState + ") error " + xhr.status + "on change stream:" + xhr.statusText);
-                console.log("     error body: " + xhr.responseText);
-                xhr.abort();
-                return;
-            } 
-            if (xhr.responseText.length > xhr.alreadyProcessed) {
-                var patchText = xhr.responseText.slice(xhr.alreadyProcessed);
-                xhr.alreadyProcessed = xhr.responseText.length;
-                
-                xhr.headers = $rdf.Util.getHTTPHeaders(xhr);
-                try {
-                    onChange(patchText);
-                } catch (e) {
-                    console.log("Exception in patch update handler: " + e)
-                    // @@ Where to report error e?
-                }
-                getChanges_LongPoll(doc, onChange); // Queue another one
-                
-            }        
-        };
-        return null; // No error
-
-    }; // end getChanges_LongPoll
-    
-    if (options.longPoll ) {
-        getChanges_LongPoll(doc, onChange);
-    }
-    if (options.SSE) {
-        getChanges_SSE(doc, onChange);
-    }
-    if (options.websockets) {
-        getChanges_WS(doc, onChange);
-    }
-
-}; // subscription
-
-///////////////////////////////// End of subscription stufff 
-
+// ###### Finished expanding js/panes/common/widgets.js ##############
+// A discussion area for discussing anything
+// ###### Expanding js/panes/common/discussion.js ##############
+//  Common code for a discussion are a of messages about something
+//
 
 tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
     var kb = tabulator.kb;
@@ -12271,13 +11376,20 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         tr.AJAR_date = dateString;
         tr.AJAR_subject = message;
 
+        var done = false;
         for (var ele = messageTable.firstChild;;ele = ele.nextSibling) {
-            if (!ele)  {messageTable.appendChild(tr); break;};
+            if (!ele)  { // empty
+                break;
+            };
             if (((dateString > ele.AJAR_date) && newestFirst) ||
                         ((dateString < ele.AJAR_date) && !newestFirst)) {
                 messageTable.insertBefore(tr, ele);
+                done = true;
                 break;
             }
+        }
+        if (!done) {
+            messageTable.appendChild(tr);
         }
         
         var  td1 = dom.createElement('td');
@@ -12386,3553 +11498,11 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 
 
 
-
-
-    
-// These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_bug = iconPrefix + 'js/panes/issue/tbl-bug-22.png';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Track issue'
-
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_bug,
-    
-    name: 'issue',
-    
-    // Does the subject deserve an issue pane?
-    label: function(subject) {
-        var kb = tabulator.kb;
-        var t = kb.findTypeURIs(subject);
-        if (t['http://www.w3.org/2005/01/wf/flow#Task']) return "issue";
-        if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) return "tracker";
-        // Later: Person. For a list of things assigned to them,
-        // open bugs on projects they are developer on, etc
-        return null; // No under other circumstances (while testing at least!)
-    },
-
-    render: function(subject, dom) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var div = dom.createElement("div")
-        div.setAttribute('class', 'issuePane');
-        div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
-
-        var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
-                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
-            return false
-        }
-        
-        var setModifiedDate = function(subj, kb, doc) {
-            var deletions = kb.statementsMatching(subject, DCT('modified'));
-            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
-            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
-            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
-            updater.update(deletions, insertions, function(uri, ok, body){});
-        }
-
-        var say = function say(message, style){
-            var pre = dom.createElement("pre");
-            pre.setAttribute('style', style ? style :'color: grey');
-            div.appendChild(pre);
-            pre.appendChild(dom.createTextNode(message));
-            return pre
-        } 
-
-        var complainIfBad = function(ok,body){
-            if (ok) {
-            }
-            else console.log("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
-        }
-
-
-        var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, dom);
-            parent.replaceChild(div2, div);
-        };
-
-        var timestring = function() {
-            var now = new Date();
-            return ''+ now.getTime();
-            // http://www.w3schools.com/jsref/jsref_obj_date.asp
-        }
-
-
-        //  Form to collect data about a New Issue
-        //
-        var newIssueForm = function(dom, kb, tracker, superIssue) {
-            var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
-            var stateStore = kb.any(tracker, WF('stateStore'));
-
-            var sendNewIssue = function() {
-                titlefield.setAttribute('class','pendingedit');
-                titlefield.disabled = true;
-                sts = [];
-                
-                var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestring());
-                sts.push(new $rdf.Statement(issue, WF('tracker'), tracker, stateStore));
-                var title = kb.literal(titlefield.value);
-                sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
-                
-                // sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
-                sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
-
-                var initialStates = kb.each(tracker, WF('initialState'));
-                if (initialStates.length == 0) console.log('This tracker has no initialState');
-                for (var i=0; i<initialStates.length; i++) {
-                    sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialStates[i], stateStore))
-                }
-                if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
-                var sendComplete = function(uri, success, body) {
-                    if (!success) {
-                         console.log("Error: can\'t save new issue:" + body);
-                        //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
-                    } else {
-                        // dump('Tabulator issue pane: saved new issue\n')
-                        form.parentNode.removeChild(form);
-                        rerender(div);
-                        tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
-                        // tabulator.outline.GoToURI(issue.uri); // ?? or open in place?
-                    }
-                }
-                updater.update([], sts, sendComplete);
-            }
-            //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
-            //form.setAttribute('onsubmit', "function xx(){return false;}");
-            
-            
-            
-            tabulator.sf.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
-            tabulator.sf.removeCallback('fail','expand');
-
-            
-            var states = kb.any(tracker, WF('issueClass'));
-            classLabel = tabulator.Util.label(states);
-            form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
-                    classLabel+"</h2><p>Title of new "+classLabel+":</p>";
-            var titlefield = dom.createElement('input')
-            titlefield.setAttribute('type','text');
-            titlefield.setAttribute('size','100');
-            titlefield.setAttribute('maxLength','2048');// No arbitrary limits
-            titlefield.select() // focus next user input
-            titlefield.addEventListener('keyup', function(e) {
-                if(e.keyCode == 13) {
-                    sendNewIssue();
-                }
-            }, false);
-            form.appendChild(titlefield);
-            return form;
-        };
-        
-        
-
-                                                  
-        /////////////////////// Reproduction: Spawn a new instance of this app
-        
-        var newTrackerButton = function(thisTracker) {
-            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
-        
-                var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
-
-                // console.log("Ready to make new instance at "+ws);
-                var sp = tabulator.ns.space;
-                var kb = tabulator.kb;
-                
-                var base = kb.any(ws, sp('uriPrefix')).value;
-                if (base.slice(-1) !== '/') {
-                    $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + base );
-                    base = base + '/';
-                }
-                base += appPathSegment + '/' + timestring() + '/'; // unique id 
-
-                var documentOf = function(x) {
-                    return kb.sym($rdf.uri.docpart(x.uri));
-                }
-
-                var stateStore = kb.any(tracker, WF('stateStore'));
-                var newStore = kb.sym(base + 'store.ttl');
-
-                var here = documentOf(thisTracker);
-
-                var oldBase = here.uri.slice(0, here.uri.lastIndexOf('/')+1);
-
-                var morph = function(x) { // Move any URIs in this space into that space
-                    if (x.elements !== undefined) return x.elements.map(morph); // Morph within lists
-                    if (x.uri === undefined) return x;
-                    var u = x.uri;
-                    if (u === stateStore.uri) return newStore; // special case
-                    if (u.slice(0, oldBase.length) === oldBase) {
-                        u = base + u.slice(oldBase.length);
-                        $rdf.log.debug(" Map "+ x.uri + " to " + u);
-                    }
-                    return kb.sym(u);
-                }
-                var there = morph(here);
-                var newTracker = morph(thisTracker); 
-                
-                var myConfig = kb.statementsMatching(undefined, undefined, undefined, here);
-                for (var i=0; i < myConfig.length; i++) {
-                    st = myConfig[i];
-                    kb.add(morph(st.subject), morph(st.predicate), morph(st.object), there);
-                }
-                
-                // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
-                //
-                kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, stateStore);
-                
-                kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, there);
-                
-                // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
-
-
-                updater.put(
-                    there,
-                    kb.statementsMatching(undefined, undefined, undefined, there),
-                    'text/turtle',
-                    function(uri2, ok, message) {
-                        if (ok) {
-                            updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
-                                if (ok) {
-                                    console.info("Ok The tracker created OK at: " + newTracker.uri +
-                                    "\nMake a note of it, bookmark it. ");
-                                } else {
-                                    console.log("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
-                                };
-                            });
-                        } else {
-                            console.log("FAILED to save new tracker at: "+ there.uri +' : ' + message);
-                        };
-                    }
-                );
-                
-                // Created new data files.
-                // @@ Now create initial files - html skin, (Copy of mashlib, css?)
-                // @@ Now create form to edit configuation parameters
-                // @@ Optionally link new instance to list of instances -- both ways? and to child/parent?
-                // @@ Set up access control for new config and store. 
-                
-            }); // callback to newAppInstance
-
-            
-        }; // newTrackerButton
-
- 
- 
-///////////////////////////////////////////////////////////////////////////////
-        
-        
-        
-        var updater = new tabulator.rdf.sparqlUpdate(kb);
-
- 
-        var plist = kb.statementsMatching(subject)
-        var qlist = kb.statementsMatching(undefined, undefined, subject)
-
-        var t = kb.findTypeURIs(subject);
-
-        var me_uri = tabulator.preferences.get('me');
-        var me = me_uri? kb.sym(me_uri) : null;
-
-
-        // Reload resorce then
-        
-        var reloadStore = function(store, callBack) {
-            tabulator.sf.unload(store);
-            tabulator.sf.nowOrWhenFetched(store.uri, undefined, function(ok, body){
-                if (!ok) {
-                    console.log("Cant refresh data:" + body);
-                } else {
-                    callBack();
-                };
-            });
-        };
-
-
-
-        // Refresh the DOM tree
-      
-        refreshTree = function(root) {
-            if (root.refresh) {
-                root.refresh();
-                return;
-            }
-            for (var i=0; i < root.children.length; i++) {
-                refreshTree(root.children[i]);
-            }
-        }
-
-
-
-        //              Render a single issue
-        
-        if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
-
-            var tracker = kb.any(subject, WF('tracker'));
-            if (!tracker) throw 'This issue '+subject+'has no tracker';
-            
-            var trackerURI = tracker.uri.split('#')[0];
-            // Much data is in the tracker instance, so wait for the data from it
-            tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
-                if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
-                var ns = tabulator.ns
-                var predicateURIsDone = {};
-                var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
-                donePredicate(ns.rdf('type'));
-                donePredicate(ns.dc('title'));
-
-
-
-
-                var setPaneStyle = function() {
-                    var types = kb.findTypeURIs(subject);
-                    var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
-                    for (var uri in types) {
-                        var backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
-                        if (backgroundColor) { mystyle += "background-color: "+backgroundColor.value+"; "; break;}
-                    }
-                    div.setAttribute('style', mystyle);
-                }
-                setPaneStyle();
-                
-                var stateStore = kb.any(tracker, WF('stateStore'));
-                var store = kb.sym(subject.uri.split('#')[0]);
-/*                if (stateStore != undefined && store.uri != stateStore.uri) {
-                    console.log('(This bug is not stored in the default state store)')
-                }
-*/
-
-                // Unfinished -- need this for speed to save the reloadStore below
-                var incommingPatch = function(text) {
-                    var contentType = xhr.headers['content-type'].trim();
-                    var patchKB = $rdf.graph();
-                    $rdf.parse(patchText, patchKB, doc.uri, contentType);
-                    // @@ TBC: check this patch isn't one of ours
-                    // @@ TBC: kb.applyPatch();  @@@@@ code me
-                    refreshTree(div);
-                    say("Tree Refreshed!!!");
-                }
-
-
-                var subopts = { 'longPoll': true };
-                $rdf.subscription(subopts, stateStore, function() {
-                    reloadStore(stateStore, function(deltaText) {
-                        refreshTree(div);
-                        say("Tree Refreshed!!!");
-                    });
-                });
-
-
-
-                tabulator.panes.utils.checkUserSetMe(dom, stateStore);
-
-                
-                var states = kb.any(tracker, WF('issueClass'));
-                if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
-                        if (ok) {
-                            setModifiedDate(store, kb, store);
-                            rerender(div);
-                        }
-                        else console.log("Failed to change state:\n"+body);
-                    })
-                div.appendChild(select);
-
-
-                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-                for (var i=0; i<cats.length; i++) {
-                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
-                            kb, subject, cats[i], store, function(ok,body){
-                        if (ok) {
-                            setModifiedDate(store, kb, store);
-                            rerender(div);
-                        }
-                        else console.log("Failed to change category:\n"+body);
-                    }));
-                }
-                
-                var a = dom.createElement('a');
-                a.setAttribute('href',tracker.uri);
-                a.setAttribute('style', 'float:right');
-                div.appendChild(a).textContent = tabulator.Util.label(tracker);
-                a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                donePredicate(ns.wf('tracker'));
-
-
-                div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
-                    store, function(ok,body){
-                        if (ok) setModifiedDate(store, kb, store);
-                        else console.log("Failed to description:\n"+body);
-                    }));
-                donePredicate(WF('description'));
-
-
-
-                // Assigned to whom?
-                
-                var assignees = kb.each(subject, ns.wf('assignee'));
-                if (assignees.length > 1) throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
-                var assignee = assignees.length ? assignees[0] : null;
-                // Who could be assigned to this?
-                // Anyone assigned to any issue we know about  @@ should be just for this tracker
-                var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
-                var devs = sts.map(function(st){return st.object});
-                // Anyone who is a developer of any project which uses this tracker
-                var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
-                if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
-                if (devs.length) {
-                    devs.map(function(person){tabulator.sf.lookUpThing(person)}); // best effort async for names etc
-                    var opts = { 'mint': "** Add new person **",
-                                'nullLabel': "(unassigned)",
-                                'mintStatementsFun': function(newDev) {
-                                    var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
-                                    if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
-                                    return sts;
-                                }};
-                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
-                        subject, ns.wf('assignee'), devs, opts, store,
-                        function(ok,body){
-                            if (ok) setModifiedDate(store, kb, store);
-                            else console.log("Failed to description:\n"+body);
-                        }));
-                }
-                donePredicate(ns.wf('assignee'));
-
-
-                var allowSubIssues = kb.any(tracker, ns.ui('allowSubIssues'));
-                if (allowSubIssues && allowSubIssues.value) {
-                    // Sub issues
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(WF('dependent'))) return true;
-                            return false
-                        });
-
-                    // Super issues
-                    tabulator.outline.appendPropertyTRs(div, qlist, true,
-                        function(pred, inverse) {
-                            if (inverse && pred.sameTerm(WF('dependent'))) return true;
-                            return false
-                        });
-                    donePredicate(WF('dependent'));
-                }
-
-                div.appendChild(dom.createElement('br'));
-
-                 var allowSubIssues = kb.any(tracker, ns.ui('allowSubIssues'));
-                if (allowSubIssues && allowSubIssues.value) {
-                    var b = dom.createElement("button");
-                    b.setAttribute("type", "button");
-                    div.appendChild(b)
-                    classLabel = tabulator.Util.label(states);
-                    b.innerHTML = "New sub "+classLabel;
-                    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
-                    b.addEventListener('click', function(e) {
-                        div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
-                };
-
-                var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
-                if (extrasForm) {
-                    tabulator.panes.utils.appendForm(dom, div, {},
-                                subject, extrasForm, stateStore, complainIfBad);
-                    var fields = kb.each(extrasForm, ns.ui('part'));
-                    fields.map(function(field) {
-                        var p = kb.any(field, ns.ui('property'));
-                        if (p) {
-                            donePredicate(p); // Check that one off
-                        }
-                    });
-                    
-                };
-                
-                //   Comment/discussion area
-                
-                var messageStore = kb.any(tracker, ns.wf('messageStore'));
-                if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
-                div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
-                donePredicate(ns.wf('message'));
-                
-
-/*
-                // Add in simple comments about the bug - if not already in extras form.
-                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
-                            return false
-                        });
-                    donePredicate(ns.rdfs('comment'));
-                };
-*/
-                div.appendChild(dom.createElement('tr'))
-                            .setAttribute('style','height: 1em'); // spacer
-                
-                // Remaining properties
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                tabulator.outline.appendPropertyTRs(div, qlist, true,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                    
-                var refreshButton = dom.createElement('button');
-                refreshButton.textContent = "refresh";
-                refreshButton.addEventListener('click', function(e) {
-                    tabulator.sf.unload(messageStore);
-                    tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
-                        if (!ok) {
-                            console.log("Cant refresh messages" + body);
-                        } else {
-                            refreshTree(div);
-                            // syncMessages(subject, messageTable);
-                        };
-                    });
-                }, false);
-                div.appendChild(refreshButton);
-
-
-
-                    
-            });  // End nowOrWhenFetched tracker
-
-    ///////////////////////////////////////////////////////////
-
-        //          Render a Tracker instance
-        
-        } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
-            var tracker = subject;
-            
-            var states = kb.any(subject, WF('issueClass'));
-            if (!states) throw 'This tracker has no issueClass';
-            var stateStore = kb.any(subject, WF('stateStore'));
-            if (!stateStore) throw 'This tracker has no stateStore';
-            
-            tabulator.panes.utils.checkUserSetMe(dom, stateStore);
-            
-            var cats = kb.each(subject, WF('issueCategory')); // zero or more
-            
-            var h = dom.createElement('h2');
-            h.setAttribute('style', 'font-size: 150%');
-            div.appendChild(h);
-            classLabel = tabulator.Util.label(states);
-            h.appendChild(dom.createTextNode(classLabel+" list")); // Use class label @@I18n
-
-            // New Issue button
-            var b = dom.createElement("button");
-            var container = dom.createElement("div");
-            b.setAttribute("type", "button");
-            if (!me) b.setAttribute('disabled', 'true')
-            container.appendChild(b);
-            div.appendChild(container);
-            b.innerHTML = "New "+classLabel;
-            b.addEventListener('click', function(e) {
-                    b.setAttribute('disabled', 'true');
-                    container.appendChild(newIssueForm(dom, kb, subject));
-                }, false);
-            
-            // Table of issues - when we have the main issue list
-            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
-                if (!ok) return console.log("Cannot load state store "+body);
-                var query = new $rdf.Query(tabulator.Util.label(subject));
-                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-                var vars =  ['issue', 'state', 'created'];
-                for (var i=0; i<cats.length; i++) { vars.push('_cat_'+i) };
-                var v = {}; // The RDF variable objects for each variable name
-                vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
-                query.pat.add(v['issue'], WF('tracker'), tracker);
-                //query.pat.add(v['issue'], ns.dc('title'), v['title']);
-                query.pat.add(v['issue'], ns.dct('created'), v['created']);
-                query.pat.add(v['issue'], ns.rdf('type'), v['state']);
-                query.pat.add(v['state'], ns.rdfs('subClassOf'), states);
-                for (var i=0; i<cats.length; i++) {
-                    query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
-                    query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
-                }
-                
-                query.pat.optional = [];
-                
-                var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
-                // console.log('Property list: '+propertyList); //
-                if (propertyList) {
-                    properties = propertyList.elements;
-                    for (var p=0; p < properties.length; p++) {
-                        var prop = properties[p];
-                        var vname = '_prop_'+p;
-                        if (prop.uri.indexOf('#') >= 0) {
-                            vname = prop.uri.split('#')[1];
-                        }
-                        var oneOpt = new $rdf.IndexedFormula();
-                        query.pat.optional.push(oneOpt);
-                        query.vars.push(v[vname]=$rdf.variable(vname));
-                        oneOpt.add(v['issue'], prop, v[vname]);
-                    }
-                }
-                
-            
-                // console.log('Query pattern is:\n'+query.pat);
-                // console.log('Query pattern optional is:\n'+opts); 
-            
-                var selectedStates = {};
-                var possible = kb.each(undefined, ns.rdfs('subClassOf'), states);
-                possible.map(function(s){
-                    if (kb.holds(s, ns.rdfs('subClassOf'), WF('Open')) || s.sameTerm(WF('Open'))) {
-                        selectedStates[s.uri] = true;
-                        // console.log('on '+s.uri); // @@
-                    };
-                });
-                
-                        
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
-                    'hints': {
-                        '?created': { 'cellFormat': 'shortDate'},
-                        '?state': { 'initialSelection': selectedStates }}} );
-                div.appendChild(tableDiv);
-
-                if (tableDiv.refresh) { // Refresh function
-                    var refreshButton = dom.createElement('button');
-                    refreshButton.textContent = "refresh";
-                    refreshButton.addEventListener('click', function(e) {
-                        tabulator.sf.unload(stateStore);
-                        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
-                            if (!ok) {
-                                console.log("Cant refresh data:" + body);
-                            } else {
-                                tableDiv.refresh();
-                            };
-                        });
-                    }, false);
-                    div.appendChild(refreshButton);
-                } else {
-                    console.log('No refresh function?!');
-                }
-                            
-                
-                
-                
-            });
-            div.appendChild(dom.createElement('hr'));
-            div.appendChild(newTrackerButton(subject));
-            // end of Tracker instance
-
-
-        } else { 
-            console.log("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
-        }         
-        if (!tabulator.preferences.get('me')) {
-            console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
-        } else {
-            // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
-        };
-        
-        
-        var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
-            // sayt.parent.removeChild(sayt);
-            if (webid) {
-                tabulator.preferences.set('me', webid);
-                console.log("(Logged in as "+ webid+")")
-                me = kb.sym(webid);
-            } else {
-                tabulator.preferences.set('me', '');
-                console.log("(Logged out)")
-                me = null;
-            }
-        });
-        
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
-
-        div.appendChild(loginOutButton);
-        
-        
-        return div;
-
-    }
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/issue/pane.js ##############
-// ###### Expanding js/panes/argument/argumentPane.js ##############
-/*      View argument Pane
-**
-**  This pane shows a position and optionally the positions which
-** support or oppose it.
-*/
-
-
-tabulator.Icon.src.icon_argument = tabulator.iconPrefix + 'js/panes/argument/icon_argument.png'
-tabulator.panes.argumentPane = {
-    
-    icon:  tabulator.Icon.src.icon_argument, // @@
-    
-    name: 'argument',
-    
-    label: function(subject) {
-
-        var kb = tabulator.kb;
-        var t = kb.findTypeURIs(subject);
-   
-        if (t[tabulator.ns.arg('Position').uri]) return "Argument";
-        
-        return null;
-    },
-
-
-    // View the data in a file in user-friendly way
-    render: function(subject, myDocument) {
-
-        var $r = tabulator.rdf;
-        var kb = tabulator.kb;
-        var arg = tabulator.ns.arg;
-        
-        subject = kb.canon(subject);
-        var types = kb.findTypeURIs(subject);
-
-        var div = myDocument.createElement('div')
-        div.setAttribute('class', 'argumentPane')
-
-        // var title = kb.any(subject, tabulator.ns.dc('title'));
-        
-        var comment = kb.any(subject, tabulator.ns.rdfs('comment'));
-        if (comment) {
-            var para = myDocument.createElement('p');
-            para.setAttribute('style', 'margin-left: 2em; font-style: italic;');
-            div.appendChild(para);
-            para.textContent = comment.value;
-        };
-        var plist = kb.statementsMatching(subject, arg('support'));
-        tabulator.outline.appendPropertyTRs(div, plist, false);
-
-        var plist = kb.statementsMatching(subject, arg('opposition'));
-        tabulator.outline.appendPropertyTRs(div, plist, false);
-
-        return div
-    }
-};
-
-tabulator.panes.register(tabulator.panes.argumentPane, false);
-
-
-
-
-//ends
-
-
-// ###### Finished expanding js/panes/argument/argumentPane.js ##############
-// ###### Expanding js/panes/transaction/pane.js ##############
-/*   Financial Transaction Pane
-**
-**  This outline pane allows a user to interact with a transaction
-**  downloaded from a bank statement, annotting it with classes and comments,
-** trips, etc
-*/
-
-    
-tabulator.Icon.src.icon_money = iconPrefix +
-    'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Transaction'
-
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_money,
-    
-    name: 'transaction',
-    
-    // Does the subject deserve this pane?
-    label: function(subject) {
-        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        var kb = tabulator.kb;
-        var t = kb.findTypeURIs(subject);
-        if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
-        if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
-
-        if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
-        
-        return null; // No under other circumstances (while testing at least!)
-    },
-
-    render: function(subject, myDocument) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
-        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
-        var div = myDocument.createElement('div')
-        div.setAttribute('class', 'transactionPane');
-        div.innherHTML='<h1>Transaction</h1><table><tbody><tr>\
-        <td>%s</tr></tbody></table>\
-        <p>This is a pane under development.</p>';
-
-        var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
-                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
-            return false
-        }
-        
-        var setModifiedDate = function(subj, kb, doc) {
-            var deletions = kb.statementsMatching(subject, DCT('modified'));
-            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
-            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
-            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
-            sparqlService.update(deletions, insertions, function(uri, ok, body){});
-        }
-
-        var complain = function complain(message, style){
-            if (style == undefined) style = 'color: grey';
-            var pre = myDocument.createElement("pre");
-            pre.setAttribute('style', style);
-            div.appendChild(pre);
-            pre.appendChild(myDocument.createTextNode(message));
-        } 
-        var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, myDocument);
-            parent.replaceChild(div2, div);
-        };
-
-
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
-        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
-
- 
-        var plist = kb.statementsMatching(subject)
-        var qlist = kb.statementsMatching(undefined, undefined, subject)
-
-        var t = kb.findTypeURIs(subject);
-
-        var me_uri = tabulator.preferences.get('me');
-        var me = me_uri? kb.sym(me_uri) : null;
-
-
-        //              Render a single transaction
-        
-        // This works only if enough metadata about the properties can drive the RDFS
-        // (or actual type statements whichtypically are NOT there on)
-        if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
-
-            var trip = kb.any(subject, WF('trip'));
-            var ns = tabulator.ns
-            var predicateURIsDone = {};
-            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
-            donePredicate(ns.rdf('type'));
-            
-            var setPaneStyle = function() {
-                var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
-                if (account) {
-                    var backgroundColor = kb.any(account,UI('backgroundColor'));
-                    if (backgroundColor) mystyle += "background-color: "
-                                +backgroundColor.value+"; ";
-                }
-                div.setAttribute('style', mystyle);
-            }
-            setPaneStyle();
-            
-            var account = kb.any(subject, Q('toAccount'));
-	    var store = null;
-	    
-            if (account == undefined) {
-                complain('(Error: There is no bank account known for this transaction <'
-                        +subject.uri+'>,\n -- every transaction needs one.)')
-            };
-	    
-            var statement = kb.any(subject, Q('accordingTo'));
-            if (statement == undefined) {
-                complain('(Error: There is no back link to the original data source foir this transaction <'
-                        +subject.uri+'>,\nso I can\'t tell how to annotate it.)')
-            } else {
-		store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
-		if (store == undefined) {
-		    complain('(There is no annotation document for this statement\n<'
-			    +statement.uri+'>,\nso you cannot classify this transaction.)')
-		};
-            };
-            var nav = myDocument.createElement('div');
-            nav.setAttribute('style', 'float:right');
-            div.appendChild(nav);
-
-            var navLink = function(pred, label) {
-                donePredicate(pred);
-                var obj =  kb.any(subject, pred);
-                if (!obj) return;
-                var a = myDocument.createElement('a');
-                a.setAttribute('href',obj.uri);
-                a.setAttribute('style', 'float:right');
-                nav.appendChild(a).textContent = label ? label : tabulator.Util.label(obj);
-                nav.appendChild(myDocument.createElement('br'));
-            }
-
-            navLink(Q('toAccount'));
-            navLink(Q('accordingTo'), "Statement");
-            navLink(TRIP('trip'));
-            
-            // Basic data:
-            var table = myDocument.createElement('table');
-            div.appendChild(table);
-            var preds = ['date', 'payee', 'amount', 'in_USD', 'currency'].map(Q);
-            var inner = preds.map(function(p){
-                donePredicate(p);
-                var value = kb.any(subject, p);
-                var s = value ? tabulator.Util.labelForXML(value) : '';
-                return '<tr><td style="text-align: right; padding-right: 0.6em">'+tabulator.Util.labelForXML(p)+
-                    '</td><td style="font-weight: bold;">'+s+'</td></tr>';
-            }).join('\n');
-            table.innerHTML =  inner;
-
-            var complainIfBad = function(ok,body){
-                if (ok) {
-                    setModifiedDate(store, kb, store);
-                    rerender(div);
-                }
-                else complain("Sorry, failed to save your change:\n"+body);
-            }
-
-            // What trips do we know about?
-            
-            // Classify:
-            if (store) {
-                kb.sf.nowOrWhenFetched(store.uri, subject, function(ok, body){
-                    if (!ok) complain("Cannot load store " + store + " " + body);
-                    div.appendChild(
-                        tabulator.panes.utils.makeSelectForNestedCategory(myDocument, kb,
-                            subject, Q('Classified'), store, complainIfBad));
-
-                    div.appendChild(tabulator.panes.utils.makeDescription(myDocument, kb, subject,
-                            tabulator.ns.rdfs('comment'), store, complainIfBad));
-
-                    var trips = kb.statementsMatching(undefined, TRIP('trip'), undefined, store)
-                                .map(function(st){return st.object}); // @@ Use rdfs
-                    var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
-                    trips = trips.concat(trips2).sort(); // @@ Unique 
-                    
-                    var sortedBy = function(kb, list, pred, reverse) {
-                        l2 = list.map(function(x) {
-                            var key = kb.any(x, pred);
-                            key = key ? key.value : "9999-12-31";
-                            return [ key, x ]; 
-                        });
-                        l2.sort();
-                        if (reverse) l2.reverse();
-                        return l2.map(function(pair){return pair[1]});
-                    }
-                    
-                    trips = sortedBy(kb, trips, tabulator.ns.cal('dtstart'), true); // Reverse chron
-                    
-                    if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
-                        myDocument, kb, subject, TRIP('trip'), trips,
-                            { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *",
-                                'mintClass':  TRIP('Trip'),
-                                'mintStatementsFun': function(trip){
-                                    var is = [];
-                                    is.push($rdf.st(trip, tabulator.ns.rdf('type'), TRIP('Trip')));
-                                    return is}},
-                            store, complainIfBad));
-
-                });
-            }
-
-            
-
-            div.appendChild(myDocument.createElement('br'));
-
-
-            // Add in simple comments about the transaction
-
-            donePredicate(ns.rdfs('comment')); // Done above
-/*            tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {
-                    if (!inverse && pred.uri == 
-                        "http://www.w3.org/2000/01/rdf-schema#comment") return true;
-                    return false
-                });
-*/
-            div.appendChild(myDocument.createElement('tr'))
-                        .setAttribute('style','height: 1em'); // spacer
-            
-            // Remaining properties
-            tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {
-                    return !(pred.uri in predicateURIsDone)
-                });
-            tabulator.outline.appendPropertyTRs(div, qlist, true,
-                function(pred, inverse) {
-                    return !(pred.uri in predicateURIsDone)
-                });
-
-        // end of render tranasaction instance
-
-        //////////////////////////////////////////////////////////////////////
-        //
-        //      Render the transactions in a Trip
-        //
-        } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
-        
-            var query = new $rdf.Query(tabulator.Util.label(subject));
-            var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
-            var v = {};
-            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
-            query.pat.add(v['transaction'], TRIP('trip'), subject);
-            
-            var opt = kb.formula();
-            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
-            query.pat.optional.push(opt);
-            
-            query.pat.add(v['transaction'], Q('date'), v['date']);
-            
-            var opt = kb.formula();
-            opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
-            query.pat.optional.push(opt);
-
-            //opt = kb.formula();
-            query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
-            //query.pat.optional.push(opt);
-
-            var calculations = function() {
-                var total = {};
-                var trans = kb.each(undefined, TRIP('trip'), subject);
-                // complain("@@ Number of transactions in this trip: " + trans.length);
-                trans.map(function(t){
-                    var ty = kb.the(t, ns.rdf('type'));
-                    // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
-                    if (!ty) ty = Q('ErrorNoType');
-                    if (ty && ty.uri) {
-                        var tyuri = ty.uri;
-                        if (!total[tyuri]) total[tyuri] = 0.0;
-                        var lit = kb.any(t, Q('in_USD'));
-                        if (!lit) {
-                            complain("    @@ No amount in USD: "+lit+" for " + t);
-                        }
-                        if (lit) {
-                            total[tyuri] = total[tyuri] + parseFloat(lit.value);
-                            //complain('      Trans type ='+ty+'; in_USD "' + lit
-                            //       +'; total[tyuri] = '+total[tyuri]+';') 
-                        }
-                    }
-                });
-                var str = '';
-                var types = 0;
-                var grandTotal = 0.0;
-                for (var uri in total) {
-                    str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
-                    types++;
-                    grandTotal += total[uri];
-                } 
-                complain("Totals of "+trans.length+" transactions: " + str, '')
-                if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
-            }
-
-            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query, 'onDone': calculations} );
-            div.appendChild(tableDiv);
-            
-        }
-
-
-        
-        //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
-
-        return div;
-    }
-        
-
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/transaction/pane.js ##############
-// ###### Expanding js/panes/trip/tripPane.js ##############
-/*   Trip Pane
-**
-** This pane deals with trips themselves and also
-** will look at transactions organized by trip.
-**
-**  This outline pane allows a user to interact with a transaction
-**  downloaded from a bank statement, annotting it with classes and comments,
-**  trips, etc
-*/
-
-    
-tabulator.Icon.src.icon_trip = iconPrefix +
-    'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png'; // @@
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_trip] = 'travel expenses'
-
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_trip,
-    
-    name: 'travel expenses',
-    
-    // Does the subject deserve this pane?
-    label: function(subject) {
-        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        var kb = tabulator.kb;
-        var t = kb.findTypeURIs(subject);
-        
-        // if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
-        //if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
-
-
-        if (Q('Transaction') in kb.findSuperClassesNT(subject)) return "by Trip";
-        if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
-        
-        return null; // No under other circumstances (while testing at least!)
-    },
-
-    render: function(subject, myDocument) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var CAL = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
-        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
-        var div = myDocument.createElement('div')
-        div.setAttribute('class', 'transactionPane');
-        div.innherHTML='<h1>Transaction</h1><table><tbody><tr>\
-        <td>%s</tr></tbody></table>\
-        <p>This is a pane under development.</p>';
-
-        var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
-                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
-            return false
-        }
-        
-        var setModifiedDate = function(subj, kb, doc) {
-            var deletions = kb.statementsMatching(subject, DCT('modified'));
-            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
-            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
-            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
-            sparqlService.update(deletions, insertions, function(uri, ok, body){});
-        }
-
-        var complain = function complain(message, style){
-            if (style == undefined) style = 'color: grey';
-            var pre = myDocument.createElement("pre");
-            pre.setAttribute('style', style);
-            div.appendChild(pre);
-            pre.appendChild(myDocument.createTextNode(message));
-        } 
-        var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, myDocument);
-            parent.replaceChild(div2, div);
-        };
-
-
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
-        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
-
- 
-        var plist = kb.statementsMatching(subject)
-        var qlist = kb.statementsMatching(undefined, undefined, subject)
-
-        var t = kb.findTypeURIs(subject);
-
-        var me_uri = tabulator.preferences.get('me');
-        var me = me_uri? kb.sym(me_uri) : null;
-
-        //      Function: Render a single trip
-
-        var renderTrip = function renderTrip(subject, thisDiv){
-            var query = new $rdf.Query(tabulator.Util.label(subject));
-            var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
-            var v = {};
-            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
-            query.pat.add(v['transaction'], TRIP('trip'), subject);
-            
-            var opt = kb.formula();
-            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
-            query.pat.optional.push(opt);
-            
-            query.pat.add(v['transaction'], Q('date'), v['date']);
-            
-            var opt = kb.formula();
-            opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
-            query.pat.optional.push(opt);
-
-            //opt = kb.formula();
-            query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
-            //query.pat.optional.push(opt);
-
-            var calculations = function() {
-                var total = {};
-                var trans = kb.each(undefined, TRIP('trip'), subject);
-                // complain("@@ Number of transactions in this trip: " + trans.length);
-                trans.map(function(t){
-                    var ty = kb.the(t, ns.rdf('type'));
-                    // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
-                    if (!ty) ty = Q('ErrorNoType');
-                    if (ty && ty.uri) {
-                        var tyuri = ty.uri;
-                        if (!total[tyuri]) total[tyuri] = 0.0;
-                        var lit = kb.any(t, Q('in_USD'));
-                        if (!lit) {
-                            complain("    @@ No amount in USD: "+lit+" for " + t);
-                        }
-                        if (lit) {
-                            total[tyuri] = total[tyuri] + parseFloat(lit.value);
-                            //complain('      Trans type ='+ty+'; in_USD "' + lit
-                            //       +'; total[tyuri] = '+total[tyuri]+';') 
-                        }
-                    }
-                });
-                var str = '';
-                var types = 0;
-                var grandTotal = 0.0;
-                for (var uri in total) {
-                    str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
-                    types++;
-                    grandTotal += total[uri];
-                } 
-                complain("Totals of "+trans.length+" transactions: " + str, ''); // @@@@@  yucky -- need 2 col table
-                if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
-            }
-            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query, 'onDone': calculations} );
-            thisDiv.appendChild(tableDiv);
-
-        }
-
-        //          Render the set of trips which have transactions in this class
-        
-        if (Q('Transaction') in kb.findSuperClassesNT(subject)) {
-
-            ts = kb.each(undefined, ns.rdf('type'), subject);
-            var tripless = [];
-            var index = [];
-            for (var i=0; i<ts.length; i++) {
-                var trans = ts[i];
-                var trip = kb.any(trans, TRIP('trip'));
-                if (!trip) {
-                    tripless.push(trans);
-                } else {
-                    if (!(trans in index)) index[trip] =  { total:0, transactions: [] };
-                    var usd = kb.any(trans, Q('in_USD'));
-                    if (usd) index[trip]['total'] += usd; 
-                    var date = kb.any(trans, Q('date'));
-                    index[trip.toNT()]['transactions'].push([date, trans]); 
-                }
-            }
-/*            var byDate = function(a,b) {
-                return new Date(kb.any(a, CAL('dtstart'))) - 
-                        new Date(kb.any(b, CAL('dtstart')));
-            }
-*/
-            var list = [], x;
-            for (var h1 in index) {
-                var t1 = kb.fromNT(h1);
-                list.push([kb.any(t1, CAL('dtstart')), t1]);
-            }
-            list.sort();
-            for (var j=0; j < list.length; j++){
-                var t2 = list[j][1];
-                renderTrip(t2, div);
-            }
-
-
-       //       Render a single trip
-
-        } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
-
-            renderTrip(subject, div);
-            
-        }
-
-
-        
-        //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
-
-        return div;
-    }
-        
-
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/trip/tripPane.js ##############
-// ###### Expanding js/panes/airPane.js ##############
- /** AIR (Amord in RDF) Pane
- *
- * This pane will display the justification trace of a when it encounters 
- * air reasoner output
- * oshani@csail.mit.edu
- */
- 
-airPane = {};
-airPane.name = 'air';
-airPane.icon = tabulator.Icon.src.icon_airPane;
-
-airPane.label = function(subject) {
-  
-    //Flush all the justification statements already found
-    justificationsArr = [];
-    
-	//Find all the statements with air:justification in it
-	var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
-	//This will hold the string to display if the pane appears
-	var stringToDisplay = null
-	//Then make a registry of the compliant and non-compliant subjects
-	//(This algorithm is heavily dependant on the output from the reasoner.
-	//If the output changes, the parser will break.)
-	for (var j=0; j<stsJust.length; j++){
-		//The subject of the statements should be a quouted formula and
-		//the object should not be tms:premise (this corresponds to the final chunk of the output 
-		//which has {some triples} tms:justification tms:premise)
-		if (stsJust[j].subject.termType == 'formula' && stsJust[j].object != ap_prem.toString()){
-			var sts = stsJust[j].subject.statements;
-			if (sts.length != 1) throw new Error("There should be only ONE statement indicating some event is (non-)compliant with some policy!")
-			//Keep track of the subjects of the statements in the global variables above and return "Justify"
-			//which will be the tool-tip text of the label icon
-			if (sts[0].predicate.toString() == ap_compliant.toString()){
-                var compliantString = tabulator.Util.label(sts[0].subject) + " is compliant with " + tabulator.Util.label(sts[0].object);
-                var compliantArr = [];
-                compliantArr.push(sts[0].object);
-                compliantArr.push(ap_compliant.toString());
-                compliantArr.push(compliantString);
-				justificationsArr.push(compliantArr);
-            }
-			if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
-                var nonCompliantString = tabulator.Util.label(sts[0].subject) + " is non compliant with " + tabulator.Util.label(sts[0].object);
-                var nonCompliantArr = [];
-                nonCompliantArr.push(sts[0].object);
-                nonCompliantArr.push(ap_nonCompliant.toString());
-                nonCompliantArr.push(nonCompliantString);
-				justificationsArr.push(nonCompliantArr);
-
-            }
-			stringToDisplay = "Justify" //Even with one relevant statement this method should return something 
-		}   
-	}
-	//Make the subject list we will be exploring in the render function unique
-	//compliantStrings = tabulator.panes.utils.unique(compliantStrings);
-	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings); 
-    
-   return stringToDisplay;
-}
-
-// View the justification trace in an exploratory manner
-airPane.render = function(subject, myDocument) {
-
-	//Variables specific to the UI
-	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
-	var divClass;
-	var div = myDocument.createElement("div");
-
-	//Helpers
-	var logFileURI = tabulator.panes.utils.extractLogURI(myDocument.location.toString());
-
-	div.setAttribute('class', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
-	div.setAttribute('id', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
-
-
-    //If there are multiple justifications show a dropdown box to select the correct one
-    var selectEl = myDocument.createElement("select");
-
-    var divOutcome = myDocument.createElement("div"); //This is div to display the final outcome. 
-    divOutcome.setAttribute('id', 'outcome'); //There can only be one outcome per selection from the drop down box
-  
-    //Show the selected justification only
-	airPane.render.showSelected = function(){
-        
-        //Clear the contents of the outcome div
-        if (myDocument.getElementById('outcome') != null){
-            myDocument.getElementById('outcome').innerHTML = ''; 
-        }
-        
-        //Function to hide the natural language description div and the premises div
-        airPane.render.showSelected.hide = function(){
-        
-            //Clear the outcome div
-            if (myDocument.getElementById('outcome') != null){
-                myDocument.getElementById('outcome').innerHTML = ''; 
-            }
-            //Remove the justification div from the pane
-            var d = myDocument.getElementById('dataContentPane');
-            var j = myDocument.getElementById('justification');
-            var b = myDocument.getElementById('hide');
-            var m = myDocument.getElementById('more');
-            var o = myDocument.getElementById('outcome');
-            var w = myDocument.getElementById('whyButton');
-            if (d != null && m != null){
-                d.removeChild(m);
-            }
-            if (d != null && j != null && b != null){
-                d.removeChild(j);
-                d.removeChild(b);
-            }
-            if (d != null && o != null){
-                d.removeChild(o);
-            }
-            if (d != null && w != null){
-                d.removeChild(w);
-            }
-
-        }
-        //End of airPane.render.showSelected.hide
-
-        //Clear the contents of the justification div
-        airPane.render.showSelected.hide();
-        
-        if (this.selectedIndex == 0)
-            return;
-            
-        selected = justificationsArr[this.selectedIndex - 1];
-        var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
-        
-
-        for (var i=0; i<stsJust.length; i++){
-        
-            //Find the statement maching the option selected from the drop down box
-            if (stsJust[i].subject.termType == 'formula' && 
-                stsJust[i].object != ap_prem.toString() && 
-                stsJust[i].subject.statements[0].object.toString() == selected[0].toString()){
-                
-                var stsFound = stsJust[i].subject.statements[0]; //We have only one statement - so no need to iterate
-                
-                //@@@@@@ Variables specific to the logic	
-                var ruleNameFound;
-                
-                //Display red or green depending on the compliant/non-compliant status
-                if (selected[1].toString() == ap_nonCompliant.toString()){
-                    divOutcome.setAttribute('class', 'nonCompliantPane');
-                }
-                else if (selected[1].toString() == ap_compliant.toString()){
-                    divOutcome.setAttribute('class', 'compliantPane');
-                }
-                else{
-                    alert("something went terribly wrong");
-                } 
-                
-                //Create a table and structure the final conclucsion appropriately
-                
-                var table = myDocument.createElement("table");
-                var tr = myDocument.createElement("tr");
-                
-                var td_s = myDocument.createElement("td");
-                var a_s = myDocument.createElement('a')
-                a_s.setAttribute('href', stsFound.subject.uri)
-                a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
-                td_s.appendChild(a_s);
-                tr.appendChild(td_s);
-
-                var td_is = myDocument.createElement("td");
-                td_is.appendChild(myDocument.createTextNode(' is '));
-                tr.appendChild(td_is);
-
-                var td_p = myDocument.createElement("td");
-                var a_p = myDocument.createElement('a');
-                a_p.setAttribute('href', stsFound.predicate.uri)
-                a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
-                td_p.appendChild(a_p);
-                tr.appendChild(td_p);
-
-                var td_o = myDocument.createElement("td");
-                var a_o = myDocument.createElement('a')
-                a_o.setAttribute('href', stsFound.object.uri)
-                a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
-                td_o.appendChild(a_o);
-                tr.appendChild(td_o);
-
-                table.appendChild(tr);
-                divOutcome.appendChild(table);
-                
-                div.appendChild(divOutcome);
-                //End of the outcome sentences
-                
-                //Add the initial buttons 
-                airPane.render.showSelected.addInitialButtons = function(){ //Function Call 1
-
-                    //Create and append the 'Why?' button        
-                    //Check if it is visible in the DOM, if not add it.
-                    if (myDocument.getElementById('whyButton') == null){
-                        var becauseButton = myDocument.createElement('input');
-                        becauseButton.setAttribute('type','button');
-                        becauseButton.setAttribute('id','whyButton');
-                        becauseButton.setAttribute('value','Why?');
-                        div.appendChild(becauseButton);
-                        becauseButton.addEventListener('click',airPane.render.showSelected.because,false);
-                    }
-                                        
-                    div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
-                }
-                //End of airPane.render.showSelected.addInitialButtons
-
-
-                //The following function is triggered, when the why button is clicked
-                airPane.render.showSelected.because = function(){ //Function Call 2
-                
-                
-                    //If the reasoner used closed-world-assumption, there are no interesting premises 
-                    var cwa = ap_air('closed-world-assumption');
-                    var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
-                    var noPremises = false;
-                /*    if (cwaStatements.length > 0){
-                        noPremises = true;
-                    }
-                 */   
-                    //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
-                    var whyButton = myDocument.getElementById('whyButton');
-                    var d = myDocument.getElementById('dataContentPane');
-                    if (d != null && whyButton != null)
-                        d.removeChild(whyButton);
-                
-                    //Function to display the natural language description
-                    airPane.render.showSelected.because.displayDesc = function(obj){
-                        for (var i=0; i<obj.elements.length; i++) {
-                                dump(obj.elements[i]);
-                                dump("\n");
-                                
-                                if (obj.elements[i].termType == 'symbol') {
-                                    var anchor = myDocument.createElement('a');
-                                    anchor.setAttribute('href', obj.elements[i].uri);
-                                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj.elements[i])));
-                                    //anchor.appendChild(myDocument.createTextNode(obj.elements[i]));
-                                    divDescription.appendChild(anchor);
-                                }
-                                else if (obj.elements[i].termType == 'literal') {
-                                    if (obj.elements[i].value != undefined)
-                                        divDescription.appendChild(myDocument.createTextNode(obj.elements[i].value));
-                                }
-                                else if (obj.elements[i].termType == 'formula') {
-                                    //@@ As per Lalana's request to handle formulas within the description
-                                    divDescription.appendChild(myDocument.createTextNode(obj.elements[i]));
-                                    //@@@ Using statementsAsTables to render the result gives a very ugly result -- urgh!
-                                    //divDescription.appendChild(statementsAsTables(obj.elements[i].statements,myDocument));
-                                }       
-                            }
-                    }
-                    //End of airPane.render.showSelected.because.displayDesc
-
-                    //Function to display the inner most stuff from the proof-tree
-                    airPane.render.showSelected.because.moreInfo = function(ruleToFollow){
-                        //Terminating condition: 
-                        // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
-                        // there are no more information to follow
-                        var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
-                        if (terminatingCondition[0] != undefined){
-
-                           divPremises.appendChild(myDocument.createElement('br'));
-                           divPremises.appendChild(myDocument.createElement('br'));
-                           divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
-                           divPremises.appendChild(myDocument.createElement('br'));
-                           divPremises.appendChild(myDocument.createElement('br'));
-                       
-                        }
-                        else{
-                            
-                            //Update the description div with the description at the next level
-                            var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow, subject);
-                            
-                            //Find the corresponding description matching the currenrRule
-
-                            var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
-                            
-                            for (var i=0; i<currentRuleDescSts.length; i++){
-                                if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
-                                    var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
-                                    
-                                    for (var j=0; j<currentRuleDesc.length; j++){
-                                        if (currentRuleDesc[j].predicate == ap_description.toString() &&
-                                        currentRuleDesc[j].object.termType == 'collection'){
-                                            divDescription.appendChild(myDocument.createElement('br'));
-                                            airPane.render.showSelected.because.displayDesc(currentRuleDesc[j].object);
-                                            divDescription.appendChild(myDocument.createElement('br'));
-                                            divDescription.appendChild(myDocument.createElement('br'));
-                                        }
-                                    }	
-                                }
-                            }
-
-                             //This is a hack to fix the rule appearing instead of the bnode containing the description
-                            correctCurrentRule = "";
-                            for (var i=0; i< currentRule.length; i++){
-                                if (currentRule[i].subject.termType == 'bnode'){
-                                    correctCurrentRule = currentRule[i].subject;
-                                    break;
-                                }
-                            }
-                            
-                            var currentRuleSts = tabulator.kb.statementsMatching(correctCurrentRule, ap_just, undefined, subject);
-                            var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
-                            ruleNameFound = nextRuleSts[0].object;
-
-                            var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
-                            
-                            var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined, subject);
-    
-                            var formulaFound = false;
-                            var bnodeFound = false;
-                            for (var i=0; i<currentRuleSubExpr.length; i++){
-                                if(currentRuleSubExpr[i].object.termType == 'formula'){
-                                    divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
-                                    formulaFound = true;
-                                }
-                                else if (currentRuleSubExpr[i].object.termType == 'bnode'){
-                                    bnodeFound = true;
-                            
-                                }
-                            }
-                            
-                            if (bnodeFound){
-                                divPremises.appendChild(myDocument.createElement("br"));
-                                divPremises.appendChild(myDocument.createTextNode("  No premises applicable."));
-                                divPremises.appendChild(myDocument.createElement("br"));
-                                divPremises.appendChild(myDocument.createElement("br"));
-                            }
-
-
-                        }
-                    }
-                    //End of airPane.render.showSelected.because.moreInfo
-                    
-                    //Function to bootstrap the natural language description div and the premises div
-                    airPane.render.showSelected.because.justify = function(){ //Function Call 3
-                    
-                        //Clear the contents of the premises div
-                        myDocument.getElementById('premises').innerHTML='';
-                        airPane.render.showSelected.because.moreInfo(ruleNameFound);   //@@@@ make sure this rul would be valid at all times!      	
-
-                        divJustification.appendChild(divPremises);
-                        div.appendChild(divJustification);
-
-                    }
-                    //End of airPane.render.showSelected.because.justify
-
-                    //Add the More Information Button
-                    var justifyButton = myDocument.createElement('input');
-                    justifyButton.setAttribute('type','button');
-                    justifyButton.setAttribute('id','more');
-                    justifyButton.setAttribute('value','More Information');
-                    justifyButton.addEventListener('click',airPane.render.showSelected.because.justify,false);
-                    div.appendChild(justifyButton);
-                                    
-                    //Add 2 spaces to leave some space between the 2 buttons, any better method?                
-                    div.appendChild(myDocument.createTextNode('   '));
-                    div.appendChild(myDocument.createTextNode('   '));
-
-                    //Add the hide button
-                    var hideButton = myDocument.createElement('input');
-                    hideButton.setAttribute('type','button');
-                    hideButton.setAttribute('id','hide');
-                    hideButton.setAttribute('value','Start Over');
-                    div.appendChild(hideButton);
-                    hideButton.addEventListener('click',airPane.render.showSelected.hide,false);
-
-                    //This div is the containing div for the natural language description and the premises of any given justification
-                    var divJustification = myDocument.createElement("div");
-                    divJustification.setAttribute('class', 'justification');
-                    divJustification.setAttribute('id', 'justification');
-
-                    //Leave a gap between the outcome and the justification divs
-                    divJustification.appendChild(myDocument.createElement('br'));
-
-                    //Div for the natural language description
-                    var divDescription = myDocument.createElement("div");
-                    divDescription.setAttribute('class', 'description');
-                    divDescription.setAttribute('id', 'description');
-                    
-                    //Div for the premises
-                    var divPremises = myDocument.createElement("div");
-                    divPremises.setAttribute('class', 'premises');
-                    divPremises.setAttribute('id', 'premises');
-                    
-                    //@@@@ what is this for?
-                    var justificationSts;
-                    
-                    //Get all the triples with a air:description as the predicate
-                    var stsDesc = tabulator.kb.statementsMatching(undefined, ap_description, undefined, subject); 
-
-                    //You are bound to have more than one such triple, 
-                    //so iterates through all of them and figure out which belongs to the one that's referred from the drop down box
-                    for (var j=0; j<stsDesc.length; j++){
-                        if (stsDesc[j].subject.termType == 'formula' && 
-                            stsDesc[j].object.termType == 'collection' &&
-                            stsDesc[j].subject.statements[0].object.toString() == selected[0].toString()){
-                            
-                            divDescription.appendChild(myDocument.createElement('br'));
-                            airPane.render.showSelected.because.displayDesc(stsDesc[j].object);
-                            divDescription.appendChild(myDocument.createElement('br'));
-                            divDescription.appendChild(myDocument.createElement('br'));
-                        }
-                        divJustification.appendChild(divDescription);
-                        
-                    }	
-                    
-                    //@@@@@@@@@ Why was this here???
-                    //div.appendChild(divJustification);
-                    
-                    //Leave spaces
-                    divJustification.appendChild(myDocument.createElement('br'));
-                    divJustification.appendChild(myDocument.createElement('br'));
-                    
-                    //Yes, we are showing premises next...
-                    divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
-                    
-                    //Leave spaces
-                    divJustification.appendChild(myDocument.createElement('br'));
-                    divJustification.appendChild(myDocument.createElement('br'));
-
-                    //Closed World Assumption
-                    if (noPremises){
-                        divPremises.appendChild(myDocument.createElement('br'));
-                        divPremises.appendChild(myDocument.createElement('br'));
-                        divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in the "));
-                        var a = myDocument.createElement('a')
-                        a.setAttribute("href", unescape(logFileURI));
-                        a.appendChild(myDocument.createTextNode("log file"));
-                        divPremises.appendChild(a);
-                        divPremises.appendChild(myDocument.createElement('br'));
-                        divPremises.appendChild(myDocument.createElement('br'));
-                        
-                    }
-                        
-                    for (var j=0; j<stsJust.length; j++){
-                        if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-                        
-                            var ruleNameSts = tabulator.kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
-                            ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
-                                                // statement containing the formula		
-                            if (!noPremises){
-                                var t1 = tabulator.kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
-                                for (var k=0; k<t1.length; k++){
-                                    var t2 = tabulator.kb.statementsMatching(t1[k].object, undefined, undefined, subject);
-                                    for (var l=0; l<t2.length; l++){
-                                        if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
-                                            justificationSts = t2;
-                                            divPremises.appendChild(myDocument.createElement('br'));
-                                            //divPremises.appendChild(myDocument.createElement('br'));
-                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
-                                           
-                                            //@@@@ The following piece of code corresponds to going one level of the justification proof to figure out
-                                            // whether there are any premises
-                                            //it is commented out, because, the user need not know that at each level there are no premises associated
-                                            //that particular step
-                                            
-                                            /*if (t2[l].object.statements.length == 0){
-                                                alert("here");
-                        
-                                                divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
-                                                var a = myDocument.createElement('a')
-                                                a.setAttribute('href', unescape(logFileURI));
-                                                a.appendChild(myDocument.createTextNode("log file"));
-                                                divPremises.appendChild(a);
-                                            }
-                                            else{
-                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
-                                            }
-                                           */
-                                            //divPremises.appendChild(myDocument.createElement('br'));
-                                            divPremises.appendChild(myDocument.createElement('br'));
-                                        }
-                                   }     
-                                }
-                            }
-                        }
-                    }
-                    
-                    divJustification.appendChild(divPremises);   
-                    div.appendChild(divJustification); 
-                      
-                }
-                //End of airPane.render.showSelected.because
-                
-                airPane.render.showSelected.addInitialButtons(); //Add the "Why Button"
-             }
-        }
-    }
-    
-
-    //First add a bogus element
-    var optionElBogus = myDocument.createElement("option");
-    var optionTextBogus = myDocument.createTextNode(" ");
-    optionElBogus.appendChild(optionTextBogus);
-    selectEl.appendChild(optionElBogus);
-
-    //Adds the option of which justification to choose in a drop down list box
-    for (var i=0; i<justificationsArr.length; i++){
-        var optionEl = myDocument.createElement("option");
-        var optionText = myDocument.createTextNode(justificationsArr[i][2]);
-        optionEl.appendChild(optionText);
-        selectEl.appendChild(optionEl);
-    }
-    
-    div.appendChild(selectEl);
-    selectEl.addEventListener('change', airPane.render.showSelected, false);
-    div.appendChild(myDocument.createElement('br'));
-    div.appendChild(myDocument.createElement('br'));
-        
-	return div;
-};
-
-//^^
-airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
-					divJustification){
-  var divDescription = myDocument.createElement("div");
-  divDescription.setAttribute('class', 'description');
-
-        //Display the actual English-like description first
-	//It's no longer English-like, but just property tables
-        //var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
-        //var stsDesc = kb.statementsMatching(st, ap_description);
-	var stsDesc = tabulator.kb.statementsMatching(st, ap_just);
-	// {}  tms:justification []. (multiple)
-
-	if(stsDesc.length > 1){
-            for (var j=0; j<stsDesc.length; j++){
-                //Display the header "Reason x:"
-		var h3 = divJustification.appendChild(document.createElement('h3'));
-		h3.textContent = "Reason " + String(j+1); + ":";
-		airPane.render.because.displayDesc(stsDesc[j].object,
-						   divDescription);
-		divJustification.appendChild(divDescription);
-                //Make a copy of the orange box
-		divDescription = divDescription.cloneNode(false); //shallow:true
-            
-            }
-	} else{
-	  airPane.render.because.displayDesc(stsDesc[0].object,
-					     divDescription);
-	  divJustification.appendChild(divDescription);
-	}
-};
-    
-airPane.renderExplanationForStatement = function renderExplanationForStatement(st){
-    var subject = undefined; //not restricted to a source, but kb
-    var div = myDocument.createElement("div"); //the returned div
-    var ruleNameFound;
-    var stsCompliant;
-    var stsNonCompliant;
-    var stsFound;
-    var stsJust = tabulator.kb.statementsMatching(st, ap_just); 
-	
-    
-    var divOutcome = myDocument.createElement("div"); //To give the "yes/no" type answer indicating the concise reason
-
-        /*
-	for (var j=0; j<stsJust.length; j++){
-		if (stsJust[j].subject.termType == 'formula'){
-			var sts = stsJust[j].subject.statements;
-			for (var k=0; k<sts.length; k++){
-				if (sts[0].predicate.toString() == ap_compliant.toString()){
-					stsCompliant = sts[k];
-				} 
-				if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
-					stsNonCompliant = sts[k];
-				}
-			}
-		}    
-	}
-
-	if (stsNonCompliant != undefined){
-		divClass = 'nonCompliantPane';
-		stsFound =  stsNonCompliant;
-	}
-	if (stsCompliant != undefined){
-		divClass = 'compliantPane';
-		stsFound =  stsCompliant;
-	}
-        */
-
-    var divClass = 'compliantPane'; //a statement is natively good :)
-    //stsFound = kb.anyStatementsMatching(st, ap_just);
-    stsFound = stsJust[0].subject.statements[0];
-
-    if (stsFound != undefined){
-        divOutcome.setAttribute('class', divClass);
-        divOutcome.setAttribute('id', 'outcome');
-
-        var table = myDocument.createElement("table");
-        var tr = myDocument.createElement("tr");
-
-        var td_intro = myDocument.createElement("td");
-        td_intro.appendChild(myDocument.createTextNode('The reason '));
-        tr.appendChild(td_intro);
-
-        var td_s = myDocument.createElement("td");
-        var a_s = myDocument.createElement('a')
-        a_s.setAttribute('href', stsFound.subject.uri)
-        a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
-        td_s.appendChild(a_s);
-        tr.appendChild(td_s);
-
-        //var td_is = myDocument.createElement("td");
-        //td_is.appendChild(myDocument.createTextNode(' is '));
-        //tr.appendChild(td_is);
-
-        var td_p = myDocument.createElement("td");
-        var a_p = myDocument.createElement('a');
-        a_p.setAttribute('href', stsFound.predicate.uri);
-        a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
-        td_p.appendChild(a_p);
-        tr.appendChild(td_p);
-
-        var td_o = myDocument.createElement("td");
-	var a_o = null;
-	if (stsFound.object.termType == 'literal'){
-	  a_o = myDocument.createTextNode(stsFound.object.value);
-	} else {
-	  var a_o = myDocument.createElement('a');
-	  a_o.setAttribute('href', stsFound.object.uri);
-	  a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
-	}
-        td_o.appendChild(a_o);
-        tr.appendChild(td_o);
-
-        var td_end = myDocument.createElement("td");
-        td_end.appendChild(myDocument.createTextNode(' is because: '));
-        tr.appendChild(td_end);
-
-        table.appendChild(tr);
-        divOutcome.appendChild(table);
-        div.appendChild(divOutcome);
-
-
-        var hideButton = myDocument.createElement('input');
-        hideButton.setAttribute('type','button');
-        hideButton.setAttribute('id','hide');
-        hideButton.setAttribute('value','Start Over');
-    }
-
-    airPane.render.addInitialButtons = function(){ //Function Call 1
-
-        //Create and append the 'Why?' button        
-        var becauseButton = myDocument.createElement('input');
-        becauseButton.setAttribute('type','button');
-        becauseButton.setAttribute('id','whyButton');
-        becauseButton.setAttribute('value','Why?');
-        div.appendChild(becauseButton);
-        becauseButton.addEventListener('click',airPane.render.because,false);
-                            
-        div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
-    }
-    
-    airPane.render.hide = function(){
-    
-        //Remove the justification div from the pane
-        var d = myDocument.getElementById('dataContentPane');
-        var j = myDocument.getElementById('justification');
-        var b = myDocument.getElementById('hide');
-        var m = myDocument.getElementById('more');
-        if (d != null && m != null){
-            d.removeChild(m);
-        }
-        if (d != null && j != null && b != null){
-            d.removeChild(j);
-            d.removeChild(b);
-        }
-
-        airPane.render.addInitialButtons();
-                    
-    }
-
-    airPane.render.because = function(){ //Function Call 2
-    
-        var cwa = ap_air('closed-world-assumption');
-        var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
-        var noPremises = false;
-        if (cwaStatements.length > 0){
-            noPremises = true;
-        }
-        
-           //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
-           var whyButton = myDocument.getElementById('whyButton');
-        var d = myDocument.getElementById('dataContentPane');
-        if (d != null && whyButton != null)
-            d.removeChild(whyButton);
-    
-        airPane.render.because.displayDesc = function(obj, divDescription){
-	  //@argument obj: most likely a [] that has 
-	  //a tms:antecedent-expr and a tms:rule-name
-	  var aAnd_justification = tabulator.kb.the(obj, ap_antcExpr);
-	  var subExprs = tabulator.kb.each(aAnd_justification, ap_subExpr);
-	  var premiseFormula = null;
-	  if (subExprs[0].termType == 'formula')
-	    premiseFormula = subExprs[0];
-	  else
-	    premiseFormula = subExprs[1];
-	  divDescription.waitingFor = []; //resources of more information 
-                                          //this reason is waiting for
-	  divDescription.informationFound = false; //true if an extra 
-	               //information is found and we can stop the throbber
-	  function dumpFormula(formula, firstLevel){
-	    for (var i=0;i<formula.statements.length;i++){
-	      var st = formula.statements[i];
-	      var elements_to_display = [st.subject, st.predicate, 
-					 st.object];
-	      var p = null; //the paragraph element the description is dumped to
-	      if (firstLevel){
-		p = myDocument.createElement('p');
-		//Look up the outermost subject and object for information
-		if (st.subject.termType == 'symbol'){
-		  var doc_uri = Util.uri.docpart(st.subject.uri);
-		  if (divDescription.waitingFor.indexOf(doc_uri) < 0 &&
-		      typeof sf.requested[doc_uri]=="undefined")
-		    divDescription.waitingFor.push(doc_uri);
-		}
-		if (st.object.termType == 'symbol'){
-		  var doc_uri = Util.uri.docpart(st.object.uri);
-		  if (divDescription.waitingFor.indexOf(doc_uri) < 0 &&
-		      typeof sf.requested[doc_uri]=="undefined")
-		    divDescription.waitingFor.push(doc_uri);
-		}
-	      }
-	      else{
-		p = dumpFormula.current_p;
-	      }
-	      for (var j=0; j<3; j++) {
-		var element = elements_to_display[j];
-		switch(element.termType) {
-
-		  //@@ As per Lalana's request to handle formulas within the description
-		case 'formula':
-		  p.appendChild(myDocument.createTextNode("{ "));
-		  dumpFormula.current_p = p;
-		  dumpFormula(element, false);
-		  p.appendChild(myDocument.createTextNode(" }"));
-		  break;
-		case 'symbol':
-		  var anchor = myDocument.createElement('a');
-		  anchor.setAttribute('href', element.uri);
-		  anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(element)));
-		  p.appendChild(anchor);
-		  p.appendChild(myDocument.createTextNode(" "));
-		  break;
-		case 'literal':
-		  //if (obj.elements[i].value != undefined)
-		  p.appendChild(myDocument.createTextNode(element.value)); 
-		  
-		}       
-	      }
-	      p.appendChild(myDocument.createTextNode(". "));
-	      if(firstLevel){
-		divDescription.appendChild(p);
-		var one_statement_formula = new tabulator.rdf.IndexedFormula();
-		one_statement_formula.statements.push(st)
-		p.AJAR_formula = one_statement_formula;
-		function make_callback(st, p, divDescription){
-		  return function statement_more_information_callback(uri){
-		    divDescription.waitingFor.remove(uri);
-		    if(tabulator.kb.any(p.AJAR_formula, ap_just)) {
-		      //The would get called twice even if the callback
-		      //is canceled, so check the last child.
-		      //dump("in statement_more_information_callback with st: "                         +st + "and uri: " + uri + "\n");
-		      divDescription.informationFound = true;
-		      if (p.lastChild.nodeName=="#text"){
-			var explain_icon = p.appendChild(myDocument.createElement('img'));
-			explain_icon.src = tabulator.iconPrefix + "icons/tango/22-help-browser.png";
-			var click_cb = function(){
-			  airPane.renderReasonsForStatement(
-			    p.AJAR_formula, divJustification);
-			};
-			explain_icon.addEventListener('click',
-						      click_cb,
-						      false)
-		      }
-		      if (throbber_p && throbber_callback) 
-			throbber_callback();
-		      return false; //no need to fire this function
-		    }
-		    //Fetch sameAs here. We try to load minimum sources
-		    //so this comes after the above kb.any
-		    for (var h=0;h<2;h++) { //Never use for each!!!
-		                           //Array.prototype.remove would
-                                           //be one of them!!!
-		      var thing =[st.subject, st.object][h];
-		      var uris = tabulator.kb.uris(thing);
-		      for (var k=0;k<uris.length;k++){
-			var doc_uri = Util.uri.docpart(uris[k])
-			  if (typeof sf.requested[doc_uri]=="undefined" &&
-			     divDescription.waitingFor.indexOf(doc_uri)<0){
-			    //the second condition holds, for example,
-			    //Util.uri.docpart(thing.uri)
-			    divDescription.waitingFor.push(doc_uri);
-			    sf.lookUpThing(tabulator.kb.sym(doc_uri));
-			  }
-		      }
-		    }
-		    if (divDescription.waitingFor.length == 0){
-		      if (throbber_p && throbber_callback) 
-			throbber_callback();
-		      return false; //the last resource this div is waiting for
-		    }
-		    if (throbber_p && throbber_callback) 
-		      throbber_callback();
-		    return true;
-		  };
-		}
-		var cb = make_callback(st, p, divDescription)
-		cb();
-		//statement_more_information_callback(); //run once for exsiting information
-		sf.addCallback('done',cb);
-		sf.addCallback('fail',cb);
-	      }
-	    } //statement loop
-	  } //function dumpFormula
-	  dumpFormula(premiseFormula, true);
-	  //'Looking for more information...
-	  //@correct the background color of the throbber
-	  var throbber_p = myDocument.createElement('p');
-	  throbber_p.setAttribute('class', 'ap_premise_loading')
-	  var throbber = throbber_p.appendChild(myDocument.createElement
-						('img'));
-	  throbber.src = tabulator.iconPrefix + "icons/loading.png";
-	  throbber_p.appendChild(myDocument.createTextNode
-				 ("Looking for more information..."));
-	  divDescription.appendChild(throbber_p);
-	  function throbber_callback(uri){
-	    divDescription.waitingFor.remove(uri);
-	    
-	    if (divDescription.informationFound){
-	      throbber_p.removeChild(throbber_p.firstChild);
-	      throbber_p.textContent = "More information found!";
-	      return false;
-	    } else if (divDescription.waitingFor.length == 0){
-	      
-	      //The final call to this function. But the above callbacks 
-	      //might not have been fired. So check all. Well...
-              //It takes time to close the world
-	      //@@This method assumes there's only one thread for this js.
-	      //Maybe not?
-	      var found = false;
-// 	      for (var i=0;i<divDescription.childNodes.length;i++){
-// 		var p = divDescription.childNodes[i];
-// 		if(p.AJAR_formula && kb.any(p.AJAR_formula, ap_just)){
-// 		  found = true;
-// 		  break;
-// 		}
-// 	      }
-	      if (found){
-		throbber_p.removeChild(throbber_p.firstChild);
-		throbber_p.textContent = "More information found!";
-	      } else {
-		throbber_p.removeChild(throbber_p.firstChild);
-		throbber_p.textContent = "No more information.";
-	      }
-	      return false; //no more resource waiting for
-	    } else {
-	      return true;
-	    }
-	  }
-	  throbber_callback();
-// 	  if(divDescription.waitingFor.length){
-// 	    //we don't need to do call back if there's nothing more to lookup
-// 	    sf.addCallback('done',throbber_callback);
-// 	    sf.addCallback('fail',throbber_callback);
-// 	  }
-	  for (var i=0;i<divDescription.waitingFor.length;i++)
-	    sf.lookUpThing(tabulator.kb.sym(divDescription.waitingFor[i]));
-	  
-	} //function airPane.render.because.displayDesc
-
-        airPane.render.because.moreInfo = function(ruleToFollow){
-            //Terminating condition: 
-            // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
-            // there are no more information to follow
-            var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
-            if (terminatingCondition[0] != undefined){
-
-               divPremises.appendChild(myDocument.createElement('br'));
-               divPremises.appendChild(myDocument.createElement('br'));
-               divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
-               divPremises.appendChild(myDocument.createElement('br'));
-               divPremises.appendChild(myDocument.createElement('br'));
-           
-            }
-            else{
-                
-                //Update the description div with the description at the next level
-                var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow);
-                
-                //Find the corresponding description matching the currenrRule
-
-                var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
-                
-                for (var i=0; i<currentRuleDescSts.length; i++){
-                    if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
-                        var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
-                        
-                        for (var j=0; j<currentRuleDesc.length; j++){
-                            if (currentRuleDesc[j].predicate == ap_description.toString() &&
-                            currentRuleDesc[j].object.termType == 'collection'){
-                                divDescription.appendChild(myDocument.createElement('br'));
-                                airPane.render.because.displayDesc(currentRuleDesc[j].object);
-                                divDescription.appendChild(myDocument.createElement('br'));
-                                divDescription.appendChild(myDocument.createElement('br'));
-                            }
-                        }    
-                    }
-                }
-
-                
-                var currentRuleSts = tabulator.kb.statementsMatching(currentRule[0].subject, ap_just, undefined);
-                
-                var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined);
-                ruleNameFound = nextRuleSts[0].object;
-
-                var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined);
-                
-                var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined);
-
-                for (var i=0; i<currentRuleSubExpr.length; i++){
-                    if(currentRuleSubExpr[i].object.termType == 'formula')
-                        divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
-                }
-
-            }
-        }
-        
-        airPane.render.because.justify = function(){ //Function Call 3
-        
-            //Clear the contents of the div
-            myDocument.getElementById('premises').innerHTML='';
-            airPane.render.because.moreInfo(ruleNameFound);                
-
-            divJustification.appendChild(divPremises);
-            div.appendChild(divJustification);
-
-        }
-
-        //Add the More Information Button
-	/* //disable buttons
-        var justifyButton = myDocument.createElement('input');
-        justifyButton.setAttribute('type','button');
-        justifyButton.setAttribute('id','more');
-        justifyButton.setAttribute('value','More Information');
-        justifyButton.addEventListener('click',airPane.render.because.justify,false);
-        div.appendChild(justifyButton);
-                        
-        div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
-        div.appendChild(myDocument.createTextNode('   '));
-
-        div.appendChild(hideButton);
-        hideButton.addEventListener('click',airPane.render.hide,false);
-        */
-
-        var divJustification = myDocument.createElement("div");
-        divJustification.setAttribute('class', 'justification');
-        divJustification.setAttribute('id', 'justification');
-
-        var divDescription = myDocument.createElement("div");
-        divDescription.setAttribute('class', 'description');
-        //divDescription.setAttribute('id', 'description');
-
-        /*
-        var divPremises = myDocument.createElement("div");
-        divPremises.setAttribute('class', 'premises');
-        divPremises.setAttribute('id', 'premises');
-        */ 
-        
-        
-        var justificationSts;
-        
-        
-	airPane.renderReasonsForStatement(st, divJustification);
-    
-        
-        div.appendChild(divJustification);
-	
-        /*
-        divJustification.appendChild(myDocument.createElement('br'));
-        divJustification.appendChild(myDocument.createElement('br'));
-        divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
-        divJustification.appendChild(myDocument.createElement('br'));
-        divJustification.appendChild(myDocument.createElement('br'));
-	
-        if (noPremises){
-            divPremises.appendChild(myDocument.createElement('br'));
-            divPremises.appendChild(myDocument.createElement('br'));
-            divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in the "));
-            var a = myDocument.createElement('a')
-            a.setAttribute("href", unescape(logFileURI));
-            a.appendChild(myDocument.createTextNode("log file"));
-            divPremises.appendChild(a);
-            divPremises.appendChild(myDocument.createElement('br'));
-            divPremises.appendChild(myDocument.createElement('br'));
-            
-        }
-            
-        for (var j=0; j<stsJust.length; j++){
-            if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-            
-                var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
-                ruleNameFound =    ruleNameSts[0].object; // This would be the initial rule name from the 
-                                    // statement containing the formula        
-                if (!noPremises){
-                    var t1 = kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
-                    for (var k=0; k<t1.length; k++){
-                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined, subject);
-                        for (var l=0; l<t2.length; l++){
-                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
-                                justificationSts = t2;
-                                divPremises.appendChild(myDocument.createElement('br'));
-                                divPremises.appendChild(myDocument.createElement('br'));
-                                if (t2[l].object.statements.length == 0){
-                                    divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
-                                    var a = myDocument.createElement('a')
-                                    a.setAttribute('href', unescape(logFileURI));
-                                    a.appendChild(myDocument.createTextNode("log file"));
-                                    divPremises.appendChild(a);
-                                }
-                                else{
-                                    divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
-                                }
-                                divPremises.appendChild(myDocument.createElement('br'));
-                                divPremises.appendChild(myDocument.createElement('br'));
-                            }
-                       }     
-                    }
-                }
-            }
-        }
-        
-        divJustification.appendChild(divPremises);
-        */    
-          
-    }//end of airPane.render.because
-
-
-    //airPane.render.addInitialButtons();
-    airPane.render.because();
-        
-    return div;
-}
-tabulator.panes.register(airPane, false);
-
-// ends
-
-
-
-
-
-// ###### Finished expanding js/panes/airPane.js ##############
-
-// Content views
-
-// ###### Expanding js/panes/imagePane.js ##############
-/*   Image Pane
-**
-**  This outline pane contains the document contents for an Image document
-*/
-tabulator.panes.register( {
-    icon: tabulator.Icon.src.icon_imageContents,
-    
-    name: 'image',
-    
-    label: function(subject) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-
-        if (!kb.anyStatementMatching(
-            subject, tabulator.ns.rdf( 'type'),
-            kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
-            return null;
-
-        //   See aslo the source pane, which has lower precedence.
- 
-        var contentTypeMatch = function(kb, x, contentTypes) {
-            var cts = kb.fetcher.getHeader(x, 'content-type');
-            if (cts) {
-                for (var j=0; j<cts.length; j++) {
-                    for (var k=0; k < contentTypes.length; k++) {
-                        if (cts[j].indexOf(contentTypes[k]) >= 0) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        };
-        
-        var suppressed = [ 'application/pdf'];
-        if (contentTypeMatch(kb, subject, suppressed)) return null;
-
-        return "view";
-    },
-
-    render: function(subject, myDocument) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'imageView')
-        var img = myDocument.createElement("IMG")
-        img.setAttribute('src', subject.uri) // w640 h480
-        img.setAttribute('style','max-width: 100%; max-height: 100%;')
-//        div.style['max-width'] = '640';
-//        div.style['max-height'] = '480';
-        var tr = myDocument.createElement('TR')  // why need tr?
-        tr.appendChild(img)
-        div.appendChild(tr)
-        return div
-    }
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/imagePane.js ##############
-
-// ###### Expanding js/panes/humanReadablePane.js ##############
-/*   Human-readable Pane
-**
-**  This outline pane contains the document contents for an HTML document
-**  This is for peeking at a page, because the user might not want to leave the tabulator.
-*/
-tabulator.panes.register({
-    
-    icon: tabulator.Icon.src.icon_visit,
-    
-    name: 'humanReadable',
-    
-    label: function(subject, myDocument) {
-        // Prevent infinite recursion with iframe loading a web page which uses tabulator which shows iframe...
-        if (tabulator.isExtension && myDocument.location == subject.uri) return null;
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-
-        //   See aslo tthe source pane, which has lower precedence.
-        
-        var allowed = ['text/plain',
-                       'text/html','application/xhtml+xml',
-                        'image/png', 'image/jpeg', 'application/pdf'];
- 
-        var displayable = function(kb, x, displayables) {
-            var cts = kb.fetcher.getHeader(x, 'content-type');
-            if (cts) {
-                for (var j=0; j<cts.length; j++) {
-                    for (var k=0; k < displayables.length; k++) {
-                        if (cts[j].indexOf(displayables[k]) >= 0) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        };
-        
-        var t = kb.findTypeURIs(subject);
-        if (t[ns.link('WebPage').uri]) return "view";
-
-        if (displayable(kb, subject, allowed)) return "View";
-
-        return null;
-    },
-    
-    render: function(subject, myDocument) {
-        var div = myDocument.createElement("div")
-
-        //  @@ When we can, use CSP to turn off scripts within the iframe
-        div.setAttribute('class', 'docView')    
-        var iframe = myDocument.createElement("IFRAME")
-        iframe.setAttribute('src', subject.uri)    // allow-same-origin
-        iframe.setAttribute('class', 'doc')
-        iframe.setAttribute('sandbox', 'allow-same-origin allow-forms'); // allow-scripts ?? no documents should be static
-        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
-        iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
-//        iframe.setAttribute('height', '480')
-//        iframe.setAttribute('width', '640')
-        var tr = myDocument.createElement('TR')
-        tr.appendChild(iframe)
-        div.appendChild(tr)
-        return div
-    }
-}, true);
-//ends
-
-
-
-// ###### Finished expanding js/panes/humanReadablePane.js ##############
-
-// ###### Expanding js/panes/dataContentPane.js ##############
-/*      Data content Pane
-**
-**  This pane shows the content of a particular RDF resource
-** or at least the RDF semantics we attribute to that resource.
-*/
-
-// To do:  - Only take data from one graph
-//         - Only do forwards not backward?
-//         - Expand automatically all the way down
-//         - original source view?  Use ffox view source
-
-tabulator.panes.dataContentPane = {
-    
-    icon:  tabulator.Icon.src.icon_dataContents,
-    
-    name: 'dataContents',
-    
-    label: function(subject) {
-        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
-        var n = tabulator.kb.statementsMatching(
-            undefined, undefined, undefined, subject).length;
-        if (n == 0) return null;
-        return "Data ("+n+")";
-    },
-    /*
-    shouldGetFocus: function(subject) {
-        return tabulator.kb.whether(subject, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'));
-    },
-*/
-    statementsAsTables: function statementsAsTables(sts, myDocument, initialRoots) {
-        var rep = myDocument.createElement('table');
-        var sz = tabulator.rdf.Serializer( tabulator.kb );
-        var res = sz.rootSubjects(sts);
-        var roots = res.roots;
-        var subjects = res.subjects;
-        var loopBreakers = res.loopBreakers;
-        for (var x in loopBreakers) dump('\tdataContentPane: loopbreaker:'+x+'\n')
-        var outline = tabulator.outline;
-        var doneBnodes = {}; // For preventing looping
-        var referencedBnodes = {}; // Bnodes which need to be named alas
-        
-        // The property tree for a single subject or anonymos node
-        function propertyTree(subject) {
-            // print('Proprty tree for '+subject);
-            var rep = myDocument.createElement('table')
-            var lastPred = null;
-            var sts = subjects[sz.toStr(subject)]; // relevant statements
-            if (!sts) { // No statements in tree
-                rep.appendChild(myDocument.createTextNode('...')); // just empty bnode as object
-                return rep;
-            }
-            sts.sort();
-            var same =0;
-            var td_p; // The cell which holds the predicate
-            for (var i=0; i<sts.length; i++) {
-                var st = sts[i];
-                var tr = myDocument.createElement('tr');
-                if (st.predicate.uri != lastPred) {
-                    if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
-                    td_p = myDocument.createElement('td');
-                    td_p.setAttribute('class', 'pred');
-                    var anchor = myDocument.createElement('a')
-                    anchor.setAttribute('href', st.predicate.uri)
-                    anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.predicateLabelForXML(st.predicate)));
-                    td_p.appendChild(anchor);
-                    tr.appendChild(td_p);
-                    lastPred = st.predicate.uri;
-                    same = 0;
-                }
-                same++;
-                var td_o = myDocument.createElement('td');
-                td_o.appendChild(objectTree(st.object));
-                tr.appendChild(td_o);
-                rep.appendChild(tr);
-            }
-            if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
-            return rep;
-        }
-
-        // Convert a set of statements into a nested tree of tables
-        function objectTree(obj) {
-            var res;
-            switch(obj.termType) {
-                case 'symbol':
-                    var anchor = myDocument.createElement('a')
-                    anchor.setAttribute('href', obj.uri)
-                    anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
-                    return anchor;
-                    
-                case 'literal':
-
-                    if (!obj.datatype || !obj.datatype.uri) {
-                        res = myDocument.createElement('div');
-                        res.setAttribute('style', 'white-space: pre-wrap;');
-                        res.textContent = obj.value;
-                        return res
-                    } else if (obj.datatype.uri == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral') {
-                        res = myDocument.createElement('div');
-                        res.setAttribute('class', 'embeddedXHTML');
-                        res.innerHTML = obj.value; // Try that  @@@ beware embedded dangerous code
-                        return res;
-                    };
-                    return myDocument.createTextNode(obj.value); // placeholder - could be smarter, 
-                    
-                case 'bnode':
-                    if (obj.toNT() in doneBnodes) { // Break infinite recursion
-                        referencedBnodes[(obj.toNT())] = true;
-                        var anchor = myDocument.createElement('a')
-                        anchor.setAttribute('href', '#'+obj.toNT().slice(2))
-                        anchor.setAttribute('class','bnodeRef')
-                        anchor.textContent = '*'+obj.toNT().slice(3);
-                        return anchor; 
-                    }
-                    doneBnodes[obj.toNT()] = true; // Flag to prevent infinite recusruion in propertyTree
-                    var newTable =  propertyTree(obj);
-                    doneBnodes[obj.toNT()] = newTable; // Track where we mentioned it first
-                    if (tabulator.Util.ancestor(newTable, 'TABLE') && tabulator.Util.ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
-                        newTable.style.backgroundColor='#eee'
-                    } else {
-                        newTable.style.backgroundColor='white'
-                    }
-                    return newTable;
-                    
-                case 'collection':
-                    var res = myDocument.createElement('table')
-                    res.setAttribute('class', 'collectionAsTables')
-                    for (var i=0; i<obj.elements.length; i++) {
-                        var tr = myDocument.createElement('tr');
-                        res.appendChild(tr);
-                        tr.appendChild(objectTree(obj.elements[i]));
-                    }
-                    return  res;
-                case 'formula':
-                    var res = tabulator.panes.dataContentPane.statementsAsTables(obj.statements, myDocument);
-                    res.setAttribute('class', 'nestedFormula')
-                    return res;
-                case 'variable':
-                    var res = myDocument.createTextNode('?' + obj.uri);
-                    return res;
-                    
-            }
-            throw "Unhandled node type: "+obj.termType
-        }
-    
-        // roots.sort();
-
-        if (initialRoots) {
-            roots = initialRoots.concat(roots.filter(function(x){
-                for (var i=0; i<initialRoots.length; i++) { // Max 2
-                    if (x.sameTerm(initialRoots[i])) return false;
-                }
-                return true;
-            }));
-        }
-        for (var i=0; i<roots.length; i++) {
-            var tr = myDocument.createElement('tr')
-            rep.appendChild(tr);
-            var td_s = myDocument.createElement('td')
-            tr.appendChild(td_s);
-            var td_tree = myDocument.createElement('td')
-            tr.appendChild(td_tree);
-            var root = roots[i];
-            if (root.termType == 'bnode') {
-                td_s.appendChild(myDocument.createTextNode(tabulator.Util.label(root))); // Don't recurse!
-            } 
-            else {
-                td_s.appendChild(objectTree(root)); // won't have tree
-            }
-            td_tree.appendChild(propertyTree(root));
-        }
-        for (var bNT in referencedBnodes) { // Add number to refer to
-            var table = doneBnodes[bNT];
-            var tr = myDocument.createElement('tr');
-            var anchor = myDocument.createElement('a')
-            anchor.setAttribute('id', bNT.slice(2))
-            anchor.setAttribute('class','bnodeDef')
-            anchor.textContent = bNT.slice(3)+')';
-            table.insertBefore(anchor, table.firstChild);
-        }
-        return rep;
-    }, // statementsAsTables
-
-
-    // View the data in a file in user-friendly way
-    render: function(subject, myDocument) {
-
-        var kb = tabulator.kb;
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'dataContentPane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        if (1) {
-            initialRoots = []; // Ordering: start with stuf fabout this doc
-            if (kb.holds(subject, undefined, undefined, subject)) initialRoots.push(subject);
-            // Then about the primary topic of the document if any
-            var ps = kb.any(subject, tabulator.ns.foaf('primaryTopic'), undefined, subject);
-            if (ps) initialRoots.push(ps);
-            div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(
-                            sts, myDocument, initialRoots));
-            
-        } else {  // An outline mode openable rendering .. might be better
-            var sz = tabulator.rdf.Serializer( tabulator.kb );
-            var res = sz.rootSubjects(sts);
-            var roots = res.roots;
-            var p  = {};
-            // p.icon = dataContentPane.icon
-            p.render = function(s2) {
-                var div = myDocument.createElement('div')
-                
-                div.setAttribute('class', 'withinDocumentPane')
-                var plist = kb.statementsMatching(s2, undefined, undefined, subject)
-                appendPropertyTRs(div, plist, false, function(pred, inverse) {return true;})
-                return div    
-            }
-            for (var i=0; i<roots.length; i++) {
-                var tr = myDocument.createElement("TR");
-                root = roots[i];
-                tr.style.verticalAlign="top";
-                var td = thisOutline.outline_objectTD(root, undefined, tr)
-                tr.appendChild(td)
-                div.appendChild(tr);
-                outline_expand(td, root,  p);
-            }
-        }
-        return div
-    }
-};
-
-tabulator.panes.register(tabulator.panes.dataContentPane, false);
-
-
-/*   Pane within Document data content view
-**
-**  This outline pane contains docuemnts from a specific source document only.
-** It is a pane used recursively within an outer dataContentPane. (above)
-*/
-/*  Not used in fact??
-tabulator.panes.register({
-
-    icon: Icon.src.icon_withinDocumentPane, // should not show
-
-    label: function(subject) { return 'doc contents';},
-    
-    filter: function(pred, inverse) {
-        return true; // show all
-    },
-    
-    render: function(subject, source) {
-        var div = myDocument.createElement('div')
-        div.setAttribute('class', 'withinDocumentPane')                  
-        var plist = kb.statementsMatching(subject, undefined, undefined, source)
-        tabulator.outline.appendPropertyTRs(div, plist, false,
-                function(pred, inverse) {return true;});
-        return div ;
-    }
-}, true);
-    
-*/
-
-
-//ends
-
-
-// ###### Finished expanding js/panes/dataContentPane.js ##############
-// ###### Expanding js/panes/n3Pane.js ##############
-/*      Notation3 content Pane
-**
-**  This pane shows the content of a particular RDF resource
-** or at least the RDF semantics we attribute to that resource,
-** in generated N3 syntax.
-*/
-
-tabulator.panes.register ({
-
-    icon: tabulator.Icon.src.icon_n3Pane,
-    
-    name: 'n3',
-    
-    label: function(subject) {
-        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
-        var n = tabulator.kb.statementsMatching(
-            undefined, undefined, undefined, subject).length;
-        if (n == 0) return null;
-        return "Data ("+n+") as N3";
-    },
-
-    render: function(subject, myDocument) {
-        var kb = tabulator.kb;
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'n3Pane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        /*
-        var kludge = kb.formula([]); // No features
-        for (var i=0; i< sts.length; i++) {
-            s = sts[i];
-            kludge.add(s.subject, s.predicate, s.object);
-        }
-        */
-        var sz = tabulator.rdf.Serializer(kb);
-        sz.suggestNamespaces(kb.namespaces);
-        sz.setBase(subject.uri);
-        var str = sz.statementsToN3(sts)
-        var pre = myDocument.createElement('PRE');
-        pre.appendChild(myDocument.createTextNode(str));
-        div.appendChild(pre);
-        return div
-    }
-}, false);
-
-
-
-// ###### Finished expanding js/panes/n3Pane.js ##############
-// ###### Expanding js/panes/RDFXMLPane.js ##############
-
-
-    /*      RDF/XML content Pane
-    **
-    **  This pane shows the content of a particular RDF resource
-    ** or at least the RDF semantics we attribute to that resource,
-    ** in generated N3 syntax.
-    */
-tabulator.panes.register ({
-
-    icon: tabulator.Icon.src.icon_RDFXMLPane,
-    
-    name: 'RDFXML',
-    
-    label: function(subject) {
-        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
-
-        var n = tabulator.kb.statementsMatching(
-            undefined, undefined, undefined, subject).length;
-        if (n == 0) return null;
-        return 'As RDF/XML ('+n+')';
-    },
-
-    render: function(subject, myDocument) {
-        var kb = tabulator.kb;
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'RDFXMLPane');
-        // Because of smushing etc, this will not be a copy of the original source
-        // We could instead either fetch and re-parse the source,
-        // or we could keep all the pre-smushed triples.
-        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
-        /*
-        var kludge = kb.formula([]); // No features
-        for (var i=0; i< sts.length; i++) {
-            s = sts[i];
-            kludge.add(s.subject, s.predicate, s.object);
-        }
-        */
-        var sz = tabulator.rdf.Serializer(kb);
-        sz.suggestNamespaces(kb.namespaces);
-        sz.setBase(subject.uri);
-        var str = sz.statementsToXML(sts)
-        var pre = myDocument.createElement('PRE');
-        pre.appendChild(myDocument.createTextNode(str));
-        div.appendChild(pre);
-        return div
-    }
-}, false);
-
-// ends
-
-
-// ###### Finished expanding js/panes/RDFXMLPane.js ##############
-
-// User configured:
-// ###### Expanding js/panes/form/pane.js ##############
-/*
-**                 Pane for running existing forms for any object
-**
-*/
-
-    
-tabulator.Icon.src.icon_form = iconPrefix + 'js/panes/form/form-b-22.png';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_form] = 'forms';
-
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_form,
-    
-    name: 'form',
-    
-    // Does the subject deserve this pane?
-    label: function(subject) {
-        var n = tabulator.panes.utils.formsFor(subject).length;
-        tabulator.log.debug("Form pane: forms for "+subject+": "+n)
-        if (!n) return null;
-        return ""+n+" forms";
-    },
-
-    render: function(subject, dom) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
-        
-
-        var mention = function complain(message, style){
-            var pre = dom.createElement("p");
-            pre.setAttribute('style', style ? style :'color: grey; background-color: white');
-            box.appendChild(pre).textContent = message;
-            return pre
-        } 
-
-        var complain = function complain(message, style){
-            mention(message, 'style', style ? style :'color: grey; background-color: #fdd;');
-        } 
-
-        var complainIfBad = function(ok,body){
-            if (ok) {
-                // setModifiedDate(store, kb, store);
-                // rerender(box);   // Deleted forms at the moment
-            }
-            else complain("Sorry, failed to save your change:\n"+body);
-        }
-
-        var thisPane = this;
-        var rerender = function(box) {
-            var parent  = box.parentNode;
-            var box2 = thisPane.render(subject, dom);
-            parent.replaceChild(box2, box);
-        };
-        
-        if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
-         
-        //kb.statementsMatching(undefined, undefined, subject);
-
-        // The question of where to store this data about subject
-        // This in general needs a whole lot more thought
-        // and it connects to the discoverbility through links
-        
-        var t = kb.findTypeURIs(subject);
-
-        var me_uri = tabulator.preferences.get('me');
-        var me = me_uri? kb.sym(me_uri) : null;
-
-        var box = dom.createElement('div');
-        box.setAttribute('class', 'formPane');
-
-        if (!me) {
-            mention("You are not logged in. If you log in and have \
-workspaces then you would be able to select workspace in which \
-to put this new information")
-        } else {
-            var ws = kb.each(me, ns.ui('workspace'));
-            if (ws.length = 0) {
-                mention("You don't seem to have any workspaces defined.  \
-A workspace is a place on the web (http://..) or in \
-the file system (file:///) to store application data.\n")            
-            } else {
-                //@@
-            }
-        }
-
-
-        // Render forms using a given store
-        
-        var renderFormsFor = function(store, subject) {
-            kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
-                if (!ok) return complain("Cannot load store "+store.uri + ': '+ body);
-
-                //              Render the forms
-                
-                var forms = tabulator.panes.utils.formsFor(subject);
-                
-                // complain('Form for editing this form:');
-                for (var i=0; i<forms.length; i++) {
-                    var form = forms[i];
-                    var heading = dom.createElement('h4');
-                    box.appendChild(heading);
-                    if (form.uri) {
-                        var formStore = $rdf.Util.uri.document(form);
-                        if (formStore.uri != form.uri) {// The form is a hash-type URI
-                            var e = box.appendChild(tabulator.panes.utils.editFormButton(
-                                    dom, box, form, formStore,complainIfBad ));
-                            e.setAttribute('style', 'float: right;');
-                        }
-                    }
-                    var anchor = dom.createElement('a');
-                    anchor.setAttribute('href', form.uri);
-                    heading.appendChild(anchor)
-                    anchor.textContent = tabulator.Util.label(form, true);
-                    
-                    mention("Where will this information be stored?")
-                    var ele = dom.createElement('input');
-                    box.appendChild(ele);
-                    ele.setAttribute('type', 'text');
-                    ele.setAttribute('size', '72');
-                    ele.setAttribute('maxlength', '1024');
-                    ele.setAttribute('style', 'font-size: 80%; color:#222;');
-                    ele.value = store.uri
-                    
-                    tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
-                }
-
-            }); // end: when store loded
-        }; // renderFormsFor
-
-
-        // Figure out what store
-
-        // Which places are editable and have stuff about the subject?
-
-        var store = null;
-
-        // 1. The document URI of the subject itself
-        var docuri = $rdf.Util.uri.docpart(subject.uri);
-        if (subject.uri != docuri
-            && tabulator.sparql.editable(docuri, kb))
-            store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable data file with hash
-            
-        else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
-            // 
-        }
-        // 2. where stuff is already stored
-        if (!store) {
-            var docs = {}, docList = [];
-            kb.statementsMatching(subject).map(function(st){docs[st.why.uri] = 1});
-            kb.statementsMatching(undefined, undefined, subject).map(function(st){docs[st.why.uri] = 2});
-            for (var d in docs) docList.push(docs[d], d);
-            docList.sort();
-            for (var i=0; i<docList.length; i++) {
-                var uri = docList[i][1];
-                if (uri && tabulator.sparql.editable(uri)) {
-                    store = kb.sym(uri);
-                    break;
-                }            
-            }
-        }
-
-        // 3. In a workspace store
-        
-        var followeach = function(kb, subject, path) {
-            if (path.length == 0) return [ subject ];
-            var oo = kb.each(subj, path[0]);
-            var res = [];
-            for (var i=0; i<oo.length; i++) {
-                res = res.concat(followeach(kb, oo[i], path.slice(1)));
-            }
-            return res;
-        }
-
-        var date = '2014'; // @@@@@@@@@@@@ pass as parameter
-
-        
-
-       if (store) {
-            mention("@@ Ok, we have a store <" + store.uri + ">.");
-            renderFormsFor(store, subject);
-        } else {
-            complain("No suitable store is known, to edit <" + subject.uri + ">.");
-            var foobarbaz = tabulator.panes.utils.selectWorkspace(dom,
-                                        function(ws){
-                mention("Workspace selected OK: " + ws);
-
-                var activities = kb.each(undefined, ns.space('workspace'), ws);
-                for (var j=0; j <activities.length;i++) {
-                    var act = activities[j];
-
-                    var s = kb.any(ws, ns.space('store'));
-                    var start =  kb.any(ws, ns.ical('dtstart')).value();
-                    var end =    kb.any(ws, ns.ical('dtend')).value();
-                    if ( s && start && end &&  start <= date && end > date) {
-                        renderFormsFor(s, subject);
-                        break;
-                    } else {
-                        complain("Note no suitable annotation store in activity: " + act);
-                    }
-                }
-                
-           });
-           box.appendChild(foobarbaz);
-        };
-        
-        return box;
-    }
-
-}, false);
-
-//ends
-
-
-
-
-// ###### Finished expanding js/panes/form/pane.js ##############
-
-// Generic:
-// ###### Expanding js/panes/attach/attachPane.js ##############
-/*   Attachment Pane
-**
-** - Attach a document to a thing
-**  - View attachments
-** - Look at all unattached Supporting Documents.
-** - Drag a document onto the pane to attach it @@
-**
-**
-** I am using in places single quotes strings like 'this'
-** where internationalizatio ("i18n") is not a problem, and double quoted
-** like "this" where th string is seen by the user and so I18n is an issue.
-*/
-
-    
-// These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_paperclip = tabulator.iconPrefix + 'js/panes/attach/tbl-paperclip-22.png';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Attachments'
-
-if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(tabulator.kb);
-
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_paperclip,
-    
-    name: 'attachments',
-    
-    // Does the subject deserve an issue pane?
-    //
-    //  In this case we will render any thing which is in any subclass of 
-    //  certain classes, or also the certain classes themselves, as a
-    //  triage tool for correlating many attachees with attachments.
-    // We also offer the pane for anything of any class which just has an attachment already.
-    //
-    label: function(subject) {
-        var kb = tabulator.kb;
-        var t = kb.findTypeURIs(subject);
-        var QU = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        if (t['http://www.w3.org/ns/pim/trip#Trip'] || // If in any subclass
-        subject.uri == 'http://www.w3.org/ns/pim/trip#Trip' ||
-        t['http://www.w3.org/2005/01/wf/flow#Task'] ||
-        t['http://www.w3.org/2000/10/swap/pim/qif#Transaction'] ||
-        //subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' ||
-        QU('Transaction') in kb.findSuperClassesNT(subject) ||
-        kb.holds(subject, WF('attachment'))) return "attachments";
-        return null; 
-    },
-
-    render: function(subject, dom) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
-        var CAL = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        var QU = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
-        
-        
-   //////////////////////////////////////////////////////////////////////////////     
-        
-        var setModifiedDate = function(subj, kb, doc) {
-            var deletions = kb.statementsMatching(subject, DCT('modified'));
-            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
-            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
-            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
-            sparqlService.update(deletions, insertions, function(uri, ok, body){});
-        }
-
-        var complain = function complain(message){
-            var pre = dom.createElement("pre");
-            pre.setAttribute('style', 'background-color: pink');
-            div.appendChild(pre);
-            pre.appendChild(dom.createTextNode(message));
-        } 
-        var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, dom);
-            parent.replaceChild(div2, div);
-        };
-
-        // Where can we write about this thing?
-        //
-        // Returns term for document or null 
-        var findStore = function(kb, subject) {
-            var docURI = tabulator.rdf.Util.uri.docpart(subject.uri);
-            if (tabulator.sparql.editable(docURI, kb)) return kb.sym(docURI);
-            var store = kb.any(kb.sym(docURI), QU('annotationStore'));
-            // if (!store) complain("No store for "+docURI);
-            return store;
-        }
-
-        
-        var div = dom.createElement("div");
-        var esc = tabulator.Util.escapeForXML;
-        div.setAttribute('class', 'attachPane');
-        div.innerHTML='<h1>' + esc(tabulator.Util.label(subject, true)) +
-                            ' attachments</h1>'; //
-
-
-        var predicate =  WF('attachment');
-        var range = QU('SupportingDocument');
-        
-        var subjects;
-        var multi;
-        var options = {};
-        var currentMode = 0; // 0 -> Show all;  1 -> Attached;    2 -> unattached
-        var currentSubject = null, currentObject = null;
-        var currentSubjectItem = null, currentObjectItem = null;
-        var objectType = QU('SupportingDocument');
-        
-        // Find all members of the class which we know about
-        // and sort them by an appropriate property.   @@ Move to library
-        //
-        
-        var getSortKeySimple =  function(c) {         
-            var sortBy = kb.sym({
-                'http://www.w3.org/2005/01/wf/flow#Task' :
-                    'http://purl.org/dc/elements/1.1/created',
-                'http://www.w3.org/ns/pim/trip#Trip' : // @@ put this into the ontologies
-                    'http://www.w3.org/2002/12/cal/ical#dtstart' ,
-                'http://www.w3.org/2000/10/swap/pim/qif#Transaction' :
-                    'http://www.w3.org/2000/10/swap/pim/qif#date',
-                'http://www.w3.org/2000/10/swap/pim/qif#SupportingDocument':
-                    'http://purl.org/dc/elements/1.1/date'} [subject.uri]);
-                    
-            if (!sortBy) {
-                sortBy = kb.any(subject, tabulator.ns.ui('sortBy'));
-            }
-            return sortBy;
-        }
-        
-        var getSortKey = function(c) {
-            var k = getSortKeySimple(c.uri);
-            if (k) return k;
-            var sup =  kb.findSuperClassesNT(c);
-            for (var cl in sup) { // note unordered -- could be closest first
-                k = getSortKeySimple(kb.fromNT(cl).uri);
-                if (k) return k;
-            }
-            return undefined; // failure
-        }
-        
-        var getMembersAndSort = function(subject) {
-        
-            var sortBy = getSortKey(subject);
-            var u, x, key, uriHash = kb.findMemberURIs(subject);
-            var pairs = [], subjects = [];
-            for (u in uriHash) { //@ protect against methods?
-                x = kb.sym(u);
-                if (sortBy) {
-                    key = kb.any(x, sortBy);
-                    if (!key) {
-                        // complain("No key "+key+" sortby "+sortBy+" for "+x);
-                        key = "8888-12-31"
-                    } else {
-                        key = key.value;
-                    }
-                 } else {
-                    complain("No sortby "+sortBy+" for "+x);
-                    key = "9999-12-31";
-                 }
-                // key = (sortBy && kb.any(x, sortBy)) || kb.literal("9999-12-31"); // Undated appear future
-                // if (!key) complain("Sort: '"+key+"' No "+sortBy+" for "+x); // Assume just not in this year
-                pairs.push( [key, x]);
-            }
-            pairs.sort();
-            pairs.reverse(); // @@ Descending order .. made a toggle?
-            for (var i=0; i< pairs.length; i++) {
-                subjects.push(pairs[i][1]);
-            }
-            return subjects;
-        };
-        
-        // Set up a triage of many class members against documents or just one
-        if (subject.uri ==  'http://www.w3.org/ns/pim/trip#Trip' ||
-            QU('Transaction') in kb.findSuperClassesNT(subject)
-            //subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction'
-            ) {
-            multi = true;
-            subjects = getMembersAndSort(subject);
-        } else {
-            currentSubject = subject;
-            currentMode = 1; // Show attached only.
-            subjects = [ subject ];
-            multi = false;
-        }
-
-        //var store = findStore(kb, subject);
-        //if (!store) complain("There is no annotation store for: "+subject.uri);
-
-        //var objects = kb.each(undefined, ns.rdf('type'), range);
-        var objects = getMembersAndSort(range);
-        if (!objects) complain("objects:"+objects.length);
-        
-        var deselectObject = function() {
-            currentObject = null;
-            preview.innerHTML = '';
-        }
-
-        var showFiltered = function(mode) {
-            var filtered = (mode == 0) ? objects :
-                (mode == 1) ?   (currentSubject === null
-                    ? objects.filter(function(y){return !!kb.holds(undefined, predicate, y)})
-                    : objects.filter(function(y){return !!kb.holds(currentSubject, predicate, y)}) )
-                : objects.filter(function(y){return kb.each(undefined, predicate, y).length == 0});
-            tabulator.panes.utils.selectorPanelRefresh(objectList,
-                dom, kb, objectType, predicate, true, filtered, options, showObject, linkClicked);
-            if (filtered.length == 1) {
-                currentObject = filtered[0];
-                showObject(currentObject, null, true); // @@ (Sure?) if only one select it.
-            } else {
-                deselectObject();
-            };
-        };
-        
-
-
-        var setAttachment = function(x, y, value, refresh) {
-            if (kb.holds(x, predicate, y) == value) return;
-            var verb = value ? "attach" : "detach";
-            //complain("Info: starting to "+verb+" " + y.uri + " to "+x.uri+ ":\n")
-            var linkDone3 = function(uri, ok, body) {
-                if (ok) {
-                    // complain("Success "+verb+" "+y.uri+" to "+x.uri+ ":\n"+ body);
-                    refresh();
-                } else {
-                    complain("Error: Unable to "+verb+" "+y.uri+" to "+x.uri+ ":\n"+ body);
-                }
-            };
-
-            var store = findStore(kb, x);
-            if (!store) {
-                complain("There is no annotation store for: "+x.uri);
-            } else {
-                var sts = [$rdf.st(x, predicate, y, store)];
-                if (value) {
-                    tabulator.sparql.update([], sts, linkDone3);
-                } else {
-                    tabulator.sparql.update(sts, [], linkDone3);
-                };
-            };
-        };
-
-        var linkClicked = function(x, event, inverse, refresh) {
-            var s, o;
-            if (inverse) { // Objectlist
-                if (!currentSubject) {
-                    complain("No subject for the link has been selected");
-                    return;
-                } else {
-                    s = currentSubject;
-                    o = x;
-                };
-            
-            } else { // Subjectlist
-                if (!currentObject) {
-                    complain("No object for the link has been selected");
-                    return;
-                } else {
-                    s = x;
-                    o = currentObject;
-                };
-            };
-            setAttachment(s, o, !kb.holds(s, predicate, o), refresh); // @@ toggle
-        };
-        
-        // When you click on a subject, filter the objects connected to the subject in Mode 1
-        var showSubject = function(x, event, selected) {
-            if (selected) {
-                currentSubject = x;
-            } else {
-                currentSubject = null;
-                if (currentMode === 1) deselectObject();
-            } // If all are displayed, refresh would just annoy:
-            if (currentMode !== 0) showFiltered(currentMode); // Refresh the objects
-        }
-        
-        if (multi) {
-            var subjectList = tabulator.panes.utils.selectorPanel(dom, kb, subject,
-                    predicate, false, subjects, options, showSubject, linkClicked);
-            subjectList.setAttribute('style',
-                'background-color: white;  width: 25em; height: 100%; padding: 0 em; overflow:scroll; float:left');
-            div.appendChild(subjectList);
-        }
-
-        var showObject = function(x, event, selected) {
-            if (!selected) {
-                deselectObject();
-                preview.innerHTML = ''; // Clean out what is there
-            // complain("Show object "+x.uri)
-                return;
-            }
-            currentObject = x;
-            try {
-
-/*
-                var table = dom.createElement('table');
-                tabulator.outline.GotoSubject(x, true, undefined, false, undefined, table) 
-*/
-                var dispalyable = function(kb, x) {
-                    var cts = kb.fetcher.getHeader(x, 'content-type');
-                    if (cts) {
-                        var displayables = [ 'text/html', 'image/png', 'application/pdf'];
-                        for (var j=0; j<cts.length; j++) {
-                            for (var k=0; k < displayables.length; k++) {
-                                if (cts[j].indexOf(displayables[k]) >= 0) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                    return false;
-                };
-
-                preview.innerHTML = "Loading ....";
-                if (x.uri) kb.fetcher.nowOrWhenFetched(x.uri, undefined, function(ok, body) {
-                    if (!ok) {
-                        preview.textContent = "Error loading " + x.uri + ': ' + body;
-                        return;
-                    }
-                    var display = tabulator.outline.propertyTable(x); //  ,table, pane
-                    preview.innerHTML = '';
-                    preview.appendChild(display);                    
-                });
-
-
-/*                
-                if (dispalyable(kb, x) || x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" || x.uri.slice(-5) == ".html" ||
-                        x.uri.slice(-5) == ".jpeg") { // @@@@@@ MAJOR KLUDGE! use metadata after HEAD
-                    preview.innerHTML = '<iframe height="100%" width="100%"src="'
-                        + x.uri + '">' + x.uri + '</iframe>';
-                } else {
-                };
-*/
-
-            } catch(e) {
-                preview.innerHTML = '<span style="background-color: pink;">' + "Error:" + e + '</span>'; // @@ enc
-            }
-        }
-
-        div.setAttribute('style', 'background-color: white; width:40cm; height:20cm;');
-        
-        
-        var headerButtons = function(dom, labels, intial, callback) {
-            var head = dom.createElement('table');
-            var current = intial;
-            head.setAttribute('style', 'float: left; width: 30em; padding: 0.5em; height: 1.5em; background-color: #ddd; color: #444; font-weight: bold')
-            var tr = dom.createElement('tr');
-            var style0 = 'border-radius: 0.6em; text-align: center;'
-            var style1 = style0 + 'background-color: #ccc; color: black;'
-            head.appendChild(tr);
-            var setStyles = function() {
-                for (i=0; i<labels.length; i++) {
-                    buttons[i] .setAttribute('style', i == current ? style1 : style0);
-                }
-            }
-            var i, b, buttons = [];
-            for (i=0; i<labels.length; i++) {
-                b = buttons[i] = dom.createElement('td');
-                b.textContent = labels[i];
-                tr.appendChild(buttons[i]);
-                var listen = function(b, i) {
-                    b.addEventListener('click', function(e) {
-                        current = i;
-                        setStyles();
-                        callback(i);
-                    });
-                }
-                listen(b, i);
-            };
-            setStyles();
-            return head;
-        };
-
-        var setMode = function (mode){
-            if (mode !== currentMode) {
-                currentMode = mode;
-                deselectObject();
-                showFiltered(mode);
-            }
-        }
-
-        var wrapper = dom.createElement('div');
-        wrapper.setAttribute('style', ' width: 30em; height: 100%;  padding: 0em; float:left;');
-        // wrapper.appendChild(head);
-        div.appendChild(wrapper);
-        wrapper.appendChild(headerButtons(dom, [ 'all', 'attached', 'not attached',], currentMode, setMode));
-
-        var objectList = tabulator.panes.utils.selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked);
-        objectList.setAttribute('style',
-            'background-color: #ffe;  width: 30em; height: 100%; padding: 0em; overflow:scroll;'); //float:left
-        wrapper.appendChild(objectList);
-        
-        //objectList.insertBefore(head, objectList.firstChild);
-
-        var preview = dom.createElement("div");
-        preview.setAttribute('style', /*background-color: black; */ 'padding: 0em; margin: 0;  height: 100%; overflow:scroll;');
-        div.appendChild(preview);
-        showFiltered(currentMode);
-
-        if (subjects.length > 0 && multi) {
-            var stores = {};
-            for (var k=0; k<subjects.length; k++) {
-                var store = findStore(kb, subjects[k]);
-                if (store) stores[store.uri] = subjects[k];
-                //if (!store) complain("No store for "+subjects[k].uri);
-            };
-            for (var storeURI in stores) {
-            //var store = findStore(kb,subjects[subjectList.length-1]);
-                var store = kb.sym(storeURI);
-                var mintBox = dom.createElement('div');
-                mintBox.setAttribute('style', 'clear: left; width: 20em; margin-top:2em; background-color:#ccc; border-radius: 1em; padding: 1em; font-weight: bold;');
-                mintBox.textContent = "+ New " + tabulator.Util.label(subject);
-                if (true)  { // Only if > 1 store in set?
-                    mintBox.textContent += " in "+ tabulator.Util.label(store);
-                    var storeLab = dom.createElement('span');
-                    storeLab.setAttribute('style', 'font-weight: normal; font-size: 80%; color: #777;')
-                    storeLab.textContent = storeURI;
-                    mintBox.appendChild(dom.createElement('br'));
-                    mintBox.appendChild(storeLab);
-                }
-                /*
-                var mintButton = dom.createElement('img');
-                mintBox.appendChild(mintButton);
-                mintButton.setAttribute('src', tabulator.Icon.src.icon_add_triple); @@ Invokes master handler
-                */
-                mintBox.addEventListener('click', function(event) {
-                    var thisForm = tabulator.panes.utils.promptForNew(
-                        dom, kb, subject, predicate, subject, null, store,
-                        function(ok, body){
-                            if (!ok) {
-                                //callback(ok, body); // @@ if ok, need some form of refresh of the select for the new thing
-                            } else {
-                                // Refresh @@
-                            }
-                        });
-                    try {
-                        div.insertBefore(thisForm, mintBox.nextSibling) // Sigh no insertAfter
-                    } catch(e) {
-                        div.appendChild(thisForm);
-                    }
-                    var newObject = thisForm.AJAR_subject;
-
-                }, false);
-                div.appendChild(mintBox);
-            };
-        };
-
-         
-        
-        
-        // if (!me) complain("(You do not have your Web Id set. Set your Web ID to make changes.)");
-
-        return div;
-    }
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/attach/attachPane.js ##############
-// ###### Expanding js/panes/tableViewPane.js ##############
-
-// Format an array of RDF statements as an HTML table.
+// ###### Finished expanding js/panes/common/discussion.js ##############
+// A relationsal table widget
+// ###### Expanding js/panes/common/table.js ##############
+
+// Table Widget: Format an array of RDF statements as an HTML table.
 //
 // This can operate in one of three modes: when the class of object is given
 // or when the source document from whuch data is taken is given,
@@ -15943,7 +11513,9 @@ tabulator.panes.register( {
 // When the tableClass is not given, it looks for common  classes in the data,
 // and gives the user the option.
 //
-// 2008 Written, Ilaria Liccardi
+// 2008 Written, Ilaria Liccardi  asthe tableViewPane.js
+// 2014 Core table widget moved into common/table.js - timbl
+//
 
 tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, options) {
     var sourceDocument = options.sourceDocument;
@@ -17631,6 +13203,4031 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 }
 /////////////////////////////////////////////////////////////////////
 
+// ENDS
+
+// ###### Finished expanding js/panes/common/table.js ##############
+// A 2-D matrix of values 
+// ###### Expanding js/panes/common/matrix.js ##############
+//      Build a 2D matrix of values
+//
+//  query    a Query object of rdflib.js with a valid pattern
+//  vx       A variable object, the one to be used for the X variable (horiz)
+//  vy       A variable object, the one to be used for the Y variable (vertical)
+//  vvalue       A variable object, the one to be used for the cell value
+//  returns  A DOM element with the matrix in it, which has a .refresh() function.
+//
+// Options:
+//     cellFunction(td, x, y, value)  fill the TD element of a single cell
+//     xDecreasing  set true for x axis to be in decreasiong order.
+//     yDecreasing  set true for y axis to be in decreasiong order.
+//     set_x        array of X values to be define initial rows (order irrelevant)
+//     set_y        array of Y values to be define initial columns
+//
+// Features:
+//   Header row at top (x axis) and left (y-axis) generated automatically.
+//   Extra rows and columns are inserted as needed to hold new data points
+//   matrix.refresh() will re-run the query and adjust the display
+
+tabulator.panes.utils.matrixForQuery  = function (query, vx, vy, vvalue, options, whenDone) {
+    var matrix = dom.createElement('table');
+    var header = dom.createElement('tr');
+    var corner = header.appendChild(dom.createElement('td'));
+    corner.setAttribute('class', 'MatrixCorner')
+    //corner.textContent = '*'; // @@ test only
+    matrix.appendChild(header); // just one for now
+    matrix.lastHeader = header; // Element before data
+    var headerRows = 1;
+    var headerColumns = 1;
+    var columns = []; // Vector
+    var rows = []; // Associative array
+    
+    var setCell = function(cell, x, y, value) {
+        while(cell.firstChild) { // Empty any previous
+            cell.removeChild(cell.firstChild);
+        }
+        cell.setAttribute('style', '');
+        cell.style.textAlign = "center";
+        
+        if (options.cellFunction) {
+            options.cellFunction(cell, x, y, value);
+        } else {
+            cell.textContent = tabulator.Util.label(value); 
+        }
+    };
+
+    var rowFor = function(y1) { 
+        var y = y1.toNT();
+        if (rows[y]) return rows[y];
+        var tr = dom.createElement('tr');
+        var header = tr.appendChild(dom.createElement('td'));
+        if (y1.termType = 'symbol') {
+            kb.fetcher.nowOrWhenFetched(y1.uri.split('#')[0], undefined, function(uri, ok, body){
+                header.textContent = tabulator.Util.label(y1);
+            });
+        } else {
+            header.textContent = tabulator.Util.label(y1);
+        }
+        for (var i = 0; i < columns.length; i++) {
+            setCell(tr.appendChild(dom.createElement('td')), $rdf.fromNT(columns[i]), y1, null);
+        }
+        tr.dataValueNT = y;
+        rows[y] = tr;
+        for (var ele = matrix.lastHeader.nextSibling; ele; ele = ele.nextSibling) { // skip header
+            if (((y > ele.dataValueNT) && options && options.yDecreasing) ||
+                        ((y < ele.dataValueNT) && !(options && options.yDecreasing))) {
+                return matrix.insertBefore(tr, ele);// return the tr
+            }
+        }
+        return matrix.appendChild(tr); // return the tr
+    }
+    
+    var columnNumberFor = function(x1) {
+        var xNT = x1.toNT();  // xNT is a NT string
+        var col = null;
+        // These are data columns (not headings)
+        for (var i=0; i < columns.length; i++) {
+            if (columns[i] === xNT) {
+                return i
+            }
+            
+            if (((xNT > columns[i]) && options.xDecreasing) ||
+                    ((xNT < columns[i]) && !options.xDecreasing)) {
+                columns = columns.slice(0, i).concat([xNT]).concat(columns.slice(i));
+                col = i;
+                break
+            }
+        }
+
+        if (col === null) {
+            col = columns.length;
+            columns.push(xNT);
+        } 
+
+        // col is the number of the new column, starting from 0
+        for (var row = matrix.firstChild; row; row = row.nextSibling) { //For every row header or not
+            var y = row.dataValueNT;
+            var td = dom.createElement('td'); // Add a new cell 
+            td.style.textAlign = "center";
+            if (row === matrix.firstChild) {
+               td.textContent = tabulator.Util.label(x1); 
+            } else {
+                setCell(td, x1, $rdf.fromNT(y), null) 
+            }
+            if (col === columns.length -1 ) {
+                row.appendChild(td);
+            } else {
+                var t = row.firstChild;
+                for (var j =0; j < col; j++) {
+                    t = t.nextSibling;
+                }
+                row.insertBefore(td, t); 
+            }
+        }
+        return col;
+    };
+
+
+    var markOldCells = function() {
+        for (var i = 1; i < matrix.children.length; i ++) {
+            var row = matrix.children[i];
+            for (var j = 1; j < row.children.length; j++) {
+                matrix.children[i].old = true;
+            }
+        }
+    }
+
+    var clearOldCells = function() {
+        var row;
+        var colsUsed = [];
+        var rowsUsed = [];
+        for (var i = 1; i < matrix.children.length; i ++) {
+            row = matrix.children[i];
+            for (var j = 1; j < row.children.length; j++) {
+                var cell = matrix.children[i];
+                if (cell.old)  {
+                    cell.textContent = ''; 
+                } else {
+                    rowsUsed[row.dataValueNT] = true;
+                    colsUsed[j] = true;
+                }
+            }
+        }
+        for (var i = 1; i < matrix.children.length; i ++) {
+            row = matrix.children[i];
+            if (!rowsUsed[row.dataValueNT]) {
+                matrix.removeChild(row);
+            }
+        }
+        for (var i = 0; i < matrix.children.length; i ++) {
+            row = matrix.children[i];
+            for (var j = row.children.length -1 ; j > 0;  j--) { // backwards
+                var cell = matrix.children[i];
+                if (!columnUsed[j])  {
+                    row.removeChild(cell);
+                }
+            }
+        }
+    };
+
+    matrix.refresh = function() {
+        markOldCells();
+        kb.query(query, addCellFromBindings, clearOldCells);
+    }
+
+    var addCellFromBindings = function(bindings) {
+        var x = bindings[vx], y = bindings[vy], value = bindings[vvalue];
+        var row = rowFor(y);
+        var colNo = columnNumberFor(x);
+        var cell = row.children[colNo + 1]; // number of Y axis headings
+        setCell(cell, x, y, value);
+    }
+
+    if (options.set_y) {  // Knows y values create rows
+        for (var k=0; k<options.set_y.length; k++) {
+            rowFor(options.set_y[k]);
+        }
+    }
+    if (options.set_x) {
+        for (k=0; k<options.set_x.length; k++) {
+            columnNumberFor(options.set_x[k]);
+        }
+    }
+    
+    kb.query(query, addCellFromBindings, whenDone); // Populate the matrix
+    return matrix;
+
+}
+
+// ###### Finished expanding js/panes/common/matrix.js ##############
+
+/*  Note that hte earliest panes have priority. So the most specific ones are first.
+**
+*/
+// Developer designed:
+// ###### Expanding js/panes/issue/pane.js ##############
+/*   Issue Tracker Pane
+**
+**  This outline pane allows a user to interact with an issue,
+to change its state according to an ontology, comment on it, etc.
+**
+**
+** I am using in places single quotes strings like 'this'
+** where internationalization ("i18n") is not a problem, and double quoted
+** like "this" where the string is seen by the user and so I18n is an issue.
+*/
+
+
+if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser have console
+    console = {};
+    console.log = function(msg) { tabulator.log.info(msg);};
+}
+
+
+
+//////////////////////////////////////////////////////  SUBCRIPTIONS
+
+$rdf.subscription =  function(options, doc, onChange) {
+
+
+    //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
+    var linkRels = function(doc) {
+        var links = {}; // map relationship to uri
+        var linkHeaders = tabulator.sf.getHeader(doc, 'link');
+        if (!linkHeaders) return null;
+        linkHeaders.map(function(headerValue){
+            var arg = headerValue.trim().split(';');
+            var uri = arg[0];
+            arg.slice(1).map(function(a){
+                var key = a.split('=')[0].trim();
+                var val = a.split('=')[1].trim();
+                if (key ==='rel') {
+                    links[val] = uri.trim();
+                }
+            });        
+        });
+        return links;
+    };
+
+
+    var getChangesURI = function(doc, rel) {
+        var links = linkRels(doc);
+        if (!links[rel]) {
+            console.log("No link header rel=" + rel + " on " + doc.uri)
+            return null;
+        }
+        var changesURI = $rdf.uri.join(links[rel], doc.uri);
+        // console.log("Found rel=" + rel + " URI: " + changesURI);
+        return changesURI;
+    };
+
+
+
+///////////////  Subscribe to changes by SSE
+
+
+    var getChanges_SSE = function(doc, onChange) {
+        var streamURI = getChangesURI(doc, 'events');
+        if (!streamURI) return;
+        var source = new EventSource(streamURI); // @@@  just path??
+        console.log("Server Side Source");   
+
+        source.addEventListener('message', function(e) {
+            console.log("Server Side Event: " + e);   
+            alert("SSE: " + e)  
+            // $('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
+        }, false);
+    };
+
+ 
+    
+
+    //////////////// Subscribe to changes websocket
+
+    // This implementation uses web sockets using update-via
+    
+    var getChanges_WS2 = function(doc, onChange) {
+        var router = new $rdf.UpdatesVia(tabulator.sf); // Pass fetcher do it can subscribe to headers
+        var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+        router.register(wsuri, doc.uri);
+    };
+    
+    var getChanges_WS = function(doc, onChange) {
+        var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
+        var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
+        var socket;
+        try {
+            socket = new WebSocket(changesURI);
+        } catch(e) {
+            socket = new MozWebSocket(changesURI);
+        };
+        
+        socket.onopen = function(event){
+            console.log("socket opened");
+        };
+        
+        socket.onmessage = function (event) {
+            console.log("socket received: " +event.data);
+            var patchText = event.data;
+            console.log("Success: patch received:" + patchText);
+            
+            // @@ check integrity of entire patch
+            var patchKB = $rdf.graph();
+            var sts;
+            try {
+                $rdf.parse(patchText, patchKB, doc.uri, 'text/n3');
+            } catch(e) {
+                console.log("Parse error in patch: "+e);
+            };
+            clauses = {};
+            ['where', 'insert', 'delete'].map(function(pred){
+                sts = patchKB.statementsMatching(undefined, SQNS(pred), undefined);
+                if (sts) clauses[pred] = sts[0].object;
+            });
+            console.log("Performing patch!");
+            kb.applyPatch(clauses, doc, function(err){
+                if (err) {
+                    console.log("Incoming patch failed!!!\n" + err)
+                    alert("Incoming patch failed!!!\n" + err)
+                    socket.close();
+                } else {
+                    console.log("Incoming patch worked!!!!!!\n" + err)
+                    onChange(); // callback user
+                };
+            });
+        };
+
+    }; // end getChanges
+    
+
+    ////////////////////////// Subscribe to changes using Long Poll
+
+    // This implementation uses link headers and a diff returned by plain HTTP
+    
+    var getChanges_LongPoll = function(doc, onChange) {
+        var changesURI = getChangesURI(doc, 'changes');
+        if (!changesURI) return "No advertized long poll URI";
+        console.log(tabulator.panes.utils.shortTime() + " Starting new long poll.")
+        var xhr = $rdf.Util.XMLHTTPFactory();
+        xhr.alreadyProcessed = 0;
+
+        xhr.onreadystatechange = function(){
+            switch (xhr.readyState) {
+            case 0:
+            case 1:
+                return;
+            case 3:
+                console.log("Mid delta stream (" + xhr.responseText.length + ") "+ changesURI);
+                handlePartial();
+                break;
+            case 4:
+                handlePartial();
+                console.log(tabulator.panes.utils.shortTime() + " End of delta stream " + changesURI);
+                break;
+             }   
+        };
+
+        try {
+            xhr.open('GET', changesURI);
+        } catch (er) {
+            console.log("XHR open for GET changes failed <"+changesURI+">:\n\t" + er);
+        }
+        try {
+            xhr.send();
+        } catch (er) {
+            console.log("XHR send failed <"+changesURI+">:\n\t" + er);
+        }
+
+        var handlePartial = function() {
+            // @@ check content type is text/n3
+
+            if (xhr.status >= 400) {
+                console.log("HTTP (" + xhr.readyState + ") error " + xhr.status + "on change stream:" + xhr.statusText);
+                console.log("     error body: " + xhr.responseText);
+                xhr.abort();
+                return;
+            } 
+            if (xhr.responseText.length > xhr.alreadyProcessed) {
+                var patchText = xhr.responseText.slice(xhr.alreadyProcessed);
+                xhr.alreadyProcessed = xhr.responseText.length;
+                
+                console.log(tabulator.panes.utils.shortTime() + " Long poll returns, processing...")
+                xhr.headers = $rdf.Util.getHTTPHeaders(xhr);
+                try {
+                    onChange(patchText);
+                } catch (e) {
+                    console.log("Exception in patch update handler: " + e)
+                    // @@ Where to report error e?
+                }
+                getChanges_LongPoll(doc, onChange); // Queue another one
+                
+            }        
+        };
+        return null; // No error
+
+    }; // end getChanges_LongPoll
+    
+    if (options.longPoll ) {
+        getChanges_LongPoll(doc, onChange);
+    }
+    if (options.SSE) {
+        getChanges_SSE(doc, onChange);
+    }
+    if (options.websockets) {
+        getChanges_WS(doc, onChange);
+    }
+
+}; // subscription
+
+///////////////////////////////// End of subscription stufff 
+
+
+
+
+    
+// These used to be in js/init/icons.js but are better in the pane.
+tabulator.Icon.src.icon_bug = iconPrefix + 'js/panes/issue/tbl-bug-22.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Track issue'
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_bug,
+    
+    name: 'issue',
+    
+    // Does the subject deserve an issue pane?
+    label: function(subject) {
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+        if (t['http://www.w3.org/2005/01/wf/flow#Task']) return "issue";
+        if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) return "tracker";
+        // Later: Person. For a list of things assigned to them,
+        // open bugs on projects they are developer on, etc
+        return null; // No under other circumstances (while testing at least!)
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var div = dom.createElement("div")
+        div.setAttribute('class', 'issuePane');
+        div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
+
+        var commentFlter = function(pred, inverse) {
+            if (!inverse && pred.uri == 
+                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
+            return false
+        }
+        
+        var setModifiedDate = function(subj, kb, doc) {
+            if (!getOption(tracker, 'trackLastModified')) return;
+            var deletions = kb.statementsMatching(subject, DCT('modified'));
+            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
+            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
+            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
+            updater.update(deletions, insertions, function(uri, ok, body){});
+        }
+
+        var say = function say(message, style){
+            var pre = dom.createElement("pre");
+            pre.setAttribute('style', style ? style :'color: grey');
+            div.appendChild(pre);
+            pre.appendChild(dom.createTextNode(message));
+            return pre
+        } 
+
+        var complainIfBad = function(ok,body){
+            if (ok) {
+            }
+            else console.log("Sorry, failed to save your change:\n"+body, 'background-color: pink;');
+        }
+
+        var getOption = function (tracker, option){ // eg 'allowSubIssues'
+            var opt = kb.any(tracker, ns.ui(option));
+            return !!(opt && opt.value);
+        }
+
+
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, dom);
+            parent.replaceChild(div2, div);
+        };
+
+        var timestring = function() {
+            var now = new Date();
+            return ''+ now.getTime();
+            // http://www.w3schools.com/jsref/jsref_obj_date.asp
+        }
+
+
+        //  Form to collect data about a New Issue
+        //
+        var newIssueForm = function(dom, kb, tracker, superIssue) {
+            var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
+            var stateStore = kb.any(tracker, WF('stateStore'));
+
+            var sendNewIssue = function() {
+                titlefield.setAttribute('class','pendingedit');
+                titlefield.disabled = true;
+                sts = [];
+                
+                var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestring());
+                sts.push(new $rdf.Statement(issue, WF('tracker'), tracker, stateStore));
+                var title = kb.literal(titlefield.value);
+                sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
+                
+                // sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
+                sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
+
+                var initialStates = kb.each(tracker, WF('initialState'));
+                if (initialStates.length == 0) console.log('This tracker has no initialState');
+                for (var i=0; i<initialStates.length; i++) {
+                    sts.push(new $rdf.Statement(issue, ns.rdf('type'), initialStates[i], stateStore))
+                }
+                if (superIssue) sts.push (new $rdf.Statement(superIssue, WF('dependent'), issue, stateStore));
+                var sendComplete = function(uri, success, body) {
+                    if (!success) {
+                         console.log("Error: can\'t save new issue:" + body);
+                        //dump('Tabulator issue pane: can\'t save new issue:\n\t'+body+'\n')
+                    } else {
+                        // dump('Tabulator issue pane: saved new issue\n')
+                        form.parentNode.removeChild(form);
+                        rerender(div);
+                        tabulator.outline.GotoSubject(issue, true, undefined, true, undefined);
+                        // tabulator.outline.GoToURI(issue.uri); // ?? or open in place?
+                    }
+                }
+                updater.update([], sts, sendComplete);
+            }
+            //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
+            //form.setAttribute('onsubmit', "function xx(){return false;}");
+            
+            
+            
+            tabulator.sf.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
+            tabulator.sf.removeCallback('fail','expand');
+
+            
+            var states = kb.any(tracker, WF('issueClass'));
+            classLabel = tabulator.Util.label(states);
+            form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
+                    classLabel+"</h2><p>Title of new "+classLabel+":</p>";
+            var titlefield = dom.createElement('input')
+            titlefield.setAttribute('type','text');
+            titlefield.setAttribute('size','100');
+            titlefield.setAttribute('maxLength','2048');// No arbitrary limits
+            titlefield.select() // focus next user input
+            titlefield.addEventListener('keyup', function(e) {
+                if(e.keyCode == 13) {
+                    sendNewIssue();
+                }
+            }, false);
+            form.appendChild(titlefield);
+            return form;
+        };
+        
+        
+
+                                                  
+        /////////////////////// Reproduction: Spawn a new instance of this app
+        
+        var newTrackerButton = function(thisTracker) {
+            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
+        
+                var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
+
+                // console.log("Ready to make new instance at "+ws);
+                var sp = tabulator.ns.space;
+                var kb = tabulator.kb;
+                
+                var base = kb.any(ws, sp('uriPrefix')).value;
+                if (base.slice(-1) !== '/') {
+                    $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + base );
+                    base = base + '/';
+                }
+                base += appPathSegment + '/' + timestring() + '/'; // unique id 
+
+                var documentOf = function(x) {
+                    return kb.sym($rdf.uri.docpart(x.uri));
+                }
+
+                var stateStore = kb.any(tracker, WF('stateStore'));
+                var newStore = kb.sym(base + 'store.ttl');
+
+                var here = documentOf(thisTracker);
+
+                var oldBase = here.uri.slice(0, here.uri.lastIndexOf('/')+1);
+
+                var morph = function(x) { // Move any URIs in this space into that space
+                    if (x.elements !== undefined) return x.elements.map(morph); // Morph within lists
+                    if (x.uri === undefined) return x;
+                    var u = x.uri;
+                    if (u === stateStore.uri) return newStore; // special case
+                    if (u.slice(0, oldBase.length) === oldBase) {
+                        u = base + u.slice(oldBase.length);
+                        $rdf.log.debug(" Map "+ x.uri + " to " + u);
+                    }
+                    return kb.sym(u);
+                }
+                var there = morph(here);
+                var newTracker = morph(thisTracker); 
+                
+                var myConfig = kb.statementsMatching(undefined, undefined, undefined, here);
+                for (var i=0; i < myConfig.length; i++) {
+                    st = myConfig[i];
+                    kb.add(morph(st.subject), morph(st.predicate), morph(st.object), there);
+                }
+                
+                // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
+                //
+                kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, stateStore);
+                
+                kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, there);
+                
+                // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
+
+
+                updater.put(
+                    there,
+                    kb.statementsMatching(undefined, undefined, undefined, there),
+                    'text/turtle',
+                    function(uri2, ok, message) {
+                        if (ok) {
+                            updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
+                                if (ok) {
+                                    console.info("Ok The tracker created OK at: " + newTracker.uri +
+                                    "\nMake a note of it, bookmark it. ");
+                                } else {
+                                    console.log("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
+                                };
+                            });
+                        } else {
+                            console.log("FAILED to save new tracker at: "+ there.uri +' : ' + message);
+                        };
+                    }
+                );
+                
+                // Created new data files.
+                // @@ Now create initial files - html skin, (Copy of mashlib, css?)
+                // @@ Now create form to edit configuation parameters
+                // @@ Optionally link new instance to list of instances -- both ways? and to child/parent?
+                // @@ Set up access control for new config and store. 
+                
+            }); // callback to newAppInstance
+
+            
+        }; // newTrackerButton
+
+ 
+ 
+///////////////////////////////////////////////////////////////////////////////
+        
+        
+        
+        var updater = new tabulator.rdf.sparqlUpdate(kb);
+
+ 
+        var plist = kb.statementsMatching(subject)
+        var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+
+
+        // Reload resorce then
+        
+        var reloadStore = function(store, callBack) {
+            tabulator.sf.unload(store);
+            tabulator.sf.nowOrWhenFetched(store.uri, undefined, function(ok, body){
+                if (!ok) {
+                    console.log("Cant refresh data:" + body);
+                } else {
+                    callBack();
+                };
+            });
+        };
+
+
+
+        // Refresh the DOM tree
+      
+        var refreshTree = function(root) {
+            if (root.refresh) {
+                root.refresh();
+                return;
+            }
+            for (var i=0; i < root.children.length; i++) {
+                refreshTree(root.children[i]);
+            }
+        }
+
+
+
+        //              Render a single issue
+        
+        if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
+
+            var tracker = kb.any(subject, WF('tracker'));
+            if (!tracker) throw 'This issue '+subject+'has no tracker';
+            
+            var trackerURI = tracker.uri.split('#')[0];
+            // Much data is in the tracker instance, so wait for the data from it
+            tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
+                if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
+                var ns = tabulator.ns
+                var predicateURIsDone = {};
+                var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+                donePredicate(ns.rdf('type'));
+                donePredicate(ns.dc('title'));
+
+
+                var setPaneStyle = function() {
+                    var types = kb.findTypeURIs(subject);
+                    var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                    var backgroundColor = null;
+                    for (var uri in types) {
+                        backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
+                        if (backgroundColor) break;
+                    }
+                    backgroundColor = backgroundColor ? backgroundColor.value : '#eee'; // default grey
+                    mystyle += "background-color: " + backgroundColor + "; ";
+                    div.setAttribute('style', mystyle);
+                }
+                setPaneStyle();
+                
+                var stateStore = kb.any(tracker, WF('stateStore'));
+                var store = kb.sym(subject.uri.split('#')[0]);
+/*                if (stateStore != undefined && store.uri != stateStore.uri) {
+                    console.log('(This bug is not stored in the default state store)')
+                }
+*/
+
+                // Unfinished -- need this for speed to save the reloadStore below
+                var incommingPatch = function(text) {
+                    var contentType = xhr.headers['content-type'].trim();
+                    var patchKB = $rdf.graph();
+                    $rdf.parse(patchText, patchKB, doc.uri, contentType);
+                    // @@ TBC: check this patch isn't one of ours
+                    // @@ TBC: kb.applyPatch();  @@@@@ code me
+                    setPaneStyle();
+                    refreshTree(div);
+                }
+
+
+                var subopts = { 'longPoll': true };
+                $rdf.subscription(subopts, stateStore, function() {
+                    reloadStore(stateStore, function(deltaText) {
+                        setPaneStyle();
+                        refreshTree(div);
+                    });
+                });
+
+
+
+                tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+
+                
+                var states = kb.any(tracker, WF('issueClass'));
+                if (!states) throw 'This tracker '+tracker+' has no issueClass';
+                var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
+                        if (ok) {
+                            setModifiedDate(store, kb, store);
+                            refreshTree(div);
+                        }
+                        else console.log("Failed to change state:\n"+body);
+                    })
+                div.appendChild(select);
+
+
+                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+                for (var i=0; i<cats.length; i++) {
+                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
+                            kb, subject, cats[i], store, function(ok,body){
+                        if (ok) {
+                            setModifiedDate(store, kb, store);
+                            refreshTree(div);
+                        }
+                        else console.log("Failed to change category:\n"+body);
+                    }));
+                }
+                
+                var a = dom.createElement('a');
+                a.setAttribute('href',tracker.uri);
+                a.setAttribute('style', 'float:right');
+                div.appendChild(a).textContent = tabulator.Util.label(tracker);
+                a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+                donePredicate(ns.wf('tracker'));
+
+
+                div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
+                    store, function(ok,body){
+                        if (ok) setModifiedDate(store, kb, store);
+                        else console.log("Failed to description:\n"+body);
+                    }));
+                donePredicate(WF('description'));
+
+
+
+                // Assigned to whom?
+                
+                var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
+                if (assignments.length > 1) {
+                    say("Weird, was assigned to more than one person. Fixing ..");
+                    var deletions = assignments.slice(1);
+                    updater.update(deletions, [], function(uri, ok, body){
+                        if (ok) {
+                            say("Now fixed.")
+                        } else {
+                            complain("Fixed failed: " + body)
+                        }
+                    });
+
+                    // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
+                }
+                
+                var assignee = assignments.length ? assignments[0].object : null;
+                // Who could be assigned to this?
+                // Anyone assigned to any issue we know about  @@ should be just for this tracker
+                var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
+                var devs = sts.map(function(st){return st.object});
+                // Anyone who is a developer of any project which uses this tracker
+                var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
+                if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
+                if (devs.length) {
+                    devs.map(function(person){tabulator.sf.lookUpThing(person)}); // best effort async for names etc
+                    var opts = { 'mint': "** Add new person **",
+                                'nullLabel': "(unassigned)",
+                                'mintStatementsFun': function(newDev) {
+                                    var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
+                                    if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
+                                    return sts;
+                                }};
+                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
+                        subject, ns.wf('assignee'), devs, opts, store,
+                        function(ok,body){
+                            if (ok) setModifiedDate(store, kb, store);
+                            else console.log("Failed to description:\n"+body);
+                        }));
+                }
+                donePredicate(ns.wf('assignee'));
+
+
+                if ( getOption(tracker, 'allowSubIssues')) {
+                    // Sub issues
+                    tabulator.outline.appendPropertyTRs(div, plist, false,
+                        function(pred, inverse) {
+                            if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                            return false
+                        });
+
+                    // Super issues
+                    tabulator.outline.appendPropertyTRs(div, qlist, true,
+                        function(pred, inverse) {
+                            if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                            return false
+                        });
+                    donePredicate(WF('dependent'));
+                }
+
+                div.appendChild(dom.createElement('br'));
+
+                if (getOption(tracker, 'allowSubIssues')) {
+                    var b = dom.createElement("button");
+                    b.setAttribute("type", "button");
+                    div.appendChild(b)
+                    classLabel = tabulator.Util.label(states);
+                    b.innerHTML = "New sub "+classLabel;
+                    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+                    b.addEventListener('click', function(e) {
+                        div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
+                };
+
+                var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
+                if (extrasForm) {
+                    tabulator.panes.utils.appendForm(dom, div, {},
+                                subject, extrasForm, stateStore, complainIfBad);
+                    var fields = kb.each(extrasForm, ns.ui('part'));
+                    fields.map(function(field) {
+                        var p = kb.any(field, ns.ui('property'));
+                        if (p) {
+                            donePredicate(p); // Check that one off
+                        }
+                    });
+                    
+                };
+                
+                //   Comment/discussion area
+                
+                var messageStore = kb.any(tracker, ns.wf('messageStore'));
+                if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
+                div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
+                donePredicate(ns.wf('message'));
+                
+
+/*
+                // Add in simple comments about the bug - if not already in extras form.
+                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
+                    tabulator.outline.appendPropertyTRs(div, plist, false,
+                        function(pred, inverse) {
+                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
+                            return false
+                        });
+                    donePredicate(ns.rdfs('comment'));
+                };
+*/
+                div.appendChild(dom.createElement('tr'))
+                            .setAttribute('style','height: 1em'); // spacer
+                
+                // Remaining properties
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        return !(pred.uri in predicateURIsDone)
+                    });
+                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                    function(pred, inverse) {
+                        return !(pred.uri in predicateURIsDone)
+                    });
+                    
+                var refreshButton = dom.createElement('button');
+                refreshButton.textContent = "refresh";
+                refreshButton.addEventListener('click', function(e) {
+                    tabulator.sf.unload(messageStore);
+                    tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+                        if (!ok) {
+                            console.log("Cant refresh messages" + body);
+                        } else {
+                            refreshTree(div);
+                            // syncMessages(subject, messageTable);
+                        };
+                    });
+                }, false);
+                div.appendChild(refreshButton);
+
+
+
+                    
+            });  // End nowOrWhenFetched tracker
+
+    ///////////////////////////////////////////////////////////
+
+        //          Render a Tracker instance
+        
+        } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
+            var tracker = subject;
+            
+            var states = kb.any(subject, WF('issueClass'));
+            if (!states) throw 'This tracker has no issueClass';
+            var stateStore = kb.any(subject, WF('stateStore'));
+            if (!stateStore) throw 'This tracker has no stateStore';
+            
+            tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+            
+            var cats = kb.each(subject, WF('issueCategory')); // zero or more
+            
+            var h = dom.createElement('h2');
+            h.setAttribute('style', 'font-size: 150%');
+            div.appendChild(h);
+            classLabel = tabulator.Util.label(states);
+            h.appendChild(dom.createTextNode(classLabel+" list")); // Use class label @@I18n
+
+            // New Issue button
+            var b = dom.createElement("button");
+            var container = dom.createElement("div");
+            b.setAttribute("type", "button");
+            if (!me) b.setAttribute('disabled', 'true')
+            container.appendChild(b);
+            div.appendChild(container);
+            b.innerHTML = "New "+classLabel;
+            b.addEventListener('click', function(e) {
+                    b.setAttribute('disabled', 'true');
+                    container.appendChild(newIssueForm(dom, kb, subject));
+                }, false);
+            
+            // Table of issues - when we have the main issue list
+            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
+                if (!ok) return console.log("Cannot load state store "+body);
+                var query = new $rdf.Query(tabulator.Util.label(subject));
+                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+                var vars =  ['issue', 'state', 'created'];
+                for (var i=0; i<cats.length; i++) { vars.push('_cat_'+i) };
+                var v = {}; // The RDF variable objects for each variable name
+                vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
+                query.pat.add(v['issue'], WF('tracker'), tracker);
+                //query.pat.add(v['issue'], ns.dc('title'), v['title']);
+                query.pat.add(v['issue'], ns.dct('created'), v['created']);
+                query.pat.add(v['issue'], ns.rdf('type'), v['state']);
+                query.pat.add(v['state'], ns.rdfs('subClassOf'), states);
+                for (var i=0; i<cats.length; i++) {
+                    query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
+                    query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
+                }
+                
+                query.pat.optional = [];
+                
+                var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
+                // console.log('Property list: '+propertyList); //
+                if (propertyList) {
+                    properties = propertyList.elements;
+                    for (var p=0; p < properties.length; p++) {
+                        var prop = properties[p];
+                        var vname = '_prop_'+p;
+                        if (prop.uri.indexOf('#') >= 0) {
+                            vname = prop.uri.split('#')[1];
+                        }
+                        var oneOpt = new $rdf.IndexedFormula();
+                        query.pat.optional.push(oneOpt);
+                        query.vars.push(v[vname]=$rdf.variable(vname));
+                        oneOpt.add(v['issue'], prop, v[vname]);
+                    }
+                }
+                
+            
+                // console.log('Query pattern is:\n'+query.pat);
+                // console.log('Query pattern optional is:\n'+opts); 
+            
+                var selectedStates = {};
+                var possible = kb.each(undefined, ns.rdfs('subClassOf'), states);
+                possible.map(function(s){
+                    if (kb.holds(s, ns.rdfs('subClassOf'), WF('Open')) || s.sameTerm(WF('Open'))) {
+                        selectedStates[s.uri] = true;
+                        // console.log('on '+s.uri); // @@
+                    };
+                });
+                
+                        
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
+                    'hints': {
+                        '?created': { 'cellFormat': 'shortDate'},
+                        '?state': { 'initialSelection': selectedStates }}} );
+                div.appendChild(tableDiv);
+
+                if (tableDiv.refresh) { // Refresh function
+                    var refreshButton = dom.createElement('button');
+                    refreshButton.textContent = "refresh";
+                    refreshButton.addEventListener('click', function(e) {
+                        tabulator.sf.unload(stateStore);
+                        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+                            if (!ok) {
+                                console.log("Cant refresh data:" + body);
+                            } else {
+                                tableDiv.refresh();
+                            };
+                        });
+                    }, false);
+                    div.appendChild(refreshButton);
+                } else {
+                    console.log('No refresh function?!');
+                }
+                            
+                
+                
+                
+            });
+            div.appendChild(dom.createElement('hr'));
+            div.appendChild(newTrackerButton(subject));
+            // end of Tracker instance
+
+
+        } else { 
+            console.log("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
+        }         
+        if (!tabulator.preferences.get('me')) {
+            console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
+        } else {
+            // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
+        };
+        
+        
+        var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
+            // sayt.parent.removeChild(sayt);
+            if (webid) {
+                tabulator.preferences.set('me', webid);
+                console.log("(Logged in as "+ webid+")")
+                me = kb.sym(webid);
+            } else {
+                tabulator.preferences.set('me', '');
+                console.log("(Logged out)")
+                me = null;
+            }
+        });
+        
+        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
+
+        div.appendChild(loginOutButton);
+        
+        
+        return div;
+
+    }
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/issue/pane.js ##############
+// ###### Expanding js/panes/argument/argumentPane.js ##############
+/*      View argument Pane
+**
+**  This pane shows a position and optionally the positions which
+** support or oppose it.
+*/
+
+
+tabulator.Icon.src.icon_argument = tabulator.iconPrefix + 'js/panes/argument/icon_argument.png'
+tabulator.panes.argumentPane = {
+    
+    icon:  tabulator.Icon.src.icon_argument, // @@
+    
+    name: 'argument',
+    
+    label: function(subject) {
+
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+   
+        if (t[tabulator.ns.arg('Position').uri]) return "Argument";
+        
+        return null;
+    },
+
+
+    // View the data in a file in user-friendly way
+    render: function(subject, myDocument) {
+
+        var $r = tabulator.rdf;
+        var kb = tabulator.kb;
+        var arg = tabulator.ns.arg;
+        
+        subject = kb.canon(subject);
+        var types = kb.findTypeURIs(subject);
+
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'argumentPane')
+
+        // var title = kb.any(subject, tabulator.ns.dc('title'));
+        
+        var comment = kb.any(subject, tabulator.ns.rdfs('comment'));
+        if (comment) {
+            var para = myDocument.createElement('p');
+            para.setAttribute('style', 'margin-left: 2em; font-style: italic;');
+            div.appendChild(para);
+            para.textContent = comment.value;
+        };
+        var plist = kb.statementsMatching(subject, arg('support'));
+        tabulator.outline.appendPropertyTRs(div, plist, false);
+
+        var plist = kb.statementsMatching(subject, arg('opposition'));
+        tabulator.outline.appendPropertyTRs(div, plist, false);
+
+        return div
+    }
+};
+
+tabulator.panes.register(tabulator.panes.argumentPane, false);
+
+
+
+
+//ends
+
+
+// ###### Finished expanding js/panes/argument/argumentPane.js ##############
+// ###### Expanding js/panes/transaction/pane.js ##############
+/*   Financial Transaction Pane
+**
+**  This outline pane allows a user to interact with a transaction
+**  downloaded from a bank statement, annotting it with classes and comments,
+** trips, etc
+*/
+
+    
+tabulator.Icon.src.icon_money = iconPrefix +
+    'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Transaction'
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_money,
+    
+    name: 'transaction',
+    
+    // Does the subject deserve this pane?
+    label: function(subject) {
+        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
+        if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
+
+        if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
+        
+        return null; // No under other circumstances (while testing at least!)
+    },
+
+    render: function(subject, myDocument) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
+        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
+        
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'transactionPane');
+        div.innherHTML='<h1>Transaction</h1><table><tbody><tr>\
+        <td>%s</tr></tbody></table>\
+        <p>This is a pane under development.</p>';
+
+        var commentFlter = function(pred, inverse) {
+            if (!inverse && pred.uri == 
+                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
+            return false
+        }
+        
+        var setModifiedDate = function(subj, kb, doc) {
+            var deletions = kb.statementsMatching(subject, DCT('modified'));
+            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
+            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
+            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
+            sparqlService.update(deletions, insertions, function(uri, ok, body){});
+        }
+
+        var complain = function complain(message, style){
+            if (style == undefined) style = 'color: grey';
+            var pre = myDocument.createElement("pre");
+            pre.setAttribute('style', style);
+            div.appendChild(pre);
+            pre.appendChild(myDocument.createTextNode(message));
+        } 
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, myDocument);
+            parent.replaceChild(div2, div);
+        };
+
+
+ // //////////////////////////////////////////////////////////////////////////////       
+        
+        
+        
+        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+
+ 
+        var plist = kb.statementsMatching(subject)
+        var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+
+
+        //              Render a single transaction
+        
+        // This works only if enough metadata about the properties can drive the RDFS
+        // (or actual type statements whichtypically are NOT there on)
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
+
+            var trip = kb.any(subject, WF('trip'));
+            var ns = tabulator.ns
+            var predicateURIsDone = {};
+            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+            donePredicate(ns.rdf('type'));
+            
+            var setPaneStyle = function() {
+                var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                if (account) {
+                    var backgroundColor = kb.any(account,UI('backgroundColor'));
+                    if (backgroundColor) mystyle += "background-color: "
+                                +backgroundColor.value+"; ";
+                }
+                div.setAttribute('style', mystyle);
+            }
+            setPaneStyle();
+            
+            var account = kb.any(subject, Q('toAccount'));
+	    var store = null;
+	    
+            if (account == undefined) {
+                complain('(Error: There is no bank account known for this transaction <'
+                        +subject.uri+'>,\n -- every transaction needs one.)')
+            };
+	    
+            var statement = kb.any(subject, Q('accordingTo'));
+            if (statement == undefined) {
+                complain('(Error: There is no back link to the original data source foir this transaction <'
+                        +subject.uri+'>,\nso I can\'t tell how to annotate it.)')
+            } else {
+		store = statement != undefined ? kb.any(statement, Q('annotationStore')) :null;
+		if (store == undefined) {
+		    complain('(There is no annotation document for this statement\n<'
+			    +statement.uri+'>,\nso you cannot classify this transaction.)')
+		};
+            };
+            var nav = myDocument.createElement('div');
+            nav.setAttribute('style', 'float:right');
+            div.appendChild(nav);
+
+            var navLink = function(pred, label) {
+                donePredicate(pred);
+                var obj =  kb.any(subject, pred);
+                if (!obj) return;
+                var a = myDocument.createElement('a');
+                a.setAttribute('href',obj.uri);
+                a.setAttribute('style', 'float:right');
+                nav.appendChild(a).textContent = label ? label : tabulator.Util.label(obj);
+                nav.appendChild(myDocument.createElement('br'));
+            }
+
+            navLink(Q('toAccount'));
+            navLink(Q('accordingTo'), "Statement");
+            navLink(TRIP('trip'));
+            
+            // Basic data:
+            var table = myDocument.createElement('table');
+            div.appendChild(table);
+            var preds = ['date', 'payee', 'amount', 'in_USD', 'currency'].map(Q);
+            var inner = preds.map(function(p){
+                donePredicate(p);
+                var value = kb.any(subject, p);
+                var s = value ? tabulator.Util.labelForXML(value) : '';
+                return '<tr><td style="text-align: right; padding-right: 0.6em">'+tabulator.Util.labelForXML(p)+
+                    '</td><td style="font-weight: bold;">'+s+'</td></tr>';
+            }).join('\n');
+            table.innerHTML =  inner;
+
+            var complainIfBad = function(ok,body){
+                if (ok) {
+                    setModifiedDate(store, kb, store);
+                    rerender(div);
+                }
+                else complain("Sorry, failed to save your change:\n"+body);
+            }
+
+            // What trips do we know about?
+            
+            // Classify:
+            if (store) {
+                kb.sf.nowOrWhenFetched(store.uri, subject, function(ok, body){
+                    if (!ok) complain("Cannot load store " + store + " " + body);
+                    div.appendChild(
+                        tabulator.panes.utils.makeSelectForNestedCategory(myDocument, kb,
+                            subject, Q('Classified'), store, complainIfBad));
+
+                    div.appendChild(tabulator.panes.utils.makeDescription(myDocument, kb, subject,
+                            tabulator.ns.rdfs('comment'), store, complainIfBad));
+
+                    var trips = kb.statementsMatching(undefined, TRIP('trip'), undefined, store)
+                                .map(function(st){return st.object}); // @@ Use rdfs
+                    var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
+                    trips = trips.concat(trips2).sort(); // @@ Unique 
+                    
+                    var sortedBy = function(kb, list, pred, reverse) {
+                        l2 = list.map(function(x) {
+                            var key = kb.any(x, pred);
+                            key = key ? key.value : "9999-12-31";
+                            return [ key, x ]; 
+                        });
+                        l2.sort();
+                        if (reverse) l2.reverse();
+                        return l2.map(function(pair){return pair[1]});
+                    }
+                    
+                    trips = sortedBy(kb, trips, tabulator.ns.cal('dtstart'), true); // Reverse chron
+                    
+                    if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
+                        myDocument, kb, subject, TRIP('trip'), trips,
+                            { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *",
+                                'mintClass':  TRIP('Trip'),
+                                'mintStatementsFun': function(trip){
+                                    var is = [];
+                                    is.push($rdf.st(trip, tabulator.ns.rdf('type'), TRIP('Trip')));
+                                    return is}},
+                            store, complainIfBad));
+
+                });
+            }
+
+            
+
+            div.appendChild(myDocument.createElement('br'));
+
+
+            // Add in simple comments about the transaction
+
+            donePredicate(ns.rdfs('comment')); // Done above
+/*            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    if (!inverse && pred.uri == 
+                        "http://www.w3.org/2000/01/rdf-schema#comment") return true;
+                    return false
+                });
+*/
+            div.appendChild(myDocument.createElement('tr'))
+                        .setAttribute('style','height: 1em'); // spacer
+            
+            // Remaining properties
+            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+            tabulator.outline.appendPropertyTRs(div, qlist, true,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+
+        // end of render tranasaction instance
+
+        //////////////////////////////////////////////////////////////////////
+        //
+        //      Render the transactions in a Trip
+        //
+        } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
+        
+            var query = new $rdf.Query(tabulator.Util.label(subject));
+            var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
+            var v = {};
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
+            query.pat.add(v['transaction'], TRIP('trip'), subject);
+            
+            var opt = kb.formula();
+            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
+            query.pat.optional.push(opt);
+            
+            query.pat.add(v['transaction'], Q('date'), v['date']);
+            
+            var opt = kb.formula();
+            opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
+            query.pat.optional.push(opt);
+
+            //opt = kb.formula();
+            query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
+            //query.pat.optional.push(opt);
+
+            var calculations = function() {
+                var total = {};
+                var trans = kb.each(undefined, TRIP('trip'), subject);
+                // complain("@@ Number of transactions in this trip: " + trans.length);
+                trans.map(function(t){
+                    var ty = kb.the(t, ns.rdf('type'));
+                    // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
+                    if (!ty) ty = Q('ErrorNoType');
+                    if (ty && ty.uri) {
+                        var tyuri = ty.uri;
+                        if (!total[tyuri]) total[tyuri] = 0.0;
+                        var lit = kb.any(t, Q('in_USD'));
+                        if (!lit) {
+                            complain("    @@ No amount in USD: "+lit+" for " + t);
+                        }
+                        if (lit) {
+                            total[tyuri] = total[tyuri] + parseFloat(lit.value);
+                            //complain('      Trans type ='+ty+'; in_USD "' + lit
+                            //       +'; total[tyuri] = '+total[tyuri]+';') 
+                        }
+                    }
+                });
+                var str = '';
+                var types = 0;
+                var grandTotal = 0.0;
+                for (var uri in total) {
+                    str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
+                    types++;
+                    grandTotal += total[uri];
+                } 
+                complain("Totals of "+trans.length+" transactions: " + str, '')
+                if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
+            }
+
+            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query, 'onDone': calculations} );
+            div.appendChild(tableDiv);
+            
+        }
+
+
+        
+        //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
+
+        return div;
+    }
+        
+
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/transaction/pane.js ##############
+// ###### Expanding js/panes/trip/tripPane.js ##############
+/*   Trip Pane
+**
+** This pane deals with trips themselves and also
+** will look at transactions organized by trip.
+**
+**  This outline pane allows a user to interact with a transaction
+**  downloaded from a bank statement, annotting it with classes and comments,
+**  trips, etc
+*/
+
+    
+tabulator.Icon.src.icon_trip = iconPrefix +
+    'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png'; // @@
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_trip] = 'travel expenses'
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_trip,
+    
+    name: 'travel expenses',
+    
+    // Does the subject deserve this pane?
+    label: function(subject) {
+        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+        
+        // if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
+        //if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
+
+
+        if (Q('Transaction') in kb.findSuperClassesNT(subject)) return "by Trip";
+        if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
+        
+        return null; // No under other circumstances (while testing at least!)
+    },
+
+    render: function(subject, myDocument) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var CAL = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
+        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
+        
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'transactionPane');
+        div.innherHTML='<h1>Transaction</h1><table><tbody><tr>\
+        <td>%s</tr></tbody></table>\
+        <p>This is a pane under development.</p>';
+
+        var commentFlter = function(pred, inverse) {
+            if (!inverse && pred.uri == 
+                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
+            return false
+        }
+        
+        var setModifiedDate = function(subj, kb, doc) {
+            var deletions = kb.statementsMatching(subject, DCT('modified'));
+            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
+            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
+            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
+            sparqlService.update(deletions, insertions, function(uri, ok, body){});
+        }
+
+        var complain = function complain(message, style){
+            if (style == undefined) style = 'color: grey';
+            var pre = myDocument.createElement("pre");
+            pre.setAttribute('style', style);
+            div.appendChild(pre);
+            pre.appendChild(myDocument.createTextNode(message));
+        } 
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, myDocument);
+            parent.replaceChild(div2, div);
+        };
+
+
+ // //////////////////////////////////////////////////////////////////////////////       
+        
+        
+        
+        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+
+ 
+        var plist = kb.statementsMatching(subject)
+        var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+
+        //      Function: Render a single trip
+
+        var renderTrip = function renderTrip(subject, thisDiv){
+            var query = new $rdf.Query(tabulator.Util.label(subject));
+            var vars =  [ 'date', 'transaction', 'comment', 'type',  'in_USD'];
+            var v = {};
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
+            query.pat.add(v['transaction'], TRIP('trip'), subject);
+            
+            var opt = kb.formula();
+            opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
+            query.pat.optional.push(opt);
+            
+            query.pat.add(v['transaction'], Q('date'), v['date']);
+            
+            var opt = kb.formula();
+            opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
+            query.pat.optional.push(opt);
+
+            //opt = kb.formula();
+            query.pat.add(v['transaction'], Q('in_USD'), v['in_USD']);
+            //query.pat.optional.push(opt);
+
+            var calculations = function() {
+                var total = {};
+                var trans = kb.each(undefined, TRIP('trip'), subject);
+                // complain("@@ Number of transactions in this trip: " + trans.length);
+                trans.map(function(t){
+                    var ty = kb.the(t, ns.rdf('type'));
+                    // complain(" -- one trans: "+t.uri + ' -> '+kb.any(t, Q('in_USD')));
+                    if (!ty) ty = Q('ErrorNoType');
+                    if (ty && ty.uri) {
+                        var tyuri = ty.uri;
+                        if (!total[tyuri]) total[tyuri] = 0.0;
+                        var lit = kb.any(t, Q('in_USD'));
+                        if (!lit) {
+                            complain("    @@ No amount in USD: "+lit+" for " + t);
+                        }
+                        if (lit) {
+                            total[tyuri] = total[tyuri] + parseFloat(lit.value);
+                            //complain('      Trans type ='+ty+'; in_USD "' + lit
+                            //       +'; total[tyuri] = '+total[tyuri]+';') 
+                        }
+                    }
+                });
+                var str = '';
+                var types = 0;
+                var grandTotal = 0.0;
+                for (var uri in total) {
+                    str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
+                    types++;
+                    grandTotal += total[uri];
+                } 
+                complain("Totals of "+trans.length+" transactions: " + str, ''); // @@@@@  yucky -- need 2 col table
+                if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
+            }
+            var tableDiv = tabulator.panes.utils.renderTableViewPane(myDocument, {'query': query, 'onDone': calculations} );
+            thisDiv.appendChild(tableDiv);
+
+        }
+
+        //          Render the set of trips which have transactions in this class
+        
+        if (Q('Transaction') in kb.findSuperClassesNT(subject)) {
+
+            ts = kb.each(undefined, ns.rdf('type'), subject);
+            var tripless = [];
+            var index = [];
+            for (var i=0; i<ts.length; i++) {
+                var trans = ts[i];
+                var trip = kb.any(trans, TRIP('trip'));
+                if (!trip) {
+                    tripless.push(trans);
+                } else {
+                    if (!(trans in index)) index[trip] =  { total:0, transactions: [] };
+                    var usd = kb.any(trans, Q('in_USD'));
+                    if (usd) index[trip]['total'] += usd; 
+                    var date = kb.any(trans, Q('date'));
+                    index[trip.toNT()]['transactions'].push([date, trans]); 
+                }
+            }
+/*            var byDate = function(a,b) {
+                return new Date(kb.any(a, CAL('dtstart'))) - 
+                        new Date(kb.any(b, CAL('dtstart')));
+            }
+*/
+            var list = [], x;
+            for (var h1 in index) {
+                var t1 = kb.fromNT(h1);
+                list.push([kb.any(t1, CAL('dtstart')), t1]);
+            }
+            list.sort();
+            for (var j=0; j < list.length; j++){
+                var t2 = list[j][1];
+                renderTrip(t2, div);
+            }
+
+
+       //       Render a single trip
+
+        } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
+
+            renderTrip(subject, div);
+            
+        }
+
+
+        
+        //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
+
+        return div;
+    }
+        
+
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/trip/tripPane.js ##############
+// ###### Expanding js/panes/airPane.js ##############
+ /** AIR (Amord in RDF) Pane
+ *
+ * This pane will display the justification trace of a when it encounters 
+ * air reasoner output
+ * oshani@csail.mit.edu
+ */
+
+
+
+
+	
+//These are horrible global vars. To minimize the chance of an unintended name collision
+//these are prefixed with 'ap_' (short for air pane) - Oshani
+// moved to airpane.js from paneutils.js 2014 tbl
+
+var ap_air = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/air#");
+var ap_tms = tabulator.rdf.Namespace("http://dig.csail.mit.edu/TAMI/2007/amord/tms#");
+var ap_compliant = ap_air('compliant-with');
+var ap_nonCompliant = ap_air('non-compliant-with');
+var ap_antcExpr = ap_tms('antecedent-expr');
+var ap_just = ap_tms('justification');
+var ap_subExpr = ap_tms('sub-expr');
+var ap_description = ap_tms('description');
+var ap_ruleName = ap_tms('rule-name');
+var ap_prem = ap_tms('premise');
+var ap_instanceOf = ap_air('instanceOf');
+var justificationsArr = [];
+
+
+
+ 
+airPane = {};
+airPane.name = 'air';
+airPane.icon = tabulator.Icon.src.icon_airPane;
+
+airPane.label = function(subject) {
+  
+    //Flush all the justification statements already found
+    justificationsArr = [];
+    
+	//Find all the statements with air:justification in it
+	var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
+	//This will hold the string to display if the pane appears
+	var stringToDisplay = null
+	//Then make a registry of the compliant and non-compliant subjects
+	//(This algorithm is heavily dependant on the output from the reasoner.
+	//If the output changes, the parser will break.)
+	for (var j=0; j<stsJust.length; j++){
+		//The subject of the statements should be a quouted formula and
+		//the object should not be tms:premise (this corresponds to the final chunk of the output 
+		//which has {some triples} tms:justification tms:premise)
+		if (stsJust[j].subject.termType == 'formula' && stsJust[j].object != ap_prem.toString()){
+			var sts = stsJust[j].subject.statements;
+			if (sts.length != 1) throw new Error("There should be only ONE statement indicating some event is (non-)compliant with some policy!")
+			//Keep track of the subjects of the statements in the global variables above and return "Justify"
+			//which will be the tool-tip text of the label icon
+			if (sts[0].predicate.toString() == ap_compliant.toString()){
+                var compliantString = tabulator.Util.label(sts[0].subject) + " is compliant with " + tabulator.Util.label(sts[0].object);
+                var compliantArr = [];
+                compliantArr.push(sts[0].object);
+                compliantArr.push(ap_compliant.toString());
+                compliantArr.push(compliantString);
+				justificationsArr.push(compliantArr);
+            }
+			if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
+                var nonCompliantString = tabulator.Util.label(sts[0].subject) + " is non compliant with " + tabulator.Util.label(sts[0].object);
+                var nonCompliantArr = [];
+                nonCompliantArr.push(sts[0].object);
+                nonCompliantArr.push(ap_nonCompliant.toString());
+                nonCompliantArr.push(nonCompliantString);
+				justificationsArr.push(nonCompliantArr);
+
+            }
+			stringToDisplay = "Justify" //Even with one relevant statement this method should return something 
+		}   
+	}
+	//Make the subject list we will be exploring in the render function unique
+	//compliantStrings = tabulator.panes.utils.unique(compliantStrings);
+	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings); 
+    
+   return stringToDisplay;
+}
+
+// View the justification trace in an exploratory manner
+airPane.render = function(subject, myDocument) {
+
+	//Variables specific to the UI
+	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
+	var divClass;
+	var div = myDocument.createElement("div");
+
+	//Helpers
+	var logFileURI = tabulator.panes.utils.extractLogURI(myDocument.location.toString());
+
+	div.setAttribute('class', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
+	div.setAttribute('id', 'dataContentPane'); //airPane has the same formatting as the dataContentPane
+
+
+    //If there are multiple justifications show a dropdown box to select the correct one
+    var selectEl = myDocument.createElement("select");
+
+    var divOutcome = myDocument.createElement("div"); //This is div to display the final outcome. 
+    divOutcome.setAttribute('id', 'outcome'); //There can only be one outcome per selection from the drop down box
+  
+    //Show the selected justification only
+	airPane.render.showSelected = function(){
+        
+        //Clear the contents of the outcome div
+        if (myDocument.getElementById('outcome') != null){
+            myDocument.getElementById('outcome').innerHTML = ''; 
+        }
+        
+        //Function to hide the natural language description div and the premises div
+        airPane.render.showSelected.hide = function(){
+        
+            //Clear the outcome div
+            if (myDocument.getElementById('outcome') != null){
+                myDocument.getElementById('outcome').innerHTML = ''; 
+            }
+            //Remove the justification div from the pane
+            var d = myDocument.getElementById('dataContentPane');
+            var j = myDocument.getElementById('justification');
+            var b = myDocument.getElementById('hide');
+            var m = myDocument.getElementById('more');
+            var o = myDocument.getElementById('outcome');
+            var w = myDocument.getElementById('whyButton');
+            if (d != null && m != null){
+                d.removeChild(m);
+            }
+            if (d != null && j != null && b != null){
+                d.removeChild(j);
+                d.removeChild(b);
+            }
+            if (d != null && o != null){
+                d.removeChild(o);
+            }
+            if (d != null && w != null){
+                d.removeChild(w);
+            }
+
+        }
+        //End of airPane.render.showSelected.hide
+
+        //Clear the contents of the justification div
+        airPane.render.showSelected.hide();
+        
+        if (this.selectedIndex == 0)
+            return;
+            
+        selected = justificationsArr[this.selectedIndex - 1];
+        var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
+        
+
+        for (var i=0; i<stsJust.length; i++){
+        
+            //Find the statement maching the option selected from the drop down box
+            if (stsJust[i].subject.termType == 'formula' && 
+                stsJust[i].object != ap_prem.toString() && 
+                stsJust[i].subject.statements[0].object.toString() == selected[0].toString()){
+                
+                var stsFound = stsJust[i].subject.statements[0]; //We have only one statement - so no need to iterate
+                
+                //@@@@@@ Variables specific to the logic	
+                var ruleNameFound;
+                
+                //Display red or green depending on the compliant/non-compliant status
+                if (selected[1].toString() == ap_nonCompliant.toString()){
+                    divOutcome.setAttribute('class', 'nonCompliantPane');
+                }
+                else if (selected[1].toString() == ap_compliant.toString()){
+                    divOutcome.setAttribute('class', 'compliantPane');
+                }
+                else{
+                    alert("something went terribly wrong");
+                } 
+                
+                //Create a table and structure the final conclucsion appropriately
+                
+                var table = myDocument.createElement("table");
+                var tr = myDocument.createElement("tr");
+                
+                var td_s = myDocument.createElement("td");
+                var a_s = myDocument.createElement('a')
+                a_s.setAttribute('href', stsFound.subject.uri)
+                a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
+                td_s.appendChild(a_s);
+                tr.appendChild(td_s);
+
+                var td_is = myDocument.createElement("td");
+                td_is.appendChild(myDocument.createTextNode(' is '));
+                tr.appendChild(td_is);
+
+                var td_p = myDocument.createElement("td");
+                var a_p = myDocument.createElement('a');
+                a_p.setAttribute('href', stsFound.predicate.uri)
+                a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
+                td_p.appendChild(a_p);
+                tr.appendChild(td_p);
+
+                var td_o = myDocument.createElement("td");
+                var a_o = myDocument.createElement('a')
+                a_o.setAttribute('href', stsFound.object.uri)
+                a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
+                td_o.appendChild(a_o);
+                tr.appendChild(td_o);
+
+                table.appendChild(tr);
+                divOutcome.appendChild(table);
+                
+                div.appendChild(divOutcome);
+                //End of the outcome sentences
+                
+                //Add the initial buttons 
+                airPane.render.showSelected.addInitialButtons = function(){ //Function Call 1
+
+                    //Create and append the 'Why?' button        
+                    //Check if it is visible in the DOM, if not add it.
+                    if (myDocument.getElementById('whyButton') == null){
+                        var becauseButton = myDocument.createElement('input');
+                        becauseButton.setAttribute('type','button');
+                        becauseButton.setAttribute('id','whyButton');
+                        becauseButton.setAttribute('value','Why?');
+                        div.appendChild(becauseButton);
+                        becauseButton.addEventListener('click',airPane.render.showSelected.because,false);
+                    }
+                                        
+                    div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
+                }
+                //End of airPane.render.showSelected.addInitialButtons
+
+
+                //The following function is triggered, when the why button is clicked
+                airPane.render.showSelected.because = function(){ //Function Call 2
+                
+                
+                    //If the reasoner used closed-world-assumption, there are no interesting premises 
+                    var cwa = ap_air('closed-world-assumption');
+                    var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
+                    var noPremises = false;
+                /*    if (cwaStatements.length > 0){
+                        noPremises = true;
+                    }
+                 */   
+                    //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
+                    var whyButton = myDocument.getElementById('whyButton');
+                    var d = myDocument.getElementById('dataContentPane');
+                    if (d != null && whyButton != null)
+                        d.removeChild(whyButton);
+                
+                    //Function to display the natural language description
+                    airPane.render.showSelected.because.displayDesc = function(obj){
+                        for (var i=0; i<obj.elements.length; i++) {
+                                dump(obj.elements[i]);
+                                dump("\n");
+                                
+                                if (obj.elements[i].termType == 'symbol') {
+                                    var anchor = myDocument.createElement('a');
+                                    anchor.setAttribute('href', obj.elements[i].uri);
+                                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj.elements[i])));
+                                    //anchor.appendChild(myDocument.createTextNode(obj.elements[i]));
+                                    divDescription.appendChild(anchor);
+                                }
+                                else if (obj.elements[i].termType == 'literal') {
+                                    if (obj.elements[i].value != undefined)
+                                        divDescription.appendChild(myDocument.createTextNode(obj.elements[i].value));
+                                }
+                                else if (obj.elements[i].termType == 'formula') {
+                                    //@@ As per Lalana's request to handle formulas within the description
+                                    divDescription.appendChild(myDocument.createTextNode(obj.elements[i]));
+                                    //@@@ Using statementsAsTables to render the result gives a very ugly result -- urgh!
+                                    //divDescription.appendChild(statementsAsTables(obj.elements[i].statements,myDocument));
+                                }       
+                            }
+                    }
+                    //End of airPane.render.showSelected.because.displayDesc
+
+                    //Function to display the inner most stuff from the proof-tree
+                    airPane.render.showSelected.because.moreInfo = function(ruleToFollow){
+                        //Terminating condition: 
+                        // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
+                        // there are no more information to follow
+                        var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
+                        if (terminatingCondition[0] != undefined){
+
+                           divPremises.appendChild(myDocument.createElement('br'));
+                           divPremises.appendChild(myDocument.createElement('br'));
+                           divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
+                           divPremises.appendChild(myDocument.createElement('br'));
+                           divPremises.appendChild(myDocument.createElement('br'));
+                       
+                        }
+                        else{
+                            
+                            //Update the description div with the description at the next level
+                            var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow, subject);
+                            
+                            //Find the corresponding description matching the currenrRule
+
+                            var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
+                            
+                            for (var i=0; i<currentRuleDescSts.length; i++){
+                                if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
+                                    var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
+                                    
+                                    for (var j=0; j<currentRuleDesc.length; j++){
+                                        if (currentRuleDesc[j].predicate == ap_description.toString() &&
+                                        currentRuleDesc[j].object.termType == 'collection'){
+                                            divDescription.appendChild(myDocument.createElement('br'));
+                                            airPane.render.showSelected.because.displayDesc(currentRuleDesc[j].object);
+                                            divDescription.appendChild(myDocument.createElement('br'));
+                                            divDescription.appendChild(myDocument.createElement('br'));
+                                        }
+                                    }	
+                                }
+                            }
+
+                             //This is a hack to fix the rule appearing instead of the bnode containing the description
+                            correctCurrentRule = "";
+                            for (var i=0; i< currentRule.length; i++){
+                                if (currentRule[i].subject.termType == 'bnode'){
+                                    correctCurrentRule = currentRule[i].subject;
+                                    break;
+                                }
+                            }
+                            
+                            var currentRuleSts = tabulator.kb.statementsMatching(correctCurrentRule, ap_just, undefined, subject);
+                            var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
+                            ruleNameFound = nextRuleSts[0].object;
+
+                            var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
+                            
+                            var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined, subject);
+    
+                            var formulaFound = false;
+                            var bnodeFound = false;
+                            for (var i=0; i<currentRuleSubExpr.length; i++){
+                                if(currentRuleSubExpr[i].object.termType == 'formula'){
+                                    divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                                    formulaFound = true;
+                                }
+                                else if (currentRuleSubExpr[i].object.termType == 'bnode'){
+                                    bnodeFound = true;
+                            
+                                }
+                            }
+                            
+                            if (bnodeFound){
+                                divPremises.appendChild(myDocument.createElement("br"));
+                                divPremises.appendChild(myDocument.createTextNode("  No premises applicable."));
+                                divPremises.appendChild(myDocument.createElement("br"));
+                                divPremises.appendChild(myDocument.createElement("br"));
+                            }
+
+
+                        }
+                    }
+                    //End of airPane.render.showSelected.because.moreInfo
+                    
+                    //Function to bootstrap the natural language description div and the premises div
+                    airPane.render.showSelected.because.justify = function(){ //Function Call 3
+                    
+                        //Clear the contents of the premises div
+                        myDocument.getElementById('premises').innerHTML='';
+                        airPane.render.showSelected.because.moreInfo(ruleNameFound);   //@@@@ make sure this rul would be valid at all times!      	
+
+                        divJustification.appendChild(divPremises);
+                        div.appendChild(divJustification);
+
+                    }
+                    //End of airPane.render.showSelected.because.justify
+
+                    //Add the More Information Button
+                    var justifyButton = myDocument.createElement('input');
+                    justifyButton.setAttribute('type','button');
+                    justifyButton.setAttribute('id','more');
+                    justifyButton.setAttribute('value','More Information');
+                    justifyButton.addEventListener('click',airPane.render.showSelected.because.justify,false);
+                    div.appendChild(justifyButton);
+                                    
+                    //Add 2 spaces to leave some space between the 2 buttons, any better method?                
+                    div.appendChild(myDocument.createTextNode('   '));
+                    div.appendChild(myDocument.createTextNode('   '));
+
+                    //Add the hide button
+                    var hideButton = myDocument.createElement('input');
+                    hideButton.setAttribute('type','button');
+                    hideButton.setAttribute('id','hide');
+                    hideButton.setAttribute('value','Start Over');
+                    div.appendChild(hideButton);
+                    hideButton.addEventListener('click',airPane.render.showSelected.hide,false);
+
+                    //This div is the containing div for the natural language description and the premises of any given justification
+                    var divJustification = myDocument.createElement("div");
+                    divJustification.setAttribute('class', 'justification');
+                    divJustification.setAttribute('id', 'justification');
+
+                    //Leave a gap between the outcome and the justification divs
+                    divJustification.appendChild(myDocument.createElement('br'));
+
+                    //Div for the natural language description
+                    var divDescription = myDocument.createElement("div");
+                    divDescription.setAttribute('class', 'description');
+                    divDescription.setAttribute('id', 'description');
+                    
+                    //Div for the premises
+                    var divPremises = myDocument.createElement("div");
+                    divPremises.setAttribute('class', 'premises');
+                    divPremises.setAttribute('id', 'premises');
+                    
+                    //@@@@ what is this for?
+                    var justificationSts;
+                    
+                    //Get all the triples with a air:description as the predicate
+                    var stsDesc = tabulator.kb.statementsMatching(undefined, ap_description, undefined, subject); 
+
+                    //You are bound to have more than one such triple, 
+                    //so iterates through all of them and figure out which belongs to the one that's referred from the drop down box
+                    for (var j=0; j<stsDesc.length; j++){
+                        if (stsDesc[j].subject.termType == 'formula' && 
+                            stsDesc[j].object.termType == 'collection' &&
+                            stsDesc[j].subject.statements[0].object.toString() == selected[0].toString()){
+                            
+                            divDescription.appendChild(myDocument.createElement('br'));
+                            airPane.render.showSelected.because.displayDesc(stsDesc[j].object);
+                            divDescription.appendChild(myDocument.createElement('br'));
+                            divDescription.appendChild(myDocument.createElement('br'));
+                        }
+                        divJustification.appendChild(divDescription);
+                        
+                    }	
+                    
+                    //@@@@@@@@@ Why was this here???
+                    //div.appendChild(divJustification);
+                    
+                    //Leave spaces
+                    divJustification.appendChild(myDocument.createElement('br'));
+                    divJustification.appendChild(myDocument.createElement('br'));
+                    
+                    //Yes, we are showing premises next...
+                    divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
+                    
+                    //Leave spaces
+                    divJustification.appendChild(myDocument.createElement('br'));
+                    divJustification.appendChild(myDocument.createElement('br'));
+
+                    //Closed World Assumption
+                    if (noPremises){
+                        divPremises.appendChild(myDocument.createElement('br'));
+                        divPremises.appendChild(myDocument.createElement('br'));
+                        divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in the "));
+                        var a = myDocument.createElement('a')
+                        a.setAttribute("href", unescape(logFileURI));
+                        a.appendChild(myDocument.createTextNode("log file"));
+                        divPremises.appendChild(a);
+                        divPremises.appendChild(myDocument.createElement('br'));
+                        divPremises.appendChild(myDocument.createElement('br'));
+                        
+                    }
+                        
+                    for (var j=0; j<stsJust.length; j++){
+                        if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
+                        
+                            var ruleNameSts = tabulator.kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
+                            ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
+                                                // statement containing the formula		
+                            if (!noPremises){
+                                var t1 = tabulator.kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
+                                for (var k=0; k<t1.length; k++){
+                                    var t2 = tabulator.kb.statementsMatching(t1[k].object, undefined, undefined, subject);
+                                    for (var l=0; l<t2.length; l++){
+                                        if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+                                            justificationSts = t2;
+                                            divPremises.appendChild(myDocument.createElement('br'));
+                                            //divPremises.appendChild(myDocument.createElement('br'));
+                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                           
+                                            //@@@@ The following piece of code corresponds to going one level of the justification proof to figure out
+                                            // whether there are any premises
+                                            //it is commented out, because, the user need not know that at each level there are no premises associated
+                                            //that particular step
+                                            
+                                            /*if (t2[l].object.statements.length == 0){
+                                                alert("here");
+                        
+                                                divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
+                                                var a = myDocument.createElement('a')
+                                                a.setAttribute('href', unescape(logFileURI));
+                                                a.appendChild(myDocument.createTextNode("log file"));
+                                                divPremises.appendChild(a);
+                                            }
+                                            else{
+                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                            }
+                                           */
+                                            //divPremises.appendChild(myDocument.createElement('br'));
+                                            divPremises.appendChild(myDocument.createElement('br'));
+                                        }
+                                   }     
+                                }
+                            }
+                        }
+                    }
+                    
+                    divJustification.appendChild(divPremises);   
+                    div.appendChild(divJustification); 
+                      
+                }
+                //End of airPane.render.showSelected.because
+                
+                airPane.render.showSelected.addInitialButtons(); //Add the "Why Button"
+             }
+        }
+    }
+    
+
+    //First add a bogus element
+    var optionElBogus = myDocument.createElement("option");
+    var optionTextBogus = myDocument.createTextNode(" ");
+    optionElBogus.appendChild(optionTextBogus);
+    selectEl.appendChild(optionElBogus);
+
+    //Adds the option of which justification to choose in a drop down list box
+    for (var i=0; i<justificationsArr.length; i++){
+        var optionEl = myDocument.createElement("option");
+        var optionText = myDocument.createTextNode(justificationsArr[i][2]);
+        optionEl.appendChild(optionText);
+        selectEl.appendChild(optionEl);
+    }
+    
+    div.appendChild(selectEl);
+    selectEl.addEventListener('change', airPane.render.showSelected, false);
+    div.appendChild(myDocument.createElement('br'));
+    div.appendChild(myDocument.createElement('br'));
+        
+	return div;
+};
+
+//^^
+airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
+					divJustification){
+  var divDescription = myDocument.createElement("div");
+  divDescription.setAttribute('class', 'description');
+
+        //Display the actual English-like description first
+	//It's no longer English-like, but just property tables
+        //var stsDesc = kb.statementsMatching(undefined, ap_description, undefined, subject);
+        //var stsDesc = kb.statementsMatching(st, ap_description);
+	var stsDesc = tabulator.kb.statementsMatching(st, ap_just);
+	// {}  tms:justification []. (multiple)
+
+	if(stsDesc.length > 1){
+            for (var j=0; j<stsDesc.length; j++){
+                //Display the header "Reason x:"
+		var h3 = divJustification.appendChild(document.createElement('h3'));
+		h3.textContent = "Reason " + String(j+1); + ":";
+		airPane.render.because.displayDesc(stsDesc[j].object,
+						   divDescription);
+		divJustification.appendChild(divDescription);
+                //Make a copy of the orange box
+		divDescription = divDescription.cloneNode(false); //shallow:true
+            
+            }
+	} else{
+	  airPane.render.because.displayDesc(stsDesc[0].object,
+					     divDescription);
+	  divJustification.appendChild(divDescription);
+	}
+};
+    
+airPane.renderExplanationForStatement = function renderExplanationForStatement(st){
+    var subject = undefined; //not restricted to a source, but kb
+    var div = myDocument.createElement("div"); //the returned div
+    var ruleNameFound;
+    var stsCompliant;
+    var stsNonCompliant;
+    var stsFound;
+    var stsJust = tabulator.kb.statementsMatching(st, ap_just); 
+	
+    
+    var divOutcome = myDocument.createElement("div"); //To give the "yes/no" type answer indicating the concise reason
+
+        /*
+	for (var j=0; j<stsJust.length; j++){
+		if (stsJust[j].subject.termType == 'formula'){
+			var sts = stsJust[j].subject.statements;
+			for (var k=0; k<sts.length; k++){
+				if (sts[0].predicate.toString() == ap_compliant.toString()){
+					stsCompliant = sts[k];
+				} 
+				if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
+					stsNonCompliant = sts[k];
+				}
+			}
+		}    
+	}
+
+	if (stsNonCompliant != undefined){
+		divClass = 'nonCompliantPane';
+		stsFound =  stsNonCompliant;
+	}
+	if (stsCompliant != undefined){
+		divClass = 'compliantPane';
+		stsFound =  stsCompliant;
+	}
+        */
+
+    var divClass = 'compliantPane'; //a statement is natively good :)
+    //stsFound = kb.anyStatementsMatching(st, ap_just);
+    stsFound = stsJust[0].subject.statements[0];
+
+    if (stsFound != undefined){
+        divOutcome.setAttribute('class', divClass);
+        divOutcome.setAttribute('id', 'outcome');
+
+        var table = myDocument.createElement("table");
+        var tr = myDocument.createElement("tr");
+
+        var td_intro = myDocument.createElement("td");
+        td_intro.appendChild(myDocument.createTextNode('The reason '));
+        tr.appendChild(td_intro);
+
+        var td_s = myDocument.createElement("td");
+        var a_s = myDocument.createElement('a')
+        a_s.setAttribute('href', stsFound.subject.uri)
+        a_s.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.subject)));
+        td_s.appendChild(a_s);
+        tr.appendChild(td_s);
+
+        //var td_is = myDocument.createElement("td");
+        //td_is.appendChild(myDocument.createTextNode(' is '));
+        //tr.appendChild(td_is);
+
+        var td_p = myDocument.createElement("td");
+        var a_p = myDocument.createElement('a');
+        a_p.setAttribute('href', stsFound.predicate.uri);
+        a_p.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.predicate)));
+        td_p.appendChild(a_p);
+        tr.appendChild(td_p);
+
+        var td_o = myDocument.createElement("td");
+	var a_o = null;
+	if (stsFound.object.termType == 'literal'){
+	  a_o = myDocument.createTextNode(stsFound.object.value);
+	} else {
+	  var a_o = myDocument.createElement('a');
+	  a_o.setAttribute('href', stsFound.object.uri);
+	  a_o.appendChild(myDocument.createTextNode(tabulator.Util.label(stsFound.object)));
+	}
+        td_o.appendChild(a_o);
+        tr.appendChild(td_o);
+
+        var td_end = myDocument.createElement("td");
+        td_end.appendChild(myDocument.createTextNode(' is because: '));
+        tr.appendChild(td_end);
+
+        table.appendChild(tr);
+        divOutcome.appendChild(table);
+        div.appendChild(divOutcome);
+
+
+        var hideButton = myDocument.createElement('input');
+        hideButton.setAttribute('type','button');
+        hideButton.setAttribute('id','hide');
+        hideButton.setAttribute('value','Start Over');
+    }
+
+    airPane.render.addInitialButtons = function(){ //Function Call 1
+
+        //Create and append the 'Why?' button        
+        var becauseButton = myDocument.createElement('input');
+        becauseButton.setAttribute('type','button');
+        becauseButton.setAttribute('id','whyButton');
+        becauseButton.setAttribute('value','Why?');
+        div.appendChild(becauseButton);
+        becauseButton.addEventListener('click',airPane.render.because,false);
+                            
+        div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
+    }
+    
+    airPane.render.hide = function(){
+    
+        //Remove the justification div from the pane
+        var d = myDocument.getElementById('dataContentPane');
+        var j = myDocument.getElementById('justification');
+        var b = myDocument.getElementById('hide');
+        var m = myDocument.getElementById('more');
+        if (d != null && m != null){
+            d.removeChild(m);
+        }
+        if (d != null && j != null && b != null){
+            d.removeChild(j);
+            d.removeChild(b);
+        }
+
+        airPane.render.addInitialButtons();
+                    
+    }
+
+    airPane.render.because = function(){ //Function Call 2
+    
+        var cwa = ap_air('closed-world-assumption');
+        var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
+        var noPremises = false;
+        if (cwaStatements.length > 0){
+            noPremises = true;
+        }
+        
+           //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
+           var whyButton = myDocument.getElementById('whyButton');
+        var d = myDocument.getElementById('dataContentPane');
+        if (d != null && whyButton != null)
+            d.removeChild(whyButton);
+    
+        airPane.render.because.displayDesc = function(obj, divDescription){
+	  //@argument obj: most likely a [] that has 
+	  //a tms:antecedent-expr and a tms:rule-name
+	  var aAnd_justification = tabulator.kb.the(obj, ap_antcExpr);
+	  var subExprs = tabulator.kb.each(aAnd_justification, ap_subExpr);
+	  var premiseFormula = null;
+	  if (subExprs[0].termType == 'formula')
+	    premiseFormula = subExprs[0];
+	  else
+	    premiseFormula = subExprs[1];
+	  divDescription.waitingFor = []; //resources of more information 
+                                          //this reason is waiting for
+	  divDescription.informationFound = false; //true if an extra 
+	               //information is found and we can stop the throbber
+	  function dumpFormula(formula, firstLevel){
+	    for (var i=0;i<formula.statements.length;i++){
+	      var st = formula.statements[i];
+	      var elements_to_display = [st.subject, st.predicate, 
+					 st.object];
+	      var p = null; //the paragraph element the description is dumped to
+	      if (firstLevel){
+		p = myDocument.createElement('p');
+		//Look up the outermost subject and object for information
+		if (st.subject.termType == 'symbol'){
+		  var doc_uri = Util.uri.docpart(st.subject.uri);
+		  if (divDescription.waitingFor.indexOf(doc_uri) < 0 &&
+		      typeof sf.requested[doc_uri]=="undefined")
+		    divDescription.waitingFor.push(doc_uri);
+		}
+		if (st.object.termType == 'symbol'){
+		  var doc_uri = Util.uri.docpart(st.object.uri);
+		  if (divDescription.waitingFor.indexOf(doc_uri) < 0 &&
+		      typeof sf.requested[doc_uri]=="undefined")
+		    divDescription.waitingFor.push(doc_uri);
+		}
+	      }
+	      else{
+		p = dumpFormula.current_p;
+	      }
+	      for (var j=0; j<3; j++) {
+		var element = elements_to_display[j];
+		switch(element.termType) {
+
+		  //@@ As per Lalana's request to handle formulas within the description
+		case 'formula':
+		  p.appendChild(myDocument.createTextNode("{ "));
+		  dumpFormula.current_p = p;
+		  dumpFormula(element, false);
+		  p.appendChild(myDocument.createTextNode(" }"));
+		  break;
+		case 'symbol':
+		  var anchor = myDocument.createElement('a');
+		  anchor.setAttribute('href', element.uri);
+		  anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(element)));
+		  p.appendChild(anchor);
+		  p.appendChild(myDocument.createTextNode(" "));
+		  break;
+		case 'literal':
+		  //if (obj.elements[i].value != undefined)
+		  p.appendChild(myDocument.createTextNode(element.value)); 
+		  
+		}       
+	      }
+	      p.appendChild(myDocument.createTextNode(". "));
+	      if(firstLevel){
+		divDescription.appendChild(p);
+		var one_statement_formula = new tabulator.rdf.IndexedFormula();
+		one_statement_formula.statements.push(st)
+		p.AJAR_formula = one_statement_formula;
+		function make_callback(st, p, divDescription){
+		  return function statement_more_information_callback(uri){
+		    divDescription.waitingFor.remove(uri);
+		    if(tabulator.kb.any(p.AJAR_formula, ap_just)) {
+		      //The would get called twice even if the callback
+		      //is canceled, so check the last child.
+		      //dump("in statement_more_information_callback with st: "                         +st + "and uri: " + uri + "\n");
+		      divDescription.informationFound = true;
+		      if (p.lastChild.nodeName=="#text"){
+			var explain_icon = p.appendChild(myDocument.createElement('img'));
+			explain_icon.src = tabulator.iconPrefix + "icons/tango/22-help-browser.png";
+			var click_cb = function(){
+			  airPane.renderReasonsForStatement(
+			    p.AJAR_formula, divJustification);
+			};
+			explain_icon.addEventListener('click',
+						      click_cb,
+						      false)
+		      }
+		      if (throbber_p && throbber_callback) 
+			throbber_callback();
+		      return false; //no need to fire this function
+		    }
+		    //Fetch sameAs here. We try to load minimum sources
+		    //so this comes after the above kb.any
+		    for (var h=0;h<2;h++) { //Never use for each!!!
+		                           //Array.prototype.remove would
+                                           //be one of them!!!
+		      var thing =[st.subject, st.object][h];
+		      var uris = tabulator.kb.uris(thing);
+		      for (var k=0;k<uris.length;k++){
+			var doc_uri = Util.uri.docpart(uris[k])
+			  if (typeof sf.requested[doc_uri]=="undefined" &&
+			     divDescription.waitingFor.indexOf(doc_uri)<0){
+			    //the second condition holds, for example,
+			    //Util.uri.docpart(thing.uri)
+			    divDescription.waitingFor.push(doc_uri);
+			    sf.lookUpThing(tabulator.kb.sym(doc_uri));
+			  }
+		      }
+		    }
+		    if (divDescription.waitingFor.length == 0){
+		      if (throbber_p && throbber_callback) 
+			throbber_callback();
+		      return false; //the last resource this div is waiting for
+		    }
+		    if (throbber_p && throbber_callback) 
+		      throbber_callback();
+		    return true;
+		  };
+		}
+		var cb = make_callback(st, p, divDescription)
+		cb();
+		//statement_more_information_callback(); //run once for exsiting information
+		sf.addCallback('done',cb);
+		sf.addCallback('fail',cb);
+	      }
+	    } //statement loop
+	  } //function dumpFormula
+	  dumpFormula(premiseFormula, true);
+	  //'Looking for more information...
+	  //@correct the background color of the throbber
+	  var throbber_p = myDocument.createElement('p');
+	  throbber_p.setAttribute('class', 'ap_premise_loading')
+	  var throbber = throbber_p.appendChild(myDocument.createElement
+						('img'));
+	  throbber.src = tabulator.iconPrefix + "icons/loading.png";
+	  throbber_p.appendChild(myDocument.createTextNode
+				 ("Looking for more information..."));
+	  divDescription.appendChild(throbber_p);
+	  function throbber_callback(uri){
+	    divDescription.waitingFor.remove(uri);
+	    
+	    if (divDescription.informationFound){
+	      throbber_p.removeChild(throbber_p.firstChild);
+	      throbber_p.textContent = "More information found!";
+	      return false;
+	    } else if (divDescription.waitingFor.length == 0){
+	      
+	      //The final call to this function. But the above callbacks 
+	      //might not have been fired. So check all. Well...
+              //It takes time to close the world
+	      //@@This method assumes there's only one thread for this js.
+	      //Maybe not?
+	      var found = false;
+// 	      for (var i=0;i<divDescription.childNodes.length;i++){
+// 		var p = divDescription.childNodes[i];
+// 		if(p.AJAR_formula && kb.any(p.AJAR_formula, ap_just)){
+// 		  found = true;
+// 		  break;
+// 		}
+// 	      }
+	      if (found){
+		throbber_p.removeChild(throbber_p.firstChild);
+		throbber_p.textContent = "More information found!";
+	      } else {
+		throbber_p.removeChild(throbber_p.firstChild);
+		throbber_p.textContent = "No more information.";
+	      }
+	      return false; //no more resource waiting for
+	    } else {
+	      return true;
+	    }
+	  }
+	  throbber_callback();
+// 	  if(divDescription.waitingFor.length){
+// 	    //we don't need to do call back if there's nothing more to lookup
+// 	    sf.addCallback('done',throbber_callback);
+// 	    sf.addCallback('fail',throbber_callback);
+// 	  }
+	  for (var i=0;i<divDescription.waitingFor.length;i++)
+	    sf.lookUpThing(tabulator.kb.sym(divDescription.waitingFor[i]));
+	  
+	} //function airPane.render.because.displayDesc
+
+        airPane.render.because.moreInfo = function(ruleToFollow){
+            //Terminating condition: 
+            // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
+            // there are no more information to follow
+            var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
+            if (terminatingCondition[0] != undefined){
+
+               divPremises.appendChild(myDocument.createElement('br'));
+               divPremises.appendChild(myDocument.createElement('br'));
+               divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
+               divPremises.appendChild(myDocument.createElement('br'));
+               divPremises.appendChild(myDocument.createElement('br'));
+           
+            }
+            else{
+                
+                //Update the description div with the description at the next level
+                var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow);
+                
+                //Find the corresponding description matching the currenrRule
+
+                var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
+                
+                for (var i=0; i<currentRuleDescSts.length; i++){
+                    if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
+                        var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
+                        
+                        for (var j=0; j<currentRuleDesc.length; j++){
+                            if (currentRuleDesc[j].predicate == ap_description.toString() &&
+                            currentRuleDesc[j].object.termType == 'collection'){
+                                divDescription.appendChild(myDocument.createElement('br'));
+                                airPane.render.because.displayDesc(currentRuleDesc[j].object);
+                                divDescription.appendChild(myDocument.createElement('br'));
+                                divDescription.appendChild(myDocument.createElement('br'));
+                            }
+                        }    
+                    }
+                }
+
+                
+                var currentRuleSts = tabulator.kb.statementsMatching(currentRule[0].subject, ap_just, undefined);
+                
+                var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined);
+                ruleNameFound = nextRuleSts[0].object;
+
+                var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined);
+                
+                var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined);
+
+                for (var i=0; i<currentRuleSubExpr.length; i++){
+                    if(currentRuleSubExpr[i].object.termType == 'formula')
+                        divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                }
+
+            }
+        }
+        
+        airPane.render.because.justify = function(){ //Function Call 3
+        
+            //Clear the contents of the div
+            myDocument.getElementById('premises').innerHTML='';
+            airPane.render.because.moreInfo(ruleNameFound);                
+
+            divJustification.appendChild(divPremises);
+            div.appendChild(divJustification);
+
+        }
+
+        //Add the More Information Button
+	/* //disable buttons
+        var justifyButton = myDocument.createElement('input');
+        justifyButton.setAttribute('type','button');
+        justifyButton.setAttribute('id','more');
+        justifyButton.setAttribute('value','More Information');
+        justifyButton.addEventListener('click',airPane.render.because.justify,false);
+        div.appendChild(justifyButton);
+                        
+        div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
+        div.appendChild(myDocument.createTextNode('   '));
+
+        div.appendChild(hideButton);
+        hideButton.addEventListener('click',airPane.render.hide,false);
+        */
+
+        var divJustification = myDocument.createElement("div");
+        divJustification.setAttribute('class', 'justification');
+        divJustification.setAttribute('id', 'justification');
+
+        var divDescription = myDocument.createElement("div");
+        divDescription.setAttribute('class', 'description');
+        //divDescription.setAttribute('id', 'description');
+
+        /*
+        var divPremises = myDocument.createElement("div");
+        divPremises.setAttribute('class', 'premises');
+        divPremises.setAttribute('id', 'premises');
+        */ 
+        
+        
+        var justificationSts;
+        
+        
+	airPane.renderReasonsForStatement(st, divJustification);
+    
+        
+        div.appendChild(divJustification);
+	
+        /*
+        divJustification.appendChild(myDocument.createElement('br'));
+        divJustification.appendChild(myDocument.createElement('br'));
+        divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
+        divJustification.appendChild(myDocument.createElement('br'));
+        divJustification.appendChild(myDocument.createElement('br'));
+	
+        if (noPremises){
+            divPremises.appendChild(myDocument.createElement('br'));
+            divPremises.appendChild(myDocument.createElement('br'));
+            divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in the "));
+            var a = myDocument.createElement('a')
+            a.setAttribute("href", unescape(logFileURI));
+            a.appendChild(myDocument.createTextNode("log file"));
+            divPremises.appendChild(a);
+            divPremises.appendChild(myDocument.createElement('br'));
+            divPremises.appendChild(myDocument.createElement('br'));
+            
+        }
+            
+        for (var j=0; j<stsJust.length; j++){
+            if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
+            
+                var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
+                ruleNameFound =    ruleNameSts[0].object; // This would be the initial rule name from the 
+                                    // statement containing the formula        
+                if (!noPremises){
+                    var t1 = kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
+                    for (var k=0; k<t1.length; k++){
+                        var t2 = kb.statementsMatching(t1[k].object, undefined, undefined, subject);
+                        for (var l=0; l<t2.length; l++){
+                            if (t2[l].subject.termType == 'bnode' && t2[l].object.termType == 'formula'){
+                                justificationSts = t2;
+                                divPremises.appendChild(myDocument.createElement('br'));
+                                divPremises.appendChild(myDocument.createElement('br'));
+                                if (t2[l].object.statements.length == 0){
+                                    divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
+                                    var a = myDocument.createElement('a')
+                                    a.setAttribute('href', unescape(logFileURI));
+                                    a.appendChild(myDocument.createTextNode("log file"));
+                                    divPremises.appendChild(a);
+                                }
+                                else{
+                                    divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                }
+                                divPremises.appendChild(myDocument.createElement('br'));
+                                divPremises.appendChild(myDocument.createElement('br'));
+                            }
+                       }     
+                    }
+                }
+            }
+        }
+        
+        divJustification.appendChild(divPremises);
+        */    
+          
+    }//end of airPane.render.because
+
+
+    //airPane.render.addInitialButtons();
+    airPane.render.because();
+        
+    return div;
+}
+tabulator.panes.register(airPane, false);
+
+// ends
+
+
+
+
+
+// ###### Finished expanding js/panes/airPane.js ##############
+
+// Content views
+
+// ###### Expanding js/panes/imagePane.js ##############
+/*   Image Pane
+**
+**  This outline pane contains the document contents for an Image document
+*/
+tabulator.panes.register( {
+    icon: tabulator.Icon.src.icon_imageContents,
+    
+    name: 'image',
+    
+    label: function(subject) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+
+        if (!kb.anyStatementMatching(
+            subject, tabulator.ns.rdf( 'type'),
+            kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
+            return null;
+
+        //   See aslo the source pane, which has lower precedence.
+ 
+        var contentTypeMatch = function(kb, x, contentTypes) {
+            var cts = kb.fetcher.getHeader(x, 'content-type');
+            if (cts) {
+                for (var j=0; j<cts.length; j++) {
+                    for (var k=0; k < contentTypes.length; k++) {
+                        if (cts[j].indexOf(contentTypes[k]) >= 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        
+        var suppressed = [ 'application/pdf'];
+        if (contentTypeMatch(kb, subject, suppressed)) return null;
+
+        return "view";
+    },
+
+    render: function(subject, myDocument) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'imageView')
+        var img = myDocument.createElement("IMG")
+        img.setAttribute('src', subject.uri) // w640 h480
+        img.setAttribute('style','max-width: 100%; max-height: 100%;')
+//        div.style['max-width'] = '640';
+//        div.style['max-height'] = '480';
+        var tr = myDocument.createElement('TR')  // why need tr?
+        tr.appendChild(img)
+        div.appendChild(tr)
+        return div
+    }
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/imagePane.js ##############
+
+// ###### Expanding js/panes/humanReadablePane.js ##############
+/*   Human-readable Pane
+**
+**  This outline pane contains the document contents for an HTML document
+**  This is for peeking at a page, because the user might not want to leave the tabulator.
+*/
+tabulator.panes.register({
+    
+    icon: tabulator.Icon.src.icon_visit,
+    
+    name: 'humanReadable',
+    
+    label: function(subject, myDocument) {
+        // Prevent infinite recursion with iframe loading a web page which uses tabulator which shows iframe...
+        if (tabulator.isExtension && myDocument.location == subject.uri) return null;
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+
+        //   See aslo tthe source pane, which has lower precedence.
+        
+        var allowed = ['text/plain',
+                       'text/html','application/xhtml+xml',
+                        'image/png', 'image/jpeg', 'application/pdf'];
+ 
+        var displayable = function(kb, x, displayables) {
+            var cts = kb.fetcher.getHeader(x, 'content-type');
+            if (cts) {
+                for (var j=0; j<cts.length; j++) {
+                    for (var k=0; k < displayables.length; k++) {
+                        if (cts[j].indexOf(displayables[k]) >= 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        
+        var t = kb.findTypeURIs(subject);
+        if (t[ns.link('WebPage').uri]) return "view";
+
+        if (displayable(kb, subject, allowed)) return "View";
+
+        return null;
+    },
+    
+    render: function(subject, myDocument) {
+        var div = myDocument.createElement("div")
+
+        //  @@ When we can, use CSP to turn off scripts within the iframe
+        div.setAttribute('class', 'docView')    
+        var iframe = myDocument.createElement("IFRAME")
+        iframe.setAttribute('src', subject.uri)    // allow-same-origin
+        iframe.setAttribute('class', 'doc')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-forms'); // allow-scripts ?? no documents should be static
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
+        iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
+//        iframe.setAttribute('height', '480')
+//        iframe.setAttribute('width', '640')
+        var tr = myDocument.createElement('TR')
+        tr.appendChild(iframe)
+        div.appendChild(tr)
+        return div
+    }
+}, true);
+//ends
+
+
+
+// ###### Finished expanding js/panes/humanReadablePane.js ##############
+
+// ###### Expanding js/panes/dataContentPane.js ##############
+/*      Data content Pane
+**
+**  This pane shows the content of a particular RDF resource
+** or at least the RDF semantics we attribute to that resource.
+*/
+
+// To do:  - Only take data from one graph
+//         - Only do forwards not backward?
+//         - Expand automatically all the way down
+//         - original source view?  Use ffox view source
+
+tabulator.panes.dataContentPane = {
+    
+    icon:  tabulator.Icon.src.icon_dataContents,
+    
+    name: 'dataContents',
+    
+    label: function(subject) {
+        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
+        var n = tabulator.kb.statementsMatching(
+            undefined, undefined, undefined, subject).length;
+        if (n == 0) return null;
+        return "Data ("+n+")";
+    },
+    /*
+    shouldGetFocus: function(subject) {
+        return tabulator.kb.whether(subject, tabulator.ns.rdf('type'), tabulator.ns.link('RDFDocument'));
+    },
+*/
+    statementsAsTables: function statementsAsTables(sts, myDocument, initialRoots) {
+        var rep = myDocument.createElement('table');
+        var sz = tabulator.rdf.Serializer( tabulator.kb );
+        var res = sz.rootSubjects(sts);
+        var roots = res.roots;
+        var subjects = res.subjects;
+        var loopBreakers = res.loopBreakers;
+        for (var x in loopBreakers) dump('\tdataContentPane: loopbreaker:'+x+'\n')
+        var outline = tabulator.outline;
+        var doneBnodes = {}; // For preventing looping
+        var referencedBnodes = {}; // Bnodes which need to be named alas
+        
+        // The property tree for a single subject or anonymos node
+        function propertyTree(subject) {
+            // print('Proprty tree for '+subject);
+            var rep = myDocument.createElement('table')
+            var lastPred = null;
+            var sts = subjects[sz.toStr(subject)]; // relevant statements
+            if (!sts) { // No statements in tree
+                rep.appendChild(myDocument.createTextNode('...')); // just empty bnode as object
+                return rep;
+            }
+            sts.sort();
+            var same =0;
+            var td_p; // The cell which holds the predicate
+            for (var i=0; i<sts.length; i++) {
+                var st = sts[i];
+                var tr = myDocument.createElement('tr');
+                if (st.predicate.uri != lastPred) {
+                    if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
+                    td_p = myDocument.createElement('td');
+                    td_p.setAttribute('class', 'pred');
+                    var anchor = myDocument.createElement('a')
+                    anchor.setAttribute('href', st.predicate.uri)
+                    anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.predicateLabelForXML(st.predicate)));
+                    td_p.appendChild(anchor);
+                    tr.appendChild(td_p);
+                    lastPred = st.predicate.uri;
+                    same = 0;
+                }
+                same++;
+                var td_o = myDocument.createElement('td');
+                td_o.appendChild(objectTree(st.object));
+                tr.appendChild(td_o);
+                rep.appendChild(tr);
+            }
+            if (lastPred && same > 1) td_p.setAttribute("rowspan", ''+same)
+            return rep;
+        }
+
+        // Convert a set of statements into a nested tree of tables
+        function objectTree(obj) {
+            var res;
+            switch(obj.termType) {
+                case 'symbol':
+                    var anchor = myDocument.createElement('a')
+                    anchor.setAttribute('href', obj.uri)
+                    anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+                    anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
+                    return anchor;
+                    
+                case 'literal':
+
+                    if (!obj.datatype || !obj.datatype.uri) {
+                        res = myDocument.createElement('div');
+                        res.setAttribute('style', 'white-space: pre-wrap;');
+                        res.textContent = obj.value;
+                        return res
+                    } else if (obj.datatype.uri == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral') {
+                        res = myDocument.createElement('div');
+                        res.setAttribute('class', 'embeddedXHTML');
+                        res.innerHTML = obj.value; // Try that  @@@ beware embedded dangerous code
+                        return res;
+                    };
+                    return myDocument.createTextNode(obj.value); // placeholder - could be smarter, 
+                    
+                case 'bnode':
+                    if (obj.toNT() in doneBnodes) { // Break infinite recursion
+                        referencedBnodes[(obj.toNT())] = true;
+                        var anchor = myDocument.createElement('a')
+                        anchor.setAttribute('href', '#'+obj.toNT().slice(2))
+                        anchor.setAttribute('class','bnodeRef')
+                        anchor.textContent = '*'+obj.toNT().slice(3);
+                        return anchor; 
+                    }
+                    doneBnodes[obj.toNT()] = true; // Flag to prevent infinite recusruion in propertyTree
+                    var newTable =  propertyTree(obj);
+                    doneBnodes[obj.toNT()] = newTable; // Track where we mentioned it first
+                    if (tabulator.Util.ancestor(newTable, 'TABLE') && tabulator.Util.ancestor(newTable, 'TABLE').style.backgroundColor=='white') {
+                        newTable.style.backgroundColor='#eee'
+                    } else {
+                        newTable.style.backgroundColor='white'
+                    }
+                    return newTable;
+                    
+                case 'collection':
+                    var res = myDocument.createElement('table')
+                    res.setAttribute('class', 'collectionAsTables')
+                    for (var i=0; i<obj.elements.length; i++) {
+                        var tr = myDocument.createElement('tr');
+                        res.appendChild(tr);
+                        tr.appendChild(objectTree(obj.elements[i]));
+                    }
+                    return  res;
+                case 'formula':
+                    var res = tabulator.panes.dataContentPane.statementsAsTables(obj.statements, myDocument);
+                    res.setAttribute('class', 'nestedFormula')
+                    return res;
+                case 'variable':
+                    var res = myDocument.createTextNode('?' + obj.uri);
+                    return res;
+                    
+            }
+            throw "Unhandled node type: "+obj.termType
+        }
+    
+        // roots.sort();
+
+        if (initialRoots) {
+            roots = initialRoots.concat(roots.filter(function(x){
+                for (var i=0; i<initialRoots.length; i++) { // Max 2
+                    if (x.sameTerm(initialRoots[i])) return false;
+                }
+                return true;
+            }));
+        }
+        for (var i=0; i<roots.length; i++) {
+            var tr = myDocument.createElement('tr')
+            rep.appendChild(tr);
+            var td_s = myDocument.createElement('td')
+            tr.appendChild(td_s);
+            var td_tree = myDocument.createElement('td')
+            tr.appendChild(td_tree);
+            var root = roots[i];
+            if (root.termType == 'bnode') {
+                td_s.appendChild(myDocument.createTextNode(tabulator.Util.label(root))); // Don't recurse!
+            } 
+            else {
+                td_s.appendChild(objectTree(root)); // won't have tree
+            }
+            td_tree.appendChild(propertyTree(root));
+        }
+        for (var bNT in referencedBnodes) { // Add number to refer to
+            var table = doneBnodes[bNT];
+            var tr = myDocument.createElement('tr');
+            var anchor = myDocument.createElement('a')
+            anchor.setAttribute('id', bNT.slice(2))
+            anchor.setAttribute('class','bnodeDef')
+            anchor.textContent = bNT.slice(3)+')';
+            table.insertBefore(anchor, table.firstChild);
+        }
+        return rep;
+    }, // statementsAsTables
+
+
+    // View the data in a file in user-friendly way
+    render: function(subject, myDocument) {
+
+        var kb = tabulator.kb;
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'dataContentPane');
+        // Because of smushing etc, this will not be a copy of the original source
+        // We could instead either fetch and re-parse the source,
+        // or we could keep all the pre-smushed triples.
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        if (1) {
+            initialRoots = []; // Ordering: start with stuf fabout this doc
+            if (kb.holds(subject, undefined, undefined, subject)) initialRoots.push(subject);
+            // Then about the primary topic of the document if any
+            var ps = kb.any(subject, tabulator.ns.foaf('primaryTopic'), undefined, subject);
+            if (ps) initialRoots.push(ps);
+            div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(
+                            sts, myDocument, initialRoots));
+            
+        } else {  // An outline mode openable rendering .. might be better
+            var sz = tabulator.rdf.Serializer( tabulator.kb );
+            var res = sz.rootSubjects(sts);
+            var roots = res.roots;
+            var p  = {};
+            // p.icon = dataContentPane.icon
+            p.render = function(s2) {
+                var div = myDocument.createElement('div')
+                
+                div.setAttribute('class', 'withinDocumentPane')
+                var plist = kb.statementsMatching(s2, undefined, undefined, subject)
+                appendPropertyTRs(div, plist, false, function(pred, inverse) {return true;})
+                return div    
+            }
+            for (var i=0; i<roots.length; i++) {
+                var tr = myDocument.createElement("TR");
+                root = roots[i];
+                tr.style.verticalAlign="top";
+                var td = thisOutline.outline_objectTD(root, undefined, tr)
+                tr.appendChild(td)
+                div.appendChild(tr);
+                outline_expand(td, root,  p);
+            }
+        }
+        return div
+    }
+};
+
+tabulator.panes.register(tabulator.panes.dataContentPane, false);
+
+
+/*   Pane within Document data content view
+**
+**  This outline pane contains docuemnts from a specific source document only.
+** It is a pane used recursively within an outer dataContentPane. (above)
+*/
+/*  Not used in fact??
+tabulator.panes.register({
+
+    icon: Icon.src.icon_withinDocumentPane, // should not show
+
+    label: function(subject) { return 'doc contents';},
+    
+    filter: function(pred, inverse) {
+        return true; // show all
+    },
+    
+    render: function(subject, source) {
+        var div = myDocument.createElement('div')
+        div.setAttribute('class', 'withinDocumentPane')                  
+        var plist = kb.statementsMatching(subject, undefined, undefined, source)
+        tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {return true;});
+        return div ;
+    }
+}, true);
+    
+*/
+
+
+//ends
+
+
+// ###### Finished expanding js/panes/dataContentPane.js ##############
+// ###### Expanding js/panes/n3Pane.js ##############
+/*      Notation3 content Pane
+**
+**  This pane shows the content of a particular RDF resource
+** or at least the RDF semantics we attribute to that resource,
+** in generated N3 syntax.
+*/
+
+tabulator.panes.register ({
+
+    icon: tabulator.Icon.src.icon_n3Pane,
+    
+    name: 'n3',
+    
+    label: function(subject) {
+        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
+        var n = tabulator.kb.statementsMatching(
+            undefined, undefined, undefined, subject).length;
+        if (n == 0) return null;
+        return "Data ("+n+") as N3";
+    },
+
+    render: function(subject, myDocument) {
+        var kb = tabulator.kb;
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'n3Pane');
+        // Because of smushing etc, this will not be a copy of the original source
+        // We could instead either fetch and re-parse the source,
+        // or we could keep all the pre-smushed triples.
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        /*
+        var kludge = kb.formula([]); // No features
+        for (var i=0; i< sts.length; i++) {
+            s = sts[i];
+            kludge.add(s.subject, s.predicate, s.object);
+        }
+        */
+        var sz = tabulator.rdf.Serializer(kb);
+        sz.suggestNamespaces(kb.namespaces);
+        sz.setBase(subject.uri);
+        var str = sz.statementsToN3(sts)
+        var pre = myDocument.createElement('PRE');
+        pre.appendChild(myDocument.createTextNode(str));
+        div.appendChild(pre);
+        return div
+    }
+}, false);
+
+
+
+// ###### Finished expanding js/panes/n3Pane.js ##############
+// ###### Expanding js/panes/RDFXMLPane.js ##############
+
+
+    /*      RDF/XML content Pane
+    **
+    **  This pane shows the content of a particular RDF resource
+    ** or at least the RDF semantics we attribute to that resource,
+    ** in generated N3 syntax.
+    */
+tabulator.panes.register ({
+
+    icon: tabulator.Icon.src.icon_RDFXMLPane,
+    
+    name: 'RDFXML',
+    
+    label: function(subject) {
+        if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
+
+        var n = tabulator.kb.statementsMatching(
+            undefined, undefined, undefined, subject).length;
+        if (n == 0) return null;
+        return 'As RDF/XML ('+n+')';
+    },
+
+    render: function(subject, myDocument) {
+        var kb = tabulator.kb;
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'RDFXMLPane');
+        // Because of smushing etc, this will not be a copy of the original source
+        // We could instead either fetch and re-parse the source,
+        // or we could keep all the pre-smushed triples.
+        var sts = kb.statementsMatching(undefined, undefined, undefined, subject); // @@ slow with current store!
+        /*
+        var kludge = kb.formula([]); // No features
+        for (var i=0; i< sts.length; i++) {
+            s = sts[i];
+            kludge.add(s.subject, s.predicate, s.object);
+        }
+        */
+        var sz = tabulator.rdf.Serializer(kb);
+        sz.suggestNamespaces(kb.namespaces);
+        sz.setBase(subject.uri);
+        var str = sz.statementsToXML(sts)
+        var pre = myDocument.createElement('PRE');
+        pre.appendChild(myDocument.createTextNode(str));
+        div.appendChild(pre);
+        return div
+    }
+}, false);
+
+// ends
+
+
+// ###### Finished expanding js/panes/RDFXMLPane.js ##############
+
+// User configured:
+// ###### Expanding js/panes/form/pane.js ##############
+/*
+**                 Pane for running existing forms for any object
+**
+*/
+
+    
+tabulator.Icon.src.icon_form = iconPrefix + 'js/panes/form/form-b-22.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_form] = 'forms';
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_form,
+    
+    name: 'form',
+    
+    // Does the subject deserve this pane?
+    label: function(subject) {
+        var n = tabulator.panes.utils.formsFor(subject).length;
+        tabulator.log.debug("Form pane: forms for "+subject+": "+n)
+        if (!n) return null;
+        return ""+n+" forms";
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
+        
+
+        var mention = function complain(message, style){
+            var pre = dom.createElement("p");
+            pre.setAttribute('style', style ? style :'color: grey; background-color: white');
+            box.appendChild(pre).textContent = message;
+            return pre
+        } 
+
+        var complain = function complain(message, style){
+            mention(message, 'style', style ? style :'color: grey; background-color: #fdd;');
+        } 
+
+        var complainIfBad = function(ok,body){
+            if (ok) {
+                // setModifiedDate(store, kb, store);
+                // rerender(box);   // Deleted forms at the moment
+            }
+            else complain("Sorry, failed to save your change:\n"+body);
+        }
+
+        var thisPane = this;
+        var rerender = function(box) {
+            var parent  = box.parentNode;
+            var box2 = thisPane.render(subject, dom);
+            parent.replaceChild(box2, box);
+        };
+        
+        if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
+         
+        //kb.statementsMatching(undefined, undefined, subject);
+
+        // The question of where to store this data about subject
+        // This in general needs a whole lot more thought
+        // and it connects to the discoverbility through links
+        
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+
+        var box = dom.createElement('div');
+        box.setAttribute('class', 'formPane');
+
+        if (!me) {
+            mention("You are not logged in. If you log in and have \
+workspaces then you would be able to select workspace in which \
+to put this new information")
+        } else {
+            var ws = kb.each(me, ns.ui('workspace'));
+            if (ws.length = 0) {
+                mention("You don't seem to have any workspaces defined.  \
+A workspace is a place on the web (http://..) or in \
+the file system (file:///) to store application data.\n")            
+            } else {
+                //@@
+            }
+        }
+
+
+        // Render forms using a given store
+        
+        var renderFormsFor = function(store, subject) {
+            kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
+                if (!ok) return complain("Cannot load store "+store.uri + ': '+ body);
+
+                //              Render the forms
+                
+                var forms = tabulator.panes.utils.formsFor(subject);
+                
+                // complain('Form for editing this form:');
+                for (var i=0; i<forms.length; i++) {
+                    var form = forms[i];
+                    var heading = dom.createElement('h4');
+                    box.appendChild(heading);
+                    if (form.uri) {
+                        var formStore = $rdf.Util.uri.document(form);
+                        if (formStore.uri != form.uri) {// The form is a hash-type URI
+                            var e = box.appendChild(tabulator.panes.utils.editFormButton(
+                                    dom, box, form, formStore,complainIfBad ));
+                            e.setAttribute('style', 'float: right;');
+                        }
+                    }
+                    var anchor = dom.createElement('a');
+                    anchor.setAttribute('href', form.uri);
+                    heading.appendChild(anchor)
+                    anchor.textContent = tabulator.Util.label(form, true);
+                    
+                    /*  Keep tis as a reminder to let a New one have its URI given by user
+                    mention("Where will this information be stored?")
+                    var ele = dom.createElement('input');
+                    box.appendChild(ele);
+                    ele.setAttribute('type', 'text');
+                    ele.setAttribute('size', '72');
+                    ele.setAttribute('maxlength', '1024');
+                    ele.setAttribute('style', 'font-size: 80%; color:#222;');
+                    ele.value = store.uri
+                    */
+                    
+                    tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
+                }
+
+            }); // end: when store loded
+        }; // renderFormsFor
+
+
+        // Figure out what store
+
+        // Which places are editable and have stuff about the subject?
+
+        var store = null;
+
+        // 1. The document URI of the subject itself
+        var docuri = $rdf.Util.uri.docpart(subject.uri);
+        if (subject.uri != docuri
+            && tabulator.sparql.editable(docuri, kb))
+            store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable data file with hash
+            
+        else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
+            // 
+        }
+        // 2. where stuff is already stored
+        if (!store) {
+            var docs = {}, docList = [];
+            kb.statementsMatching(subject).map(function(st){docs[st.why.uri] = 1});
+            kb.statementsMatching(undefined, undefined, subject).map(function(st){docs[st.why.uri] = 2});
+            for (var d in docs) docList.push(docs[d], d);
+            docList.sort();
+            for (var i=0; i<docList.length; i++) {
+                var uri = docList[i][1];
+                if (uri && tabulator.sparql.editable(uri)) {
+                    store = kb.sym(uri);
+                    break;
+                }            
+            }
+        }
+
+        // 3. In a workspace store
+        
+        var followeach = function(kb, subject, path) {
+            if (path.length == 0) return [ subject ];
+            var oo = kb.each(subj, path[0]);
+            var res = [];
+            for (var i=0; i<oo.length; i++) {
+                res = res.concat(followeach(kb, oo[i], path.slice(1)));
+            }
+            return res;
+        }
+
+        var date = '2014'; // @@@@@@@@@@@@ pass as parameter
+
+        
+
+       if (store) {
+            // mention("@@ Ok, we have a store <" + store.uri + ">.");
+            renderFormsFor(store, subject);
+        } else {
+            complain("No suitable store is known, to edit <" + subject.uri + ">.");
+            var foobarbaz = tabulator.panes.utils.selectWorkspace(dom,
+                                        function(ws){
+                mention("Workspace selected OK: " + ws);
+
+                var activities = kb.each(undefined, ns.space('workspace'), ws);
+                for (var j=0; j <activities.length;i++) {
+                    var act = activities[j];
+
+                    var s = kb.any(ws, ns.space('store'));
+                    var start =  kb.any(ws, ns.ical('dtstart')).value();
+                    var end =    kb.any(ws, ns.ical('dtend')).value();
+                    if ( s && start && end &&  start <= date && end > date) {
+                        renderFormsFor(s, subject);
+                        break;
+                    } else {
+                        complain("Note no suitable annotation store in activity: " + act);
+                    }
+                }
+                
+           });
+           box.appendChild(foobarbaz);
+        };
+        
+        return box;
+    }
+
+}, false);
+
+//ends
+
+
+
+
+// ###### Finished expanding js/panes/form/pane.js ##############
+
+// Generic:
+// ###### Expanding js/panes/attach/attachPane.js ##############
+/*   Attachment Pane
+**
+** - Attach a document to a thing
+**  - View attachments
+** - Look at all unattached Supporting Documents.
+** - Drag a document onto the pane to attach it @@
+**
+**
+** I am using in places single quotes strings like 'this'
+** where internationalizatio ("i18n") is not a problem, and double quoted
+** like "this" where th string is seen by the user and so I18n is an issue.
+*/
+
+    
+// These used to be in js/init/icons.js but are better in the pane.
+tabulator.Icon.src.icon_paperclip = tabulator.iconPrefix + 'js/panes/attach/tbl-paperclip-22.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Attachments'
+
+if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(tabulator.kb);
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_paperclip,
+    
+    name: 'attachments',
+    
+    // Does the subject deserve an issue pane?
+    //
+    //  In this case we will render any thing which is in any subclass of 
+    //  certain classes, or also the certain classes themselves, as a
+    //  triage tool for correlating many attachees with attachments.
+    // We also offer the pane for anything of any class which just has an attachment already.
+    //
+    label: function(subject) {
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+        var QU = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        if (t['http://www.w3.org/ns/pim/trip#Trip'] || // If in any subclass
+        subject.uri == 'http://www.w3.org/ns/pim/trip#Trip' ||
+        t['http://www.w3.org/2005/01/wf/flow#Task'] ||
+        t['http://www.w3.org/2000/10/swap/pim/qif#Transaction'] ||
+        //subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction' ||
+        QU('Transaction') in kb.findSuperClassesNT(subject) ||
+        kb.holds(subject, WF('attachment'))) return "attachments";
+        return null; 
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var CAL = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
+        var QU = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        
+        
+   //////////////////////////////////////////////////////////////////////////////     
+        
+        var setModifiedDate = function(subj, kb, doc) {
+            var deletions = kb.statementsMatching(subject, DCT('modified'));
+            var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
+            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
+            if (me) insertions.push($rdf.st(subject, WF('modifiedBy'), me, doc) );
+            sparqlService.update(deletions, insertions, function(uri, ok, body){});
+        }
+
+        var complain = function complain(message){
+            var pre = dom.createElement("pre");
+            pre.setAttribute('style', 'background-color: pink');
+            div.appendChild(pre);
+            pre.appendChild(dom.createTextNode(message));
+        } 
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, dom);
+            parent.replaceChild(div2, div);
+        };
+
+        // Where can we write about this thing?
+        //
+        // Returns term for document or null 
+        var findStore = function(kb, subject) {
+            var docURI = tabulator.rdf.Util.uri.docpart(subject.uri);
+            if (tabulator.sparql.editable(docURI, kb)) return kb.sym(docURI);
+            var store = kb.any(kb.sym(docURI), QU('annotationStore'));
+            // if (!store) complain("No store for "+docURI);
+            return store;
+        }
+
+        
+        var div = dom.createElement("div");
+        var esc = tabulator.Util.escapeForXML;
+        div.setAttribute('class', 'attachPane');
+        div.innerHTML='<h1>' + esc(tabulator.Util.label(subject, true)) +
+                            ' attachments</h1>'; //
+
+
+        var predicate =  WF('attachment');
+        var range = QU('SupportingDocument');
+        
+        var subjects;
+        var multi;
+        var options = {};
+        var currentMode = 0; // 0 -> Show all;  1 -> Attached;    2 -> unattached
+        var currentSubject = null, currentObject = null;
+        var currentSubjectItem = null, currentObjectItem = null;
+        var objectType = QU('SupportingDocument');
+        
+        // Find all members of the class which we know about
+        // and sort them by an appropriate property.   @@ Move to library
+        //
+        
+        var getSortKeySimple =  function(c) {         
+            var sortBy = kb.sym({
+                'http://www.w3.org/2005/01/wf/flow#Task' :
+                    'http://purl.org/dc/elements/1.1/created',
+                'http://www.w3.org/ns/pim/trip#Trip' : // @@ put this into the ontologies
+                    'http://www.w3.org/2002/12/cal/ical#dtstart' ,
+                'http://www.w3.org/2000/10/swap/pim/qif#Transaction' :
+                    'http://www.w3.org/2000/10/swap/pim/qif#date',
+                'http://www.w3.org/2000/10/swap/pim/qif#SupportingDocument':
+                    'http://purl.org/dc/elements/1.1/date'} [subject.uri]);
+                    
+            if (!sortBy) {
+                sortBy = kb.any(subject, tabulator.ns.ui('sortBy'));
+            }
+            return sortBy;
+        }
+        
+        var getSortKey = function(c) {
+            var k = getSortKeySimple(c.uri);
+            if (k) return k;
+            var sup =  kb.findSuperClassesNT(c);
+            for (var cl in sup) { // note unordered -- could be closest first
+                k = getSortKeySimple(kb.fromNT(cl).uri);
+                if (k) return k;
+            }
+            return undefined; // failure
+        }
+        
+        var getMembersAndSort = function(subject) {
+        
+            var sortBy = getSortKey(subject);
+            var u, x, key, uriHash = kb.findMemberURIs(subject);
+            var pairs = [], subjects = [];
+            for (u in uriHash) { //@ protect against methods?
+                x = kb.sym(u);
+                if (sortBy) {
+                    key = kb.any(x, sortBy);
+                    if (!key) {
+                        // complain("No key "+key+" sortby "+sortBy+" for "+x);
+                        key = "8888-12-31"
+                    } else {
+                        key = key.value;
+                    }
+                 } else {
+                    complain("No sortby "+sortBy+" for "+x);
+                    key = "9999-12-31";
+                 }
+                // key = (sortBy && kb.any(x, sortBy)) || kb.literal("9999-12-31"); // Undated appear future
+                // if (!key) complain("Sort: '"+key+"' No "+sortBy+" for "+x); // Assume just not in this year
+                pairs.push( [key, x]);
+            }
+            pairs.sort();
+            pairs.reverse(); // @@ Descending order .. made a toggle?
+            for (var i=0; i< pairs.length; i++) {
+                subjects.push(pairs[i][1]);
+            }
+            return subjects;
+        };
+        
+        // Set up a triage of many class members against documents or just one
+        if (subject.uri ==  'http://www.w3.org/ns/pim/trip#Trip' ||
+            QU('Transaction') in kb.findSuperClassesNT(subject)
+            //subject.uri == 'http://www.w3.org/2000/10/swap/pim/qif#Transaction'
+            ) {
+            multi = true;
+            subjects = getMembersAndSort(subject);
+        } else {
+            currentSubject = subject;
+            currentMode = 1; // Show attached only.
+            subjects = [ subject ];
+            multi = false;
+        }
+
+        //var store = findStore(kb, subject);
+        //if (!store) complain("There is no annotation store for: "+subject.uri);
+
+        //var objects = kb.each(undefined, ns.rdf('type'), range);
+        var objects = getMembersAndSort(range);
+        if (!objects) complain("objects:"+objects.length);
+        
+        var deselectObject = function() {
+            currentObject = null;
+            preview.innerHTML = '';
+        }
+
+        var showFiltered = function(mode) {
+            var filtered = (mode == 0) ? objects :
+                (mode == 1) ?   (currentSubject === null
+                    ? objects.filter(function(y){return !!kb.holds(undefined, predicate, y)})
+                    : objects.filter(function(y){return !!kb.holds(currentSubject, predicate, y)}) )
+                : objects.filter(function(y){return kb.each(undefined, predicate, y).length == 0});
+            tabulator.panes.utils.selectorPanelRefresh(objectList,
+                dom, kb, objectType, predicate, true, filtered, options, showObject, linkClicked);
+            if (filtered.length == 1) {
+                currentObject = filtered[0];
+                showObject(currentObject, null, true); // @@ (Sure?) if only one select it.
+            } else {
+                deselectObject();
+            };
+        };
+        
+
+
+        var setAttachment = function(x, y, value, refresh) {
+            if (kb.holds(x, predicate, y) == value) return;
+            var verb = value ? "attach" : "detach";
+            //complain("Info: starting to "+verb+" " + y.uri + " to "+x.uri+ ":\n")
+            var linkDone3 = function(uri, ok, body) {
+                if (ok) {
+                    // complain("Success "+verb+" "+y.uri+" to "+x.uri+ ":\n"+ body);
+                    refresh();
+                } else {
+                    complain("Error: Unable to "+verb+" "+y.uri+" to "+x.uri+ ":\n"+ body);
+                }
+            };
+
+            var store = findStore(kb, x);
+            if (!store) {
+                complain("There is no annotation store for: "+x.uri);
+            } else {
+                var sts = [$rdf.st(x, predicate, y, store)];
+                if (value) {
+                    tabulator.sparql.update([], sts, linkDone3);
+                } else {
+                    tabulator.sparql.update(sts, [], linkDone3);
+                };
+            };
+        };
+
+        var linkClicked = function(x, event, inverse, refresh) {
+            var s, o;
+            if (inverse) { // Objectlist
+                if (!currentSubject) {
+                    complain("No subject for the link has been selected");
+                    return;
+                } else {
+                    s = currentSubject;
+                    o = x;
+                };
+            
+            } else { // Subjectlist
+                if (!currentObject) {
+                    complain("No object for the link has been selected");
+                    return;
+                } else {
+                    s = x;
+                    o = currentObject;
+                };
+            };
+            setAttachment(s, o, !kb.holds(s, predicate, o), refresh); // @@ toggle
+        };
+        
+        // When you click on a subject, filter the objects connected to the subject in Mode 1
+        var showSubject = function(x, event, selected) {
+            if (selected) {
+                currentSubject = x;
+            } else {
+                currentSubject = null;
+                if (currentMode === 1) deselectObject();
+            } // If all are displayed, refresh would just annoy:
+            if (currentMode !== 0) showFiltered(currentMode); // Refresh the objects
+        }
+        
+        if (multi) {
+            var subjectList = tabulator.panes.utils.selectorPanel(dom, kb, subject,
+                    predicate, false, subjects, options, showSubject, linkClicked);
+            subjectList.setAttribute('style',
+                'background-color: white;  width: 25em; height: 100%; padding: 0 em; overflow:scroll; float:left');
+            div.appendChild(subjectList);
+        }
+
+        var showObject = function(x, event, selected) {
+            if (!selected) {
+                deselectObject();
+                preview.innerHTML = ''; // Clean out what is there
+            // complain("Show object "+x.uri)
+                return;
+            }
+            currentObject = x;
+            try {
+
+/*
+                var table = dom.createElement('table');
+                tabulator.outline.GotoSubject(x, true, undefined, false, undefined, table) 
+*/
+                var dispalyable = function(kb, x) {
+                    var cts = kb.fetcher.getHeader(x, 'content-type');
+                    if (cts) {
+                        var displayables = [ 'text/html', 'image/png', 'application/pdf'];
+                        for (var j=0; j<cts.length; j++) {
+                            for (var k=0; k < displayables.length; k++) {
+                                if (cts[j].indexOf(displayables[k]) >= 0) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                };
+
+                preview.innerHTML = "Loading ....";
+                if (x.uri) kb.fetcher.nowOrWhenFetched(x.uri, undefined, function(ok, body) {
+                    if (!ok) {
+                        preview.textContent = "Error loading " + x.uri + ': ' + body;
+                        return;
+                    }
+                    var display = tabulator.outline.propertyTable(x); //  ,table, pane
+                    preview.innerHTML = '';
+                    preview.appendChild(display);                    
+                });
+
+
+/*                
+                if (dispalyable(kb, x) || x.uri.slice(-4) == ".pdf" || x.uri.slice(-4) == ".png" || x.uri.slice(-5) == ".html" ||
+                        x.uri.slice(-5) == ".jpeg") { // @@@@@@ MAJOR KLUDGE! use metadata after HEAD
+                    preview.innerHTML = '<iframe height="100%" width="100%"src="'
+                        + x.uri + '">' + x.uri + '</iframe>';
+                } else {
+                };
+*/
+
+            } catch(e) {
+                preview.innerHTML = '<span style="background-color: pink;">' + "Error:" + e + '</span>'; // @@ enc
+            }
+        }
+
+        div.setAttribute('style', 'background-color: white; width:40cm; height:20cm;');
+        
+        
+        var headerButtons = function(dom, labels, intial, callback) {
+            var head = dom.createElement('table');
+            var current = intial;
+            head.setAttribute('style', 'float: left; width: 30em; padding: 0.5em; height: 1.5em; background-color: #ddd; color: #444; font-weight: bold')
+            var tr = dom.createElement('tr');
+            var style0 = 'border-radius: 0.6em; text-align: center;'
+            var style1 = style0 + 'background-color: #ccc; color: black;'
+            head.appendChild(tr);
+            var setStyles = function() {
+                for (i=0; i<labels.length; i++) {
+                    buttons[i] .setAttribute('style', i == current ? style1 : style0);
+                }
+            }
+            var i, b, buttons = [];
+            for (i=0; i<labels.length; i++) {
+                b = buttons[i] = dom.createElement('td');
+                b.textContent = labels[i];
+                tr.appendChild(buttons[i]);
+                var listen = function(b, i) {
+                    b.addEventListener('click', function(e) {
+                        current = i;
+                        setStyles();
+                        callback(i);
+                    });
+                }
+                listen(b, i);
+            };
+            setStyles();
+            return head;
+        };
+
+        var setMode = function (mode){
+            if (mode !== currentMode) {
+                currentMode = mode;
+                deselectObject();
+                showFiltered(mode);
+            }
+        }
+
+        var wrapper = dom.createElement('div');
+        wrapper.setAttribute('style', ' width: 30em; height: 100%;  padding: 0em; float:left;');
+        // wrapper.appendChild(head);
+        div.appendChild(wrapper);
+        wrapper.appendChild(headerButtons(dom, [ 'all', 'attached', 'not attached',], currentMode, setMode));
+
+        var objectList = tabulator.panes.utils.selectorPanel(dom, kb, objectType, predicate, true, objects, options, showObject, linkClicked);
+        objectList.setAttribute('style',
+            'background-color: #ffe;  width: 30em; height: 100%; padding: 0em; overflow:scroll;'); //float:left
+        wrapper.appendChild(objectList);
+        
+        //objectList.insertBefore(head, objectList.firstChild);
+
+        var preview = dom.createElement("div");
+        preview.setAttribute('style', /*background-color: black; */ 'padding: 0em; margin: 0;  height: 100%; overflow:scroll;');
+        div.appendChild(preview);
+        showFiltered(currentMode);
+
+        if (subjects.length > 0 && multi) {
+            var stores = {};
+            for (var k=0; k<subjects.length; k++) {
+                var store = findStore(kb, subjects[k]);
+                if (store) stores[store.uri] = subjects[k];
+                //if (!store) complain("No store for "+subjects[k].uri);
+            };
+            for (var storeURI in stores) {
+            //var store = findStore(kb,subjects[subjectList.length-1]);
+                var store = kb.sym(storeURI);
+                var mintBox = dom.createElement('div');
+                mintBox.setAttribute('style', 'clear: left; width: 20em; margin-top:2em; background-color:#ccc; border-radius: 1em; padding: 1em; font-weight: bold;');
+                mintBox.textContent = "+ New " + tabulator.Util.label(subject);
+                if (true)  { // Only if > 1 store in set?
+                    mintBox.textContent += " in "+ tabulator.Util.label(store);
+                    var storeLab = dom.createElement('span');
+                    storeLab.setAttribute('style', 'font-weight: normal; font-size: 80%; color: #777;')
+                    storeLab.textContent = storeURI;
+                    mintBox.appendChild(dom.createElement('br'));
+                    mintBox.appendChild(storeLab);
+                }
+                /*
+                var mintButton = dom.createElement('img');
+                mintBox.appendChild(mintButton);
+                mintButton.setAttribute('src', tabulator.Icon.src.icon_add_triple); @@ Invokes master handler
+                */
+                mintBox.addEventListener('click', function(event) {
+                    var thisForm = tabulator.panes.utils.promptForNew(
+                        dom, kb, subject, predicate, subject, null, store,
+                        function(ok, body){
+                            if (!ok) {
+                                //callback(ok, body); // @@ if ok, need some form of refresh of the select for the new thing
+                            } else {
+                                // Refresh @@
+                            }
+                        });
+                    try {
+                        div.insertBefore(thisForm, mintBox.nextSibling) // Sigh no insertAfter
+                    } catch(e) {
+                        div.appendChild(thisForm);
+                    }
+                    var newObject = thisForm.AJAR_subject;
+
+                }, false);
+                div.appendChild(mintBox);
+            };
+        };
+
+         
+        
+        
+        // if (!me) complain("(You do not have your Web Id set. Set your Web ID to make changes.)");
+
+        return div;
+    }
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/attach/attachPane.js ##############
+// ###### Expanding js/panes/tableViewPane.js ##############
+
+// Format an array of RDF statements as an HTML table.
+//
+// This can operate in one of three modes: when the class of object is given
+// or when the source document from whuch data is taken is given,
+// or if a prepared query object is given.
+// (In principle it could operate with neither class nor document 
+// given but typically
+// there would be too much data.)
+// When the tableClass is not given, it looks for common  classes in the data,
+// and gives the user the option.
+//
+// 2008 Written, Ilaria Liccardi
+// 2014 core functionality now in common/table.js   -timbl
+
+
+/////////////////////////////////////////////////////////////////////
+
 /* Table view pane  -- view of a class*/
 
 tabulator.panes.register({
@@ -18185,7 +17782,7 @@ tabulator.panes.pubsPane = {
         
         // Creates "tag" thing as a child under "p"
         function newElement(tag, p){
-            x = myDocument.createElement(tag);
+            var x = myDocument.createElement(tag);
             x['child'] = function(tag){return newElement(tag,x)};
             if(!p){ pubsPane.appendChild(x); }
             else{ p.appendChild(x); }
@@ -24416,7 +24013,7 @@ tabulator.OutlineObject = function(doc) {
     function saveQuery() {
         var qs = tabulator.qs;
         var q= new tabulator.rdf.Query()
-        var i, n=selection.length, j, m, tr, sel, st;
+        var i, n=selection.length, j, m, tr, sel, st, tr;
         for (i=0; i<n; i++) {
             sel = selection[i]
             tr = sel.parentNode
@@ -25162,10 +24759,10 @@ tabulator.OutlineObject = function(doc) {
 /*   termWidget
 **
 */  
-    termWidget={}
+    termWidget={} // @@@@@@ global
     termWidget.construct = function (myDocument) {
         myDocument = myDocument||document;                              
-        td = myDocument.createElement('TD')
+        var td = myDocument.createElement('TD')
         td.setAttribute('class','iconTD')
         td.setAttribute('notSelectable','true')
         td.style.width = '0px';
@@ -25233,7 +24830,7 @@ tabulator.OutlineObject = function(doc) {
     }
     
     var queries = [];
-    myQuery=queries[0]=new queryObj();
+    var myQuery = queries[0] = new queryObj();
 
     function query_save() {
         queries.push(queries[0]);

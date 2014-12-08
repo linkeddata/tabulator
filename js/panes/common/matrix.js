@@ -1,5 +1,6 @@
 //      Build a 2D matrix of values
 //
+//  dom      AKA document
 //  query    a Query object of rdflib.js with a valid pattern
 //  vx       A variable object, the one to be used for the X variable (horiz)
 //  vy       A variable object, the one to be used for the Y variable (vertical)
@@ -18,8 +19,9 @@
 //   Extra rows and columns are inserted as needed to hold new data points
 //   matrix.refresh() will re-run the query and adjust the display
 
-tabulator.panes.utils.matrixForQuery  = function (query, vx, vy, vvalue, options, whenDone) {
+tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, options, whenDone) {
     var matrix = dom.createElement('table');
+    var kb = tabulator.kb;
     var header = dom.createElement('tr');
     var corner = header.appendChild(dom.createElement('td'));
     corner.setAttribute('class', 'MatrixCorner')

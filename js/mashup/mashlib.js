@@ -6099,7 +6099,7 @@ $rdf.sparqlUpdate = function() {
                 if (!success) tabulator.log.error("sparql: update failed for <"+uri+"> status="+
                     xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
                 else  tabulator.log.debug("sparql: update Ok for <"+uri+">");
-                callback(uri, success, xhr.responseText);
+                callback(uri, success, xhr.responseText, xhr);
             }
         }
 
@@ -6239,7 +6239,7 @@ $rdf.sparqlUpdate = function() {
                 }
             }
             this._fire(doc.uri, query,
-                function(uri, success, body) {
+                function(uri, success, body, xhr) {
                     tabulator.log.info("\t sparql: Return success="+success+" for query "+query+"\n");
                     if (success) {
                         for (var i=0; i<ds.length;i++)
@@ -6251,7 +6251,7 @@ $rdf.sparqlUpdate = function() {
                         for (var i=0; i<is.length;i++)
                             kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
                     }
-                    callback(uri, success, body);
+                    callback(uri, success, body, xhr);
                 });
             
         } else if (protocol.indexOf('DAV') >=0) {
@@ -6382,42 +6382,45 @@ $rdf.sparqlUpdate = function() {
 
     // This suitable for an inital creation of a document
     //
-    sparql.prototype.put = function(doc, newSts, content_type, callback) {
+    // data:    string, or array of statements
+    //
+    sparql.prototype.put = function(doc, data, content_type, callback) {
 
         var documentString;
         var kb = this.store;
        
-        //serialize to te appropriate format
-        var sz = $rdf.Serializer(kb);
-        sz.suggestNamespaces(kb.namespaces);
-        sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
-        switch(content_type){
-            case 'application/rdf+xml': 
-                documentString = sz.statementsToXML(newSts);
-                break;
-            case 'text/n3':
-            case 'text/turtle':
-            case 'application/x-turtle': // Legacy
-            case 'application/n3': // Legacy
-                documentString = sz.statementsToN3(newSts);
-                break;
-            default:
-                throw "Content-type "+content_type +" not supported for data PUT";                                                                            
+        if (typeof data === typeof '') {
+            documentString = data;
+        } else {
+            //serialize to te appropriate format
+            var sz = $rdf.Serializer(kb);
+            sz.suggestNamespaces(kb.namespaces);
+            sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
+            switch(content_type){
+                case 'application/rdf+xml': 
+                    documentString = sz.statementsToXML(data);
+                    break;
+                case 'text/n3':
+                case 'text/turtle':
+                case 'application/x-turtle': // Legacy
+                case 'application/n3': // Legacy
+                    documentString = sz.statementsToN3(data);
+                    break;
+                default:
+                    throw "Content-type "+content_type +" not supported for data PUT";                                                                            
+            }
         }
-        
         var xhr = $rdf.Util.XMLHTTPFactory();
         xhr.onreadystatechange = function (){
             if (xhr.readyState == 4){
                 //formula from sparqlUpdate.js, what about redirects?
                 var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-                callback(doc.uri, success, xhr.responseText);
+                callback(doc.uri, success, xhr.responseText, xhr);
             }
         };
         xhr.open('PUT', doc.uri, true);
-        //assume the server does PUT content-negotiation.
-        xhr.setRequestHeader('Content-type', content_type);//OK?
+        xhr.setRequestHeader('Content-type', content_type);
         xhr.send(documentString);
-    
     };
     
     
@@ -7118,14 +7121,25 @@ __Serializer.prototype.writeStore = function(write) {
     var session = fetcher && fetcher.appNode;
     
     // Everything we know from experience just write out.
-    if (session) write(this.statementsToN3(kb.statementsMatching(
-                                undefined, undefined, undefined, session)));
+    // It is undder the session and the requests.
+    
+    var metaSources = kb.statementsMatching(undefined,
+            kb.sym('http://www.w3.org/2007/ont/link#requestedURI')).map(
+                function(st){return st.subject});
+    if (session) metaSources.push(session);
+    var metadata = [];
+    metaSources.map(function(source){
+        metadata = metadata.concat(kb.statementsMatching(undefined, undefined, undefined, source));
+    });
+    write(this.statementsToN3(metadata));
                                 
     var sources = this.store.index[3];
     for (s in sources) {  // -> assume we can use -> as short for log:semantics
         var source = kb.fromNT(s);
         if (session && source.sameTerm(session)) continue;
-        write('\n'+ this.atomicTermToN3(source)+' -> { '+ this.statementsToN3(kb.statementsMatching(
+        write('\n'+ this.atomicTermToN3(source)+' ' + 
+                this.atomicTermToN3(kb.sym('http://www.w3.org/2000/10/swap/log#'))
+                 + ' { '+ this.statementsToN3(kb.statementsMatching(
                             undefined, undefined, undefined, source)) + ' }.\n');
     }
 }
@@ -7699,14 +7713,14 @@ $rdf.Fetcher = function(store, timeout, async) {
 */
                 var root = this.dom.documentElement;
                 if (root.nodeName == 'parsererror') { //@@ Mozilla only See issue/issue110
-                    sf.failFetch(xhr, "Badly formed XML in " + xhr.uri.uri); //have to fail the request
-                    throw new Error("Badly formed XML in " + xhr.uri.uri); //@@ Add details
+                    sf.failFetch(xhr, "Badly formed XML in " + xhr.resource.uri); //have to fail the request
+                    throw new Error("Badly formed XML in " + xhr.resource.uri); //@@ Add details
                 }
                 // Find the last URI we actual URI in a series of redirects
-                // (xhr.uri.uri is the original one)
+                // (xhr.resource.uri is the original one)
                 var lastRequested = kb.any(xhr.req, ns.link('requestedURI'));
                 if (!lastRequested) {
-                    lastRequested = xhr.uri;
+                    lastRequested = xhr.resource;
                 } else {
                     lastRequested = kb.sym(lastRequested.value);
                 }
@@ -7752,8 +7766,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // dc:title
                 var title = this.dom.getElementsByTagName('title')
                 if (title.length > 0) {
-                    kb.add(xhr.uri, ns.dc('title'), kb.literal(title[0].textContent), xhr.uri)
-                    // $rdf.log.info("Inferring title of " + xhr.uri)
+                    kb.add(xhr.resource, ns.dc('title'), kb.literal(title[0].textContent), xhr.resource)
+                    // $rdf.log.info("Inferring title of " + xhr.resource)
                 }
 
                 // link rel
@@ -7768,24 +7782,24 @@ $rdf.Fetcher = function(store, timeout, async) {
                     var profile = head.getAttribute('profile');
                     if (profile && $rdf.uri.protocol(profile) == 'http') {
                         // $rdf.log.info("GRDDL: Using generic " + "2003/11/rdf-in-xhtml-processor.");
-                         $rdf.Fetcher.doGRDDL(kb, xhr.uri, "http://www.w3.org/2003/11/rdf-in-xhtml-processor", xhr.uri.uri)
+                         $rdf.Fetcher.doGRDDL(kb, xhr.resource, "http://www.w3.org/2003/11/rdf-in-xhtml-processor", xhr.resource.uri)
 /*			sf.requestURI('http://www.w3.org/2005/08/'
 					  + 'online_xslt/xslt?'
 					  + 'xslfile=http://www.w3.org'
 					  + '/2003/11/'
 					  + 'rdf-in-xhtml-processor'
 					  + '&xmlfile='
-					  + escape(xhr.uri.uri),
-				      xhr.uri)
+					  + escape(xhr.resource.uri),
+				      xhr.resource)
                         */
                     } else {
-                        // $rdf.log.info("GRDDL: No GRDDL profile in " + xhr.uri)
+                        // $rdf.log.info("GRDDL: No GRDDL profile in " + xhr.resource)
                     }
                 }
-                kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
+                kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                 // Do RDFa here
                 if ($rdf.rdfa && $rdf.rdfa.parse)
-                    $rdf.rdfa.parse(this.dom, kb, xhr.uri.uri);
+                    $rdf.rdfa.parse(this.dom, kb, xhr.resource.uri);
                 cb(); // Fire done callbacks
             }
         }
@@ -7836,8 +7850,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                         var xforms = kb.each(kb.sym(ns), kb.sym("http://www.w3.org/2003/g/data-view#namespaceTransformation"));
                         for (var i = 0; i < xforms.length; i++) {
                             var xform = xforms[i];
-                            // $rdf.log.info(xhr.uri.uri + " namespace " + ns + " has GRDDL ns transform" + xform.uri);
-                             $rdf.Fetcher.doGRDDL(kb, xhr.uri, xform.uri, xhr.uri.uri);
+                            // $rdf.log.info(xhr.resource.uri + " namespace " + ns + " has GRDDL ns transform" + xform.uri);
+                             $rdf.Fetcher.doGRDDL(kb, xhr.resource, xform.uri, xhr.resource.uri);
                         }
                         break
                     }
@@ -7846,7 +7860,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // Or it could be XHTML?
                 // Maybe it has an XHTML DOCTYPE?
                 if (dom.doctype) {
-                    // $rdf.log.info("We found a DOCTYPE in " + xhr.uri)
+                    // $rdf.log.info("We found a DOCTYPE in " + xhr.resource)
                     if (dom.doctype.name == 'html' && dom.doctype.publicId.match(/^-\/\/W3C\/\/DTD XHTML/) && dom.doctype.systemId.match(/http:\/\/www.w3.org\/TR\/xhtml/)) {
                         sf.addStatus(xhr.req,"Has XHTML DOCTYPE. Switching to XHTML Handler.\n")
                         sf.switchHandler('XHTMLHandler', xhr, cb)
@@ -7893,7 +7907,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.handle = function(cb) {
                 var rt = xhr.responseText
                 // We only handle XHTML so we have to figure out if this is XML
-                // $rdf.log.info("Sniffing HTML " + xhr.uri + " for XHTML.");
+                // $rdf.log.info("Sniffing HTML " + xhr.resource + " for XHTML.");
 
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
                     sf.addStatus(xhr.req, "Has an XML declaration. We'll assume " +
@@ -7922,8 +7936,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var titleMatch = (new RegExp("<title>([\\s\\S]+?)</title>", 'im')).exec(rt);
                 if (titleMatch) {
                     var kb = sf.store;
-                    kb.add(xhr.uri, ns.dc('title'), kb.literal(titleMatch[1]), xhr.uri); //think about xml:lang later
-                    kb.add(xhr.uri, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
+                    kb.add(xhr.resource, ns.dc('title'), kb.literal(titleMatch[1]), xhr.resource); //think about xml:lang later
+                    kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                     cb(); //doneFetch, not failed
                     return;
                 }
@@ -7953,7 +7967,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // Look for an XML declaration
                 if (rt.match(/\s*<\?xml\s+version\s*=[^<>]+\?>/)) {
-                    sf.addStatus(xhr.req, "Warning: "+xhr.uri + " has an XML declaration. We'll assume " 
+                    sf.addStatus(xhr.req, "Warning: "+xhr.resource + " has an XML declaration. We'll assume " 
                         + "it's XML but its content-type wasn't XML.\n")
                     sf.switchHandler('XMLHandler', xhr, cb)
                     return
@@ -7969,9 +7983,9 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // We give up finding semantics - this is not an error, just no data
                 sf.addStatus(xhr.req, "Plain text document, no known RDF semantics.");
-                sf.doneFetch(xhr, [xhr.uri.uri]);
+                sf.doneFetch(xhr, [xhr.resource.uri]);
 //                sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
-//                dump(xhr.uri + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
+//                dump(xhr.resource + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
 
             }
         }
@@ -7993,24 +8007,24 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.handlerFactory = function(xhr) {
             xhr.handle = function(cb) {
                 // Parse the text of this non-XML file
-                $rdf.log.debug("web.js: Parsing as N3 " + xhr.uri.uri); // @@@@ comment me out 
+                $rdf.log.debug("web.js: Parsing as N3 " + xhr.resource.uri); // @@@@ comment me out 
                 //sf.addStatus(xhr.req, "N3 not parsed yet...")
                 var rt = xhr.responseText
-                var p = $rdf.N3Parser(kb, kb, xhr.uri.uri, xhr.uri.uri, null, null, "", null)
+                var p = $rdf.N3Parser(kb, kb, xhr.resource.uri, xhr.resource.uri, null, null, "", null)
                 //                p.loadBuf(xhr.responseText)
                 try {
                     p.loadBuf(xhr.responseText)
 
                 } catch (e) {
-                    var msg = ("Error trying to parse " + xhr.uri + " as Notation3:\n" + e +':\n'+e.stack)
+                    var msg = ("Error trying to parse " + xhr.resource + " as Notation3:\n" + e +':\n'+e.stack)
                     // dump(msg+"\n")
                     sf.failFetch(xhr, msg)
                     return;
                 }
 
                 sf.addStatus(xhr.req, "N3 parsed: " + p.statementCount + " triples in " + p.lines + " lines.")
-                sf.store.add(xhr.uri, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
-                args = [xhr.uri.uri]; // Other args needed ever?
+                sf.store.add(xhr.resource, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
+                args = [xhr.resource.uri]; // Other args needed ever?
                 sf.doneFetch(xhr, args)
             }
         }
@@ -8081,10 +8095,10 @@ $rdf.Fetcher = function(store, timeout, async) {
     // Returns xhr so can just do return this.failfetch(...)
     this.failFetch = function(xhr, status) {
         this.addStatus(xhr.req, status)
-        kb.add(xhr.uri, ns.link('error'), status)
-        this.requested[$rdf.uri.docpart(xhr.uri.uri)] = false
+        kb.add(xhr.resource, ns.link('error'), status)
+        this.requested[$rdf.uri.docpart(xhr.resource.uri)] = false
         if (xhr.userCallback) {
-            xhr.userCallback(false, "Fetch of <" + xhr.uri.uri + "> failed: "+status)
+            xhr.userCallback(false, "Fetch of <" + xhr.resource.uri + "> failed: "+status, xhr)
         };
         this.fireCallbacks('fail', [xhr.requestedURI, status])
         xhr.abort()
@@ -8092,25 +8106,25 @@ $rdf.Fetcher = function(store, timeout, async) {
     }
 
     this.linkData = function(xhr, rel, uri) {
-        var x = xhr.uri;
+        var x = xhr.resource;
         if (!uri) return;
         // See http://www.w3.org/TR/powder-dr/#httplink for describedby 2008-12-10
         if (rel == 'alternate' || rel == 'seeAlso' || rel == 'meta' || rel == 'describedby') {
             // var join = $rdf.uri.join2;   // doesn't work, now a method of rdf.uri
-            var obj = kb.sym($rdf.uri.join(uri, xhr.uri.uri))
-            if (obj.uri != xhr.uri) {
-                kb.add(xhr.uri, ns.rdfs('seeAlso'), obj, xhr.uri);
-                // $rdf.log.info("Loading " + obj + " from link rel in " + xhr.uri);
+            var obj = kb.sym($rdf.uri.join(uri, xhr.resource.uri))
+            if (obj.uri != xhr.resource) {
+                kb.add(xhr.resource, ns.rdfs('seeAlso'), obj, xhr.resource);
+                // $rdf.log.info("Loading " + obj + " from link rel in " + xhr.resource);
             }
         }
     };
 
     this.doneFetch = function(xhr, args) {
         this.addStatus(xhr.req, 'Done.')
-        // $rdf.log.info("Done with parse, firing 'done' callbacks for " + xhr.uri)
-        this.requested[xhr.uri.uri] = 'done'; //Kenny
+        // $rdf.log.info("Done with parse, firing 'done' callbacks for " + xhr.resource)
+        this.requested[xhr.resource.uri] = 'done'; //Kenny
         if (xhr.userCallback) {
-            xhr.userCallback(true);
+            xhr.userCallback(true, undefined, xhr);
         };
         this.fireCallbacks('done', args)
     }
@@ -8148,7 +8162,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 //  term:       canonical term for the thing whose URI is to be dereferenced
 //  rterm:      the resource which refered to this (for tracking bad links)
 //  force:      Load the data even if loaded before
-//  oneDone:   is called as callback(ok, errorbody) for each one
+//  oneDone:   is called as callback(ok, errorbody, xhr) for each one
 //  allDone:   is called as callback(ok, errorbody) for all of them
 // Returns      the number of things looked up
 //
@@ -8168,7 +8182,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var sf = this;
 
                 var requestOne = function requestOne(u1){
-                    sf.requestURI($rdf.uri.docpart(u1), rterm, force, function(ok, body){
+                    sf.requestURI($rdf.uri.docpart(u1), rterm, force, function(ok, body, xhr){
                         if (ok) {
                             if (oneDone) oneDone(true, u1);
                         } else {
@@ -8229,6 +8243,16 @@ $rdf.Fetcher = function(store, timeout, async) {
         return undefined;
     };
 
+    this.proxyIfNecessary = function(uri) {
+        if (tabulator && tabulator.isExtension) return uri; // Extenstion does not need proxy
+                        // browser does 2014 on as https browser script not trusted
+        if ($rdf.Fetcher.crossSiteProxyTemplate && document && document.location
+			&& ('' + document.location).slice(0,6) === 'https:'
+                && uri.slice(0,5) === 'http:') {
+              return $rdf.Fetcher.crossSiteProxyTemplate.replace('{uri}', encodeURIComponent(uri));
+        }
+        return uri;
+    };
 
     /** Requests a document URI and arranges to load the document.
      ** Parameters:
@@ -8278,7 +8302,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         if (!useJQuery) {
             var xhr = $rdf.Util.XMLHTTPFactory();
             var req = xhr.req = kb.bnode();
-            xhr.uri = docterm;
+            xhr.resource = docterm;
             xhr.requestedURI = args[0];
         } else {
             var req = kb.bnode(); // @@ Joe, no need for xhr.req?
@@ -8306,7 +8330,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             if ($rdf.Fetcher.crossSiteProxyTemplate && document && document.location && !xhr.proxyUsed) { // In mashup situation
                 var hostpart = $rdf.uri.hostpart;
                 var here = '' + document.location;
-                var uri = xhr.uri.uri
+                var uri = xhr.resource.uri
                 if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
                     newURI = $rdf.Fetcher.crossSiteProxy(uri);
                     sf.addStatus(xhr.req, "BLOCKED -> Cross-site Proxy to <" + newURI + ">");
@@ -8339,9 +8363,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                     sf.addStatus(oldreq, 'done - redirected') // why
                     //the callback throws an exception when called from xhr.onerror (so removed)
                     //sf.fireCallbacks('done', args) // Are these args right? @@@   Noit done yet! done means success
-                    sf.requested[xhr.uri.uri] = 'redirected';
+                    sf.requested[xhr.resource.uri] = 'redirected';
 
-                    var xhr2 = sf.requestURI(newURI, xhr.uri, force, userCallback);
+                    var xhr2 = sf.requestURI(newURI, xhr.resource, force, userCallback);
                     xhr2.proxyUsed = true; //only try the proxy once
 
                     if (xhr2 && xhr2.req) {
@@ -8379,7 +8403,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
                 xhr.headers = {}
-                if ($rdf.uri.protocol(xhr.uri.uri) == 'http' || $rdf.uri.protocol(xhr.uri.uri) == 'https') {
+                if ($rdf.uri.protocol(xhr.resource.uri) == 'http' || $rdf.uri.protocol(xhr.resource.uri) == 'https') {
                     xhr.headers = $rdf.Util.getHTTPHeaders(xhr)
                     for (var h in xhr.headers) { // trim below for Safari - adds a CR!
                         kb.add(response, ns.httph(h.toLowerCase()), xhr.headers[h].trim(), response)
@@ -8395,7 +8419,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                         kb.add(response, ns.http('content'), kb.literal(xhr.responseText), response);
                         // dump("HTTP >= 400 responseText:\n"+xhr.responseText+"\n"); // @@@@
                     }
-                    sf.failFetch(xhr, "HTTP error for " +xhr.uri + ": "+ xhr.status + ' ' + xhr.statusText);
+                    sf.failFetch(xhr, "HTTP error for " +xhr.resource + ": "+ xhr.status + ' ' + xhr.statusText);
                     return;
                 }
 
@@ -8431,8 +8455,8 @@ $rdf.Fetcher = function(store, timeout, async) {
                     }
                 }
 
-                if ($rdf.uri.protocol(xhr.uri.uri) == 'file' || $rdf.uri.protocol(xhr.uri.uri) == 'chrome') {
-                    switch (xhr.uri.uri.split('.').pop()) {
+                if ($rdf.uri.protocol(xhr.resource.uri) == 'file' || $rdf.uri.protocol(xhr.resource.uri) == 'chrome') {
+                    switch (xhr.resource.uri.split('.').pop()) {
                     case 'rdf':
                     case 'owl':
                         xhr.headers['content-type'] = 'application/rdf+xml';
@@ -8449,10 +8473,10 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // If we have alread got the thing at this location, abort
                 if (loc) {
-                    var udoc = $rdf.uri.join(xhr.uri.uri, loc)
-                    if (!force && udoc != xhr.uri.uri && sf.requested[udoc]) {
+                    var udoc = $rdf.uri.join(xhr.resource.uri, loc)
+                    if (!force && udoc != xhr.resource.uri && sf.requested[udoc]) {
                         // should we smush too?
-                        // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.uri + " as " + udoc + ". Aborting.")
+                        // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.resource + " as " + udoc + ". Aborting.")
                         sf.doneFetch(xhr, args)
                         xhr.abort()
                         return
@@ -8510,11 +8534,11 @@ $rdf.Fetcher = function(store, timeout, async) {
             // OPENED: 1
             // UNSENT: 0
 
-            // $rdf.log.debug("web.js: XHR " + xhr.uri.uri + ' readyState='+xhr.readyState); // @@@@ comment me out 
+            // $rdf.log.debug("web.js: XHR " + xhr.resource.uri + ' readyState='+xhr.readyState); // @@@@ comment me out 
 
             switch (xhr.readyState) {
             case 0:
-                    var uri = xhr.uri.uri, newURI;
+                    var uri = xhr.resource.uri, newURI;
                     if (this.crossSiteProxyTemplate && document && document.location) { // In mashup situation
                         var hostpart = $rdf.uri.hostpart;
                         var here = '' + document.location;
@@ -8551,9 +8575,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                                 xhr.userCallback(true);
                             };
                             sf.fireCallbacks('done', args) // Are these args right? @@@
-                            sf.requested[xhr.uri.uri] = 'redirected';
+                            sf.requested[xhr.resource.uri] = 'redirected';
 
-                            var xhr2 = sf.requestURI(newURI, xhr.uri);
+                            var xhr2 = sf.requestURI(newURI, xhr.resource);
                             if (xhr2 && xhr2.req) kb.add(xhr.req,
                                 kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
                                 xhr2.req, sf.appNode);                             return;
@@ -8573,7 +8597,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 handleResponse();
                 // Now handle
                 if (xhr.handle) {
-                    if (sf.requested[xhr.uri.uri] === 'redirected') {
+                    if (sf.requested[xhr.resource.uri] === 'redirected') {
                         break;
                     }
                     sf.fireCallbacks('load', args)
@@ -8610,13 +8634,14 @@ $rdf.Fetcher = function(store, timeout, async) {
         // XMLHttpRequest cannot load http://www.w3.org/People/Berners-Lee/card. 
         // A wildcard '*' cannot be used in the 'Access-Control-Allow-Origin' header when the credentials flag is true. 
 
-        // @ Many ontology files under http: and need CORD wildcard -> can't have withCredentials
+        // @ Many ontology files under http: and need CORS wildcard -> can't have withCredentials
         var withCredentials = ( uri2.slice(0,6) === 'https:'); // @@ Kludge -- need for webid which typically is served from https
 
+        var actualProxyURI = this.proxyIfNecessary(uri2);
         // Setup the request
         if (typeof jQuery !== 'undefined' && jQuery.ajax) {
             var xhr = jQuery.ajax({
-                url: uri2,
+                url: actualProxyURI,
                 accepts: {'*': 'text/turtle,text/n3,application/rdf+xml'},
                 processData: false,
                 xhrFields: {
@@ -8627,7 +8652,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                     xhr.req = req;   // Add these in case fails before .ajax returns
                     xhr.userCallback = userCallback;
-                    xhr.uri = docterm;
+                    xhr.resource = docterm;
                     xhr.requestedURI = uri2;
 
 
@@ -8640,7 +8665,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                     xhr.req = req;
                     xhr.userCallback = userCallback;
-                    xhr.uri = docterm;
+                    xhr.resource = docterm;
                     xhr.requestedURI = uri2;
 
                     onreadystatechangeFactory(xhr)();
@@ -8649,8 +8674,9 @@ $rdf.Fetcher = function(store, timeout, async) {
 
             xhr.req = req;
             xhr.userCallback = userCallback;
-            xhr.uri = docterm;
+            xhr.resource = docterm;
             xhr.requestedURI = uri2;
+            xhr.actualProxyURI = actualProxyURI;
 
 
         } else {
@@ -8659,17 +8685,18 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.onreadystatechange = onreadystatechangeFactory(xhr);
             xhr.timeout = sf.timeout;
             xhr.withCredentials = withCredentials;
+            xhr.actualProxyURI = actualProxyURI;
 
             xhr.req = req;
             xhr.userCallback = userCallback;
-            xhr.uri = docterm;
+            xhr.resource = docterm;
             xhr.requestedURI = uri2;
 
             xhr.ontimeout = function () {
                 sf.failFetch(xhr, "requestTimeout");
             }
             try {
-                xhr.open('GET', uri2, this.async);
+                xhr.open('GET', actualProxyURI, this.async);
             } catch (er) {
                 return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
             }
@@ -8678,8 +8705,8 @@ $rdf.Fetcher = function(store, timeout, async) {
         // Set redirect callback and request headers -- alas Firefox Extension Only
         
         if (typeof tabulator != 'undefined' && tabulator.isExtension && xhr.channel &&
-            ($rdf.uri.protocol(xhr.uri.uri) == 'http' ||
-             $rdf.uri.protocol(xhr.uri.uri) == 'https')) {
+            ($rdf.uri.protocol(xhr.resource.uri) == 'http' ||
+             $rdf.uri.protocol(xhr.resource.uri) == 'https')) {
             try {
                 xhr.channel.notificationCallbacks = {
                     getInterface: function(iid) {
@@ -8698,7 +8725,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                                     ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
                                     var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
-                                    // xhr.uri = docterm
+                                    // xhr.resource = docterm
                                     // xhr.requestedURI = args[0]
                                     // var requestHandlers = kb.collection()
 
@@ -8722,10 +8749,10 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
                                     if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
-                                    if (xhr.status - 0 != 303) kb.HTTPRedirects[xhr.uri.uri] = newURI; // same document as
+                                    if (xhr.status - 0 != 303) kb.HTTPRedirects[xhr.resource.uri] = newURI; // same document as
                                     if (xhr.status - 0 == 301 && rterm) { // 301 Moved
                                         var badDoc = $rdf.uri.docpart(rterm.uri);
-                                        var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
+                                        var msg = 'Warning: ' + xhr.resource + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
                                             msg += ' Link in <' + badDoc + ' >should be changed';
                                             kb.add(badDoc, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg, sf.appNode);
@@ -8737,21 +8764,21 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                                     sf.addStatus(oldreq, 'done') // why
                                     sf.fireCallbacks('done', args) // Are these args right? @@@
-                                    sf.requested[xhr.uri.uri] = 'redirected';
+                                    sf.requested[xhr.resource.uri] = 'redirected';
 
                                     var hash = newURI.indexOf('#');
                                     if (hash >= 0) {
-                                        var msg = ('Warning: ' + xhr.uri + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
+                                        var msg = ('Warning: ' + xhr.resource + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
                                         // dump(msg+"\n");
-                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
+                                        kb.add(xhr.resource, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
                                         newURI = newURI.slice(0, hash);
                                     }
-                                    var xhr2 = sf.requestURI(newURI, xhr.uri);
+                                    var xhr2 = sf.requestURI(newURI, xhr.resource);
                                     if (xhr2 && xhr2.req) kb.add(xhr.req,
                                         kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
                                         xhr2.req, sf.appNode); 
         
-                                    // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
+                                    // else dump("No xhr.req available for redirect from "+xhr.resource+" to "+newURI+"\n")
                                 },
                                 
                                 // See https://developer.mozilla.org/en/XPCOM_Interface_Reference/nsIChannelEventSink
@@ -8767,7 +8794,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                                     ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
                                     var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
-                                    // xhr.uri = docterm
+                                    // xhr.resource = docterm
                                     // xhr.requestedURI = args[0]
                                     // var requestHandlers = kb.collection()
 
@@ -8791,10 +8818,10 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
                                     if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
 
-                                    if (xhr.status - 0 != 303) kb.HTTPRedirects[xhr.uri.uri] = newURI; // same document as
+                                    if (xhr.status - 0 != 303) kb.HTTPRedirects[xhr.resource.uri] = newURI; // same document as
                                     if (xhr.status - 0 == 301 && rterm) { // 301 Moved
                                         var badDoc = $rdf.uri.docpart(rterm.uri);
-                                        var msg = 'Warning: ' + xhr.uri + ' has moved to <' + newURI + '>.';
+                                        var msg = 'Warning: ' + xhr.resource + ' has moved to <' + newURI + '>.';
                                         if (rterm) {
                                             msg += ' Link in <' + badDoc + ' >should be changed';
                                             kb.add(badDoc, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg, sf.appNode);
@@ -8811,21 +8838,21 @@ $rdf.Fetcher = function(store, timeout, async) {
                                         xhr.userCallback(true);
                                     };
                                     sf.fireCallbacks('done', args) // Are these args right? @@@
-                                    sf.requested[xhr.uri.uri] = 'redirected';
+                                    sf.requested[xhr.resource.uri] = 'redirected';
 
                                     var hash = newURI.indexOf('#');
                                     if (hash >= 0) {
-                                        var msg = ('Warning: ' + xhr.uri + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
+                                        var msg = ('Warning: ' + xhr.resource + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
                                         // dump(msg+"\n");
-                                        kb.add(xhr.uri, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
+                                        kb.add(xhr.resource, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
                                         newURI = newURI.slice(0, hash);
                                     }
-                                    var xhr2 = sf.requestURI(newURI, xhr.uri);
+                                    var xhr2 = sf.requestURI(newURI, xhr.resource);
                                     if (xhr2 && xhr2.req) kb.add(xhr.req,
                                         kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
                                         xhr2.req, sf.appNode); 
         
-                                    // else dump("No xhr.req available for redirect from "+xhr.uri+" to "+newURI+"\n")
+                                    // else dump("No xhr.req available for redirect from "+xhr.resource+" to "+newURI+"\n")
                                 } // asyncOnChannelRedirect
                             }
                         }
@@ -8869,7 +8896,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 return this.failFetch(xhr, "XHR send failed:" + er);
             }
             setTimeout(function() {
-                if (xhr.readyState != 4 && sf.isPending(xhr.uri.uri)) {
+                if (xhr.readyState != 4 && sf.isPending(xhr.resource.uri)) {
                     sf.failFetch(xhr, "requestTimeout")
                 }
             }, this.timeout);
@@ -8935,7 +8962,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         return this.requested[docuri] == true;
     }
 
-    var updatesVia = new $rdf.UpdatesVia(this);
+    // var updatesVia = new $rdf.UpdatesVia(this);
 };
 
 $rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, timeout, async) };
@@ -9186,6 +9213,7 @@ tabulator.ns.httph = $rdf.Namespace('http://www.w3.org/2007/ont/httph#');
 tabulator.ns.ical = $rdf.Namespace('http://www.w3.org/2002/12/cal/icaltzd#');
 tabulator.ns.ldp = $rdf.Namespace('http://www.w3.org/ns/ldp#');
 tabulator.ns.link = tabulator.ns.tab = tabulator.ns.tabont = $rdf.Namespace('http://www.w3.org/2007/ont/link#');
+tabulator.ns.log = $rdf.Namespace('http://www.w3.org/2000/10/swap/log#')
 tabulator.ns.mo = $rdf.Namespace('http://purl.org/ontology/mo/');
 tabulator.ns.owl = $rdf.Namespace('http://www.w3.org/2002/07/owl#');
 tabulator.ns.patch = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
@@ -9194,11 +9222,13 @@ tabulator.ns.trip = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
 tabulator.ns.rdf = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 tabulator.ns.rdfs = $rdf.Namespace('http://www.w3.org/2000/01/rdf-schema#');
 tabulator.ns.rss = $rdf.Namespace('http://purl.org/rss/1.0/');
+tabulator.ns.sched =  $rdf.Namespace('http://www.w3.org/ns/pim/schedule#');
 tabulator.ns.sioc =  $rdf.Namespace('http://rdfs.org/sioc/ns#');
 // was - tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-');
 tabulator.ns.space = $rdf.Namespace('http://www.w3.org/ns/pim/space#');
 tabulator.ns.stat = $rdf.Namespace('http://www.w3.org/ns/posix/stat#');
 tabulator.ns.ui = $rdf.Namespace('http://www.w3.org/ns/ui#');
+tabulator.ns.vcard = $rdf.Namespace('http://www.w3.org/2006/vcard/ns#');
 tabulator.ns.wf = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
 tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/2001/XMLSchema#');
 
@@ -9252,7 +9282,9 @@ Also lower could be optional tools for various classes.
 * Few General purpose utility functions used in the panes
 * oshani@csail.mit.edu 
 *
-* Includes form-oriented widgets, and sign-on sign-up widgets.
+* Includes form-oriented widgets
+* 
+* sign-in sign-up widgets are in signin.js
 *
 *  Note... For pointers to posssible text-editing code, see
 *  http://stackoverflow.com/questions/6756407/what-contenteditable-editors
@@ -9589,8 +9621,11 @@ tabulator.panes.field[tabulator.ns.ui('SingleLineTextField').uri] = function(
     var box = dom.createElement('tr');
     container.appendChild(box);
     var lhs = dom.createElement('td');
+    lhs.setAttribute('class', 'formFieldName')
+    lhs.setAttribute('style', '  vertical-align: middle;')
     box.appendChild(lhs);
     var rhs = dom.createElement('td');
+    rhs.setAttribute('class', 'formFieldValue')
     box.appendChild(rhs);
 
     var property = kb.any(form, ui('property'));
@@ -9941,6 +9976,7 @@ tabulator.panes.utils.fieldLabel = function(dom, property, form) {
     if (property == undefined) return dom.createTextNode('@@Internal error: undefined property');
     var anchor = dom.createElement('a');
     if (property.uri) anchor.setAttribute('href', property.uri);
+    anchor.setAttribute('style', 'color: #3B5998; text-decoration: none;');// Not too blue and no underline
     anchor.textContent = lab;
     return anchor
 }
@@ -10679,6 +10715,85 @@ tabulator.panes.utils.selectorPanelRefresh = function(list, dom, kb, type,
 
 
 
+//###########################################################################
+//
+//      Small compact views of things
+//
+tabulator.panes.widget = {};
+tabulator.panes.widget.line = {}; // Approx 80em
+tabulator.panes.widget.twoLine = {}; // Approx 40em * 2.4em
+
+
+/////////////////////////////////////////////////////////////////////////////
+ // We need these for anything which is a subject of an attachment.
+ //
+ // These should be moved to type-dependeent UI code. Related panes maybe
+ 
+tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
+    var box = dom.createElement("div");
+    box.textContent = (tabulator.Util.label(x));
+    return box;
+};
+
+tabulator.panes.widget.twoLine.widgetForClass = function(c) {
+    var widget = tabulator.panes.widget.twoLine[c.uri];
+    var kb = tabulator.kb;
+    if (widget) return widget;
+    var sup =  kb.findSuperClassesNT(c);
+    for (var cl in sup) {
+        widget = tabulator.panes.widget.twoLine[kb.fromNT(cl).uri];
+        if (widget) return widget;
+    }
+    return tabulator.panes.widget.twoLine[''];
+};
+ 
+tabulator.panes.widget.twoLine[
+    'http://www.w3.org/2000/10/swap/pim/qif#Transaction'] = function(dom, x) {
+    var failed = "";
+    var enc = function(p) {
+        var y = tabulator.kb.any(x, tabulator.ns.qu(p));
+        if (!y) failed += "@@ No value for " + p +"! ";
+        return y ? tabulator.Util.escapeForXML(y.value) : '?';   // @@@@
+    };
+    var box = dom.createElement("table");
+    box.innerHTML = '<tr><td colspan="2">' + enc('payee') + 
+        '</td></tr>\n<tr><td><td>' + enc('date').slice(0,10) +
+        '</td><td style="text-align: right;">' + enc('amount') + '</td></tr>';
+    if (failed) box.innerHTML = '<tr><td><a href="' + 
+        tabulator.Util.escapeForXML(x.uri) + '">' + 
+        tabulator.Util.escapeForXML(failed) + '</a></td></tr>';
+    return box;
+};
+ 
+tabulator.panes.widget.twoLine[
+    'http://www.w3.org/ns/pim/trip#Trip'] = function(dom, x) {
+    var enc = function(p) {
+        var y = tabulator.kb.any(x, p);
+        return y ? tabulator.Util.escapeForXML(y.value) : '?';
+    };
+    var box = dom.createElement("table");
+    box.innerHTML = '<tr><td colspan="2">' + enc(tabulator.ns.dc('title')) + 
+        '</td></tr>\n<tr style="color: #777"><td><td>' +
+        enc(tabulator.ns.cal('dtstart')) + '</td><td>' + enc(tabulator.ns.cal('dtend'))
+        + '</td></tr>';
+    return box;
+};
+
+
+
+
+// ends
+
+
+
+// ###### Finished expanding js/panes/common/widgets.js ##############
+// Sign-in, sign-up, workspce and identity UI widgets 
+// ###### Expanding js/panes/common/signin.js ##############
+//  signin.js     Signing in, signing up, workspace selection, app spawning
+//
+
+
+
 ////////////////////////////////////////// Boostrapping identity
 //
 //
@@ -10736,7 +10851,7 @@ web ID</a>?<br/>\
     <div class=\"affirmative\">\
         <p>What is your Web ID?</p>\
         <p>\
-            <input id='webidField' name=\"webid\" type=\"text\" style='width:100%' value=\"http:\"/>\
+            <input id='webidField' name=\"webid\" type=\"text\" style='width:100%' value=\"\"/>\
             <br/>\
             <input id='gotOneButton' type=\"button\" value=\"Use this ID\"/>\
         </p>\
@@ -10805,8 +10920,8 @@ web ID</a>?<br/>\
 
 //  Check user and set 'me' if found
 
-tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
-    return tabulator.panes.utils.checkUser(dom, doc, function(uri) {
+tabulator.panes.utils.checkUserSetMe = function(doc) {
+    return tabulator.panes.utils.checkUser(doc, function(uri) {
         var me_uri = tabulator.preferences.get('me');
         if (uri == me_uri) return null;
         var message;
@@ -10834,7 +10949,7 @@ tabulator.panes.utils.checkUserSetMe = function(dom, doc) {
 // One way is for the server to send the information back as a User: header.
 // This function looks for a linked 
 
-tabulator.panes.utils.checkUser = function(dom, doc, setIt) {
+tabulator.panes.utils.checkUser = function(doc, setIt) {
     var userMirror = tabulator.kb.any(doc, tabulator.ns.link('userMirror'));
     if (!userMirror) userMirror = doc;
     var kb = tabulator.kb
@@ -10936,72 +11051,6 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 }
 
 
-//###########################################################################
-//
-//      Small compact views of things
-//
-tabulator.panes.widget = {};
-tabulator.panes.widget.line = {}; // Approx 80em
-tabulator.panes.widget.twoLine = {}; // Approx 40em * 2.4em
-
-
-/////////////////////////////////////////////////////////////////////////////
- // We need these for anything which is a subject of an attachment.
- //
- // These should be moved to type-dependeent UI code. Related panes maybe
- 
-tabulator.panes.widget.twoLine[''] = function(dom, x) { // Default
-    var box = dom.createElement("div");
-    box.textContent = (tabulator.Util.label(x));
-    return box;
-};
-
-tabulator.panes.widget.twoLine.widgetForClass = function(c) {
-    var widget = tabulator.panes.widget.twoLine[c.uri];
-    var kb = tabulator.kb;
-    if (widget) return widget;
-    var sup =  kb.findSuperClassesNT(c);
-    for (var cl in sup) {
-        widget = tabulator.panes.widget.twoLine[kb.fromNT(cl).uri];
-        if (widget) return widget;
-    }
-    return tabulator.panes.widget.twoLine[''];
-};
- 
-tabulator.panes.widget.twoLine[
-    'http://www.w3.org/2000/10/swap/pim/qif#Transaction'] = function(dom, x) {
-    var failed = "";
-    var enc = function(p) {
-        var y = tabulator.kb.any(x, tabulator.ns.qu(p));
-        if (!y) failed += "@@ No value for " + p +"! ";
-        return y ? tabulator.Util.escapeForXML(y.value) : '?';   // @@@@
-    };
-    var box = dom.createElement("table");
-    box.innerHTML = '<tr><td colspan="2">' + enc('payee') + 
-        '</td></tr>\n<tr><td><td>' + enc('date').slice(0,10) +
-        '</td><td style="text-align: right;">' + enc('amount') + '</td></tr>';
-    if (failed) box.innerHTML = '<tr><td><a href="' + 
-        tabulator.Util.escapeForXML(x.uri) + '">' + 
-        tabulator.Util.escapeForXML(failed) + '</a></td></tr>';
-    return box;
-};
- 
-tabulator.panes.widget.twoLine[
-    'http://www.w3.org/ns/pim/trip#Trip'] = function(dom, x) {
-    var enc = function(p) {
-        var y = tabulator.kb.any(x, p);
-        return y ? tabulator.Util.escapeForXML(y.value) : '?';
-    };
-    var box = dom.createElement("table");
-    box.innerHTML = '<tr><td colspan="2">' + enc(tabulator.ns.dc('title')) + 
-        '</td></tr>\n<tr style="color: #777"><td><td>' +
-        enc(tabulator.ns.cal('dtstart')) + '</td><td>' + enc(tabulator.ns.cal('dtend'))
-        + '</td></tr>';
-    return box;
-};
-
-
-
 //######################################################
 //
 //       Workspace selection etc
@@ -11022,10 +11071,10 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
     var kb = tabulator.kb;
     var box;
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
-    var displayOptions = function(id, preferencesFile){
     
+    var displayOptions = function(id, preferencesFile){
         var status = ''; 
-
+        
         // A workspace specifically defined in the private preferences file:
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
             undefined, preferencesFile).map(function(st){return st.object;});
@@ -11152,7 +11201,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 
     var gotIDChange = function(me) {
         if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.Util.uri.docpart(me.uri);
+        var docURI = $rdf.uri.docpart(me.uri);
         kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
             if (!ok) {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
@@ -11201,8 +11250,7 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
 // ends
 
 
-
-// ###### Finished expanding js/panes/common/widgets.js ##############
+// ###### Finished expanding js/panes/common/signin.js ##############
 // A discussion area for discussing anything
 // ###### Expanding js/panes/common/discussion.js ##############
 //  Common code for a discussion are a of messages about something
@@ -13972,7 +14020,7 @@ tabulator.panes.register( {
 
 
 
-                tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+                tabulator.panes.utils.checkUserSetMe(stateStore);
 
                 
                 var states = kb.any(tracker, WF('issueClass'));
@@ -14168,7 +14216,7 @@ tabulator.panes.register( {
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
             
-            tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+            tabulator.panes.utils.checkUserSetMe(stateStore);
             
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             
@@ -14381,6 +14429,7 @@ tabulator.panes.register(tabulator.panes.argumentPane, false);
 
 
 // ###### Finished expanding js/panes/argument/argumentPane.js ##############
+
 // ###### Expanding js/panes/transaction/pane.js ##############
 /*   Financial Transaction Pane
 **
@@ -14486,7 +14535,7 @@ tabulator.panes.register( {
             var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
             donePredicate(ns.rdf('type'));
             
-            var setPaneStyle = function() {
+            var setPaneStyle = function(account) {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                 if (account) {
                     var backgroundColor = kb.any(account,UI('backgroundColor'));
@@ -14495,16 +14544,15 @@ tabulator.panes.register( {
                 }
                 div.setAttribute('style', mystyle);
             }
-            setPaneStyle();
             
             var account = kb.any(subject, Q('toAccount'));
-	    var store = null;
-	    
+            setPaneStyle(account);
             if (account == undefined) {
                 complain('(Error: There is no bank account known for this transaction <'
                         +subject.uri+'>,\n -- every transaction needs one.)')
             };
 	    
+	    var store = null;
             var statement = kb.any(subject, Q('accordingTo'));
             if (statement == undefined) {
                 complain('(Error: There is no back link to the original data source foir this transaction <'
@@ -14710,6 +14758,368 @@ tabulator.panes.register( {
 
 
 // ###### Finished expanding js/panes/transaction/pane.js ##############
+// ###### Expanding js/panes/transaction/period.js ##############
+/*   Financial Period Pane
+**
+**  This outline pane allows a user to interact with a period
+**  downloaded from a bank statement, annotting it with classes and comments,
+** trips, etc
+*/
+
+    
+tabulator.Icon.src.icon_money = iconPrefix +
+    'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Period'
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_money,
+    
+    name: 'period',
+    
+    // Does the subject deserve this pane?
+    label: function(subject) {
+        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var kb = tabulator.kb;
+        var t = kb.findTypeURIs(subject);
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period";        
+        return null; // No under other circumstances (while testing at least!)
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+        var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
+        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
+        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
+        var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
+        var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
+        var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
+        
+        var div = dom.createElement('div')
+        div.setAttribute('class', 'periodPane');
+        div.innherHTML='<h1>Period</h1><table><tbody><tr>\
+        <td>%s</tr></tbody></table>\
+        <p>This is a pane under development.</p>';
+
+        var commentFlter = function(pred, inverse) {
+            if (!inverse && pred.uri == 
+                'http://www.w3.org/2000/01/rdf-schema#comment') return true;
+            return false
+        }
+        
+
+        var complain = function complain(message, style){
+            if (style == undefined) style = 'color: grey';
+            var pre = dom.createElement("pre");
+            pre.setAttribute('style', style);
+            div.appendChild(pre);
+            pre.appendChild(dom.createTextNode(message));
+        } 
+        var thisPane = this;
+        var rerender = function(div) {
+            var parent  = div.parentNode;
+            var div2 = thisPane.render(subject, dom);
+            parent.replaceChild(div2, div);
+        };
+
+
+ // //////////////////////////////////////////////////////////////////////////////       
+        
+        
+        
+        var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
+
+ 
+        var plist = kb.statementsMatching(subject)
+        var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+        var t = kb.findTypeURIs(subject);
+
+        var me_uri = tabulator.preferences.get('me');
+        var me = me_uri? kb.sym(me_uri) : null;
+
+
+        //              Render a single Period
+        
+        // This works only if enough metadata about the properties can drive the RDFS
+        // (or actual type statements whichtypically are NOT there on)
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) {
+
+            var dtstart = kb.any(subject, ns.cal('dtstart'));
+            if (dtstart === undefined) {
+                complain('(Error: There is no start date known for this period <'
+                        +subject.uri+'>,\n -- every period needs one.)')
+            };
+            
+            var dtend = kb.any(subject, ns.cal('dtend'));
+            if (dtend === undefined) {
+                complain('(Error: There is no end date known for this period <'
+                        +subject.uri+'>,\n -- every period needs one.)')
+            };
+
+            var store = kb.any(subject, Q('annotationStore')) || null;
+            
+            var needed = kb.each(subject, ns.rdfs('seeAlso'));
+            
+            
+            var predicateURIsDone = {};
+            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+            donePredicate(ns.rdf('type'));
+            
+            var inPeriod = function(date) {
+                return !!(date && date >= dtstart && date < dtend);
+            };
+            
+            var d2 = function(n) {
+                var s = '' + n
+                if (s.indexOf('.') >= 0) {
+                    return s.split('.')[0] + '.' + (s.split('.')[1]+'00').slice(0,2)
+                }
+                return s + '.00'
+            }
+            
+            var transactionInPeriod = function(x) {
+                return inPeriod(kb.any(x, ns.qu('date')));
+            };
+            
+            var oderByDate = function(x, y) {
+                dx = tabulator.kb.any(x, ns.qu('date'));
+                dy = tabulator.kb.any(y, ns.qu('date'));
+                if (dx !== undefined && dy !== undefined) {
+                    if (dx.value < dy.value) return -1;
+                    if (dx.value > dy.value) return 1;
+                }
+                if (x.uri < y.uri) return -1; // Arbitrary but repeatable
+                if (x.uri > y.uri) return 1;
+                return 0;
+            }
+            
+            var setPaneStyle = function() {
+                var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                if (account) {
+                    var backgroundColor = kb.any(account,UI('backgroundColor'));
+                    if (backgroundColor) mystyle += "background-color: "
+                                +backgroundColor.value+"; ";
+                }
+                div.setAttribute('style', mystyle);
+            }
+            // setPaneStyle();
+            
+            var h2 = div.appendChild(dom.createElement('h2'));
+            h2.textContent = "Period " + dtstart.value.slice(0,10) + ' - ' + dtend.value.slice(0,10);
+            
+            var insertedPane = function(dom, subject, paneName) {
+                var p = tabulator.panes.byName(paneName);
+                var d = p.render(subject, dom);
+                d.setAttribute('style', 'border: 0.1em solid green;')
+                return d;
+            };
+            
+            var expandAfterRow = function(dom, row, subject, paneName, solo) {
+                var siblings = row.parentNode.children;
+                if (solo) {
+                    for (var j = siblings.length - 1; j >= 0; j--) {
+                        if (siblings[j].expanded) {
+                            siblings[j].parentNode.removeChild(siblings[j].expanded);
+                        }
+                    }
+                }
+                var tr = dom.createElement('tr');
+                var td = tr.appendChild(dom.createElement('td'));
+                td.setAttribute('style', 'width: 98%; padding: 1em; border: 0.1em solid grey;')
+                var cols = row.children.length;
+                if (row.nextSibling) {
+                    row.parentNode.insertBefore(tr, row.nextSibling);
+                } else {
+                    row.parentNode.appendChild(tr);
+                }
+                row.expanded = tr;
+                td.setAttribute('colspan', '' + cols)
+                td.appendChild(insertedPane(dom, subject, paneName));            
+            };
+            
+            var expandAfterRowOrCollapse = function(dom, row, subject, paneName, solo) {
+                if (row.expanded) {
+                    row.parentNode.removeChild(row.expanded);
+                    row.expanded = false;
+                } else {
+                    expandAfterRow(dom, row, subject, paneName, solo);
+                }
+            };
+
+            var transactionTable = function(dom, list) {
+            
+                var table = dom.createElement('table');
+                table.setAttribute('style', 'margin-left: 100; font-size: 9pt; width: 85%;');
+                var transactionRow = function(dom, x) {
+                    var tr = dom.createElement('tr');
+
+                    var setTRStyle = function(tr, account) {
+                        // var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                        var mystyle = "margin-left: 8em; padding-left: 5em;";
+                        if (account) {
+                            var backgroundColor = kb.any(account,UI('backgroundColor'));
+                            if (backgroundColor) mystyle += "background-color: "
+                                        +backgroundColor.value+"; ";
+                        }
+                        tr.setAttribute('style', mystyle);
+                    }
+                
+                    var account = kb.any(x, ns.qu('toAccount'));
+                    setTRStyle(tr, account);
+                    
+                    var c0 = tr.appendChild(dom.createElement('td'));
+                    var date = kb.any(x, ns.qu('date'));
+                    c0.textContent = date ? date.value.slice(0,10) : '???';
+                    c0.setAttribute('style',  'width: 7em;');
+                    
+                    var c1 = tr.appendChild(dom.createElement('td'));
+                    c1.setAttribute('style',  'width: 36em;');
+                    var payee = kb.any(x, ns.qu('payee'));
+                    c1.textContent = payee ? payee.value : '???';
+                    var a1 = c1.appendChild(dom.createElement('a'));
+                    a1.textContent = ' ➜';
+                    a1.setAttribute('href', x.uri);
+
+                    var c3 = tr.appendChild(dom.createElement('td'));
+                    var amount = kb.any(x, ns.qu('in_USD'));
+                    c3.textContent = amount ? d2(amount.value) : '???';
+                    c3.setAttribute('style',  'width: 6em; text-align: right; '); // @@ decimal alignment?
+                    tr.addEventListener('click', function(e) { // solo unless shift key
+                        expandAfterRowOrCollapse(dom, tr, x, 'transaction', !e.shiftKey);
+                    }, false);
+                    
+                    return tr;
+                 }; 
+                 
+                 var list2 = list.filter(transactionInPeriod);
+                 list2.sort(oderByDate);
+                 
+                 for (var i=0; i < list2.length; i++) {
+                    table.appendChild(transactionRow(dom, list2[i]));
+                 }
+                 return table;
+            };
+            
+            
+            // List unclassified transactions
+            
+
+            var dummies = { 
+                'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true, // (we knew)
+                'http://www.w3.org/2000/10/swap/pim/qif#Unclassified': true, // pseudo classifications we may phase out
+                'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedOutgoing': true,
+                'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedIncome': true,
+            };
+            var xURIs = kb.findMemberURIs(ns.qu('Transaction')); 
+            var unc_in = [], unc_out = [], usd, z, tt, t, j;
+            for (var y in xURIs) { // For each thing which can be inferred to be a transaction
+                if (xURIs.hasOwnProperty(y)) {
+                    z = kb.sym(y);
+                    tt = kb.each(z, ns.rdf('type')); // What EXPLICIT definitions
+                    classified = false;
+                    for (j=0; j< tt.length; j++) {
+                        t = tt[j];
+                        if ( dummies[t.uri] === undefined) {
+                            classified = true;
+                        }
+                    };
+                    if (!classified) {
+                        usd = kb.any(z, ns.qu('in_USD'));
+                        if (usd === undefined) {
+                            usd = kb.any(z, ns.qu('amount'));
+                        }
+                        if (usd && ( '' + usd.value).indexOf('-') >= 0) {
+                            unc_out.push(kb.sym(y));
+                        } else {
+                            unc_in.push(kb.sym(y));
+                        }
+                    }
+                }
+            }
+            var tab, count;
+            if (unc_in.length) {
+                tab = transactionTable(dom, unc_in);
+                count = tab.children.length;
+                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Income" +
+                    ( count < 4 ? '' : ' (' + count + ')' );
+                div.appendChild(tab);
+            }
+            if (unc_out.length) {
+                tab = transactionTable(dom, unc_out);
+                count = tab.children.length;
+                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" + 
+                    ( count < 4 ? '' : ' (' + count+ ')' );
+                div.appendChild(tab);
+            }
+
+            /////////////////  Check some categories of transaction for having given fields
+            
+            var catSymbol = function(catTail) {
+                var cat, cats = kb.findSubClassesNT(ns.qu('Transaction'));
+                for (cat in cats) {
+                    if (cats.hasOwnProperty(cat)) {
+                        if (cat.slice(1,-1).split('#')[1] === catTail) {
+                            return kb.sym(cat.slice(1,-1));
+                        }
+                    };
+                 };
+                 return null;
+            };
+
+            var checkCatHasField = function(catTail, pred) {
+                var cat = catSymbol(catTail), tab, count;
+                var guilty = [], count = 0;
+                if (!cat) {
+                    complain("Error: No category correspnding to " + catTail)
+                    return null;
+                }
+                var list = kb.each(undefined, ns.rdf('type'), cat);
+                for (var i=0; i<list.length; i++) {
+                    if (!kb.any(list[i], pred)) {
+                        guilty.push(list[i]);
+                    }
+                }
+                if (guilty.length) {
+                    tab = transactionTable(dom, guilty);
+                    count = tab.children.length;
+                    div.appendChild(dom.createElement('h3')).textContent = tabulator.Util.label(cat)
+                        + " with no " + tabulator.Util.label(pred) +
+                        ( count < 4 ? '' : ' (' + count + ')' );
+                    div.appendChild(tab);
+                }
+                return count;
+            }
+            
+            // Load dynamically as properties of period 
+            if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
+                complain("Reimbursables all have trips")
+            };
+            if (checkCatHasField('Other_Inc_Speaking', ns.trip('trip')) === 0) {
+                complain("Speaking income all has trips")
+            };
+            
+        // end of render period instance
+
+        };
+
+
+        
+        //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
+
+        return div;
+    }
+        
+
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/transaction/period.js ##############
+
 // ###### Expanding js/panes/trip/tripPane.js ##############
 /*   Trip Pane
 **
@@ -21478,6 +21888,9 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
 /*
    This is a translator between computer-recognizable object identifiers (URIs) and
    human terms.
+   
+   This signs up to be notified whenever a new rtiple in the store gives anything
+   a human-readable label.
                                                                     Sunday 2007.07.22 kennyluck
 */
 //ToDo: sorted array for optimization, I need a binary search tree... - Kenny
@@ -21496,8 +21909,11 @@ function Labeler(kb, LanguagePreference){
     }
     this.LanguagePreference = LanguagePreference;
     this.addLabelProperty(ns.link('message'),20); //quite a different semantic, cause confusion?
+    
+    this.addLabelProperty(ns.vcard('fn'),10);
     this.addLabelProperty(ns.foaf('name'),10);
-    this.addLabelProperty(ns.dc('title'),8);
+    this.addLabelProperty(ns.dct('title'),8);
+    this.addLabelProperty(ns.dc('title'),7);
     this.addLabelProperty(ns.rss('title'),6);   // = dc:title?
     this.addLabelProperty(ns.contact('fullName'),4);
     this.addLabelProperty(kb.sym('http://www.w3.org/2001/04/roadmap/org#name'),4);

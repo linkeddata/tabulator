@@ -613,8 +613,9 @@ table.viewTable tr {
 
 
 a {
-    color:blue;
-    cursor:pointer;
+    color: #3B5998;
+    text-decoration: none;
+    cursor: pointer;
 }
 a.inactive{
     background-color: #eee;

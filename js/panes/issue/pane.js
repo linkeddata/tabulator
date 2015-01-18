@@ -563,7 +563,7 @@ tabulator.panes.register( {
 
 
 
-                tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+                tabulator.panes.utils.checkUserSetMe(stateStore);
 
                 
                 var states = kb.any(tracker, WF('issueClass'));
@@ -759,7 +759,7 @@ tabulator.panes.register( {
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
             
-            tabulator.panes.utils.checkUserSetMe(dom, stateStore);
+            tabulator.panes.utils.checkUserSetMe(stateStore);
             
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
             

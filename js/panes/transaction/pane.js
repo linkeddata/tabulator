@@ -102,7 +102,7 @@ tabulator.panes.register( {
             var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
             donePredicate(ns.rdf('type'));
             
-            var setPaneStyle = function() {
+            var setPaneStyle = function(account) {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                 if (account) {
                     var backgroundColor = kb.any(account,UI('backgroundColor'));
@@ -111,16 +111,15 @@ tabulator.panes.register( {
                 }
                 div.setAttribute('style', mystyle);
             }
-            setPaneStyle();
             
             var account = kb.any(subject, Q('toAccount'));
-	    var store = null;
-	    
+            setPaneStyle(account);
             if (account == undefined) {
                 complain('(Error: There is no bank account known for this transaction <'
                         +subject.uri+'>,\n -- every transaction needs one.)')
             };
 	    
+	    var store = null;
             var statement = kb.any(subject, Q('accordingTo'));
             if (statement == undefined) {
                 complain('(Error: There is no back link to the original data source foir this transaction <'

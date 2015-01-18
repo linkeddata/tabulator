@@ -41,6 +41,8 @@ Also lower could be optional tools for various classes.
 
 // Form and general UI widgets 
 tabulator.loadScript("js/panes/common/widgets.js");
+// Sign-in, sign-up, workspce and identity UI widgets 
+tabulator.loadScript("js/panes/common/signin.js");
 // A discussion area for discussing anything
 tabulator.loadScript("js/panes/common/discussion.js");
 // A relationsal table widget
@@ -54,7 +56,10 @@ tabulator.loadScript("js/panes/common/matrix.js");
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
 tabulator.loadScript("js/panes/argument/argumentPane.js"); // A posistion in an argumnent tree
+
 tabulator.loadScript("js/panes/transaction/pane.js");
+tabulator.loadScript("js/panes/transaction/period.js");
+
 tabulator.loadScript("js/panes/trip/tripPane.js");
 tabulator.loadScript("js/panes/airPane.js");
 

@@ -5,7 +5,7 @@
 ** trips, etc
 */
 
-    
+/*    
 tabulator.Icon.src.icon_money = iconPrefix +
     'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Period'
@@ -48,12 +48,18 @@ tabulator.panes.register( {
         }
         
 
-        var complain = function complain(message, style){
+        var mention = function mention(message, style){
             if (style == undefined) style = 'color: grey';
             var pre = dom.createElement("pre");
             pre.setAttribute('style', style);
             div.appendChild(pre);
             pre.appendChild(dom.createTextNode(message));
+        } 
+        var happy = function happy(message){
+            return mention('✓ ' + message, 'color: #010; background-color: #efe');
+        } 
+        var complain = function complain(message){
+            return mention(message, 'color: #100; background-color: #fee');
         } 
         var thisPane = this;
         var rerender = function(div) {
@@ -161,6 +167,7 @@ tabulator.panes.register( {
                     for (var j = siblings.length - 1; j >= 0; j--) {
                         if (siblings[j].expanded) {
                             siblings[j].parentNode.removeChild(siblings[j].expanded);
+                            siblings[j].expanded = false;
                         }
                     }
                 }
@@ -284,6 +291,8 @@ tabulator.panes.register( {
                 div.appendChild(dom.createElement('h3')).textContent = "Unclassified Income" +
                     ( count < 4 ? '' : ' (' + count + ')' );
                 div.appendChild(tab);
+            } else {
+                happy("No unclassified income");
             }
             if (unc_out.length) {
                 tab = transactionTable(dom, unc_out);
@@ -291,6 +300,8 @@ tabulator.panes.register( {
                 div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" + 
                     ( count < 4 ? '' : ' (' + count+ ')' );
                 div.appendChild(tab);
+            } else {
+                happy("No unclassified outgoings ");
             }
 
             /////////////////  Check some categories of transaction for having given fields
@@ -333,10 +344,10 @@ tabulator.panes.register( {
             
             // Load dynamically as properties of period 
             if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
-                complain("Reimbursables all have trips")
+                happy("Reimbursables all have trips")
             };
             if (checkCatHasField('Other_Inc_Speaking', ns.trip('trip')) === 0) {
-                complain("Speaking income all has trips")
+                happy("Speaking income all has trips")
             };
             
         // end of render period instance
@@ -353,6 +364,7 @@ tabulator.panes.register( {
 
 }, true);
 
+*/
 //ends
 
 

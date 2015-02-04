@@ -76,7 +76,7 @@ tabulator.panes.register(tabulator.panes.newsocialpane= {
       var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
       var rss = tabulator.rdf.Namespace("http://purl.org/rss/1.0/");
       var kb = tabulator.kb;
-      var sf = tabulator.sf;
+      var sf = tabulator.fetcher;
       var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
       var Events = new CustomEvents();
 

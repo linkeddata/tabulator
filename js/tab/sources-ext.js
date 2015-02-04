@@ -55,7 +55,7 @@ function SourceWidget(container) {
                     if (!lstat.elements) return true; // @@
                     if (typeof lstat.elements[lstat.elements.length-1]
                         != 'undefined') {
-                        if(tabulator.sf.getState(term)=="failed"){
+                        if(tabulator.fetcher.getState(term)=="failed"){
                             node.parentNode.setAttribute('syle', 'background-color: #faa;');
                         }
                         node.textContent = lstat.elements[lstat.elements.length-1];
@@ -78,19 +78,19 @@ function SourceWidget(container) {
         };
 
         ['recv', 'load', 'fail', 'done'].map(function (phase){
-            tabulator.sf.addCallback(phase, function (uri, r) {
+            tabulator.fetcher.addCallback(phase, function (uri, r) {
                 return displayStatus(uri, r, phase)
             });
         });
         
-//        tabulator.sf.addCallback('recv', function (uri, r) {return displayStatus(uri, r, 'recv')});
-//        tabulator.sf.addCallback('load', function (uri, r) {return displayStatus(uri, r, 'load')});
-//        tabulator.sf.addCallback('load',cb2);
-//        tabulator.sf.addCallback('fail', function (uri, r) {return displayStatus(uri, r, ')});
-//        tabulator.sf.addCallback('done', function (uri, r) {return displayStatus(uri, r, "Done")});
+//        tabulator.fetcher.addCallback('recv', function (uri, r) {return displayStatus(uri, r, 'recv')});
+//        tabulator.fetcher.addCallback('load', function (uri, r) {return displayStatus(uri, r, 'load')});
+//        tabulator.fetcher.addCallback('load',cb2);
+//        tabulator.fetcher.addCallback('fail', function (uri, r) {return displayStatus(uri, r, ')});
+//        tabulator.fetcher.addCallback('done', function (uri, r) {return displayStatus(uri, r, "Done")});
 
-//        tabulator.sf.addCallback('fail',cb);
-//        tabulator.sf.addCallback('done',cb);
+//        tabulator.fetcher.addCallback('fail',cb);
+//        tabulator.fetcher.addCallback('done',cb);
     }
 
     this.addSource = function (uri, r) {
@@ -106,7 +106,7 @@ function SourceWidget(container) {
 
             var xbtn = tabulator.Util.AJARImage(tabulator.Icon.src.icon_remove_node, 'remove',null,sw.document);
             xbtn.addEventListener('click',function () {
-                tabulator.sf.retract(udoc)
+                tabulator.fetcher.retract(udoc)
                 sw.ele.removeChild(row)
             },true);
             iconCell.appendChild(xbtn)
@@ -120,7 +120,7 @@ function SourceWidget(container) {
             },true);
 
             sw.addStatusUpdateCallbacks(udoc,status)
-            tabulator.sf.addCallback('refresh',function (u, r) {
+            tabulator.fetcher.addCallback('refresh',function (u, r) {
                 if (!status) { return false }
                 if (!uri) { return true }
                 var udoc2 = tabulator.kb.sym(tabulator.rdf.Util.uri.docpart(uri))
@@ -142,8 +142,8 @@ function SourceWidget(container) {
         return true
     }
 
-    tabulator.sf.addCallback('request',this.addSource);
-    tabulator.sf.addCallback('retract',function (u) {
+    tabulator.fetcher.addCallback('request',this.addSource);
+    tabulator.fetcher.addCallback('retract',function (u) {
         u.uri && delete sw.sources[u.uri]
         //TODO:Probably have to physically remove DOM Nodes, too.
         return true

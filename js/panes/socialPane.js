@@ -586,7 +586,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 }, false);  // tabulator.panes.register({})
 
 if (tabulator.preferences && tabulator.preferences.get('me')) {
-    tabulator.sf.lookUpThing(tabulator.kb.sym(tabulator.preferences.get('me')));
+    tabulator.fetcher.lookUpThing(tabulator.kb.sym(tabulator.preferences.get('me')));
 };
 //ends
 

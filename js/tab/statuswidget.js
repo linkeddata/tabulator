@@ -31,7 +31,7 @@ function StatusWidget() {
 	return true
     }
 
-    tabulator.sf.addCallback('request',this.recv)
-    tabulator.sf.addCallback('fail',this.quit)
-    tabulator.sf.addCallback('done',this.quit)
+    tabulator.fetcher.addCallback('request',this.recv)
+    tabulator.fetcher.addCallback('fail',this.quit)
+    tabulator.fetcher.addCallback('done',this.quit)
 }

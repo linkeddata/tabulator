@@ -333,7 +333,7 @@ tabulator.panes.register( {
             
             // Classify:
             if (store) {
-                kb.sf.nowOrWhenFetched(store.uri, subject, function(ok, body){
+                kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body){
                     if (!ok) complain("Cannot load store " + store + " " + body);
                     div.appendChild(
                         tabulator.panes.utils.makeSelectForNestedCategory(dom, kb,

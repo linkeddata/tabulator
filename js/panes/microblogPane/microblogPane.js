@@ -27,7 +27,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
 
         var kb = tabulator.kb;
         var charCount = 140;
-        var sf =  tabulator.sf
+        var sf =  tabulator.fetcher
         //***********************************************
         // BACK END
         //***********************************************
@@ -660,7 +660,7 @@ tabulator.panes.register(tabulator.panes.microblogPane = {
                 kb.whether(kb.any(creators[c], SIOC('creator_of')), RDF('type'), SIOCt('Microblog'))) {
                     var creator = creators[c];
                     // var mb = kb.sym(creator.uri.split("#")[0]);
-                    //tabulator.sf.refresh(mb);
+                    //tabulator.fetcher.refresh(mb);
                     break;
                     //TODO add support for more than one microblog in same foaf
                 }

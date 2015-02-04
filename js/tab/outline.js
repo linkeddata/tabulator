@@ -47,7 +47,7 @@ tabulator.OutlineObject = function(doc) {
     this.sparql = tabulator.rdf.sparqlUpdate;
     this.kb = tabulator.kb;
     var kb = tabulator.kb;
-    var sf = tabulator.sf;
+    var sf = tabulator.fetcher;
     var sourceWidget = tabulator.sourceWidget;
     myDocument.outline = this;
     

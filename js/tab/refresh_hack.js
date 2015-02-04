@@ -20,7 +20,7 @@ window.addEventListener("load", function(){
 		var element = content.document.body.childNodes;
 		if (element.length > 2) {
 			if (element[1].className == "TabulatorOutline") {
-				var sf = tabulator.sf;
+				var sf = tabulator.fetcher;
 				var kb = tabulator.kb;
 				var thing = kb.sym(content.document.location.href);
 				sf.objectRefresh(thing);

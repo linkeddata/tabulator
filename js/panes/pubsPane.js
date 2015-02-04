@@ -63,7 +63,6 @@ tabulator.panes.pubsPane = {
         var dcelems = tabulator.rdf.Namespace('http://purl.org/dc/elements/1.1/');
         var soics = tabulator.rdf.Namespace('http://rdfs.org/sioc/spec/');
         var kb = tabulator.kb;
-        var sf = tabulator.sf;
         var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
 
         var collections_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/collections';

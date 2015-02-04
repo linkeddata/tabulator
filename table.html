@@ -19,7 +19,7 @@
         tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
         //Horrible global vars :(
         kb = tabulator.kb;
-        sf = tabulator.sf;
+        sf = tabulator.fetcher;
         qs = tabulator.qs;
         var myTableView = new tableView(document.getElementById('viewArea'));
         qs.addListener(myTableView);

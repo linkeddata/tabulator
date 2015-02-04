@@ -81,6 +81,34 @@ try {
     //Oh, and the views!
     tabulator.loadScript("js/init/views.js");
 
+/////////// code below was in init-mashup for FF ext is in xpcom.js (which loaded init.js)
+/*
+    tabulator.kb = new tabulator.rdf.IndexedFormula();
+    tabulator.sf = tabulator.fetcher = new tabulator.rdf.Fetcher(tabulator.kb); // .sf deprecated
+
+    tabulator.qs = new tabulator.rdf.QuerySource();
+    // tabulator.sourceWidget = new SourceWidget();
+    tabulator.sourceURI = "resource://tabulator/";
+    tabulator.sparql = new tabulator.rdf.sparqlUpdate(tabulator.kb);
+    // tabulator.rc = new RequestConnector();
+    tabulator.requestCache = [];
+    tabulator.cacheEntry = {};
+
+    tabulator.lb = new Labeler(tabulator.kb, tabulator.preferences.get('languages')); // @@ was LanguagePreference
+    tabulator.kb.predicateCallback = tabulator.rdf.Util.AJAR_handleNewTerm; // @@ needed??
+    tabulator.kb.typeCallback = tabulator.rdf.Util.AJAR_handleNewTerm;
+
+    tabulator.requestUUIDs = {};
+
+    if (typeof document !== 'undefined') { // Not in FF extension
+        tabulator.outline = new tabulator.OutlineObject(document);
+
+    // we don't currently have a uuid generator code in non-extension mode
+    // var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
+        tabulator.outline.init();
+    }
+*/
+//////////////////////////////////////////////////////////  FF EXTENSION ONLY
 
     tabulator.requestUUIDs = {};
 

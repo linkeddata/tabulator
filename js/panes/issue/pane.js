@@ -25,7 +25,7 @@ $rdf.subscription =  function(options, doc, onChange) {
     //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
     var linkRels = function(doc) {
         var links = {}; // map relationship to uri
-        var linkHeaders = tabulator.sf.getHeader(doc, 'link');
+        var linkHeaders = tabulator.fetcher.getHeader(doc, 'link');
         if (!linkHeaders) return null;
         linkHeaders.map(function(headerValue){
             var arg = headerValue.trim().split(';');
@@ -79,7 +79,7 @@ $rdf.subscription =  function(options, doc, onChange) {
     // This implementation uses web sockets using update-via
     
     var getChanges_WS2 = function(doc, onChange) {
-        var router = new $rdf.UpdatesVia(tabulator.sf); // Pass fetcher do it can subscribe to headers
+        var router = new $rdf.UpdatesVia(tabulator.fetcher); // Pass fetcher do it can subscribe to headers
         var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
         router.register(wsuri, doc.uri);
     };
@@ -341,8 +341,8 @@ tabulator.panes.register( {
             
             
             
-            tabulator.sf.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
-            tabulator.sf.removeCallback('fail','expand');
+            tabulator.fetcher.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
+            tabulator.fetcher.removeCallback('fail','expand');
 
             
             var states = kb.any(tracker, WF('issueClass'));
@@ -476,8 +476,8 @@ tabulator.panes.register( {
         // Reload resorce then
         
         var reloadStore = function(store, callBack) {
-            tabulator.sf.unload(store);
-            tabulator.sf.nowOrWhenFetched(store.uri, undefined, function(ok, body){
+            tabulator.fetcher.unload(store);
+            tabulator.fetcher.nowOrWhenFetched(store.uri, undefined, function(ok, body){
                 if (!ok) {
                     console.log("Cant refresh data:" + body);
                 } else {
@@ -511,7 +511,7 @@ tabulator.panes.register( {
             
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
-            tabulator.sf.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
+            tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
                 if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
                 var ns = tabulator.ns
                 var predicateURIsDone = {};
@@ -633,7 +633,7 @@ tabulator.panes.register( {
                 var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
                 if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
                 if (devs.length) {
-                    devs.map(function(person){tabulator.sf.lookUpThing(person)}); // best effort async for names etc
+                    devs.map(function(person){tabulator.fetcher.lookUpThing(person)}); // best effort async for names etc
                     var opts = { 'mint': "** Add new person **",
                                 'nullLabel': "(unassigned)",
                                 'mintStatementsFun': function(newDev) {
@@ -730,8 +730,8 @@ tabulator.panes.register( {
                 var refreshButton = dom.createElement('button');
                 refreshButton.textContent = "refresh";
                 refreshButton.addEventListener('click', function(e) {
-                    tabulator.sf.unload(messageStore);
-                    tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+                    tabulator.fetcher.unload(messageStore);
+                    tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
                         if (!ok) {
                             console.log("Cant refresh messages" + body);
                         } else {
@@ -783,7 +783,7 @@ tabulator.panes.register( {
                 }, false);
             
             // Table of issues - when we have the main issue list
-            tabulator.sf.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
+            tabulator.fetcher.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
                 if (!ok) return console.log("Cannot load state store "+body);
                 var query = new $rdf.Query(tabulator.Util.label(subject));
                 var cats = kb.each(tracker, WF('issueCategory')); // zero or more
@@ -844,8 +844,8 @@ tabulator.panes.register( {
                     var refreshButton = dom.createElement('button');
                     refreshButton.textContent = "refresh";
                     refreshButton.addEventListener('click', function(e) {
-                        tabulator.sf.unload(stateStore);
-                        tabulator.sf.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
+                        tabulator.fetcher.unload(stateStore);
+                        tabulator.fetcher.nowOrWhenFetched(stateStore.uri, undefined, function(ok, body){
                             if (!ok) {
                                 console.log("Cant refresh data:" + body);
                             } else {

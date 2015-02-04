@@ -4,41 +4,14 @@ tabulator = {};
 tabulator.isExtension = false;
 
 // base for icons etc
-tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/';
-
-/*
-tabulator.getScriptName = function () {
-    var error = new Error()
-      , source
-      , lastStackFrameRegex = new RegExp(/.+\/(.*?):\d+(:\d+)*$/)
-      , currentStackFrameRegex = new RegExp(/getScriptName \(.+\/(.*):\d+:\d+\)/);
-
-    if((source = lastStackFrameRegex.exec(error.stack.trim())) && source[1] != "")
-        return source[1];
-    else if((source = currentStackFrameRegex.exec(error.stack.trim())))
-        return source[1];
-    else if(error.fileName != undefined)
-        return error.fileName;
-}
-*/
-// tabulator.scriptBase = tabulato.getScriptName();
-// tabulator.scriptBase = tabulator.scriptBase.split('/').slice(0,-1).join('/') + '/';
+tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/'; // @@ now broken - set explictly in HTML page
 
 tabulator.iconPrefix = tabulator.scriptBase;
 
 // Dump exists in ff but not safari.
-if (typeof dump == 'undefined') dump = function(x) {};
-
-var complain = function complain(message, style){
-    if (style == undefined) style = 'color: grey';
-    var pre = document.createElement("pre");
-    pre.setAttribute('style', style);
-    document.lastChild.appendChild(pre);
-    pre.appendChild(document.createTextNode(message));
-} 
+if (typeof dump == 'undefined') dump = function(x) {console.log(x)};
 
 tabulator.setup = function() {
-    // complain("@@ init.js test 40 )");
 
     //Before anything else, load up the logger so that errors can get logged.
     tabulator.loadScript("js/tab/log.js");
@@ -74,17 +47,15 @@ tabulator.setup = function() {
     tabulator.loadScript("js/tab/labeler.js");
     tabulator.loadScript("js/tab/request.js");
     tabulator.loadScript("js/tab/outlineinit.js");
-    // tabulator.loadScript("js/tab/updateCenter.js"); obsolete, moved to rdf/sparqlUpdate.js
     tabulator.loadScript("js/tab/userinput.js");
     tabulator.loadScript("js/tab/outline.js");
 
     //Oh, and the views!
-    //@@ jambo commented this out to pare things down temporarily.
     tabulator.loadScript("js/init/views.js");
 
     tabulator.kb = new tabulator.rdf.IndexedFormula();
-    tabulator.sf = new tabulator.rdf.Fetcher(tabulator.kb);
-    tabulator.kb.sf = tabulator.sf;
+    tabulator.sf = tabulator.fetcher = new tabulator.rdf.Fetcher(tabulator.kb); // .sf deprecated
+
     tabulator.qs = new tabulator.rdf.QuerySource();
     // tabulator.sourceWidget = new SourceWidget();
     tabulator.sourceURI = "resource://tabulator/";

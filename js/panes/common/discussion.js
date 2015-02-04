@@ -190,7 +190,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         
         var creator = kb.any(message, ns.foaf('maker'));
         var nickAnchor = td1.appendChild(anchor(nick(creator), creator));
-        tabulator.sf.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
+        tabulator.fetcher.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
             nickAnchor.textContent = nick(creator);
         });
         td1.appendChild(dom.createElement('br'));
@@ -269,8 +269,8 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
     var refreshButton = dom.createElement('button');
     refreshButton.textContent = "refresh";
     refreshButton.addEventListener('click', function(e) {
-        tabulator.sf.unload(messageStore);
-        tabulator.sf.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+        tabulator.fetcher.unload(messageStore);
+        tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
             if (!ok) {
                 console.log("Cant refresh messages" + body);
             } else {

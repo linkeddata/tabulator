@@ -29,7 +29,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     this.PatternNode.prototype.fetch = function(subject) {
         if(subject == null) return null;
         if(subject.type === 'Symbol')
-            tabulator.sf.requestURI(getBaseURI(subject.uri));
+            tabulator.fetcher.requestURI(getBaseURI(subject.uri));
         return this.fetchMethod(this.searchMethod(subject), this.children);
     }
     this.PatternNode.prototype.toString = function() {

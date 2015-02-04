@@ -445,6 +445,12 @@ img.hideTillHover:hover  {
 .hideTillHover:hover a {
  visibility:visible;
 }
+.hoverControl .hoverControlHide{
+  visibility:hidden;
+}
+.hoverControl:hover .hoverControlHide {
+ visibility:visible;
+}
 
 
 /* Pane icons: */
@@ -607,8 +613,9 @@ table.viewTable tr {
 
 
 a {
-    color:blue;
-    cursor:pointer;
+    color: #3B5998;
+    text-decoration: none;
+    cursor: pointer;
 }
 a.inactive{
     background-color: #eee;

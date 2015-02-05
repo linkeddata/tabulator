@@ -5,7 +5,7 @@ tabulator = {};
 tabulator.isExtension = false;
 
 // base for icons etc
-tabulator.scriptBase = 'https://raw.github.com/linkeddata/tabulator/master/'; // @@ now broken - set explictly in HTML page
+tabulator.scriptBase = 'https://linkeddata.github.com/tabulator/'; // Or app dev overwrite to point to your app's own copy
 
 tabulator.iconPrefix = tabulator.scriptBase;
 
@@ -471,7 +471,7 @@ $rdf.Util.parseXML = function(str) {
     if ((typeof tabulator != 'undefined' && tabulator.isExtension)) {
         dparser = Components.classes["@mozilla.org/xmlextras/domparser;1"].getService(
                     Components.interfaces.nsIDOMParser);
-    } else if (typeof module != 'undefined' ){ // Node.js
+    } else if (typeof module != 'undefined' && module && module.exports){ // Node.js
         //var libxmljs = require('libxmljs'); // Was jsdom before 2012-01 then libxmljs but that nonstandard
         //return libxmljs.parseXmlString(str);
         var jsdom = require('jsdom');
@@ -4418,6 +4418,7 @@ $rdf.sparqlUpdateParser = function(str, kb, base) {
     } // while
     //return clauses
 
+
 }; // End of spaqlUpdateParser
 
 
@@ -4494,6 +4495,7 @@ $rdf.IndexedFormula.prototype.applyPatch = function(patch, target, patchCallback
         doPatch(patchCallback)
     };
 };
+
 
 
 
@@ -8108,7 +8110,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.store.add(this.appNode, ns.rdfs('label'), this.store.literal('This Session'), this.appNode);
 
     ['http', 'https', 'file', 'chrome'].map(this.addProtocol); // ftp? mailto:?
-    [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler, $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler, $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler, ].map(this.addHandler)
+    [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler, $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler, $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler ].map(this.addHandler)
 
 
  
@@ -8621,7 +8623,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 accepts: {'*': 'text/turtle,text/n3,application/rdf+xml'},
                 processData: false,
                 xhrFields: {
-                    withCredentials: withCredentials,
+                    withCredentials: withCredentials
                 },
                 timeout: sf.timeout,
                 error: function(xhr, s, e) {

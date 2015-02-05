@@ -22,7 +22,8 @@ pull: pull_submodules
 
 gh-pages:
 	git branch -D gh-pages ||:
-	git checkout -b gh-pages
+#	git checkout -b gh-pages
+	git checkout  gh-pages
 	make -B
 	git add -f js/rdf
 	git add -f js/mashup/*.js

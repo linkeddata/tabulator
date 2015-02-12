@@ -437,6 +437,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 // or a chess game, or calendar, or a health/fitness record for a person.
 //
 
+// Returns a div with a button in it for making a new app instance
 
 tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     var gotWS = function(ws) {

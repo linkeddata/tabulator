@@ -178,6 +178,7 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
         } else {
             var message = "checkUser: Unable to load " + userMirror.uri;
             try {  // Ugh
+                console.log(message);
                 tabulator.log.alert(message);
             } catch(e) {
                 try {

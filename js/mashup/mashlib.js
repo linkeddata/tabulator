@@ -578,13 +578,13 @@ $rdf.Util.extend = function () {
 
 /*
  * Implements URI-specific functions
-#
+ *
  * See RFC 2386
-#
+ *
  * See also:
  *   http://www.w3.org/2005/10/ajaw/uri.js
  *   http://www.w3.org/2000/10/swap/uripath.py
-#
+ *
  */
 var $rdf, k, v, _base, _ref,
   __hasProp = {}.hasOwnProperty;
@@ -785,14 +785,14 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
 }
 /*
  * These are the classes corresponding to the RDF and N3 data models
-#
+ *
  * Designed to look like rdflib and cwm
-#
+ *
  * This is coffee see http://coffeescript.org
  */
 var $rdf, k, v,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 if (typeof $rdf === "undefined" || $rdf === null) {
@@ -848,8 +848,8 @@ $rdf.Empty = (function(_super) {
 $rdf.Symbol = (function(_super) {
   __extends(Symbol, _super);
 
-  function Symbol(_at_uri) {
-    this.uri = _at_uri;
+  function Symbol(uri) {
+    this.uri = uri;
     this.value = this.uri;
   }
 
@@ -954,10 +954,10 @@ $rdf.BlankNode = (function(_super) {
 $rdf.Literal = (function(_super) {
   __extends(Literal, _super);
 
-  function Literal(_at_value, _at_lang, _at_datatype) {
-    this.value = _at_value;
-    this.lang = _at_lang;
-    this.datatype = _at_datatype;
+  function Literal(value, lang, datatype) {
+    this.value = value;
+    this.lang = lang;
+    this.datatype = datatype;
     if (this.lang == null) {
       this.lang = void 0;
     }
@@ -1643,7 +1643,7 @@ $rdf.variable = $rdf.Formula.prototype.variable;
 
 /*
  * Variable
-#
+ *
  * Variables are placeholders used in patterns to be matched.
  * In cwm they are symbols which are the formula's list of quantified variables.
  * In sparl they are not visibily URIs.  Here we compromise, by having
@@ -6084,7 +6084,7 @@ $rdf.sparqlUpdate = function() {
             }
         }
         
-        xhr.open('PATCH', uri, true);  // async=true
+        xhr.open('POST', uri, true);  // async=true
         xhr.setRequestHeader('Content-type', 'application/sparql-update');
         xhr.send(query);
     }
@@ -7444,10 +7444,10 @@ if (typeof $rdf === "undefined" || $rdf === null) {
 }
 
 $rdf.UpdatesSocket = (function() {
-  function UpdatesSocket(_at_parent, _at_via) {
+  function UpdatesSocket(parent, via) {
     var error;
-    this.parent = _at_parent;
-    this.via = _at_via;
+    this.parent = parent;
+    this.via = via;
     this.subscribe = __bind(this.subscribe, this);
     this.onError = __bind(this.onError, this);
     this.onMessage = __bind(this.onMessage, this);
@@ -7553,8 +7553,8 @@ $rdf.UpdatesSocket = (function() {
 })();
 
 $rdf.UpdatesVia = (function() {
-  function UpdatesVia(_at_fetcher) {
-    this.fetcher = _at_fetcher;
+  function UpdatesVia(fetcher) {
+    this.fetcher = fetcher;
     this.onUpdate = __bind(this.onUpdate, this);
     this.onHeaders = __bind(this.onHeaders, this);
     this.register = __bind(this.register, this);
@@ -7637,9 +7637,11 @@ if ((typeof module !== "undefined" && module !== null ? module.exports : void 0)
  * Firing up a mail client for mid:  (message:) URLs
  */
 
-jsonld = require('jsonld');
-N3 = require('n3');
-asyncLib = require('async');
+if (typeof module !== 'undefined' && module.require) { // Node 
+    $rdf.jsonld = require('jsonld');
+    N3 = require('n3');
+    asyncLib = require('async');
+}
 
 $rdf.Fetcher = function(store, timeout, async) {
     this.store = store
@@ -8234,37 +8236,6 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
         return uri;
     };
-    
- 
-    this.saveRequestMetadata = function(xhr, kb, docuri) {
-        var request = kb.bnode();
-        var ns = tabulator.ns;
-        xhr.req = request;
-        var now = new Date();
-        var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
-        kb.add(request, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
-        kb.add(request, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
-        kb.add(request, ns.link('status'), kb.collection(), this.appNode);
-        return request;
-    };
-       
-    this.saveResponseMetadata = function(xhr, kb) {
-        var response = kb.bnode();
-        var ns = tabulator.ns;
-        kb.add(xhr.req, ns.link('response'), response);
-        kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
-        kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
-
-        xhr.headers = {}
-        if ($rdf.uri.protocol(xhr.resource.uri) == 'http' || $rdf.uri.protocol(xhr.resource.uri) == 'https') {
-            xhr.headers = $rdf.Util.getHTTPHeaders(xhr)
-            for (var h in xhr.headers) { // trim below for Safari - adds a CR!
-                kb.add(response, ns.httph(h.toLowerCase()), xhr.headers[h].trim(), response)
-            }
-        }
-        return response;
-    };
-    
 
     /** Requests a document URI and arranges to load the document.
      ** Parameters:
@@ -8317,7 +8288,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.resource = docterm;
             xhr.requestedURI = args[0];
         } else {
-            var req = kb.bnode(); 
+            var req = kb.bnode(); // @@ Joe, no need for xhr.req?
         }
         var requestHandlers = kb.collection();
         var sf = this;
@@ -8327,7 +8298,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         kb.add(req, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
         kb.add(req, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
-        kb.add(req, ns.link('status'), kb.collection(), this.appNode)
+        kb.add(req, ns.link('status'), kb.collection(), sf.req)
 
         // This should not be stored in the store, but in the JS data
         /*
@@ -8409,7 +8380,18 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var thisReq = xhr.req // Might have changes by redirect
                 sf.fireCallbacks('recv', args)
                 var kb = sf.store;
-                sf.saveResponseMetadata(xhr, kb);
+                var response = kb.bnode();
+                kb.add(thisReq, ns.link('response'), response);
+                kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
+                kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+
+                xhr.headers = {}
+                if ($rdf.uri.protocol(xhr.resource.uri) == 'http' || $rdf.uri.protocol(xhr.resource.uri) == 'https') {
+                    xhr.headers = $rdf.Util.getHTTPHeaders(xhr)
+                    for (var h in xhr.headers) { // trim below for Safari - adds a CR!
+                        kb.add(response, ns.httph(h.toLowerCase()), xhr.headers[h].trim(), response)
+                    }
+                }
 
                 sf.fireCallbacks('headers', [{uri: docuri, headers: xhr.headers}]);
 
@@ -8731,7 +8713,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     // var requestHandlers = kb.collection()
 
                                     // kb.add(kb.sym(newURI), ns.link("request"), req, this.appNode)
-                                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, this.appNode);
+                                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
 
                                     var now = new Date();
                                     var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
@@ -9043,9 +9025,9 @@ $rdf.serialize = function(target, kb, base, contentType) {
             documentString = convertToJson(n3String);
             break;
         case 'application/n-quads':
-        case 'application/nquads':
+        case 'application/nquads': // @@@ just outpout the quads? Does not work for collections
             var n3String = sz.statementsToN3(newSts);
-            documentString = convertToNQuads(n3String);
+            documentString = convertToNQuads(n3String); 
             break;
         default:
             throw "serialise: Content-type "+content_type +" not supported for data write";
@@ -9053,59 +9035,64 @@ $rdf.serialize = function(target, kb, base, contentType) {
     return documentString;
 };
 
-var convertToJson = function(n3String) {
-    var jsonString = undefined;
-    var n3Parser = N3.Parser();
-    var n3Writer = N3.Parser({format: 'N-Quads'});
-    asyncLib.waterfall([
-        function(parseCallback) {
-            n3Parser.parse(n3String, prefixCallback);
-        },
-        function(err, triple, prefix, writeCallback) {
-            if (!err) {
-                n3Writer.addTriple(triple);
-                if (typeof writeCallback === 'function') {
-                    writer.end(writeCallback);
-                }
-            }
-        },
-        function(err, result) {
-            if (!err) {
-                jsonld.fromRDF(result, {format: 'application/nquads'}, stringCallback);
-            }
-        },
-        function(err, json) {
-            if (!error) {
-                jsonString = JSON.stringify(json);
-            }
-        }
-    ]);
-    return jsonString;
-}
+////////////////// JSON-LD code currently requires Node
 
-var convertToNQuads = function(n3String) {
-    var nquadString = undefined;
-    var n3Parser = N3.Parser();
-    var n3Writer = N3.Parser({format: 'N-Quads'});
-    asyncLib.waterfall([
-        function(parseCallback) {
-            n3Parser.parse(n3String, tripleCallback);
-        },
-        function(err, triple, prefix, writeCallback) {
-            if (!err) {
-                n3Writer.addTriple(triple);
-                if (typeof writeCallback === 'function') {
-                    writer.end(writeCallback);
+if (typeof module !== 'undefined' && module.require) { // Node 
+
+    var convertToJson = function(n3String) {
+        var jsonString = undefined;
+        var n3Parser = N3.Parser();
+        var n3Writer = N3.Parser({format: 'N-Quads'});
+        asyncLib.waterfall([
+            function(parseCallback) {
+                n3Parser.parse(n3String, prefixCallback);
+            },
+            function(err, triple, prefix, writeCallback) {
+                if (!err) {
+                    n3Writer.addTriple(triple);
+                    if (typeof writeCallback === 'function') {
+                        writer.end(writeCallback);
+                    }
+                }
+            },
+            function(err, result) {
+                if (!err) {
+                    $rdf.jsonld.fromRDF(result, {format: 'application/nquads'}, stringCallback);
+                }
+            },
+            function(err, json) {
+                if (!error) {
+                    jsonString = JSON.stringify(json);
                 }
             }
-        },
-        function(err, result) {
-            if (!err) {
-                nquadString = result;
-            }
-        },
-    ]);
-    return nquadString;
+        ]);
+        return jsonString;
+    }
+
+    var convertToNQuads = function(n3String) {
+        var nquadString = undefined;
+        var n3Parser = N3.Parser();
+        var n3Writer = N3.Parser({format: 'N-Quads'});
+        asyncLib.waterfall([
+            function(parseCallback) {
+                n3Parser.parse(n3String, tripleCallback);
+            },
+            function(err, triple, prefix, writeCallback) {
+                if (!err) {
+                    n3Writer.addTriple(triple);
+                    if (typeof writeCallback === 'function') {
+                        writer.end(writeCallback);
+                    }
+                }
+            },
+            function(err, result) {
+                if (!err) {
+                    nquadString = result;
+                }
+            },
+        ]);
+        return nquadString;
+    } // endif Node 
 }
 // ends
 

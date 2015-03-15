@@ -145,14 +145,14 @@ jQuery(document).ready(function() {
             $rdf.parse(prologue + inputText(tests[t]), kb, testDocURI, 'text/turtle') ;
             matrix.refresh();
 
-            setTimeout(nextTest, 3000);
+            setTimeout(nextTest, 2000);
         
         };
  
 
         agenda.push(nextTest);
 
-        setTimeout(function(){ agenda.shift()()}, 3000);
+        setTimeout(function(){ agenda.shift()()}, 2000);
 
 /*
         for (var t=1; t<tests.length; t++) {

@@ -160,14 +160,14 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
             }
         }
 
-        for (var i = 1; i < matrix.children.length; i ++) {
+        for (var i = 0; i < matrix.children.length; i ++) {
             row = matrix.children[i];
-            if (!rowsUsed[row.dataValueNT]) {
+            if (i > 0 && !rowsUsed[row.dataValueNT]) {
                 delete rows[row.dataValueNT];
                 matrix.removeChild(row);
             } else {
                 for (var j = row.children.length -1 ; j > 0;  j--) { // backwards
-                    var cell = matrix.children[i];
+                    var cell = row.children[j];
                     if (!colsUsed[j])  {
                         row.removeChild(cell);
                     }

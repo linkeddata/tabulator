@@ -71,12 +71,16 @@ jQuery(document).ready(function() {
         $rdf.parse(prologue + inputText(tests[t]), kb, testDocURI, 'text/turtle') // str, kb, base, contentType
         
         var options = {};
-        options.set_x = kb.each(subject, SCHED('option')); // @@@@@ option -> dtstart in future
-        options.set_x = options.set_x.map(function(opt){return kb.any(opt, ICAL('dtstart'))});
+        
+        var setAxes = function() {
+            options.set_x = kb.each(subject, SCHED('option')); // @@@@@ option -> dtstart in future
+            options.set_x = options.set_x.map(function(opt){return kb.any(opt, ICAL('dtstart'))});
 
-        options.set_y = kb.each(subject, SCHED('response'));
-        options.set_y = options.set_y.map(function(resp){return kb.any(resp, DC('author'))});
-
+            options.set_y = kb.each(subject, SCHED('response'));
+            options.set_y = options.set_y.map(function(resp){return kb.any(resp, DC('author'))});
+        };
+        setAxes();
+        
         var possibleTimes = kb.each(invitation, SCHED('option'))
             .map(function(opt){return kb.any(opt, ICAL('dtstart'))});
 
@@ -141,8 +145,9 @@ jQuery(document).ready(function() {
             var test = tests[t];
             if (!test) return;
 
-            kb.removeMany(undefined, undefined, undefined, testDocURI);  // Flush out previous test data
+            kb.removeMany(undefined, undefined, undefined, testDoc);  // Flush out previous test data
             $rdf.parse(prologue + inputText(tests[t]), kb, testDocURI, 'text/turtle') ;
+            setAxes();
             matrix.refresh();
 
             setTimeout(nextTest, 2000);

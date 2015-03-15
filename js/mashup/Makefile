@@ -17,9 +17,15 @@ mash.css : ../../tabbedtab.css
 update :
 	(cd $J/rdf; make dist/rdflib.js)
 	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib.js
-	cp mashlib.js $A/src/main/resources/public/mashlib.js 
-	cp mashlib.js /devel/dvcs.w3.org/read-write-web/target/scala-2.9.1/classes/public/mashlib.js
-	(cd /devel/dvcs.w3.org/read-write-web; hg commit -m "New mashlib.js -- see http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/js/mashup/Makefile")
+#	cp mashlib.js $A/src/main/resources/public/mashlib.js 
+#	cp mashlib.js /devel/dvcs.w3.org/read-write-web/target/scala-2.9.1/classes/public/mashlib.js
+#	(cd /devel/dvcs.w3.org/read-write-web; hg commit -m "New mashlib.js -- see http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/js/mashup/Makefile")
+
+
+gh-pages: mashlib.js 
+	git add mashlib.js 
+	git commit -m "see Makefile"
+	git push origin gh-pages
 
 
 alpha :

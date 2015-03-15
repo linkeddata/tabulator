@@ -109,7 +109,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
                 row.appendChild(td);
             } else {
                 var t = row.firstChild;
-                for (var j =0; j < col; j++) {
+                for (var j =0; j < col + 1; j++) { // Skip header col too
                     t = t.nextSibling;
                 }
                 row.insertBefore(td, t); 

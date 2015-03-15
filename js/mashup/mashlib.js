@@ -6084,7 +6084,7 @@ $rdf.sparqlUpdate = function() {
             }
         }
         
-        xhr.open('POST', uri, true);  // async=true
+        xhr.open('PATCH', uri, true);  // async=true
         xhr.setRequestHeader('Content-type', 'application/sparql-update');
         xhr.send(query);
     }
@@ -8242,6 +8242,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.saveRequestMetadata = function(xhr, kb, docuri) {
         var request = kb.bnode();
         var ns = tabulator.ns;
+        xhr.resource = $rdf.sym(docuri);
         xhr.req = request;
         var now = new Date();
         var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
@@ -10868,6 +10869,14 @@ tabulator.panes.widget.twoLine[
 //
 
 
+tabulator.panes.utils.clearElement = function(ele) {
+    while (ele.firstChild) {
+        ele.removeChild(ele.firstChild);
+    }
+    return ele;
+};
+    
+
 
 ////////////////////////////////////////// Boostrapping identity
 //
@@ -11042,7 +11051,7 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
                 }
             });
         } else {
-            var message = "checkUser: Unable to load " + userMirror.uri;
+            var message = "checkUser: Unable to load " + userMirror.uri + ": " + body;
             try {  // Ugh
                 console.log(message);
                 tabulator.log.alert(message);
@@ -11057,26 +11066,38 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
 };
 
 //              Login status box
-
+//
+//   Shows 
 tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
-    var logoutLabel = 'Web ID Logout';
-    if (me) {
-        var nick = tabulator.kb.any(me, tabulator.ns.foaf('nick'));
-        if (nick) {
-            logoutLabel = 'Logout ' + nick.value;
-        }
+ 
+    var box = myDocument.createElement('div');
+
+    var logoutButton = function(me) {
+        var logoutLabel = 'Web ID logout';
+        if (me) {
+            var nick = tabulator.kb.any(me, tabulator.ns.foaf('nick')) ||
+                tabulator.kb.any(me, tabulator.ns.foaf('name'));
+            if (nick) {
+                logoutLabel = 'Logout ' + nick.value;
+            };
+        };
+        var signOutButton = myDocument.createElement('input');  
+        signOutButton.className = 'WebIDCancelButton';
+        signOutButton.setAttribute('type', 'button');
+        signOutButton.setAttribute('value', logoutLabel);
+        signOutButton.addEventListener('click', zapIt, false);
+        return signOutButton;
     };
 
-    // If the user has no WebID that we know of
-    var box = myDocument.createElement('div');
-    var signOutButton = myDocument.createElement('input');  
+    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
+
     var setIt = function(newid) {
         tabulator.preferences.set('me',newid);
         me_uri = newid;
         me = me_uri && tabulator.kb.sym(me_uri)
-        var message = 'Your Web ID is now <'+me_uri+'> .';
+        var message = 'Your Web ID is now ' + me +' .';
         try { 
             tabulator.log.alert(message);
         } catch(e) {
@@ -11085,16 +11106,13 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
             } catch (e) {
             };
         }
-
-
-        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(sisu);
-        box.appendChild(signOutButton); 
+        box.refresh();
         if (listener) listener(newid);
     };
+    
     var zapIt = function() {
         tabulator.preferences.set('me','');
-        var message = 'Your Web ID was <'+me_uri+'>. It has been forgotten.';
+        var message = 'Your Web ID was ' + me + '. It has been forgotten.';
         me_uri = '';
         me = null
         try { 
@@ -11105,24 +11123,27 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
             } catch (e) {
             };
         }
-        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(signOutButton);
-        sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
-        box.appendChild(sisu); 
+        box.refresh();
         if (listener) listener(undefined);
     }
+    
+    box.refresh = function() {
+        var me_uri = tabulator.preferences.get('me') || '';
+        var me = me_uri ? tabulator.kb.sym(me_uri) : null;
+        if (box.me !== me_uri) { 
+            tabulator.panes.utils.clearElement(box);
+            if (me) {
+                box.appendChild(logoutButton(me));
+            } else {
+                box.appendChild(tabulator.panes.utils.signInOrSignUpBox(myDocument, listener));
+            }; 
+        }
+        box.me = me_uri;
+    }
 
-    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
-
-    if (me) {
-        box.appendChild(signOutButton);
-    } else {
-        box.appendChild(sisu);
-    };
-    signOutButton.className = 'WebIDCancelButton';
-    signOutButton.setAttribute('type', 'button');
-    signOutButton.setAttribute('value', logoutLabel);
-    signOutButton.addEventListener('click', zapIt, false);
+    box.me = '99999';  // Force refresh    
+    box.refresh();
+    
     return box;
 }
 
@@ -13444,7 +13465,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
                 row.appendChild(td);
             } else {
                 var t = row.firstChild;
-                for (var j =0; j < col; j++) {
+                for (var j =0; j < col + 1; j++) { // Skip header col too
                     t = t.nextSibling;
                 }
                 row.insertBefore(td, t); 

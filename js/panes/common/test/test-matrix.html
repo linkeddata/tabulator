@@ -80,6 +80,42 @@ table.tbody.tr.td { padding: 1em; border: 0.1em solid gray;}
      :a0 foaf:name "zoe".
      
      
+# answers:   INCOMPLETE ANSWERS
+    
+     :event1 sched:response :r1, :r2.
+     :r1 dc:author :a1; 
+        sched:cell 
+            [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-01 ],
+            # [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-02 ],
+            [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-05].
+     :a1 foaf:name "Alice".
+     
+     :r2 dc:author :a2; 
+        sched:cell 
+            [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-01 ].
+            # [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-02 ],
+            # [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-05].
+     :a2 foaf:name "Bob".
+#ends
+
+ </pre></td><td class='output'>
+ </td>
+ </tr>
+
+ 
+<tr><td class='input'>
+ <pre>
+ 
+# questions:
+     :event1 dc:author :a0; 
+        a sched:YesNoMaybe;
+        sched:option 
+            [ cal:dtstart 2015-01-01 ],
+            [ cal:dtstart 2015-01-02 ],
+            [ cal:dtstart 2015-01-05].
+     :a0 foaf:name "zoe".
+     
+     
 # answers:
     
      :event1 sched:response :r1, :r2.
@@ -182,7 +218,51 @@ table.tbody.tr.td { padding: 1em; border: 0.1em solid gray;}
         a sched:YesNoMaybe;
         sched:option 
             [ cal:dtstart 2015-01-01 ],
-  ##          [ cal:dtstart 2015-01-02 ],        ### *** remove a column
+            [ cal:dtstart 2015-01-02 ],        ### *** add a column
+            [ cal:dtstart 2015-01-03 ],        ### *** add a column
+            [ cal:dtstart 2015-01-05].
+     :a0 foaf:name "zoe".
+     
+     
+# answers:
+    
+     :event1 sched:response :r1, :r2, :r0.
+     :r1 dc:author :a1; 
+        sched:cell 
+            [ sched:availabilty sched:Yes; cal:dtstart 2015-01-01 ],
+            [ sched:availabilty sched:No; cal:dtstart 2015-01-02 ],
+            [ sched:availabilty sched:Yes; cal:dtstart 2015-01-03 ],
+            [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-05].
+     :a1 foaf:name "Alice".
+     
+     :r2 dc:author :a2; 
+        sched:cell 
+            [ sched:availabilty sched:No; cal:dtstart 2015-01-01 ],
+            [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-02 ],
+            [ sched:availabilty sched:Yes; cal:dtstart 2015-01-05].
+     :a2 foaf:name "Bob".
+
+     :r0 dc:author :a0; 
+        sched:cell 
+            [ sched:availabilty sched:Yes; cal:dtstart 2015-01-01 ],
+            [ sched:availabilty sched:No; cal:dtstart 2015-01-02 ],
+            [ sched:availabilty sched:Maybe; cal:dtstart 2015-01-05].
+
+#ends
+
+ </pre></td><td class='output'>
+ </td>
+ </tr>
+
+<tr><td class='input'>
+ <pre>
+ 
+# questions:
+     :event1 dc:author :a0; 
+        a sched:YesNoMaybe;
+        sched:option 
+            [ cal:dtstart 2015-01-01 ],
+            [ cal:dtstart 2015-01-03 ],        ### *** remove a column
             [ cal:dtstart 2015-01-05].
      :a0 foaf:name "zoe".
      

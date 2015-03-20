@@ -8669,7 +8669,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
         var actualProxyURI = this.proxyIfNecessary(uri2);
         // Setup the request
-        if (false && typeof jQuery !== 'undefined' && jQuery.ajax) {
+        if (typeof jQuery !== 'undefined' && jQuery.ajax) {
             var xhrFields = { withCredentials: withCredentials};
             var xhr = jQuery.ajax({
                 url: actualProxyURI,

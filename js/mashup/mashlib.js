@@ -8321,6 +8321,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         var pcol = $rdf.uri.protocol(docuri);
         if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn') return null; // No look-up operation on these, but they are not errors
+        if (options === undefined) options = {};
         var force = !! options.force
         var kb = this.store
         var args = arguments

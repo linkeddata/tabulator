@@ -8175,7 +8175,8 @@ $rdf.Fetcher = function(store, timeout, async) {
             force = options;
             options = { force: force };
         } else {
-            force = !!options.force
+            if (option === undefined) options = {};
+            force = !!options.force;
         }
 
         if (typeof uris !== 'undefined') {

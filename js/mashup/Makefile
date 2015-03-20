@@ -22,7 +22,7 @@ update :
 #	(cd /devel/dvcs.w3.org/read-write-web; hg commit -m "New mashlib.js -- see http://dig.csail.mit.edu/hg/tabulator/raw-file/tip/content/js/mashup/Makefile")
 
 
-gh-pages: mashlib.js 
+gh-pages: update 
 	git add mashlib.js 
 	git commit -m "see Makefile"
 	git push origin gh-pages

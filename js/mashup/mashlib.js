@@ -577,27 +577,29 @@ $rdf.Util.extend = function () {
 
 
 /*
- * Implements URI-specific functions
- *
- * See RFC 2386
- *
- * See also:
- *   http://www.w3.org/2005/10/ajaw/uri.js
- *   http://www.w3.org/2000/10/swap/uripath.py
- *
- */
-var $rdf, k, v, _base, _ref,
+# Implements URI-specific functions
+#
+# See RFC 2386
+#
+# See also:
+#   http://www.w3.org/2005/10/ajaw/uri.js
+#   http://www.w3.org/2000/10/swap/uripath.py
+#
+*/
+
+var $rdf, k, v, _base, _ref, _ref1, _ref2,
   __hasProp = {}.hasOwnProperty;
 
 if (typeof $rdf === "undefined" || $rdf === null) {
   $rdf = {};
 }
 
-if ($rdf.Util == null) {
+if ((_ref = $rdf.Util) == null) {
   $rdf.Util = {};
 }
 
 $rdf.uri = (function() {
+
   function uri() {}
 
   uri.join = function(given, base) {
@@ -624,7 +626,7 @@ $rdf.uri = (function() {
       alert("Invalid base: " + base + " in join with given: " + given);
       return given;
     }
-    baseScheme = base.slice(0, +baseColon + 1 || 9e9);
+    baseScheme = base.slice(0, baseColon + 1 || 9e9);
     if (given.indexOf('//') === 0) {
       return baseScheme + given;
     }
@@ -656,7 +658,7 @@ $rdf.uri = (function() {
       return baseScheme + given;
     }
     if (lastSlash >= 0 && lastSlash < path.length - 1) {
-      path = path.slice(0, +lastSlash + 1 || 9e9);
+      path = path.slice(0, lastSlash + 1 || 9e9);
     }
     path += given;
     while (path.match(/[^\/]*\/\.\.\//)) {
@@ -680,7 +682,7 @@ $rdf.uri = (function() {
   };
 
   uri.refTo = function(base, uri) {
-    var c, i, j, k, l, n, s, _i, _j, _k, _len, _len1, _ref;
+    var c, i, j, k, l, n, s, _i, _j, _k, _len, _len1, _ref1;
     if (!base) {
       return uri;
     }
@@ -719,9 +721,9 @@ $rdf.uri = (function() {
       return uri;
     }
     n = 0;
-    _ref = base.slice(i);
-    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-      c = _ref[_j];
+    _ref1 = base.slice(i);
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      c = _ref1[_j];
       if (c === '/') {
         n++;
       }
@@ -767,29 +769,30 @@ $rdf.uri = (function() {
 
   return uri;
 
-})();
+}).call(this);
 
 $rdf.Util.uri = $rdf.uri;
 
 if ((typeof module !== "undefined" && module !== null ? module.exports : void 0) != null) {
-  if ((_base = module.exports).Util == null) {
+  if ((_ref1 = (_base = module.exports).Util) == null) {
     _base.Util = {};
   }
-  _ref = $rdf.Util;
-  for (k in _ref) {
-    if (!__hasProp.call(_ref, k)) continue;
-    v = _ref[k];
+  _ref2 = $rdf.Util;
+  for (k in _ref2) {
+    if (!__hasProp.call(_ref2, k)) continue;
+    v = _ref2[k];
     module.exports.Util[k] = v;
   }
   module.exports.uri = $rdf.uri;
 }
 /*
- * These are the classes corresponding to the RDF and N3 data models
- *
- * Designed to look like rdflib and cwm
- *
- * This is coffee see http://coffeescript.org
- */
+# These are the classes corresponding to the RDF and N3 data models
+#
+# Designed to look like rdflib and cwm
+#
+# This is coffee see http://coffeescript.org
+*/
+
 var $rdf, k, v,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
@@ -799,14 +802,15 @@ if (typeof $rdf === "undefined" || $rdf === null) {
   $rdf = {};
 }
 
-
 /*
   the superclass of all RDF Statement objects, that is
   $rdf.Symbol, $rdf.Literal, $rdf.BlankNode
   No class extends this yet, but it could be a place to put common behavior.
- */
+*/
+
 
 $rdf.Node = (function() {
+
   function Node() {}
 
   Node.prototype.substitute = function(bindings) {
@@ -818,6 +822,7 @@ $rdf.Node = (function() {
 })();
 
 $rdf.Empty = (function(_super) {
+
   __extends(Empty, _super);
 
   function Empty() {
@@ -836,16 +841,17 @@ $rdf.Empty = (function(_super) {
 
 })($rdf.Node);
 
-
 /*
    A named node in an RDF graph
     todo: badly named. 
     No, formally a URI is a string, this is a node whose name is a URI.
     Connolly pointed out it isa symbol on the language.
     @param uri the uri as string
- */
+*/
+
 
 $rdf.Symbol = (function(_super) {
+
   __extends(Symbol, _super);
 
   function Symbol(uri) {
@@ -909,6 +915,7 @@ if ($rdf.NextId != null) {
 $rdf.NTAnonymousNodePrefix = "_:n";
 
 $rdf.BlankNode = (function(_super) {
+
   __extends(BlankNode, _super);
 
   function BlankNode(id) {
@@ -952,16 +959,18 @@ $rdf.BlankNode = (function(_super) {
 })($rdf.Node);
 
 $rdf.Literal = (function(_super) {
+
   __extends(Literal, _super);
 
   function Literal(value, lang, datatype) {
+    var _ref, _ref1;
     this.value = value;
     this.lang = lang;
     this.datatype = datatype;
-    if (this.lang == null) {
+    if ((_ref = this.lang) == null) {
       this.lang = void 0;
     }
-    if (this.datatype == null) {
+    if ((_ref1 = this.datatype) == null) {
       this.datatype = void 0;
     }
   }
@@ -1022,6 +1031,7 @@ $rdf.Literal = (function(_super) {
 })($rdf.Node);
 
 $rdf.Collection = (function(_super) {
+
   __extends(Collection, _super);
 
   function Collection(initial) {
@@ -1085,12 +1095,12 @@ $rdf.Collection.prototype.sameTerm = $rdf.BlankNode.prototype.sameTerm;
 
 $rdf.Collection.prototype.compareTerm = $rdf.BlankNode.prototype.compareTerm;
 
-
 /*
  function to transform a value into an $rdf.Node
  @param val can be an rdf.Node, a date, string, number, boolean, or undefined. RDF Nodes are returned as is,
    undefined as undefined
- */
+*/
+
 
 $rdf.term = function(val) {
   var d2, dt, elt, value, x, _i, _len;
@@ -1131,6 +1141,7 @@ $rdf.term = function(val) {
 };
 
 $rdf.Statement = (function() {
+
   function Statement(subject, predicate, object, why) {
     this.subject = $rdf.term(subject);
     this.predicate = $rdf.term(predicate);
@@ -1159,6 +1170,7 @@ $rdf.st = function(subject, predicate, object, why) {
 };
 
 $rdf.Formula = (function(_super) {
+
   __extends(Formula, _super);
 
   function Formula() {
@@ -1244,13 +1256,13 @@ $rdf.Formula = (function(_super) {
     };
   };
 
-
   /*
-  transform an NTriples string format into an $rdf.Node
-  The bnode bit should not be used on program-external values; designed
-  for internal work such as storing a bnode id in an HTML attribute.
-  This will only parse the strings generated by the vaious toNT() methods.
-   */
+      transform an NTriples string format into an $rdf.Node
+      The bnode bit should not be used on program-external values; designed
+      for internal work such as storing a bnode id in an HTML attribute.
+      This will only parse the strings generated by the vaious toNT() methods.
+  */
+
 
   Formula.prototype.fromNT = function(str) {
     var dt, k, lang, x;
@@ -1297,22 +1309,22 @@ $rdf.Formula = (function(_super) {
     var elt, results, sts, _i, _j, _k, _l, _len, _len1, _len2, _len3;
     results = [];
     sts = this.statementsMatching(s, p, o, w, false);
-    if (s == null) {
+    if (!(s != null)) {
       for (_i = 0, _len = sts.length; _i < _len; _i++) {
         elt = sts[_i];
         results.push(elt.subject);
       }
-    } else if (p == null) {
+    } else if (!(p != null)) {
       for (_j = 0, _len1 = sts.length; _j < _len1; _j++) {
         elt = sts[_j];
         results.push(elt.predicate);
       }
-    } else if (o == null) {
+    } else if (!(o != null)) {
       for (_k = 0, _len2 = sts.length; _k < _len2; _k++) {
         elt = sts[_k];
         results.push(elt.object);
       }
-    } else if (w == null) {
+    } else if (!(w != null)) {
       for (_l = 0, _len3 = sts.length; _l < _len3; _l++) {
         elt = sts[_l];
         results.push(elt.why);
@@ -1324,13 +1336,13 @@ $rdf.Formula = (function(_super) {
   Formula.prototype.any = function(s, p, o, w) {
     var st;
     st = this.anyStatementMatching(s, p, o, w);
-    if (st == null) {
+    if (!(st != null)) {
       return void 0;
-    } else if (s == null) {
+    } else if (!(s != null)) {
       return st.subject;
-    } else if (p == null) {
+    } else if (!(p != null)) {
       return st.predicate;
-    } else if (o == null) {
+    } else if (!(o != null)) {
       return st.object;
     }
     return void 0;
@@ -1396,15 +1408,15 @@ $rdf.Formula = (function(_super) {
     }
   };
 
-
   /*
-  For thisClass or any subclass, anything which has it is its type
-  or is the object of something which has the type as its range, or subject
-  of something which has the type as its domain
-  We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
-  Get all the Classes of which we can RDFS-infer the subject is a member
-  @returns a hash of URIs
-   */
+      For thisClass or any subclass, anything which has it is its type
+      or is the object of something which has the type as its range, or subject
+      of something which has the type as its domain
+      We don't bother doing subproperty (yet?)as it doesn't seeem to be used much.
+      Get all the Classes of which we can RDFS-infer the subject is a member
+      @returns a hash of URIs
+  */
+
 
   Formula.prototype.findMembersNT = function(thisClass) {
     var members, pred, seeds, st, t, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
@@ -1441,13 +1453,13 @@ $rdf.Formula = (function(_super) {
     return members;
   };
 
-
   /*
-  transform a collection of NTriple URIs into their URI strings
-  @param t some iterable colletion of NTriple URI strings
-  @return a collection of the URIs as strings
-  todo: explain why it is important to go through NT
-   */
+      transform a collection of NTriple URIs into their URI strings
+      @param t some iterable colletion of NTriple URI strings
+      @return a collection of the URIs as strings
+      todo: explain why it is important to go through NT
+  */
+
 
   Formula.prototype.NTtoURI = function(t) {
     var k, uris, v;
@@ -1470,14 +1482,14 @@ $rdf.Formula = (function(_super) {
     return this.NTtoURI(this.findMembersNT(subject));
   };
 
-
   /*
-  Get all the Classes of which we can RDFS-infer the subject is a member
-  todo: This will loop is there is a class subclass loop (Sublass loops are not illegal)
-  Returns a hash table where key is NT of type and value is statement why we think so.
-  Does NOT return terms, returns URI strings.
-  We use NT representations in this version because they handle blank nodes.
-   */
+      Get all the Classes of which we can RDFS-infer the subject is a member
+      todo: This will loop is there is a class subclass loop (Sublass loops are not illegal)
+      Returns a hash table where key is NT of type and value is statement why we think so.
+      Does NOT return terms, returns URI strings.
+      We use NT representations in this version because they handle blank nodes.
+  */
+
 
   Formula.prototype.findTypesNT = function(subject) {
     var domain, range, rdftype, st, types, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
@@ -1508,13 +1520,13 @@ $rdf.Formula = (function(_super) {
     return this.transitiveClosure(types, this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), false);
   };
 
-
   /*
-  Get all the Classes of which we can RDFS-infer the subject is a subclass
-  Returns a hash table where key is NT of type and value is statement why we think so.
-  Does NOT return terms, returns URI strings.
-  We use NT representations in this version because they handle blank nodes.
-   */
+      Get all the Classes of which we can RDFS-infer the subject is a subclass
+      Returns a hash table where key is NT of type and value is statement why we think so.
+      Does NOT return terms, returns URI strings.
+      We use NT representations in this version because they handle blank nodes.
+  */
+
 
   Formula.prototype.findSuperClassesNT = function(subject) {
     var types;
@@ -1523,13 +1535,13 @@ $rdf.Formula = (function(_super) {
     return this.transitiveClosure(types, this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), false);
   };
 
-
   /*
-  Get all the Classes of which we can RDFS-infer the subject is a superclass
-  Returns a hash table where key is NT of type and value is statement why we think so.
-  Does NOT return terms, returns URI strings.
-  We use NT representations in this version because they handle blank nodes.
-   */
+      Get all the Classes of which we can RDFS-infer the subject is a superclass
+      Returns a hash table where key is NT of type and value is statement why we think so.
+      Does NOT return terms, returns URI strings.
+      We use NT representations in this version because they handle blank nodes.
+  */
+
 
   Formula.prototype.findSubClassesNT = function(subject) {
     var types;
@@ -1538,11 +1550,11 @@ $rdf.Formula = (function(_super) {
     return this.transitiveClosure(types, this.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), true);
   };
 
-
   /*
-  Find the types in the list which have no *stored* supertypes
-  We exclude the universal class, owl:Things and rdf:Resource, as it is information-free.
-   */
+      Find the types in the list which have no *stored* supertypes
+      We exclude the universal class, owl:Things and rdf:Resource, as it is information-free.
+  */
+
 
   Formula.prototype.topTypeURIs = function(types) {
     var j, k, n, tops, v, _i, _len, _ref;
@@ -1572,13 +1584,13 @@ $rdf.Formula = (function(_super) {
     return tops;
   };
 
-
   /*
-  Find the types in the list which have no *stored* subtypes
-  These are a set of classes which provide by themselves complete
-  information -- the other classes are redundant for those who
-  know the class DAG.
-   */
+      Find the types in the list which have no *stored* subtypes
+      These are a set of classes which provide by themselves complete
+      information -- the other classes are redundant for those who
+      know the class DAG.
+  */
+
 
   Formula.prototype.bottomTypeURIs = function(types) {
     var bots, bottom, elt, k, subs, v, _i, _len, _ref;
@@ -1640,18 +1652,19 @@ $rdf.Namespace = $rdf.Formula.prototype.ns;
 
 $rdf.variable = $rdf.Formula.prototype.variable;
 
-
 /*
- * Variable
- *
- * Variables are placeholders used in patterns to be matched.
- * In cwm they are symbols which are the formula's list of quantified variables.
- * In sparl they are not visibily URIs.  Here we compromise, by having
- * a common special base URI for variables. Their names are uris,
- * but the ? nottaion has an implicit base uri of 'varid:'
- */
+# Variable
+#
+# Variables are placeholders used in patterns to be matched.
+# In cwm they are symbols which are the formula's list of quantified variables.
+# In sparl they are not visibily URIs.  Here we compromise, by having
+# a common special base URI for variables. Their names are uris,
+# but the ? nottaion has an implicit base uri of 'varid:'
+*/
+
 
 $rdf.Variable = (function(_super) {
+
   __extends(Variable, _super);
 
   function Variable(rel) {
@@ -4418,6 +4431,7 @@ $rdf.sparqlUpdateParser = function(str, kb, base) {
     } // while
     //return clauses
 
+
 }; // End of spaqlUpdateParser
 
 
@@ -4494,6 +4508,7 @@ $rdf.IndexedFormula.prototype.applyPatch = function(patch, target, patchCallback
         doPatch(patchCallback)
     };
 };
+
 
 
 
@@ -7560,7 +7575,6 @@ $rdf.UpdatesVia = (function() {
     this.register = __bind(this.register, this);
     this.graph = {};
     this.via = {};
-    this.fetcher.addCallback('headers', this.onHeaders);
   }
 
   UpdatesVia.prototype.register = function(via, uri) {
@@ -8138,20 +8152,18 @@ $rdf.Fetcher = function(store, timeout, async) {
 
 
 
-// Looks up something.
-//
-// Looks up all the URIs a things has.
-// Parameters:
-//
-//  term:       canonical term for the thing whose URI is to be dereferenced
-//  rterm:      the resource which refered to this (for tracking bad links)
-//  force:      Load the data even if loaded before
-//  oneDone:   is called as callback(ok, errorbody, xhr) for each one
-//  allDone:   is called as callback(ok, errorbody) for all of them
-// Returns      the number of things looked up
-//
-
-
+    // Looks up something.
+    //
+    // Looks up all the URIs a things has.
+    // Parameters:
+    //
+    //  term:       canonical term for the thing whose URI is to be dereferenced
+    //  rterm:      the resource which refered to this (for tracking bad links)
+    //  force:      Load the data even if loaded before
+    //  oneDone:   is called as callback(ok, errorbody, xhr) for each one
+    //  allDone:   is called as callback(ok, errorbody) for all of them
+    // Returns      the number of things looked up
+    //
     this.lookUpThing = function(term, rterm, force, oneDone, allDone) {
         var uris = kb.uris(term) // Get all URIs
         var success = true;
@@ -8186,11 +8198,11 @@ $rdf.Fetcher = function(store, timeout, async) {
     }
 
 
-/*  Ask for a doc to be loaded if necessary then call back
-**
-** Changed 2013-08-20:  Added (ok, body) params to callback
-**
-**/
+    /*  Ask for a doc to be loaded if necessary then call back
+    **
+    ** Changed 2013-08-20:  Added (ok, body) params to callback
+    **
+    **/
     this.nowOrWhenFetched = function(uri, referringTerm, userCallback) {
         var sta = this.getState(uri);
         if (sta == 'fetched') return userCallback(true);
@@ -8241,23 +8253,33 @@ $rdf.Fetcher = function(store, timeout, async) {
      
     this.saveRequestMetadata = function(xhr, kb, docuri) {
         var request = kb.bnode();
-        var ns = tabulator.ns;
         xhr.resource = $rdf.sym(docuri);
+
+        var ns = {};
+        ns.link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
+        ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
+
         xhr.req = request;
         var now = new Date();
         var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
-        kb.add(request, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
-        kb.add(request, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
+        kb.add(request, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode);
+        kb.add(request, ns.link("requestedURI"), kb.literal(docuri), this.appNode);
+
         kb.add(request, ns.link('status'), kb.collection(), this.appNode);
         return request;
     };
        
     this.saveResponseMetadata = function(xhr, kb) {
         var response = kb.bnode();
-        var ns = tabulator.ns;
+        var ns = {};
+        ns.link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
+        ns.http = $rdf.Namespace("http://www.w3.org/2007/ont/http#");
+        ns.httph = $rdf.Namespace("http://www.w3.org/2007/ont/httph#");
+        ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
+
         kb.add(xhr.req, ns.link('response'), response);
-        kb.add(response, ns.http('status'), kb.literal(xhr.status), response)
-        kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+        kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
+        kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response);
 
         xhr.headers = {}
         if ($rdf.uri.protocol(xhr.resource.uri) == 'http' || $rdf.uri.protocol(xhr.resource.uri) == 'https') {
@@ -8268,9 +8290,6 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
         return response;
     };
-    
-
-    
     
 
     /** Requests a document URI and arranges to load the document.
@@ -8324,7 +8343,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.resource = docterm;
             xhr.requestedURI = args[0];
         } else {
-            var req = kb.bnode(); // @@ Joe, no need for xhr.req?
+            var req = kb.bnode(); 
         }
         var requestHandlers = kb.collection();
         var sf = this;
@@ -8397,6 +8416,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 }
             } else {
                 if (xhr.withCredentials) {
+                    console.log("@@ Retrying with no credentials for " + xhr.resource)
                     xhr.abort();
                     xhr.withCredentials = false;
                     sf.addStatus(xhr.req, "Credentials SUPPRESSED to see if that helps");
@@ -8417,7 +8437,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                 sf.fireCallbacks('recv', args)
                 var kb = sf.store;
                 sf.saveResponseMetadata(xhr, kb);
-
                 sf.fireCallbacks('headers', [{uri: docuri, headers: xhr.headers}]);
 
                 if (xhr.status >= 400) { // For extra dignostics, keep the reply
@@ -8662,6 +8681,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     xhr.userCallback = userCallback;
                     xhr.resource = docterm;
                     xhr.requestedURI = uri2;
+                    xhr.withCredentials = withCredentials; // Somehow gets lost by jq
 
 
                     if (s == 'timeout')
@@ -8738,7 +8758,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     // var requestHandlers = kb.collection()
 
                                     // kb.add(kb.sym(newURI), ns.link("request"), req, this.appNode)
-                                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, xhr.req);
+                                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, this.appNode);
 
                                     var now = new Date();
                                     var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
@@ -9029,7 +9049,7 @@ $rdf.parse = function parse(str, kb, base, contentType) {
 
 //   Serialize to the appropriate format
 //
-$rdf.serialize = function(target, kb, base, contentType) {
+$rdf.serialize = function(target, kb, base, contentType, callback) {
     var documentString;
     var sz = $rdf.Serializer(kb);
     var newSts = kb.statementsMatching(undefined, undefined, undefined, target);
@@ -9047,12 +9067,12 @@ $rdf.serialize = function(target, kb, base, contentType) {
             break;
         case 'application/json+ld':
             var n3String = sz.statementsToN3(newSts);
-            documentString = convertToJson(n3String);
+            convertToJson(n3String, callback);
             break;
         case 'application/n-quads':
         case 'application/nquads': // @@@ just outpout the quads? Does not work for collections
             var n3String = sz.statementsToN3(newSts);
-            documentString = convertToNQuads(n3String); 
+            documentString = convertToNQuads(n3String, callback);
             break;
         default:
             throw "serialise: Content-type "+content_type +" not supported for data write";
@@ -9061,63 +9081,74 @@ $rdf.serialize = function(target, kb, base, contentType) {
 };
 
 ////////////////// JSON-LD code currently requires Node
+if (typeof module !== 'undefined' && module.require) { // Node
+    var asyncLib = require('async');
+    var jsonld = require('jsonld');
+    var N3 = require('n3');
 
-if (typeof module !== 'undefined' && module.require) { // Node 
-
-    var convertToJson = function(n3String) {
+    var convertToJson = function(n3String, jsonCallback) {
         var jsonString = undefined;
         var n3Parser = N3.Parser();
-        var n3Writer = N3.Parser({format: 'N-Quads'});
+        var n3Writer = N3.Writer({
+            format: 'N-Quads'
+        });
         asyncLib.waterfall([
-            function(parseCallback) {
-                n3Parser.parse(n3String, prefixCallback);
+            function(callback) {
+                n3Parser.parse(n3String, callback);
             },
-            function(err, triple, prefix, writeCallback) {
-                if (!err) {
+            function(triple, prefix, callback) {
+                if (triple !== null) {
                     n3Writer.addTriple(triple);
-                    if (typeof writeCallback === 'function') {
-                        writer.end(writeCallback);
-                    }
+                }
+                if (typeof callback === 'function') {
+                    n3Writer.end(callback);
                 }
             },
-            function(err, result) {
-                if (!err) {
-                    $rdf.jsonld.fromRDF(result, {format: 'application/nquads'}, stringCallback);
+            function(result, callback) {
+                try {
+                    jsonld.fromRDF(result, {
+                        format: 'application/nquads'
+                    }, callback);
+                } catch (err) {
+                    callback(err);
                 }
             },
-            function(err, json) {
-                if (!error) {
-                    jsonString = JSON.stringify(json);
-                }
+            function(json, callback) {
+                jsonString = JSON.stringify(json);
+                jsonCallback(null, jsonString);
             }
-        ]);
-        return jsonString;
+        ], function(err, result) {
+            jsonCallback(err, jsonString);
+        });
     }
 
-    var convertToNQuads = function(n3String) {
+    var convertToNQuads = function(n3String, nquadCallback) {
         var nquadString = undefined;
         var n3Parser = N3.Parser();
-        var n3Writer = N3.Parser({format: 'N-Quads'});
+        var n3Writer = N3.Writer({
+            format: 'N-Quads'
+        });
         asyncLib.waterfall([
-            function(parseCallback) {
-                n3Parser.parse(n3String, tripleCallback);
+            function(callback) {
+                n3Parser.parse(n3String, callback);
             },
-            function(err, triple, prefix, writeCallback) {
-                if (!err) {
+            function(triple, prefix, callback) {
+                if (triple !== null) {
                     n3Writer.addTriple(triple);
-                    if (typeof writeCallback === 'function') {
-                        writer.end(writeCallback);
-                    }
+                }
+                if (typeof callback === 'function') {
+                    n3Writer.end(callback);
                 }
             },
-            function(err, result) {
-                if (!err) {
-                    nquadString = result;
-                }
+            function(result, callback) {
+                nquadString = result;
+                nquadCallback(null, nquadString);
             },
-        ]);
-        return nquadString;
-    } // endif Node 
+        ], function(err, result) {
+            nquadCallback(err, nquadString);
+        });
+    }
+
 }
 // ends
 

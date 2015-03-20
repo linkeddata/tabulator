@@ -139,6 +139,7 @@ jQuery(document).ready(function() {
         var agenda = [];
 
         var nextTest = function nextTest() {
+            // First take a copy of the DOM the klast test produced
             output(tests[t]).appendChild(matrix.cloneNode(true));
 
             t += 1;
@@ -159,15 +160,6 @@ jQuery(document).ready(function() {
 
         setTimeout(function(){ agenda.shift()()}, 2000);
 
-/*
-        for (var t=1; t<tests.length; t++) {
-            kb.removeMany(undefined, undefined, undefined, testDocURI);  // Flush out previous test data
-            $rdf.parse(prologue + inputText(tests[t]), kb, testDocURI, 'text/turtle') ;
-            matrix.refresh();
-            output(tests[t]).appendChild(matrix.cloneNode(true));
-
-        }
-*/
         
     }; // showResults
     

@@ -11040,13 +11040,16 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
     kb.fetcher.nowOrWhenFetched(userMirror.uri, undefined, function(ok, body) {
         var done = false;
         if (ok) {
-            kb.each(undefined, tabulator.ns.link("requestedURI"), $rdf.uri.docpart(userMirror.uri))
+            kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
             .map(function(request){
-                var response = kb.any(request, tabulator.ns.link("response"));
+                var response = kb.any(request, tabulator.ns.link('response'));
                 if (request !== undefined) {
-                    kb.each(response, tabulator.ns.httph("user")).map(function(userHeader){
-                        setIt(userHeader.value.trim());
-                        done = true;
+                    kb.each(response, tabulator.ns.httph('user')).map(function(userHeader){
+                        var username = userHeader.value.trim();
+                        if (userHeader.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+                            setIt(userHeader.value.trim());
+                            done = true;
+                        }
                     });
                 }
             });

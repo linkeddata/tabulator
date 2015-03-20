@@ -8413,13 +8413,13 @@ $rdf.Fetcher = function(store, timeout, async) {
                 if (xhr.withCredentials) {
                     console.log("@@ Retrying with no credentials for " + xhr.resource)
                     xhr.abort();
-                    xhr.withCredentials = false;
+                    delete this.requested[docuri]; // forget the original request happened
                     newopt = {};
                     for (opt in options) if (options.hasOwnProperty(opt)) {
                         newopt[opt] = options[opt]
                     }
                     newopt.withCredentials = false;
-                    sf.addStatus(xhr.req, "Credentials SUPPRESSED to see if that helps");
+                    sf.addStatus(xhr.req, "Abort: Will retry with credentials SUPPRESSED to see if that helps");
                      sf.requestURI(docuri, rterm, newopt, userCallback)
                     // xhr.send(); // try again -- not a function
                 } else {

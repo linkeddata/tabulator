@@ -15,7 +15,7 @@ mash.css : ../../tabbedtab.css
 	cp ../../tabbedtab.css mash.css
 
 update :
-	(cd $J/rdf; make dist/rdflib.js)
+	(cd $J/rdf; rm dist/rdflib.js ; make dist/rdflib.js)
 	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib.js
 #	cp mashlib.js $A/src/main/resources/public/mashlib.js 
 #	cp mashlib.js /devel/dvcs.w3.org/read-write-web/target/scala-2.9.1/classes/public/mashlib.js

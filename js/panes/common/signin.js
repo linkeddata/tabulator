@@ -179,8 +179,8 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
                 if (request !== undefined) {
                     kb.each(response, tabulator.ns.httph('user')).map(function(userHeader){
                         var username = userHeader.value.trim();
-                        if (userHeader.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
-                            setIt(userHeader.value.trim());
+                        if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+                            setIt(username);
                             done = true;
                         }
                     });

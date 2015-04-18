@@ -6351,7 +6351,8 @@ $rdf.sparqlUpdate = function() {
                 var stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
                 .createInstance(Components.interfaces.nsIFileOutputStream);
 
-                stream.init(file, 0x02 | 0x08 | 0x20, 0666, 0);
+                // Various JS systems object to 0666 in struct mode as dangerous
+                stream.init(file, 0x02 | 0x08 | 0x20, parseInt('0666',8), 0);
 
                 //write data to file then close output stream
                 stream.write(documentString, documentString.length);
@@ -8175,7 +8176,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             force = options;
             options = { force: force };
         } else {
-            if (option === undefined) options = {};
+            if (options === undefined) options = {};
             force = !!options.force;
         }
 
@@ -23018,7 +23019,7 @@ onDragStart: function(x,y,td){
     //ToDo for myself: understand the connections in firefox, x, screenX
     
     this.dragTarget=td;
-    const kDSIID = Components.interfaces.nsIDragService;
+    var kDSIID = Components.interfaces.nsIDragService;
     var dragAction = { action: kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_MOVE + kDSIID.DRAGDROP_ACTION_LINK };    
 
     //alert(td.ownerDocument.getBoxObjectFor(td));
@@ -23079,11 +23080,11 @@ URItoTransferDataSet: function(uri){
     return dataSet;
 },
 _mDS: null, 
-get mDragService() //some syntax I don't understand
+get_mDragService:  function() //some syntax I don't understand -- was get mDragService() 
 {
     if (!this._mDS) {
-        const kDSContractID = "@mozilla.org/widget/dragservice;1";
-        const kDSIID = Components.interfaces.nsIDragService;
+        var kDSContractID = "@mozilla.org/widget/dragservice;1";
+        var kDSIID = Components.interfaces.nsIDragService;
         this._mDS = Components.classes[kDSContractID].getService(kDSIID);
     }
     return this._mDS;
@@ -26762,8 +26763,8 @@ tabulator.OutlineObject = function(doc) {
 
         if (tabulator.isExtension) newURI = function(spec) {
             // e.g. see http://www.nexgenmedia.net/docs/protocol/
-            const kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
-            const nsIURI = Components.interfaces.nsIURI;
+            var kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
+            var nsIURI = Components.interfaces.nsIURI;
             var uri = Components.classes[kSIMPLEURI_CONTRACTID].createInstance(nsIURI);
             uri.spec = spec;
             return uri;

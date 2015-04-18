@@ -302,7 +302,7 @@ onDragStart: function(x,y,td){
     //ToDo for myself: understand the connections in firefox, x, screenX
     
     this.dragTarget=td;
-    const kDSIID = Components.interfaces.nsIDragService;
+    var kDSIID = Components.interfaces.nsIDragService;
     var dragAction = { action: kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_MOVE + kDSIID.DRAGDROP_ACTION_LINK };    
 
     //alert(td.ownerDocument.getBoxObjectFor(td));
@@ -363,11 +363,11 @@ URItoTransferDataSet: function(uri){
     return dataSet;
 },
 _mDS: null, 
-get mDragService() //some syntax I don't understand
+get_mDragService:  function() //some syntax I don't understand -- was get mDragService() 
 {
     if (!this._mDS) {
-        const kDSContractID = "@mozilla.org/widget/dragservice;1";
-        const kDSIID = Components.interfaces.nsIDragService;
+        var kDSContractID = "@mozilla.org/widget/dragservice;1";
+        var kDSIID = Components.interfaces.nsIDragService;
         this._mDS = Components.classes[kDSContractID].getService(kDSIID);
     }
     return this._mDS;

@@ -274,15 +274,15 @@ function copyImageWithLicense(){
 /**Get the Mozilla clipboard interface*/
 function getClipboard()
 {
-    const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
-    const kClipboardIID = Components.interfaces.nsIClipboard;
+    var kClipboardContractID = "@mozilla.org/widget/clipboard;1";
+    var kClipboardIID = Components.interfaces.nsIClipboard;
     return Components.classes[kClipboardContractID].getService(kClipboardIID);
 }
 
 /**Check whether the data formats that have been copied to the clipboard and the target data formats are matching*/
 function canPaste()
 {
-    const kClipboardIID = Components.interfaces.nsIClipboard;
+    var kClipboardIID = Components.interfaces.nsIClipboard;
 
     var clipboard = getClipboard();
     var flavourArray = new SupportsArray;

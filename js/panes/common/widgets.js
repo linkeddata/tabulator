@@ -295,6 +295,11 @@ tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri] = {
 tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/;
 
+tabulator.panes.fieldParams[tabulator.ns.ui('TimeField').uri] = {
+    'size': 10, 'type': 'time', 'dt': 'time'};
+tabulator.panes.fieldParams[tabulator.ns.ui('TimeField').uri].pattern = 
+    /^\s*([0-2]?[0-9]:[0-5][0-9](:[0-5][0-9])?)\s*$/;
+
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri] = {
     'size': 12, 'style': 'text-align: right', 'dt': 'integer' };
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri].pattern =
@@ -328,6 +333,7 @@ tabulator.panes.field[tabulator.ns.ui('EmailField').uri] =
 tabulator.panes.field[tabulator.ns.ui('ColorField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateTimeField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('TimeField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('NumericField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('IntegerField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DecimalField').uri] = 

@@ -1886,8 +1886,8 @@ tabulator.OutlineObject = function(doc) {
 
         if (tabulator.isExtension) newURI = function(spec) {
             // e.g. see http://www.nexgenmedia.net/docs/protocol/
-            const kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
-            const nsIURI = Components.interfaces.nsIURI;
+            var kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
+            var nsIURI = Components.interfaces.nsIURI;
             var uri = Components.classes[kSIMPLEURI_CONTRACTID].createInstance(nsIURI);
             uri.spec = spec;
             return uri;

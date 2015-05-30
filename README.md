@@ -65,3 +65,7 @@ Thanks to all those who have provided feedback, code patches etc.
 Only if you have a data browser, such as ffox+Tabulator extension, installed.
 
 *   [Tabulator project](http://dig.csail.mit.edu/2005/ajar/ajaw/data#Tabulator)
+
+### License
+
+[MIT](http://mit-license.org/)

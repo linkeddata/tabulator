@@ -501,8 +501,10 @@ $rdf.Util.string = {
     }
 };
 
+// Reomved 2015-08-05 timbl - unused and depended on jQuery!
 // from http://dev.jquery.com/browser/trunk/jquery/src/core.js
-// Overlap with JQuery -- we try to keep the rdflib.js and jquery libraries separate at the moment.
+// Dependency with JQuery -- we try to keep the rdflib.js and jquery libraries separate at the moment.
+/*
 $rdf.Util.extend = function () {
     // copy reference to target object
     var target = arguments[0] || {},
@@ -571,7 +573,7 @@ $rdf.Util.extend = function () {
     // Return the modified object
     return target;
 };
-
+*/
 
 
 
@@ -5894,16 +5896,19 @@ $rdf.sparqlUpdate = function() {
             if (request !== undefined) {
                 var response = kb.any(request, this.ns.link("response"));
                 if (request !== undefined) {
+                    var acceptPatch = kb.each(response, this.ns.httph("accept-patch"));
+                    if (acceptPatch.length) {
+                        for (var i = 0; i < acceptPatch.length; i++) {
+                            var method = acceptPatch[i].value.trim();
+                            if (method.indexOf('application/sparql-update') >=0 ) return 'SPARQL';
+                        }
+                    }
                     var author_via = kb.each(response, this.ns.httph("ms-author-via"));
                     if (author_via.length) {
                         for (var i = 0; i < author_via.length; i++) {
                             var method = author_via[i].value.trim();
                             if (method.indexOf('SPARQL') >=0 ) return 'SPARQL';
                             if (method.indexOf('DAV') >=0 ) return 'DAV';
-//                            if (author_via[i].value == "SPARQL" || author_via[i].value == "DAV")
-                                // dump("sparql.editable: Success for "+uri+": "+author_via[i] +"\n");
-                                //return author_via[i].value;
-                                
                         }
                     }
                     var status = kb.each(response, this.ns.http("status"));
@@ -7772,7 +7777,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 // link rel
                 var links = this.dom.getElementsByTagName('link');
                 for (var x = links.length - 1; x >= 0; x--) {
-                    sf.linkData(xhr, links[x].getAttribute('rel'), links[x].getAttribute('href'));
+                    sf.linkData(xhr, links[x].getAttribute('rel'), links[x].getAttribute('href'), xhr.resource);
                 }
 
                 //GRDDL
@@ -8104,19 +8109,52 @@ $rdf.Fetcher = function(store, timeout, async) {
         return xhr
     }
 
-    this.linkData = function(xhr, rel, uri) {
+    // in the why part of the quad distinguish between HTML and HTTP header
+    this.linkData = function(xhr, rel, uri, why) {
         var x = xhr.resource;
         if (!uri) return;
+        var predicate =  ns.rdfs('seeAlso');
         // See http://www.w3.org/TR/powder-dr/#httplink for describedby 2008-12-10
+        var obj = kb.sym($rdf.uri.join(uri, xhr.resource.uri));
         if (rel == 'alternate' || rel == 'seeAlso' || rel == 'meta' || rel == 'describedby') {
-            // var join = $rdf.uri.join2;   // doesn't work, now a method of rdf.uri
-            var obj = kb.sym($rdf.uri.join(uri, xhr.resource.uri))
-            if (obj.uri != xhr.resource) {
-                kb.add(xhr.resource, ns.rdfs('seeAlso'), obj, xhr.resource);
-                // $rdf.log.info("Loading " + obj + " from link rel in " + xhr.resource);
+            if (obj.uri != xhr.resource.uri) {
+                kb.add(xhr.resource, predicate, obj, why);
+            }
+        } else {
+        // See https://www.iana.org/assignments/link-relations/link-relations.xml
+        // Alas not yet in RDF yet for each predicate
+            predicate = kb.sym($rdf.uri.join(rel, 'http://www.iana.org/assignments/link-relations/'));
+            kb.add(xhr.resource, predicate, obj, why);
+        }
+    };
+
+    this.parseLinkHeader = function(xhr, thisReq) {
+        var link;
+        try {
+            link = xhr.getResponseHeader('link'); // May crash from CORS error
+        }catch(e){}
+        if (link) {
+            var rel;
+            var lines = link.replace(/ /g, '').split(',');
+            for (var k=0; k < lines.length; k++) {
+                rel = null;
+                var arg = lines[k].split(';');
+                for (var i = 1; i < arg.length; i++) {
+                    lr = arg[i].split('=');
+                    if (lr[0] == 'rel') rel = lr[1].replace(/"/g, '').replace(/'/g, ''); // '"remove quotes
+                }
+                var v = arg[0];
+                // eg. Link: <.meta>; rel=meta, <.acl>; rel=acl
+                if (v.length && v[0] == '<' && v[v.length-1] == '>' && v.slice)
+                    v = v.slice(1, -1);
+                if (rel) { // Treat just like HTML link element
+                    this.linkData(xhr, rel, v, thisReq);
+                }
             }
         }
     };
+
+
 
     this.doneFetch = function(xhr, args) {
         this.addStatus(xhr.req, 'Done.')
@@ -8214,6 +8252,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     **
     **/
     this.nowOrWhenFetched = function(uri, referringTerm, userCallback) {
+        uri = uri.uri || uri; // allow symbol object or string to be passed
         var sta = this.getState(uri);
         if (sta == 'fetched') return userCallback(true);
 
@@ -8316,6 +8355,7 @@ $rdf.Fetcher = function(store, timeout, async) {
      **              or URI has already been loaded
      */
     this.requestURI = function(docuri, rterm, options, userCallback) { //sources_request_new
+        docuri = docuri.uri || docuri; // Symbol or string
         if (docuri.indexOf('#') >= 0) { // hash
             throw ("requestURI should not be called with fragid: " + docuri);
         }
@@ -8438,7 +8478,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var thisReq = xhr.req // Might have changes by redirect
                 sf.fireCallbacks('recv', args)
                 var kb = sf.store;
-                sf.saveResponseMetadata(xhr, kb);
+                var response = sf.saveResponseMetadata(xhr, kb);
                 sf.fireCallbacks('headers', [{uri: docuri, headers: xhr.headers}]);
 
                 if (xhr.status >= 400) { // For extra dignostics, keep the reply
@@ -8521,25 +8561,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     }
                 }
 
-                var link;
-                try {
-                    link = xhr.getResponseHeader('link');
-                }catch(e){}
-                if (link) {
-                    var rel = null;
-                    var arg = link.replace(/ /g, '').split(';');
-                    for (var i = 1; i < arg.length; i++) {
-                        lr = arg[i].split('=');
-                        if (lr[0] == 'rel') rel = lr[1];
-                    }
-                    var v = arg[0];
-                    // eg. Link: <.meta>, rel=meta
-                    if (v.length && v[0] == '<' && v[v.length-1] == '>' && v.slice)
-                        v = v.slice(1, -1);
-                    if (rel) // Treat just like HTML link element
-                        sf.linkData(xhr, rel, v);
-                }
-
+                sf.parseLinkHeader(xhr, thisReq); // sf.?
 
                 if (handler) {
                     try {
@@ -9315,6 +9337,7 @@ tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Ic
 tabulator.ns = {};
 
 
+tabulator.ns.auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
 tabulator.ns.arg = $rdf.Namespace('http://www.w3.org/ns/pim/arg#');
 tabulator.ns.cal = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
 tabulator.ns.contact = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/contact#');
@@ -9689,6 +9712,11 @@ tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri] = {
 tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/;
 
+tabulator.panes.fieldParams[tabulator.ns.ui('TimeField').uri] = {
+    'size': 10, 'type': 'time', 'dt': 'time'};
+tabulator.panes.fieldParams[tabulator.ns.ui('TimeField').uri].pattern = 
+    /^\s*([0-2]?[0-9]:[0-5][0-9](:[0-5][0-9])?)\s*$/;
+
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri] = {
     'size': 12, 'style': 'text-align: right', 'dt': 'integer' };
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri].pattern =
@@ -9722,6 +9750,7 @@ tabulator.panes.field[tabulator.ns.ui('EmailField').uri] =
 tabulator.panes.field[tabulator.ns.ui('ColorField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateTimeField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('TimeField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('NumericField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('IntegerField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DecimalField').uri] = 
@@ -29832,7 +29861,8 @@ tabulator.registerViewType(TimelineViewFactory);
     tabulator.outline.init();
 };
 
-jQuery(function() {
+document.addEventListener('DOMContentLoaded', function() {
+// jQuery(function() {
     if (tabulator.rdf == undefined)
         tabulator.setup();
 });

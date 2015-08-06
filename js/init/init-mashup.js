@@ -78,7 +78,8 @@ tabulator.setup = function() {
     tabulator.outline.init();
 };
 
-jQuery(function() {
+document.addEventListener('DOMContentLoaded', function() {
+// jQuery(function() {
     if (tabulator.rdf == undefined)
         tabulator.setup();
 });

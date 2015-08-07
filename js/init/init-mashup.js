@@ -4,7 +4,7 @@ tabulator = {};
 tabulator.isExtension = false;
 
 // base for icons etc
-tabulator.scriptBase = 'https://linkeddata.github.com/tabulator/'; // Or app dev overwrite to point to your app's own copy
+tabulator.scriptBase = 'https://linkeddata.github.io/tabulator/'; // Or app dev overwrite to point to your app's own copy
 
 tabulator.iconPrefix = tabulator.scriptBase;
 

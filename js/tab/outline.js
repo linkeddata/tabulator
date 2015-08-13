@@ -529,7 +529,7 @@ tabulator.OutlineObject = function(doc) {
                             paneDiv.pane = pane;
                         }
                         ico.setAttribute('class', state) // set the button state
-                        // outline_expand(p, subject, internalPane, true); //  pane, already
+                        // outline_expand(p, subject, { 'pane': internalPane, 'already': true}); //  pane, already
 
                     
                     
@@ -1336,7 +1336,7 @@ tabulator.OutlineObject = function(doc) {
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
                         sf.addCallback('done',setSelectedAfterward);
                         sf.addCallback('fail',setSelectedAfterward);
-                        outline_expand(selectedTd, obj, tabulator.panes.defaultPane);
+                        outline_expand(selectedTd, obj, { 'pane': tabulator.panes.defaultPane});
                     }
                     setSelectedAfterward();                   
                 }
@@ -1511,9 +1511,20 @@ tabulator.OutlineObject = function(doc) {
             case tabulator.Icon.src.icon_expand:
             case tabulator.Icon.src.icon_collapse:
                 var pane = e.altKey? tabulator.panes.internalPane : undefined; // set later: was tabulator.panes.defaultPane
-                var mode = e.shiftKey ? outline_refocus :
-                    (tsrc == tabulator.Icon.src.icon_expand ? outline_expand : outline_collapse);
-                mode(p, subject, pane);
+                
+                if (tsrc == tabulator.Icon.src.icon_expand) {
+                    if (e.shiftKey) { // Shift forces 
+                        outline_refocus(p, subject, pane);
+                    } else {
+                        if (e.altKey) { // To investigate screwups, dont wait show internals
+                            outline_expand(p, subject,  {'pane': tabulator.panes.internalPane, 'immediate': true});
+                        } else {
+                            outline_expand(p, subject);
+                        }
+                    }
+                } else {
+                    outline_collapse(p, subject,  pane);
+                }
                 break;
                 //  case Icon.src.icon_visit:
                 //emptyNode(p.parentNode).appendChild(documentContentTABLE(subject));
@@ -1524,12 +1535,16 @@ tabulator.OutlineObject = function(doc) {
             case tabulator.Icon.src.icon_failed:
             case tabulator.Icon.src.icon_fetched:
                 var uri = target.getAttribute('uri'); // Put on access buttons
-                sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
+                if (e.altKey) {
+                    sf.requestURI(tabulator.rdf.uri.docpart(uri))
+                } else {
+                    sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
+                }
                 // sf.objectRefresh(subject);
                 break;
             case tabulator.Icon.src.icon_unrequested:
                 var uri = target.getAttribute('uri'); // Put on access buttons
-                if (!uri) alert('Interal error: No URI on unrequested icon! @@');
+                if (!uri) alert('Internal error: No URI on unrequested icon! @@');
                 sf.requestURI(tabulator.rdf.uri.docpart(uri))
                 // if (subject.uri) sf.lookUpThing(subject);
                 break;
@@ -1556,7 +1571,7 @@ tabulator.OutlineObject = function(doc) {
             case tabulator.Icon.src.icon_add_triple:
                 var returnSignal=thisOutline.UserInput.addNewObject(e);
                 if (returnSignal){ //when expand signal returned
-                    outline_expand(returnSignal[0],returnSignal[1],internalPane);
+                    outline_expand(returnSignal[0],returnSignal[1], { 'pane': internalPane});
                     for (var trIterator=returnSignal[0].firstChild.childNodes[1].firstChild;
                         trIterator; trIterator=trIterator.nextSibling) {
                         var st=trIterator.AJAR_statement;
@@ -1626,7 +1641,12 @@ tabulator.OutlineObject = function(doc) {
     
 
  
-    function outline_expand(p, subject1, pane, already) {
+    function outline_expand(p, subject1, options) {
+        options = options || {}
+        var pane = options.pane
+        var already = options.already
+        var immediate = options.immediate
+        
         tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
@@ -1663,7 +1683,7 @@ tabulator.OutlineObject = function(doc) {
             }
             try{if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');}catch(e){dump("YAHOO")}
             tabulator.Util.emptyNode(p).appendChild(newTable)
-            thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
+            thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...because not defined in callbacks
             tabulator.log.debug("expand: Node for " + subject + " expanded")
             //fetch seeAlso when render()
             //var seeAlsoStats = sf.store.statementsMatching(subject, tabulator.ns.rdfs('seeAlso'))
@@ -1750,8 +1770,11 @@ tabulator.OutlineObject = function(doc) {
                 return;
             }
         }
-        if (subj_uri) {
+        // dump('outline_expand 1773 subj_uri ' + subj_uri + ' type ' + typeof subj_uri + '\n');
+        if (subj_uri && !immediate) {
             var doc = tabulator.rdf.uri.docpart(subj_uri);
+            //dump('@@@@ Fetching before expanding ' + subj_uri + ' type ' + typeof subj_uri + '\n');
+            if (subject.termType == 'bnode') alert('@@@@@ bnode ' + subj_uri)
             // Wait till at least the main URI is loaded before expanding:
             sf.nowOrWhenFetched(doc, undefined, function(ok, body) {
                 if (ok) {
@@ -1895,7 +1918,7 @@ tabulator.OutlineObject = function(doc) {
         var td = GotoSubject_default();
         if (!td) td = GotoSubject_default(); //the first tr is required       
         if (expand) {
-            outline_expand(td, subject, pane);
+            outline_expand(td, subject, { 'pane': pane});
             myDocument.title = tabulator.Util.label(subject);  // "Tabulator: "+  No need to advertize
             tr=td.parentNode;
             tabulator.Util.getEyeFocus(tr,false,undefined,window);//instantly: false

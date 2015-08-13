@@ -223,7 +223,7 @@ tabulator.panes.dataContentPane = {
                 var td = thisOutline.outline_objectTD(root, undefined, tr)
                 tr.appendChild(td)
                 div.appendChild(tr);
-                outline_expand(td, root,  p);
+                outline_expand(td, root,  {'pane': p});
             }
         }
         return div

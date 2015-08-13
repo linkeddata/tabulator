@@ -55,6 +55,7 @@ tabulator.loadScript("js/panes/common/matrix.js");
 */
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
+tabulator.loadScript("js/panes/contact/contactPane.js");
 tabulator.loadScript("js/panes/argument/argumentPane.js"); // A posistion in an argumnent tree
 
 tabulator.loadScript("js/panes/transaction/pane.js");

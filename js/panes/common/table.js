@@ -1548,7 +1548,10 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         };
         
         var onDone = function() {
-            progressMessage.parentNode.removeChild(progressMessage);
+            if (progressMessage && progressMessage.parentNode && progressMessage.parentNode.removeChild) {
+                progressMessage.parentNode.removeChild(progressMessage);
+                progressMessage = null;
+            }
             applyColumnFilters(rows, columns); // @@ TBL added this
             // Here add table clean-up, remove "loading" message etc.
             if (options.onDone) options.onDone();

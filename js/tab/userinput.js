@@ -441,7 +441,7 @@ function UserInput(outline){
                                 //this add will cause a repainting
                             }
                             var enclosingTd=tabulator.Util.ancestor(this.lastModified.parentNode.parentNode,'TD');
-                            outline.outline_expand(enclosingTd,s.subject,defaultPane,true);
+                            outline.outline_expand(enclosingTd,s.subject, { 'pane': defaultPane, 'already': true});
                             outline.walk('right',outline.focusTd);
                         //</Feature>                         
                         }else{
@@ -1134,7 +1134,7 @@ function UserInput(outline){
         var newTerm=kb.nextSymbol(targetdoc);
         outline.UserInput.fillInRequest('object',selectedTd,newTerm);
         //selection is changed
-        outline.outline_expand(outline.getSelection()[0],newTerm);
+        outline.outline_expand(outline.getSelection()[0], newTerm);
     },
     
     

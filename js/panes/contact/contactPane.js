@@ -452,8 +452,15 @@ tabulator.panes.register( {
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
                 donePredicate(ns.rdf('type'));
                 donePredicate(ns.dc('title'));
+                // donePredicate(ns.dc('created'));
+                donePredicate(ns.dc('modified'));
                 
-                donePredicate(ns.vcard('UID'));
+                donePredicate(ns.vcard('hasUID'));
+                donePredicate(ns.vcard('fn'));
+                donePredicate(ns.vcard('hasEmail'));
+                donePredicate(ns.vcard('hasName'));
+                donePredicate(ns.vcard('hasAddress'));
+                donePredicate(ns.vcard('note'));
 
 
                 var setPaneStyle = function() {
@@ -541,15 +548,16 @@ tabulator.panes.register( {
             
             //var cats = kb.each(subject, ns.wf('contactCategory')); // zero or more
             
-            var h = dom.createElement('h2');
-            h.setAttribute('style', 'font-size: 120%');
-            div.appendChild(h);
             classLabel = tabulator.Util.label(ns.vcard('AddressBook'));
+            IndividualClassLabel = tabulator.Util.label(ns.vcard('Individual'));
             
             var title = kb.any(subject, ns.dc('title'));
             title = title ? title.value : classLabel;
-            h.appendChild(dom.createTextNode(title)); 
-
+/*
+            var h = div.appendChild(dom.createElement('h2'));
+            h.setAttribute('style', 'font-size: 120%');
+            h.appendChild(dom.createTextNode(title));   // try it without an h2
+*/
             // New Contact button
             var b = dom.createElement("button");
             var container = dom.createElement("div");
@@ -557,7 +565,7 @@ tabulator.panes.register( {
             if (!me) b.setAttribute('disabled', 'true')
             container.appendChild(b);
             div.appendChild(container);
-            b.innerHTML = "New "+classLabel;
+            b.innerHTML = "New " + IndividualClassLabel;
             b.addEventListener('click', function(e) {
                     b.setAttribute('disabled', 'true');
                     // container.appendChild(newContactForm(dom, kb, subject));   // @@@@ todo
@@ -585,10 +593,14 @@ tabulator.panes.register( {
                 var peopleMainTable = peopleMain.appendChild(dom.createElement('table'));
                 
                 var cardMain = bookMain.appendChild(dom.createElement('td'));
+                var dataCellStyle =  'padding: 0.1em;'
                 
                 groupsHeader.textContent = "groups";
+                groupsHeader.setAttribute('style', 'min-width: 10em; padding-bottom 0.2em;');
+                
                 peopleHeader.textContent = "name";
                 peopleHeader.setAttribute('style', 'min-width: 18em;');
+                peopleMain.setAttribute('style','overflow:scroll;');
                 cardHeader.textContent = "contact details";
                 
                 
@@ -596,49 +608,61 @@ tabulator.panes.register( {
                 var groups2 = groups.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
                 groups.sort();
                 var selected = {};
-                var refreshGroupRow = function(row, group) {
-                    row.setAttribute('style', selected[group.uri] ? 'background-color: #cce;' : '') 
-                }
 
                 var cardPane = function(dom, subject, paneName) {
                     var p = tabulator.panes.byName(paneName);
                     var d = p.render(subject, dom);
-                    d.setAttribute('style', 'border: 0.1em solid green;')
+                    d.setAttribute('style', 'border: 0.1em solid #888; border-radius: 0.5em')
                     return d;
                 };
 
-
+                var compareForSort = function(self, other) {
+                    var s = kb.any(self, ns.vcard('fn'));
+                    var o = kb.any(other, ns.vcard('fn'));
+                    if (s && o) {
+                        s = s.value.toLowerCase();
+                        o = o.value.toLowerCase();
+                        if (s > o) return 1;
+                        if (s < o) return -1;
+                    }
+                    if (self.uri > other.uri) return 1;
+                    if (self.uri < other.uri) return -1;
+                    return 0;
+                }
 
                 var refreshNames = function() {
-                    var cards = [];
+                    var cards = [], ng = 0;
                     for (var u in selected) {
                         if (selected[u]) {
                             var a = kb.each(kb.sym(u), ns.vcard('hasMember'));
-                            dump('Adding '+ a.length + ' people from ' + u + '\n')
+                            // dump('Adding '+ a.length + ' people from ' + u + '\n')
                             cards = cards.concat(a);
+                            ng += 1;
                         }
                     }
-                    cards.sort(); // @@ sort by name not UID later
+                    cards.sort(compareForSort); // @@ sort by name not UID later
                     peopleMainTable.innerHTML = ''; // clear
+                    peopleHeader.textContent = (cards.length > 5 ? '' + cards.length + " contacts" : "contact");
+
                     for (var j =0; j < cards.length; j++) {
                         var personRow = peopleMainTable.appendChild(dom.createElement('tr'));
+                        personRow.setAttribute('style', dataCellStyle);
                         var person = cards[j];
-                        var name = kb.any(person, ns.vcard('fn'));
-                        
+                        var name = kb.any(person, ns.vcard('fn')) ||
+                                kb.any(person, ns.foaf('name'));
                         name = name ? name.value : '???';
                         personRow.textContent = name;
+                        personRow.subject = person;
 
                         var setPersonListener = function toggle(personRow, person) {
                             personRow.addEventListener('click', function(event){
-                                dump("click person " + person + '; ' + '\n');
                                 event.preventDefault();
                                 cardMain.innerHTML = 'loading...';
                                 var cardURI = person.uri.split('#')[0];
-                                dump('Loading card '+ cardURI + '\n')
                                 tabulator.fetcher.nowOrWhenFetched(cardURI, undefined, function(ok, message){
                                     cardMain.innerHTML = '';
                                     if (!ok) return complainIfBad(ok, "Can't load card: " +  group.uri.split('#')[0] + ": " + message)
-                                    dump("Loaded card " + cardURI + '\n')
+                                    // dump("Loaded card " + cardURI + '\n')
                                     cardMain.appendChild(cardPane(dom, person, 'contact'));            
                                 })
                            });
@@ -648,12 +672,22 @@ tabulator.panes.register( {
     
                 }
                 
+                var refreshGroups = function() {
+                    for (i=0; i < groupsMainTable.children.length; i++) {
+                        var row = groupsMainTable.children[i];
+                        if (row.subject) {
+                            row.setAttribute('style', selected[row.subject.uri] ? 'background-color: #cce;' : '');
+                        }
+                    }
+                };
+                
                 for (var i =0; i<groups2.length; i++) {
                     var name = groups2[i][0];
                     var group = groups2[i][1];
-                    selected[group.uri] = false;
+                    //selected[group.uri] = false;
                     var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
                     groupRow.subject = group;
+                    groupRow.setAttribute('style', dataCellStyle);
                     // var groupLeft = groupRow.appendChild(dom.createElement('td'));
                     // var groupRight = groupRow.appendChild(dom.createElement('td'));
                     groupRow.textContent = name;
@@ -663,15 +697,19 @@ tabulator.panes.register( {
                         groupRow.addEventListener('click', function(event){
                             event.preventDefault();
                             var groupList = kb.sym(group.uri.split('#')[0]);
-                            if (!event.shiftKey) {
-                                selected = {}; // If shift key pressed, accumulate multiple
+                            if (!event.altKey) {
+                                selected = {}; // If alt key pressed, accumulate multiple
                             }
                             selected[group.uri] = selected[group.uri] ? false : true;
-                            dump("click group " + group + '; ' + selected[group.uri] + '\n');
+                            // We set the cell gey to immediately acknowledge the user's click, and in the case
+                            // of a slow load to let them know that something is happening (or broken)
+                            // using the same grey-ed out metaphor as the input fields have.
+                            groupRow.setAttribute('style',  'color: #888;'); // Pending load
+                            // dump("click group " + group + '; ' + selected[group.uri] + '\n');
                             kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
                                 if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                dump("Loaded group file " + groupList + '\n')
-                                refreshGroupRow(groupRow, group);
+                                // dump("Loaded group file " + groupList + '\n')
+                                refreshGroups();
                                 refreshNames();
                             })
                         }, true);

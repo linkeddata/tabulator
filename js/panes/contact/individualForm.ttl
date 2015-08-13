@@ -8,7 +8,10 @@
 <#form1>
     <http://purl.org/dc/elements/1.1/title> "Contact Details" ;
     a <http://www.w3.org/ns/ui#Form> ;
-    <http://www.w3.org/ns/ui#part> <#fullNameField>, <#id1409437134240>, <#id1409437936549>, <#id1409439036311>, <#id1410396447179> .
+    <http://www.w3.org/ns/ui#part>
+        <#fullNameField>, <#addresses>, 
+        <#emailComment>, <#eMails>,
+        <#telephoneComment>, <#telephones>, <#noteComment>, <#noteField> .
 
 <#fullNameField>
     a <http://www.w3.org/ns/ui#SingleLineTextField> ;
@@ -16,13 +19,13 @@
     <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#fn> ;
     <http://www.w3.org/ns/ui#size> "40" .
 
-<#id1409437134240>
+<#addresses>
     <http://purl.org/dc/elements/1.1/title> "Address details" ;
     a <http://www.w3.org/ns/ui#Multiple> ;
-    <http://www.w3.org/ns/ui#part> <#id1409437198781> ;
+    <http://www.w3.org/ns/ui#part> <#oneAddress> ;
     <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#hasAddress> .
 
-<#id1409437198781>
+<#oneAddress>
     a <http://www.w3.org/ns/ui#Group> ;
     <http://www.w3.org/ns/ui#part> <#id1409437207443>, <#id1409437292400>, <#id1409437421996>, <#id1409437467649>, <#id1409437569420>, <#id1409437646712> .
 
@@ -61,32 +64,70 @@
     <http://www.w3.org/ns/ui#from> rdf:Class ;
     <http://www.w3.org/ns/ui#property> <http://purl.org/dc/terms/type> .
 
-<#id1409437936549>
+
+##############################
+
+<#emailComment>
+    a <http://www.w3.org/ns/ui#Comment> ;
+    <http://www.w3.org/ns/ui#contents> "Email" .
+
+
+<#eMails>
     a <http://www.w3.org/ns/ui#Multiple> ;
-    <http://www.w3.org/ns/ui#part> <#id1409437992960> ;
+    <http://www.w3.org/ns/ui#part> <#oneEMail> ;
     <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#hasEmail> .
 
-<#id1409437992960>
+<#oneEMail>
     a <http://www.w3.org/ns/ui#Group> ;
-    <http://www.w3.org/ns/ui#part> <#id1409438012053>, <#id1409438426086> .
+    <http://www.w3.org/ns/ui#part> <#emailValue>, <#emailType> .
 
-<#id1409438012053>
+<#emailValue>
     a <http://www.w3.org/ns/ui#EmailField> ;
     <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#value> ;
     <http://www.w3.org/ns/ui#size> "50" .
 
-<#id1409438426086>
+<#emailType>
     a <http://www.w3.org/ns/ui#Classifier> ;
     <http://www.w3.org/ns/ui#canMintNew> "0" ;
     <http://www.w3.org/ns/ui#category> <http://www.w3.org/2006/vcard/ns#Type> ;
     <http://www.w3.org/ns/ui#from> <http://www.w3.org/2006/vcard/ns#Type> ;
     <http://www.w3.org/ns/ui#property> <http://purl.org/dc/terms/type> .
 
-<#id1409439036311>
-    a <http://www.w3.org/ns/ui#Comment> ;
-    <http://www.w3.org/ns/ui#contents> "Thank you for using a form which was user-built as a user-built application using LDP read-write-web technology!" .
+##############################
 
-<#id1410396447179>
+<#telephoneComment>
+    a <http://www.w3.org/ns/ui#Comment> ;
+    <http://www.w3.org/ns/ui#contents> "Phones" .
+
+
+<#telephones>
+    a <http://www.w3.org/ns/ui#Multiple> ;
+    <http://www.w3.org/ns/ui#part> <#onetelephone> ;
+    <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#hasTelephone> .
+
+<#onetelephone>
+    a <http://www.w3.org/ns/ui#Group> ;
+    <http://www.w3.org/ns/ui#part> <#telephoneValue>, <#telephoneType> .
+
+<#telephoneValue>
+    a <http://www.w3.org/ns/ui#PhoneField> ;
+    <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#value> ;
+    <http://www.w3.org/ns/ui#size> "50" .
+
+<#telephoneType>
+    a <http://www.w3.org/ns/ui#Classifier> ;
+    <http://www.w3.org/ns/ui#canMintNew> "0" ;
+    <http://www.w3.org/ns/ui#category> <http://www.w3.org/2006/vcard/ns#Type> ;
+    <http://www.w3.org/ns/ui#from> <http://www.w3.org/2006/vcard/ns#Type> ;
+    <http://www.w3.org/ns/ui#property> <http://purl.org/dc/terms/type> .
+
+##############################
+
+<#noteComment>
+    a <http://www.w3.org/ns/ui#Comment> ;
+    <http://www.w3.org/ns/ui#contents> "General Notes" .
+
+<#noteField>
     a <http://www.w3.org/ns/ui#MultiLineTextField> ;
     <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#note> .
 

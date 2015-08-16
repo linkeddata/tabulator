@@ -8279,7 +8279,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.proxyIfNecessary = function(uri) {
         if (typeof tabulator != 'undefined' && tabulator.isExtension) return uri; // Extenstion does not need proxy
                         // browser does 2014 on as https browser script not trusted
-        if ($rdf.Fetcher.crossSiteProxyTemplate && document && document.location
+        if ($rdf.Fetcher.crossSiteProxyTemplate && (typeof document !== 'undefined') &&document.location
 			&& ('' + document.location).slice(0,6) === 'https:'
                 && uri.slice(0,5) === 'http:') {
               return $rdf.Fetcher.crossSiteProxyTemplate.replace('{uri}', encodeURIComponent(uri));
@@ -8406,7 +8406,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         */
 
         var onerrorFactory = function(xhr) { return function(event) {
-            if ($rdf.Fetcher.crossSiteProxyTemplate && document && document.location && !xhr.proxyUsed) { // In mashup situation
+            if ($rdf.Fetcher.crossSiteProxyTemplate && (typeof document !== 'undefined') &&document.location && !xhr.proxyUsed) { // In mashup situation
                 var hostpart = $rdf.uri.hostpart;
                 var here = '' + document.location;
                 var uri = xhr.resource.uri
@@ -8578,7 +8578,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             switch (xhr.readyState) {
             case 0:
                     var uri = xhr.resource.uri, newURI;
-                    if (this.crossSiteProxyTemplate && document && document.location) { // In mashup situation
+                    if (this.crossSiteProxyTemplate && (typeof document !== 'undefined') &&document.location) { // In mashup situation
                         var hostpart = $rdf.uri.hostpart;
                         var here = '' + document.location;
                         if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
@@ -14549,10 +14549,14 @@ tabulator.panes.register( {
 **  This outline pane allows a user to interact with an contact,
 to change its state according to an ontology, comment on it, etc.
 **
+** See aslo things like
+**  http://www.w3.org/TR/vcard-rdf/
+**  http://tools.ietf.org/html/rfc6350
+**  http://www.iana.org/assignments/vcard-elements/vcard-elements.xhtml
 **
 ** I am using in places single quotes strings like 'this'
 ** where internationalization ("i18n") is not a problem, and double quoted
-** like "this" where the string is seen by the user and so I18n is an contact.
+** like "this" where the string is seen by the user and so I18n is an issue.
 */
 
 
@@ -14871,68 +14875,56 @@ tabulator.panes.register( {
                     return kb.sym($rdf.uri.docpart(x.uri));
                 }
 
-                var stateStore = kb.any(tracker, ns.wf('stateStore'));
-                var newStore = kb.sym(base + 'store.ttl');
+                var newBook = kb.sym(base + 'book.ttl');
+                var newGroups = kb.sym(base + 'groups.ttl');
+                var newPeople = kb.sym(base + 'people.ttl');
 
-                var here = documentOf(thisAddressBook);
-
-                var oldBase = here.uri.slice(0, here.uri.lastIndexOf('/')+1);
-
-                var morph = function(x) { // Move any URIs in this space into that space
-                    if (x.elements !== undefined) return x.elements.map(morph); // Morph within lists
-                    if (x.uri === undefined) return x;
-                    var u = x.uri;
-                    if (u === stateStore.uri) return newStore; // special case
-                    if (u.slice(0, oldBase.length) === oldBase) {
-                        u = base + u.slice(oldBase.length);
-                        $rdf.log.debug(" Map "+ x.uri + " to " + u);
-                    }
-                    return kb.sym(u);
-                }
-                var there = morph(here);
-                var newAddressBook = morph(thisAddressBook); 
-                
-                var myConfig = kb.statementsMatching(undefined, undefined, undefined, here);
-                for (var i=0; i < myConfig.length; i++) {
-                    st = myConfig[i];
-                    kb.add(morph(st.subject), morph(st.predicate), morph(st.object), there);
-                }
-                
-                // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
+                 
                 //
-                kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, stateStore);
+                // kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, stateStore);
                 
-                kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, there);
+                //kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, there);
                 
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
-                updater.put(
-                    there,
-                    kb.statementsMatching(undefined, undefined, undefined, there),
-                    'text/turtle',
-                    function(uri2, ok, message) {
-                        if (ok) {
-                            updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
-                                if (ok) {
-                                    console.info("Ok The tracker created OK at: " + newAddressBook.uri +
-                                    "\nMake a note of it, bookmark it. ");
-                                } else {
-                                    console.log("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
-                                };
-                            });
-                        } else {
-                            console.log("FAILED to save new tracker at: "+ there.uri +' : ' + message);
-                        };
-                    }
-                );
+
+                agenda = [];
                 
-                // Created new data files.
-                // @@ Now create initial files - html skin, (Copy of mashlib, css?)
-                // @@ Now create form to edit configuation parameters
-                // @@ Optionally link new instance to list of instances -- both ways? and to child/parent?
-                // @@ Set up access control for new config and store. 
+                prefixes = '@prefix vcard: <http://www.w3.org/2006/vcard/ns#>. \n\
+@prefix ab: <http://www.w3.org/ns/pim/ab#>. \n\
+@prefix dc: <http://purl.org/dc/elements/1.1/>.\n\
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.\n\
+'
+
+                bookData = prefixes + '\n<#this> a vcard:AddressBook;\n\
+                    vcard:nameEmailIndex <people.ttl>; \n\
+                    vcard:groupIndex <groups.ttl>. \n\n';  // @@ Add title?
+
+
+                agenda.push(function() {
+                    webOperation('PUT', base + 'groups.ttl', { data: bookData, contentType: 'text/turtle'}, function(ok, body) {
+                        complainIfBad(ok, "Failed to initialize empty results file: " + body);
+                        if (ok) agenda.shift()();
+                    })
+                });
+
+
+                groupsData = prefixes + '<book.ttl#this> vcard:includesGroup  <Group/Home.ttl#this>. <Group/Home.ttl#this> a vcard:Group; vcard:fn "Home"\n' 
+                     + '<book.ttl#this> vcard:includesGroup  <Group/Work.ttl#this>. <Group/Work.ttl#this> a vcard:Group; vcard:fn "Work"\n' 
+
+                 agenda.push(function() {
+                    webOperation('PUT', base + 'groups.ttl', { data: groupsData, contentType: 'text/turtle'}, function(ok, body) {
+                        complainIfBad(ok, "Failed to initialize empty results file: " + body);
+                        if (ok) agenda.shift()();
+                    })
+                });
+
+           ////////////
+
+                agenda.shift()();
                 
+                 
             }); // callback to newAppInstance
 
             
@@ -14998,8 +14990,16 @@ tabulator.panes.register( {
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
                 donePredicate(ns.rdf('type'));
                 donePredicate(ns.dc('title'));
+                // donePredicate(ns.dc('created'));
+                donePredicate(ns.dc('modified'));
                 
-                donePredicate(ns.vcard('UID'));
+                donePredicate(ns.vcard('hasUID'));
+                donePredicate(ns.vcard('fn'));
+                donePredicate(ns.vcard('hasEmail'));
+                donePredicate(ns.vcard('hasTelephone'));
+                donePredicate(ns.vcard('hasName'));
+                donePredicate(ns.vcard('hasAddress'));
+                donePredicate(ns.vcard('note'));
 
 
                 var setPaneStyle = function() {
@@ -15087,15 +15087,16 @@ tabulator.panes.register( {
             
             //var cats = kb.each(subject, ns.wf('contactCategory')); // zero or more
             
-            var h = dom.createElement('h2');
-            h.setAttribute('style', 'font-size: 120%');
-            div.appendChild(h);
             classLabel = tabulator.Util.label(ns.vcard('AddressBook'));
+            IndividualClassLabel = tabulator.Util.label(ns.vcard('Individual'));
             
             var title = kb.any(subject, ns.dc('title'));
             title = title ? title.value : classLabel;
-            h.appendChild(dom.createTextNode(title)); 
-
+/*
+            var h = div.appendChild(dom.createElement('h2'));
+            h.setAttribute('style', 'font-size: 120%');
+            h.appendChild(dom.createTextNode(title));   // try it without an h2
+*/
             // New Contact button
             var b = dom.createElement("button");
             var container = dom.createElement("div");
@@ -15103,7 +15104,7 @@ tabulator.panes.register( {
             if (!me) b.setAttribute('disabled', 'true')
             container.appendChild(b);
             div.appendChild(container);
-            b.innerHTML = "New "+classLabel;
+            b.innerHTML = "New " + IndividualClassLabel;
             b.addEventListener('click', function(e) {
                     b.setAttribute('disabled', 'true');
                     // container.appendChild(newContactForm(dom, kb, subject));   // @@@@ todo
@@ -15131,10 +15132,14 @@ tabulator.panes.register( {
                 var peopleMainTable = peopleMain.appendChild(dom.createElement('table'));
                 
                 var cardMain = bookMain.appendChild(dom.createElement('td'));
+                var dataCellStyle =  'padding: 0.1em;'
                 
                 groupsHeader.textContent = "groups";
+                groupsHeader.setAttribute('style', 'min-width: 10em; padding-bottom 0.2em;');
+                
                 peopleHeader.textContent = "name";
                 peopleHeader.setAttribute('style', 'min-width: 18em;');
+                peopleMain.setAttribute('style','overflow:scroll;');
                 cardHeader.textContent = "contact details";
                 
                 
@@ -15142,49 +15147,61 @@ tabulator.panes.register( {
                 var groups2 = groups.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
                 groups.sort();
                 var selected = {};
-                var refreshGroupRow = function(row, group) {
-                    row.setAttribute('style', selected[group.uri] ? 'background-color: #cce;' : '') 
-                }
 
                 var cardPane = function(dom, subject, paneName) {
                     var p = tabulator.panes.byName(paneName);
                     var d = p.render(subject, dom);
-                    d.setAttribute('style', 'border: 0.1em solid green;')
+                    d.setAttribute('style', 'border: 0.1em solid #888; border-radius: 0.5em')
                     return d;
                 };
 
-
+                var compareForSort = function(self, other) {
+                    var s = kb.any(self, ns.vcard('fn'));
+                    var o = kb.any(other, ns.vcard('fn'));
+                    if (s && o) {
+                        s = s.value.toLowerCase();
+                        o = o.value.toLowerCase();
+                        if (s > o) return 1;
+                        if (s < o) return -1;
+                    }
+                    if (self.uri > other.uri) return 1;
+                    if (self.uri < other.uri) return -1;
+                    return 0;
+                }
 
                 var refreshNames = function() {
-                    var cards = [];
+                    var cards = [], ng = 0;
                     for (var u in selected) {
                         if (selected[u]) {
                             var a = kb.each(kb.sym(u), ns.vcard('hasMember'));
-                            dump('Adding '+ a.length + ' people from ' + u + '\n')
+                            // dump('Adding '+ a.length + ' people from ' + u + '\n')
                             cards = cards.concat(a);
+                            ng += 1;
                         }
                     }
-                    cards.sort(); // @@ sort by name not UID later
+                    cards.sort(compareForSort); // @@ sort by name not UID later
                     peopleMainTable.innerHTML = ''; // clear
+                    peopleHeader.textContent = (cards.length > 5 ? '' + cards.length + " contacts" : "contact");
+
                     for (var j =0; j < cards.length; j++) {
                         var personRow = peopleMainTable.appendChild(dom.createElement('tr'));
+                        personRow.setAttribute('style', dataCellStyle);
                         var person = cards[j];
-                        var name = kb.any(person, ns.vcard('fn'));
-                        
+                        var name = kb.any(person, ns.vcard('fn')) ||
+                                kb.any(person, ns.foaf('name'));
                         name = name ? name.value : '???';
                         personRow.textContent = name;
+                        personRow.subject = person;
 
                         var setPersonListener = function toggle(personRow, person) {
                             personRow.addEventListener('click', function(event){
-                                dump("click person " + person + '; ' + '\n');
                                 event.preventDefault();
                                 cardMain.innerHTML = 'loading...';
                                 var cardURI = person.uri.split('#')[0];
-                                dump('Loading card '+ cardURI + '\n')
                                 tabulator.fetcher.nowOrWhenFetched(cardURI, undefined, function(ok, message){
                                     cardMain.innerHTML = '';
                                     if (!ok) return complainIfBad(ok, "Can't load card: " +  group.uri.split('#')[0] + ": " + message)
-                                    dump("Loaded card " + cardURI + '\n')
+                                    // dump("Loaded card " + cardURI + '\n')
                                     cardMain.appendChild(cardPane(dom, person, 'contact'));            
                                 })
                            });
@@ -15194,12 +15211,22 @@ tabulator.panes.register( {
     
                 }
                 
+                var refreshGroups = function() {
+                    for (i=0; i < groupsMainTable.children.length; i++) {
+                        var row = groupsMainTable.children[i];
+                        if (row.subject) {
+                            row.setAttribute('style', selected[row.subject.uri] ? 'background-color: #cce;' : '');
+                        }
+                    }
+                };
+                
                 for (var i =0; i<groups2.length; i++) {
                     var name = groups2[i][0];
                     var group = groups2[i][1];
-                    selected[group.uri] = false;
+                    //selected[group.uri] = false;
                     var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
                     groupRow.subject = group;
+                    groupRow.setAttribute('style', dataCellStyle);
                     // var groupLeft = groupRow.appendChild(dom.createElement('td'));
                     // var groupRight = groupRow.appendChild(dom.createElement('td'));
                     groupRow.textContent = name;
@@ -15209,15 +15236,19 @@ tabulator.panes.register( {
                         groupRow.addEventListener('click', function(event){
                             event.preventDefault();
                             var groupList = kb.sym(group.uri.split('#')[0]);
-                            if (!event.shiftKey) {
-                                selected = {}; // If shift key pressed, accumulate multiple
+                            if (!event.altKey) {
+                                selected = {}; // If alt key pressed, accumulate multiple
                             }
                             selected[group.uri] = selected[group.uri] ? false : true;
-                            dump("click group " + group + '; ' + selected[group.uri] + '\n');
+                            // We set the cell gey to immediately acknowledge the user's click, and in the case
+                            // of a slow load to let them know that something is happening (or broken)
+                            // using the same grey-ed out metaphor as the input fields have.
+                            groupRow.setAttribute('style',  'color: #888;'); // Pending load
+                            // dump("click group " + group + '; ' + selected[group.uri] + '\n');
                             kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
                                 if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                dump("Loaded group file " + groupList + '\n')
-                                refreshGroupRow(groupRow, group);
+                                // dump("Loaded group file " + groupList + '\n')
+                                refreshGroups();
                                 refreshNames();
                             })
                         }, true);

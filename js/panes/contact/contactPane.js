@@ -3,10 +3,14 @@
 **  This outline pane allows a user to interact with an contact,
 to change its state according to an ontology, comment on it, etc.
 **
+** See aslo things like
+**  http://www.w3.org/TR/vcard-rdf/
+**  http://tools.ietf.org/html/rfc6350
+**  http://www.iana.org/assignments/vcard-elements/vcard-elements.xhtml
 **
 ** I am using in places single quotes strings like 'this'
 ** where internationalization ("i18n") is not a problem, and double quoted
-** like "this" where the string is seen by the user and so I18n is an contact.
+** like "this" where the string is seen by the user and so I18n is an issue.
 */
 
 
@@ -325,68 +329,56 @@ tabulator.panes.register( {
                     return kb.sym($rdf.uri.docpart(x.uri));
                 }
 
-                var stateStore = kb.any(tracker, ns.wf('stateStore'));
-                var newStore = kb.sym(base + 'store.ttl');
+                var newBook = kb.sym(base + 'book.ttl');
+                var newGroups = kb.sym(base + 'groups.ttl');
+                var newPeople = kb.sym(base + 'people.ttl');
 
-                var here = documentOf(thisAddressBook);
-
-                var oldBase = here.uri.slice(0, here.uri.lastIndexOf('/')+1);
-
-                var morph = function(x) { // Move any URIs in this space into that space
-                    if (x.elements !== undefined) return x.elements.map(morph); // Morph within lists
-                    if (x.uri === undefined) return x;
-                    var u = x.uri;
-                    if (u === stateStore.uri) return newStore; // special case
-                    if (u.slice(0, oldBase.length) === oldBase) {
-                        u = base + u.slice(oldBase.length);
-                        $rdf.log.debug(" Map "+ x.uri + " to " + u);
-                    }
-                    return kb.sym(u);
-                }
-                var there = morph(here);
-                var newAddressBook = morph(thisAddressBook); 
-                
-                var myConfig = kb.statementsMatching(undefined, undefined, undefined, here);
-                for (var i=0; i < myConfig.length; i++) {
-                    st = myConfig[i];
-                    kb.add(morph(st.subject), morph(st.predicate), morph(st.object), there);
-                }
-                
-                // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
+                 
                 //
-                kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, stateStore);
+                // kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, stateStore);
                 
-                kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, there);
+                //kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, there);
                 
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
-                updater.put(
-                    there,
-                    kb.statementsMatching(undefined, undefined, undefined, there),
-                    'text/turtle',
-                    function(uri2, ok, message) {
-                        if (ok) {
-                            updater.put(newStore, [], 'text/turtle', function(uri3, ok, message) {
-                                if (ok) {
-                                    console.info("Ok The tracker created OK at: " + newAddressBook.uri +
-                                    "\nMake a note of it, bookmark it. ");
-                                } else {
-                                    console.log("FAILED to set up new store at: "+ newStore.uri +' : ' + message);
-                                };
-                            });
-                        } else {
-                            console.log("FAILED to save new tracker at: "+ there.uri +' : ' + message);
-                        };
-                    }
-                );
+
+                agenda = [];
                 
-                // Created new data files.
-                // @@ Now create initial files - html skin, (Copy of mashlib, css?)
-                // @@ Now create form to edit configuation parameters
-                // @@ Optionally link new instance to list of instances -- both ways? and to child/parent?
-                // @@ Set up access control for new config and store. 
+                prefixes = '@prefix vcard: <http://www.w3.org/2006/vcard/ns#>. \n\
+@prefix ab: <http://www.w3.org/ns/pim/ab#>. \n\
+@prefix dc: <http://purl.org/dc/elements/1.1/>.\n\
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.\n\
+'
+
+                bookData = prefixes + '\n<#this> a vcard:AddressBook;\n\
+                    vcard:nameEmailIndex <people.ttl>; \n\
+                    vcard:groupIndex <groups.ttl>. \n\n';  // @@ Add title?
+
+
+                agenda.push(function() {
+                    webOperation('PUT', base + 'groups.ttl', { data: bookData, contentType: 'text/turtle'}, function(ok, body) {
+                        complainIfBad(ok, "Failed to initialize empty results file: " + body);
+                        if (ok) agenda.shift()();
+                    })
+                });
+
+
+                groupsData = prefixes + '<book.ttl#this> vcard:includesGroup  <Group/Home.ttl#this>. <Group/Home.ttl#this> a vcard:Group; vcard:fn "Home"\n' 
+                     + '<book.ttl#this> vcard:includesGroup  <Group/Work.ttl#this>. <Group/Work.ttl#this> a vcard:Group; vcard:fn "Work"\n' 
+
+                 agenda.push(function() {
+                    webOperation('PUT', base + 'groups.ttl', { data: groupsData, contentType: 'text/turtle'}, function(ok, body) {
+                        complainIfBad(ok, "Failed to initialize empty results file: " + body);
+                        if (ok) agenda.shift()();
+                    })
+                });
+
+           ////////////
+
+                agenda.shift()();
                 
+                 
             }); // callback to newAppInstance
 
             
@@ -458,6 +450,7 @@ tabulator.panes.register( {
                 donePredicate(ns.vcard('hasUID'));
                 donePredicate(ns.vcard('fn'));
                 donePredicate(ns.vcard('hasEmail'));
+                donePredicate(ns.vcard('hasTelephone'));
                 donePredicate(ns.vcard('hasName'));
                 donePredicate(ns.vcard('hasAddress'));
                 donePredicate(ns.vcard('note'));

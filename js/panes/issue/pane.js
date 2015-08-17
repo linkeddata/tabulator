@@ -246,7 +246,7 @@ tabulator.panes.register( {
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var div = dom.createElement("div")
         div.setAttribute('class', 'issuePane');
-        div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
+        div.innerHTML='<h1>Issue</h1><p>This is a pane under development</p>';
 
         var commentFlter = function(pred, inverse) {
             if (!inverse && pred.uri == 

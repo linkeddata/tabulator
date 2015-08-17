@@ -42,7 +42,7 @@ tabulator.panes.register( {
         
         var div = dom.createElement('div')
         div.setAttribute('class', 'transactionPane');
-        div.innherHTML='<h1>Transaction</h1><table><tbody><tr>\
+        div.innerHTML='<h1>Transaction</h1><table><tbody><tr>\
         <td>%s</tr></tbody></table>\
         <p>This is a pane under development.</p>';
 

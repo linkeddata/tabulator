@@ -89,6 +89,7 @@ $rdf.subscription =  function(options, doc, onChange) {
         router.register(wsuri, doc.uri);
     };
     
+    
     var getChanges_WS = function(doc, onChange) {
         var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
         var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
@@ -252,7 +253,6 @@ tabulator.panes.register( {
         var cardDoc = kb.sym(subject.uri.split('#')[0]);
         
         div.setAttribute('class', 'contactPane');
-        div.innherHTML='<h1>Contact</h1><p>This is a pane under development</p>';
 
         var commentFlter = function(pred, inverse) {
             if (!inverse && pred.uri == 
@@ -303,8 +303,72 @@ tabulator.panes.register( {
         }
 
 
-         
+         var gen_uuid = function() { // http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+                return v.toString(16);
+            });
+        };
+
+
         
+        // Unused and untested but could be handy: a facetted browser view
+        //
+        var addressBookAsTable = function() {
+            var query = new $rdf.Query(tabulator.Util.label(subject));
+            var vars =  ['contact', 'name', 'em', 'email'];
+            var v = {}; // The RDF variable objects for each variable name
+            vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
+
+            query.pat.add(v['contact'], ns.vcard('fn'), v['name']);
+            query.pat.add(v['contact'], ns.vcard('hasEmail'), v['em']);
+            query.pat.add(v['contact'], ns.vcard('value'), v['email']);
+            query.pat.optional = [];
+            
+            var propertyList = kb.any(subject, ns.wf('propertyList')); // List of extra properties
+            // console.log('Property list: '+propertyList); //
+            if (propertyList) {
+                properties = propertyList.elements;
+                for (var p=0; p < properties.length; p++) {
+                    var prop = properties[p];
+                    var vname = '_prop_'+p;
+                    if (prop.uri.indexOf('#') >= 0) {
+                        vname = prop.uri.split('#')[1];
+                    }
+                    query.vars.push(v[vname]=$rdf.variable(vname));
+                    var oneOpt = new $rdf.IndexedFormula();
+                    query.pat.optional.push(oneOpt);
+                    oneOpt.add(v['contact'], prop, v[vname]);
+                }
+            }
+                    
+            var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
+   /*             'hints': {
+                    '?created': { 'cellFormat': 'shortDate'},
+                    '?state': { 'initialSelection': selectedStates }}
+                    */
+                } );
+                    
+            div.appendChild(tableDiv);
+
+            if (tableDiv.refresh) { // Refresh function
+                var refreshButton = dom.createElement('button');
+                refreshButton.textContent = "refresh";
+                refreshButton.addEventListener('click', function(e) {
+                    tabulator.fetcher.unload(nameEmailIndex);
+                    tabulator.fetcher.nowOrWhenFetched(nameEmailIndex.uri, undefined, function(ok, body){
+                        if (!ok) {
+                            console.log("Cant refresh data:" + body);
+                        } else {
+                            tableDiv.refresh();
+                        };
+                    });
+                }, false);
+                div.appendChild(refreshButton);
+            } else {
+                console.log('No refresh function?!');
+            }
+        };
 
                                                   
         /////////////////////// Reproduction: Spawn a new instance of this app
@@ -335,7 +399,7 @@ tabulator.panes.register( {
 
                  
                 //
-                // kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, stateStore);
+                // kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, doc);
                 
                 //kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, there);
                 
@@ -439,7 +503,7 @@ tabulator.panes.register( {
             var individualForm = kb.sym(individualFormDoc.uri + '#form1')
 
             tabulator.fetcher.nowOrWhenFetched(individualFormDoc.uri, subject, function drawContactPane(ok, body) {
-                if (!ok) return console.log("Failed to load form " + indiviaualForm.uri + ' '+body);
+                if (!ok) return console.log("Failed to load form " + individualFormDoc.uri + ' '+body);
                 var predicateURIsDone = {};
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
                 donePredicate(ns.rdf('type'));
@@ -479,7 +543,7 @@ tabulator.panes.register( {
                  //   Comment/discussion area
                 /*
                 var messageStore = kb.any(tracker, ns.wf('messageStore'));
-                if (!messageStore) messageStore = kb.any(tracker, ns.wf('stateStore'));                
+                if (!messageStore) messageStore = kb.any(tracker, ns.wf('doc'));                
                 div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
                 donePredicate(ns.wf('message'));
                 */
@@ -507,7 +571,7 @@ tabulator.panes.register( {
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                     });
-                    
+                /*
                 var refreshButton = dom.createElement('button');
                 refreshButton.textContent = "refresh";
                 refreshButton.addEventListener('click', function(e) {
@@ -522,11 +586,12 @@ tabulator.panes.register( {
                     });
                 }, false);
                 div.appendChild(refreshButton);
+                */
 
 
 
-                    
-            });  // End nowOrWhenFetched tracker
+                    // Alas force ct for github.io 
+            }, { 'forceContentType': 'text/turtle'});  // End nowOrWhenFetched tracker
 
     ///////////////////////////////////////////////////////////
 
@@ -551,24 +616,136 @@ tabulator.panes.register( {
             h.setAttribute('style', 'font-size: 120%');
             h.appendChild(dom.createTextNode(title));   // try it without an h2
 */
-            // New Contact button
-            var b = dom.createElement("button");
-            var container = dom.createElement("div");
-            b.setAttribute("type", "button");
-            if (!me) b.setAttribute('disabled', 'true')
-            container.appendChild(b);
-            div.appendChild(container);
-            b.innerHTML = "New " + IndividualClassLabel;
-            b.addEventListener('click', function(e) {
-                    b.setAttribute('disabled', 'true');
-                    // container.appendChild(newContactForm(dom, kb, subject));   // @@@@ todo
-                }, false);
+            
+            
+ 
+           var createNewContact = function(book, name, selectedGroups, callback) {
+                var gix = kb.any(book, ns.vcard('groupIndex'));
+                var pix = kb.any(book, ns.vcard('nameEmailIndex'));
+                
+                var uuid = gen_uuid();
+                var x = subject.uri.split('#')[0]
+                var doc  = kb.sym(x.slice(0, x.lastIndexOf('/')+1) + 'Person/' + uuid + '.ttl');
+                var person = kb.sym(doc.uri + '#this');
+                dump(" New Person will be: "+ person + '\n');
+                
+                // Sets of statements to different files
+                agenda = [    // Store the card about the person
+                        
+                    [   $rdf.st(person, ns.vcard('inAddressBook'), book, pix), // The people index
+                        $rdf.st(person, ns.vcard('fn'), name, pix) ]
+                ];
+
+                //@@ May be missing email - sync that differently
+                
+                // sts.push(new $rdf.Statement(person, DCT('created'), new Date(), doc));  ??? include this?
+                for (gu in selectedGroups) {
+                    var g = kb.sym(gu);
+                    var gd = kb.sym(gu.split('#')[0]);
+                    agenda.push( [   $rdf.st(g, ns.vcard('hasMember'), person, gd)]);
+                    dump("@@  This person is in group " + g);
+                }
+
+                
+ 
+               // updater.update([], agenda.shift(), updateCallback); // Kick off the waterfall
+                
+                var updateCallback = function(uri, success, body){
+                    if (!success) {
+                        dump("Error: can\'t update " + uri + " for new contact:" + body + '\n' );
+                        callback(false, "Error: can\'t uodate " + uri + " for new contact:" + body);
+                    } else {
+                        if (agenda.length > 0) {
+                            dump("Patching " + agenda[0] + '\n')
+                            updater.update([], agenda.shift(), updateCallback);
+                        } else { // done!
+                            dump("Done patching. Now reading back in.\n")
+                            tabulator.fetcher.nowOrWhenFetched(doc, undefined, function(ok, body){
+                                if (ok) {
+                                    callback(true, person);
+                                } else {
+                                    callback(false, body);
+                                }
+                            });
+                        }
+                    }
+                };
+
+                var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
+                tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
+                    if (ok) {
+                        dump(" People index must be loaded\n");
+                        updater.put(doc, [
+                                $rdf.st(person, ns.vcard('fn'), name, doc), 
+                                $rdf.st(person, ns.rdf('type'), ns.vcard('Individual'), doc) ],
+                            'text/turtle', updateCallback);
+                    } else {
+                        dump("Error loading people index!" + uri + ": " + message);
+                        callback(false, "Error loading people index!" + uri + ": " + message + '\n');
+                    }
+                });
+
+            };
  
             
-            
+            //  Form to collect data about a New Contact
+            //
+            var newContactForm = function(dom, kb, selectedGroups, createdNewContactCallback) {
+                var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
+
+                tabulator.fetcher.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
+                tabulator.fetcher.removeCallback('fail','expand'); // @@ ?? 
+                
+                classLabel = tabulator.Util.label(ns.vcard('Individual'));
+                form.innerHTML = "<h2>Add new "+
+                        classLabel+"</h2><p>name of new "+classLabel+":</p>";
+                var namefield = dom.createElement('input')
+                namefield.setAttribute('type','text');
+                namefield.setAttribute('size','100');
+                namefield.setAttribute('maxLength','2048');// No arbitrary limits
+                namefield.select() // focus next user input
+                
+                var gotName = function() {
+                    namefield.setAttribute('class','pendingedit');
+                    namefield.disabled = true;
+                    createNewContact(subject, kb.literal(namefield.value), selectedGroups, function(success, body) {
+                        if (!success) {
+                             console.log("Error: can\'t save new contact:" + body);
+                        } else {
+                            createdNewContactCallback(true, body);
+                        }
+                    });
+                }
+                
+                namefield.addEventListener('keyup', function(e) {
+                    if(e.keyCode == 13) {
+                        gotName();
+                    }
+                }, false);
+                form.appendChild(namefield);
+                
+                var cancel = form.appendChild(dom.createElement("button"));
+                cancel.setAttribute("type", "button");
+                cancel.innerHTML = "Cancel";
+                cancel.addEventListener('click', function(e) {
+                    createdNewContactCallback(false);
+                }, false);
+
+                var b = form.appendChild(dom.createElement("button"));
+                b.setAttribute("type", "button");
+                b.innerHTML = "Continue";
+                b.addEventListener('click', function(e) {
+                    gotName();
+                }, false);
+                
+                return form;
+            };
+        
+
+                       
             ////////////////////////////// Three-column Contact Browser
             
-            if (1) tabulator.fetcher.nowOrWhenFetched(groupIndex.uri, subject, function(ok, body) {
+            tabulator.fetcher.nowOrWhenFetched(groupIndex.uri, subject, function(ok, body) {
         
                 if (!ok) return console.log("Cannot load group index: "+body);
                 
@@ -594,7 +771,7 @@ tabulator.panes.register( {
                 peopleHeader.textContent = "name";
                 peopleHeader.setAttribute('style', 'min-width: 18em;');
                 peopleMain.setAttribute('style','overflow:scroll;');
-                cardHeader.textContent = "contact details";
+                // cardHeader.textContent = "contact details"; // clutter
                 
                 
                 var groups = kb.each(subject, ns.vcard('includesGroup'));
@@ -694,7 +871,7 @@ tabulator.panes.register( {
                                 selected = {}; // If alt key pressed, accumulate multiple
                             }
                             selected[group.uri] = selected[group.uri] ? false : true;
-                            // We set the cell gey to immediately acknowledge the user's click, and in the case
+                            // We set the cell grey to immediately acknowledge the user's click, and in the case
                             // of a slow load to let them know that something is happening (or broken)
                             // using the same grey-ed out metaphor as the input fields have.
                             groupRow.setAttribute('style',  'color: #888;'); // Pending load
@@ -710,83 +887,51 @@ tabulator.panes.register( {
                     foo(groupRow, group);
                 }
                 
+ 
+                // New Contact button
+                var b = dom.createElement("button");
+                var container = dom.createElement("div");
+                b.setAttribute("type", "button");
+                if (!me) b.setAttribute('disabled', 'true')
+                container.appendChild(b);
+                div.appendChild(container);
+                b.innerHTML = "New " + IndividualClassLabel;
+                
+                var createdNewContactCallback1 = function(ok, person) {
+                    dump("createdNewContactCallback1 "+ok+" - "+person +"\n");
+                    cardMain.innerHTML = ''; 
+                    if (ok) {
+                        cardMain.appendChild(cardPane(dom, person, 'contact'));
+                    } // else no harm done delete form
+                };
+
+                b.addEventListener('click', function(e) {
+                    b.setAttribute('disabled', 'true');
+                    cardMain.innerHTML = '';
+
+                    var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
+                    tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
+                        if (ok) {
+                            dump(" People index has been loaded\n");
+                        } else {
+                            dump("Error: People index has NOT been loaded" + message + "\n");
+                        };
+                        // Just a heads up, actually used later.
+                    });
+                    cardMain.appendChild(newContactForm(dom, kb, selected, createdNewContactCallback1));
+                }, false);
+ 
              
+                                     
             });
                                              
-            // Table of contacts - when we have the main big contact list
-            if (0) tabulator.fetcher.nowOrWhenFetched(nameEmailIndex.uri, subject, function(ok, body) {
-        
-                if (!ok) return console.log("Cannot load people index: "+body);
-                
-                var query = new $rdf.Query(tabulator.Util.label(subject));
-                var vars =  ['contact', 'name', 'em', 'email'];
-                var v = {}; // The RDF variable objects for each variable name
-                vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))});
-                query.pat.add(v['contact'], ns.vcard('fn'), v['name']);
-
-                query.pat.add(v['contact'], ns.vcard('hasEmail'), v['em']);
-
-                query.pat.add(v['contact'], ns.vcard('value'), v['email']);
-
-                query.pat.optional = [];
-                
-                var propertyList = kb.any(subject, ns.wf('propertyList')); // List of extra properties
-                // console.log('Property list: '+propertyList); //
-                if (propertyList) {
-                    properties = propertyList.elements;
-                    for (var p=0; p < properties.length; p++) {
-                        var prop = properties[p];
-                        var vname = '_prop_'+p;
-                        if (prop.uri.indexOf('#') >= 0) {
-                            vname = prop.uri.split('#')[1];
-                        }
-                        var oneOpt = new $rdf.IndexedFormula();
-                        query.pat.optional.push(oneOpt);
-                        query.vars.push(v[vname]=$rdf.variable(vname));
-                        oneOpt.add(v['contact'], prop, v[vname]);
-                    }
-                }
-                
-            
-                        
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
-       /*             'hints': {
-                        '?created': { 'cellFormat': 'shortDate'},
-                        '?state': { 'initialSelection': selectedStates }}
-                        */
-                    } );
-                        
-                div.appendChild(tableDiv);
-
-                if (tableDiv.refresh) { // Refresh function
-                    var refreshButton = dom.createElement('button');
-                    refreshButton.textContent = "refresh";
-                    refreshButton.addEventListener('click', function(e) {
-                        tabulator.fetcher.unload(nameEmailIndex);
-                        tabulator.fetcher.nowOrWhenFetched(nameEmailIndex.uri, undefined, function(ok, body){
-                            if (!ok) {
-                                console.log("Cant refresh data:" + body);
-                            } else {
-                                tableDiv.refresh();
-                            };
-                        });
-                    }, false);
-                    div.appendChild(refreshButton);
-                } else {
-                    console.log('No refresh function?!');
-                }
-                            
-                
-                
-                
-            });
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newAddressBookButton(subject));
             // end of AddressBook instance
 
 
         } else { 
-            console.log("Error: Contact pane: No evidence that "+subject+" is either a bug or a tracker.")
+            console.log("Error: Contact pane: No evidence that "+subject+" is either a bug or a tracker.");
         }         
         if (!tabulator.preferences.get('me')) {
             console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
@@ -810,7 +955,7 @@ tabulator.panes.register( {
             }
         });
         
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
+        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end // float sucks
 
         div.appendChild(loginOutButton);
         */

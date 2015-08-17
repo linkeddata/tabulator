@@ -37,7 +37,7 @@ tabulator.panes.register( {
         
         var div = dom.createElement('div')
         div.setAttribute('class', 'periodPane');
-        div.innherHTML='<h1>Period</h1><table><tbody><tr>\
+        div.innerHTML='<h1>Period</h1><table><tbody><tr>\
         <td>%s</tr></tbody></table>\
         <p>This is a pane under development.</p>';
 

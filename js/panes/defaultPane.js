@@ -55,6 +55,12 @@ tabulator.panes.defaultPane = {
             holdingTd.setAttribute('notSelectable','true');
             var img = myDocument.createElement('img');
             img.src = tabulator.Icon.src.icon_add_new_triple;
+            img.addEventListener('click', function  add_new_tripleIconMouseDownListener(e) { // tabulator.Icon.src.icon_add_new_triple
+                    thisOutline.UserInput.addNewPredicateObject(e);
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return;
+            });
             img.className='bottom-border-active';
             //img.addEventListener('click', thisOutline.UserInput.addNewPredicateObject,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          

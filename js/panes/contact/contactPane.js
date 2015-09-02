@@ -219,8 +219,303 @@ $rdf.subscription =  function(options, doc, onChange) {
 
 /////////////////////////////////////////// End of subscription stufff 
 
+// Sets the best name we have and looks up a better one
+tabulator.panes.utils.setName = function(element, subject) {
+    var kb = tabulator.kb, ns = tabulator.ns;
+    var name = kb.any(subject, ns.vcard('fn')) || kb.any(subject, ns.foaf('name'))
+        ||  kb.any(subject, ns.vcard('organization-name'));
+    element.textContent = name ? name.value : tabulator.Util.label(subject);
+    if (!name) {
+        tabulator.sf.nowOrWhenFetched(subject, undefined, function(ok) {
+             element.textContent = (ok ? '' : '?') +  tabulator.Util.label(subject);
+        });
+    }
+}
 
 
+
+// Delete button with a check you really mean it
+
+tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, deleteFunction) {
+    var delButton = dom.createElement('button');
+    container.appendChild(delButton);
+    delButton.textContent = "-";
+    
+    container.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
+    delButton.setAttribute('class', 'hoverControlHide');
+    delButton.setAttribute('style', 'color: red; margin-right: 0.3em; foat:right; text-align:right');
+    delButton.addEventListener('click', function(e) {
+        container.removeChild(delButton);  // Ask -- are you sure?
+        var cancelButton = dom.createElement('button');
+        cancelButton.textContent = "cancel";
+        container.appendChild(cancelButton).addEventListener('click', function(e) {
+            container.removeChild(sureButton);
+            container.removeChild(cancelButton);
+            container.appendChild(delButton);
+        }, false);
+        var sureButton = dom.createElement('button');
+        sureButton.textContent = "Delete " + noun;
+        container.appendChild(sureButton).addEventListener('click', function(e) {
+            container.removeChild(sureButton);
+            container.removeChild(cancelButton);
+            deleteFunction();   
+        }, false);
+    }, false);
+}
+
+////////////////////////////////////// Start ACL stuff
+
+
+// Take the "defaltForNew" ACL and convert it into the equivlent ACL 
+// which the resource would have had.  Retur it as a new separate store.
+
+tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
+    var kb = tabulator.kb;
+    var auth = tabulator.ns.auth;
+    var ns = tabulator.ns;
+    var defaults = kb.each(undefined, auth('defaultForNew'), defaultResource, defaultACLdoc);
+    var proposed = [];
+    defaults.map(function(da) {
+        proposed = proposed.concat(kb.statementsMatching(da, auth('agent'), undefined, defaultACLdoc))
+            .concat(kb.statementsMatching(da, auth('agentClass'), undefined, defaultACLdoc))
+            .concat(kb.statementsMatching(da, auth('mode'), undefined, defaultACLdoc));
+        proposed.push($rdf.st(da, auth('accessTo'), doc, defaultACLdoc)); // Suppose 
+    });
+    var kb2 = $rdf.graph(); // Potential - derived is kept apart
+    proposed.map(function(st){
+        var move = function(sym) {
+            var y = defaultACLdoc.uri.length; // The default ACL file
+            return  $rdf.sym( (sym.uri.slice(0, y) == defaultACLdoc.uri) ?
+                 aclDoc.uri + sym.uri.slice(y) : sym.uri );
+        }
+        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
+    });
+    
+    //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
+    var ccc = kb2.each(undefined, auth('accessTo'), doc)
+        .filter(function(au){ return  kb2.holds(au, auth('mode'), auth('Control'))});
+    ccc.map(function(au){
+        var au2 = kb2.sym(au.uri + "__ACLACL");
+            kb2.add(au2, ns.rdf('type'), auth('Authorization'), aclDoc);
+            kb2.add(au2, auth('accessTo'), aclDoc, aclDoc);
+            kb2.add(au2, auth('mode'), auth('Read'), aclDoc);
+            kb2.add(au2, auth('mode'), auth('Write'), aclDoc);
+        kb2.each(au, auth('agent')).map(function(who){
+            kb2.add(au2, auth('agent'), who, aclDoc);
+        });
+        kb2.each(au, auth('agentClass')).map(function(who){
+            kb2.add(au2, auth('agentClass'), who, aclDoc);
+        });
+    });
+    
+    return kb2;
+}
+
+tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
+    var kb = tabulator.kb;
+    var updater = new tabulator.rdf.sparqlUpdate(kb);
+    var auth = tabulator.ns.auth;
+    var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
+
+    var table = dom.createElement('table');
+    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
+    var headerRow = table.appendChild(dom.createElement('tr'));
+    headerRow.textContent = "Sharing for group " + tabulator.Util.label(subject);
+    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
+
+    var statusRow = table.appendChild(dom.createElement('tr'));
+    var statusBlock = statusRow.appendChild(dom.createElement('div'));
+    statusBlock.setAttribute('style', 'padding: 2em;');
+    var MainRow = table.appendChild(dom.createElement('tr'));
+    var box = MainRow.appendChild(dom.createElement('table'));
+    var bottomRow = table.appendChild(dom.createElement('tr'));
+
+    var ACLControl = function(box, doc, aclDoc, kb) {
+        var authorizations = kb.each(undefined, auth('accessTo'), doc, aclDoc); // ONLY LOOK IN ACL DOC
+        if (authorizations.length === 0) {
+            statusBlock.textContent += "Access control file exists but contains no authorizations! " + aclDoc + ")";
+        }
+        for (i=0; i < authorizations.length; i++) {
+            var row = box.appendChild(dom.createElement('tr'));
+            var rowdiv1 = row.appendChild(dom.createElement('div'));
+            row.setAttribute('style', 'margin: 1em; border: 0.1em solid black; border-radius: 0.5em; padding: 1em;') // doesn't work
+            rowdiv1.setAttribute('style', 'margin: 1em; border: 0.1em solid black; border-radius: 1em; padding: 1em;');
+            rowtable1 = rowdiv1.appendChild(dom.createElement('table'));
+            rowrow = rowtable1.appendChild(dom.createElement('tr'));
+            var left = rowrow.appendChild(dom.createElement('td'));
+            var middle = rowrow.appendChild(dom.createElement('td'));
+            middle.textContent = "can:"
+            middle.setAttribute('style', 'font-size:100%; padding: 1em;');
+            var leftTable = left.appendChild(dom.createElement('table'));
+            var right = rowrow.appendChild(dom.createElement('td'));
+            var rightTable = right.appendChild(dom.createElement('table'));
+            var a = authorizations[i];
+            
+            kb.each(a,  auth('agent')).map(function(x){
+                var tr = leftTable.appendChild(dom.createElement('tr'));
+                tabulator.panes.utils.setName(tr, x);
+                tr.setAttribute('style', 'min-width: 12em');
+            });
+            
+            kb.each(a,  auth('agentClass')).map(function(x){
+                var tr = leftTable.appendChild(dom.createElement('tr'));
+                tr.textContent = tabulator.Util.label(x) + ' *'; // for now // later add # or members
+            });
+            
+            kb.each(a,  auth('mode')).map(function(x){
+                var tr = rightTable.appendChild(dom.createElement('tr'));
+                tr.textContent = tabulator.Util.label(x); // for now // later add # or members
+            });
+        }
+    }
+
+    tabulator.panes.utils.getACL(doc, function(ok, status, aclDoc, message) {
+        var i, row, left, right, a;
+        var auth = tabulator.ns.auth;
+        var useDefault;
+        var addDefaultButton = function() {
+            useDefault = bottomRow.appendChild(dom.createElement('button'));
+            useDefault.textContent = "Stop specific sharing for this group -- just use default.";
+            useDefault.addEventListener('click', function(event) {
+                updater.delete(doc, function(uri, ok, message){
+                    if (!ok) {
+                        statusBlock.textContent += " (Error deleting access control file: "+message+")";
+                    } else {
+                        statusBlock.textContent = " The sharing for this group is now the default.";
+                        bottomRow.removeChild(useDefault);
+                    }
+                });
+
+            });
+        }
+
+        
+        // Recursively search for the ACL file which gives default access
+        var tryParent = function(uri) {
+            if (uri.slice(-1) === '/') {
+                uri = uri.slice(0, -1);
+            }
+            var right = uri.lastIndexOf('/');
+            var left = uri.indexOf('/', uri.indexOf('//') + 2);
+            uri = uri.slice(0, right + 1);
+            var doc2 = $rdf.sym(uri);
+            tabulator.panes.utils.getACL(doc2, function(ok, status, aclDoc2) {
+
+                if (!ok) {
+                    statusBlock.textContent += ("( No ACL pointer " + uri + ' ' + status + ")");
+                } else if (status === 403) {
+                    statusBlock.textContent += ("( ACL file FORBIDDEN. Stop." + uri + ")");
+                } else if (status === 404) {
+                    statusBlock.textContent += ("( No ACL file for set " + uri + ")");
+                    if (left >= right) {
+                        statusBlock.textContent += ("( Thats all folks.)");
+                    } else {
+                        tryParent(uri);
+                    }
+                } else { // 200
+                    statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
+                    var defaults = kb.each(undefined, auth('defaultForNew'), kb.sym(uri), aclDoc2);
+                    if (!defaults.length) {
+                        statusBlock.textContent += " (No defaults given.)";
+                    } else {
+                        statusBlock.textContent = "The sharing for this group is the default.";
+                        var kb2 = tabulator.panes.utils.adoptACLDefault(doc, aclDoc, kb.sym(uri), aclDoc2) 
+                        ACLControl(box, doc, aclDoc, kb2); // Add btton to save them as actual
+                        
+                        var editPlease = bottomRow.appendChild(dom.createElement('button'));
+                        editPlease.textContent = "Set specific sharing\nfor this group";
+                        editPlease.addEventListener('click', function(event) {
+                            updater.put(aclDoc, kb2.statements,
+                                'text/turtle', function(uri, ok, message){
+                                if (!ok) {
+                                    statusBlock.textContent += " (Error writing back access control file: "+message+")";
+                                } else {
+                                    statusBlock.textContent = " (Now editing specific access for this group)";
+                                    bottomRow.removeChild(editPlease);
+                                }
+                            });
+
+                        });
+                    }
+                }
+            });
+        };
+
+        if (!ok) {
+            statusBlock.textContent += ("( Access control information not provided " + uri +")");
+        } else if (status === 404) {
+            statusBlock.textContent = '(No specific access control has been set.)\n'; // error message
+            statusBlock.setAttribute('style', 'background-color: #ffe; padding:2em;');
+            tryParent(doc.uri);
+            //  @@ construct default one - the server should do that
+        } else  if (status === 403) {
+            statusBlock.textContent = '(Sharing not available to you)'; // error message
+        } else  if (status !== 200) {
+            statusBlock.textContent = message; // error message
+            statusBlock.setAttribute('style', 'background-color: #f99; padding:2em;')
+        } else { // 200
+            ACLControl(box, doc, aclDoc, kb);
+            addDefaultButton();
+        }        
+    });
+    
+    return table
+}; // ACLControl
+
+
+tabulator.panes.utils.setACL = function(docURI, aclText, callback) {
+    var aclDoc = kb.any(kb.sym(docURI),
+        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+    if (aclDoc) { // Great we already know where it is
+        webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);        
+    } else {
+    
+        fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+            var aclDoc = kb.any(kb.sym(docURI),
+                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+            if (!aclDoc) {
+                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                callback(false, "No Link rel=ACL header for " + docURI);
+            } else {
+                webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+            }
+        })
+    }
+};
+
+//    Calls back (ok, status, acldoc, message)
+// 
+//   (false, errormessage)        no link header
+//   (true, 403, documentSymbol, fileaccesserror) not authorized
+//   (true, 404, documentSymbol, fileaccesserror) if does not exist
+//   (true, 200, documentSymbol)   if file exitss and read OK
+//
+tabulator.panes.utils.getACL = function(doc, callback) {
+    tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
+        if (!ok) return callback(ok, "Can't get headers to find ACL file: " + body);
+        var kb = tabulator.kb;
+        var aclDoc = kb.any(doc,
+            kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+        if (!aclDoc) {
+            callback(false, "No Link rel=ACL header for " + doc);
+        } else {
+            if (tabulator.sf.nonexistant[aclDoc.uri]) {
+                return callback(true, 404, aclDoc, "ACL file does not exist.");
+            }
+            tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
+                if (!ok) {
+                    callback(true, xhr.status, aclDoc, "Can't read Access Control File " + body);
+                } else {
+                    callback(true, 200, aclDoc);
+                }
+            });
+        }
+    });
+};
+              
+
+///////////////////////////////////////////  End of ACL stuff
 
     
 // These used to be in js/init/icons.js but are better in the pane.
@@ -239,6 +534,7 @@ tabulator.panes.register( {
         var ns = tabulator.ns;
         var t = kb.findTypeURIs(subject);
         if (t[ns.vcard('Individual').uri]) return "Contact";
+        if (t[ns.vcard('Organization').uri]) return "contact";
         if (t[ns.vcard('Group').uri]) return "Group";
         if (t[ns.vcard('AddressBook').uri]) return "Address book";
         return null; // No under other circumstances
@@ -406,7 +702,8 @@ tabulator.panes.register( {
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
-
+                //  @@@  MAKE SURE NOT OVERWRITING EXISTING FILES
+                
                 agenda = [];
                 
                 prefixes = '@prefix vcard: <http://www.w3.org/2006/vcard/ns#>. \n\
@@ -492,33 +789,31 @@ tabulator.panes.register( {
                 refreshTree(root.children[i]);
             }
         }
-
+        
 
 
         //              Render a single contact Individual
         
-        if (t[ns.vcard('Individual').uri]) {
+        if (t[ns.vcard('Individual').uri]|| t[ns.vcard('Organization').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
 
-            var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
+            // var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
+            var individualFormDoc = kb.sym('https://timbl.rww.io/Apps/Contactator/individualForm.ttl');
             var individualForm = kb.sym(individualFormDoc.uri + '#form1')
 
             tabulator.fetcher.nowOrWhenFetched(individualFormDoc.uri, subject, function drawContactPane(ok, body) {
                 if (!ok) return console.log("Failed to load form " + individualFormDoc.uri + ' '+body);
                 var predicateURIsDone = {};
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+                
                 donePredicate(ns.rdf('type'));
                 donePredicate(ns.dc('title'));
-                // donePredicate(ns.dc('created'));
                 donePredicate(ns.dc('modified'));
                 
-                donePredicate(ns.vcard('hasUID'));
-                donePredicate(ns.vcard('fn'));
-                donePredicate(ns.vcard('hasEmail'));
-                donePredicate(ns.vcard('hasTelephone'));
-                donePredicate(ns.vcard('hasName'));
-                donePredicate(ns.vcard('hasAddress'));
-                donePredicate(ns.vcard('note'));
-
+                [ 'hasUID', 'fn', 'hasEmail', 'hasTelephone', 'hasName',
+                    'hasAddress', 'note'].map(function(p) {
+                    donePredicate(ns.vcard(p));
+                });
+                
 
                 var setPaneStyle = function() {
                     var types = kb.findTypeURIs(subject);
@@ -528,7 +823,7 @@ tabulator.panes.register( {
                         backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
                         if (backgroundColor) break;
                     }
-                    backgroundColor = backgroundColor ? backgroundColor.value : '#eee'; // default grey
+                    backgroundColor = backgroundColor ? backgroundColor.value : '#fff'; // default white
                     mystyle += "background-color: " + backgroundColor + "; ";
                     div.setAttribute('style', mystyle);
                 }
@@ -548,29 +843,18 @@ tabulator.panes.register( {
                 donePredicate(ns.wf('message'));
                 */
 
-/*
-                // Add in simple comments about the bug - if not already in extras form.
-                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
-                            return false
-                        });
-                    donePredicate(ns.rdfs('comment'));
-                };
-*/
                 div.appendChild(dom.createElement('tr'))
                             .setAttribute('style','height: 1em'); // spacer
                 
-                // Remaining properties
+                // Remaining properties from whatever ontollogy
                 tabulator.outline.appendPropertyTRs(div, plist, false,
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
-                    });
+                });
                 tabulator.outline.appendPropertyTRs(div, qlist, true,
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
-                    });
+                });
                 /*
                 var refreshButton = dom.createElement('button');
                 refreshButton.textContent = "refresh";
@@ -589,9 +873,10 @@ tabulator.panes.register( {
                 */
 
 
-
+            });  // End nowOrWhenFetched tracker
+            
                     // Alas force ct for github.io 
-            }, { 'forceContentType': 'text/turtle'});  // End nowOrWhenFetched tracker
+            // was:  ,{ 'forceContentType': 'text/turtle'}
 
     ///////////////////////////////////////////////////////////
 
@@ -611,29 +896,22 @@ tabulator.panes.register( {
             
             var title = kb.any(subject, ns.dc('title'));
             title = title ? title.value : classLabel;
-/*
-            var h = div.appendChild(dom.createElement('h2'));
-            h.setAttribute('style', 'font-size: 120%');
-            h.appendChild(dom.createTextNode(title));   // try it without an h2
-*/
             
-            
- 
-           var createNewContact = function(book, name, selectedGroups, callback) {
-                var gix = kb.any(book, ns.vcard('groupIndex'));
-                var pix = kb.any(book, ns.vcard('nameEmailIndex'));
+            //  Write a new contact to the web
+            //
+            var createNewContact = function(book, name, selectedGroups, callback) {
+                var nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'));
                 
                 var uuid = gen_uuid();
                 var x = subject.uri.split('#')[0]
                 var doc  = kb.sym(x.slice(0, x.lastIndexOf('/')+1) + 'Person/' + uuid + '.ttl');
                 var person = kb.sym(doc.uri + '#this');
-                dump(" New Person will be: "+ person + '\n');
                 
                 // Sets of statements to different files
-                agenda = [    // Store the card about the person
+                agenda = [    // Patch the main index to add the person
                         
-                    [   $rdf.st(person, ns.vcard('inAddressBook'), book, pix), // The people index
-                        $rdf.st(person, ns.vcard('fn'), name, pix) ]
+                    [   $rdf.st(person, ns.vcard('inAddressBook'), book, nameEmailIndex), // The people index
+                        $rdf.st(person, ns.vcard('fn'), name, nameEmailIndex) ]
                 ];
 
                 //@@ May be missing email - sync that differently
@@ -642,18 +920,15 @@ tabulator.panes.register( {
                 for (gu in selectedGroups) {
                     var g = kb.sym(gu);
                     var gd = kb.sym(gu.split('#')[0]);
-                    agenda.push( [   $rdf.st(g, ns.vcard('hasMember'), person, gd)]);
-                    dump("@@  This person is in group " + g);
+                    agenda.push( [  $rdf.st(g, ns.vcard('hasMember'), person, gd),
+                                    $rdf.st(person, ns.vcard('fn'), name, gd) 
+                    ]);
                 }
 
-                
- 
-               // updater.update([], agenda.shift(), updateCallback); // Kick off the waterfall
-                
                 var updateCallback = function(uri, success, body){
                     if (!success) {
                         dump("Error: can\'t update " + uri + " for new contact:" + body + '\n' );
-                        callback(false, "Error: can\'t uodate " + uri + " for new contact:" + body);
+                        callback(false, "Error: can\'t update " + uri + " for new contact:" + body);
                     } else {
                         if (agenda.length > 0) {
                             dump("Patching " + agenda[0] + '\n')
@@ -662,8 +937,10 @@ tabulator.panes.register( {
                             dump("Done patching. Now reading back in.\n")
                             tabulator.fetcher.nowOrWhenFetched(doc, undefined, function(ok, body){
                                 if (ok) {
+                                    dump("Read back in OK.\n")
                                     callback(true, person);
                                 } else {
+                                    dump("Read back in FAILED: " + body + "\n")
                                     callback(false, body);
                                 }
                             });
@@ -671,7 +948,6 @@ tabulator.panes.register( {
                     }
                 };
 
-                var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
                 tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
                     if (ok) {
                         dump(" People index must be loaded\n");
@@ -686,17 +962,50 @@ tabulator.panes.register( {
                 });
 
             };
- 
             
-            //  Form to collect data about a New Contact
-            //
-            var newContactForm = function(dom, kb, selectedGroups, createdNewContactCallback) {
+           // Write new group to web
+           // Creates an empty new group file and adds it to the index
+           //
+           var createNewGroup = function(book, name, callback) {
+                var gix = kb.any(book, ns.vcard('groupIndex'));
+                
+                var x = subject.uri.split('#')[0]
+                var gname = name.replace(' ', '_');
+                var doc  = kb.sym(x.slice(0, x.lastIndexOf('/')+1) + 'Group/' + gname + '.ttl');
+                var group = kb.sym(doc.uri + '#this');
+                dump(" New group will be: "+ group + '\n');
+                
+                tabulator.fetcher.nowOrWhenFetched(gix, undefined, function(ok, message) {
+                    if (ok) {
+                        dump(" Group index must be loaded\n");
+                        updater.update([], 
+                            [   $rdf.st(subject, ns.vcard('includesGroup'), group, gix),
+                                $rdf.st(group, ns.rdf('type'), ns.vcard('Group'), gix) ,
+                                $rdf.st(group, ns.vcard('fn'), name, gix) ], function(uri, success, body){
+                                    if (ok) {
+                                        updater.put(doc, [], 'text/turtle', function(uri, ok, body){
+                                            callback(ok, ok? group : "Can't save new group file " + doc + body);
+                                        });
+                                    } else {
+                                        callback(ok, "Could not update group index "+ body); // fail
+                                    }
+                            });
+                    } else {
+                        dump("Error loading people index!" + uri + ": " + message);
+                        callback(false, "Error loading people index!" + uri + ": " + message + '\n');
+                    }
+                });
+
+            };
+ 
+            // Form to get the name of a new thing before we create it        
+            var getNameForm = function(dom, kb, classLabel, selectedGroups, gotNameCallback) {
                 var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
 
                 tabulator.fetcher.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
                 tabulator.fetcher.removeCallback('fail','expand'); // @@ ?? 
                 
-                classLabel = tabulator.Util.label(ns.vcard('Individual'));
+                // classLabel = tabulator.Util.label(ns.vcard('Individual'));
                 form.innerHTML = "<h2>Add new "+
                         classLabel+"</h2><p>name of new "+classLabel+":</p>";
                 var namefield = dom.createElement('input')
@@ -708,13 +1017,7 @@ tabulator.panes.register( {
                 var gotName = function() {
                     namefield.setAttribute('class','pendingedit');
                     namefield.disabled = true;
-                    createNewContact(subject, kb.literal(namefield.value), selectedGroups, function(success, body) {
-                        if (!success) {
-                             console.log("Error: can\'t save new contact:" + body);
-                        } else {
-                            createdNewContactCallback(true, body);
-                        }
-                    });
+                    gotNameCallback(subject, namefield.value, selectedGroups);
                 }
                 
                 namefield.addEventListener('keyup', function(e) {
@@ -724,6 +1027,8 @@ tabulator.panes.register( {
                 }, false);
                 form.appendChild(namefield);
                 
+                var br = form.appendChild(dom.createElement("br"));
+
                 var cancel = form.appendChild(dom.createElement("button"));
                 cancel.setAttribute("type", "button");
                 cancel.innerHTML = "Cancel";
@@ -741,7 +1046,6 @@ tabulator.panes.register( {
                 return form;
             };
         
-
                        
             ////////////////////////////// Three-column Contact Browser
             
@@ -749,11 +1053,19 @@ tabulator.panes.register( {
         
                 if (!ok) return console.log("Cannot load group index: "+body);
                 
+                // organization-name is a hack for Mac records with no FN which is mandatory.
+                var nameFor = function(x) { 
+                    var name = kb.any(x, ns.vcard('fn')) || 
+                        kb.any(x, ns.foaf('name')) || kb.any(x, ns.vcard('organization-name')); 
+                    return name ? name.value : '???';
+                }
                 
                 var bookTable = dom.createElement('table');
+                bookTable.setAttribute('style', 'border-collapse: collapse; margin-right: 0;')
                 div.appendChild(bookTable);
                 var bookHeader = bookTable.appendChild(dom.createElement('tr'));
                 var bookMain = bookTable.appendChild(dom.createElement('tr'));
+                var bookFooter = bookTable.appendChild(dom.createElement('tr'));
                 var groupsHeader =  bookHeader.appendChild(dom.createElement('td'));
                 var peopleHeader =  bookHeader.appendChild(dom.createElement('td'));
                 var cardHeader =  bookHeader.appendChild(dom.createElement('td'));
@@ -761,8 +1073,13 @@ tabulator.panes.register( {
                 var groupsMainTable = groupsMain.appendChild(dom.createElement('table'));
                 var peopleMain = bookMain.appendChild(dom.createElement('td'));
                 var peopleMainTable = peopleMain.appendChild(dom.createElement('table'));
+
+                var groupsFooter =  bookFooter.appendChild(dom.createElement('td'));
+                var peopleFooter =  bookFooter.appendChild(dom.createElement('td'));
+                var cardFooter =  bookFooter.appendChild(dom.createElement('td'));
                 
                 var cardMain = bookMain.appendChild(dom.createElement('td'));
+                cardMain.setAttribute('style', 'margin: 0;'); // fill space available
                 var dataCellStyle =  'padding: 0.1em;'
                 
                 groupsHeader.textContent = "groups";
@@ -787,11 +1104,11 @@ tabulator.panes.register( {
                 };
 
                 var compareForSort = function(self, other) {
-                    var s = kb.any(self, ns.vcard('fn'));
-                    var o = kb.any(other, ns.vcard('fn'));
+                    var s = nameFor(self) ;
+                    var o = nameFor(other);
                     if (s && o) {
-                        s = s.value.toLowerCase();
-                        o = o.value.toLowerCase();
+                        s = s.toLowerCase();
+                        o = o.toLowerCase();
                         if (s > o) return 1;
                         if (s < o) return -1;
                     }
@@ -799,6 +1116,34 @@ tabulator.panes.register( {
                     if (self.uri < other.uri) return -1;
                     return 0;
                 }
+
+                // In a LDP work, deletes the whole document describing a thing
+                // plus patch out ALL mentiosn of it!    Use with care!
+                // beware of other dta picked up from other places being smushed 
+                // together and then deleted.
+
+                var deleteThing = function(x) {
+                    var ds = kb.statementsMatching(x).concat(kb.statementsMatching(undefined, undefined, x));
+                    var targets = {};
+                    ds.map(function(st){targets[st.why.uri] = st;});
+                    agenda = []; // sets of statements of same dcoument to delete;
+                    for (target in targets) {
+                        agenda.push(ds.filter(function(st){ return st.why.uri = target}));
+                        dump('Deleting '+ agenda[agenda.length -1].length + ' from ' + target)
+                    }
+                    function nextOne() {
+                        if (agenda.length > 0) {
+                            updater.update(agenda.shift(), [], function(uri, ok, body) {
+                                nextOne();
+                            });
+                        } else {
+                            var doc = kb.sym(x.uri.split('#')[0]);
+                            dump('Deleting resoure ' + doc)
+                            updater.deleteResource(doc);
+                        }
+                    }
+                    nextOne;
+                };
 
                 var refreshNames = function() {
                     var cards = [], ng = 0;
@@ -818,13 +1163,16 @@ tabulator.panes.register( {
                         var personRow = peopleMainTable.appendChild(dom.createElement('tr'));
                         personRow.setAttribute('style', dataCellStyle);
                         var person = cards[j];
-                        var name = kb.any(person, ns.vcard('fn')) ||
-                                kb.any(person, ns.foaf('name'));
-                        name = name ? name.value : '???';
+                        var name = nameFor(person);
                         personRow.textContent = name;
                         personRow.subject = person;
 
                         var setPersonListener = function toggle(personRow, person) {
+                            tabulator.panes.utils.deleteButtonWithCheck(dom, personRow, 'contact', function(){
+                                deleteThing(person);
+                                refreshNames();
+                                cardMain.innerHTML = '';
+                            });
                             personRow.addEventListener('click', function(event){
                                 event.preventDefault();
                                 cardMain.innerHTML = 'loading...';
@@ -864,23 +1212,35 @@ tabulator.panes.register( {
                     // var checkBox = groupLeft.appendChild(dom.createElement('input'))
                     // checkBox.setAttribute('type', 'checkbox'); // @@ set from personal last settings
                     var foo = function toggle(groupRow, group) {
+                        tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, "group", function(){
+                            deleteThing(group);
+                        });
                         groupRow.addEventListener('click', function(event){
                             event.preventDefault();
                             var groupList = kb.sym(group.uri.split('#')[0]);
                             if (!event.altKey) {
                                 selected = {}; // If alt key pressed, accumulate multiple
+                                /*
+                                cardMain.innerHTML = ''; 
+                                cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                    if (!ok) cardMain.innerHTML = "Failed: " + body;
+                                }));
+                                */
                             }
                             selected[group.uri] = selected[group.uri] ? false : true;
-                            // We set the cell grey to immediately acknowledge the user's click, and in the case
-                            // of a slow load to let them know that something is happening (or broken)
-                            // using the same grey-ed out metaphor as the input fields have.
-                            groupRow.setAttribute('style',  'color: #888;'); // Pending load
-                            // dump("click group " + group + '; ' + selected[group.uri] + '\n');
+                            refreshGroups();
+                            peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
+
                             kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
                                 if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                // dump("Loaded group file " + groupList + '\n')
-                                refreshGroups();
                                 refreshNames();
+
+                                if (!event.altKey) { // If only one group has beeen selected show ACL
+                                    cardMain.innerHTML = ''; 
+                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                        if (!ok) cardMain.innerHTML = "Failed: " + body;
+                                    }));
+                                }
                             })
                         }, true);
                     };
@@ -889,13 +1249,13 @@ tabulator.panes.register( {
                 
  
                 // New Contact button
-                var b = dom.createElement("button");
+                var newContactButton = dom.createElement("button");
                 var container = dom.createElement("div");
-                b.setAttribute("type", "button");
-                if (!me) b.setAttribute('disabled', 'true')
-                container.appendChild(b);
-                div.appendChild(container);
-                b.innerHTML = "New " + IndividualClassLabel;
+                newContactButton.setAttribute("type", "button");
+                if (!me) newContactButton.setAttribute('disabled', 'true')
+                container.appendChild(newContactButton);
+                newContactButton.innerHTML = "New Contact" // + IndividualClassLabel;
+                peopleFooter.appendChild(container);
                 
                 var createdNewContactCallback1 = function(ok, person) {
                     dump("createdNewContactCallback1 "+ok+" - "+person +"\n");
@@ -905,8 +1265,8 @@ tabulator.panes.register( {
                     } // else no harm done delete form
                 };
 
-                b.addEventListener('click', function(e) {
-                    b.setAttribute('disabled', 'true');
+                newContactButton.addEventListener('click', function(e) {
+                    // b.setAttribute('disabled', 'true');  (do we need o do this?)
                     cardMain.innerHTML = '';
 
                     var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
@@ -918,15 +1278,64 @@ tabulator.panes.register( {
                         };
                         // Just a heads up, actually used later.
                     });
-                    cardMain.appendChild(newContactForm(dom, kb, selected, createdNewContactCallback1));
+                    // cardMain.appendChild(newContactForm(dom, kb, selected, createdNewContactCallback1));
+                    cardMain.appendChild(getNameForm(dom, kb, "Contact", selected,
+                        function(subject, name, selectedGroups) {
+                            createNewContact(subject, name, selectedGroups, function(success, body) {
+                                if (!success) {
+                                     console.log("Error: can't save new contact:" + body);
+                                } else {
+                                    cardMain.innerHTML = ''; 
+                                    refreshNames(); // Add name to list of group
+                                    cardMain.appendChild(cardPane(dom, body, 'contact'));
+                                }
+                            });
+                        }));
                 }, false);
  
+                // New Group button
+                var newGroupButton = groupsFooter.appendChild(dom.createElement("button"));
+                newGroupButton.setAttribute("type", "button");
+                newGroupButton.innerHTML = "New Group" // + IndividualClassLabel;
+                newGroupButton.addEventListener('click', function(e) {
+                    // b.setAttribute('disabled', 'true');  (do we need o do this?)
+                    cardMain.innerHTML = '';
+                    var groupIndex = kb.any(subject, ns.vcard('groupIndex'));
+                    tabulator.fetcher.nowOrWhenFetched(groupIndex, undefined, function(ok, message) {
+                        if (ok) {
+                            dump(" Group index has been loaded\n");
+                        } else {
+                            dump("Error: Group index has NOT been loaded" + message + "\n");
+                        };
+                    });
+                    // cardMain.appendChild(newContactForm(dom, kb, selected, createdNewContactCallback1));
+                    cardMain.appendChild(getNameForm(dom, kb, "Group", selected,
+                        function(subject, name, selectedGroups) {
+                            createNewGroup(subject, name, function(success, body) {
+                                if (!success) {
+                                     console.log("Error: can\'t save new group:" + body);
+                                     cardMain.innerHTML = "Failed to save group" + body
+                                } else {
+                                    cardMain.innerHTML = ''; 
+                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                        if (!ok) cardMain.innerHTML = "Group creation failed: " + body;
+                                    }));
+                                }
+                            });
+                        }));
+                }, false);
+                
+
+
+
+
+                cardFooter.appendChild(newAddressBookButton(subject));
              
                                      
             });
                                              
             div.appendChild(dom.createElement('hr'));
-            div.appendChild(newAddressBookButton(subject));
+            //  div.appendChild(newAddressBookButton(subject));       // later
             // end of AddressBook instance
 
 

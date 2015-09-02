@@ -6412,7 +6412,12 @@ $rdf.sparqlUpdate = function() {
                     data.map(function(st){
                         kb.addStatement(st);
                     });
-                    kb.fetcher.requested[doc.uri] = true; // as though fetched
+                    // kb.fetcher.requested[doc.uri] = true; // as though fetched
+                }
+                if (success) {
+                    delete kb.fetcher.nonexistant[doc.uri];
+                    delete kb.fetcher.requested[doc.uri];
+                    // @@ later we can fake it has been requestd if put gives us the header sand we save them.
                 }
                 callback(doc.uri, success, xhr.responseText, xhr);
             }
@@ -19080,7 +19085,17 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.async = async != null ? async : true
     this.appNode = this.store.bnode(); // Denoting this session
     this.store.fetcher = this; //Bi-linked
-    this.requested = {}
+    this.requested = {}  
+    // this.requested[uri] states:
+    //   undefined     no record of web access or records reset
+    //   true          has been requested, XHR in progress
+    //   'done'        received, Ok
+    //   403           HTTP status unauthorized
+    //   404           Ressource does not exist. Can be created etc.
+    //   'redirected'  In attempt to counter CORS problems retried.
+    //   other strings mean various other erros, such as parse errros.
+    // 
+    this.nonexistant = {}; // keep track of explict 404s -> we can overwrite etc
     this.lookedUp = {}
     this.handlers = []
     this.mediatypes = {}
@@ -19484,7 +19499,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.failFetch = function(xhr, status) {
         this.addStatus(xhr.req, status)
         kb.add(xhr.resource, ns.link('error'), status)
-        this.requested[$rdf.uri.docpart(xhr.resource.uri)] = false
+        this.requested[$rdf.uri.docpart(xhr.resource.uri)] = xhr.status; // changed 2015 was false
         if (xhr.userCallback) {
             xhr.userCallback(false, "Fetch of <" + xhr.resource.uri + "> failed: "+status, xhr)
         };
@@ -19634,22 +19649,48 @@ $rdf.Fetcher = function(store, timeout, async) {
 
     /*  Ask for a doc to be loaded if necessary then call back
     **
-    ** Changed 2013-08-20:  Added (ok, body) params to callback
+    ** Changed 2013-08-20:  Added (ok, errormessage) params to callback
     **
+    ** Calling methods:
+    **   nowOrWhenFetched (uri, userCallback) 
+    **   nowOrWhenFetched (uri, options, userCallback) 
+    **   nowOrWhenFetched (uri, referringTerm, userCallback, options)  <-- old
+    **   nowOrWhenFetched (uri, referringTerm, userCallback) <-- old
+    **
+    **  Options include:
+    **   referringTerm    The docuemnt in which this link was found.
+    **                    this is valuable when finding the source of bad URIs
+    **   force            boolean.  Never mind whether you have tried before,
+    **                    load this from scratch.
+    **   forceContentType Override the incoming header to force the data to be
+    **                    treaed as this content-type. 
     **/
-    this.nowOrWhenFetched = function(uri, referringTerm, userCallback, options) {
+    this.nowOrWhenFetched = function(uri, p2, userCallback, options) {
         uri = uri.uri || uri; // allow symbol object or string to be passed
-        // Sanitize URI (remove #localid) 
+        if (typeof p2 == 'function') {
+            options = {};
+            userCallback = p2;
+        } else if (typeof p2 == 'undefined') { // original calling signature
+            referingTerm = undefined;
+        } else if (p2 instanceof $rdf.Symbol) {
+            referingTerm = p2;
+        } else {
+            options = p2;
+        }
+        
+        // Remove #localid 
+        /* moved to this.requestURI 
         uri = uri.split('#')[0];
         var sta = this.getState(uri);
         if (sta == 'fetched') return userCallback(true);
-
+        if (sta == 'failed') return userCallback(false);
+*/   
         // If it is 'failed', then shoulkd we try again?  I think so so an old error doens't get stuck
         //if (sta == 'unrequested')
-        this.requestURI(uri, referringTerm, options || {}, userCallback);
+        this.requestURI(uri, p2, options || {}, userCallback);
     }
 
-
+    this.get = this.nowOrWhenFetched;
 
     // Look up response header
     //
@@ -19707,7 +19748,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.saveResponseMetadata = function(xhr, kb) {
         var response = kb.bnode();
 
-        kb.add(xhr.req, ns.link('response'), response);
+        if (xhr.req) kb.add(xhr.req, ns.link('response'), response);
         kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
         kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response);
 
@@ -19737,20 +19778,36 @@ $rdf.Fetcher = function(store, timeout, async) {
      */
     this.requestURI = function(docuri, rterm, options, userCallback) { //sources_request_new
         docuri = docuri.uri || docuri; // Symbol or string
-        if (docuri.indexOf('#') >= 0) { // hash
-            throw ("requestURI should not be called with fragid: " + docuri);
+        // Remove #localid 
+        docuri = docuri.split('#')[0];
+
+        if (typeof options === 'boolean') options = { 'force': options}; // Ols dignature
+        if (typeof options === 'undefined') options = {};
+        var force = !! options.force
+        var kb = this.store;
+        var args = arguments;
+
+
+        var sta = this.getState(docuri);
+        if (!force) {
+            if (sta == 'fetched') return userCallback(true);
+            if (sta == 'failed') return userCallback(false, "Previously failed. " + this.requested[docuri],
+                {'status': this.requested[docuri]}); // An xhr standin
+            if (sta == 'requested') return userCallback(false, "Sorry already requested - pending already.");
+        } else {
+            delete this.nonexistant[docuri];        
         }
+        // @@ Should allow concurrent requests
+
+        // If it is 'failed', then shoulkd we try again?  I think so so an old error doens't get stuck
+        //if (sta == 'unrequested')
+
 
         var pcol = $rdf.uri.protocol(docuri);
-        if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn') return null; // No look-up operation on these, but they are not errors
-        if (options === undefined) options = {};
-        var force = !! options.force
-        var kb = this.store
-        var args = arguments
-        var docterm = kb.sym(docuri)
-        if (!force && typeof(this.requested[docuri]) != "undefined") {
-            return null
+        if (pcol == 'tel' || pcol == 'mailto' || pcol == 'urn') {
+            return userCallback(false, "Unsupported protocol"); //"No look-up operation on these, but they are not errors?"
         }
+        var docterm = kb.sym(docuri);
 
         this.fireCallbacks('request', args); //Kenny: fire 'request' callbacks here
         // dump( "web.js: Requesting uri: " + docuri + "\n" );
@@ -19761,14 +19818,6 @@ $rdf.Fetcher = function(store, timeout, async) {
                 kb.add(docterm.uri, ns.link("requestedBy"), rterm.uri, this.appNode)
             }
         }
-
-        if (rterm) {
-            // $rdf.log.info('SF.request: ' + docuri + ' refd by ' + rterm.uri)
-        }
-        else {
-            // $rdf.log.info('SF.request: ' + docuri + ' no referring doc')
-        };
-
 
         var useJQuery = typeof jQuery != 'undefined';
         if (!useJQuery) {
@@ -19821,7 +19870,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                             sf.addStatus(oldreq, 'redirected to new request') // why
                             //the callback throws an exception when called from xhr.onerror (so removed)
-                            //sf.fireCallbacks('done', args) // Are these args right? @@@   Noit done yet! done means success
+                            //sf.fireCallbacks('done', args) // Are these args right? @@@   Not done yet! done means success
                             sf.requested[xhr.resource.uri] = 'redirected';
 
                             var xhr2 = sf.requestURI(newURI, xhr.resource, options, userCallback);
@@ -19872,6 +19921,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                     if (xhr.status >= 400) { // For extra dignostics, keep the reply
                     //  @@@ 401 should cause  a retry with credential son
                     // @@@ cache the credentials flag by host ????
+                        if (xhr.status === 404) {
+                            kb.fetcher.nonexistant[xhr.resource.uri] = true;
+                        }
                         if (xhr.responseText.length > 10) {
                             var response = kb.bnode();
                             kb.add(response, ns.http('content'), kb.literal(xhr.responseText), response);
@@ -19908,41 +19960,52 @@ $rdf.Fetcher = function(store, timeout, async) {
                             if (redirection != '301' && redirection != '302') break;
                         }
                     }
+                    // This is a minimal set to allow the use of damaged servers if necessary
+                    var extensionToContentType = {
+                        'rdf': 'application/rdf+xml', 'owl': 'application/rdf+xml',
+                        'n3': 'text/n3', 'ttl': 'text/turtle', 'nt': 'text/n3', 'acl': 'text/n3',
+                        'html': 'text/html', 'html': 'text/htm', 
+                        'xml': 'text/xml' 
+                    };
+                    
                     if (xhr.status == 200) {
                         addType(ns.link('Document'));
                         var ct = xhr.headers['content-type'];
+                        if (options.forceContentType) {
+                            xhr.headers['content-type'] = options.forceContentType;
+                        };
+                        if (ct.indexOf('application/octet-stream') >=0 ) {
+                            var guess = extensionToContentType[xhr.resource.uri.split('.').pop()];
+                            if (guess) {
+                                xhr.headers['content-type'] = guess;
+                            }
+                        } 
                         if (ct) {
                             if (ct.indexOf('image/') == 0 || ct.indexOf('application/pdf') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
                         }
-                        if (options.forceContentType) {
-                            xhr.headers['content-type'] = options.forceContentType;
-                        };
                     }
+                    // application/octet-stream; charset=utf-8
+
+                    
 
                     if ($rdf.uri.protocol(xhr.resource.uri) == 'file' || $rdf.uri.protocol(xhr.resource.uri) == 'chrome') {
-                        switch (xhr.resource.uri.split('.').pop()) {
-                        case 'rdf':
-                        case 'owl':
-                            xhr.headers['content-type'] = 'application/rdf+xml';
-                            break;
-                        case 'n3':
-                        case 'nt':
-                        case 'ttl':
-                            xhr.headers['content-type'] = 'text/n3';
-                            break;
-                        default:
-                            xhr.headers['content-type'] = 'text/xml';
-                        }
                         if (options.forceContentType) {
                             xhr.headers['content-type'] = options.forceContentType;
-                        };
-
+                        } else {
+                            var guess = extensionToContentType[xhr.resource.uri.split('.').pop()];
+                            if (guess) {
+                                xhr.headers['content-type'] = guess;
+                            } else {
+                                xhr.headers['content-type'] = 'text/xml';
+                            }
+                        }
                     }
 
                     // If we have alread got the thing at this location, abort
                     if (loc) {
                         var udoc = $rdf.uri.join(xhr.resource.uri, loc)
-                        if (!force && udoc != xhr.resource.uri && sf.requested[udoc]) {
+                        if (!force && udoc != xhr.resource.uri && sf.requested[udoc]
+                            && sf.requested[udoc] == 'done') { // we have already fetched this in fact.
                             // should we smush too?
                             // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.resource + " as " + udoc + ". Aborting.")
                             sf.doneFetch(xhr, args)
@@ -19960,7 +20023,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                         }
                     }
 
-                    sf.parseLinkHeader(xhr, thisReq); // sf.?
+                    sf.parseLinkHeader(xhr, thisReq);
 
                     if (handler) {
                         try {
@@ -20372,7 +20435,6 @@ $rdf.Fetcher = function(store, timeout, async) {
         
     } // this.requestURI()
 
-// this.requested[docuri]) != "undefined"
 
     this.objectRefresh = function(term) {
         var uris = kb.uris(term) // Get all URIs
@@ -20403,26 +20465,22 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.fireCallbacks('retract', arguments)
     }
 
-    this.getState = function(docuri) { // docState
-        if (typeof this.requested[docuri] != "undefined") {
-            if (this.requested[docuri]) {
-                if (this.isPending(docuri)) {
-                    return "requested"
-                } else {
-                    return "fetched"
-                }
-            } else {
-                return "failed"
-            }
-        } else {
+    this.getState = function(docuri) {
+        if (typeof this.requested[docuri] == "undefined") {
             return "unrequested"
+        } else if (this.requested[docuri] === true) {
+            return "requested"
+        } else if (this.requested[docuri] === 'done') {
+            return "fetched"
+        } else  { // An non-200 HTTP error status
+            return "failed"
         }
     }
 
     //doing anyStatementMatching is wasting time
     this.isPending = function(docuri) { // sources_pending
         //if it's not pending: false -> flailed 'done' -> done 'redirected' -> redirected
-        return this.requested[docuri] == true;
+        return this.requested[docuri] === true;
     }
 
     // var updatesVia = new $rdf.UpdatesVia(this); // Subscribe to headers
@@ -31709,7 +31767,8 @@ $rdf.subscription =  function(options, doc, onChange) {
 // Sets the best name we have and looks up a better one
 tabulator.panes.utils.setName = function(element, subject) {
     var kb = tabulator.kb, ns = tabulator.ns;
-    var name = kb.any(subject, ns.vcard('fn')) || kb.any(subject, ns.foaf('name'));
+    var name = kb.any(subject, ns.vcard('fn')) || kb.any(subject, ns.foaf('name'))
+        ||  kb.any(subject, ns.vcard('organization-name'));
     element.textContent = name ? name.value : tabulator.Util.label(subject);
     if (!name) {
         tabulator.sf.nowOrWhenFetched(subject, undefined, function(ok) {
@@ -31722,14 +31781,14 @@ tabulator.panes.utils.setName = function(element, subject) {
 
 // Delete button with a check you really mean it
 
-tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, deleteFunction) {
+tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, deleteFunction) {
     var delButton = dom.createElement('button');
     container.appendChild(delButton);
     delButton.textContent = "-";
     
     container.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
     delButton.setAttribute('class', 'hoverControlHide');
-    delButton.setAttribute('style', 'color: red;');
+    delButton.setAttribute('style', 'color: red; margin-right: 0.3em; foat:right; text-align:right');
     delButton.addEventListener('click', function(e) {
         container.removeChild(delButton);  // Ask -- are you sure?
         var cancelButton = dom.createElement('button');
@@ -31740,7 +31799,7 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, deleteFun
             container.appendChild(delButton);
         }, false);
         var sureButton = dom.createElement('button');
-        sureButton.textContent = "Delete message";
+        sureButton.textContent = "Delete " + noun;
         container.appendChild(sureButton).addEventListener('click', function(e) {
             container.removeChild(sureButton);
             container.removeChild(cancelButton);
@@ -31751,45 +31810,89 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, deleteFun
 
 ////////////////////////////////////// Start ACL stuff
 
-tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
-    var box = dom.createElement('table');
+
+// Take the "defaltForNew" ACL and convert it into the equivlent ACL 
+// which the resource would have had.  Retur it as a new separate store.
+
+tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
     var kb = tabulator.kb;
     var auth = tabulator.ns.auth;
+    var ns = tabulator.ns;
+    var defaults = kb.each(undefined, auth('defaultForNew'), defaultResource, defaultACLdoc);
+    var proposed = [];
+    defaults.map(function(da) {
+        proposed = proposed.concat(kb.statementsMatching(da, auth('agent'), undefined, defaultACLdoc))
+            .concat(kb.statementsMatching(da, auth('agentClass'), undefined, defaultACLdoc))
+            .concat(kb.statementsMatching(da, auth('mode'), undefined, defaultACLdoc));
+        proposed.push($rdf.st(da, auth('accessTo'), doc, defaultACLdoc)); // Suppose 
+    });
+    var kb2 = $rdf.graph(); // Potential - derived is kept apart
+    proposed.map(function(st){
+        var move = function(sym) {
+            var y = defaultACLdoc.uri.length; // The default ACL file
+            return  $rdf.sym( (sym.uri.slice(0, y) == defaultACLdoc.uri) ?
+                 aclDoc.uri + sym.uri.slice(y) : sym.uri );
+        }
+        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
+    });
+    
+    //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
+    var ccc = kb2.each(undefined, auth('accessTo'), doc)
+        .filter(function(au){ return  kb2.holds(au, auth('mode'), auth('Control'))});
+    ccc.map(function(au){
+        var au2 = kb2.sym(au.uri + "__ACLACL");
+            kb2.add(au2, ns.rdf('type'), auth('Authorization'), aclDoc);
+            kb2.add(au2, auth('accessTo'), aclDoc, aclDoc);
+            kb2.add(au2, auth('mode'), auth('Read'), aclDoc);
+            kb2.add(au2, auth('mode'), auth('Write'), aclDoc);
+        kb2.each(au, auth('agent')).map(function(who){
+            kb2.add(au2, auth('agent'), who, aclDoc);
+        });
+        kb2.each(au, auth('agentClass')).map(function(who){
+            kb2.add(au2, auth('agentClass'), who, aclDoc);
+        });
+    });
+    
+    return kb2;
+}
+
+tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
+    var kb = tabulator.kb;
+    var updater = new tabulator.rdf.sparqlUpdate(kb);
+    var auth = tabulator.ns.auth;
     var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
-    box.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.01em #ccc ;');
-    var headerRow = box.appendChild(dom.createElement('tr'));
-    headerRow.textContent = "Sharing for " + tabulator.Util.label(subject);
-    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid #ddd;');
 
-    var statusRow = box.appendChild(dom.createElement('tr'));
+    var table = dom.createElement('table');
+    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
+    var headerRow = table.appendChild(dom.createElement('tr'));
+    headerRow.textContent = "Sharing for group " + tabulator.Util.label(subject);
+    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
 
-    tabulator.panes.utils.getACL(doc, function(ok, exists, aclDoc) {
-        var i, row, left, right, a;
-        if (!ok) {
-            statusRow.textContent = exists; // error message
-            statusRow.setAttribute('style', 'background-color: #fee; padding:2em; font-famiy: monospace;')
-            return;
-        }
-        if (!exists) {
-            statusRow.textContent = '(No specific access control has been set.)\n'; // error message
-            statusRow.setAttribute('style', 'background-color: #ffe; padding:2em;');
-            
-            //  @@ construct default one - the server should do that
-            return;
-        }
+    var statusRow = table.appendChild(dom.createElement('tr'));
+    var statusBlock = statusRow.appendChild(dom.createElement('div'));
+    statusBlock.setAttribute('style', 'padding: 2em;');
+    var MainRow = table.appendChild(dom.createElement('tr'));
+    var box = MainRow.appendChild(dom.createElement('table'));
+    var bottomRow = table.appendChild(dom.createElement('tr'));
+
+    var ACLControl = function(box, doc, aclDoc, kb) {
         var authorizations = kb.each(undefined, auth('accessTo'), doc, aclDoc); // ONLY LOOK IN ACL DOC
         if (authorizations.length === 0) {
-            statusRow.textContent = "No access allowed";
+            statusBlock.textContent += "Access control file exists but contains no authorizations! " + aclDoc + ")";
         }
         for (i=0; i < authorizations.length; i++) {
             var row = box.appendChild(dom.createElement('tr'));
-            row.setAttribute('style', 'margin: 1em; border: 0.1em solid black; border-radius: 0.5em; padding: 1em;')
-            var left = row.appendChild(dom.createElement('td'));
-            var middle = row.appendChild(dom.createElement('td'));
-            middle.textContent = "have access:"
+            var rowdiv1 = row.appendChild(dom.createElement('div'));
+            row.setAttribute('style', 'margin: 1em; border: 0.1em solid black; border-radius: 0.5em; padding: 1em;') // doesn't work
+            rowdiv1.setAttribute('style', 'margin: 1em; border: 0.1em solid black; border-radius: 1em; padding: 1em;');
+            rowtable1 = rowdiv1.appendChild(dom.createElement('table'));
+            rowrow = rowtable1.appendChild(dom.createElement('tr'));
+            var left = rowrow.appendChild(dom.createElement('td'));
+            var middle = rowrow.appendChild(dom.createElement('td'));
+            middle.textContent = "can:"
             middle.setAttribute('style', 'font-size:100%; padding: 1em;');
             var leftTable = left.appendChild(dom.createElement('table'));
-            var right = row.appendChild(dom.createElement('td'));
+            var right = rowrow.appendChild(dom.createElement('td'));
             var rightTable = right.appendChild(dom.createElement('table'));
             var a = authorizations[i];
             
@@ -31809,9 +31912,117 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                 tr.textContent = tabulator.Util.label(x); // for now // later add # or members
             });
         }
+    }
+
+    tabulator.panes.utils.getACL(doc, function(ok, status, aclDoc, message) {
+        dump("getACL callback for "+subject + "\n");
+        var i, row, left, right, a;
+        var auth = tabulator.ns.auth;
+        var useDefault;
+        var addDefaultButton = function() {
+            useDefault = bottomRow.appendChild(dom.createElement('button'));
+            useDefault.textContent = "Stop specific sharing for this group -- just use default.";
+            useDefault.addEventListener('click', function(event) {
+                updater.delete(doc, function(uri, ok, message){
+                    if (!ok) {
+                        statusBlock.textContent += " (Error deleting access control file: "+message+")";
+                    } else {
+                        statusBlock.textContent = " The sharing for this group is now the default.";
+                        bottomRow.removeChild(useDefault);
+                    }
+                });
+
+            });
+        }
+
+        
+        // Recursively search for the ACL file which gives default access
+        var tryParent = function(uri) {
+            if (uri.slice(-1) === '/') {
+                uri = uri.slice(0, -1);
+            }
+            var right = uri.lastIndexOf('/');
+            var left = uri.indexOf('/', uri.indexOf('//') + 2);
+            uri = uri.slice(0, right + 1);
+            var doc2 = $rdf.sym(uri);
+            tabulator.panes.utils.getACL(doc2, function(ok, status, aclDoc2) {
+
+                if (!ok) {
+                    statusBlock.textContent += ("( No ACL pointer " + uri + ' ' + status + ")");
+                } else if (status === 403) {
+                    statusBlock.textContent += ("( ACL file FORBIDDEN. Stop." + uri + ")");
+                } else if (status === 404) {
+                    statusBlock.textContent += ("( No ACL file for set " + uri + ")");
+                    if (left >= right) {
+                        statusBlock.textContent += ("( Thats all folks.)");
+                    } else {
+                        tryParent(uri);
+                    }
+                } else { // 200
+                    statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
+                    var defaults = kb.each(undefined, auth('defaultForNew'), kb.sym(uri), aclDoc2);
+                    if (!defaults.length) {
+                        statusBlock.textContent += " (No defaults given.)";
+                    } else {
+                        statusBlock.textContent = "The sharing for this group is the default.";
+                        /*
+                        defaults.map(function(da) {
+                            proposed = proposed.concat(kb.statementsMatching(da, auth('agent'), undefined, aclDoc2))
+                                .concat(kb.statementsMatching(da, auth('mode'), undefined, aclDoc2));
+                            proposed.push($rdf.st(da, auth('accessTo'), doc, aclDoc2)); // Suppose 
+                        });
+                        var kb2 = $rdf.graph(); // Potential - derived is kept apart
+                        proposed.map(function(st){
+                            var move = function(sym) {
+                                var y = aclDoc2.uri.length; // The default ACL file
+                                return  $rdf.sym( (sym.uri.slice(0, y) == aclDoc2.uri) ?
+                                     aclDoc.uri + sym.uri.slice(y) : sym.uri );
+                            }
+                            kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
+                        });
+                        */
+                        statusBlock.textContent = "The sharing for this group is the default.";
+                        var kb2 = tabulator.panes.utils.adoptACLDefault(doc, aclDoc, kb.sym(uri), aclDoc2) 
+                        ACLControl(box, doc, aclDoc, kb2); // Add btton to save them as actual
+                        
+                        var editPlease = bottomRow.appendChild(dom.createElement('button'));
+                        editPlease.textContent = "Set specific sharing\nfor this group";
+                        editPlease.addEventListener('click', function(event) {
+                            updater.put(aclDoc, kb2.statements,
+                                'text/turtle', function(uri, ok, message){
+                                if (!ok) {
+                                    statusBlock.textContent += " (Error writing back access control file: "+message+")";
+                                } else {
+                                    statusBlock.textContent = " (Now editing specific access for this group)";
+                                    bottomRow.removeChild(editPlease);
+                                }
+                            });
+
+                        });
+                    }
+                }
+            });
+        };
+
+        if (!ok) {
+            statusBlock.textContent += ("( Access control information not provided " + uri +")");
+        } else if (status === 404) {
+            statusBlock.textContent = '(No specific access control has been set.)\n'; // error message
+            statusBlock.setAttribute('style', 'background-color: #ffe; padding:2em;');
+            tryParent(doc.uri);
+            //  @@ construct default one - the server should do that
+        } else  if (status === 403) {
+            statusBlock.textContent = '(Sharing not available to you)'; // error message
+        } else  if (status !== 200) {
+            statusBlock.textContent = message; // error message
+            statusBlock.setAttribute('style', 'background-color: #f99; padding:2em;')
+        } else { // 200
+            ACLControl(box, doc, aclDoc, kb);
+            addDefaultButton();
+        }        
     });
     
-    return box
+    return table
 }; // ACLControl
 
 
@@ -31836,10 +32047,12 @@ tabulator.panes.utils.setACL = function(docURI, aclText, callback) {
     }
 };
 
-//    Calls back (ok, exists, acldoc) 
-//   (false, errormessage)
-//   (true, false, fileaccesserror) if does not exist
-//   (true, true, documentSymbol)   if file exitss
+//    Calls back (ok, status, acldoc, message)
+// 
+//   (false, errormessage)        no link header
+//   (true, 403, documentSymbol, fileaccesserror) not authorized
+//   (true, 404, documentSymbol, fileaccesserror) if does not exist
+//   (true, 200, documentSymbol)   if file exitss and read OK
 //
 tabulator.panes.utils.getACL = function(doc, callback) {
     tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
@@ -31850,9 +32063,15 @@ tabulator.panes.utils.getACL = function(doc, callback) {
         if (!aclDoc) {
             callback(false, "No Link rel=ACL header for " + doc);
         } else {
-            tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, body){
-                if (!ok) callback(true, false, "Can't read Access Control File " + body);
-                callback(true, true, aclDoc);
+            if (tabulator.sf.nonexistant[aclDoc.uri]) {
+                return callback(true, 404, aclDoc, "ACL file does not exist.");
+            }
+            tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
+                if (!ok) {
+                    callback(true, xhr.status, aclDoc, "Can't read Access Control File " + body);
+                } else {
+                    callback(true, 200, aclDoc);
+                }
             });
         }
     });
@@ -31878,6 +32097,7 @@ tabulator.panes.register( {
         var ns = tabulator.ns;
         var t = kb.findTypeURIs(subject);
         if (t[ns.vcard('Individual').uri]) return "Contact";
+        if (t[ns.vcard('Organization').uri]) return "contact";
         if (t[ns.vcard('Group').uri]) return "Group";
         if (t[ns.vcard('AddressBook').uri]) return "Address book";
         return null; // No under other circumstances
@@ -32137,7 +32357,7 @@ tabulator.panes.register( {
 
         //              Render a single contact Individual
         
-        if (t[ns.vcard('Individual').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
+        if (t[ns.vcard('Individual').uri]|| t[ns.vcard('Organization').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
 
             // var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
             var individualFormDoc = kb.sym('https://timbl.rww.io/Apps/Contactator/individualForm.ttl');
@@ -32240,8 +32460,9 @@ tabulator.panes.register( {
             var title = kb.any(subject, ns.dc('title'));
             title = title ? title.value : classLabel;
             
- 
-           var createNewContact = function(book, name, selectedGroups, callback) {
+            //  Write a new contact to the web
+            //
+            var createNewContact = function(book, name, selectedGroups, callback) {
                 var nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'));
                 
                 var uuid = gen_uuid();
@@ -32251,7 +32472,7 @@ tabulator.panes.register( {
                 dump(" New Person will be: "+ person + '\n');
                 
                 // Sets of statements to different files
-                agenda = [    // Store the card about the person
+                agenda = [    // Patch the main index to add the person
                         
                     [   $rdf.st(person, ns.vcard('inAddressBook'), book, nameEmailIndex), // The people index
                         $rdf.st(person, ns.vcard('fn'), name, nameEmailIndex) ]
@@ -32263,14 +32484,12 @@ tabulator.panes.register( {
                 for (gu in selectedGroups) {
                     var g = kb.sym(gu);
                     var gd = kb.sym(gu.split('#')[0]);
-                    agenda.push( [   $rdf.st(g, ns.vcard('hasMember'), person, gd)]);
-                    dump("@@  This person is in group " + g);
+                    agenda.push( [  $rdf.st(g, ns.vcard('hasMember'), person, gd),
+                                    $rdf.st(person, ns.vcard('fn'), name, gd) 
+                    ]);
+                    dump("This person is in group " + g);
                 }
 
-                
- 
-               // updater.update([], agenda.shift(), updateCallback); // Kick off the waterfall
-                
                 var updateCallback = function(uri, success, body){
                     if (!success) {
                         dump("Error: can\'t update " + uri + " for new contact:" + body + '\n' );
@@ -32283,8 +32502,10 @@ tabulator.panes.register( {
                             dump("Done patching. Now reading back in.\n")
                             tabulator.fetcher.nowOrWhenFetched(doc, undefined, function(ok, body){
                                 if (ok) {
+                                    dump("Read back in OK.\n")
                                     callback(true, person);
                                 } else {
+                                    dump("Read back in FAILED: " + body + "\n")
                                     callback(false, body);
                                 }
                             });
@@ -32397,6 +32618,12 @@ tabulator.panes.register( {
         
                 if (!ok) return console.log("Cannot load group index: "+body);
                 
+                // organization-name is a hack for Mac records with no FN which is mandatory.
+                var nameFor = function(x) { 
+                    var name = kb.any(x, ns.vcard('fn')) || 
+                        kb.any(x, ns.foaf('name')) || kb.any(x, ns.vcard('organization-name')); 
+                    return name ? name.value : '???';
+                }
                 
                 var bookTable = dom.createElement('table');
                 bookTable.setAttribute('style', 'border-collapse: collapse; margin-right: 0;')
@@ -32442,11 +32669,11 @@ tabulator.panes.register( {
                 };
 
                 var compareForSort = function(self, other) {
-                    var s = kb.any(self, ns.vcard('fn'));
-                    var o = kb.any(other, ns.vcard('fn'));
+                    var s = nameFor(self) ;
+                    var o = nameFor(other);
                     if (s && o) {
-                        s = s.value.toLowerCase();
-                        o = o.value.toLowerCase();
+                        s = s.toLowerCase();
+                        o = o.toLowerCase();
                         if (s > o) return 1;
                         if (s < o) return -1;
                     }
@@ -32463,7 +32690,7 @@ tabulator.panes.register( {
                 var deleteThing = function(x) {
                     var ds = kb.statementsMatching(x).concat(kb.statementsMatching(undefined, undefined, x));
                     var targets = {};
-                    ds.map(function(st){target[st.why.uri] = st;});
+                    ds.map(function(st){targets[st.why.uri] = st;});
                     agenda = []; // sets of statements of same dcoument to delete;
                     for (target in targets) {
                         agenda.push(ds.filter(function(st){ return st.why.uri = target}));
@@ -32476,6 +32703,7 @@ tabulator.panes.register( {
                             });
                         } else {
                             var doc = kb.sym(x.uri.split('#')[0]);
+                            dump('Deleting resoure ' + doc)
                             updater.deleteResource(doc);
                         }
                     }
@@ -32500,15 +32728,15 @@ tabulator.panes.register( {
                         var personRow = peopleMainTable.appendChild(dom.createElement('tr'));
                         personRow.setAttribute('style', dataCellStyle);
                         var person = cards[j];
-                        var name = kb.any(person, ns.vcard('fn')) ||
-                                kb.any(person, ns.foaf('name'));
-                        name = name ? name.value : '???';
+                        var name = nameFor(person);
                         personRow.textContent = name;
                         personRow.subject = person;
 
                         var setPersonListener = function toggle(personRow, person) {
-                            tabulator.panes.utils.deleteButtonWithCheck(dom, personRow, function(){
+                            tabulator.panes.utils.deleteButtonWithCheck(dom, personRow, 'contact', function(){
                                 deleteThing(person);
+                                refreshNames();
+                                cardMain.innerHTML = '';
                             });
                             personRow.addEventListener('click', function(event){
                                 event.preventDefault();
@@ -32549,7 +32777,7 @@ tabulator.panes.register( {
                     // var checkBox = groupLeft.appendChild(dom.createElement('input'))
                     // checkBox.setAttribute('type', 'checkbox'); // @@ set from personal last settings
                     var foo = function toggle(groupRow, group) {
-                        tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, function(){
+                        tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, "group", function(){
                             deleteThing(group);
                         });
                         groupRow.addEventListener('click', function(event){
@@ -32557,12 +32785,12 @@ tabulator.panes.register( {
                             var groupList = kb.sym(group.uri.split('#')[0]);
                             if (!event.altKey) {
                                 selected = {}; // If alt key pressed, accumulate multiple
-                                if (1) { // was: event.shiftKey
-                                    cardMain.innerHTML = ''; 
-                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
-                                        if (!ok) cardMain.innerHTML = "Failed: " + body;
-                                    }));
-                                }
+                                /*
+                                cardMain.innerHTML = ''; 
+                                cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                    if (!ok) cardMain.innerHTML = "Failed: " + body;
+                                }));
+                                */
                             }
                             selected[group.uri] = selected[group.uri] ? false : true;
                             refreshGroups();
@@ -32571,6 +32799,13 @@ tabulator.panes.register( {
                             kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
                                 if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
                                 refreshNames();
+
+                                if (!event.altKey) { // If only one group has beeen selected show ACL
+                                    cardMain.innerHTML = ''; 
+                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                        if (!ok) cardMain.innerHTML = "Failed: " + body;
+                                    }));
+                                }
                             })
                         }, true);
                     };
@@ -32616,6 +32851,7 @@ tabulator.panes.register( {
                                      console.log("Error: can't save new contact:" + body);
                                 } else {
                                     cardMain.innerHTML = ''; 
+                                    refreshNames(); // Add name to list of group
                                     cardMain.appendChild(cardPane(dom, body, 'contact'));
                                 }
                             });
@@ -32647,7 +32883,7 @@ tabulator.panes.register( {
                                 } else {
                                     cardMain.innerHTML = ''; 
                                     cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
-                                        if (!ok) cardMain.innerHTML = "ACL Failed: " + body;
+                                        if (!ok) cardMain.innerHTML = "Group creation failed: " + body;
                                     }));
                                 }
                             });
@@ -36571,6 +36807,12 @@ tabulator.panes.defaultPane = {
             holdingTd.setAttribute('notSelectable','true');
             var img = myDocument.createElement('img');
             img.src = tabulator.Icon.src.icon_add_new_triple;
+            img.addEventListener('click', function  add_new_tripleIconMouseDownListener(e) { // tabulator.Icon.src.icon_add_new_triple
+                    thisOutline.UserInput.addNewPredicateObject(e);
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return;
+            });
             img.className='bottom-border-active';
             //img.addEventListener('click', thisOutline.UserInput.addNewPredicateObject,false);
             div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
@@ -43055,7 +43297,7 @@ function UserInput(outline){
 
 // ###### Finished expanding js/tab/userinput.js ##############
 // ###### Expanding js/tab/outline.js ##############
-/* -*- coding: utf-8-dos -*-
+    /* -*- coding: utf-8-dos -*-
 @@No DOS CRLF please
 
      Outline Mode
@@ -43205,9 +43447,12 @@ tabulator.OutlineObject = function(doc) {
     } //benchmark
     
     ///////////////////////// Representing data
+    
     //  Represent an object in summary form as a table cell
+    
     function appendRemoveIcon(node, subject, removeNode) {
         var image = tabulator.Util.AJARImage(tabulator.Icon.src.icon_remove_node, 'remove',undefined, myDocument)
+        image.addEventListener('click', remove_nodeIconMouseDownListener)
         // image.setAttribute('align', 'right')  Causes icon to be moved down
         image.node = removeNode
         image.setAttribute('about', subject.toNT())
@@ -43237,30 +43482,36 @@ tabulator.OutlineObject = function(doc) {
         var docuri = tabulator.rdf.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
         var state = sf.getState(docuri);
-        var icon, alt;
+        var icon, alt, listener;
         switch (state) {
             case 'unrequested': 
                 icon = tabulator.Icon.src.icon_unrequested;
                 alt = 'fetch';
+                listener = unrequestedIconMouseDownListener;
             break;
             case 'requested':
                 icon = tabulator.Icon.src.icon_requested;
                 alt = 'fetching';
+                listener = failedIconMouseDownListener; // new: can retry yello blob
             break;
             case 'fetched':
                 icon = tabulator.Icon.src.icon_fetched;
+                listener = fetchedIconMouseDownListener;
                 alt = 'loaded';
             break;
             case 'failed':
                 icon = tabulator.Icon.src.icon_failed;
                 alt = 'failed';
+                listener = failedIconMouseDownListener;
             break;
             case 'unpermitted':
                 icon = tabulator.Icon.src.icon_failed;
+                listener = failedIconMouseDownListener;
                 alt = 'no perm';
             break;
             case 'unfetchable':
                 icon = tabulator.Icon.src.icon_failed;
+                listener = failedIconMouseDownListener;
                 alt = 'cannot fetch';
             break;
             default:
@@ -43362,6 +43613,7 @@ tabulator.OutlineObject = function(doc) {
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, statement) {
         // tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
         var td = myDocument.createElement('td');
+        td.setAttribute('notSelectable','false');
         var theClass = "obj";
                 
         // check the IPR on the data.  Ok if there is any checked license which is one the document has.
@@ -43377,7 +43629,7 @@ tabulator.OutlineObject = function(doc) {
             for (i=0; i< licenses.length; i++) {
                 for (j=0; j<tabulator.options.checkedLicenses.length; j++) {
                     if (tabulator.options.checkedLicenses[j] && (licenses[i].uri == licenseURI[j])) {                
-                        theClass += ' licOkay';
+                        theClass += ' licOkay'; // icon_expand
                         break;
                     }
                 }
@@ -43392,13 +43644,11 @@ tabulator.OutlineObject = function(doc) {
                     obj.value.slice(0,7) == 'http://'))) {
             td.setAttribute('about', obj.toNT());
             td.appendChild(tabulator.Util.AJARImage(
-                tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));
+                tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument)
+                ).addEventListener('click', expandMouseDownListener)
         }
         td.setAttribute('class', theClass);      //this is how you find an object
-        // tabulator.log.info('class on '+td)
         var check = td.getAttribute('class')
-        // tabulator.log.info('td has class:' + check)
-        // tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl
@@ -43435,6 +43685,7 @@ tabulator.OutlineObject = function(doc) {
 	        td.appendChild(inquiry_span);
             }
         }
+        td.addEventListener('click', selectable_TD_ClickListener);
         return td;
     } //outline_objectTD
     
@@ -43476,18 +43727,10 @@ tabulator.OutlineObject = function(doc) {
         //set DOM methods
         td_p.tabulatorSelect = function (){setSelected(this,true);};
         td_p.tabulatorDeselect = function(){setSelected(this,false);}; 
+        td_p.addEventListener('click', selectable_TD_ClickListener);
         return td_p;              
     } //outline_predicateTD
-/*
-    ///////////////// Represent an arbirary subject by its properties
-    //These are public variables ---  @@@@ ugh
-    expandedHeaderTR.tr = myDocument.createElement('tr');
-    expandedHeaderTR.td = myDocument.createElement('td');
-    expandedHeaderTR.td.setAttribute('colspan', '2');
-    expandedHeaderTR.td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument));
-    expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
-    expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
-*/
+
     function makeExpandedHeaderTR(myDocument) {
         return tr;
     };
@@ -43495,8 +43738,11 @@ tabulator.OutlineObject = function(doc) {
     function expandedHeaderTR(subject, requiredPane) {
         var tr = myDocument.createElement('tr');
         var td = myDocument.createElement('td');
+        td.setAttribute('notSelectable','false');
+
         td.setAttribute('colspan', '2');
-        td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument));
+        td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument)
+            ).addEventListener('click', collapseMouseDownListener);
         td.appendChild(myDocument.createElement('strong'));
         tr.appendChild(td);
 
@@ -43849,6 +44095,7 @@ tabulator.OutlineObject = function(doc) {
                 if (show<predDups){ //Add the x more <TR> here
                     var moreTR=myDocument.createElement('tr');
                     var moreTD=moreTR.appendChild(myDocument.createElement('td'));
+                    moreTD.setAttribute('notSelectable','false');
                     if (predDups>n){ //what is this for??
                         var small=myDocument.createElement('a');
                         moreTD.appendChild(small);
@@ -43906,7 +44153,7 @@ tabulator.OutlineObject = function(doc) {
         td.style.width = '0px';
         return td
     }
-    termWidget.addIcon = function (td, icon) {
+    termWidget.addIcon = function (td, icon, listener) {
         var iconTD = td.childNodes[1];
         if (!iconTD) return;
         var width = iconTD.style.width;
@@ -43915,6 +44162,9 @@ tabulator.OutlineObject = function(doc) {
         width = width + icon.width;
         iconTD.style.width = width+'px';
         iconTD.appendChild(img);
+        if (listener) {
+            img.addEventListener('click', listener)
+        }
     }
     termWidget.removeIcon = function (td, icon) {
         var iconTD = td.childNodes[1];
@@ -43936,9 +44186,9 @@ tabulator.OutlineObject = function(doc) {
             }
         }
     }
-    termWidget.replaceIcon = function (td, oldIcon, newIcon) {
+    termWidget.replaceIcon = function (td, oldIcon, newIcon, listener) {
             termWidget.removeIcon (td, oldIcon)
-            termWidget.addIcon (td, newIcon)
+            termWidget.addIcon (td, newIcon, listener)
     }   
     
     
@@ -44046,25 +44296,45 @@ tabulator.OutlineObject = function(doc) {
         return false
     }
 
+    // These woulkd be simpler using closer variables below
+    function optOnIconMouseDownListener(e) { // tabulator.Icon.src.icon_opton  needed?
+        var target = thisOutline.targetOf(e);  
+        var p = target.parentNode;
+        termWidget.replaceIcon(p.parentNode,
+            tabulator.Icon.termWidgets.optOn,
+            tabulator.Icon.termWidgets.optOff, optOffIconMouseDownListener);
+        p.parentNode.parentNode.removeAttribute('optional');
+    }
+    
+    function optOffIconMouseDownListener(e) { // tabulator.Icon.src.icon_optoff needed?
+        var target = thisOutline.targetOf(e);  
+        var p = target.parentNode;
+        termWidget.replaceIcon(p.parentNode,
+            tabulator.Icon.termWidgets.optOff,
+            tabulator.Icon.termWidgets.optOn, optOnIconMouseDownListener);
+        p.parentNode.parentNode.setAttribute('optional','true');
+    }
+    
+
     function setSelectedParent(node, inc) {
         var onIcon = tabulator.Icon.termWidgets.optOn;
-            var offIcon = tabulator.Icon.termWidgets.optOff;
-            for (var n = node; n.parentNode; n=n.parentNode)
-            {
-            while (true)
-            {
-                if (n.getAttribute('predTR'))
-                {
+        var offIcon = tabulator.Icon.termWidgets.optOff;
+        for (var n = node; n.parentNode; n=n.parentNode) {
+            while (true) {
+                if (n.getAttribute('predTR')) {
                     var num = n.getAttribute('parentOfSelected')
                     if (!num) num = 0;
                     else num = parseInt(num);
-                    if (num==0 && inc>0) termWidget.addIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
+                    if (num==0 && inc>0) {
+                        termWidget.addIcon(n.childNodes[0],
+                            n.getAttribute('optional') ? onIcon : offIcon,
+                            n.getAttribute('optional') ? optOnIconMouseDownListener : optOffIconMouseDownListener)
+                    }
                     num = num+inc;
                     n.setAttribute('parentOfSelected',num)
-                    if (num==0) 
-                    {
+                    if (num==0) {
                         n.removeAttribute('parentOfSelected')
-                        termWidget.removeIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
+                        termWidget.removeIcon(n.childNodes[0], n.getAttribute('optional')?onIcon:offIcon)
                     }
                     break;
                 }
@@ -44186,7 +44456,7 @@ tabulator.OutlineObject = function(doc) {
     }
     
     /////////  Hiding
-
+/*
     this.AJAR_hideNext = function(event) {
         var target = tabulator.Util.getTarget(event)
         var div = target.parentNode.nextSibling
@@ -44200,8 +44470,8 @@ tabulator.OutlineObject = function(doc) {
             target.src = tabulator.Icon.src.icon_collapse
         }
     }
-
-    this.TabulatorDoubleClick =function(event) {
+*/
+    this.TabulatorDoubleClick =function(event) { // used??
         var target = tabulator.Util.getTarget(event);
         var tname = target.tagName;
         tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
@@ -44451,7 +44721,7 @@ tabulator.OutlineObject = function(doc) {
             if (PosY<window.scrollY+54) tabulator.Util.getEyeFocus(selection[0],true,undefined,window);
         }
     };
-    this.OutlinerMouseclickPanel=function(e){
+    this.OutlinerMouseclickPanel = function(e){
         switch(thisOutline.UserInput._tabulatorMode){
             case 0:
                 TabulatorMousedown(e);
@@ -44474,6 +44744,199 @@ tabulator.OutlineObject = function(doc) {
     // refocus
     // select
     // visit/open a page    
+    
+    function expandMouseDownListener(e) { // For icon tabulator.Icon.src.icon_expand
+        var target = thisOutline.targetOf(e);
+        var p = target.parentNode;
+        var subject = tabulator.Util.getAbout(kb, target);
+        var pane = e.altKey? tabulator.panes.internalPane : undefined; // set later: was tabulator.panes.defaultPane
+
+        if (e.shiftKey) { // Shift forces a refocuss - bring this to the top
+            outline_refocus(p, subject, pane);
+        } else {
+            if (e.altKey) { // To investigate screwups, dont wait show internals
+                outline_expand(p, subject,  {'pane': tabulator.panes.internalPane, 'immediate': true});
+            } else {
+                outline_expand(p, subject);
+            }
+        }
+    }
+    
+    function collapseMouseDownListener(e) { // for icon tabulator.Icon.src.icon_collapse
+        var target = thisOutline.targetOf(e);
+        var subject = tabulator.Util.getAbout(kb, target);
+        var pane = e.altKey? tabulator.panes.internalPane : undefined;
+        var p = target.parentNode;
+        outline_collapse(p, subject,  pane);
+    }
+    
+    function failedIconMouseDownListener(e) { // tabulator.Icon.src.icon_failed
+        var target = thisOutline.targetOf(e);
+        var uri = target.getAttribute('uri'); // Put on access buttons
+        if (e.altKey) {
+            sf.requestURI(tabulator.rdf.uri.docpart(uri), undefined, { 'force': true }); // Add 'force' bit?
+        } else {
+            sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
+        }
+    }
+    
+    function fetchedIconMouseDownListener(e) { // tabulator.Icon.src.icon_fetched
+        var target = thisOutline.targetOf(e);
+        var uri = target.getAttribute('uri'); // Put on access buttons
+        if (e.altKey) {
+            sf.requestURI(tabulator.rdf.uri.docpart(uri), undefined, { 'force': true })
+        } else {
+            sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
+        }
+    }
+    
+    function unrequestedIconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+        var uri = target.getAttribute('uri'); // Put on access buttons
+        sf.requestURI(tabulator.rdf.uri.docpart(uri))
+    }
+    
+    
+    function  remove_nodeIconMouseDownListener(e) { // icon_remove_node
+        var target = thisOutline.targetOf(e);        
+        var node = target.node;
+        if (node.childNodes.length>1) node=target.parentNode; //parallel outline view @@ Hack
+        removeAndRefresh(node); // @@ update icons for pane?
+    }
+    
+    function  add_tripleIconMouseDownListener(e) { // tabulator.Icon.src.icon_add_triple
+        var target = thisOutline.targetOf(e);        
+        var returnSignal = thisOutline.UserInput.addNewObject(e);
+        if (returnSignal){ //when expand signal returned
+            outline_expand(returnSignal[0],returnSignal[1], { 'pane': internalPane});
+            for (var trIterator = returnSignal[0].firstChild.childNodes[1].firstChild;
+                trIterator; trIterator=trIterator.nextSibling) {
+                var st = trIterator.AJAR_statement;
+                if (!st) continue;
+                if (st.predicate.termType=='collection') break;
+            }
+            thisOutline.UserInput.Click(e,trIterator.lastChild);
+            thisOutline.walk('moveTo',trIterator.lastChild);
+        }
+        //thisOutline.UserInput.clearMenu();
+        e.stopPropagation();
+        e.preventDefault();
+        return;
+    }
+    
+     function  show_choicesIconMouseDownListener(e) { // tabulator.Icon.src.icon_show_choices
+                                            //  A down-traingle like 'collapse'
+                                            // unused ???
+        // Query Error because of getAbout->kb.fromNT
+        var target = thisOutline.targetOf(e);  
+        var p = target.parentNode;
+        var choiceQuery = SPARQLToQuery(
+            "SELECT ?pred\nWHERE{ "+about+ tabulator.ns.link('element')+" ?pred.}");
+        thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
+            choiceQuery,{'clickedTd':p.parentNode});
+    }
+    
+    // Special to Proof explanation pane
+    /*     I think unused 2015-08
+    function  display_reasonsIconMouseDownListener(e) { // tabulator.Icon.src.icon_display_reasons
+        var target = thisOutline.targetOf(e);  
+        if(!tabulator.isExtension) return;
+        var TMS = $rdf.Namespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
+        var st_to_explain = tabulator.Util.ancestor(target, 'TR').AJAR_statement;
+        //the 'explanationID' triples are used to pass the information
+        //about the triple to be explained to the new tab
+        var one_statement_formula = new RDFIndexedFormula();
+        one_statement_formula.statements.push(st_to_explain);
+        var explained = kb.any(one_statement_formula,
+                               TMS('explanationID'));
+        if(!explained){
+            var explained_number = kb.each(undefined, 
+                                   TMS('explanationID')).length;
+            kb.add(one_statement_formula, TMS('explanationID'),
+                   kb.literal(String(explained_number)));
+        } else
+            var explained_number = explained.value;
+
+        //open new tab
+        gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
+    }
+    */
+    
+    function  selectable_TD_ClickListener(e) {
+
+        // Is we are in editing mode already
+        if (thisOutline.UserInput._tabulatorMode) {
+            return thisOutline.UserInput.Click(e);
+        }
+
+        var target = thisOutline.targetOf(e);  
+        // Originallt this was set on the whole tree and could happen anywhere
+        var p = target.parentNode;
+        var node;
+        for (node = tabulator.Util.ancestor(target, 'TD');
+             node && !(node.getAttribute('notSelectable') === 'false'); // Default now is not selectable
+             node = tabulator.Util.ancestor(node.parentNode, 'TD')) {}
+        if (!node) return;
+        
+        
+        
+        //var node = target;
+        
+        var sel = selected(node);
+        var cla = node.getAttribute('class')
+        tabulator.log.debug("Was node selected before: "+sel)
+        if (e.altKey) {
+            setSelected(node, !selected(node))
+        } else if  (e.shiftKey) {
+            setSelected(node, true)
+        } else {
+            //setSelected(node, !selected(node))
+            deselectAll()
+            thisOutline.UserInput.clearInputAndSave(e);   
+            setSelected(node, true)
+            
+            if (e.detail==2){//dobule click -> quit TabulatorMousedown()
+                e.stopPropagation();
+                return;
+            }
+            //if the node is already selected and the correspoding statement is editable,
+            //go to UserInput
+            var st = node.parentNode.AJAR_statement;
+            if (!st) return; // For example in the title TD of an expanded pane
+            var target = st.why;
+            var editable = tabulator.sparql.editable(target.uri, kb);
+            if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
+            // var text="TabulatorMouseDown@Outline()";
+            // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
+        }
+        tabulator.log.debug("Was node selected after: "+selected(node)
+            +", count="+selection.length)
+            var tr = node.parentNode;
+            if (tr.AJAR_statement) {
+                var why = tr.AJAR_statement.why
+                //tabulator.log.info("Information from "+why);
+            }
+        e.stopPropagation();
+        return; //this is important or conflict between deslect and userinput happens
+    }
+    
+    function  IconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+    }
+    
+    
+    function  IconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+    }
+    
+    function  IconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+    }
+    
+    
+
+
+
     function TabulatorMousedown(e) {
         tabulator.log.info("@TabulatorMousedown, myDocument.location is now " + myDocument.location);
         var target = thisOutline.targetOf(e);
@@ -44486,215 +44949,27 @@ tabulator.OutlineObject = function(doc) {
         if (tname == "INPUT" || tname == "TEXTAREA") {
             return
         }
+        
         //not input then clear
         thisOutline.UserInput.clearMenu();
+        
         //ToDo:remove this and recover X
         if (thisOutline.UserInput.lastModified&&
             thisOutline.UserInput.lastModified.parentNode.nextSibling) thisOutline.UserInput.backOut();
-        if (tname != "IMG") {
-            /*
-            if(about && myDocument.getElementById('UserURI')) { 
-                myDocument.getElementById('UserURI').value = 
-                     (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-            } else if(about && tabulator.isExtension) {
-                var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
-                tabStatusBar.setAttribute('style','display:block');
-                tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-                if(tabStatusBar.label=="") {
-                    tabStatusBar.setAttribute('style','display:none');
-                }
-            }
-            */
-            var node;
-            for (node = tabulator.Util.ancestor(target, 'TD');
-                 node && node.getAttribute('notSelectable');
-                 node = tabulator.Util.ancestor(node.parentNode, 'TD')) {}
-            if (!node) return;
-            var sel = selected(node);
-            var cla = node.getAttribute('class')
-            tabulator.log.debug("Was node selected before: "+sel)
-            if (e.altKey) {
-                setSelected(node, !selected(node))
-            } else if  (e.shiftKey) {
-                setSelected(node, true)
-            } else {
-                //setSelected(node, !selected(node))
-                deselectAll()
-                thisOutline.UserInput.clearInputAndSave(e);   
-                setSelected(node, true)
-                
-                if (e.detail==2){//dobule click -> quit TabulatorMousedown()
-                    e.stopPropagation();
-                    return;
-                }
-                //if the node is already selected and the correspoding statement is editable,
-                //go to UserInput
-                var st = node.parentNode.AJAR_statement;
-                if (!st) return; // For example in the title TD of an expanded pane
-                var target = st.why;
-                var editable = tabulator.sparql.editable(target.uri, kb);
-                if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
-                // var text="TabulatorMouseDown@Outline()";
-                // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
-            }
-            tabulator.log.debug("Was node selected after: "+selected(node)
-                +", count="+selection.length)
-                var tr = node.parentNode;
-                if (tr.AJAR_statement) {
-                    var why = tr.AJAR_statement.why
-                    //tabulator.log.info("Information from "+why);
-                }
-            e.stopPropagation();
-            return; //this is important or conflict between deslect and userinput happens
-        } else { // IMG
-            var tsrc = target.src
-            var outer
-            var i = tsrc.indexOf('/icons/')
-            //TODO: This check could definitely be made cleaner.
-            // if (i >=0 && tsrc.search('chrome://tabulator/content/icons') == -1) tsrc=tsrc.slice(i+1) // get just relative bit we use
-            tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
-            tabulator.log.debug("\nEvent: about=" + about)
-									   
-										//@@ What's the reason for the following check?	  
-            if (!about && tsrc!=tabulator.Icon.src.icon_add_new_triple
-		       && tsrc!=tabulator.Icon.src.icon_display_reasons) {
-                //alert("No about attribute");
-                return;
-            }
-            var subject = about;
-            tabulator.log.debug("TabulatorMousedown: subject=" + subject);
-            
-            switch (tsrc) {
-            case tabulator.Icon.src.icon_expand:
-            case tabulator.Icon.src.icon_collapse:
-                var pane = e.altKey? tabulator.panes.internalPane : undefined; // set later: was tabulator.panes.defaultPane
-                
-                if (tsrc == tabulator.Icon.src.icon_expand) {
-                    if (e.shiftKey) { // Shift forces 
-                        outline_refocus(p, subject, pane);
-                    } else {
-                        if (e.altKey) { // To investigate screwups, dont wait show internals
-                            outline_expand(p, subject,  {'pane': tabulator.panes.internalPane, 'immediate': true});
-                        } else {
-                            outline_expand(p, subject);
-                        }
-                    }
-                } else {
-                    outline_collapse(p, subject,  pane);
-                }
-                break;
-                //  case Icon.src.icon_visit:
-                //emptyNode(p.parentNode).appendChild(documentContentTABLE(subject));
-                //document.url = subject.uri;   // How to jump to new page?
-                //var newWin = window.open(''+subject.uri,''+subject.uri,'width=500,height=500,resizable=1,scrollbars=1');
-                //newWin.focus();
-                //break;
-            case tabulator.Icon.src.icon_failed:
-            case tabulator.Icon.src.icon_fetched:
-                var uri = target.getAttribute('uri'); // Put on access buttons
-                if (e.altKey) {
-                    sf.requestURI(tabulator.rdf.uri.docpart(uri))
-                } else {
-                    sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
-                }
-                // sf.objectRefresh(subject);
-                break;
-            case tabulator.Icon.src.icon_unrequested:
-                var uri = target.getAttribute('uri'); // Put on access buttons
-                if (!uri) alert('Internal error: No URI on unrequested icon! @@');
-                sf.requestURI(tabulator.rdf.uri.docpart(uri))
-                // if (subject.uri) sf.lookUpThing(subject);
-                break;
-            case tabulator.Icon.src.icon_opton:
-            case tabulator.Icon.src.icon_optoff:
-                oldIcon = (tsrc==tabulator.Icon.src.icon_opton)? tabulator.Icon.termWidgets.optOn : tabulator.Icon.termWidgets.optOff;
-                newIcon = (tsrc==tabulator.Icon.src.icon_opton)? tabulator.Icon.termWidgets.optOff : tabulator.Icon.termWidgets.optOn;
-                termWidget.replaceIcon(p.parentNode,oldIcon,newIcon);
-                if (tsrc==tabulator.Icon.src.icon_opton)
-                    p.parentNode.parentNode.removeAttribute('optional');
-                else p.parentNode.parentNode.setAttribute('optional','true');
-                break;
-            case tabulator.Icon.src.icon_remove_node:
-                var node = target.node;
-                if (node.childNodes.length>1) node=target.parentNode; //parallel outline view @@ Hack
-                removeAndRefresh(node); // @@ update icons for pane?
-                
-                break;
-            case tabulator.Icon.src.icon_map:
-                var node = target.node;
-                    setSelected(node, true);
-                    viewAndSaveQuery();
-                break;
-            case tabulator.Icon.src.icon_add_triple:
-                var returnSignal=thisOutline.UserInput.addNewObject(e);
-                if (returnSignal){ //when expand signal returned
-                    outline_expand(returnSignal[0],returnSignal[1], { 'pane': internalPane});
-                    for (var trIterator=returnSignal[0].firstChild.childNodes[1].firstChild;
-                        trIterator; trIterator=trIterator.nextSibling) {
-                        var st=trIterator.AJAR_statement;
-                        if (!st) continue;
-                        if (st.predicate.termType=='collection') break;
-                    }
-                    thisOutline.UserInput.Click(e,trIterator.lastChild);
-                    thisOutline.walk('moveTo',trIterator.lastChild);
-                }
-                //thisOutline.UserInput.clearMenu();
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-                break;
-            case tabulator.Icon.src.icon_add_new_triple:
-                thisOutline.UserInput.addNewPredicateObject(e);
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-                break;     
-            case tabulator.Icon.src.icon_show_choices: // @what is this? A down-traingle like 'collapse'
-                /*  SELECT ?pred 
-                            WHERE{
-                            about tabont:element ?pred.
-                                }
-                */
-                // Query Error because of getAbout->kb.fromNT
-                var choiceQuery=SPARQLToQuery(
-                    "SELECT ?pred\nWHERE{ "+about+ tabulator.ns.link('element')+" ?pred.}");
-                thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
-                    choiceQuery,{'clickedTd':p.parentNode});
-                break;
-            case tabulator.Icon.src.icon_display_reasons:
-                if(!tabulator.isExtension) return;
-                var TMS = RDFNamespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
-                var st_to_explain = tabulator.Util.ancestor(target, 'TR').AJAR_statement;
-                //the 'explanationID' triples are used to pass the information
-                //about the triple to be explained to the new tab
-                var one_statement_formula = new RDFIndexedFormula();
-                one_statement_formula.statements.push(st_to_explain);
-                var explained = kb.any(one_statement_formula,
-                                       TMS('explanationID'));
-                if(!explained){
-                    var explained_number = kb.each(undefined, 
-                                           TMS('explanationID')).length;
-                    kb.add(one_statement_formula, TMS('explanationID'),
-                           kb.literal(String(explained_number)));
-                } else
-                    var explained_number = explained.value;
 
-                //open new tab
-                gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
-                break;
-            default:  // Look up any icons for panes
-                // paneButtonClick(@@@)
-           }
-        }  // else IMG
+
         //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
         //have to put this here or this conflicts with deselectAll()
-        if (!target.src||(target.src.slice(target.src.indexOf('/icons/')+1)!=tabulator.Icon.src.icon_show_choices
-                       &&target.src.slice(target.src.indexOf('/icons/')+1)!=tabulator.Icon.src.icon_add_triple))
+        
+        if (!target.src||(target.src.slice(target.src.indexOf('/icons/')+1) != tabulator.Icon.src.icon_show_choices
+                       &&target.src.slice(target.src.indexOf('/icons/')+1) != tabulator.Icon.src.icon_add_triple))
             thisOutline.UserInput.clearInputAndSave(e);
-        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=tabulator.Icon.src.icon_show_choices)        
+            
+        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1) != tabulator.Icon.src.icon_show_choices)        
             thisOutline.UserInput.clearMenu();
+            
         if (e) e.stopPropagation();
-    } //function
+    } //function TabulatorMousedown
     
 
  
@@ -45103,6 +45378,7 @@ tabulator.OutlineObject = function(doc) {
                 var elt = obj.elements[i];
                 var row = rep.appendChild(myDocument.createElement('tr'));
                 var numcell = row.appendChild(myDocument.createElement('td'));
+                numcell .setAttribute('notSelectable','false')
                 numcell.setAttribute('about', obj.toNT());
                 numcell.innerHTML = (i+1) + ')';
                 row.appendChild(thisOutline.outline_objectTD(elt));
@@ -45234,8 +45510,11 @@ tabulator.OutlineObject = function(doc) {
     var wholeDoc = doc.getElementById('docHTML');
     if (wholeDoc) wholeDoc.addEventListener('keypress',function(e){thisOutline.OutlinerKeypressPanel.apply(thisOutline,[e])},false);
     
+    /*   2015-08-30  Removed this global overal listerner - should have been on individual elelments
+    
     var outlinePart = doc.getElementById('outline');
     if (outlinePart) outlinePart.addEventListener('mousedown',thisOutline.OutlinerMouseclickPanel,false);
+    */
     
     //doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
     //Kenny: I cannot make this work. The target of keypress is always <html>.

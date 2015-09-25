@@ -15,18 +15,21 @@ if ((typeof sparql) == "undefined") {
     sparql = tabulator.sparql;
 }
 
+/*
 
 function Namespace(nsuri) {
-    return function(ln) { return new RDFSymbol(nsuri+ln) }
+    return function(ln) { return new $rdf.Symbol(nsuri+ln) }
 }
 
-foaf = Namespace("http://xmlns.com/foaf/0.1/")
-RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
-dc = Namespace("http://purl.org/dc/elements/1.1/")
-rss = Namespace("http://purl.org/rss/1.0/")
-contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
+/* THESE WERE GLOBALS     DELETED  -- Now see $rdf.Symbol
 
-LanguagePreference="en";
+var foaf = Namespace("http://xmlns.com/foaf/0.1/")
+var RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+var dc = Namespace("http://purl.org/dc/elements/1.1/")
+var rss = Namespace("http://purl.org/rss/1.0/")
+var contact = Namespace("http://www.w3.org/2000/10/swap/pim/contact#")
+
+var LanguagePreference="en";
 
 labelPriority = []
 labelPriority[foaf('name').uri] = 10
@@ -37,6 +40,8 @@ labelPriority['http://www.w3.org/2001/04/roadmap/org#name'] = 4
 labelPriority[foaf('nick').uri] = 3
 labelPriority[RDFS('label').uri] = 2
 
+*/
+/*
 function RDFSymbol_toNT(x) {
     return ("<" + x.uri + ">")
 }
@@ -73,3 +78,6 @@ RDFSymbol.prototype.classOrder = 5
 
 RDFSymbol.prototype.XSDboolean = new RDFSymbol('http://www.w3.org/2001/XMLSchema#boolean');
 RDFSymbol.prototype.integer = new RDFSymbol('http://www.w3.org/2001/XMLSchema#integer');
+
+
+*/

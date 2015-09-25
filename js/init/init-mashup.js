@@ -2,6 +2,7 @@
 
 tabulator = {};
 tabulator.isExtension = false;
+tabulator.mode = 'webapp';
 
 // base for icons etc
 tabulator.scriptBase = 'https://linkeddata.github.io/tabulator/'; // Or app dev overwrite to point to your app's own copy

@@ -21,6 +21,8 @@ var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
     .getService(Components.interfaces.mozIJSSubScriptLoader);
 
 tabulator.isExtension = true;
+tabulator.mode = 'extension'; // can also be 'webapp'
+
 tabulator.iconPrefix = 'chrome://tabulator/content/';
 
 tabulator.loadScript = function(uri) {

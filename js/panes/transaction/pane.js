@@ -42,9 +42,6 @@ tabulator.panes.register( {
         
         var div = dom.createElement('div')
         div.setAttribute('class', 'transactionPane');
-        div.innerHTML='<h1>Transaction</h1><table><tbody><tr>\
-        <td>%s</tr></tbody></table>\
-        <p>This is a pane under development.</p>';
 
         var setModifiedDate = function(subj, kb, doc) {
             var deletions = kb.statementsMatching(subject, DCT('modified'));

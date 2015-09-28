@@ -49,6 +49,8 @@ tabulator.loadScript("js/panes/common/discussion.js");
 tabulator.loadScript("js/panes/common/table.js");
 // A 2-D matrix of values 
 tabulator.loadScript("js/panes/common/matrix.js");
+// A line-oriented collaborative notepad
+tabulator.loadScript("js/panes/common/pad.js");
 
 /*  Note that hte earliest panes have priority. So the most specific ones are first.
 **

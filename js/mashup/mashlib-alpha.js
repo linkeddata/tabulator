@@ -4050,6 +4050,18 @@ $rdf.IndexedFormula.prototype.uris = function(term) {
 // (would it be better to return the original formula for chaining?)
 //
 $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
+    if (arguments.length === 1) {
+        if (subj instanceof Array) {
+            for (var i=0; i < subj.length; i++) {
+                this.add(subj[i]);
+            }
+        } else if (subj instanceof $rdf.Statement) {
+            this.add(subj.subject, subj.predicate, subj.object, subj.why);
+        } else if (subj instanceof $rdf.IndexedFormula) {
+            this.add(subj.statements)
+        }
+        return this;
+    }
     var actions, st;
     if (why == undefined) why = this.fetcher ? this.fetcher.appNode: this.sym("chrome:theSession"); //system generated
                 //defined in source.js, is this OK with identity.js only user?
@@ -4187,13 +4199,17 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
     return results;
 }; // statementsMatching
 
-/** Find a statement object and remove it **/
+
+/** Find a statement object and remove it 
+**
+** Or array of statements or graph
+**/
 $rdf.IndexedFormula.prototype.remove = function (st) {
     if (st instanceof Array) {
         for (var i=0; i< st.length; i++) {
             this.remove(st[i]);
         }
-        return;
+        return this;
     }
     if (st instanceof $rdf.IndexedFormula) {
         return this.remove(st.statements);
@@ -4203,12 +4219,28 @@ $rdf.IndexedFormula.prototype.remove = function (st) {
         throw "Statement to be removed is not on store: " + st;
     }
     this.removeStatement(sts[0]);
+    return this;
 }
+
+
+$rdf.IndexedFormula.prototype.removeMatches = function (subject, predicate, object, why) {
+    this.removeStatements(this.staementsMatching(subject, predicate, object, why));
+    return this;
+}
+
+$rdf.IndexedFormula.prototype.removeStatements = function (sts) {
+    for (var i=0; i < sts.length; i++) {
+        this.remove(sts[i]);
+    }
+    return this;
+}
+
 
 /** Remove a particular statement object from the store
 **
 ** st    a statement which is already in the store and indexed.
 **      Make sure you only use this for these.
+**    Otherwise, you should use remove() above.
 **/
 $rdf.IndexedFormula.prototype.removeStatement = function (st) {
     //$rdf.log.debug("entering remove w/ st=" + st);
@@ -4223,6 +4255,7 @@ $rdf.IndexedFormula.prototype.removeStatement = function (st) {
         }
     }
     $rdf.Util.RDFArrayRemove(this.statements, st);
+    return this;
 }; //remove
 
 
@@ -5912,8 +5945,8 @@ $rdf.sparqlUpdate = function() {
                 return 'LOCALFILE';
             var sts = kb.statementsMatching(kb.sym(uri),undefined,undefined);
             
-            tabulator.log.warn("sparql.editable: Not MachineEditableDocument file "+uri+"\n");
-            tabulator.log.warn(sts.map(function(x){return x.toNT();}).join('\n'))
+            console.log("sparql.editable: Not MachineEditableDocument file "+uri+"\n");
+            console.log(sts.map(function(x){return x.toNT();}).join('\n'))
             return false;
         //@@ Would be nifty of course to see whether we actually have write acess first.
         }
@@ -5951,17 +5984,17 @@ $rdf.sparqlUpdate = function() {
                         }
                     }
                 } else {
-                    tabulator.log.warn("sparql.editable: No response for "+uri+"\n");
+                    console.log("sparql.editable: No response for "+uri+"\n");
                 }
             }
         }
         if (requests.length == 0) {
-            tabulator.log.warn("sparql.editable: No request for "+uri+"\n");
+            console.log("sparql.editable: No request for "+uri+"\n");
         } else {
             if (definitive) return false;  // We have got a request and it did NOT say editable => not editable
         };
 
-        tabulator.log.warn("sparql.editable: inconclusive for "+uri+"\n");
+        console.log("sparql.editable: inconclusive for "+uri+"\n");
         return undefined; // We don't know (yet) as we haven't had a response (yet)
     }
 
@@ -6112,7 +6145,7 @@ $rdf.sparqlUpdate = function() {
 
     sparql.prototype._fire = function(uri, query, callback) {
         if (!uri) throw "No URI given for remote editing operation: "+query;
-        tabulator.log.info("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+        console.log("sparql: sending update to <"+uri+">\n   query="+query+"\n");
         var xhr = $rdf.Util.XMLHTTPFactory();
 
         xhr.onreadystatechange = function() {
@@ -6126,6 +6159,7 @@ $rdf.sparqlUpdate = function() {
             }
         }
 
+/*  Out of date protcol - CORS replaces this
         if(!tabulator.isExtension) {
             try {
                 $rdf.Util.enablePrivilege("UniversalBrowserRead")
@@ -6133,7 +6167,7 @@ $rdf.sparqlUpdate = function() {
                 alert("Failed to get privileges: " + e)
             }
         }
-        
+  */      
         xhr.open('PATCH', uri, true);  // async=true
         xhr.setRequestHeader('Content-type', 'application/sparql-update');
         xhr.send(query);
@@ -6204,6 +6238,29 @@ $rdf.sparqlUpdate = function() {
         this._fire(st0.why.uri, query, callback);
     }
 
+
+    //  Request a now or future action to refresh changes coming downstream
+    //
+    // This is designed to allow the system to re-request the server version,
+    // when a websocket has pinged to say there are changes.
+    // If thewebsocket, by contrast, has sent a patch, then this may not be necessary.
+
+    sparql.prototype.requestDownstreamAction = function(doc, action) {
+        if (!doc.pendingUpstream) {
+            action();
+        } else {
+            if (doc.downstreamAction) {
+                if (doc.downstreamAction === action) {
+                    return this;
+                } else {
+                    throw "Can't wait for > 1 differnt downstream actions";
+                }
+            } else {
+                doc.downstreamAction = action;
+            }
+        }
+    }
+
     // This high-level function updates the local store iff the web is changed successfully. 
     //
     //  - deletions, insertions may be undefined or single statements or lists or formulae.
@@ -6212,7 +6269,6 @@ $rdf.sparqlUpdate = function() {
     //
     sparql.prototype.update = function(deletions, insertions, callback) {
         var kb = this.store;
-        tabulator.log.info("update called")
         var ds =  deletions == undefined ? []
                     : deletions instanceof $rdf.IndexedFormula ? deletions.statements
                     : deletions instanceof Array ? deletions : [ deletions ];
@@ -6225,10 +6281,46 @@ $rdf.sparqlUpdate = function() {
             return callback(null, true); // success -- nothing needed to be done.
         }
         var doc = ds.length ? ds[0].why : is[0].why;
+        var startTime = Date.now();
         
-        ds.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination "+doc+" inconsistent with ds "+st.why;});
-        is.map(function(st){if (!doc.sameTerm(st.why)) throw "sparql update: destination = "+doc+" inconsistent with st.why ="+st.why;});
+        var props = ['subject', 'predicate', 'object', 'why'];
+        var verbs = ['insert', 'delete'];
+        var clauses = { 'delete': ds, 'insert': is};
+        verbs.map(function(verb){
+            clauses[verb].map(function(st){
+                if (!doc.sameTerm(st.why)) {
+                    throw "update: destination "+doc+" inconsistent with delete quad "+st.why;
+                }
+                props.map(function(prop){
+                    if (typeof st[prop] === 'undefined') {
+                        throw "update: undefined "+prop+" of statement."
+                    }
+                })
+                
+            });
+        });
 
+        /*
+        });
+        
+        ds.map(function(st){
+            if (!doc.sameTerm(st.why)) {
+                throw "Update: destination "+doc+" inconsistent with delete quad "+st.why;
+            }
+            props.map(function(prop){
+                if (typeof ds[prop] === 'undefined') {
+                    throw "Update: undefined "+prop+" of statement."
+                }
+            })
+            
+        });
+        is.map(function(st){i
+            f (!doc.sameTerm(st.why))
+                throw "sparql update: destination = "+doc+" inconsistent with insert st.why ="+st.why;
+            }
+        });
+        */
+        
         var protocol = this.editable(doc.uri, kb);
         if (!protocol) throw "Can't make changes in uneditable "+doc;
 
@@ -6264,23 +6356,37 @@ $rdf.sparqlUpdate = function() {
                     query += " }\n";
                 }
             }
+            // Track pending upstream patches until they have fnished their callback
+            doc.pendingUpstream = doc.pendingUpstream ? doc.pendingUpstream + 1 : 1;
+            if (typeof doc.upstreamCount !== 'undefined') {
+                doc.upstreamCount += 1; // count changes we originated ourselves
+            }
+
             this._fire(doc.uri, query,
                 function(uri, success, body, xhr) {
-                    tabulator.log.info("\t sparql: Return success="+success+" for query "+query+"\n");
+                    console.log("\t sparql: Return success="+success+" for query "+query+"\n");
                     if (success) {
-                        kb.remove(ds);
-                            
-/*                            catch { // disable try for testing @@@
-                            // try { kb.remove(ds[i]) } catch(e) {
-                                callback(uri, false,
-                                "sparqlUpdate: Remote OK but error deleting statemmnt "+
-                                    ds[i] + " from local store:\n" + e)
-                            }
-*/
-                        for (var i=0; i<is.length;i++)
+                        try {
+                            kb.remove(ds);
+                        } catch(e) {
+                            success = false;
+                            body = "Remote Ok BUT error deleting "+ds.length+" from store!!! " + e;
+                        } // Add in any case -- help recover from weirdness?? 
+                        for (var i=0; i<is.length;i++) {
                             kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                        }
                     }
+                    
+                    xhr.elapsedTime_ms =  Date.now() - startTime;
+
                     callback(uri, success, body, xhr);
+                    doc.pendingUpstream = doc.pendingUpstream - 1;
+                    // When upstream patches have been sent, reload state if downstream waiting 
+                    if (doc.pendingUpstream  === 0 && doc.downstreamAction) {
+                        var downstreamAction = doc.downstreamAction;
+                        delete  doc.downstreamListener;
+                        downstreamAction();
+                    }
                 });
             
         } else if (protocol.indexOf('DAV') >=0) {
@@ -6340,7 +6446,7 @@ $rdf.sparqlUpdate = function() {
 
         } else if (protocol.indexOf('LOCALFILE') >=0) {
             try {
-                tabulator.log.info("Writing back to local file\n");
+                console.log("Writing back to local file\n");
                 // See http://simon-jung.blogspot.com/2007/10/firefox-extension-file-io.html
                 //prepare contents of revised document
                 var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
@@ -6375,7 +6481,7 @@ $rdf.sparqlUpdate = function() {
                 //create component for file writing
                 dump("Writing back: <<<"+documentString+">>>\n")
                 var filename = doc.uri.slice(7); // chop off   file://  leaving /path
-                //tabulator.log.warn("Writeback: Filename: "+filename+"\n")
+                //console.log("Writeback: Filename: "+filename+"\n")
                 var file = Components.classes["@mozilla.org/file/local;1"]
                     .createInstance(Components.interfaces.nsILocalFile);
                 file.initWithPath(filename);
@@ -6464,6 +6570,42 @@ $rdf.sparqlUpdate = function() {
         xhr.send(documentString);
     };
     
+
+    // Reload a document.
+    //
+    // Fast and cheap, no metaata
+    // Measure times for the document 
+    // Recover data if fetch fails.
+    
+    sparql.prototype.reload = function(kb, doc, callback) {
+        var saved = kb.statementsMatching(undefined, undefined, undefined, doc);
+        console.log("Reload resource: Unloading statements " + saved.length
+            + " out of " + kb.statements.length)
+        kb.fetcher.unload(doc);
+        var startTime = Date.now();
+        // force sets no-cache and 
+        kb.fetcher.nowOrWhenFetched(doc.uri, {force: true, noMeta: true}, function(ok, body){
+            if (!ok) {
+                console.log("ERROR reloading data! -- restoring original " + saved.length + " statements. Error: " + body);
+                kb.add(saved);
+                callback(false, "Error reloading data: " + body)
+            } else {
+                console.log("Reloaded " + kb.statementsMatching(undefined, undefined, undefined, doc).length
+                    + " out of " + kb.statements.length)
+                elapsedTime_ms = Date.now() - startTime;
+                console.log("fetch took "+elapsedTime_ms+"ms. Now sync the DOM.");
+                if (!doc.reloadTime_total) doc.reloadTime_total = 0;
+                if (!doc.reloadTime_count) doc.reloadTime_count = 0;
+                doc.reloadTime_total += elapsedTime_ms;
+                doc.reloadTime_count += 1;
+                callback(true);
+            };
+        });
+    };
+
+
+
+
     
 
     return sparql;
@@ -6610,7 +6752,9 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     function canUse(pp) {
         if (! __Serializer.prototype.validPrefix.test(pp)) return false; // bad format
         if (pp === 'ns') return false; // boring
+        if (this.namespaces[pp]) return false; // already used
         this.prefixes[uri] = pp;
+        this.namespaces[pp] = uri; 
         pok = pp;
         return true
     }
@@ -19188,7 +19332,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                 var parser = new $rdf.RDFParser(kb);
                 // sf.addStatus(xhr.req, 'parsing as RDF/XML...');
                 parser.parse(this.dom, lastRequested.uri, lastRequested);
-                kb.add(lastRequested, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
+                if (!xhr.options.noMeta) {
+                    kb.add(lastRequested, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode);
+                }
                 cb();
             }
         }
@@ -19251,7 +19397,9 @@ $rdf.Fetcher = function(store, timeout, async) {
                         // $rdf.log.info("GRDDL: No GRDDL profile in " + xhr.resource)
                     }
                 }
-                kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
+                if (!xhr.options.noMeta) {
+                    kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
+                }
                 // Do RDFa here
                 
                 if ($rdf.parseDOM_RDFa) {
@@ -19542,7 +19690,9 @@ $rdf.Fetcher = function(store, timeout, async) {
     // Returns xhr so can just do return this.failfetch(...)
     this.failFetch = function(xhr, status) {
         this.addStatus(xhr.req, status)
-        kb.add(xhr.resource, ns.link('error'), status)
+        if (!xhr.options.noMeta) {
+            kb.add(xhr.resource, ns.link('error'), status)
+        }
         this.requested[$rdf.uri.docpart(xhr.resource.uri)] = xhr.status; // changed 2015 was false
         while (this.fetchCallbacks[xhr.resource.uri] && this.fetchCallbacks[xhr.resource.uri].length) {
             this.fetchCallbacks[xhr.resource.uri].shift()(false, "Fetch of <" + xhr.resource.uri + "> failed: "+status, xhr);
@@ -19773,12 +19923,14 @@ $rdf.Fetcher = function(store, timeout, async) {
         xhr.resource = $rdf.sym(docuri);
 
         xhr.req = request;
-        var now = new Date();
-        var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
-        kb.add(request, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode);
-        kb.add(request, ns.link("requestedURI"), kb.literal(docuri), this.appNode);
+        if (!xhr.options.noMeta) { // Store no triples but do mind the bnode for req
+            var now = new Date();
+            var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
+            kb.add(request, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode);
+            kb.add(request, ns.link("requestedURI"), kb.literal(docuri), this.appNode);
 
-        kb.add(request, ns.link('status'), kb.collection(), this.appNode);
+            kb.add(request, ns.link('status'), kb.collection(), this.appNode);
+        }
         return request;
     };
 
@@ -20279,9 +20431,6 @@ $rdf.Fetcher = function(store, timeout, async) {
             xhr.timeout = sf.timeout;
             xhr.withCredentials = withCredentials;
             xhr.actualProxyURI = actualProxyURI;
-            if (force) {
-                xhr.setRequestHeader('Cache-control', 'no-cache');
-            }
 
             xhr.req = req;
             xhr.options = options;
@@ -20296,6 +20445,10 @@ $rdf.Fetcher = function(store, timeout, async) {
             } catch (er) {
                 return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
             }
+            if (force) { // must happen after open 
+                xhr.setRequestHeader('Cache-control', 'no-cache');
+            }
+
         } // if not jQuery
 
         // Set redirect callback and request headers -- alas Firefox Extension Only
@@ -20314,37 +20467,32 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     var kb = sf.store;
                                     var newURI = newC.URI.spec;
                                     var oldreq = xhr.req;
-                                    sf.addStatus(xhr.req, "Redirected: " + xhr.status + " to <" + newURI + ">");
-                                    kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), xhr.req);
+                                    if (!xhr.options.noMeta) {
+
+                                        sf.addStatus(xhr.req, "Redirected: " + xhr.status + " to <" + newURI + ">");
+                                        kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), xhr.req);
+
+                                    ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate code?
+                                        var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
+                                        kb.add(oldreq, ns.http('redirectedRequest'), newreq, this.appNode);
+
+                                        var now = new Date();
+                                        var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
+                                        kb.add(newreq, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + newURI), this.appNode)
+                                        kb.add(newreq, ns.link('status'), kb.collection(), this.appNode)
+                                        kb.add(newreq, ns.link("requestedURI"), kb.literal(newURI), this.appNode)
+                                        ///////////////
 
 
-
-                                    ////////////// Change the request node to a new one:  @@@@@@@@@@@@ Duplicate?
-                                    var newreq = xhr.req = kb.bnode() // Make NEW reqest for everything else
-                                    // xhr.resource = docterm
-                                    // xhr.requestedURI = args[0]
-                                    // var requestHandlers = kb.collection()
-
-                                    // kb.add(kb.sym(newURI), ns.link("request"), req, this.appNode)
-                                    kb.add(oldreq, ns.http('redirectedRequest'), newreq, this.appNode);
-
-                                    var now = new Date();
-                                    var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
-                                    kb.add(newreq, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + newURI), this.appNode)
-                                    kb.add(newreq, ns.link('status'), kb.collection(), this.appNode)
-                                    kb.add(newreq, ns.link("requestedURI"), kb.literal(newURI), this.appNode)
-                                    ///////////////
-
-
-                                    //// $rdf.log.info('@@ sources onChannelRedirect'+
-                                    //               "Redirected: "+
-                                    //               xhr.status + " to <" + newURI + ">"); //@@
-                                    var response = kb.bnode();
-                                    // kb.add(response, ns.http('location'), newURI, response); Not on this response
-                                    kb.add(oldreq, ns.link('response'), response);
-                                    kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
-                                    if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
-
+                                        //// $rdf.log.info('@@ sources onChannelRedirect'+
+                                        //               "Redirected: "+
+                                        //               xhr.status + " to <" + newURI + ">"); //@@
+                                        var response = kb.bnode();
+                                        // kb.add(response, ns.http('location'), newURI, response); Not on this response
+                                        kb.add(oldreq, ns.link('response'), response);
+                                        kb.add(response, ns.http('status'), kb.literal(xhr.status), response);
+                                        if (xhr.statusText) kb.add(response, ns.http('statusText'), kb.literal(xhr.statusText), response)
+                                    }
                                     if (xhr.status - 0 != 303) kb.HTTPRedirects[xhr.resource.uri] = newURI; // same document as
                                     if (xhr.status - 0 == 301 && rterm) { // 301 Moved
                                         var badDoc = $rdf.uri.docpart(rterm.uri);
@@ -20373,12 +20521,13 @@ $rdf.Fetcher = function(store, timeout, async) {
                                     var hash = newURI.indexOf('#');
                                     if (hash >= 0) {
                                         var msg = ('Warning: ' + xhr.resource + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign');
-                                        // dump(msg+"\n");
-                                        kb.add(xhr.resource, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
+                                        if (!xhr.options.noMeta) {
+                                            kb.add(xhr.resource, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg)
+                                        }
                                         newURI = newURI.slice(0, hash);
                                     }
                                     var xhr2 = sf.requestURI(newURI, xhr.resource);
-                                    if (xhr2 && xhr2.req) kb.add(xhr.req,
+                                    if (xhr2 && xhr2.req && !noMeta) kb.add(xhr.req,
                                         kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
                                         xhr2.req, sf.appNode);
 
@@ -26256,7 +26405,7 @@ else {
     // Leak a global regardless of module system
     root['$rdf'] = $rdf;
 }
-$rdf.buildTime = "2015-09-24T18:34:05";
+$rdf.buildTime = "2015-09-28T17:06:22";
 })(this);
 
 // ###### Finished expanding js/rdf/dist/rdflib.js ##############
@@ -30703,6 +30852,473 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
 }
 
 // ###### Finished expanding js/panes/common/matrix.js ##############
+// A line-oriented collaborative notepad
+// ###### Expanding js/panes/common/pad.js ##############
+
+
+// A utility which should prb go elsewhere
+
+tabulator.panes.utils.hashColor = function(who) {
+    who = who.uri || who;
+    var hash = function(x){return x.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0); }
+    return '#' + ((hash(who) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0 or 808080 forces pale
+}
+
+
+////////////////////////////////////////////////
+
+//   The pad widget
+//
+
+
+
+tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
+    options = options || {}
+    var exists = options.exists;
+    var table = dom.createElement('table');
+    var kb = tabulator.kb;
+    // var mainRow = table.appendChild(dom.createElement('tr'));
+    
+    var fetcher = tabulator.sf;
+    var ns = tabulator.ns;
+    var updater = new $rdf.sparqlUpdate(kb);
+    var waitingForLogin = false;
+
+    var PAD = $rdf.Namespace('http://www.w3.org/ns/pim/pad#');
+    
+    var currentNode, currentOffset;
+    
+    var setPartStyle = function(part, colors) {
+        var chunk = part.subject;
+        var baseStyle = 'font-size: 100%; font-family: monospace; min-width: 50em; border: none;'; //  font-weight:
+        var headingCore = 'font-family: sans-serif; font-weight: bold;  border: none;'
+        var headingStyle = [ 'font-size: 110%;  padding-top: 0.5em; padding-bottom: 0.5em;min-width: 20em;' ,
+            'font-size: 120%; padding-top: 1em; padding-bottom: 1em; min-width: 20em;' ,
+            'font-size: 150%; padding-top: 1em; padding-bottom: 1em; min-width: 20em;' ];
+
+        var author = kb.any(chunk, ns.dc('author'));
+        if (!colors && author) { // Hash the user webid for now -- later allow user selection!
+            var hash = function(x){return x.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0); }
+            var bgcolor = '#' + ((hash(author.uri) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0  forces pale
+            colors = 'color: black; background-color: ' + bgcolor + ';'
+        }
+
+        var indent = kb.any(chunk, PAD('indent'));
+        
+        indent = indent ? indent.value : 0;
+        var style =  (indent >= 0) ?
+            baseStyle + 'padding-left: ' + (indent * 3) + 'em;'
+            :   headingCore + headingStyle[ -1 - indent ]; 
+        part.setAttribute('style', style + colors);
+    }
+    
+
+    var removePart = function(part) {
+        var chunk = part.subject;
+        var prev = kb.any(undefined, PAD('next'), chunk);
+        var next = kb.any(chunk, PAD('next'));
+        if (prev.sameTerm(subject) && next.sameTerm(subject)) { // Last one
+            console.log("You can't delete the last line.")
+            return;
+        }
+        var del = kb.statementsMatching(chunk, undefined, undefined, padDoc)
+                .concat(kb.statementsMatching(undefined, undefined, chunk, padDoc));
+        var ins = [ $rdf.st(prev, PAD('next'), next, padDoc) ];
+
+       tabulator.sparql.update(del, ins, function(uri,ok,error_body){
+            if (!ok) {
+                //alert("Fail to removePart " + error_body);
+                console.log("removePart FAILED " + chunk + ": " + error_body);
+                console.log("removePart was deleteing :'" + del);
+                setPartStyle(part, 'color: black;  background-color: #fdd;');// failed
+                tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+            } else {
+                var row = part.parentNode;
+                var before = row.previousSibling;
+                row.parentNode.removeChild(row);
+                console.log("delete row ok " + part.value);
+                if (before && before.firstChild) {
+                    before.firstChild.focus();
+                }
+            }
+        });
+    }
+    
+    var changeIndent = function(part, chunk, delta) {
+        var del = kb.statementsMatching(chunk, PAD('indent'));
+        var current =  del.length? Number(del[0].object.value) : 0;
+        if (current + delta < -3) return; //  limit negative indent
+        var newIndent = current + delta;
+        var ins = $rdf.st(chunk, PAD('indent'), newIndent, padDoc);
+        tabulator.sparql.update(del, ins, function(uri, ok, error_body){
+            if (!ok) {
+                console.log("Indent change FAILED '" + newIndent + "' for "+padDoc+": " + error_body);
+                setPartStyle(part, 'color: black;  background-color: #fdd;'); // failed
+                tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+            } else {
+                setPartStyle(part); // Implement the indent
+            }
+        });
+    }
+    
+    var addListeners = function(part, chunk) {
+
+        part.addEventListener('keydown', function(event){
+            var author = kb.any(chunk, ns.dc('author')); 
+            //  up 38; down 40; left 37; right 39     tab 9; shift 16; escape 27
+            switch(event.keyCode) {
+            case 13:                    // Return
+                console.log("enter");   // Shift-return inserts before -- only way to add to top of pad.
+                newChunk(document.activeElement, event.shiftKey);
+                break;
+            case 8: // Delete
+                if (part.value.length === 0 ) {
+                    console.log("Deleting line")
+                    removePart(part);
+                }
+                break;
+            case 9: // Tab
+                var delta = event.shiftKey ? -1 : 1;
+                changeIndent(part, chunk, delta);
+                event.preventDefault(); // default is to highlight next field
+                break;
+            case 27:  // ESC
+                tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+                break;
+                
+            case 38: // Up
+                if (part.parentNode.previousSibling) {
+                    part.parentNode.previousSibling.firstChild.focus();
+                    event.preventDefault();
+                }
+                break;
+
+            case 40: // Down
+                if (part.parentNode.nextSibling) {
+                    part.parentNode.nextSibling.firstChild.focus();
+                    event.preventDefault();
+                }
+                break;
+
+            default:
+            }
+        });
+
+        part.addEventListener('click', function(event){
+            //var chunk = event.target.subject;
+            var author = kb.any(chunk, ns.dc('author'));
+
+            var range;
+            var textNode;
+            var offset;
+
+            if (document.caretPositionFromPoint) {
+                range = document.caretPositionFromPoint(event.clientX, event.clientY);
+                textNode = range.offsetNode;
+                offset = range.offset;
+            } else if (document.caretRangeFromPoint) {
+                range = document.caretRangeFromPoint(event.clientX, event.clientY);
+                textNode = range.startContainer;
+                offset = range.startOffset;
+            }
+
+            if (me.sameTerm(author)) {
+                // continue to edit
+ 
+                // only split TEXT_NODEs
+                if (textNode.nodeType == 3) {
+                    textNode.textContent = textNode.textContent.slice(0,offset) 
+                    + '#' + textNode.textContent.slice(offset); 
+                    currentNode = textNode;
+                    currentOffset = offset;
+                }
+            
+            } else {
+                // @@ where is the cursor?
+                // https://developer.mozilla.org/en-US/docs/Web/API/Document/caretPositionFromPoint
+                // https://drafts.csswg.org/cssom-view/#the-caretposition-interface
+                
+                
+                // only split TEXT_NODEs
+                if (textNode.nodeType == 3) {
+                
+                    var replacement = textNode.splitText(offset);
+                    
+                    var bling = document.createElement('span');
+                    bling.textContent = "*"; // @@
+                    
+                    textNode.parentNode.insertBefore(bling, replacement);
+                }
+            }
+        });
+
+        var updateStore = function(part) {
+            var chunk = part.subject;
+            setPartStyle(part, 'color: #888;');
+            var old = kb.any(chunk, ns.sioc('content')).value;
+            del = [ $rdf.st(chunk, ns.sioc('content'), old, padDoc)];
+            ins = [ $rdf.st(chunk, ns.sioc('content'), part.value, padDoc)];
+            
+            tabulator.sparql.update(del, ins, function(uri,ok,error_body){
+                if (!ok) {
+                    // alert("clash " + error_body);
+                    console.log("patch FAILED '" + part.value + "' " + error_body);
+                    setPartStyle(part,'color: black;  background-color: #fdd;'); // failed
+                    part.state = 0;
+                    tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+                } else {
+                    setPartStyle(part); // synced
+                    // console.log("patch ok " + part.value);
+                    if (part.state === 2) {
+                        part.state = 1;  // pending: lock
+                        updateStore(part)
+                    } else {
+                        part.state = 0; // clear lock
+                    }
+                }
+            });
+        }
+
+        part.addEventListener('input', function inputChangeListener(event) {
+            // console.log("input changed "+part.value);
+            setPartStyle(part, 'color: #888;'); // grey out - not synced
+            if (part.state) {
+                part.state = 2; // please do again
+                return;
+            } else {
+                part.state = 1; // in progres
+            }
+            updateStore(part);
+
+        }); // listener
+        
+    } // addlisteners
+
+
+    var newPartAfter = function(tr1, chunk, before) { // @@ take chunk and add listeners
+        text = kb.any(chunk, ns.sioc('content'));
+        text = text ? text.value : '';
+        var tr = dom.createElement('tr');
+        if (before) {
+            table.insertBefore(tr, tr1);
+        } else { // after
+            if (tr1 && tr1.nextSibling) {
+                table.insertBefore(tr, tr1.nextSibling);
+            } else {
+                table.appendChild(tr);
+            }
+        }
+        var part = tr.appendChild(dom.createElement('input'));
+        part.subject = chunk;
+        part.setAttribute('type', 'text')
+        setPartStyle(part, '');
+        part.value = text;
+        addListeners(part, chunk);
+        return part
+    };
+
+    
+           
+    var newChunk = function(ele, before) { // element of chunk being split
+        var kb = tabulator.kb, tr1;
+
+        var here, prev, next, indent = 0;
+        if (ele) {
+            if (ele.tagName.toLowerCase() !== 'input') {
+                console.log('return pressed when current document is: ' + ele.tagName)
+            }
+            here = ele.subject;
+            indent = kb.any(here, PAD('indent'));
+            indent = indent? Number(indent.value)  : 0;
+            if (before) {
+                prev =  kb.any(undefined, PAD('next'), here);
+                next = here;
+            } else {
+                prev = here;
+                next =  kb.any(here, PAD('next'));
+            }
+            tr1 = ele.parentNode;
+        } else {
+            prev = subject
+            next = subject;
+            tr1 = undefined;
+        }
+
+        var chunk = tabulator.panes.utils.newThing(padDoc);
+        var part = newPartAfter(tr1, chunk, before);
+
+        del = [ $rdf.st(prev, PAD('next'), next, padDoc)];
+        ins = [ $rdf.st(prev, PAD('next'), chunk, padDoc),
+                $rdf.st(chunk, PAD('next'), next, padDoc),
+                $rdf.st(chunk, ns.dc('author'), me, padDoc),
+                $rdf.st(chunk, ns.sioc('content'), '', padDoc)];
+        if (indent > 0) { // Do not inherit 
+            ins.push($rdf.st(chunk, PAD('indent'), indent, padDoc));
+        }
+
+        tabulator.sparql.update(del, ins, function(uri,ok,error_body){
+            if (!ok) {
+                alert("Error writing fresh PAD data " + error_body)
+            } else {
+                console.log("fresh chunk updated");
+                setPartStyle(part);
+            }
+        });
+        part.focus();
+    };
+
+    var consistencyCheck = function() {
+        var found = [], failed =0;
+        var  complain = function(msg) {
+            if (options.statusArea) {
+                options.statusArea.textContent += msg + '.  ';
+            }
+            failed++;
+        }
+    
+        for (chunk = kb.the(subject, PAD('next'));  
+            !chunk.sameTerm(subject);
+            chunk = kb.the(chunk, PAD('next'))) {
+            var label = chunk.uri.split('#')[1];
+            if (found[chunk.uri]) {
+                complian("Loop!");
+                return false;
+            }
+
+            found[chunk.uri] = true;
+            var k = kb.each(chunk, PAD('next')).length
+            if (k !== 1) complain("Should be 1 not "+k+" next pointer for " + label);
+
+            var k = kb.each(chunk, PAD('indent')).length
+            if (k > 1) complain("Should be 0 or 1 not "+k+" indent for " + label);
+
+            var k = kb.each(chunk, ns.sioc('content')).length
+            if (k !== 1) complain("Should be 1 not "+k+" contents for " + label);
+        
+            var k = kb.each(chunk, ns.dc('author')).length
+            if (k !== 1) complain("Should be 1 not "+k+" author for " + label);
+            
+            var sts = kb.statementsMatching(undefined, ns.sioc('contents'));
+            sts.map(function(st){ if (!found[st.subject.uri]) {
+                    complain("Loose chunk! " + st.subject.uri);
+            }});
+        }
+        return !failed;
+    }
+
+    // Ensure that the display matches the current state of the
+    var sync = function() {
+        var first = kb.the(subject, PAD('next'));
+        if (kb.each(subject, PAD('next')).length !== 1) {
+            console.log("Pad: Inconsistent data - too many NEXT pointers: "
+                + (kb.each(subject, PAD('next')).length));
+            //alert("Inconsitent data");
+            if (options.statusArea) {
+                statusArea.textContent = "Inconsistent Data!"
+            }
+            return
+        }
+        var last = kb.the(undefined, PAD('previous'), subject);
+        var chunk = first; //  = kb.the(subject, PAD('next'));
+        var row = table.firstChild;
+            
+        // First see which of the logical chunks have existing physical manifestations
+        manif = [];
+        // Find which lines correspond to existing chunks
+        for (chunk = kb.the(subject, PAD('next'));  
+            !chunk.sameTerm(subject);
+            chunk = kb.the(chunk, PAD('next'))) {
+            for (var i=0; i< table.children.length; i++) {
+                var tr = table.children[i];
+                if (tr.firstChild.subject.sameTerm(chunk)) {
+                    manif[chunk.uri] = tr.firstChild;
+                }
+            }
+        }
+        
+        // Remove any deleted lines
+        for (var i = table.children.length -1; i >= 0 ; i--) {
+            var row = table.children[i];
+            if (!manif[row.firstChild.subject.uri]) {
+                table.removeChild(row);
+            }
+        }
+        // Insert any new lines and update old ones
+        row = table.firstChild;
+        for (chunk = kb.the(subject, PAD('next'));  
+            !chunk.sameTerm(subject);
+            chunk = kb.the(chunk, PAD('next'))) {
+            var text = kb.any(chunk, ns.sioc('content')).value;
+            // superstitious -- don't mess with unchanged input fields
+            // which may be selected by the user
+            if (manif[chunk.uri]) { 
+                var part = row.firstChild;
+                if (text !== part.value) {
+                    part.value = text;
+                }
+                setPartStyle(part);
+                part.state = 0;
+                row = row.nextSibling
+            } else {
+                newPartAfter(row, chunk, true); // actually before
+            }
+        };
+    };
+    
+    
+    // Refresh the DOM tree
+  
+    var refreshTree = function(root) {
+        if (root.refresh) {
+            root.refresh();
+            return;
+        }
+        for (var i=0; i < root.children.length; i++) {
+            refreshTree(root.children[i]);
+        }
+    }
+
+
+    var reloadAndSync = function() {
+        tabulator.sparql.reload(kb, padDoc, function (ok) {
+            if (ok) {
+                refreshTree(table);
+            }
+        });
+    }
+    
+    table.refresh = sync; // Catch downward propagating refresh events
+    table.reloadAndSync = reloadAndSync;
+    
+    if (exists) {
+        console.log("Existing pad.");
+        if (consistencyCheck()) {
+            sync();
+        } else {
+            console.log(table.textContent = "Inconsistent data. Abort");
+        } 
+    } else { // Make new pad
+        console.log("No pad exists - making new one.");
+
+        var insertables = [];
+        insertables.push($rdf.st(subject, ns.dc('author'), me, padDoc));
+        insertables.push($rdf.st(subject, ns.dc('created'), new Date(), padDoc));
+        insertables.push($rdf.st(subject, PAD('next'), subject, padDoc));
+        
+        tabulator.sparql.update([], insertables, function(uri,ok,error_body){
+            if (!ok) {
+                complainIfBad(ok, error_body);
+            } else {
+                console.log("Initial pad created");
+                newChunk(); // Add a first chunck
+                // getResults();
+            }
+        });
+    }
+    return table;
+}
+
+// ###### Finished expanding js/panes/common/pad.js ##############
 
 /*  Note that hte earliest panes have priority. So the most specific ones are first.
 **
@@ -40654,6 +41270,7 @@ tabulator.Util.emptyNode = function(node) {
     for (i=len-1; i>=0; i--) node.removeChild(nodes[i])
         return node
 }
+
 
 tabulator.Util.getTarget = function(e) {
     var target

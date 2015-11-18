@@ -8,7 +8,18 @@ tabulator.panes.utils.clearElement = function(ele) {
     }
     return ele;
 };
+
+
+// Look for and load the User who has control over it
+tabulator.panes.utils.findOriginOwner = function(doc, callback) {
+    var uri = doc.uri || doc;
+    var i = uri.indexOf('://');
+    if (i<0) return false;
+    var j = uri.indexOf('/', i+3);
+    if (j <0) return false;
+    var orgin = uri.slice(0, j+1); // @@ TBC
     
+}
 
 
 ////////////////////////////////////////// Boostrapping identity

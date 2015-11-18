@@ -56,7 +56,7 @@ tabulator.panes.defaultPane = {
             var img = myDocument.createElement('img');
             img.src = tabulator.Icon.src.icon_add_new_triple;
             img.addEventListener('click', function  add_new_tripleIconMouseDownListener(e) { // tabulator.Icon.src.icon_add_new_triple
-                    thisOutline.UserInput.addNewPredicateObject(e);
+                    tabulator.outline.UserInput.addNewPredicateObject(e);
                     e.stopPropagation();
                     e.preventDefault();
                     return;
@@ -68,7 +68,7 @@ tabulator.panes.defaultPane = {
         return div    
     },
     
-    sync: function(subject, myDocument, div) { // Untested  and not te best way to do it
+    sync: function(subject, myDocument, div) { // Untested  and not the best way to do it
     // This code was cut out of outline.js
     //    best way is to leave TRs there and add/delete any necessray extras 
 

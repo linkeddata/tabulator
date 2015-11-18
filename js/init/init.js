@@ -84,6 +84,9 @@ try {
     tabulator.loadScript("js/init/views.js");
 
 /////////// code below was in init-mashup for FF ext is in xpcom.js (which loaded init.js)
+//
+// See ../../../components/xpcom.js
+//
 /*
     tabulator.kb = new tabulator.rdf.IndexedFormula();
     tabulator.sf = tabulator.fetcher = new tabulator.rdf.Fetcher(tabulator.kb); // .sf deprecated

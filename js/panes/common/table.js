@@ -10,7 +10,7 @@
 // When the tableClass is not given, it looks for common  classes in the data,
 // and gives the user the option.
 //
-// 2008 Written, Ilaria Liccardi  asthe tableViewPane.js
+// 2008 Written, Ilaria Liccardi  as the tableViewPane.js
 // 2014 Core table widget moved into common/table.js - timbl
 //
 
@@ -23,6 +23,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
     var ns = tabulator.ns;
     var kb = tabulator.kb;
+    var rowsLookup = {}; //  Persistent mapping of subject URI to dom TR
 
     // Predicates that are never made into columns:
 
@@ -71,7 +72,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // as an anchor that can be used to combine this information
     // back into the same row.
 
-    var ROW_KEY_COLUMN = "_row";
+    var keyVariable = options.keyVariable || '?_row';
 
     // Use queries to render the table, currently experimental:
  
@@ -96,7 +97,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // Save a refresh function for use by caller
     resultDiv.refresh = function() {
-        updateTable(givenQuery, mostCommonType); // This could be a lot more incremental and efficient
+        runQuery(table.query, table.logicalRows, table.columns, table);
+        // updateTable(givenQuery, mostCommonType); // This could be a lot more incremental and efficient
     }
 
 
@@ -265,7 +267,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     function generateQuery(type) {
         var query = new tabulator.rdf.Query();
-        var rowVar = kb.variable(ROW_KEY_COLUMN);
+        var rowVar = kb.variable(keyVariable.slice(1)); // don't pass '?'
 
         addSelectToQuery(query, type);
         addWhereToQuery(query, rowVar, type);
@@ -309,8 +311,6 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // Save the query for the edit dialog.
 
         lastQuery = query;
-        
-        
     }
 
     // Remove all subelements of the specified element.
@@ -858,11 +858,11 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         rows.sort(function(row1, row2) {
             var row1Value = null, row2Value = null;
 
-            if (columnKey in row1) {
-                row1Value = row1[columnKey][0];
+            if (columnKey in row1.values) {
+                row1Value = row1.values[columnKey][0];
             }
-            if (columnKey in row2) {
-                row2Value = row2[columnKey][0];
+            if (columnKey in row2.values) {
+                row2Value = row2.values[columnKey][0];
             }
 
             var result = sortFunction(row1Value, row2Value);
@@ -894,44 +894,51 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // Filter the list of rows based on the selectors for the 
     // columns.
 
+    function applyColumnFiltersToRow(row, columns) {
+        var rowDisplayed = true;
+
+        // Check the filter functions for every column.
+        // The row should only be displayed if the filter functions
+        // for all of the columns return true.
+
+        for (var c=0; c<columns.length; ++c) {
+            var column = columns[c];
+            var columnKey = column.getKey();
+
+            var columnValue = null;
+
+            if (columnKey in row.values) {
+                columnValue = row.values[columnKey][0];
+            }
+
+            if (!column.filterFunction(columnValue)) {
+                rowDisplayed = false;
+                break;
+            }
+        }
+
+        // Show or hide the HTML row according to the result
+        // from the filter function.
+
+        var htmlRow = row._htmlRow;
+
+        if (rowDisplayed) {
+            htmlRow.style.display = "";
+        } else {
+            htmlRow.style.display = "none";
+        }
+    }
+    
+    // Filter the list of rows based on the selectors for the 
+    // columns.
+
     function applyColumnFilters(rows, columns) {
 
         // Apply filterFunction to each row.
 
         for (var r=0; r<rows.length; ++r) {
             var row = rows[r];
-            var rowDisplayed = true;
-
-            // Check the filter functions for every column.
-            // The row should only be displayed if the filter functions
-            // for all of the columns return true.
-
-            for (var c=0; c<columns.length; ++c) {
-                var column = columns[c];
-                var columnKey = column.getKey();
-
-                var columnValue = null;
-
-                if (columnKey in row) {
-                    columnValue = row[columnKey][0];
-                }
-
-                if (!column.filterFunction(columnValue)) {
-                    rowDisplayed = false;
-                    break;
-                }
-            }
-
-            // Show or hide the HTML row according to the result
-            // from the filter function.
-
-            var htmlRow = row._htmlRow;
-
-            if (rowDisplayed) {
-                htmlRow.style.display = "";
-            } else {
-                htmlRow.style.display = "none";
-            }
+            applyColumnFiltersToRow(row, columns);
         }
     }
     
@@ -1052,7 +1059,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             searchValue[value.uri] = true;
         }
         
-        var initialSelection = hints(column).initialSelection;
+        var initialSelection = getHints(column).initialSelection;
         if (initialSelection) searchValue = initialSelection;
 
         if (doMultiple) dropdown.setAttribute('multiple', 'true');
@@ -1266,16 +1273,30 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         return tr;
     }
 
-    function linkTo(uri, linkText) {
+    function linkTo(uri, linkText, hints) {
+        hints = hints || {};
         var result = doc.createElement("a");
+        var linkFunction = hints.linkFunction;
         result.setAttribute("href", uri);
         result.appendChild(doc.createTextNode(linkText));
-        result.addEventListener('click',
-            tabulator.panes.utils.openHrefInOutlineMode, true);
+        if (!linkFunction) {
+            result.addEventListener('click',
+                tabulator.panes.utils.openHrefInOutlineMode, true);
+        } else {
+            result.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var target = tabulator.Util.getTarget(e);
+                var uri = target.getAttribute('href');
+                if (!uri) console.log("No href found \n")
+                linkFunction(uri);
+                // tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
+            }, true);
+        }
         return result;
     }
 
-    function linkToObject(obj) {
+    function linkToObject(obj, hints) {
         var match = false;
 
         if (obj.uri != null) {
@@ -1283,9 +1304,9 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         }
 
         if (match) {
-            return linkTo(obj.uri, match[1]);
+            return linkTo(obj.uri, match[1], hints);
         } else {
-            return linkTo(obj.uri, tabulator.Util.label(obj));
+            return linkTo(obj.uri, tabulator.Util.label(obj), hints);
         }
     }
 
@@ -1303,7 +1324,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // Render an individual RDF object to an HTML object displayed
     // in a table cell.
     
-    function hints(column) {
+    function getHints(column) {
         if (options && options.hints && column.variable && options.hints[column.variable.toNT()]) {
             return options.hints[column.variable.toNT()];
         }
@@ -1312,7 +1333,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     function renderValue(obj, column) { // hint
 
-        var cellFormat = hints(column).cellFormat;
+        var hints = getHints(column);
+        var cellFormat = hints.cellFormat;
         var span;
         if (cellFormat) {
             switch(cellFormat) {
@@ -1340,7 +1362,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             } else if (obj.termType == "symbol" && column.isImageColumn()) {
                 return renderImage(obj);
             } else if (obj.termType == "symbol" || obj.termType == "bnode") {
-                return linkToObject(obj);
+                return linkToObject(obj, hints);
             } else if (obj.termType == "collection") {
                 var span = doc.createElement('span');
                 span.appendChild(doc.createTextNode('['));
@@ -1361,7 +1383,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // Note that unlike other functions, this renders into a provided
     // row (<tr>) element.
 
-    function renderTableRowInto(tr, row, columns) {
+    function renderTableRowInto(tr, row, columns, downstream) {
 
         /* Link column, for linking to this subject. */
 
@@ -1379,20 +1401,36 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         for (var i=0; i<columns.length; ++i) {
             var column = columns[i];
             var td = doc.createElement("td");
+            var orig;
 
             var columnKey = column.getKey();
 
-            if (columnKey in row) {
-                var objects = row[columnKey];
-
+            if (columnKey in row.values) {
+                var objects = row.values[columnKey];
+                var different = false;
+                if (row.originalValues && row.originalValues[columnKey]) {
+                    if (objects.length !== row.originalValues[columnKey].length) {
+                        different = true;
+                    }
+                }
                 for (var j=0; j<objects.length; ++j) {
                     var obj = objects[j];
+                    if (row.originalValues && row.originalValues[columnKey]
+                        && row.originalValues[columnKey].length > j) {
+                        orig = row.originalValues[columnKey][j];
+                        if (obj.toString() !== orig.toString()) {
+                            different = true;
+                        }
+                    }
                     //dump("  column "+i+', object'+j+", obj= "+obj+"\n");
 
                     td.appendChild(renderValue(obj, column));
 
                     if (j != objects.length - 1) {
                         td.appendChild(doc.createTextNode(",\n"));
+                    }
+                    if (different) {
+                        td.style.background = '#efe'; // green = new changed
                     }
                 }
             }
@@ -1451,15 +1489,15 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             // If this key is not already in the row, create a new entry
             // for it:
 
-            if (!(key in row)) {
-                row[key] = [];
+            if (!(key in row.values)) {
+                row.values[key] = [];
             }
 
             // Possibly add this new value to the list, but don't
             // add it if we have already added it:
 
-            if (!valueInList(value, row[key])) {
-                row[key].push(value);
+            if (!valueInList(value, row.values[key])) {
+                row.values[key].push(value);
                 needUpdate = true;
             }
         }
@@ -1470,6 +1508,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             clearElement(row._htmlRow);
             renderTableRowInto(row._htmlRow, row, columns);
         }
+        applyColumnFiltersToRow(row, columns); // Hide immediately if nec
     }
 
     // Get a unique ID for the given subject.  This is normally the
@@ -1488,24 +1527,36 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         }
     }
 
-    // Run a query and generate the table.
-    // Returns an array of rows.  This will be empty when the function
+    // Run a query and populate the table.
+    // Populates also an array of logical rows.  This will be empty when the function
     // first returns (as the query is performed in the background)
 
     function runQuery(query, rows, columns, table) {
-        var rowsLookup = {};
         query.running = true;
+        var oldStyle;
+        var startTime = Date.now();
         
         var progressMessage = doc.createElement("tr");
         table.appendChild(progressMessage);
         progressMessage.textContent = "Loading ...";
 
+        for (var i=0; i< rows.length; i++) {
+            rows[i].original = true;
+            if (!rows[i].originalValues) { // remember first set
+                rows[i].originalValues = rows[i].values
+            }
+            rows[i].values = {};
+            // oldStyle = rows[i]._htmlRow.getAttribute('style') || '';
+            // rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');// yellow
+        }   
         
         var onResult = function(values) {
 
             if (!query.running) {
                 return;
             }
+            
+            progressMessage.textContent += '.'; // give a progress bar
 
             var row = null;
             var rowKey = null;
@@ -1513,8 +1564,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
             // If the query has a row key, use it to look up the row.
 
-            if (("?" + ROW_KEY_COLUMN) in values) {
-                rowKey = values["?" + ROW_KEY_COLUMN];
+            if ((keyVariable) in values) {
+                rowKey = values[keyVariable];
                 rowKeyId = getSubjectId(rowKey);
 
                 // Do we have a row for this already?
@@ -1533,7 +1584,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
                 row = {
                     _htmlRow: tr,
-                    _subject: rowKey
+                    _subject: rowKey,
+                    values: {}
                 };
                 rows.push(row);
 
@@ -1543,7 +1595,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             }
 
             // Add the new values to this row.
-
+            delete row.original; // This is included in the new data
             updateRow(row, columns, values);
         };
         
@@ -1552,11 +1604,33 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 progressMessage.parentNode.removeChild(progressMessage);
                 progressMessage = null;
             }
-            applyColumnFilters(rows, columns); // @@ TBL added this
-            // Here add table clean-up, remove "loading" message etc.
+            
+            var elapsedTime_ms = Date.now() - startTime;
+            console.log("Query done: "+rows.length+" rows, " + elapsedTime_ms +"ms")
+            // Delete rows which were from old values not new
+            for (var i = rows.length -1; i >= 0; i--) { // backwards
+                if (rows[i].original) {
+                    console.log("   deleting row " + rows[i]._subject);
+                    var tr = rows[i]._htmlRow;
+                    tr.parentNode.removeChild(tr);
+                    delete rowsLookup[getSubjectId(rows[i]._subject)];
+                    rows.splice(i,1);
+                }
+            }
+
+
+/*
+            for (var i=0; i< rows.length; i++) {
+                rows[i].originalValues = rows[i].values
+                rows[i].values = {};
+                // oldStyle = rows[i]._htmlRow.getAttribute('style') || '';
+                rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');// 
+                applyColumnFilters(rows, columns); // @@ TBL added this
+                // Here add table clean-up, remove "loading" message etc.
+            }
+            */
             if (options.onDone) options.onDone();
         }
-
         kb.query(query, onResult, undefined, onDone)
     }
 
@@ -1656,7 +1730,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // Run query.  Note that this is perform asynchronously; the
         // query runs in the background and this call does not block.
 
+        table.logicalRows = rows; // Save for refresh
+        table.columns = columns; 
+        table.query = query;
+        
         runQuery(query, rows, columns, table);
+        
         
         return table;
     }

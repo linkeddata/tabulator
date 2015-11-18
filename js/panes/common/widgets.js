@@ -616,7 +616,7 @@ tabulator.panes.utils.openHrefInOutlineMode = function(e) {
     e.stopPropagation();
     var target = tabulator.Util.getTarget(e);
     var uri = target.getAttribute('href');
-    if (!uri) dump("No href found \n")
+    if (!uri) console.log("No href found \n")
     // subject term, expand, pane, solo, referrer
     // dump('click on link to:' +uri+'\n')
     tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);

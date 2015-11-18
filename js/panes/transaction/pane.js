@@ -666,14 +666,74 @@ tabulator.panes.register( {
                 return count;
             }
             
-            // Load dynamically as properties of period 
+            // @@ In future could load these params dynamically as properties of period
             if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
                 happy("Reimbursables all have trips")
             };
             if (checkCatHasField('Other_Inc_Speaking', ns.trip('trip')) === 0) {
                 happy("Speaking income all has trips")
             };
+            if (checkCatHasField('Vacation', ns.trip('trip')) === 0) {
+                happy("Vacation all has trips")
+            };
+			 
+	    ///////////////   Check Internal transactions balance
+			 
+			 
+            var checkInternals = function() {
+		var catTail = 'Internal';
+		var pred = ns.qu('in_USD');
+                var cat = catSymbol(catTail), tab, count, x, y, ax, ay;
+                var guilty = [], count = 0;
+                if (!cat) {
+                    complain("Error: No category correspnding to " + catTail)
+                    return null;
+                }
+                var list = kb.each(undefined, ns.rdf('type'), cat);
+		var matched = false;
+		while (list.length > 0) {
+		    x = list.shift(); // take off list[0]
+		    if (!transactionInPeriod(x)) {
+			continue;
+		    }
+		    ax = kb.any(x, pred);
+		    if (!ax) continue;
+		    ax = Number(ax.value)
+		    matched = false;
+		    for (var i=0; i<list.length; i++) {
+			if (!transactionInPeriod(list[i])) {
+			    continue;
+			}
+			ay = kb.any(list[i], pred);
+			if (!ay) continue;
+			ay = Number(ay.value)
+			if (Math.abs(ax + ay) < 0.01) {
+			    matched = true;
+			    list.splice(i, 1); // remove y
+			    break;
+			}
+		    }
+		    if (!matched) {
+			guilty.push(x);
+		    }
+		}
+                if (guilty.length) {
+                    tab = transactionTable(dom, guilty);
+                    count = tab.children.length;
+                    div.appendChild(dom.createElement('h3')).textContent = tabulator.Util.label(cat)
+                        + " which do not pair up " +
+                        ( count < 4 ? '' : ' (' + count + ')' );
+                    div.appendChild(tab);
+                }
+                return count;
+            }
             
+            if (checkInternals() === 0) {
+                happy("Intenral transactions all pair up")
+            };
+
+
+			 
         // end of render period instance
 
         }; // if

@@ -47,7 +47,7 @@ tabulator.panes.utils.shortDate = function(str) {
         var n = now.getTimezoneOffset(); // Minutes
         if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
         if (str.slice(0,4) == nowZ.slice(0,4)) {
-            return ( month[parseInt(str.slice(5,7))] + ' ' + parseInt(str.slice(8,10)));
+            return ( month[parseInt(str.slice(5,7)) -1] + ' ' + parseInt(str.slice(8,10)));
         }
         return str.slice(0,10);
     } catch(e) {

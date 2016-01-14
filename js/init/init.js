@@ -50,8 +50,10 @@ if (tabulator.jQuery) {
     dump("Hmmm, tabulator.jQuery not defined. Not loading RDFa\n");
     tabulator.loadScript("js/rdf/dist/rdflib.js");
 };
-tabulator.rdf = $rdf;
+    tabulator.rdf = $rdf;
 
+    tabulator.loadScript("js/solid/dist/solid.js"); // Defines Solid
+    
 
 
 //Common code has  stackString used reporting errors in catch() below

@@ -168,7 +168,7 @@ tabulator.panes.register( {
         /////////////////////// Reproduction: Spawn a new instance of this app
         
         var newTrackerButton = function(thisTracker) {
-            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
+	    var button = tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
@@ -250,7 +250,9 @@ tabulator.panes.register( {
                 // @@ Set up access control for new config and store. 
                 
             }); // callback to newAppInstance
-
+			 
+	    button.setAttribute('style', 'margin: 0.5em 1em;');
+	    return button;
             
         }; // newTrackerButton
 
@@ -326,10 +328,6 @@ tabulator.panes.register( {
             
             var stateStore = kb.any(tracker, WF('stateStore'));
             var store = kb.sym(subject.uri.split('#')[0]);
-/*                if (stateStore != undefined && store.uri != stateStore.uri) {
-                console.log('(This bug is not stored in the default state store)')
-            }
-*/
 
             // Unfinished -- need this for speed to save the reloadStore below
             var incommingPatch = function(text) {
@@ -476,15 +474,29 @@ tabulator.panes.register( {
             
             //   Comment/discussion area
             
+            var spacer = div.appendChild(dom.createElement('tr'));
+	    spacer.setAttribute('style','height: 1em');  // spacer and placeHolder
+			
             var messageStore = kb.any(tracker, ns.wf('messageStore'));
-            if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
-            div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
-            donePredicate(ns.wf('message'));
-            
-            div.appendChild(dom.createElement('tr'))
-                        .setAttribute('style','height: 1em'); // spacer
-            
+            if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));
+	    kb.fetcher.nowOrWhenFetched(messageStore, function(ok, body, xhr){
+		if (!ok) {
+		    var er = dom.createElement('p')
+		    er.textContent = body; // @@ use nice error message
+		    div.insertBefore(er, spacer);
+		} else {
+		    var discussion = tabulator.panes.utils.messageArea(
+			dom, kb, subject, messageStore)
+		    div.insertBefore(discussion, spacer);
+		}
+	    })
+	    donePredicate(ns.wf('message'));
+			 
+			 
             // Remaining properties
+	    var plist = kb.statementsMatching(subject)
+	    var qlist = kb.statementsMatching(undefined, undefined, subject)
+
             tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
                     return !(pred.uri in predicateURIsDone)
@@ -507,6 +519,7 @@ tabulator.panes.register( {
                     };
                 });
             }, false);
+	    refreshButton.setAttribute('style', 'margin: 0.5em 1em;');
             div.appendChild(refreshButton);
         }; // singleIssueUI
 
@@ -696,7 +709,7 @@ tabulator.panes.register( {
                 me = null;
             }
         });        
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
+        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;'); 
         div.appendChild(loginOutButton);
         
         return div;

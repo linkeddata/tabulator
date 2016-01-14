@@ -26,6 +26,40 @@ tabulator.panes.utils.findOriginOwner = function(doc, callback) {
 //
 //
 
+tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
+    var box = myDocument.createElement('div');
+    var p = myDocument.createElement('p');
+    box.appendChild(p);
+    box.className="mildNotice";
+    p.innerHTML = ("You need to log in with a Web ID");
+    console.log('tabulator.panes.utils.signInOrSignUpBox')
+    
+    var but = myDocument.createElement('input');
+    box.appendChild(but);
+    but.setAttribute('type', 'button');
+    but.setAttribute('value', 'Log in');
+    but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
+        but.addEventListener('click', function(e){
+	Solid.auth.signup.withWebID().then(function(uri){
+	    console.log('signInOrSignUpBox logged in up '+ uri)
+	    gotOne(uri)
+	})
+    }, false);
+    
+    var but2 = myDocument.createElement('input');
+    box.appendChild(but2);
+    but2.setAttribute('type', 'button');
+    but2.setAttribute('value', 'Sign Up');
+    but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
+    but2.addEventListener('click', function(e){
+	Solid.auth.signup.withWebID().then(function(uri){
+	    console.log('signInOrSignUpBox signed up '+ uri)
+	    gotOne(uri)
+	})
+    }, false);
+    return box;
+};
+
 tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
@@ -177,6 +211,8 @@ tabulator.panes.utils.checkUserSetMe = function(doc) {
 // One way is for the server to send the information back as a User: header.
 // This function looks for a linked 
 
+tabulator.panes.utils.userCheckSite = 'https://databox.me/';
+
 tabulator.panes.utils.checkUser = function(doc, setIt) {
     var userMirror = tabulator.kb.any(doc, tabulator.ns.link('userMirror'));
     if (!userMirror) userMirror = doc;
@@ -186,15 +222,24 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
         if (ok) {
             kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
             .map(function(request){
+		 
                 var response = kb.any(request, tabulator.ns.link('response'));
                 if (request !== undefined) {
-                    kb.each(response, tabulator.ns.httph('user')).map(function(userHeader){
-                        var username = userHeader.value.trim();
-                        if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
-                            setIt(username);
-                            done = true;
-                        }
-                    });
+		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+		    if (userHeaders.length === 0) {
+			console.log("CheckUser: non-solid server: trying "
+			    + tabulator.panes.utils.userCheckSite);
+			tabulator.panes.utils.checkUser(
+			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+		    } else {
+			userHeaders.map(function(userHeader){
+			    var username = userHeader.value.trim();
+			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+				setIt(username);
+				done = true;
+			    }
+			});
+		    }
                 }
             });
         } else {
@@ -364,11 +409,20 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                 }
                 col2 = dom.createElement('td');
                 style = kb.any(ws, tabulator.ns.ui('style'));
-                style = style ? style.value : ''
+		if (style) {
+		    style = style.value;
+		} else { // Otherise make up arbitrary colour
+		    var hash = function(x){return x.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0); }
+		    var bgcolor = '#' + ((hash(ws.uri) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0  forces pale
+		    style = 'color: black ; background-color: ' + bgcolor + ';'
+		}
                 col2.setAttribute('style', deselectedStyle + style);
                 tr.target = ws.uri;
                 var label = kb.any(ws, tabulator.ns.rdfs('label'))
-                col2.textContent = label || "";
+		if (!label) {
+		    label = ws.uri.split('/').slice(-1)[0] || ws.uri.split('/').slice(-2)[0]
+		}
+                col2.textContent = label || "???";
                 tr.appendChild(col2);
                 if (i == 0) {
                     col3 = dom.createElement('td');
@@ -403,6 +457,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                 };
 
                 var comment = kb.any(ws, tabulator.ns.rdfs('comment'));
+		comment = comment ? comment.value : "Use this workspace";
                 addMyListener(col2, comment? comment.value : '',
                                  deselectedStyle + style, ws);
             };
@@ -466,7 +521,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 
 };
 
-//////////////////// Craete a new instance of an app
+//////////////////// Create a new instance of an app
 //
 //  An instance of an app could be e.g. an issue tracker for a given project,
 // or a chess game, or calendar, or a health/fitness record for a person.
@@ -484,7 +539,7 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     b.setAttribute('type', 'button');
     div.appendChild(b)
     b.innerHTML = label;
-    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+    // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
         div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
     div.appendChild(b);

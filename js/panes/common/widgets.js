@@ -10,9 +10,11 @@
 *  http://stackoverflow.com/questions/6756407/what-contenteditable-editors
 */
 
+if (typeof tabulator.panes.utils === 'undefined') {
+    tabulator.panes.utils = {};
+}
 
 // paneUtils = {};
-tabulator.panes.utils = {};
 tabulator.panes.field = {}; // Form field functions by URI of field type.
 
 // This is used to canonicalize an array

@@ -4200,6 +4200,18 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
 }; // statementsMatching
 
 
+/** Remove all statemnts in a doc
+**
+**/
+$rdf.IndexedFormula.prototype.removeDocument = function (doc) {
+    var sts = this.statementsMatching(undefined, undefined, undefined, doc).slice();// Take a copy as this is the actual index
+    for (var i=0; i< sts.length; i++) {
+        this.removeStatement(sts[i]);
+    }
+    return this;
+}
+
+
 /** Find a statement object and remove it 
 **
 ** Or array of statements or graph
@@ -5001,21 +5013,22 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
                 if (f.redirections[t.hashString()]) {
                     t = f.redirections[t.hashString()]; //redirect
                 }
-                termIndex = ind[i];
-                item.index = termIndex[t.hashString()];
-                if (item.index === undefined) {
-                    // $rdf.log.debug("prepare: no occurrence [yet?] of term: "+ t);
+                termIndex = ind[i][t.hashString()];
+                
+                if (!termIndex) {
                     item.index = [];
+                    return false; // Query line cannot match
+                }
+                if ((item.index === null) || (item.index.length > termIndex.length)) {
+                    item.index = termIndex;
                 }
             }
         }
             
-        if (item.index === null) {
+        if (item.index === null) { // All 3 are variables? 
             item.index = f.statements;
         }
-        // $rdf.log.debug("Prep: index length="+item.index.length+" for "+item)
-        // $rdf.log.debug("prepare: index length "+item.index.length +" for "+ item);
-        return false;
+        return true;
     }; //prepare
         
     /** sorting function -- negative if self is easier **/
@@ -5162,7 +5175,7 @@ $rdf.IndexedFormula.prototype.query = function(myQuery, callback, fetcher, onDon
             st = item.index[c]; //for each statement in the item's index, spawn a new match with that binding 
             nbs1 = unifyContents(
                     [item.subject, item.predicate, item.object],
-            [st.subject, st.predicate, st.object], bindingsSoFar, f);
+                    [st.subject, st.predicate, st.object], bindingsSoFar, f);
             $rdf.log.info(level+" From first: "+nbs1.length+": "+bindingsDebug(nbs1));
             nk=nbs1.length;
             //branch.count += nk;
@@ -5928,8 +5941,16 @@ $rdf.sparqlUpdate = function() {
         this.ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
         this.ns.rdf = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         this.ns.owl = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
+        
+        this.patchControl = []; // index of objects fro coordinating incomng and outgoing patches
     }
 
+    sparql.prototype.patchControlFor = function(doc) {
+        if (!this.patchControl[doc.uri]) {
+            this.patchControl[doc.uri] = [];
+        }
+        return this.patchControl[doc.uri];
+    }
 
     // Returns The method string SPARQL or DAV or LOCALFILE or false if known, undefined if not known.
     //
@@ -6145,29 +6166,21 @@ $rdf.sparqlUpdate = function() {
 
     sparql.prototype._fire = function(uri, query, callback) {
         if (!uri) throw "No URI given for remote editing operation: "+query;
-        console.log("sparql: sending update to <"+uri+">\n   query="+query+"\n");
+        console.log("sparql: sending update to <"+uri+">");
         var xhr = $rdf.Util.XMLHTTPFactory();
+        xhr.options = {};
 
         xhr.onreadystatechange = function() {
             //dump("SPARQL update ready state for <"+uri+"> readyState="+xhr.readyState+"\n"+query+"\n");
             if (xhr.readyState == 4) {
                 var success = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
-                if (!success) tabulator.log.error("sparql: update failed for <"+uri+"> status="+
+                if (!success) console.log("sparql: update failed for <"+uri+"> status="+
                     xhr.status+", "+xhr.statusText+", body length="+xhr.responseText.length+"\n   for query: "+query);
-                else  tabulator.log.debug("sparql: update Ok for <"+uri+">");
+                else  console.log("sparql: update Ok for <"+uri+">");
                 callback(uri, success, xhr.responseText, xhr);
             }
         }
 
-/*  Out of date protcol - CORS replaces this
-        if(!tabulator.isExtension) {
-            try {
-                $rdf.Util.enablePrivilege("UniversalBrowserRead")
-            } catch(e) {
-                alert("Failed to get privileges: " + e)
-            }
-        }
-  */      
         xhr.open('PATCH', uri, true);  // async=true
         xhr.setRequestHeader('Content-type', 'application/sparql-update');
         xhr.send(query);
@@ -6246,20 +6259,184 @@ $rdf.sparqlUpdate = function() {
     // If thewebsocket, by contrast, has sent a patch, then this may not be necessary.
 
     sparql.prototype.requestDownstreamAction = function(doc, action) {
-        if (!doc.pendingUpstream) {
-            action();
+        var control = this.patchControlFor(doc);
+        if (!control.pendingUpstream) {
+            action(doc);
         } else {
-            if (doc.downstreamAction) {
-                if (doc.downstreamAction === action) {
+            if (control.downstreamAction) {
+                if (control.downstreamAction === action) {
                     return this;
                 } else {
                     throw "Can't wait for > 1 differnt downstream actions";
                 }
             } else {
-                doc.downstreamAction = action;
+                control.downstreamAction = action;
             }
         }
     }
+    
+    // We want to start counting websockt notifications
+    // to distinguish the ones from others from our own.
+    sparql.prototype.clearUpstreamCount = function(doc) {
+        var control = this.patchControlFor(doc);
+        control.upstreamCount = 0;
+    }
+
+
+
+
+
+    sparql.prototype.getUpdatesVia = function(doc) {
+        var linkHeaders = tabulator.fetcher.getHeader(doc, 'updates-via');
+        if (!linkHeaders || !linkHeaders.length) return null;
+        return linkHeaders[0].trim();
+    };
+
+    sparql.prototype.addDownstreamChangeListener = function(doc, listener) {
+        var control = this.patchControlFor(doc);
+        if (!control.downstreamChangeListeners) control.downstreamChangeListeners = [];
+        control.downstreamChangeListeners.push(listener);
+        this.setRefreshHandler(doc, this.reloadAndSync);
+    }
+
+    
+    sparql.prototype.reloadAndSync = function(doc) {
+        var control = tabulator.sparql.patchControlFor(doc);
+        
+        if (control.reloading) {
+            console.log("   Already reloading - stop")
+            return; // once only needed
+        }
+        control.reloading = true;
+        var retryTimeout = 1000; // ms
+        var tryReload = function() {
+            console.log("try reload - timeout = " + retryTimeout);
+            tabulator.sparql.reload(tabulator.kb, doc, function (ok, message, xhr) {
+                control.reloading = false;
+                if (ok) {
+                    if (control.downstreamChangeListeners) {
+                        for (var i=0; i< control.downstreamChangeListeners.length; i++) {
+                            console.log("        Calling downstream listener " + i)
+                            control.downstreamChangeListeners[i]();
+                        }
+                    }
+                } else {
+                    if  (xhr.status === 0) {
+                        console.log("Network error refreshing the data. Retrying in "
+                                            + retryTimeout/1000);
+                        control.reloading = true;
+                        retryTimeout = retryTimeout * 2;
+                        setTimeout(tryReload, retryTimeout)
+                    } else {
+                        console.log("Error " + xhr.status + "refreshing the data:" +
+                            message + ". Stopped" + doc);
+                    }
+                }
+            });
+        }
+        tryReload();
+    }
+    
+
+
+    // Set up websocket to listen on 
+    //
+    // There is coordination between upstream changes and downstream ones
+    // so that a reload is not done in the middle of an upsteeam patch.
+    // If you usie this API then you get called when a change happens, and you 
+    // have to reload the file yourself, and then refresh the UI.
+    // Alternative is addDownstreamChangeListener(), where you do not
+    // have to do the reload yourslf. Do mot mix them.
+    //
+    sparql.prototype.setRefreshHandler = function(doc, handler) {
+
+        var wssURI = this.getUpdatesVia(doc); // relative
+        var theHandler = handler;
+        var self = this;
+        var updater = this;
+        var retryTimeout = 1500; // *2 will be 3 Seconds, 6, 12, etc
+        var retries = 0;
+
+        if (!wssURI) {
+            console.log("Server doies not support live updates thoughUpdates-Via :-(")
+            return false;
+        }
+
+        wssURI = $rdf.uri.join(wssURI, doc.uri); 
+        wssURI = wssURI.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+        console.log("Web socket URI " + wssURI);
+        
+        var openWebsocket = function() {
+        
+            // From https://github.com/solid/solid-spec#live-updates
+            var socket;
+            if (typeof WebSocket !== 'undefined') {
+                socket = new WebSocket(wssURI);
+            } else if (typeof Services !== 'undefined'){ // Firefox add on http://stackoverflow.com/questions/24244886/is-websocket-supported-in-firefox-for-android-addons
+                socket = (Services.wm.getMostRecentWindow('navigator:browser').WebSocket)(wssURI);
+            } else if (typeof window !== 'undefined'  && window.WebSocket){
+                socket = window.WebSocket(wssURI);
+            } else {
+                console.log("Live update disabled, as WebSocket not supported by platform :-(");
+                return;
+            }
+            socket.onopen = function() {
+            
+                console.log("    websocket open");
+                retryTimeout = 1500; // reset timeout to fast on success
+                this.send('sub ' + doc.uri);
+                if (retries) {
+                    console.log("Web socket has been down, better check for any news.");
+                    updater.requestDownstreamAction(doc, theHandler);
+                }
+            };
+            var control = self.patchControlFor(doc);
+            control.upstreamCount = 0;
+            
+            // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
+            //
+            // 1000	CLOSE_NORMAL	Normal closure; the connection successfully completed whatever purpose for which it was created.
+            // 1001	CLOSE_GOING_AWAY	The endpoint is going away, either
+            //                                  because of a server failure or because the browser is navigating away from the page that opened the connection.
+            // 1002	CLOSE_PROTOCOL_ERROR	The endpoint is terminating the connection due to a protocol error.
+            // 1003	CLOSE_UNSUPPORTED	The connection is being terminated because the endpoint
+            //                                  received data of a type it cannot accept (for example, a text-only endpoint received binary data).
+            // 1004                             Reserved. A meaning might be defined in the future.
+            // 1005	CLOSE_NO_STATUS	Reserved.  Indicates that no status code was provided even though one was expected.
+            // 1006	CLOSE_ABNORMAL	Reserved. Used to indicate that a connection was closed abnormally (
+            //
+            //
+            socket.onclose = function(event) { 
+                console.log("*** Websocket closed with code " + event.code + 
+                    ", reason '" + event.reason + "' clean = " + event.clean);
+                retryTimeout *= 2;
+                retries += 1;
+                console.log("Retrying in " + retryTimeout + "ms"); //(ask user?)
+                setTimeout(function(){
+                    console.log("Trying websocket again");
+                    openWebsocket();
+                }, retryTimeout);
+            }
+            socket.onmessage = function(msg) {
+                if (msg.data && msg.data.slice(0, 3) === 'pub') {
+                    if (control.upstreamCount) {
+                        control.upstreamCount -= 1;
+                        if (control.upstreamCount >= 0) {
+                            console.log("just an echo");
+                            return; // Just an echo
+                         }
+                    }
+                    control.upstreamCount = 0;
+                    console.log("Assume a real downstream change");
+                    self.requestDownstreamAction(doc, theHandler);
+                }
+            };
+        }; // openWebsocket
+        openWebsocket();
+        
+        return true;
+    };
+
 
     // This high-level function updates the local store iff the web is changed successfully. 
     //
@@ -6281,6 +6458,7 @@ $rdf.sparqlUpdate = function() {
             return callback(null, true); // success -- nothing needed to be done.
         }
         var doc = ds.length ? ds[0].why : is[0].why;
+        var control = this.patchControlFor(doc);
         var startTime = Date.now();
         
         var props = ['subject', 'predicate', 'object', 'why'];
@@ -6357,14 +6535,16 @@ $rdf.sparqlUpdate = function() {
                 }
             }
             // Track pending upstream patches until they have fnished their callback
-            doc.pendingUpstream = doc.pendingUpstream ? doc.pendingUpstream + 1 : 1;
-            if (typeof doc.upstreamCount !== 'undefined') {
-                doc.upstreamCount += 1; // count changes we originated ourselves
+            control.pendingUpstream = control.pendingUpstream ? control.pendingUpstream + 1 : 1;
+            if (typeof control.upstreamCount !== 'undefined') {
+                control.upstreamCount += 1; // count changes we originated ourselves
             }
 
             this._fire(doc.uri, query,
                 function(uri, success, body, xhr) {
-                    console.log("\t sparql: Return success="+success+" for query "+query+"\n");
+                    xhr.elapsedTime_ms =  Date.now() - startTime;
+                    console.log("    sparql: Return " + (success? "success" : "FAILURE " + xhr.status ) +
+                        " elapsed " + xhr.elapsedTime_ms + "ms");
                     if (success) {
                         try {
                             kb.remove(ds);
@@ -6377,15 +6557,15 @@ $rdf.sparqlUpdate = function() {
                         }
                     }
                     
-                    xhr.elapsedTime_ms =  Date.now() - startTime;
 
                     callback(uri, success, body, xhr);
-                    doc.pendingUpstream = doc.pendingUpstream - 1;
+                    control.pendingUpstream -= 1;
                     // When upstream patches have been sent, reload state if downstream waiting 
-                    if (doc.pendingUpstream  === 0 && doc.downstreamAction) {
-                        var downstreamAction = doc.downstreamAction;
-                        delete  doc.downstreamListener;
-                        downstreamAction();
+                    if (control.pendingUpstream  === 0 && control.downstreamAction) {
+                        var downstreamAction = control.downstreamAction;
+                        delete  control.downstreamAction;
+                        console.log("delayed downstream action:")
+                        downstreamAction(doc);
                     }
                 });
             
@@ -6427,6 +6607,7 @@ $rdf.sparqlUpdate = function() {
             var candidateTarget = kb.the(response, this.ns.httph("content-location"));
             if (candidateTarget) targetURI = $rdf.uri.join(candidateTarget.value, targetURI);
             var xhr = $rdf.Util.XMLHTTPFactory();
+            xhr.options = {};
             xhr.onreadystatechange = function (){
                 if (xhr.readyState == 4){
                     //formula from sparqlUpdate.js, what about redirects?
@@ -6547,6 +6728,7 @@ $rdf.sparqlUpdate = function() {
             }
         }
         var xhr = $rdf.Util.XMLHTTPFactory();
+        xhr.options = {};
         xhr.onreadystatechange = function (){
             if (xhr.readyState == 4){
                 //formula from sparqlUpdate.js, what about redirects?
@@ -6575,29 +6757,66 @@ $rdf.sparqlUpdate = function() {
     //
     // Fast and cheap, no metaata
     // Measure times for the document 
-    // Recover data if fetch fails.
+    // Load it provisionally 
+    // Don't delete the statemenst before the load, or it will leave a broken document
+    // in the meantime.
     
     sparql.prototype.reload = function(kb, doc, callback) {
-        var saved = kb.statementsMatching(undefined, undefined, undefined, doc);
-        console.log("Reload resource: Unloading statements " + saved.length
-            + " out of " + kb.statements.length)
-        kb.fetcher.unload(doc);
         var startTime = Date.now();
         // force sets no-cache and 
-        kb.fetcher.nowOrWhenFetched(doc.uri, {force: true, noMeta: true}, function(ok, body){
+        kb.fetcher.nowOrWhenFetched(doc.uri, {force: true, noMeta: true, clearPreviousData: true}, function(ok, body, xhr){
             if (!ok) {
-                console.log("ERROR reloading data! -- restoring original " + saved.length + " statements. Error: " + body);
-                kb.add(saved);
-                callback(false, "Error reloading data: " + body)
+                console.log("    ERROR reloading data: " + body);
+                callback(false, "Error reloading data: " + body, xhr)
+            } else if (xhr.onErrorWasCalled || xhr.status !== 200) {
+                console.log("    Non-HTTP error reloading data! onErrorWasCalled="
+                    + xhr.onErrorWasCalled + " status: " + xhr.status);
+                callback(false, "Non-HTTP error reloading data: " + body, xhr)
+                
             } else {
-                console.log("Reloaded " + kb.statementsMatching(undefined, undefined, undefined, doc).length
-                    + " out of " + kb.statements.length)
                 elapsedTime_ms = Date.now() - startTime;
-                console.log("fetch took "+elapsedTime_ms+"ms. Now sync the DOM.");
                 if (!doc.reloadTime_total) doc.reloadTime_total = 0;
                 if (!doc.reloadTime_count) doc.reloadTime_count = 0;
                 doc.reloadTime_total += elapsedTime_ms;
                 doc.reloadTime_count += 1;
+                console.log("    Fetch took "+elapsedTime_ms+"ms, av. of " + doc.reloadTime_count +  " = "
+                    + (doc.reloadTime_total/doc.reloadTime_count) +"ms.");
+                callback(true);
+            };
+        });
+    };
+
+    sparql.prototype.oldReload = function(kb, doc, callback) {
+        var g2 = $rdf.graph(); // A separate store to hold the data as we load it
+        var f2 = $rdf.fetcher(g2);
+        var startTime = Date.now();
+        // force sets no-cache and 
+        f2.nowOrWhenFetched(doc.uri, {force: true, noMeta: true, clearPreviousData: true}, function(ok, body, xhr){
+            if (!ok) {
+                console.log("    ERROR reloading data: " + body);
+                callback(false, "Error reloading data: " + body, xhr)
+            } else if (xhr.onErrorWasCalled || xhr.status !== 200) {
+                console.log("    Non-HTTP error reloading data! onErrorWasCalled="
+                    + xhr.onErrorWasCalled + " status: " + xhr.status);
+                callback(false, "Non-HTTP error reloading data: " + body, xhr)
+                
+            } else {
+                var sts1 = kb.statementsMatching(undefined, undefined, undefined, doc).slice();// Take a copy!!
+                var sts2 = g2.statementsMatching(undefined, undefined, undefined, doc).slice();
+                console.log("    replacing " + sts1.length + " with " + sts2.length
+                    + " out of total statements " + kb.statements.length)
+                kb.remove(sts1);
+                kb.add(sts2);
+                elapsedTime_ms = Date.now() - startTime;
+                if (sts2.length === 0) {
+                    console.log("????????????????? 0000000");
+                }
+                if (!doc.reloadTime_total) doc.reloadTime_total = 0;
+                if (!doc.reloadTime_count) doc.reloadTime_count = 0;
+                doc.reloadTime_total += elapsedTime_ms;
+                doc.reloadTime_count += 1;
+                console.log("    fetch took "+elapsedTime_ms+"ms, av. of " + doc.reloadTime_count +  " = "
+                    + (doc.reloadTime_total/doc.reloadTime_count) +"ms.");
                 callback(true);
             };
         });
@@ -6685,6 +6904,9 @@ var __Serializer = function( store ){
     this.prefixes = [];    // suggested prefixes
     this.namespaces = []; // complementary indexes
     
+    this.suggestPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'); // XML code assumes this!
+    this.suggestPrefix('xml', 'reserved:reservedForFutureUse'); // XML reserves xml: in the spec.
+    
     this.namespacesUsed = []; // Count actually used and so needed in @prefixes
     this.keywords = ['a']; // The only one we generate at the moment
     this.prefixchars = "abcdefghijklmnopqustuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -6703,20 +6925,20 @@ __Serializer.prototype.setFlags = function(flags)
 
 
 __Serializer.prototype.toStr = function(x) {
-        var s = x.toNT();
-        if (x.termType == 'formula') {
-            this.formulas[s] = x; // remember as reverse does not work
-        }
-        return s;
+    var s = x.toNT();
+    if (x.termType == 'formula') {
+        this.formulas[s] = x; // remember as reverse does not work
+    }
+    return s;
 };
 
 __Serializer.prototype.fromStr = function(s) {
-        if (s[0] == '{') {
-            var x = this.formulas[s];
-            if (!x) alert('No formula object for '+s)
-            return x;
-        }
-        return this.store.fromNT(s);
+    if (s[0] == '{') {
+        var x = this.formulas[s];
+        if (!x) alert('No formula object for '+s)
+        return x;
+    }
+    return this.store.fromNT(s);
 };
 
 
@@ -6732,7 +6954,8 @@ __Serializer.prototype.fromStr = function(s) {
 __Serializer.prototype.suggestPrefix = function(prefix, uri) {
     if (prefix.slice(0,7) === 'default') return; // Try to weed these out
     if (prefix.slice(0,2) === 'ns') return; //  From others inferior algos
-    if (this.namespaces[prefix] || this.prefixes[uri]) return; // already used 
+    if (!prefix || !uri) return; // empty strings not suitable
+    if (prefix in this.namespaces || uri in this.prefixes) return; // already used 
     this.prefixes[uri] = prefix;
     this.namespaces[prefix] = uri;
 }
@@ -6740,7 +6963,24 @@ __Serializer.prototype.suggestPrefix = function(prefix, uri) {
 // Takes a namespace -> prefix map
 __Serializer.prototype.suggestNamespaces = function(namespaces) {
     for (var px in namespaces) {
-        this.prefixes[namespaces[px]] = px;
+        this.suggestPrefix(px, namespaces[px]);
+    }
+}
+
+__Serializer.prototype.checkIntegrity = function() {
+    var p, ns;
+    for (p in this.namespaces) {
+        if (this.prefixes[this.namespaces[p]] !== p) {
+            throw "Serializer integity error 1: " + p + ", " + 
+                this.namespaces[p] + ", "+ this.prefixes[this.namespaces[p]] +"!";
+        }
+    }
+    for (ns in this.prefixes) {
+        if (this.namespaces[this.prefixes[ns]] !== ns) {
+            throw "Serializer integity error 2: " + ns + ", " + 
+                this.prefixs[ns] + ", "+ this.namespaces[this.prefixes[ns]] +"!";
+        
+        }
     }
 }
 
@@ -6748,11 +6988,10 @@ __Serializer.prototype.suggestNamespaces = function(namespaces) {
 __Serializer.prototype.makeUpPrefix = function(uri) {
     var p = uri;
     var pok;
-
     function canUse(pp) {
         if (! __Serializer.prototype.validPrefix.test(pp)) return false; // bad format
         if (pp === 'ns') return false; // boring
-        if (this.namespaces[pp]) return false; // already used
+        if (pp in this.namespaces) return false; // already used
         this.prefixes[uri] = pp;
         this.namespaces[pp] = uri; 
         pok = pp;
@@ -7239,7 +7478,9 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
     if (j<0 && this.flags.indexOf('/') < 0) {
         j = uri.lastIndexOf('/');
     }
-    if (j >= 0 && this.flags.indexOf('p') < 0 && uri.indexOf('http') === 0)  { // Can split at namespace but only if HTTP URI
+    if (j >= 0 && this.flags.indexOf('p') < 0 &&
+        // Can split at namespace but only if http[s]: URI or file: or ws[s] (why not others?)
+        (uri.indexOf('http') === 0 || uri.indexOf('ws') === 0 || uri.indexOf('file') === 0))  { 
         var canSplit = true;
         for (var k=j+1; k<uri.length; k++) {
             if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
@@ -7247,7 +7488,7 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
             }
         }
 
-        if (uri.slice(0, j) == this.base) { // base-relative
+        if (uri.slice(0, j+1) == this.base + '#') { // base-relative
             return '<#' + uri.slice(j+1) + '>';
         }
         if (canSplit) {
@@ -7260,6 +7501,7 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
                     return localid;
                 return ':' + localid;
             }
+            this.checkIntegrity(); //  @@@ Remove when not testing
             var prefix = this.prefixes[namesp];
             if (!prefix) prefix = this.makeUpPrefix(namesp);
             if (prefix) {
@@ -7278,7 +7520,7 @@ __Serializer.prototype.symbolToN3 = function symbolToN3(x) {  // c.f. symbolStri
 }
 
 
-// String ecaping utilities
+// String escaping utilities
 
 
 function hexify(str) { // also used in parser
@@ -7687,7 +7929,7 @@ $rdf.UpdatesSocket = (function() {
     this.subscribed = {};
     this.socket = {};
     try {
-      this.socket = new WebSocket(this.via);
+      this.socket = new WebSocket(via);
       this.socket.onopen = this.onOpen;
       this.socket.onclose = this.onClose;
       this.socket.onmessage = this.onMessage;
@@ -19270,7 +19512,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     this.async = async != null ? async : true
     this.appNode = this.store.bnode(); // Denoting this session
     this.store.fetcher = this; //Bi-linked
-    this.requested = {} ; 
+    this.requested = {} ;
     // this.requested[uri] states:
     //   undefined     no record of web access or records reset
     //   true          has been requested, XHR in progress
@@ -19279,10 +19521,10 @@ $rdf.Fetcher = function(store, timeout, async) {
     //   404           Ressource does not exist. Can be created etc.
     //   'redirected'  In attempt to counter CORS problems retried.
     //   other strings mean various other erros, such as parse errros.
-    // 
-    
+    //
+
     this.fetchCallbacks = {}; // fetchCallbacks[uri].push(callback)
-    
+
     this.nonexistant = {}; // keep track of explict 404s -> we can overwrite etc
     this.lookedUp = {}
     this.handlers = []
@@ -19359,6 +19601,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
         this.handlerFactory = function(xhr) {
             xhr.handle = function(cb) {
+                var relation, reverse;
                 if (!this.dom) {
                     this.dom = $rdf.Util.parseXML(xhr.responseText)
                 }
@@ -19373,8 +19616,17 @@ $rdf.Fetcher = function(store, timeout, async) {
 
                 // link rel
                 var links = this.dom.getElementsByTagName('link');
-                for (var x = links.length - 1; x >= 0; x--) {
-                    sf.linkData(xhr, links[x].getAttribute('rel'), links[x].getAttribute('href'), xhr.resource);
+                for (var x = links.length - 1; x >= 0; x--) { // @@ rev
+                    relation = links[x].getAttribute('rel'); 
+                    reverse = false;
+                    if (!relation) {
+                        relation = links[x].getAttribute('rev'); 
+                        reverse = true;
+                    }
+                    if (relation) {
+                        sf.linkData(xhr, relation,
+                        links[x].getAttribute('href'), xhr.resource, reverse);
+                    }
                 }
 
                 //GRDDL
@@ -19401,7 +19653,7 @@ $rdf.Fetcher = function(store, timeout, async) {
                     kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                 }
                 // Do RDFa here
-                
+
                 if ($rdf.parseDOM_RDFa) {
                     $rdf.parseDOM_RDFa(this.dom, kb, xhr.resource.uri);
                 }
@@ -19704,20 +19956,24 @@ $rdf.Fetcher = function(store, timeout, async) {
     }
 
     // in the why part of the quad distinguish between HTML and HTTP header
-    this.linkData = function(xhr, rel, uri, why) {
+    // Reverse is set iif the link was rev= as opposed to rel=
+    this.linkData = function(xhr, rel, uri, why, reverse) {
         var x = xhr.resource;
         if (!uri) return;
-        var predicate =  ns.rdfs('seeAlso');
+        var predicate;
         // See http://www.w3.org/TR/powder-dr/#httplink for describedby 2008-12-10
         var obj = kb.sym($rdf.uri.join(uri, xhr.resource.uri));
         if (rel == 'alternate' || rel == 'seeAlso' || rel == 'meta' || rel == 'describedby') {
-            if (obj.uri != xhr.resource.uri) {
-                kb.add(xhr.resource, predicate, obj, why);
-            }
+            if (obj.uri === xhr.resource.uri) return;
+            predicate = ns.rdfs('seeAlso');
         } else {
         // See https://www.iana.org/assignments/link-relations/link-relations.xml
         // Alas not yet in RDF yet for each predicate
             predicate = kb.sym($rdf.uri.join(rel, 'http://www.iana.org/assignments/link-relations/'));
+        }
+        if (reverse) {
+            kb.add(obj, predicate, xhr.resource, why);
+        } else {
             kb.add(xhr.resource, predicate, obj, why);
         }
     };
@@ -19728,21 +19984,22 @@ $rdf.Fetcher = function(store, timeout, async) {
             link = xhr.getResponseHeader('link'); // May crash from CORS error
         }catch(e){}
         if (link) {
-            var rel;
-            var lines = link.replace(/ /g, '').split(',');
-            for (var k=0; k < lines.length; k++) {
-                rel = null;
-                var arg = lines[k].split(';');
-                for (var i = 1; i < arg.length; i++) {
-                    lr = arg[i].split('=');
-                    if (lr[0] == 'rel') rel = lr[1].replace(/"/g, '').replace(/'/g, ''); // '"remove quotes
-                }
-                var v = arg[0];
-                // eg. Link: <.meta>; rel=meta, <.acl>; rel=acl
-                if (v.length && v[0] == '<' && v[v.length-1] == '>' && v.slice)
-                    v = v.slice(1, -1);
-                if (rel) { // Treat just like HTML link element
-                    this.linkData(xhr, rel, v, thisReq);
+            var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g;
+            var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g;
+
+            var matches = link.match(linkexp);
+            var rels = {};
+            for (var i = 0; i < matches.length; i++) {
+                var split = matches[i].split('>');
+                var href = split[0].substring(1);
+                var ps = split[1];
+                var s = ps.match(paramexp);
+                for (var j = 0; j < s.length; j++) {
+                    var p = s[j];
+                    var paramsplit = p.split('=');
+                    var name = paramsplit[0];
+                    var rel = paramsplit[1].replace(/["']/g, ''); //'"
+                    this.linkData(xhr, rel, href, thisReq);
                 }
             }
         }
@@ -19761,7 +20018,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         this.fireCallbacks('done', args)
     };
 
-    
+
     [$rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler,
      $rdf.Fetcher.XMLHandler, $rdf.Fetcher.HTMLHandler,
      $rdf.Fetcher.TextHandler, $rdf.Fetcher.N3Handler ].map(this.addHandler);
@@ -19842,14 +20099,34 @@ $rdf.Fetcher = function(store, timeout, async) {
         return uris.length
     }
 
+    /* Promise-based load function
+    ** 
+    ** Promise delivers xhr
+    **
+    ** @@ todo: If p1 is array then sequence or parallel fetch of all
+    */
+    this.load = function(uri, options) {
+	uri = uri.uri || uri;
+	var p = new Promise(function(resolve, reject){
+	    this.nowOrWhenFetched(uri, options, function(ok, message, xhr){
+		if (ok) {
+		    resolve(xhr);
+		} else {
+		    reject(message, xhr);
+		}
+	    
+	    });
+	});
+	return p;
+    }
 
     /*  Ask for a doc to be loaded if necessary then call back
     **
     ** Changed 2013-08-20:  Added (ok, errormessage) params to callback
     **
     ** Calling methods:
-    **   nowOrWhenFetched (uri, userCallback) 
-    **   nowOrWhenFetched (uri, options, userCallback) 
+    **   nowOrWhenFetched (uri, userCallback)
+    **   nowOrWhenFetched (uri, options, userCallback)
     **   nowOrWhenFetched (uri, referringTerm, userCallback, options)  <-- old
     **   nowOrWhenFetched (uri, referringTerm, userCallback) <-- old
     **
@@ -19859,7 +20136,7 @@ $rdf.Fetcher = function(store, timeout, async) {
     **   force            boolean.  Never mind whether you have tried before,
     **                    load this from scratch.
     **   forceContentType Override the incoming header to force the data to be
-    **                    treaed as this content-type. 
+    **                    treaed as this content-type.
     **/
     this.nowOrWhenFetched = function(uri, p2, userCallback, options) {
         uri = uri.uri || uri; // allow symbol object or string to be passed
@@ -19873,7 +20150,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         } else {
             options = p2;
         }
-        
+
         this.requestURI(uri, p2, options || {}, userCallback);
     }
 
@@ -19958,7 +20235,7 @@ $rdf.Fetcher = function(store, timeout, async) {
      **      rterm:  the resource which refered to this (for tracking bad links)
      **      options:
      **              force:  Load the data even if loaded before
-     **              withCredentials:   flag for XHR/CORS etc 
+     **              withCredentials:   flag for XHR/CORS etc
      **      userCallback:  Called with (true) or (false, errorbody, {status: 400}) after load is done or failed
      ** Return value:
      **	    The xhr object for the HTTP access
@@ -19967,7 +20244,7 @@ $rdf.Fetcher = function(store, timeout, async) {
      */
     this.requestURI = function(docuri, rterm, options, userCallback) { //sources_request_new
         docuri = docuri.uri || docuri; // Symbol or string
-        // Remove #localid 
+        // Remove #localid
         docuri = docuri.split('#')[0];
 
         if (typeof options === 'boolean') options = { 'force': options}; // Ols dignature
@@ -19986,12 +20263,12 @@ $rdf.Fetcher = function(store, timeout, async) {
         var sta = this.getState(docuri);
         if (!force) {
             if (sta == 'fetched') return userCallback ? userCallback(true) : undefined;
-            if (sta == 'failed') return userCallback ? 
+            if (sta == 'failed') return userCallback ?
                 userCallback(false, "Previously failed. " + this.requested[docuri],
                     {'status': this.requested[docuri]}) : undefined; // An xhr standin
             //if (sta == 'requested') return userCallback? userCallback(false, "Sorry already requested - pending already.", {'status': 999 }) : undefined;
         } else {
-            delete this.nonexistant[docuri];        
+            delete this.nonexistant[docuri];
         }
         // @@ Should allow concurrent requests
 
@@ -20002,7 +20279,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         this.fireCallbacks('request', args); //Kenny: fire 'request' callbacks here
         // dump( "web.js: Requesting uri: " + docuri + "\n" );
-        
+
 
         if (userCallback) {
             if (!this.fetchCallbacks[docuri]) {
@@ -20015,20 +20292,19 @@ $rdf.Fetcher = function(store, timeout, async) {
         if (this.requested[docuri] === true) {
             return; // Don't ask again - wait for existing call
         } else {
-            this.requested[docuri] = true;        
+            this.requested[docuri] = true;
         }
 
 
-        if (rterm) {
-            if (rterm.uri) { // A link betwen URIs not terms
-                kb.add(docterm.uri, ns.link("requestedBy"), rterm.uri, this.appNode)
-            }
+        if (!options.noMeta && rterm && rterm.uri) {
+            kb.add(docterm.uri, ns.link("requestedBy"), rterm.uri, this.appNode)
         }
 
         var useJQuery = typeof jQuery != 'undefined';
         if (!useJQuery) {
             var xhr = $rdf.Util.XMLHTTPFactory();
             var req = xhr.req = kb.bnode();
+            xhr.options = options;
             xhr.resource = docterm;
             xhr.requestedURI = args[0];
         } else {
@@ -20039,11 +20315,11 @@ $rdf.Fetcher = function(store, timeout, async) {
 
         var now = new Date();
         var timeNow = "[" + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + "] ";
-
-        kb.add(req, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
-        kb.add(req, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
-        kb.add(req, ns.link('status'), kb.collection(), this.appNode)
-
+        if (!options.noMeta) {
+            kb.add(req, ns.rdfs("label"), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
+            kb.add(req, ns.link("requestedURI"), kb.literal(docuri), this.appNode)
+            kb.add(req, ns.link('status'), kb.collection(), this.appNode)
+        }
         // This should not be stored in the store, but in the JS data
         /*
         if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.uri.protocol(docuri)) == "undefined") {
@@ -20052,72 +20328,84 @@ $rdf.Fetcher = function(store, timeout, async) {
             return xhr
         }
         */
+        var checkCredentialsRetry = function() {
+            if (!xhr.withCredentials) return false; // not dealt with
+            
+            console.log("@@ Retrying with no credentials for " + xhr.resource)
+            xhr.abort();
+            delete sf.requested[docuri]; // forget the original request happened
+            newopt = {};
+            for (opt in options) if (options.hasOwnProperty(opt)) {
+                newopt[opt] = options[opt]
+            }
+            newopt.withCredentials = false;
+            sf.addStatus(xhr.req, "Abort: Will retry with credentials SUPPRESSED to see if that helps");
+            sf.requestURI(docuri, rterm, newopt, xhr.userCallback); // usercallback already registered (with where?)
+            return true;
+        }
+
 
         var onerrorFactory = function(xhr) {
             return function(event) {
-                if ($rdf.Fetcher.crossSiteProxyTemplate && (typeof document !== 'undefined') &&document.location && !xhr.proxyUsed) { // In mashup situation
-                    var hostpart = $rdf.uri.hostpart;
-                    var here = '' + document.location;
-                    var uri = xhr.resource.uri
-                    if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
-                        if (xhr.status === 401 || xhr.status === 403 || xhr.status === 404) {
-                            onreadystatechangeFactory(xhr)();
-                        } else {
-                            newURI = $rdf.Fetcher.crossSiteProxy(uri);
-                            sf.addStatus(xhr.req, "BLOCKED -> Cross-site Proxy to <" + newURI + ">");
-                            if (xhr.aborted) return;
+                xhr.onErrorWasCalled = true; // debugging and may need it
+                if  (typeof document !== 'undefined') { // Mashup situation, not node etc
+                    if ($rdf.Fetcher.crossSiteProxyTemplate && document.location && !xhr.proxyUsed) { 
+                        var hostpart = $rdf.uri.hostpart;
+                        var here = '' + document.location;
+                        var uri = xhr.resource.uri
+                        if (hostpart(here) && hostpart(uri) && hostpart(here) != hostpart(uri)) {
+                            if (xhr.status === 401 || xhr.status === 403 || xhr.status === 404) {
+                                onreadystatechangeFactory(xhr)();
+                            } else {
+                                newURI = $rdf.Fetcher.crossSiteProxy(uri);
+                                sf.addStatus(xhr.req, "BLOCKED -> Cross-site Proxy to <" + newURI + ">");
+                                if (xhr.aborted) return;
 
-                            var kb = sf.store;
-                            var oldreq = xhr.req;
-                            kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), oldreq);
-
-                            xhr.abort()
-                            xhr.aborted = true
-
-                            sf.addStatus(oldreq, 'redirected to new request') // why
-                            //the callback throws an exception when called from xhr.onerror (so removed)
-                            //sf.fireCallbacks('done', args) // Are these args right? @@@   Not done yet! done means success
-                            sf.requested[xhr.resource.uri] = 'redirected';
-                            
-                            if (sf.fetchCallbacks[xhr.resource.uri]) {
-                                if (!sf.fetchCallbacks[newURI]) {
-                                    sf.fetchCallbacks[newURI] = [];
+                                var kb = sf.store;
+                                var oldreq = xhr.req;
+                                if (!xhr.options.noMeta) {
+                                    kb.add(oldreq, ns.http('redirectedTo'), kb.sym(newURI), oldreq);
                                 }
-                                sf.fetchCallbacks[newURI] == sf.fetchCallbacks[newURI].concat(sf.fetchCallbacks[xhr.resource.uri]);
-                                delete sf.fetchCallbacks[xhr.resource.uri];
-                            }
+                                xhr.abort()
+                                xhr.aborted = true
 
-                            var xhr2 = sf.requestURI(newURI, xhr.resource, options);
-                            xhr2.proxyUsed = true; //only try the proxy once
+                                sf.addStatus(oldreq, 'redirected to new request') // why
+                                //the callback throws an exception when called from xhr.onerror (so removed)
+                                //sf.fireCallbacks('done', args) // Are these args right? @@@   Not done yet! done means success
+                                sf.requested[xhr.resource.uri] = 'redirected';
 
-                            if (xhr2 && xhr2.req) {
-                                kb.add(xhr.req,
-                                    kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
-                                    xhr2.req,
-                                    sf.appNode);
-                                return;
+                                if (sf.fetchCallbacks[xhr.resource.uri]) {
+                                    if (!sf.fetchCallbacks[newURI]) {
+                                        sf.fetchCallbacks[newURI] = [];
+                                    }
+                                    sf.fetchCallbacks[newURI] == sf.fetchCallbacks[newURI].concat(sf.fetchCallbacks[xhr.resource.uri]);
+                                    delete sf.fetchCallbacks[xhr.resource.uri];
+                                }
+
+                                var xhr2 = sf.requestURI(newURI, xhr.resource, options);
+                                if (xhr2) {
+                                    xhr2.proxyUsed = true; //only try the proxy once
+                                }
+                                if (xhr2 && xhr2.req) {
+                                    if (!xhr.options.noMeta) {
+                                        kb.add(xhr.req,
+                                            kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
+                                            xhr2.req,
+                                            sf.appNode);
+                                    }
+                                    return;
+                                }
                             }
                         }
-                    } else {
-                        if (xhr.withCredentials) {
-                            console.log("@@ Retrying with no credentials for " + xhr.resource)
-                            xhr.abort();
-                            delete sf.requested[docuri]; // forget the original request happened
-                            newopt = {};
-                            for (opt in options) if (options.hasOwnProperty(opt)) {
-                                newopt[opt] = options[opt]
-                            }
-                            newopt.withCredentials = false;
-                            sf.addStatus(xhr.req, "Abort: Will retry with credentials SUPPRESSED to see if that helps");
-                             sf.requestURI(docuri, rterm, newopt); // usercallback already registered
-                            // xhr.send(); // try again -- not a function
-                        } else {
-                            //sf.failFetch(xhr, "XHR Error not from Credentials or cross-site: "+event); // Alas we get no error message
+                        
+                        if (checkCredentialsRetry(xhr)) {
+                            return;
                         }
+                        xhr.status = 999; // 
                     }
-                }; 
+                }; // mashu
             } // function of event
-        }; // onerrorFactory 
+        }; // onerrorFactory
 
             // Set up callbacks
         var onreadystatechangeFactory = function(xhr) {
@@ -20132,6 +20420,18 @@ $rdf.Fetcher = function(store, timeout, async) {
                     var response = sf.saveResponseMetadata(xhr, kb);
                     sf.fireCallbacks('headers', [{uri: docuri, headers: xhr.headers}]);
 
+                    // Check for masked errors.
+                    // For "security reasons" theboraser hides errors such as CORS errors from 
+                    // the calling code (2015). oneror() used to be called but is not now.
+                    // 
+                    if (xhr.status === 0) {
+                        console.log("Masked error - status 0 for " + xhr.resource.uri);
+                        if (checkCredentialsRetry(xhr)) { // retry is could be credentials flag CORS issue
+                            return;
+                        }
+                        xhr.status = 900; // unknown masked error
+                        return;
+                    }
                     if (xhr.status >= 400) { // For extra dignostics, keep the reply
                     //  @@@ 401 should cause  a retry with credential son
                     // @@@ cache the credentials flag by host ????
@@ -20178,10 +20478,10 @@ $rdf.Fetcher = function(store, timeout, async) {
                     var extensionToContentType = {
                         'rdf': 'application/rdf+xml', 'owl': 'application/rdf+xml',
                         'n3': 'text/n3', 'ttl': 'text/turtle', 'nt': 'text/n3', 'acl': 'text/n3',
-                        'html': 'text/html', 'html': 'text/htm', 
-                        'xml': 'text/xml' 
+                        'html': 'text/html', 'html': 'text/htm',
+                        'xml': 'text/xml'
                     };
-                    
+
                     if (xhr.status == 200) {
                         addType(ns.link('Document'));
                         var ct = xhr.headers['content-type'];
@@ -20193,14 +20493,18 @@ $rdf.Fetcher = function(store, timeout, async) {
                             if (guess) {
                                 xhr.headers['content-type'] = guess;
                             }
-                        } 
+                        }
                         if (ct) {
                             if (ct.indexOf('image/') == 0 || ct.indexOf('application/pdf') == 0) addType(kb.sym('http://purl.org/dc/terms/Image'));
                         }
+                        if (options.clearPreviousData) { // Before we parse new data clear old but only on 200
+                            kb.removeDocument(xhr.resource);
+                        };
+                        
                     }
                     // application/octet-stream; charset=utf-8
 
-                    
+
 
                     if ($rdf.uri.protocol(xhr.resource.uri) == 'file' || $rdf.uri.protocol(xhr.resource.uri) == 'chrome') {
                         if (options.forceContentType) {
@@ -20357,7 +20661,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         // Map the URI to a localhost proxy if we are running on localhost
         // This is used for working offline, e.g. on planes.
         // Is the script istelf is running in localhost, then access all data in a localhost mirror.
-        // Do not remove without checking with TimBL 
+        // Do not remove without checking with TimBL
         var uri2 = docuri;
         if (typeof tabulator != 'undefined' && tabulator.preferences.get('offlineModeUsingLocalhost')) {
             if (uri2.slice(0,7) == 'http://'  && uri2.slice(7,17) != 'localhost/') {
@@ -20373,14 +20677,14 @@ $rdf.Fetcher = function(store, timeout, async) {
         // XMLHttpRequest cannot load http://www.w3.org/People/Berners-Lee/card.
         // A wildcard '*' cannot be used in the 'Access-Control-Allow-Origin' header when the credentials flag is true.
         // @ Many ontology files under http: and need CORS wildcard -> can't have withCredentials
-        
+
         var withCredentials = ( uri2.slice(0,6) === 'https:'); // @@ Kludge -- need for webid which typically is served from https
         if (options.withCredentials !== undefined) {
             withCredentials = options.withCredentials;
         }
         var actualProxyURI = this.proxyIfNecessary(uri2);
-        
-        
+
+
         // Setup the request
         if (typeof jQuery !== 'undefined' && jQuery.ajax) {
             var xhrFields = { withCredentials: withCredentials};
@@ -20417,6 +20721,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             });
 
             xhr.req = req;
+            xhr.options = options;
 
             xhr.resource = docterm;
             xhr.options = options;
@@ -20434,6 +20739,7 @@ $rdf.Fetcher = function(store, timeout, async) {
 
             xhr.req = req;
             xhr.options = options;
+            xhr.options = options;
             xhr.resource = docterm;
             xhr.requestedURI = uri2;
 
@@ -20445,7 +20751,7 @@ $rdf.Fetcher = function(store, timeout, async) {
             } catch (er) {
                 return this.failFetch(xhr, "XHR open for GET failed for <"+uri2+">:\n\t" + er);
             }
-            if (force) { // must happen after open 
+            if (force) { // must happen after open
                 xhr.setRequestHeader('Cache-control', 'no-cache');
             }
 
@@ -20661,7 +20967,7 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
 
         return xhr
-        
+
     } // this.requestURI()
 
 
@@ -20675,15 +20981,15 @@ $rdf.Fetcher = function(store, timeout, async) {
         }
     }
 
+    // deprecated -- use IndexedFormula.removeDocument(doc)
     this.unload = function(term) {
         this.store.removeMany(undefined, undefined, undefined, term)
         delete this.requested[term.uri]; // So it can be loaded again
     }
 
     this.refresh = function(term, userCallback) { // sources_refresh
-        this.unload(term);
         this.fireCallbacks('refresh', arguments)
-        this.requestURI(term.uri, undefined, { force: true}, userCallback)
+        this.requestURI(term.uri, undefined, { force: true, clearPreviousData: true}, userCallback)
     }
 
     this.retract = function(term) { // sources_retract
@@ -20713,10 +21019,10 @@ $rdf.Fetcher = function(store, timeout, async) {
     }
 
     // var updatesVia = new $rdf.UpdatesVia(this); // Subscribe to headers
-    
+
     // @@@@@@@@ This is turned off because it causes a websocket to be set up for ANY fetch
     // whether we want to track it ot not. including ontologies loaed though the XSSproxy
-    
+
 }; // End of fetcher
 
 $rdf.fetcher = function(store, timeout, async) { return new $rdf.Fetcher(store, timeout, async) };
@@ -20812,9 +21118,9 @@ $rdf.parse = function parse(str, kb, base, contentType, callback) {
         if (err) {
             callback(err, kb);
         }
-        if (triple) { 
+        if (triple) {
             triples.push(triple);
-        } else { 
+        } else {
             for (var i = 0; i < triples.length; i++) {
                 addTriple(kb, triples[i]);
             }
@@ -20853,11 +21159,11 @@ $rdf.parse = function parse(str, kb, base, contentType, callback) {
 
 //   Serialize to the appropriate format
 //
-// Either 
+// Either
 //
 // @@ Currently NQuads and JSON/LD are deal with extrelemently inefficiently
 // through mutiple conversions.
-// 
+//
 $rdf.serialize = function(target, kb, base, contentType, callback) {
     var documentString = null;
     try {
@@ -25833,7 +26139,7 @@ exports.format = function(f) {
   var args = arguments;
   var len = args.length;
   var str = String(f).replace(formatRegExp, function(x) {
-    if (x === '%') return '%';
+    if (x === '%%') return '%';
     if (i >= len) return x;
     switch (x) {
       case '%s': return String(args[i++]);
@@ -26405,7 +26711,7 @@ else {
     // Leak a global regardless of module system
     root['$rdf'] = $rdf;
 }
-$rdf.buildTime = "2015-09-28T17:06:22";
+$rdf.buildTime = "2016-01-14T17:20:52";
 })(this);
 
 // ###### Finished expanding js/rdf/dist/rdflib.js ##############
@@ -26413,6 +26719,485 @@ $rdf.buildTime = "2015-09-28T17:06:22";
     tabulator.rdf = this['$rdf'];
     $rdf = this['$rdf'];
 
+// ###### Expanding js/solid/dist/solid.js ##############
+/*
+The MIT License (MIT)
+
+Copyright (c) 2015 Solid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Solid.js is a Javascript library for Solid applications. This library currently
+depends on rdflib.js. Please make sure to load the rdflib.js script before
+loading solid.js.
+
+If you would like to know more about the solid Solid project, please see
+https://github.com/solid/
+
+*/
+
+// WebID authentication and signup
+var Solid = Solid || {};
+Solid.auth = (function(window) {
+    'use strict';
+
+   // default (preferred) authentication endpoint
+    var authEndpoint = 'https://databox.me/';
+    var signupEndpoint = 'https://solid.github.io/solid-idps/';
+
+    // attempt to find the current user's WebID from the User header if authenticated
+    // resolve(webid) - string
+    var login = function(url) {
+        url = url || window.location.origin+window.location.pathname;
+        var promise = new Promise(function(resolve, reject) {
+            var http = new XMLHttpRequest();
+            http.open('HEAD', url);
+            http.withCredentials = true;
+            http.onreadystatechange = function() {
+                if (this.readyState == this.DONE) {
+                    if (this.status === 200) {
+                        var user = this.getResponseHeader('User');
+                        if (user && user.length > 0 && user.slice(0, 4) == 'http') {
+                            return resolve(user);
+                        }
+                    }
+                    // authenticate to a known endpoint
+                    var http = new XMLHttpRequest();
+                    http.open('HEAD', authEndpoint);
+                    http.withCredentials = true;
+                    http.onreadystatechange = function() {
+                        if (this.readyState == this.DONE) {
+                            if (this.status === 200) {
+                                var user = this.getResponseHeader('User');
+                                if (user && user.length > 0 && user.slice(0, 4) == 'http') {
+                                    return resolve(user);
+                                }
+                            }
+                            return reject({ok: false, status: this.status, body: this.responseText, xhr: this});
+                        }
+                    };
+                    http.send();
+                }
+            };
+            http.send();
+        });
+
+        return promise;
+    };
+
+    // Open signup window
+    var signup = function(url) {
+        url = url || signupEndpoint;
+        var leftPosition, topPosition;
+        var width = 1024;
+        var height = 600;
+        // set borders
+        leftPosition = (window.screen.width / 2) - ((width / 2) + 10);
+        // set title and status bars
+        topPosition = (window.screen.height / 2) - ((height / 2) + 50);
+        window.open(url+"?origin="+encodeURIComponent(window.location.origin), "Solid signup", "resizable,scrollbars,status,width="+width+",height="+height+",left="+ leftPosition + ",top=" + topPosition);
+
+        var promise = new Promise(function(resolve, reject) {
+            console.log("Starting listener");
+            listen().then(function(webid) {
+                return resolve(webid);
+            }).catch(function(err){
+                return reject(err);
+            });
+        });
+
+        return promise;
+    };
+
+    // Listen to login messages from child window/iframe
+    var listen = function() {
+        var promise = new Promise(function(resolve, reject){
+            console.log("In listen()");
+            var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+            var eventListener = window[eventMethod];
+            var messageEvent = eventMethod == "attachEvent" ? "onmessage" : "message";
+            eventListener(messageEvent,function(e) {
+                var u = e.data;
+                if (u.slice(0,5) == 'User:') {
+                    var user = u.slice(5, u.length);
+                    if (user && user.length > 0 && user.slice(0,4) == 'http') {
+                        return resolve(user);
+                    } else {
+                        return reject(user);
+                    }
+                }
+            },true);
+        });
+
+        return promise;
+    };
+
+    // return public methods
+    return {
+        login: login,
+        signup: signup,
+        listen: listen,
+    };
+}(this));
+// Identity / WebID
+var Solid = Solid || {};
+Solid.identity = (function(window) {
+    'use strict';
+
+    // common vocabs
+    var OWL = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
+    var PIM = $rdf.Namespace("http://www.w3.org/ns/pim/space#");
+    var FOAF = $rdf.Namespace("http://xmlns.com/foaf/0.1/");
+
+    // fetch user profile (follow sameAs links) and return promise with a graph
+    // resolve(graph)
+    var getProfile = function(url) {
+        var promise = new Promise(function(resolve) {
+            // Load main profile
+            Solid.web.get(url).then(
+                function(graph) {
+                    // set WebID
+                    var webid = graph.any($rdf.sym(url), FOAF('primaryTopic'));
+                    // find additional resources to load
+                    var sameAs = graph.statementsMatching(webid, OWL('sameAs'), undefined);
+                    var seeAlso = graph.statementsMatching(webid, OWL('seeAlso'), undefined);
+                    var prefs = graph.statementsMatching(webid, PIM('preferencesFile'), undefined);
+                    var toLoad = sameAs.length + seeAlso.length + prefs.length;
+
+                    var checkAll = function() {
+                        if (toLoad === 0) {
+                            return resolve(graph);
+                        }
+                    }
+                    // Load sameAs files
+                    if (sameAs.length > 0) {
+                        sameAs.forEach(function(same){
+                            Solid.web.get(same.object.value, same.object.value).then(
+                                function(g) {
+                                    Solid.utils.appendGraph(graph, g);
+                                    toLoad--;
+                                    checkAll();
+                                }
+                            ).catch(
+                            function(err){
+                                console.log(err);
+                                toLoad--;
+                                checkAll();
+                            });
+                        });
+                    }
+                    // Load seeAlso files
+                    if (seeAlso.length > 0) {
+                        seeAlso.forEach(function(see){
+                            Solid.web.get(see.object.value).then(
+                                function(g) {
+                                    Solid.utils.appendGraph(graph, g, see.object.value);
+                                    toLoad--;
+                                    checkAll();
+                                }
+                            ).catch(
+                            function(err){
+                                console.log(err);
+                                toLoad--;
+                                checkAll();
+                            });
+                        });
+                    }
+                    // Load preferences files
+                    if (prefs.length > 0) {
+                        prefs.forEach(function(pref){
+                            Solid.web.get(pref.object.value).then(
+                                function(g) {
+                                    Solid.utils.appendGraph(graph, g, pref.object.value);
+                                    toLoad--;
+                                    checkAll();
+                                }
+                            ).catch(
+                            function(err){
+                                console.log(err);
+                                toLoad--;
+                                checkAll();
+                            });
+                        });
+                    }
+                }
+            )
+            .catch(
+                function(err) {
+                    console.log("Could not load",url);
+                    resolve(err);
+                }
+            );
+        });
+
+        return promise;
+    };
+
+    // Find the user's workspaces
+    var getWorkspaces = function(webid, graph) {
+        var promise = new Promise(function(resolve, reject){
+            if (!graph) {
+                // fetch profile
+                getProfile(webid).then(function(g) {
+                    return getWorkspaces(webid, g);
+                }).catch(function(err){
+                    reject(err);
+                });
+            } else {
+                // find workspaces
+                console.log(graph);
+            }
+        });
+
+        return promise;
+    };
+
+    // return public methods
+    return {
+        getProfile: getProfile,
+        getWorkspaces: getWorkspaces
+    };
+}(this));
+// Events
+Solid = Solid || {};
+Solid.status = (function(window) {
+    'use strict';
+
+    // Get current online status
+    var isOnline = function() {
+        return window.navigator.onLine;
+    };
+
+    // Is offline
+    var onOffline = function(callback) {
+        window.addEventListener("offline", callback, false);
+    };
+    // Is online
+    var onOnline = function(callback) {
+        window.addEventListener("online", callback, false);
+    };
+
+    // return public methods
+    return {
+        isOnline: isOnline,
+        onOffline: onOffline,
+        onOnline: onOnline,
+    };
+}(this));
+// Helper functions
+var Solid = Solid || {};
+Solid.utils = (function(window) {
+    'use strict';
+
+    // parse a Link header
+    var parseLinkHeader = function(link) {
+        var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g;
+        var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g;
+
+        var matches = link.match(linkexp);
+        var rels = {};
+        for (var i = 0; i < matches.length; i++) {
+            var split = matches[i].split('>');
+            var href = split[0].substring(1);
+            var ps = split[1];
+            var s = ps.match(paramexp);
+            for (var j = 0; j < s.length; j++) {
+                var p = s[j];
+                var paramsplit = p.split('=');
+                var name = paramsplit[0];
+                var rel = paramsplit[1].replace(/["']/g, '');
+                rels[rel] = href;
+            }
+        }
+        return rels;
+    };
+
+    // append statements from one graph object to another
+    var appendGraph = function(toGraph, fromGraph, docURI) {
+        var why = (docURI)?$rdf.sym(docURI):undefined;
+        fromGraph.statementsMatching(undefined, undefined, undefined, why).forEach(function(st) {
+            toGraph.add(st.subject, st.predicate, st.object, st.why);
+        });
+    };
+
+    return {
+        parseLinkHeader: parseLinkHeader,
+        appendGraph: appendGraph,
+    };
+}(this));
+// LDP operations
+var Solid = Solid || {};
+Solid.web = (function(window) {
+    'use strict';
+
+    // Init some defaults;
+    var PROXY = "https://databox.me/,proxy?uri={uri}";
+    var TIMEOUT = 5000;
+
+    $rdf.Fetcher.crossSiteProxyTemplate = PROXY;
+    // common vocabs
+    var LDP = $rdf.Namespace("http://www.w3.org/ns/ldp#");
+
+    // return metadata for a given request
+    var parseResponseMeta = function(resp) {
+        var h = Solid.utils.parseLinkHeader(resp.getResponseHeader('Link'));
+        var meta = {};
+        meta.url = resp.getResponseHeader('Location');
+        meta.acl = h['acl'];
+        meta.meta = (h['meta'])?h['meta']:h['describedBy'];
+        meta.user = (resp.getResponseHeader('User'))?resp.getResponseHeader('User'):'';
+        meta.exists = false;
+        meta.exists = (resp.status === 200)?true:false;
+        meta.xhr = resp;
+        return meta;
+    };
+
+    // check if a resource exists and return useful Solid info (acl, meta, type, etc)
+    // resolve(metaObj)
+    var head = function(url) {
+        var promise = new Promise(function(resolve) {
+            var http = new XMLHttpRequest();
+            http.open('HEAD', url);
+            http.onreadystatechange = function() {
+                if (this.readyState == this.DONE) {
+                    resolve(parseResponseMeta(this));
+                }
+            };
+            http.send();
+        });
+
+        return promise;
+    };
+
+    // fetch an RDF resource
+    // resolve(graph) | reject(this)
+    var get = function(url) {
+        var promise = new Promise(function(resolve, reject) {
+            var g = new $rdf.graph();
+            var f = new $rdf.fetcher(g, TIMEOUT);
+
+            var docURI = (url.indexOf('#') >= 0)?url.slice(0, url.indexOf('#')):url;
+            f.nowOrWhenFetched(docURI,undefined,function(ok, body, xhr) {
+                if (!ok) {
+                    reject({status: xhr.status, xhr: xhr});
+                } else {
+                    resolve(g);
+                }
+            });
+        });
+
+        return promise;
+    };
+
+    // create new resource
+    // resolve(metaObj) | reject
+    var post = function(url, slug, data, isContainer) {
+        var resType = (isContainer)?LDP('BasicContainer').uri:LDP('Resource').uri;
+        var promise = new Promise(function(resolve, reject) {
+            var http = new XMLHttpRequest();
+            http.open('POST', url);
+            http.setRequestHeader('Content-Type', 'text/turtle');
+            http.setRequestHeader('Link', '<'+resType+'>; rel="type"');
+            if (slug && slug.length > 0) {
+                http.setRequestHeader('Slug', slug);
+            }
+            http.withCredentials = true;
+            http.onreadystatechange = function() {
+                if (this.readyState == this.DONE) {
+                    if (this.status === 200 || this.status === 201) {
+                        resolve(parseResponseMeta(this));
+                    } else {
+                        reject({status: this.status, xhr: this});
+                    }
+                }
+            };
+            if (data && data.length > 0) {
+                http.send(data);
+            } else {
+                http.send();
+            }
+        });
+
+        return promise;
+    };
+
+    // update/create resource using HTTP PUT
+    // resolve(metaObj) | reject
+    var put = function(url, data) {
+        var promise = new Promise(function(resolve, reject) {
+            var http = new XMLHttpRequest();
+            http.open('PUT', url);
+            http.setRequestHeader('Content-Type', 'text/turtle');
+            http.withCredentials = true;
+            http.onreadystatechange = function() {
+                if (this.readyState == this.DONE) {
+                    if (this.status === 200 || this.status === 201) {
+                        return resolve(parseResponseMeta(this));
+                    } else {
+                        reject({status: this.status, xhr: this});
+                    }
+                }
+            };
+            if (data) {
+                http.send(data);
+            } else {
+                http.send();
+            }
+        });
+
+        return promise;
+    };
+
+    // delete a resource
+    // resolve(true) | reject
+    var del = function(url) {
+        var promise = new Promise(function(resolve, reject) {
+            var http = new XMLHttpRequest();
+            http.open('DELETE', url);
+            http.withCredentials = true;
+            http.onreadystatechange = function() {
+                if (this.readyState == this.DONE) {
+                    if (this.status === 200) {
+                        return resolve(true);
+                    } else {
+                        reject({status: this.status, xhr: this});
+                    }
+                }
+            };
+            http.send();
+        });
+
+        return promise;
+    }
+
+    // return public methods
+    return {
+        head: head,
+        get: get,
+        post: post,
+        put: put,
+        del: del,
+    };
+}(this));
+
+// ###### Finished expanding js/solid/dist/solid.js ##############
+    
     //Load the icons namespace onto tabulator.
 // ###### Expanding js/init/icons.js ##############
 tabulator.Icon = {};
@@ -26623,7 +27408,531 @@ Also lower could be optional tools for various classes.
 /* First we load the common utilities so panes can add them (while developing) as well as use them */
 // Pattern of adding code where it used then moving it back out into a common code.
 
-// Form and general UI widgets 
+// General low-level ACL access routine
+// ###### Expanding js/panes/common/acl.js ##############
+
+
+
+if (typeof tabulator.panes.utils === 'undefined') {
+    tabulator.panes.utils = {};
+}
+
+
+////////////////////////////////////// Start ACL stuff
+//
+
+// Take the "defaltForNew" ACL and convert it into the equivlent ACL 
+// which the resource would have had.  Retur it as a new separate store.
+
+tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
+    var kb = tabulator.kb;
+    var ACL = tabulator.ns.acl;
+    var ns = tabulator.ns;
+    var defaults = kb.each(undefined, ACL('defaultForNew'), defaultResource, defaultACLdoc);
+    var proposed = [];
+    defaults.map(function(da) {
+        proposed = proposed.concat(kb.statementsMatching(da, ACL('agent'), undefined, defaultACLdoc))
+            .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
+            .concat(kb.statementsMatching(da, ACL('mode'), undefined, defaultACLdoc));
+        proposed.push($rdf.st(da, ACL('accessTo'), doc, defaultACLdoc)); // Suppose 
+    });
+    var kb2 = $rdf.graph(); // Potential - derived is kept apart
+    proposed.map(function(st){
+        var move = function(sym) {
+            var y = defaultACLdoc.uri.length; // The default ACL file
+            return  $rdf.sym( (sym.uri.slice(0, y) == defaultACLdoc.uri) ?
+                 aclDoc.uri + sym.uri.slice(y) : sym.uri );
+        }
+        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
+    });
+    
+    //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
+    var ccc = kb2.each(undefined, ACL('accessTo'), doc)
+        .filter(function(au){ return  kb2.holds(au, ACL('mode'), ACL('Control'))});
+    ccc.map(function(au){
+        var au2 = kb2.sym(au.uri + "__ACLACL");
+            kb2.add(au2, ns.rdf('type'), ACL('Authorization'), aclDoc);
+            kb2.add(au2, ACL('accessTo'), aclDoc, aclDoc);
+            kb2.add(au2, ACL('mode'), ACL('Read'), aclDoc);
+            kb2.add(au2, ACL('mode'), ACL('Write'), aclDoc);
+        kb2.each(au, ACL('agent')).map(function(who){
+            kb2.add(au2, ACL('agent'), who, aclDoc);
+        });
+        kb2.each(au, ACL('agentClass')).map(function(who){
+            kb2.add(au2, ACL('agentClass'), who, aclDoc);
+        });
+    });
+    
+    return kb2;
+}
+
+
+// Read and conaonicalize the ACL for x in aclDoc
+//
+// Accumulate the access rights which each agent or class has
+//
+tabulator.panes.utils.readACL = function(x, aclDoc) {
+    var kb = tabulator.kb;
+    var ACL = tabulator.ns.acl;
+    var ac = {'agent': [], 'agentClass': []};
+    var auths = kb.each(undefined, ACL('accessTo'), x);
+    for (var pred in { 'agent': true, 'agentClass': true}) {
+//    ['agent', 'agentClass'].map(function(pred){
+        auths.map(function(a){
+            kb.each(a,  ACL('mode')).map(function(mode){
+                 kb.each(a,  ACL(pred)).map(function(agent){                 
+                    if (!ac[pred][agent.uri]) ac[pred][agent.uri] = [];
+                    ac[pred][agent.uri][mode.uri] = a; // could be "true" but leave pointer just in case
+                });
+            });
+        });
+    };
+    return ac;
+}
+
+// Compare two ACLs
+tabulator.panes.utils.sameACL = function(a, b) {
+    var contains = function(a, b) {
+        for (var pred in { 'agent': true, 'agentClass': true}) {
+            if (a[pred]) {
+                for (var agent in a[pred]) {
+                    for (var mode in a[pred][agent]) {
+                        if (!b[pred][agent] || !b[pred][agent][mode]) {
+                            return false;
+                        }
+                    }
+                }
+            };
+        };
+        return true;
+    }
+    return contains(a, b) && contains(b,a);
+}
+
+// Union N ACLs
+tabulator.panes.utils.ACLunion = function(list) {
+    var b = list[0], a, ag;
+    for (var k=1; k < list.length; k++) {
+        ['agent', 'agentClass'].map(function(pred){
+            a = list[k];
+            if (a[pred]) {
+                for (ag in a[pred]) {
+                    for (var mode in a[pred][ag]) {
+                        if (!b[pred][ag]) b[pred][ag] = [];
+                        b[pred][ag][mode] = true;
+                    }
+                }
+            };
+        });
+    }
+    return b;
+}
+
+
+// Merge ACLs lists from things to form union
+
+tabulator.panes.utils.loadUnionACL = function(subjectList, callback) {
+    var aclList = [];
+    var doList = function(list) {
+        if (list.length) {
+            doc = list.shift().doc();
+            tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
+                var defa = !p2;
+                if (!ok) return callback(ok, targetACLDoc);
+                aclList.push((defa) ? tabulator.panes.utils.readACL(defaultHolder, defaultACLDoc) :
+                    tabulator.panes.utils.readACL(targetDoc, targetACLDoc));
+                doList(list.slice(1));
+            });
+        } else { // all gone
+            callback(true, tabulator.panes.utils.ACLunion(aclList))
+        }
+    }
+    doList(subjectList);
+}
+
+// Represents these as a RDF graph by combination of modes
+//
+tabulator.panes.utils.ACLbyCombination = function(x, ac, aclDoc) {
+    var byCombo = [];
+    ['agent', 'agentClass'].map(function(pred){
+        for (var agent in ac[pred]) {
+            var combo = [];
+            for (var mode in ac[pred][agent]) {
+                combo.push(mode)
+            }
+            combo.sort()
+            combo = combo.join('\n'); 
+            if (!byCombo[combo]) byCombo[combo] = [];
+            byCombo[combo].push([pred, agent])
+        }
+    });
+    return byCombo;
+}
+//    Write ACL graph to store
+//
+tabulator.panes.utils.makeACLGraph = function(kb, x, ac, aclDoc) {
+    var byCombo = tabulator.panes.utils.ACLbyCombination(x, ac, aclDoc);
+    var ACL = tabulator.ns.acl;
+    for (combo in byCombo) {
+        var modeURIs = combo.split('\n');
+        var short = modeURIs.map(function(u){return u.split('#')[1]}).join('');
+        var a = kb.sym(aclDoc.uri + '#' + short);
+        kb.add(a, tabulator.ns.rdf('type'), ACL('Authorization'), aclDoc);
+        kb.add(a, ACL('accessTo'), x, aclDoc);
+
+        for (var i=0; i < modeURIs.length; i++) {
+            kb.add(a, ACL('mode'), kb.sym(modeURIs[i]), aclDoc);
+        }
+        var pairs = byCombo[combo];
+        for (i=0; i< pairs.length; i++) {
+            var pred = pairs[i][0], ag = pairs[i][1];
+            kb.add(a, ACL(pred), kb.sym(ag), aclDoc);
+        } 
+    }
+}
+
+//    Write ACL graph to string
+//
+tabulator.panes.utils.makeACLString = function(x, ac, aclDoc) {
+    var kb = $rdf.graph();
+    tabulator.panes.utils.makeACLGraph(kb, x, ac, aclDoc);
+    return $rdf.serialize(aclDoc,  kb, aclDoc.uri, 'text/turtle');
+}
+
+//    Write ACL graph to web
+//
+tabulator.panes.utils.putACLGraph = function(kb, x, ac, aclDoc, callback) {
+    var kb2 = $rdf.graph();
+    tabulator.panes.utils.makeACLGraph(kb2, x, ac, aclDoc);
+    
+    //var str = tabulator.panes.utils.makeACLString = function(x, ac, aclDoc);
+    var updater =  new tabulator.rdf.sparqlUpdate(kb);
+    updater.put(aclDoc, kb2.statementsMatching(undefined, undefined, undefined, aclDoc),
+        'text/turtle', function(uri, ok, message){
+        if (!ok) {
+            callback(ok, message);
+        } else {
+            kb.fetcher.unload(aclDoc);
+            tabulator.panes.utils.makeACLGraph(kb, x, ac, aclDoc);
+            kb.fetcher.requested[aclDoc.uri] = 'done'; // missing: save headers
+        }
+    });
+}
+
+
+
+
+// Fix the ACl for an individual card as a function of the groups it is in
+// 
+// All group files must be loaded first
+//
+
+tabulator.panes.utils.fixIndividualCardACL = function(person, log, callback)  {
+    var groups =  tabulator.kb.each(undefined, tabulator.ns.vcard('hasMember'), person); 
+    var doc = person.doc();
+    if (groups) {
+        tabulator.panes.utils.fixIndividualACL(person, groups, log, callback);
+    } else {
+        log("This card is in no groups");
+        callback(true); // fine, no requirements to access. default should be ok
+    }
+    // @@ if no groups, then use default for People container or the book top container.?
+}
+
+tabulator.panes.utils.fixIndividualACL = function(item, subjects, log, callback)  {
+    log = log || console.log;
+    var doc = item.doc();
+    tabulator.panes.utils.getACLorDefault(doc, function(ok, exists, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){ 
+        if (!ok) return callback(false, targetACLDoc); // ie message
+        var ac = (exists) ? tabulator.panes.utils.readACL(targetDoc, targetACLDoc) : tabulator.panes.utils.readACL(defaultHolder, defaultACLDoc) ;
+        tabulator.panes.utils.loadUnionACL(subjects, function(ok, union){
+            if (!ok) return callback(false, union);
+            if (tabulator.panes.utils.sameACL(union, ac)) {
+                log("Nice - same ACL. no change " +tabulator.Util.label(item) + " " + doc);
+            } else {
+                log("Group ACLs differ for " + tabulator.Util.label(item) + " " + doc);
+
+                // log("Group ACLs: " + tabulator.panes.utils.makeACLString(targetDoc, union, targetACLDoc));
+                // log((exists ? "Previous set" : "Default") + " ACLs: " +
+                    // tabulator.panes.utils.makeACLString(targetDoc, ac, targetACLDoc));
+
+                tabulator.panes.utils.putACLGraph(tabulator.kb, targetDoc, union, targetACLDoc, callback);
+            }
+        });
+    })
+}
+
+
+
+tabulator.panes.utils.setACL = function(docURI, aclText, callback) {
+    var aclDoc = kb.any(kb.sym(docURI),
+        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+    if (aclDoc) { // Great we already know where it is
+        webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);        
+    } else {
+    
+        fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+            var aclDoc = kb.any(kb.sym(docURI),
+                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+            if (!aclDoc) {
+                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                callback(false, "No Link rel=ACL header for " + docURI);
+            } else {
+                webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+            }
+        })
+    }
+};
+
+
+//  Get ACL file or default if necessary
+//
+// callback(true, true, doc, aclDoc)   The ACL did exist
+// callback(true, false, doc, aclDoc, defaultHolder, defaultACLDoc)   ACL file did not exist but a default did
+// callback(false, false, status, message)  error getting original
+// callback(false, true, status, message)  error getting defualt
+
+tabulator.panes.utils.getACLorDefault = function(doc, callback) {
+
+    tabulator.panes.utils.getACL(doc, function(ok, status, aclDoc, message) {
+        var i, row, left, right, a;
+        var kb = tabulator.kb;
+        var ACL = tabulator.ns.acl;
+        if (!ok) return callback(false, false, status, message);
+        
+        // Recursively search for the ACL file which gives default access
+        var tryParent = function(uri) {
+            if (uri.slice(-1) === '/') {
+                uri = uri.slice(0, -1);
+            }
+            var right = uri.lastIndexOf('/');
+            var left = uri.indexOf('/', uri.indexOf('//') + 2);
+            uri = uri.slice(0, right + 1);
+            var doc2 = $rdf.sym(uri);
+            tabulator.panes.utils.getACL(doc2, function(ok, status, defaultACLDoc) {
+
+                if (!ok) {
+                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")")
+                } else if (status === 403) {
+                    return callback(false, true, status,"( default ACL file FORBIDDEN. Stop." + uri + ")");
+                } else if (status === 404) {
+                    if (left >= right) {
+                        return callback(false, true, 499, "Nothing to hold a default");
+                    } else {
+                        tryParent(uri);
+                    }
+                } else if (status !== 200) {
+                        return callback(false, true, status, "Error searching for default");
+                } else { // 200
+                    //statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
+                    var defaults = kb.each(undefined, ACL('defaultForNew'), kb.sym(uri), defaultACLDoc);
+                    if (!defaults.length) {
+                        tryParent(uri);       // Keep searching
+                    } else {
+                        var defaultHolder = kb.sym(uri);
+                        callback(true, false, doc, aclDoc, defaultHolder, defaultACLDoc)
+                    }
+                }
+            });
+        }; // tryParent
+
+        if (!ok) {
+            return callback(false, false, status ,
+                "Error accessing Access Control information for " + doc +") " + message);
+        } else if (status === 404) {
+            tryParent(doc.uri);   //  @@ construct default one - the server should do that
+        } else  if (status === 403) {
+            return callback(false, false, status, "(Sharing not available to you)" + message);
+        } else  if (status !== 200) {
+            return callback(false, false, status, "Error " + status +
+                " accessing Access Control information for " + doc + ": " + message); 
+        } else { // 200
+            return callback(true, true, doc, aclDoc);
+        }  
+    }); // Call to getACL
+} // getACLorDefault
+
+
+//    Calls back (ok, status, acldoc, message)
+// 
+//   (false, errormessage)        no link header
+//   (true, 403, documentSymbol, fileaccesserror) not authorized
+//   (true, 404, documentSymbol, fileaccesserror) if does not exist
+//   (true, 200, documentSymbol)   if file exitss and read OK
+//
+tabulator.panes.utils.getACL = function(doc, callback) {
+    tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
+        if (!ok) return callback(ok, "Can't get headers to find ACL file: " + body);
+        var kb = tabulator.kb;
+        var aclDoc = kb.any(doc,
+            kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+        if (!aclDoc) {
+            callback(false, "No Link rel=ACL header for " + doc);
+        } else {
+            if (tabulator.sf.nonexistant[aclDoc.uri]) {
+                return callback(true, 404, aclDoc, "ACL file does not exist.");
+            }
+            tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
+                if (!ok) {
+                    callback(true, xhr.status, aclDoc, "Can't read Access Control File " + aclDoc + ": " + message);
+                } else {
+                    callback(true, 200, aclDoc);
+                }
+            });
+        }
+    });
+};
+
+
+
+
+///////////////////////////////////////////  End of ACL stuff
+
+// ###### Finished expanding js/panes/common/acl.js ##############
+
+// User interface for ACL management
+// ###### Expanding js/panes/common/acl-control.js ##############
+
+/////////////////////////////// ACL User Interface
+
+
+tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
+    var kb = tabulator.kb;
+    var updater = new tabulator.rdf.sparqlUpdate(kb);
+    var ACL = tabulator.ns.acl;
+    var doc = subject.doc(); // The ACL is actually to the doc describing the thing
+
+    var table = dom.createElement('table');
+    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
+    var headerRow = table.appendChild(dom.createElement('tr'));
+    headerRow.textContent = "Sharing for group " + tabulator.Util.label(subject);
+    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
+
+    var statusRow = table.appendChild(dom.createElement('tr'));
+    var statusBlock = statusRow.appendChild(dom.createElement('div'));
+    statusBlock.setAttribute('style', 'padding: 2em;');
+    var MainRow = table.appendChild(dom.createElement('tr'));
+    var box = MainRow.appendChild(dom.createElement('table'));
+    var bottomRow = table.appendChild(dom.createElement('tr'));
+
+    var ACLControl = function(box, doc, aclDoc, kb) {
+        var authorizations = kb.each(undefined, ACL('accessTo'), doc, aclDoc); // ONLY LOOK IN ACL DOC
+        if (authorizations.length === 0) {
+            statusBlock.textContent += "Access control file exists but contains no authorizations! " + aclDoc + ")";
+        }
+        for (i=0; i < authorizations.length; i++) {
+            var row = box.appendChild(dom.createElement('tr'));
+            var rowdiv1 = row.appendChild(dom.createElement('div'));
+
+            rowdiv1.setAttribute('style', 'margin: 1em; border: 0.1em solid #444; border-radius: 0.5em; padding: 1em;');
+            rowtable1 = rowdiv1.appendChild(dom.createElement('table'));
+            rowrow = rowtable1.appendChild(dom.createElement('tr'));
+            var left = rowrow.appendChild(dom.createElement('td'));
+            var middle = rowrow.appendChild(dom.createElement('td'));
+            middle.textContent = "can:"
+            middle.setAttribute('style', 'font-size:100%; padding: 1em;');
+            var leftTable = left.appendChild(dom.createElement('table'));
+            var right = rowrow.appendChild(dom.createElement('td'));
+            var rightTable = right.appendChild(dom.createElement('table'));
+            var a = authorizations[i];
+            
+            kb.each(a,  ACL('agent')).map(function(x){
+                var tr = leftTable.appendChild(dom.createElement('tr'));
+                tabulator.panes.utils.setName(tr, x);
+                tr.setAttribute('style', 'min-width: 12em');
+            });
+            
+            kb.each(a,  ACL('agentClass')).map(function(x){
+                var tr = leftTable.appendChild(dom.createElement('tr'));
+                tr.textContent = tabulator.Util.label(x) + ' *'; // for now // later add # or members
+            });
+            
+            kb.each(a,  ACL('mode')).map(function(x){
+                var tr = rightTable.appendChild(dom.createElement('tr'));
+                tr.textContent = tabulator.Util.label(x); // for now // later add # or members
+            });
+        }
+    }
+
+
+    tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
+        var defa = !p2;
+        if (!ok) {
+            statusBlock.textContent += "Error reading " + (defa? " default " : "") + "ACL."
+                + " status " + targetDoc + ": " + targetACLDoc;
+        } else {
+            if (defa) {
+                var defaults = kb.each(undefined, ACL('defaultForNew'), defaultHolder, defaultACLDoc);
+                if (!defaults.length) {
+                    statusBlock.textContent += " (No defaults given.)";
+                } else {
+                    statusBlock.textContent = "The sharing for this group is the default.";
+                    var kb2 = tabulator.panes.utils.adoptACLDefault(doc, targetACLDoc, defaultHolder, defaultACLDoc) 
+                    ACLControl(box, doc, targetACLDoc, kb2); // Add btton to save them as actual
+                    
+                    var editPlease = bottomRow.appendChild(dom.createElement('button'));
+                    editPlease.textContent = "Set specific sharing\nfor this group";
+                    editPlease.addEventListener('click', function(event) {
+                        updater.put(targetACLDoc, kb2.statements,
+                            'text/turtle', function(uri, ok, message){
+                            if (!ok) {
+                                statusBlock.textContent += " (Error writing back access control file: "+message+")";
+                            } else {
+                                statusBlock.textContent = " (Now editing specific access for this group)";
+                                bottomRow.removeChild(editPlease);
+                            }
+                        });
+
+                    });
+                } // defaults.length
+            } else { // Not using defaults
+
+                ACLControl(box, targetDoc, targetACLDoc, kb);
+                
+                var useDefault;
+                var addDefaultButton = function() {
+                    useDefault = bottomRow.appendChild(dom.createElement('button'));
+                    useDefault.textContent = "Stop specific sharing for this group -- just use default.";
+                    useDefault.addEventListener('click', function(event) {
+                        updater.delete(doc, function(uri, ok, message){
+                            if (!ok) {
+                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
+                            } else {
+                                statusBlock.textContent = " The sharing for this group is now the default.";
+                                bottomRow.removeChild(useDefault);
+                            }
+                        });
+         
+                    });
+                }
+                addDefaultButton();
+            
+                var checkIndividualACLsButton;
+                var addCheckButton = function() {
+                    bottomRow.appendChild(dom.createElement('br'));
+                    checkIndividualACLsButton = bottomRow.appendChild(dom.createElement('button'));
+                    checkIndividualACLsButton.textContent = "Check individalcards ACLs";
+                    checkIndividualACLsButton.addEventListener('click', function(event) {
+                        
+                        
+                    });
+                }
+                addCheckButton();
+            
+            } // Not using defaults
+        }
+            
+    });
+
+    return table
+    
+}; // ACLControl
+
+
+// ###### Finished expanding js/panes/common/acl-control.js ##############
+
+// Form and general UI widgets
 // ###### Expanding js/panes/common/widgets.js ##############
 /**
 * Few General purpose utility functions used in the panes
@@ -26637,9 +27946,11 @@ Also lower could be optional tools for various classes.
 *  http://stackoverflow.com/questions/6756407/what-contenteditable-editors
 */
 
+if (typeof tabulator.panes.utils === 'undefined') {
+    tabulator.panes.utils = {};
+}
 
 // paneUtils = {};
-tabulator.panes.utils = {};
 tabulator.panes.field = {}; // Form field functions by URI of field type.
 
 // This is used to canonicalize an array
@@ -26674,7 +27985,7 @@ tabulator.panes.utils.shortDate = function(str) {
         var n = now.getTimezoneOffset(); // Minutes
         if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
         if (str.slice(0,4) == nowZ.slice(0,4)) {
-            return ( month[parseInt(str.slice(5,7))] + ' ' + parseInt(str.slice(8,10)));
+            return ( month[parseInt(str.slice(5,7)) -1] + ' ' + parseInt(str.slice(8,10)));
         }
         return str.slice(0,10);
     } catch(e) {
@@ -27151,10 +28462,10 @@ tabulator.panes.field[tabulator.ns.ui('Choice').uri] = function(
         possible.push(kb.fromNT(x));
         // box.appendChild(dom.createTextNode("RDFS: adding "+x));
     }; // Use rdfs
-    // tabulator.log.debug("%% Choice field: possible.length 1 = "+possible.length)
+    // tabulator.log.debug("%%% Choice field: possible.length 1 = "+possible.length)
     if (from.sameTerm(ns.rdfs('Class'))) {
         for (var p in tabulator.panes.utils.allClassURIs()) possible.push(kb.sym(p));     
-        // tabulator.log.debug("%% Choice field: possible.length 2 = "+possible.length)
+        // tabulator.log.debug("%%% Choice field: possible.length 2 = "+possible.length)
     } else if (from.sameTerm(ns.rdf('Property'))) {
         //if (tabulator.properties == undefined) 
         tabulator.panes.utils.propertyTriage();
@@ -27243,7 +28554,7 @@ tabulator.panes.utils.openHrefInOutlineMode = function(e) {
     e.stopPropagation();
     var target = tabulator.Util.getTarget(e);
     var uri = target.getAttribute('href');
-    if (!uri) dump("No href found \n")
+    if (!uri) console.log("No href found \n")
     // subject term, expand, pane, solo, referrer
     // dump('click on link to:' +uri+'\n')
     tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
@@ -28140,7 +29451,8 @@ tabulator.panes.widget.twoLine[
 
 
 // ###### Finished expanding js/panes/common/widgets.js ##############
-// Sign-in, sign-up, workspce and identity UI widgets 
+
+// Sign-in, sign-up, workspce and identity UI widgets
 // ###### Expanding js/panes/common/signin.js ##############
 //  signin.js     Signing in, signing up, workspace selection, app spawning
 //
@@ -28152,12 +29464,57 @@ tabulator.panes.utils.clearElement = function(ele) {
     }
     return ele;
 };
+
+
+// Look for and load the User who has control over it
+tabulator.panes.utils.findOriginOwner = function(doc, callback) {
+    var uri = doc.uri || doc;
+    var i = uri.indexOf('://');
+    if (i<0) return false;
+    var j = uri.indexOf('/', i+3);
+    if (j <0) return false;
+    var orgin = uri.slice(0, j+1); // @@ TBC
     
+}
 
 
 ////////////////////////////////////////// Boostrapping identity
 //
 //
+
+tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
+    var box = myDocument.createElement('div');
+    var p = myDocument.createElement('p');
+    box.appendChild(p);
+    box.className="mildNotice";
+    p.innerHTML = ("You need to log in with a Web ID");
+    console.log('tabulator.panes.utils.signInOrSignUpBox')
+    
+    var but = myDocument.createElement('input');
+    box.appendChild(but);
+    but.setAttribute('type', 'button');
+    but.setAttribute('value', 'Log in');
+    but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
+        but.addEventListener('click', function(e){
+	Solid.auth.signup.withWebID().then(function(uri){
+	    console.log('signInOrSignUpBox logged in up '+ uri)
+	    gotOne(uri)
+	})
+    }, false);
+    
+    var but2 = myDocument.createElement('input');
+    box.appendChild(but2);
+    but2.setAttribute('type', 'button');
+    but2.setAttribute('value', 'Sign Up');
+    but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
+    but2.addEventListener('click', function(e){
+	Solid.auth.signup.withWebID().then(function(uri){
+	    console.log('signInOrSignUpBox signed up '+ uri)
+	    gotOne(uri)
+	})
+    }, false);
+    return box;
+};
 
 tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
@@ -28310,6 +29667,8 @@ tabulator.panes.utils.checkUserSetMe = function(doc) {
 // One way is for the server to send the information back as a User: header.
 // This function looks for a linked 
 
+tabulator.panes.utils.userCheckSite = 'https://databox.me/';
+
 tabulator.panes.utils.checkUser = function(doc, setIt) {
     var userMirror = tabulator.kb.any(doc, tabulator.ns.link('userMirror'));
     if (!userMirror) userMirror = doc;
@@ -28319,15 +29678,24 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
         if (ok) {
             kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
             .map(function(request){
+		 
                 var response = kb.any(request, tabulator.ns.link('response'));
                 if (request !== undefined) {
-                    kb.each(response, tabulator.ns.httph('user')).map(function(userHeader){
-                        var username = userHeader.value.trim();
-                        if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
-                            setIt(username);
-                            done = true;
-                        }
-                    });
+		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+		    if (userHeaders.length === 0) {
+			console.log("CheckUser: non-solid server: trying "
+			    + tabulator.panes.utils.userCheckSite);
+			tabulator.panes.utils.checkUser(
+			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+		    } else {
+			userHeaders.map(function(userHeader){
+			    var username = userHeader.value.trim();
+			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+				setIt(username);
+				done = true;
+			    }
+			});
+		    }
                 }
             });
         } else {
@@ -28497,11 +29865,20 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                 }
                 col2 = dom.createElement('td');
                 style = kb.any(ws, tabulator.ns.ui('style'));
-                style = style ? style.value : ''
+		if (style) {
+		    style = style.value;
+		} else { // Otherise make up arbitrary colour
+		    var hash = function(x){return x.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0); }
+		    var bgcolor = '#' + ((hash(ws.uri) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0  forces pale
+		    style = 'color: black ; background-color: ' + bgcolor + ';'
+		}
                 col2.setAttribute('style', deselectedStyle + style);
                 tr.target = ws.uri;
                 var label = kb.any(ws, tabulator.ns.rdfs('label'))
-                col2.textContent = label || "";
+		if (!label) {
+		    label = ws.uri.split('/').slice(-1)[0] || ws.uri.split('/').slice(-2)[0]
+		}
+                col2.textContent = label || "???";
                 tr.appendChild(col2);
                 if (i == 0) {
                     col3 = dom.createElement('td');
@@ -28536,6 +29913,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                 };
 
                 var comment = kb.any(ws, tabulator.ns.rdfs('comment'));
+		comment = comment ? comment.value : "Use this workspace";
                 addMyListener(col2, comment? comment.value : '',
                                  deselectedStyle + style, ws);
             };
@@ -28599,7 +29977,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 
 };
 
-//////////////////// Craete a new instance of an app
+//////////////////// Create a new instance of an app
 //
 //  An instance of an app could be e.g. an issue tracker for a given project,
 // or a chess game, or calendar, or a health/fitness record for a person.
@@ -28617,7 +29995,7 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     b.setAttribute('type', 'button');
     div.appendChild(b)
     b.innerHTML = label;
-    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+    // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
         div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
     div.appendChild(b);
@@ -28629,19 +30007,26 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
 
 
 // ###### Finished expanding js/panes/common/signin.js ##############
+
 // A discussion area for discussing anything
 // ###### Expanding js/panes/common/discussion.js ##############
 //  Common code for a discussion are a of messages about something
 //
 
-tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
+tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, options) {
     var kb = tabulator.kb;
     var ns = tabulator.ns;
     var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
     var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
     var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
     
-    var newestFirst = true;
+    options = options || {};
+    
+    var newestFirst = !!options.newestFirst;
+    
+    var messageBodyStyle = 'width: 90%; font-size:100%; \
+	    background-color: white; border: 0.07em solid gray; padding: 0.15em; margin: 0.1em 1em 0.1em 1em'
+//	'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  background-color: white; white-space: pre-wrap; padding: 0.1em;'
     
     var div = dom.createElement("div")
     var messageTable; // Shared by initial build and addMessageFromBindings
@@ -28731,12 +30116,11 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         middle.appendChild(field);
         field.rows = 3;
         // field.cols = 40;
-        field.setAttribute('style', 'width: 90%; font-size:100%; \
-                background-color: white; border: 0.07em solid gray; padding: 0.1em; margin: 0.1em 1em 0.1em 1em')
+        field.setAttribute('style', messageBodyStyle)
 
         submit = dom.createElement('button');
         //submit.disabled = true; // until the filled has been modified
-        submit.textContent = "Comment"; //@@ I18n
+        submit.textContent = "send"; //@@ I18n
         submit.setAttribute('style', 'float: right;');
         submit.addEventListener('click', sendMessage, false);
         rhs.appendChild(submit);
@@ -28832,7 +30216,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         var  td2 = dom.createElement('td');
         tr.appendChild(td2);
         var pre = dom.createElement('p')            
-        pre.setAttribute('style', 'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  white-space: pre-wrap;')
+        pre.setAttribute('style', messageBodyStyle)
         td2.appendChild(pre);
         pre.textContent = kb.any(message, ns.sioc('content')).value;  
         
@@ -28870,6 +30254,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 
     messageTable = dom.createElement('table');
     div.appendChild(messageTable);
+    messageTable.setAttribute('style', 'width: 100%;'); // fill that div!
 
     if (tabulator.preferences.get('me')) {
         var tr = newMessageForm();
@@ -28925,6 +30310,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 
 
 // ###### Finished expanding js/panes/common/discussion.js ##############
+
 // A relationsal table widget
 // ###### Expanding js/panes/common/table.js ##############
 
@@ -28939,7 +30325,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 // When the tableClass is not given, it looks for common  classes in the data,
 // and gives the user the option.
 //
-// 2008 Written, Ilaria Liccardi  asthe tableViewPane.js
+// 2008 Written, Ilaria Liccardi  as the tableViewPane.js
 // 2014 Core table widget moved into common/table.js - timbl
 //
 
@@ -28952,6 +30338,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     var RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal";
     var ns = tabulator.ns;
     var kb = tabulator.kb;
+    var rowsLookup = {}; //  Persistent mapping of subject URI to dom TR
 
     // Predicates that are never made into columns:
 
@@ -29000,7 +30387,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // as an anchor that can be used to combine this information
     // back into the same row.
 
-    var ROW_KEY_COLUMN = "_row";
+    var keyVariable = options.keyVariable || '?_row';
 
     // Use queries to render the table, currently experimental:
  
@@ -29025,7 +30412,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // Save a refresh function for use by caller
     resultDiv.refresh = function() {
-        updateTable(givenQuery, mostCommonType); // This could be a lot more incremental and efficient
+        runQuery(table.query, table.logicalRows, table.columns, table);
+        // updateTable(givenQuery, mostCommonType); // This could be a lot more incremental and efficient
     }
 
 
@@ -29194,7 +30582,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     function generateQuery(type) {
         var query = new tabulator.rdf.Query();
-        var rowVar = kb.variable(ROW_KEY_COLUMN);
+        var rowVar = kb.variable(keyVariable.slice(1)); // don't pass '?'
 
         addSelectToQuery(query, type);
         addWhereToQuery(query, rowVar, type);
@@ -29238,8 +30626,6 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // Save the query for the edit dialog.
 
         lastQuery = query;
-        
-        
     }
 
     // Remove all subelements of the specified element.
@@ -29787,11 +31173,11 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         rows.sort(function(row1, row2) {
             var row1Value = null, row2Value = null;
 
-            if (columnKey in row1) {
-                row1Value = row1[columnKey][0];
+            if (columnKey in row1.values) {
+                row1Value = row1.values[columnKey][0];
             }
-            if (columnKey in row2) {
-                row2Value = row2[columnKey][0];
+            if (columnKey in row2.values) {
+                row2Value = row2.values[columnKey][0];
             }
 
             var result = sortFunction(row1Value, row2Value);
@@ -29823,44 +31209,51 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // Filter the list of rows based on the selectors for the 
     // columns.
 
+    function applyColumnFiltersToRow(row, columns) {
+        var rowDisplayed = true;
+
+        // Check the filter functions for every column.
+        // The row should only be displayed if the filter functions
+        // for all of the columns return true.
+
+        for (var c=0; c<columns.length; ++c) {
+            var column = columns[c];
+            var columnKey = column.getKey();
+
+            var columnValue = null;
+
+            if (columnKey in row.values) {
+                columnValue = row.values[columnKey][0];
+            }
+
+            if (!column.filterFunction(columnValue)) {
+                rowDisplayed = false;
+                break;
+            }
+        }
+
+        // Show or hide the HTML row according to the result
+        // from the filter function.
+
+        var htmlRow = row._htmlRow;
+
+        if (rowDisplayed) {
+            htmlRow.style.display = "";
+        } else {
+            htmlRow.style.display = "none";
+        }
+    }
+    
+    // Filter the list of rows based on the selectors for the 
+    // columns.
+
     function applyColumnFilters(rows, columns) {
 
         // Apply filterFunction to each row.
 
         for (var r=0; r<rows.length; ++r) {
             var row = rows[r];
-            var rowDisplayed = true;
-
-            // Check the filter functions for every column.
-            // The row should only be displayed if the filter functions
-            // for all of the columns return true.
-
-            for (var c=0; c<columns.length; ++c) {
-                var column = columns[c];
-                var columnKey = column.getKey();
-
-                var columnValue = null;
-
-                if (columnKey in row) {
-                    columnValue = row[columnKey][0];
-                }
-
-                if (!column.filterFunction(columnValue)) {
-                    rowDisplayed = false;
-                    break;
-                }
-            }
-
-            // Show or hide the HTML row according to the result
-            // from the filter function.
-
-            var htmlRow = row._htmlRow;
-
-            if (rowDisplayed) {
-                htmlRow.style.display = "";
-            } else {
-                htmlRow.style.display = "none";
-            }
+            applyColumnFiltersToRow(row, columns);
         }
     }
     
@@ -29981,7 +31374,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             searchValue[value.uri] = true;
         }
         
-        var initialSelection = hints(column).initialSelection;
+        var initialSelection = getHints(column).initialSelection;
         if (initialSelection) searchValue = initialSelection;
 
         if (doMultiple) dropdown.setAttribute('multiple', 'true');
@@ -30195,16 +31588,30 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         return tr;
     }
 
-    function linkTo(uri, linkText) {
+    function linkTo(uri, linkText, hints) {
+        hints = hints || {};
         var result = doc.createElement("a");
+        var linkFunction = hints.linkFunction;
         result.setAttribute("href", uri);
         result.appendChild(doc.createTextNode(linkText));
-        result.addEventListener('click',
-            tabulator.panes.utils.openHrefInOutlineMode, true);
+        if (!linkFunction) {
+            result.addEventListener('click',
+                tabulator.panes.utils.openHrefInOutlineMode, true);
+        } else {
+            result.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var target = tabulator.Util.getTarget(e);
+                var uri = target.getAttribute('href');
+                if (!uri) console.log("No href found \n")
+                linkFunction(uri);
+                // tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);
+            }, true);
+        }
         return result;
     }
 
-    function linkToObject(obj) {
+    function linkToObject(obj, hints) {
         var match = false;
 
         if (obj.uri != null) {
@@ -30212,9 +31619,9 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         }
 
         if (match) {
-            return linkTo(obj.uri, match[1]);
+            return linkTo(obj.uri, match[1], hints);
         } else {
-            return linkTo(obj.uri, tabulator.Util.label(obj));
+            return linkTo(obj.uri, tabulator.Util.label(obj), hints);
         }
     }
 
@@ -30232,7 +31639,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // Render an individual RDF object to an HTML object displayed
     // in a table cell.
     
-    function hints(column) {
+    function getHints(column) {
         if (options && options.hints && column.variable && options.hints[column.variable.toNT()]) {
             return options.hints[column.variable.toNT()];
         }
@@ -30241,7 +31648,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     function renderValue(obj, column) { // hint
 
-        var cellFormat = hints(column).cellFormat;
+        var hints = getHints(column);
+        var cellFormat = hints.cellFormat;
         var span;
         if (cellFormat) {
             switch(cellFormat) {
@@ -30269,7 +31677,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             } else if (obj.termType == "symbol" && column.isImageColumn()) {
                 return renderImage(obj);
             } else if (obj.termType == "symbol" || obj.termType == "bnode") {
-                return linkToObject(obj);
+                return linkToObject(obj, hints);
             } else if (obj.termType == "collection") {
                 var span = doc.createElement('span');
                 span.appendChild(doc.createTextNode('['));
@@ -30290,7 +31698,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // Note that unlike other functions, this renders into a provided
     // row (<tr>) element.
 
-    function renderTableRowInto(tr, row, columns) {
+    function renderTableRowInto(tr, row, columns, downstream) {
 
         /* Link column, for linking to this subject. */
 
@@ -30308,20 +31716,36 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         for (var i=0; i<columns.length; ++i) {
             var column = columns[i];
             var td = doc.createElement("td");
+            var orig;
 
             var columnKey = column.getKey();
 
-            if (columnKey in row) {
-                var objects = row[columnKey];
-
+            if (columnKey in row.values) {
+                var objects = row.values[columnKey];
+                var different = false;
+                if (row.originalValues && row.originalValues[columnKey]) {
+                    if (objects.length !== row.originalValues[columnKey].length) {
+                        different = true;
+                    }
+                }
                 for (var j=0; j<objects.length; ++j) {
                     var obj = objects[j];
+                    if (row.originalValues && row.originalValues[columnKey]
+                        && row.originalValues[columnKey].length > j) {
+                        orig = row.originalValues[columnKey][j];
+                        if (obj.toString() !== orig.toString()) {
+                            different = true;
+                        }
+                    }
                     //dump("  column "+i+', object'+j+", obj= "+obj+"\n");
 
                     td.appendChild(renderValue(obj, column));
 
                     if (j != objects.length - 1) {
                         td.appendChild(doc.createTextNode(",\n"));
+                    }
+                    if (different) {
+                        td.style.background = '#efe'; // green = new changed
                     }
                 }
             }
@@ -30380,15 +31804,15 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             // If this key is not already in the row, create a new entry
             // for it:
 
-            if (!(key in row)) {
-                row[key] = [];
+            if (!(key in row.values)) {
+                row.values[key] = [];
             }
 
             // Possibly add this new value to the list, but don't
             // add it if we have already added it:
 
-            if (!valueInList(value, row[key])) {
-                row[key].push(value);
+            if (!valueInList(value, row.values[key])) {
+                row.values[key].push(value);
                 needUpdate = true;
             }
         }
@@ -30399,6 +31823,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             clearElement(row._htmlRow);
             renderTableRowInto(row._htmlRow, row, columns);
         }
+        applyColumnFiltersToRow(row, columns); // Hide immediately if nec
     }
 
     // Get a unique ID for the given subject.  This is normally the
@@ -30417,24 +31842,36 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         }
     }
 
-    // Run a query and generate the table.
-    // Returns an array of rows.  This will be empty when the function
+    // Run a query and populate the table.
+    // Populates also an array of logical rows.  This will be empty when the function
     // first returns (as the query is performed in the background)
 
     function runQuery(query, rows, columns, table) {
-        var rowsLookup = {};
         query.running = true;
+        var oldStyle;
+        var startTime = Date.now();
         
         var progressMessage = doc.createElement("tr");
         table.appendChild(progressMessage);
         progressMessage.textContent = "Loading ...";
 
+        for (var i=0; i< rows.length; i++) {
+            rows[i].original = true;
+            if (!rows[i].originalValues) { // remember first set
+                rows[i].originalValues = rows[i].values
+            }
+            rows[i].values = {};
+            // oldStyle = rows[i]._htmlRow.getAttribute('style') || '';
+            // rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');// yellow
+        }   
         
         var onResult = function(values) {
 
             if (!query.running) {
                 return;
             }
+            
+            progressMessage.textContent += '.'; // give a progress bar
 
             var row = null;
             var rowKey = null;
@@ -30442,8 +31879,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
             // If the query has a row key, use it to look up the row.
 
-            if (("?" + ROW_KEY_COLUMN) in values) {
-                rowKey = values["?" + ROW_KEY_COLUMN];
+            if ((keyVariable) in values) {
+                rowKey = values[keyVariable];
                 rowKeyId = getSubjectId(rowKey);
 
                 // Do we have a row for this already?
@@ -30462,7 +31899,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
                 row = {
                     _htmlRow: tr,
-                    _subject: rowKey
+                    _subject: rowKey,
+                    values: {}
                 };
                 rows.push(row);
 
@@ -30472,7 +31910,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             }
 
             // Add the new values to this row.
-
+            delete row.original; // This is included in the new data
             updateRow(row, columns, values);
         };
         
@@ -30481,11 +31919,33 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 progressMessage.parentNode.removeChild(progressMessage);
                 progressMessage = null;
             }
-            applyColumnFilters(rows, columns); // @@ TBL added this
-            // Here add table clean-up, remove "loading" message etc.
+            
+            var elapsedTime_ms = Date.now() - startTime;
+            console.log("Query done: "+rows.length+" rows, " + elapsedTime_ms +"ms")
+            // Delete rows which were from old values not new
+            for (var i = rows.length -1; i >= 0; i--) { // backwards
+                if (rows[i].original) {
+                    console.log("   deleting row " + rows[i]._subject);
+                    var tr = rows[i]._htmlRow;
+                    tr.parentNode.removeChild(tr);
+                    delete rowsLookup[getSubjectId(rows[i]._subject)];
+                    rows.splice(i,1);
+                }
+            }
+
+
+/*
+            for (var i=0; i< rows.length; i++) {
+                rows[i].originalValues = rows[i].values
+                rows[i].values = {};
+                // oldStyle = rows[i]._htmlRow.getAttribute('style') || '';
+                rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');// 
+                applyColumnFilters(rows, columns); // @@ TBL added this
+                // Here add table clean-up, remove "loading" message etc.
+            }
+            */
             if (options.onDone) options.onDone();
         }
-
         kb.query(query, onResult, undefined, onDone)
     }
 
@@ -30585,7 +32045,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // Run query.  Note that this is perform asynchronously; the
         // query runs in the background and this call does not block.
 
+        table.logicalRows = rows; // Save for refresh
+        table.columns = columns; 
+        table.query = query;
+        
         runQuery(query, rows, columns, table);
+        
         
         return table;
     }
@@ -30635,7 +32100,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 // ENDS
 
 // ###### Finished expanding js/panes/common/table.js ##############
-// A 2-D matrix of values 
+
+// A 2-D matrix of values
 // ###### Expanding js/panes/common/matrix.js ##############
 //      Build a 2D matrix of values
 //
@@ -30852,6 +32318,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
 }
 
 // ###### Finished expanding js/panes/common/matrix.js ##############
+
 // A line-oriented collaborative notepad
 // ###### Expanding js/panes/common/pad.js ##############
 
@@ -30864,6 +32331,46 @@ tabulator.panes.utils.hashColor = function(who) {
     return '#' + ((hash(who) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0 or 808080 forces pale
 }
 
+
+
+// http://stackoverflow.com/questions/879152/how-do-i-make-javascript-beep
+// http://www.tsheffler.com/blog/2013/05/14/audiocontext-noteonnoteoff-and-time-units/
+
+if (!tabulator.audioContext) {
+    if (typeof AudioContext !== 'undefined') {
+        tabulator.audioContext = AudioContext;
+    } else if (typeof window !== 'undefined') {
+       tabulator.audioContext = window.AudioContext || window.webkitAudioContext;
+    }
+}
+if (tabulator.audioContext) {
+    tabulator.panes.utils.beep = (function () {
+        var ctx = new(tabulator.audioContext);
+        return function (duration, frequency, type, finishedCallback) {
+
+            duration = + (duration | 0.3);
+            
+            // Only 0-4 are valid types.
+            type = type || 'sine'; // sine, square, sawtooth, triangle
+
+            if (typeof finishedCallback != "function") {
+                finishedCallback = function () {};
+            }
+
+            var osc = ctx.createOscillator();
+
+            osc.type = type;
+            osc.frequency.value = frequency || 256;
+
+            osc.connect(ctx.destination);
+            osc.start(0);
+            osc.stop(duration);
+
+        };
+    })();
+} else { // Safari 2015
+    tabulator.panes.utils.beep  = function() {};
+}
 
 ////////////////////////////////////////////////
 
@@ -30881,33 +32388,66 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
     
     var fetcher = tabulator.sf;
     var ns = tabulator.ns;
-    var updater = new $rdf.sparqlUpdate(kb);
+    
+    tabulator.updater = tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
+    var updater = tabulator.updater;
+
     var waitingForLogin = false;
 
     var PAD = $rdf.Namespace('http://www.w3.org/ns/pim/pad#');
     
     var currentNode, currentOffset;
     
-    var setPartStyle = function(part, colors) {
+    table.setAttribute('style', 'padding: 1em; width:100%;');
+
+    var upstreamStatus = null, downstreamStatus = null;
+    
+    if (options.statusArea) {
+        var t = options.statusArea.appendChild(dom.createElement('table'));
+        var tr = t.appendChild(dom.createElement('tr'));
+        upstreamStatus = tr.appendChild(dom.createElement('td'));
+        downstreamStatus = tr.appendChild(dom.createElement('td'));
+        upstreamStatus.setAttribute('style', 'width:50%');
+        downstreamStatus.setAttribute('style', 'width:50%');
+    }
+    
+    var complain = function(message, upstream) {
+        console.log(message);
+        if (options.statusArea) {
+        (upstream ? upstreamStatus : downstreamStatus).appendChild(
+            tabulator.panes.utils.errorMessageBlock(dom, message, 'pink'));
+        }
+    }
+    
+    var clearStatus = function(upsteam) {
+        if (options.statusArea) {
+            options.statusArea.innerHTML = '';
+        }
+    };
+
+    
+    var setPartStyle = function(part, colors, pending) {
         var chunk = part.subject;
-        var baseStyle = 'font-size: 100%; font-family: monospace; min-width: 50em; border: none;'; //  font-weight:
+        colors = colors || '';
+        var baseStyle = 'font-size: 100%; font-family: monospace; width: 100%; border: none;'; //  font-weight:
         var headingCore = 'font-family: sans-serif; font-weight: bold;  border: none;'
-        var headingStyle = [ 'font-size: 110%;  padding-top: 0.5em; padding-bottom: 0.5em;min-width: 20em;' ,
-            'font-size: 120%; padding-top: 1em; padding-bottom: 1em; min-width: 20em;' ,
-            'font-size: 150%; padding-top: 1em; padding-bottom: 1em; min-width: 20em;' ];
+        var headingStyle = [ 'font-size: 110%;  padding-top: 0.5em; padding-bottom: 0.5em; width: 100%;' ,
+            'font-size: 120%; padding-top: 1em; padding-bottom: 1em; width: 100%;' ,
+            'font-size: 150%; padding-top: 1em; padding-bottom: 1em; width: 100%;' ];
 
         var author = kb.any(chunk, ns.dc('author'));
         if (!colors && author) { // Hash the user webid for now -- later allow user selection!
             var hash = function(x){return x.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0); }
             var bgcolor = '#' + ((hash(author.uri) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0  forces pale
-            colors = 'color: black; background-color: ' + bgcolor + ';'
+            colors = 'color: ' + (pending ? '#888' : 'black') +'; background-color: ' + bgcolor + ';'
         }
 
         var indent = kb.any(chunk, PAD('indent'));
         
         indent = indent ? indent.value : 0;
-        var style =  (indent >= 0) ?
-            baseStyle + 'padding-left: ' + (indent * 3) + 'em;'
+        var style =  (indent >= 0) ? // 
+            // baseStyle + 'padding-left: ' + (indent * 3) + 'em;'
+            baseStyle + 'text-indent: ' + (indent * 3) + 'em;'
             :   headingCore + headingStyle[ -1 - indent ]; 
         part.setAttribute('style', style + colors);
     }
@@ -30915,34 +32455,45 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
 
     var removePart = function(part) {
         var chunk = part.subject;
+        if (!chunk) throw "No chunk for line to be deleted!"; // just in case
         var prev = kb.any(undefined, PAD('next'), chunk);
         var next = kb.any(chunk, PAD('next'));
         if (prev.sameTerm(subject) && next.sameTerm(subject)) { // Last one
-            console.log("You can't delete the last line.")
+            console.log("You can't delete the only line.")
             return;
         }
+        
         var del = kb.statementsMatching(chunk, undefined, undefined, padDoc)
                 .concat(kb.statementsMatching(undefined, undefined, chunk, padDoc));
         var ins = [ $rdf.st(prev, PAD('next'), next, padDoc) ];
+        var label = chunk.uri.slice(-4);
+        console.log("Deleting line " + label)
 
-       tabulator.sparql.update(del, ins, function(uri,ok,error_body){
-            if (!ok) {
-                //alert("Fail to removePart " + error_body);
-                console.log("removePart FAILED " + chunk + ": " + error_body);
-                console.log("removePart was deleteing :'" + del);
-                setPartStyle(part, 'color: black;  background-color: #fdd;');// failed
-                tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
-            } else {
+        updater.update(del, ins, function(uri, ok, error_body, xhr){
+            if (ok) {
                 var row = part.parentNode;
                 var before = row.previousSibling;
                 row.parentNode.removeChild(row);
-                console.log("delete row ok " + part.value);
+                console.log("    deleted line " + label + " ok " + part.value);
                 if (before && before.firstChild) {
                     before.firstChild.focus();
                 }
-            }
-        });
-    }
+            } else if (xhr.status === 409) { // Conflict
+                setPartStyle(part,'color: black;  background-color: #ffd;'); // yellow
+                part.state = 0; // Needs downstream refresh
+                tabulator.panes.utils.beep(0.5, 512); // Ooops clash with other person
+                setTimeout(function(){
+                    updater.requestDownstreamAction(padDoc, reloadAndSync);
+                }, 1000);
+            } else {
+                console.log("    removePart FAILED " + chunk + ": " + error_body);
+                console.log("    removePart was deleteing :'" + del);
+                setPartStyle(part, 'color: black;  background-color: #fdd;');// failed
+                complain("Error "+xhr.status+" saving changes: "+ error_body. true); // upstream,
+                // updater.requestDownstreamAction(padDoc, reloadAndSync);
+            };
+        })
+    }// removePart
     
     var changeIndent = function(part, chunk, delta) {
         var del = kb.statementsMatching(chunk, PAD('indent'));
@@ -30950,31 +32501,92 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
         if (current + delta < -3) return; //  limit negative indent
         var newIndent = current + delta;
         var ins = $rdf.st(chunk, PAD('indent'), newIndent, padDoc);
-        tabulator.sparql.update(del, ins, function(uri, ok, error_body){
+        updater.update(del, ins, function(uri, ok, error_body){
             if (!ok) {
                 console.log("Indent change FAILED '" + newIndent + "' for "+padDoc+": " + error_body);
                 setPartStyle(part, 'color: black;  background-color: #fdd;'); // failed
-                tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+                updater.requestDownstreamAction(padDoc, reloadAndSync);
             } else {
                 setPartStyle(part); // Implement the indent
             }
         });
     }
     
+    // Use this sort of code to split the line when return pressed in the middle @@
+    var doGetCaretPosition =function doGetCaretPosition (oField) {
+        var iCaretPos = 0;
+
+        // IE Support
+        if (document.selection) {
+
+            // Set focus on the element to avoid IE bug
+            oField.focus ();
+
+            // To get cursor position, get empty selection range
+            var oSel = document.selection.createRange ();
+
+            // Move selection start to 0 position
+            oSel.moveStart ('character', -oField.value.length);
+
+            // The caret position is selection length
+            iCaretPos = oSel.text.length;
+        }
+
+        // Firefox support
+        else if (oField.selectionStart || oField.selectionStart == '0')
+        iCaretPos = oField.selectionStart;
+
+        // Return results
+        return (iCaretPos);
+    }
+
+    
     var addListeners = function(part, chunk) {
 
         part.addEventListener('keydown', function(event){
-            var author = kb.any(chunk, ns.dc('author')); 
             //  up 38; down 40; left 37; right 39     tab 9; shift 16; escape 27
             switch(event.keyCode) {
             case 13:                    // Return
+                var before = event.shiftKey;
                 console.log("enter");   // Shift-return inserts before -- only way to add to top of pad.
-                newChunk(document.activeElement, event.shiftKey);
+                if (before) {
+                    queue =  kb.any(undefined, PAD('next'), chunk);
+                    queueProperty = 'newlinesAfter';
+                } else {
+                    queue = kb.any(chunk, PAD('next'));
+                    queueProperty = 'newlinesBefore';
+                }
+                queue[queueProperty] = queue[queueProperty]  || 0
+                queue[queueProperty]  += 1;
+                if (queue[queueProperty]  > 1) {
+                    console.log("    queueing newline queue = " + queue[queueProperty]);
+                    return;
+                }
+                console.log("    go ahead line before " + queue[queueProperty]);
+                newChunk(part, before); // was document.activeElement
                 break;
+                
             case 8: // Delete
                 if (part.value.length === 0 ) {
-                    console.log("Deleting line")
-                    removePart(part);
+                    console.log("Delete key line " + chunk.uri.slice(-4) + " state " + part.state)
+                    
+                    switch (part.state) {
+                    case 1: // contents being sent
+                    case 2: // contents need to be sent again
+                        part.state = 4; // delete me
+                        return; 
+                    case 3: // being deleted already
+                    case 4: // already deleme state
+                        return;
+                    case undefined:
+                    case 0:
+                        part.state = 3; // being deleted
+                        removePart(part);
+                        event.preventDefault();
+                        break; // continue
+                    default:
+                        throw "Unexpected state "+part.state
+                    }
                 }
                 break;
             case 9: // Tab
@@ -30983,7 +32595,9 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
                 event.preventDefault(); // default is to highlight next field
                 break;
             case 27:  // ESC
-                tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+                console.log('escape')
+                updater.requestDownstreamAction(padDoc, reloadAndSync);
+                event.preventDefault();
                 break;
                 
             case 38: // Up
@@ -31004,72 +32618,54 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
             }
         });
 
-        part.addEventListener('click', function(event){
-            //var chunk = event.target.subject;
-            var author = kb.any(chunk, ns.dc('author'));
-
-            var range;
-            var textNode;
-            var offset;
-
-            if (document.caretPositionFromPoint) {
-                range = document.caretPositionFromPoint(event.clientX, event.clientY);
-                textNode = range.offsetNode;
-                offset = range.offset;
-            } else if (document.caretRangeFromPoint) {
-                range = document.caretRangeFromPoint(event.clientX, event.clientY);
-                textNode = range.startContainer;
-                offset = range.startOffset;
-            }
-
-            if (me.sameTerm(author)) {
-                // continue to edit
- 
-                // only split TEXT_NODEs
-                if (textNode.nodeType == 3) {
-                    textNode.textContent = textNode.textContent.slice(0,offset) 
-                    + '#' + textNode.textContent.slice(offset); 
-                    currentNode = textNode;
-                    currentOffset = offset;
-                }
-            
-            } else {
-                // @@ where is the cursor?
-                // https://developer.mozilla.org/en-US/docs/Web/API/Document/caretPositionFromPoint
-                // https://drafts.csswg.org/cssom-view/#the-caretposition-interface
-                
-                
-                // only split TEXT_NODEs
-                if (textNode.nodeType == 3) {
-                
-                    var replacement = textNode.splitText(offset);
-                    
-                    var bling = document.createElement('span');
-                    bling.textContent = "*"; // @@
-                    
-                    textNode.parentNode.insertBefore(bling, replacement);
-                }
-            }
-        });
-
         var updateStore = function(part) {
             var chunk = part.subject;
-            setPartStyle(part, 'color: #888;');
-            var old = kb.any(chunk, ns.sioc('content')).value;
+            setPartStyle(part, undefined, true);
+            var old = kb.any(chunk, ns.sioc('content')).value, color;
             del = [ $rdf.st(chunk, ns.sioc('content'), old, padDoc)];
             ins = [ $rdf.st(chunk, ns.sioc('content'), part.value, padDoc)];
+            var newOne = part.value;
             
-            tabulator.sparql.update(del, ins, function(uri,ok,error_body){
+            // DEBUGGING ONLY
+            if (part.lastSent) {
+                if (old != part.lastSent)  {
+                    throw "Out of order, last sent expected '"+old+"' but found '"+part.lastSent+"'";
+                }
+            }
+            part.lastSent = newOne;
+            
+            
+            console.log(" Patch proposed to " + chunk.uri.slice(-4) + " '"  + old + "' -> '" + newOne + "' ");
+            updater.update(del, ins, function(uri, ok, error_body, xhr){
                 if (!ok) {
                     // alert("clash " + error_body);
-                    console.log("patch FAILED '" + part.value + "' " + error_body);
-                    setPartStyle(part,'color: black;  background-color: #fdd;'); // failed
-                    part.state = 0;
-                    tabulator.sparql.requestDownstreamAction(padDoc, reloadAndSync);
+                    console.log("    patch FAILED " + xhr.status + " for '" + old + "' -> '" + newOne + "': " + error_body);
+                    if (xhr.status === 409) { // Conflict -  @@ we assume someone else
+                        setPartStyle(part,'color: black;  background-color: #fdd;'); 
+                        part.state = 0; // Needs downstream refresh
+                        tabulator.panes.utils.beep(0.5, 512); // Ooops clash with other person
+                        setTimeout(function(){
+                            updater.requestDownstreamAction(padDoc, reloadAndSync);
+                        }, 1000);
+                        
+                    } else {
+                        setPartStyle(part,'color: black;  background-color: #fdd;'); // failed pink
+                        part.state = 0;
+                        complain("    Error " + xhr.status + " sending data: " + error_body, true);   
+                        tabulator.panes.utils.beep(1.0, 128); // Other
+                        // @@@   Do soemthing more serious with other errors eg auth, etc
+                    }
                 } else {
+                    clearStatus(true);// upstream
                     setPartStyle(part); // synced
-                    // console.log("patch ok " + part.value);
-                    if (part.state === 2) {
+                    console.log("    Patch ok '"  + old + "' -> '" + newOne + "' ");
+                    
+                    if (part.state === 4) { //  delete me
+                        part.state = 3;
+                        removePart(part);
+                    } else if (part.state === 3) { // being deleted
+                        // pass
+                    } else if (part.state === 2) {
                         part.state = 1;  // pending: lock
                         updateStore(part)
                     } else {
@@ -31081,22 +32677,30 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
 
         part.addEventListener('input', function inputChangeListener(event) {
             // console.log("input changed "+part.value);
-            setPartStyle(part, 'color: #888;'); // grey out - not synced
-            if (part.state) {
-                part.state = 2; // please do again
+            setPartStyle(part, undefined, true); // grey out - not synced
+            console.log("Input event state " + part.state + " value '" + part.value + "'");
+            switch (part.state) {
+            case 3: // being deleted
                 return;
-            } else {
-                part.state = 1; // in progres
+            case 4: // needs to be deleted
+                return;
+            case 2: // needs content updating, we know
+                return;
+            case 1:
+                part.state = 2; // lag we need another patch
+                return;
+            case 0:
+            case undefined:
+                part.state = 1; // being upadted
+                updateStore(part);
             }
-            updateStore(part);
-
         }); // listener
         
     } // addlisteners
 
 
     var newPartAfter = function(tr1, chunk, before) { // @@ take chunk and add listeners
-        text = kb.any(chunk, ns.sioc('content'));
+        var text = kb.any(chunk, ns.sioc('content'));
         text = text ? text.value : '';
         var tr = dom.createElement('tr');
         if (before) {
@@ -31122,10 +32726,10 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
     var newChunk = function(ele, before) { // element of chunk being split
         var kb = tabulator.kb, tr1;
 
-        var here, prev, next, indent = 0;
+        var here, prev, next, queue, indent = 0, queueProperty = null;
         if (ele) {
             if (ele.tagName.toLowerCase() !== 'input') {
-                console.log('return pressed when current document is: ' + ele.tagName)
+                console.log("return pressed when current document is: " + ele.tagName)
             }
             here = ele.subject;
             indent = kb.any(here, PAD('indent'));
@@ -31133,11 +32737,16 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
             if (before) {
                 prev =  kb.any(undefined, PAD('next'), here);
                 next = here;
+                queue = prev;
+                queueProperty = 'newlinesAfter';
             } else {
                 prev = here;
                 next =  kb.any(here, PAD('next'));
+                queue = next;
+                queueProperty = 'newlinesBefore';
             }
             tr1 = ele.parentNode;
+
         } else {
             prev = subject
             next = subject;
@@ -31145,7 +32754,7 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
         }
 
         var chunk = tabulator.panes.utils.newThing(padDoc);
-        var part = newPartAfter(tr1, chunk, before);
+        var label = chunk.uri.slice(-4)
 
         del = [ $rdf.st(prev, PAD('next'), next, padDoc)];
         ins = [ $rdf.st(prev, PAD('next'), chunk, padDoc),
@@ -31156,51 +32765,63 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
             ins.push($rdf.st(chunk, PAD('indent'), indent, padDoc));
         }
 
-        tabulator.sparql.update(del, ins, function(uri,ok,error_body){
+        console.log("    Fresh chunk " + label + " proposed");
+        updater.update(del, ins, function(uri, ok, error_body, xhr){
             if (!ok) {
-                alert("Error writing fresh PAD data " + error_body)
+                //alert("Error writing new line " + label + ": " + error_body);
+                console.log("    ERROR writing new line " + label + ": " + error_body);
             } else {
-                console.log("fresh chunk updated");
-                setPartStyle(part);
+                var newPart = newPartAfter(tr1, chunk, before);
+                setPartStyle(newPart);
+                newPart.focus(); // Note this is delayed
+                if (queueProperty) {
+                    console.log("    Fresh chunk " + label + " updated, queue = " + queue[queueProperty]);
+                    queue[queueProperty] -= 1;
+                    if (queue[queueProperty]  > 0) {
+                        console.log("    Implementing queued newlines = " + next.newLinesBefore);
+                        newChunk(newPart, before);
+                    }
+                }
             }
         });
-        part.focus();
     };
 
     var consistencyCheck = function() {
         var found = [], failed =0;
-        var  complain = function(msg) {
-            if (options.statusArea) {
-                options.statusArea.textContent += msg + '.  ';
-            }
+        var  complain2 = function(msg) {
+            complain(msg);
             failed++;
         }
     
-        for (chunk = kb.the(subject, PAD('next'));  
+        if (!kb.the(subject, PAD('next'))) {
+            complain2("No initial next pointer");
+            return false; // can't do linked list
+        }
+        for (var chunk = kb.the(subject, PAD('next'));  
             !chunk.sameTerm(subject);
             chunk = kb.the(chunk, PAD('next'))) {
             var label = chunk.uri.split('#')[1];
             if (found[chunk.uri]) {
-                complian("Loop!");
+                complain2("Loop!");
                 return false;
             }
 
             found[chunk.uri] = true;
             var k = kb.each(chunk, PAD('next')).length
-            if (k !== 1) complain("Should be 1 not "+k+" next pointer for " + label);
+            if (k !== 1) complain2("Should be 1 not "+k+" next pointer for " + label);
 
             var k = kb.each(chunk, PAD('indent')).length
-            if (k > 1) complain("Should be 0 or 1 not "+k+" indent for " + label);
+            if (k > 1) complain2("Should be 0 or 1 not "+k+" indent for " + label);
 
             var k = kb.each(chunk, ns.sioc('content')).length
-            if (k !== 1) complain("Should be 1 not "+k+" contents for " + label);
+            if (k !== 1) complain2("Should be 1 not "+k+" contents for " + label);
         
             var k = kb.each(chunk, ns.dc('author')).length
-            if (k !== 1) complain("Should be 1 not "+k+" author for " + label);
+            if (k !== 1) complain2("Should be 1 not "+k+" author for " + label);
             
             var sts = kb.statementsMatching(undefined, ns.sioc('contents'));
             sts.map(function(st){ if (!found[st.subject.uri]) {
-                    complain("Loose chunk! " + st.subject.uri);
+                    complain2("Loose chunk! " + st.subject.uri);
             }});
         }
         return !failed;
@@ -31210,22 +32831,22 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
     var sync = function() {
         var first = kb.the(subject, PAD('next'));
         if (kb.each(subject, PAD('next')).length !== 1) {
-            console.log("Pad: Inconsistent data - too many NEXT pointers: "
-                + (kb.each(subject, PAD('next')).length));
-            //alert("Inconsitent data");
-            if (options.statusArea) {
-                statusArea.textContent = "Inconsistent Data!"
+            var msg = "Pad: Inconsistent data - NEXT pointers: "
+                + (kb.each(subject, PAD('next')).length);
+            console.log(msg);
+            if (options.statusAra) {
+                options.statusArea.textContent += msg;
             }
             return
         }
         var last = kb.the(undefined, PAD('previous'), subject);
         var chunk = first; //  = kb.the(subject, PAD('next'));
-        var row = table.firstChild;
+        var row;
             
         // First see which of the logical chunks have existing physical manifestations
-        manif = [];
+        var manif = [];
         // Find which lines correspond to existing chunks
-        for (chunk = kb.the(subject, PAD('next'));  
+        for (var chunk = kb.the(subject, PAD('next'));  
             !chunk.sameTerm(subject);
             chunk = kb.the(chunk, PAD('next'))) {
             for (var i=0; i< table.children.length; i++) {
@@ -31238,26 +32859,27 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
         
         // Remove any deleted lines
         for (var i = table.children.length -1; i >= 0 ; i--) {
-            var row = table.children[i];
+            row = table.children[i];
             if (!manif[row.firstChild.subject.uri]) {
                 table.removeChild(row);
             }
         }
         // Insert any new lines and update old ones
-        row = table.firstChild;
-        for (chunk = kb.the(subject, PAD('next'));  
+        row = table.firstChild; // might be null
+        for (var chunk = kb.the(subject, PAD('next'));  
             !chunk.sameTerm(subject);
             chunk = kb.the(chunk, PAD('next'))) {
             var text = kb.any(chunk, ns.sioc('content')).value;
             // superstitious -- don't mess with unchanged input fields
             // which may be selected by the user
-            if (manif[chunk.uri]) { 
+            if (row && manif[chunk.uri]) { 
                 var part = row.firstChild;
                 if (text !== part.value) {
                     part.value = text;
                 }
                 setPartStyle(part);
-                part.state = 0;
+                part.state = 0; // Clear the state machine
+                delete part.lastSent; // DEBUG ONLY
                 row = row.nextSibling
             } else {
                 newPartAfter(row, chunk, true); // actually before
@@ -31278,13 +32900,48 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
         }
     }
 
+    var reloading = false;
 
+    var checkAndSync = function() {
+        console.log("    reloaded OK")
+        clearStatus();
+        if (!consistencyCheck()) {
+            console.log("CONSITENCY CHECK FAILED");// Turn whole table pink??
+        } else {
+            refreshTree(table);
+        }
+    };
+    
     var reloadAndSync = function() {
-        tabulator.sparql.reload(kb, padDoc, function (ok) {
-            if (ok) {
-                refreshTree(table);
-            }
-        });
+        if (reloading) {
+            console.log("   Already reloading - stop")
+            return; // once only needed
+        }
+        reloading = true;
+        var retryTimeout = 1000; // ms
+        var tryReload = function() {
+            console.log("try reload - timeout = " + retryTimeout);
+            updater.reload(kb, padDoc, function (ok, message, xhr) {
+                reloading = false;
+                if (ok) {
+                    checkAndSync();
+                } else {
+                    if  (xhr.status === 0) {
+                        complain("Network error refreshing the pad. Retrying in "
+                                            + retryTimeout/1000);
+                        reloading = true;
+                        retryTimeout = retryTimeout * 2;
+                        setTimeout(tryReload, retryTimeout)
+                    } else {
+                        complain("Error " + xhr.status + "refreshing the pad:" +
+                            message + ". Stopped");
+                        console.log("Error " + xhr.status + "refreshing the pad:" +
+                            message + ". Stopped" + padDoc);
+                    }
+                }
+            });
+        }
+        tryReload();
     }
     
     table.refresh = sync; // Catch downward propagating refresh events
@@ -31294,18 +32951,21 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
         console.log("Existing pad.");
         if (consistencyCheck()) {
             sync();
+            if (kb.holds(subject, PAD('next'), subject)) { //Empty list untenable
+                newChunk(); // require at least one line
+            }
         } else {
             console.log(table.textContent = "Inconsistent data. Abort");
         } 
     } else { // Make new pad
         console.log("No pad exists - making new one.");
-
-        var insertables = [];
-        insertables.push($rdf.st(subject, ns.dc('author'), me, padDoc));
-        insertables.push($rdf.st(subject, ns.dc('created'), new Date(), padDoc));
-        insertables.push($rdf.st(subject, PAD('next'), subject, padDoc));
+        var insertables = [
+            $rdf.st(subject, ns.rdf('type'), PAD('Notepad'), padDoc),
+            $rdf.st(subject, ns.dc('author'), me, padDoc),
+            $rdf.st(subject, ns.dc('created'), new Date(), padDoc),
+            $rdf.st(subject, PAD('next'), subject, padDoc)];
         
-        tabulator.sparql.update([], insertables, function(uri,ok,error_body){
+        updater.update([], insertables, function(uri,ok,error_body){
             if (!ok) {
                 complainIfBad(ok, error_body);
             } else {
@@ -31320,7 +32980,7 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
 
 // ###### Finished expanding js/panes/common/pad.js ##############
 
-/*  Note that hte earliest panes have priority. So the most specific ones are first.
+/*  Note that the earliest panes have priority. So the most specific ones are first.
 **
 */
 // Developer designed:
@@ -31328,7 +32988,7 @@ tabulator.panes.utils.notepad  = function (dom, padDoc, subject, me, options) {
 /*   Issue Tracker Pane
 **
 **  This outline pane allows a user to interact with an issue,
-to change its state according to an ontology, comment on it, etc.
+** to change its state according to an ontology, comment on it, etc.
 **
 **
 ** I am using in places single quotes strings like 'this'
@@ -31341,206 +33001,6 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
     console = {};
     console.log = function(msg) { tabulator.log.info(msg);};
 }
-
-
-
-//////////////////////////////////////////////////////  SUBCRIPTIONS
-
-$rdf.subscription =  function(options, doc, onChange) {
-
-
-    //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
-    var linkRels = function(doc) {
-        var links = {}; // map relationship to uri
-        var linkHeaders = tabulator.fetcher.getHeader(doc, 'link');
-        if (!linkHeaders) return null;
-        linkHeaders.map(function(headerValue){
-            var arg = headerValue.trim().split(';');
-            var uri = arg[0];
-            arg.slice(1).map(function(a){
-                var key = a.split('=')[0].trim();
-                var val = a.split('=')[1].trim();
-                if (key ==='rel') {
-                    links[val] = uri.trim();
-                }
-            });        
-        });
-        return links;
-    };
-
-
-    var getChangesURI = function(doc, rel) {
-        var links = linkRels(doc);
-        if (!links[rel]) {
-            console.log("No link header rel=" + rel + " on " + doc.uri)
-            return null;
-        }
-        var changesURI = $rdf.uri.join(links[rel], doc.uri);
-        // console.log("Found rel=" + rel + " URI: " + changesURI);
-        return changesURI;
-    };
-
-
-
-///////////////  Subscribe to changes by SSE
-
-
-    var getChanges_SSE = function(doc, onChange) {
-        var streamURI = getChangesURI(doc, 'events');
-        if (!streamURI) return;
-        var source = new EventSource(streamURI); // @@@  just path??
-        console.log("Server Side Source");   
-
-        source.addEventListener('message', function(e) {
-            console.log("Server Side Event: " + e);   
-            alert("SSE: " + e)  
-            // $('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
-        }, false);
-    };
-
- 
-    
-
-    //////////////// Subscribe to changes websocket
-
-    // This implementation uses web sockets using update-via
-    
-    var getChanges_WS2 = function(doc, onChange) {
-        var router = new $rdf.UpdatesVia(tabulator.fetcher); // Pass fetcher do it can subscribe to headers
-        var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
-        router.register(wsuri, doc.uri);
-    };
-    
-    var getChanges_WS = function(doc, onChange) {
-        var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
-        var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
-        var socket;
-        try {
-            socket = new WebSocket(changesURI);
-        } catch(e) {
-            socket = new MozWebSocket(changesURI);
-        };
-        
-        socket.onopen = function(event){
-            console.log("socket opened");
-        };
-        
-        socket.onmessage = function (event) {
-            console.log("socket received: " +event.data);
-            var patchText = event.data;
-            console.log("Success: patch received:" + patchText);
-            
-            // @@ check integrity of entire patch
-            var patchKB = $rdf.graph();
-            var sts;
-            try {
-                $rdf.parse(patchText, patchKB, doc.uri, 'text/n3');
-            } catch(e) {
-                console.log("Parse error in patch: "+e);
-            };
-            clauses = {};
-            ['where', 'insert', 'delete'].map(function(pred){
-                sts = patchKB.statementsMatching(undefined, SQNS(pred), undefined);
-                if (sts) clauses[pred] = sts[0].object;
-            });
-            console.log("Performing patch!");
-            kb.applyPatch(clauses, doc, function(err){
-                if (err) {
-                    console.log("Incoming patch failed!!!\n" + err)
-                    alert("Incoming patch failed!!!\n" + err)
-                    socket.close();
-                } else {
-                    console.log("Incoming patch worked!!!!!!\n" + err)
-                    onChange(); // callback user
-                };
-            });
-        };
-
-    }; // end getChanges
-    
-
-    ////////////////////////// Subscribe to changes using Long Poll
-
-    // This implementation uses link headers and a diff returned by plain HTTP
-    
-    var getChanges_LongPoll = function(doc, onChange) {
-        var changesURI = getChangesURI(doc, 'changes');
-        if (!changesURI) return "No advertized long poll URI";
-        console.log(tabulator.panes.utils.shortTime() + " Starting new long poll.")
-        var xhr = $rdf.Util.XMLHTTPFactory();
-        xhr.alreadyProcessed = 0;
-
-        xhr.onreadystatechange = function(){
-            switch (xhr.readyState) {
-            case 0:
-            case 1:
-                return;
-            case 3:
-                console.log("Mid delta stream (" + xhr.responseText.length + ") "+ changesURI);
-                handlePartial();
-                break;
-            case 4:
-                handlePartial();
-                console.log(tabulator.panes.utils.shortTime() + " End of delta stream " + changesURI);
-                break;
-             }   
-        };
-
-        try {
-            xhr.open('GET', changesURI);
-        } catch (er) {
-            console.log("XHR open for GET changes failed <"+changesURI+">:\n\t" + er);
-        }
-        try {
-            xhr.send();
-        } catch (er) {
-            console.log("XHR send failed <"+changesURI+">:\n\t" + er);
-        }
-
-        var handlePartial = function() {
-            // @@ check content type is text/n3
-
-            if (xhr.status >= 400) {
-                console.log("HTTP (" + xhr.readyState + ") error " + xhr.status + "on change stream:" + xhr.statusText);
-                console.log("     error body: " + xhr.responseText);
-                xhr.abort();
-                return;
-            } 
-            if (xhr.responseText.length > xhr.alreadyProcessed) {
-                var patchText = xhr.responseText.slice(xhr.alreadyProcessed);
-                xhr.alreadyProcessed = xhr.responseText.length;
-                
-                console.log(tabulator.panes.utils.shortTime() + " Long poll returns, processing...")
-                xhr.headers = $rdf.Util.getHTTPHeaders(xhr);
-                try {
-                    onChange(patchText);
-                } catch (e) {
-                    console.log("Exception in patch update handler: " + e)
-                    // @@ Where to report error e?
-                }
-                getChanges_LongPoll(doc, onChange); // Queue another one
-                
-            }        
-        };
-        return null; // No error
-
-    }; // end getChanges_LongPoll
-    
-    if (options.longPoll ) {
-        getChanges_LongPoll(doc, onChange);
-    }
-    if (options.SSE) {
-        getChanges_SSE(doc, onChange);
-    }
-    if (options.websockets) {
-        getChanges_WS(doc, onChange);
-    }
-
-}; // subscription
-
-///////////////////////////////// End of subscription stufff 
-
-
 
 
     
@@ -31695,7 +33155,7 @@ tabulator.panes.register( {
         /////////////////////// Reproduction: Spawn a new instance of this app
         
         var newTrackerButton = function(thisTracker) {
-            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
+	    var button = tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
@@ -31777,7 +33237,9 @@ tabulator.panes.register( {
                 // @@ Set up access control for new config and store. 
                 
             }); // callback to newAppInstance
-
+			 
+	    button.setAttribute('style', 'margin: 0.5em 1em;');
+	    return button;
             
         }; // newTrackerButton
 
@@ -31786,8 +33248,8 @@ tabulator.panes.register( {
 ///////////////////////////////////////////////////////////////////////////////
         
         
-        
-        var updater = new tabulator.rdf.sparqlUpdate(kb);
+        tabulator.updater = tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
+        var updater = tabulator.updater;
 
  
         var plist = kb.statementsMatching(subject)
@@ -31825,6 +33287,228 @@ tabulator.panes.register( {
                 refreshTree(root.children[i]);
             }
         }
+        
+        // All the UI for a single issue, without store load or listening for changes
+        //
+        var singleIssueUI = function(subject, div) {
+        
+            var ns = tabulator.ns
+            var predicateURIsDone = {};
+            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+            donePredicate(ns.rdf('type'));
+            donePredicate(ns.dc('title'));
+
+
+            var setPaneStyle = function() {
+                var types = kb.findTypeURIs(subject);
+                var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                var backgroundColor = null;
+                for (var uri in types) {
+                    backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
+                    if (backgroundColor) break;
+                }
+                backgroundColor = backgroundColor ? backgroundColor.value : '#eee'; // default grey
+                mystyle += "background-color: " + backgroundColor + "; ";
+                div.setAttribute('style', mystyle);
+            }
+            setPaneStyle();
+            
+            var stateStore = kb.any(tracker, WF('stateStore'));
+            var store = kb.sym(subject.uri.split('#')[0]);
+
+            // Unfinished -- need this for speed to save the reloadStore below
+            var incommingPatch = function(text) {
+                var contentType = xhr.headers['content-type'].trim();
+                var patchKB = $rdf.graph();
+                $rdf.parse(patchText, patchKB, doc.uri, contentType);
+                // @@ TBC: check this patch isn't one of ours
+                // @@ TBC: kb.applyPatch();  @@@@@ code me
+                setPaneStyle();
+                refreshTree(div);
+            }
+
+            tabulator.panes.utils.checkUserSetMe(stateStore);
+
+            
+            var states = kb.any(tracker, WF('issueClass'));
+            if (!states) throw 'This tracker '+tracker+' has no issueClass';
+            var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
+                    if (ok) {
+                        setModifiedDate(store, kb, store);
+                        refreshTree(div);
+                    }
+                    else console.log("Failed to change state:\n"+body);
+                })
+            div.appendChild(select);
+
+
+            var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+            for (var i=0; i<cats.length; i++) {
+                div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
+                        kb, subject, cats[i], store, function(ok,body){
+                    if (ok) {
+                        setModifiedDate(store, kb, store);
+                        refreshTree(div);
+                    }
+                    else console.log("Failed to change category:\n"+body);
+                }));
+            }
+            
+            var a = dom.createElement('a');
+            a.setAttribute('href',tracker.uri);
+            a.setAttribute('style', 'float:right');
+            div.appendChild(a).textContent = tabulator.Util.label(tracker);
+            a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+            donePredicate(ns.wf('tracker'));
+
+
+            div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
+                store, function(ok,body){
+                    if (ok) setModifiedDate(store, kb, store);
+                    else console.log("Failed to description:\n"+body);
+                }));
+            donePredicate(WF('description'));
+
+
+
+            // Assigned to whom?
+            
+            var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
+            if (assignments.length > 1) {
+                say("Weird, was assigned to more than one person. Fixing ..");
+                var deletions = assignments.slice(1);
+                updater.update(deletions, [], function(uri, ok, body){
+                    if (ok) {
+                        say("Now fixed.")
+                    } else {
+                        complain("Fixed failed: " + body)
+                    }
+                });
+
+                // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
+            }
+            
+            var assignee = assignments.length ? assignments[0].object : null;
+            // Who could be assigned to this?
+            // Anyone assigned to any issue we know about  @@ should be just for this tracker
+            var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
+            var devs = sts.map(function(st){return st.object});
+            // Anyone who is a developer of any project which uses this tracker
+            var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
+            if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
+            if (devs.length) {
+                devs.map(function(person){tabulator.fetcher.lookUpThing(person)}); // best effort async for names etc
+                var opts = { 'mint': "** Add new person **",
+                            'nullLabel': "(unassigned)",
+                            'mintStatementsFun': function(newDev) {
+                                var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
+                                if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
+                                return sts;
+                            }};
+                div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
+                    subject, ns.wf('assignee'), devs, opts, store,
+                    function(ok,body){
+                        if (ok) setModifiedDate(store, kb, store);
+                        else console.log("Failed to description:\n"+body);
+                    }));
+            }
+            donePredicate(ns.wf('assignee'));
+
+
+            if ( getOption(tracker, 'allowSubIssues')) {
+                // Sub issues
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                        return false
+                    });
+
+                // Super issues
+                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                    function(pred, inverse) {
+                        if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                        return false
+                    });
+                donePredicate(WF('dependent'));
+            }
+
+            div.appendChild(dom.createElement('br'));
+
+            if (getOption(tracker, 'allowSubIssues')) {
+                var b = dom.createElement("button");
+                b.setAttribute("type", "button");
+                div.appendChild(b)
+                classLabel = tabulator.Util.label(states);
+                b.innerHTML = "New sub "+classLabel;
+                b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+                b.addEventListener('click', function(e) {
+                    div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
+            };
+
+            var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
+            if (extrasForm) {
+                tabulator.panes.utils.appendForm(dom, div, {},
+                            subject, extrasForm, stateStore, complainIfBad);
+                var fields = kb.each(extrasForm, ns.ui('part'));
+                fields.map(function(field) {
+                    var p = kb.any(field, ns.ui('property'));
+                    if (p) {
+                        donePredicate(p); // Check that one off
+                    }
+                });
+                
+            };
+            
+            //   Comment/discussion area
+            
+            var spacer = div.appendChild(dom.createElement('tr'));
+	    spacer.setAttribute('style','height: 1em');  // spacer and placeHolder
+			
+            var messageStore = kb.any(tracker, ns.wf('messageStore'));
+            if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));
+	    kb.fetcher.nowOrWhenFetched(messageStore, function(ok, body, xhr){
+		if (!ok) {
+		    var er = dom.createElement('p')
+		    er.textContent = body; // @@ use nice error message
+		    div.insertBefore(er, spacer);
+		} else {
+		    var discussion = tabulator.panes.utils.messageArea(
+			dom, kb, subject, messageStore)
+		    div.insertBefore(discussion, spacer);
+		}
+	    })
+	    donePredicate(ns.wf('message'));
+			 
+			 
+            // Remaining properties
+	    var plist = kb.statementsMatching(subject)
+	    var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+            tabulator.outline.appendPropertyTRs(div, qlist, true,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+                
+            var refreshButton = dom.createElement('button');
+            refreshButton.textContent = "refresh";
+            refreshButton.addEventListener('click', function(e) {
+                tabulator.fetcher.unload(messageStore);
+                tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+                    if (!ok) {
+                        console.log("Cant refresh messages" + body);
+                    } else {
+                        refreshTree(div);
+                        // syncMessages(subject, messageTable);
+                    };
+                });
+            }, false);
+	    refreshButton.setAttribute('style', 'margin: 0.5em 1em;');
+            div.appendChild(refreshButton);
+        }; // singleIssueUI
 
 
 
@@ -31837,239 +33521,16 @@ tabulator.panes.register( {
             
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
-            tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
-                if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
-                var ns = tabulator.ns
-                var predicateURIsDone = {};
-                var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
-                donePredicate(ns.rdf('type'));
-                donePredicate(ns.dc('title'));
-
-
-                var setPaneStyle = function() {
-                    var types = kb.findTypeURIs(subject);
-                    var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
-                    var backgroundColor = null;
-                    for (var uri in types) {
-                        backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
-                        if (backgroundColor) break;
-                    }
-                    backgroundColor = backgroundColor ? backgroundColor.value : '#eee'; // default grey
-                    mystyle += "background-color: " + backgroundColor + "; ";
-                    div.setAttribute('style', mystyle);
-                }
-                setPaneStyle();
-                
+            tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane1(ok, body) {
+                if (!ok) return console.log("Failed to load config " + trackerURI + ' '+body);
                 var stateStore = kb.any(tracker, WF('stateStore'));
-                var store = kb.sym(subject.uri.split('#')[0]);
-/*                if (stateStore != undefined && store.uri != stateStore.uri) {
-                    console.log('(This bug is not stored in the default state store)')
-                }
-*/
 
-                // Unfinished -- need this for speed to save the reloadStore below
-                var incommingPatch = function(text) {
-                    var contentType = xhr.headers['content-type'].trim();
-                    var patchKB = $rdf.graph();
-                    $rdf.parse(patchText, patchKB, doc.uri, contentType);
-                    // @@ TBC: check this patch isn't one of ours
-                    // @@ TBC: kb.applyPatch();  @@@@@ code me
-                    setPaneStyle();
-                    refreshTree(div);
-                }
-
-
-                var subopts = { 'longPoll': true };
-                $rdf.subscription(subopts, stateStore, function() {
-                    reloadStore(stateStore, function(deltaText) {
-                        setPaneStyle();
-                        refreshTree(div);
-                    });
+                tabulator.fetcher.nowOrWhenFetched(stateStore, subject, function drawIssuePane2(ok, body) {
+                    if (!ok) return console.log("Failed to load state " + stateStore + ' '+body);
+                    
+                    singleIssueUI(subject, div);
+                    updater.addDownstreamChangeListener(stateStore, function() {refreshTree(div)}); // Live update
                 });
-
-
-
-                tabulator.panes.utils.checkUserSetMe(stateStore);
-
-                
-                var states = kb.any(tracker, WF('issueClass'));
-                if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
-                        if (ok) {
-                            setModifiedDate(store, kb, store);
-                            refreshTree(div);
-                        }
-                        else console.log("Failed to change state:\n"+body);
-                    })
-                div.appendChild(select);
-
-
-                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-                for (var i=0; i<cats.length; i++) {
-                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
-                            kb, subject, cats[i], store, function(ok,body){
-                        if (ok) {
-                            setModifiedDate(store, kb, store);
-                            refreshTree(div);
-                        }
-                        else console.log("Failed to change category:\n"+body);
-                    }));
-                }
-                
-                var a = dom.createElement('a');
-                a.setAttribute('href',tracker.uri);
-                a.setAttribute('style', 'float:right');
-                div.appendChild(a).textContent = tabulator.Util.label(tracker);
-                a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                donePredicate(ns.wf('tracker'));
-
-
-                div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
-                    store, function(ok,body){
-                        if (ok) setModifiedDate(store, kb, store);
-                        else console.log("Failed to description:\n"+body);
-                    }));
-                donePredicate(WF('description'));
-
-
-
-                // Assigned to whom?
-                
-                var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
-                if (assignments.length > 1) {
-                    say("Weird, was assigned to more than one person. Fixing ..");
-                    var deletions = assignments.slice(1);
-                    updater.update(deletions, [], function(uri, ok, body){
-                        if (ok) {
-                            say("Now fixed.")
-                        } else {
-                            complain("Fixed failed: " + body)
-                        }
-                    });
-
-                    // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
-                }
-                
-                var assignee = assignments.length ? assignments[0].object : null;
-                // Who could be assigned to this?
-                // Anyone assigned to any issue we know about  @@ should be just for this tracker
-                var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
-                var devs = sts.map(function(st){return st.object});
-                // Anyone who is a developer of any project which uses this tracker
-                var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
-                if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
-                if (devs.length) {
-                    devs.map(function(person){tabulator.fetcher.lookUpThing(person)}); // best effort async for names etc
-                    var opts = { 'mint': "** Add new person **",
-                                'nullLabel': "(unassigned)",
-                                'mintStatementsFun': function(newDev) {
-                                    var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
-                                    if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
-                                    return sts;
-                                }};
-                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
-                        subject, ns.wf('assignee'), devs, opts, store,
-                        function(ok,body){
-                            if (ok) setModifiedDate(store, kb, store);
-                            else console.log("Failed to description:\n"+body);
-                        }));
-                }
-                donePredicate(ns.wf('assignee'));
-
-
-                if ( getOption(tracker, 'allowSubIssues')) {
-                    // Sub issues
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(WF('dependent'))) return true;
-                            return false
-                        });
-
-                    // Super issues
-                    tabulator.outline.appendPropertyTRs(div, qlist, true,
-                        function(pred, inverse) {
-                            if (inverse && pred.sameTerm(WF('dependent'))) return true;
-                            return false
-                        });
-                    donePredicate(WF('dependent'));
-                }
-
-                div.appendChild(dom.createElement('br'));
-
-                if (getOption(tracker, 'allowSubIssues')) {
-                    var b = dom.createElement("button");
-                    b.setAttribute("type", "button");
-                    div.appendChild(b)
-                    classLabel = tabulator.Util.label(states);
-                    b.innerHTML = "New sub "+classLabel;
-                    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
-                    b.addEventListener('click', function(e) {
-                        div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
-                };
-
-                var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
-                if (extrasForm) {
-                    tabulator.panes.utils.appendForm(dom, div, {},
-                                subject, extrasForm, stateStore, complainIfBad);
-                    var fields = kb.each(extrasForm, ns.ui('part'));
-                    fields.map(function(field) {
-                        var p = kb.any(field, ns.ui('property'));
-                        if (p) {
-                            donePredicate(p); // Check that one off
-                        }
-                    });
-                    
-                };
-                
-                //   Comment/discussion area
-                
-                var messageStore = kb.any(tracker, ns.wf('messageStore'));
-                if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
-                div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
-                donePredicate(ns.wf('message'));
-                
-
-/*
-                // Add in simple comments about the bug - if not already in extras form.
-                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
-                            return false
-                        });
-                    donePredicate(ns.rdfs('comment'));
-                };
-*/
-                div.appendChild(dom.createElement('tr'))
-                            .setAttribute('style','height: 1em'); // spacer
-                
-                // Remaining properties
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                tabulator.outline.appendPropertyTRs(div, qlist, true,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                    
-                var refreshButton = dom.createElement('button');
-                refreshButton.textContent = "refresh";
-                refreshButton.addEventListener('click', function(e) {
-                    tabulator.fetcher.unload(messageStore);
-                    tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
-                        if (!ok) {
-                            console.log("Cant refresh messages" + body);
-                        } else {
-                            refreshTree(div);
-                            // syncMessages(subject, messageTable);
-                        };
-                    });
-                }, false);
-                div.appendChild(refreshButton);
-
-
-
                     
             });  // End nowOrWhenFetched tracker
 
@@ -32159,12 +33620,30 @@ tabulator.panes.register( {
                     };
                 });
                 
+                var overlay, overlayTable;
+                
+                var bringUpInOverlay = function(href) {
+                    overlayPane.innerHTML = ''; // clear existing
+                    var button = overlayPane.appendChild(dom.createElement('button'))
+                    button.textContent = 'X';
+                    button.addEventListener('click', function(event){
+                        overlayPane.innerHTML = ''; // clear overlay
+                    })
+                    singleIssueUI(kb.sym(href), overlayPane);
+                }
                         
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
-                    'hints': {
-                        '?created': { 'cellFormat': 'shortDate'},
-                        '?state': { 'initialSelection': selectedStates }}} );
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {
+                    query: query,
+                    keyVariable: '?issue', // Charactersic of row
+                    hints: {
+                        '?issue':  { linkFunction: bringUpInOverlay },
+                        '?created': { cellFormat: 'shortDate'},
+                        '?state': { initialSelection: selectedStates }}} );
                 div.appendChild(tableDiv);
+                
+                overlay = div.appendChild(dom.createElement('div'));
+                overlay.setAttribute('style', ' position: absolute; top: 100px; right: 20px; margin: 1em white;');
+                overlayPane = overlay.appendChild(dom.createElement('div')); // avoid stomping on style by pane
 
                 if (tableDiv.refresh) { // Refresh function
                     var refreshButton = dom.createElement('button');
@@ -32184,10 +33663,12 @@ tabulator.panes.register( {
                     console.log('No refresh function?!');
                 }
                             
-                
+                updater.addDownstreamChangeListener(stateStore, tableDiv.refresh); // Live update
                 
                 
             });
+            
+            
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
             // end of Tracker instance
@@ -32214,12 +33695,9 @@ tabulator.panes.register( {
                 console.log("(Logged out)")
                 me = null;
             }
-        });
-        
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
-
+        });        
+        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;'); 
         div.appendChild(loginOutButton);
-        
         
         return div;
 
@@ -32300,508 +33778,6 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, del
     }, false);
 }
 
-////////////////////////////////////// Start ACL stuff
-
-
-// Take the "defaltForNew" ACL and convert it into the equivlent ACL 
-// which the resource would have had.  Retur it as a new separate store.
-
-tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
-    var kb = tabulator.kb;
-    var ACL = tabulator.ns.acl;
-    var ns = tabulator.ns;
-    var defaults = kb.each(undefined, ACL('defaultForNew'), defaultResource, defaultACLdoc);
-    var proposed = [];
-    defaults.map(function(da) {
-        proposed = proposed.concat(kb.statementsMatching(da, ACL('agent'), undefined, defaultACLdoc))
-            .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
-            .concat(kb.statementsMatching(da, ACL('mode'), undefined, defaultACLdoc));
-        proposed.push($rdf.st(da, ACL('accessTo'), doc, defaultACLdoc)); // Suppose 
-    });
-    var kb2 = $rdf.graph(); // Potential - derived is kept apart
-    proposed.map(function(st){
-        var move = function(sym) {
-            var y = defaultACLdoc.uri.length; // The default ACL file
-            return  $rdf.sym( (sym.uri.slice(0, y) == defaultACLdoc.uri) ?
-                 aclDoc.uri + sym.uri.slice(y) : sym.uri );
-        }
-        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
-    });
-    
-    //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
-    var ccc = kb2.each(undefined, ACL('accessTo'), doc)
-        .filter(function(au){ return  kb2.holds(au, ACL('mode'), ACL('Control'))});
-    ccc.map(function(au){
-        var au2 = kb2.sym(au.uri + "__ACLACL");
-            kb2.add(au2, ns.rdf('type'), ACL('Authorization'), aclDoc);
-            kb2.add(au2, ACL('accessTo'), aclDoc, aclDoc);
-            kb2.add(au2, ACL('mode'), ACL('Read'), aclDoc);
-            kb2.add(au2, ACL('mode'), ACL('Write'), aclDoc);
-        kb2.each(au, ACL('agent')).map(function(who){
-            kb2.add(au2, ACL('agent'), who, aclDoc);
-        });
-        kb2.each(au, ACL('agentClass')).map(function(who){
-            kb2.add(au2, ACL('agentClass'), who, aclDoc);
-        });
-    });
-    
-    return kb2;
-}
-
-
-// Read and conaonicalize the ACL for x in aclDoc
-//
-// Accumulate the access rights which each agent or class has
-//
-tabulator.panes.utils.readACL = function(x, aclDoc) {
-    var kb = tabulator.kb;
-    var ACL = tabulator.ns.acl;
-    var ac = {'agent': [], 'agentClass': []};
-    var auths = kb.each(undefined, ACL('accessTo'), x);
-    for (var pred in { 'agent': true, 'agentClass': true}) {
-//    ['agent', 'agentClass'].map(function(pred){
-        auths.map(function(a){
-            kb.each(a,  ACL('mode')).map(function(mode){
-                 kb.each(a,  ACL(pred)).map(function(agent){                 
-                    if (!ac[pred][agent.uri]) ac[pred][agent.uri] = [];
-                    ac[pred][agent.uri][mode.uri] = a; // could be "true" but leave pointer just in case
-                });
-            });
-        });
-    };
-    return ac;
-}
-
-// Compare two ACLs
-tabulator.panes.utils.sameACL = function(a, b) {
-    var contains = function(a, b) {
-        for (var pred in { 'agent': true, 'agentClass': true}) {
-            if (a[pred]) {
-                for (var agent in a[pred]) {
-                    for (var mode in a[pred][agent]) {
-                        if (!b[pred][agent] || !b[pred][agent][mode]) {
-                            return false;
-                        }
-                    }
-                }
-            };
-        };
-        return true;
-    }
-    return contains(a, b) && contains(b,a);
-}
-
-// Union N ACLs
-tabulator.panes.utils.ACLunion = function(list) {
-    var b = list[0], a, ag;
-    for (var k=1; k < list.length; k++) {
-        ['agent', 'agentClass'].map(function(pred){
-            a = list[k];
-            if (a[pred]) {
-                for (ag in a[pred]) {
-                    for (var mode in a[pred][ag]) {
-                        if (!b[pred][ag]) b[pred][ag] = [];
-                        b[pred][ag][mode] = true;
-                    }
-                }
-            };
-        });
-    }
-    return b;
-}
-
-
-// Merge ACLs lists from things to form union
-
-tabulator.panes.utils.loadUnionACL = function(subjectList, callback) {
-    var aclList = [];
-    var doList = function(list) {
-        if (list.length) {
-            doc = list.shift().doc();
-            tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
-                var defa = !p2;
-                if (!ok) return callback(ok, targetACLDoc);
-                aclList.push((defa) ? tabulator.panes.utils.readACL(defaultHolder, defaultACLDoc) :
-                    tabulator.panes.utils.readACL(targetDoc, targetACLDoc));
-                doList(list.slice(1));
-            });
-        } else { // all gone
-            callback(true, tabulator.panes.utils.ACLunion(aclList))
-        }
-    }
-    doList(subjectList);
-}
-
-// Represents these as a RDF graph by combination of modes
-//
-tabulator.panes.utils.ACLbyCombination = function(x, ac, aclDoc) {
-    var byCombo = [];
-    ['agent', 'agentClass'].map(function(pred){
-        for (var agent in ac[pred]) {
-            var combo = [];
-            for (var mode in ac[pred][agent]) {
-                combo.push(mode)
-            }
-            combo.sort()
-            combo = combo.join('\n'); 
-            if (!byCombo[combo]) byCombo[combo] = [];
-            byCombo[combo].push([pred, agent])
-        }
-    });
-    return byCombo;
-}
-//    Write ACL graph to store
-//
-tabulator.panes.utils.makeACLGraph = function(kb, x, ac, aclDoc) {
-    var byCombo = tabulator.panes.utils.ACLbyCombination(x, ac, aclDoc);
-    var ACL = tabulator.ns.acl;
-    for (combo in byCombo) {
-        var modeURIs = combo.split('\n');
-        var short = modeURIs.map(function(u){return u.split('#')[1]}).join('');
-        var a = kb.sym(aclDoc.uri + '#' + short);
-        kb.add(a, tabulator.ns.rdf('type'), ACL('Authorization'), aclDoc);
-        kb.add(a, ACL('accessTo'), x, aclDoc);
-
-        for (var i=0; i < modeURIs.length; i++) {
-            kb.add(a, ACL('mode'), kb.sym(modeURIs[i]), aclDoc);
-        }
-        var pairs = byCombo[combo];
-        for (i=0; i< pairs.length; i++) {
-            var pred = pairs[i][0], ag = pairs[i][1];
-            kb.add(a, ACL(pred), kb.sym(ag), aclDoc);
-        } 
-    }
-}
-
-//    Write ACL graph to string
-//
-tabulator.panes.utils.makeACLString = function(x, ac, aclDoc) {
-    var kb = $rdf.graph();
-    tabulator.panes.utils.makeACLGraph(kb, x, ac, aclDoc);
-    return $rdf.serialize(aclDoc,  kb, aclDoc.uri, 'text/turtle');
-}
-
-//    Write ACL graph to web
-//
-tabulator.panes.utils.putACLGraph = function(kb, x, ac, aclDoc, callback) {
-    var kb2 = $rdf.graph();
-    tabulator.panes.utils.makeACLGraph(kb2, x, ac, aclDoc);
-    
-    //var str = tabulator.panes.utils.makeACLString = function(x, ac, aclDoc);
-    var updater =  new tabulator.rdf.sparqlUpdate(kb);
-    updater.put(aclDoc, kb2.statementsMatching(undefined, undefined, undefined, aclDoc),
-        'text/turtle', function(uri, ok, message){
-        if (!ok) {
-            callback(ok, message);
-        } else {
-            kb.fetcher.unload(aclDoc);
-            tabulator.panes.utils.makeACLGraph(kb, x, ac, aclDoc);
-            kb.fetcher.requested[aclDoc.uri] = 'done'; // missing: save headers
-        }
-    });
-}
-
-
-
-
-// Fix the ACl for an individual card as a function of the groups it is in
-// 
-// All group files must be loaded first
-//
-
-tabulator.panes.utils.fixIndividualCardACL = function(person, log, callback)  {
-    var groups =  tabulator.kb.each(undefined, tabulator.ns.vcard('hasMember'), person); 
-    var doc = person.doc();
-    if (groups) {
-        tabulator.panes.utils.fixIndividualACL(person, groups, log, callback);
-    } else {
-        log("This card is in no groups");
-        callback(true); // fine, no requirements to access. default should be ok
-    }
-    // @@ if no groups, then use default for People container or the book top container.?
-}
-
-tabulator.panes.utils.fixIndividualACL = function(item, subjects, log, callback)  {
-    log = log || console.log;
-    var doc = item.doc();
-    tabulator.panes.utils.getACLorDefault(doc, function(ok, exists, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){ 
-        if (!ok) return callback(false, targetACLDoc); // ie message
-        var ac = (exists) ? tabulator.panes.utils.readACL(targetDoc, targetACLDoc) : tabulator.panes.utils.readACL(defaultHolder, defaultACLDoc) ;
-        tabulator.panes.utils.loadUnionACL(subjects, function(ok, union){
-            if (!ok) return callback(false, union);
-            if (tabulator.panes.utils.sameACL(union, ac)) {
-                log("Nice - same ACL. no change " +tabulator.Util.label(item) + " " + doc);
-            } else {
-                log("Group ACLs differ for " + tabulator.Util.label(item) + " " + doc);
-
-                // log("Group ACLs: " + tabulator.panes.utils.makeACLString(targetDoc, union, targetACLDoc));
-                // log((exists ? "Previous set" : "Default") + " ACLs: " +
-                    // tabulator.panes.utils.makeACLString(targetDoc, ac, targetACLDoc));
-
-                tabulator.panes.utils.putACLGraph(tabulator.kb, targetDoc, union, targetACLDoc, callback);
-            }
-        });
-    })
-}
-
-
-
-
-tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
-    var kb = tabulator.kb;
-    var updater = new tabulator.rdf.sparqlUpdate(kb);
-    var ACL = tabulator.ns.acl;
-    var doc = subject.doc(); // The ACL is actually to the doc describing the thing
-
-    var table = dom.createElement('table');
-    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
-    var headerRow = table.appendChild(dom.createElement('tr'));
-    headerRow.textContent = "Sharing for group " + tabulator.Util.label(subject);
-    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
-
-    var statusRow = table.appendChild(dom.createElement('tr'));
-    var statusBlock = statusRow.appendChild(dom.createElement('div'));
-    statusBlock.setAttribute('style', 'padding: 2em;');
-    var MainRow = table.appendChild(dom.createElement('tr'));
-    var box = MainRow.appendChild(dom.createElement('table'));
-    var bottomRow = table.appendChild(dom.createElement('tr'));
-
-    var ACLControl = function(box, doc, aclDoc, kb) {
-        var authorizations = kb.each(undefined, ACL('accessTo'), doc, aclDoc); // ONLY LOOK IN ACL DOC
-        if (authorizations.length === 0) {
-            statusBlock.textContent += "Access control file exists but contains no authorizations! " + aclDoc + ")";
-        }
-        for (i=0; i < authorizations.length; i++) {
-            var row = box.appendChild(dom.createElement('tr'));
-            var rowdiv1 = row.appendChild(dom.createElement('div'));
-
-            rowdiv1.setAttribute('style', 'margin: 1em; border: 0.1em solid #444; border-radius: 0.5em; padding: 1em;');
-            rowtable1 = rowdiv1.appendChild(dom.createElement('table'));
-            rowrow = rowtable1.appendChild(dom.createElement('tr'));
-            var left = rowrow.appendChild(dom.createElement('td'));
-            var middle = rowrow.appendChild(dom.createElement('td'));
-            middle.textContent = "can:"
-            middle.setAttribute('style', 'font-size:100%; padding: 1em;');
-            var leftTable = left.appendChild(dom.createElement('table'));
-            var right = rowrow.appendChild(dom.createElement('td'));
-            var rightTable = right.appendChild(dom.createElement('table'));
-            var a = authorizations[i];
-            
-            kb.each(a,  ACL('agent')).map(function(x){
-                var tr = leftTable.appendChild(dom.createElement('tr'));
-                tabulator.panes.utils.setName(tr, x);
-                tr.setAttribute('style', 'min-width: 12em');
-            });
-            
-            kb.each(a,  ACL('agentClass')).map(function(x){
-                var tr = leftTable.appendChild(dom.createElement('tr'));
-                tr.textContent = tabulator.Util.label(x) + ' *'; // for now // later add # or members
-            });
-            
-            kb.each(a,  ACL('mode')).map(function(x){
-                var tr = rightTable.appendChild(dom.createElement('tr'));
-                tr.textContent = tabulator.Util.label(x); // for now // later add # or members
-            });
-        }
-    }
-
-
-    tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
-        var defa = !p2;
-        if (!ok) {
-            statusBlock.textContent += "Error reading " + (defa? " default " : "") + "ACL."
-                + " status " + targetDoc + ": " + targetACLDoc;
-        } else {
-            if (defa) {
-                var defaults = kb.each(undefined, ACL('defaultForNew'), defaultHolder, defaultACLDoc);
-                if (!defaults.length) {
-                    statusBlock.textContent += " (No defaults given.)";
-                } else {
-                    statusBlock.textContent = "The sharing for this group is the default.";
-                    var kb2 = tabulator.panes.utils.adoptACLDefault(doc, targetACLDoc, defaultHolder, defaultACLDoc) 
-                    ACLControl(box, doc, targetACLDoc, kb2); // Add btton to save them as actual
-                    
-                    var editPlease = bottomRow.appendChild(dom.createElement('button'));
-                    editPlease.textContent = "Set specific sharing\nfor this group";
-                    editPlease.addEventListener('click', function(event) {
-                        updater.put(targetACLDoc, kb2.statements,
-                            'text/turtle', function(uri, ok, message){
-                            if (!ok) {
-                                statusBlock.textContent += " (Error writing back access control file: "+message+")";
-                            } else {
-                                statusBlock.textContent = " (Now editing specific access for this group)";
-                                bottomRow.removeChild(editPlease);
-                            }
-                        });
-
-                    });
-                } // defaults.length
-            } else { // Not using defaults
-
-                ACLControl(box, targetDoc, targetACLDoc, kb);
-                
-                var useDefault;
-                var addDefaultButton = function() {
-                    useDefault = bottomRow.appendChild(dom.createElement('button'));
-                    useDefault.textContent = "Stop specific sharing for this group -- just use default.";
-                    useDefault.addEventListener('click', function(event) {
-                        updater.delete(doc, function(uri, ok, message){
-                            if (!ok) {
-                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
-                            } else {
-                                statusBlock.textContent = " The sharing for this group is now the default.";
-                                bottomRow.removeChild(useDefault);
-                            }
-                        });
-         
-                    });
-                }
-                addDefaultButton();
-            
-                var checkIndividualACLsButton;
-                var addCheckButton = function() {
-                    bottomRow.appendChild(dom.createElement('br'));
-                    checkIndividualACLsButton = bottomRow.appendChild(dom.createElement('button'));
-                    checkIndividualACLsButton.textContent = "Check individalcards ACLs";
-                    checkIndividualACLsButton.addEventListener('click', function(event) {
-                        
-                        
-                    });
-                }
-                addCheckButton();
-            
-            } // Not using defaults
-        }
-            
-    });
-
-    return table
-    
-}; // ACLControl
-
-
-tabulator.panes.utils.setACL = function(docURI, aclText, callback) {
-    var aclDoc = kb.any(kb.sym(docURI),
-        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
-    if (aclDoc) { // Great we already know where it is
-        webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);        
-    } else {
-    
-        fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
-            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
-            var aclDoc = kb.any(kb.sym(docURI),
-                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
-            if (!aclDoc) {
-                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
-                callback(false, "No Link rel=ACL header for " + docURI);
-            } else {
-                webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
-            }
-        })
-    }
-};
-
-
-//  Get ACL file or default if necessary
-//
-// callback(true, true, doc, aclDoc)   The ACL did exist
-// callback(true, false, doc, aclDoc, defaultHolder, defaultACLDoc)   ACL file did not exist but a default did
-// callback(false, false, status, message)  error getting original
-// callback(false, true, status, message)  error getting defualt
-
-tabulator.panes.utils.getACLorDefault = function(doc, callback) {
-
-    tabulator.panes.utils.getACL(doc, function(ok, status, aclDoc, message) {
-        var i, row, left, right, a;
-        var kb = tabulator.kb;
-        var ACL = tabulator.ns.acl;
-        if (!ok) return callback(false, false, status, message);
-        
-        // Recursively search for the ACL file which gives default access
-        var tryParent = function(uri) {
-            if (uri.slice(-1) === '/') {
-                uri = uri.slice(0, -1);
-            }
-            var right = uri.lastIndexOf('/');
-            var left = uri.indexOf('/', uri.indexOf('//') + 2);
-            uri = uri.slice(0, right + 1);
-            var doc2 = $rdf.sym(uri);
-            tabulator.panes.utils.getACL(doc2, function(ok, status, defaultACLDoc) {
-
-                if (!ok) {
-                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")")
-                } else if (status === 403) {
-                    return callback(false, true, status,"( default ACL file FORBIDDEN. Stop." + uri + ")");
-                } else if (status === 404) {
-                    if (left >= right) {
-                        return callback(false, true, 499, "Nothing to hold a default");
-                    } else {
-                        tryParent(uri);
-                    }
-                } else if (status !== 200) {
-                        return callback(false, true, status, "Error searching for default");
-                } else { // 200
-                    //statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
-                    var defaults = kb.each(undefined, ACL('defaultForNew'), kb.sym(uri), defaultACLDoc);
-                    if (!defaults.length) {
-                        tryParent(uri);       // Keep searching
-                    } else {
-                        var defaultHolder = kb.sym(uri);
-                        callback(true, false, doc, aclDoc, defaultHolder, defaultACLDoc)
-                    }
-                }
-            });
-        }; // tryParent
-
-        if (!ok) {
-            return callback(false, false, status ,
-                "Error accessing Access Control information for " + doc +") " + message);
-        } else if (status === 404) {
-            tryParent(doc.uri);   //  @@ construct default one - the server should do that
-        } else  if (status === 403) {
-            return callback(false, false, status, "(Sharing not available to you)" + message);
-        } else  if (status !== 200) {
-            return callback(false, false, status, "Error " + status +
-                " accessing Access Control information for " + doc + ": " + message); 
-        } else { // 200
-            return callback(true, true, doc, aclDoc);
-        }  
-    }); // Call to getACL
-} // getACLorDefault
-
-
-//    Calls back (ok, status, acldoc, message)
-// 
-//   (false, errormessage)        no link header
-//   (true, 403, documentSymbol, fileaccesserror) not authorized
-//   (true, 404, documentSymbol, fileaccesserror) if does not exist
-//   (true, 200, documentSymbol)   if file exitss and read OK
-//
-tabulator.panes.utils.getACL = function(doc, callback) {
-    tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
-        if (!ok) return callback(ok, "Can't get headers to find ACL file: " + body);
-        var kb = tabulator.kb;
-        var aclDoc = kb.any(doc,
-            kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
-        if (!aclDoc) {
-            callback(false, "No Link rel=ACL header for " + doc);
-        } else {
-            if (tabulator.sf.nonexistant[aclDoc.uri]) {
-                return callback(true, 404, aclDoc, "ACL file does not exist.");
-            }
-            tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
-                if (!ok) {
-                    callback(true, xhr.status, aclDoc, "Can't read Access Control File " + aclDoc + ": " + message);
-                } else {
-                    callback(true, 200, aclDoc);
-                }
-            });
-        }
-    });
-};
-              
-
-///////////////////////////////////////////  End of ACL stuff
 
     
 // These used to be in js/init/icons.js but are better in the pane.
@@ -34571,14 +35547,74 @@ tabulator.panes.register( {
                 return count;
             }
             
-            // Load dynamically as properties of period 
+            // @@ In future could load these params dynamically as properties of period
             if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
                 happy("Reimbursables all have trips")
             };
             if (checkCatHasField('Other_Inc_Speaking', ns.trip('trip')) === 0) {
                 happy("Speaking income all has trips")
             };
+            if (checkCatHasField('Vacation', ns.trip('trip')) === 0) {
+                happy("Vacation all has trips")
+            };
+			 
+	    ///////////////   Check Internal transactions balance
+			 
+			 
+            var checkInternals = function() {
+		var catTail = 'Internal';
+		var pred = ns.qu('in_USD');
+                var cat = catSymbol(catTail), tab, count, x, y, ax, ay;
+                var guilty = [], count = 0;
+                if (!cat) {
+                    complain("Error: No category correspnding to " + catTail)
+                    return null;
+                }
+                var list = kb.each(undefined, ns.rdf('type'), cat);
+		var matched = false;
+		while (list.length > 0) {
+		    x = list.shift(); // take off list[0]
+		    if (!transactionInPeriod(x)) {
+			continue;
+		    }
+		    ax = kb.any(x, pred);
+		    if (!ax) continue;
+		    ax = Number(ax.value)
+		    matched = false;
+		    for (var i=0; i<list.length; i++) {
+			if (!transactionInPeriod(list[i])) {
+			    continue;
+			}
+			ay = kb.any(list[i], pred);
+			if (!ay) continue;
+			ay = Number(ay.value)
+			if (Math.abs(ax + ay) < 0.01) {
+			    matched = true;
+			    list.splice(i, 1); // remove y
+			    break;
+			}
+		    }
+		    if (!matched) {
+			guilty.push(x);
+		    }
+		}
+                if (guilty.length) {
+                    tab = transactionTable(dom, guilty);
+                    count = tab.children.length;
+                    div.appendChild(dom.createElement('h3')).textContent = tabulator.Util.label(cat)
+                        + " which do not pair up " +
+                        ( count < 4 ? '' : ' (' + count + ')' );
+                    div.appendChild(tab);
+                }
+                return count;
+            }
             
+            if (checkInternals() === 0) {
+                happy("Intenral transactions all pair up")
+            };
+
+
+			 
         // end of render period instance
 
         }; // if
@@ -37695,7 +38731,7 @@ tabulator.panes.defaultPane = {
             var img = myDocument.createElement('img');
             img.src = tabulator.Icon.src.icon_add_new_triple;
             img.addEventListener('click', function  add_new_tripleIconMouseDownListener(e) { // tabulator.Icon.src.icon_add_new_triple
-                    thisOutline.UserInput.addNewPredicateObject(e);
+                    tabulator.outline.UserInput.addNewPredicateObject(e);
                     e.stopPropagation();
                     e.preventDefault();
                     return;
@@ -37707,7 +38743,7 @@ tabulator.panes.defaultPane = {
         return div    
     },
     
-    sync: function(subject, myDocument, div) { // Untested  and not te best way to do it
+    sync: function(subject, myDocument, div) { // Untested  and not the best way to do it
     // This code was cut out of outline.js
     //    best way is to leave TRs there and add/delete any necessray extras 
 
@@ -49183,7 +50219,12 @@ tabulator.registerViewType(TimelineViewFactory);
     tabulator.qs = new tabulator.rdf.QuerySource();
     // tabulator.sourceWidget = new SourceWidget();
     tabulator.sourceURI = "resource://tabulator/";
-    tabulator.sparql = new tabulator.rdf.sparqlUpdate(tabulator.kb);
+    
+    // There must be only one of these as it coordinates upstream and downstream changes
+    tabulator.kb.updater = new tabulator.rdf.sparqlUpdate(tabulator.kb); // Main way to find
+    tabulator.updater = tabulator.kb.updater; // shortcuts
+    tabulator.sparql = tabulator.kb.updater; // obsolete but still used
+    
     // tabulator.rc = new RequestConnector();
     tabulator.requestCache = [];
     tabulator.cacheEntry = {};

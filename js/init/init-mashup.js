@@ -27,6 +27,8 @@ tabulator.setup = function() {
     tabulator.rdf = this['$rdf'];
     $rdf = this['$rdf'];
 
+    tabulator.loadScript("js/solid/dist/solid.js"); // Defines Solid
+    
     //Load the icons namespace onto tabulator.
     tabulator.loadScript("js/init/icons.js");
     //And Namespaces..

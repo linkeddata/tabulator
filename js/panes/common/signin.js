@@ -26,6 +26,7 @@ tabulator.panes.utils.webOperation = function(method, uri, options, callback) {
     xhr.onreadystatechange = function (){
         if (xhr.readyState == 4){
             var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+            // @@@ Optionally  options.saveMetadata Save metadata to preseve headers
             callback(uri, ok, xhr.responseText, xhr);
         }
     };
@@ -87,7 +88,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
     var aclDoc = kb.any(kb.sym(docURI),
         kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
     if (aclDoc) { // Great we already know where it is
-        var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+        var aclText = genACLtext(docURI, aclDoc.uri, public);
         tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
     } else {
     
@@ -99,7 +100,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
                 // complainIfBad(false, "No Link rel=ACL header for " + docURI);
                 callback(false, "No Link rel=ACL header for " + docURI);
             } else {
-                var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+                var aclText = genACLtext(docURI, aclDoc.uri, public);
                 tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
             }
         })
@@ -107,7 +108,20 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
 };
               
 
+tabulator.panes.utils.offlineTestID = function() {
 
+    if (tabulator.mode == 'webapp' && typeof document !== 'undefined' &&
+        document.location &&  ('' + document.location).slice(0,16) === 'http://localhost') {
+        var div = document.getElementById('appTarget');
+        var id = div.getAttribute('testID');
+        if (!id) return null;
+        /* me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid
+        */
+        console.log("Assuming user is " + id);
+        return id
+    }
+    return null;
+};
 
 
 ////////////////////////////////////////// Boostrapping identity
@@ -122,12 +136,15 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     p.innerHTML = ("You need to log in with a Web ID");
     console.log('tabulator.panes.utils.signInOrSignUpBox')
     
+    
     var but = myDocument.createElement('input');
     box.appendChild(but);
     but.setAttribute('type', 'button');
     but.setAttribute('value', 'Log in');
     but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
         but.addEventListener('click', function(e){
+        var offline = tabulator.panes.utils.offlineTestID();
+        if (offline) return gotOne(offline);
 	tabulator.solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
 	    gotOne(uri)
@@ -440,15 +457,39 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 //  - If not logged in, log in.
 //  - Load preferences file
 //  - Prompt user for workspaces
+//  - Allows the user to just type in a URI by hand
+//
+//  Callsback with the ws and the base URI
+//
 // 
-tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
+tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
     var box;
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
+
+
+    var figureOutBase = function(ws) {
+        var newBase = kb.any(ws, ns.space('uriPrefix'));
+        if (!newBase) {
+            newBase = ws.uri.split('#')[0];
+        } else {
+	    newBase = newBase.value;
+	}
+        if (newBase.slice(-1) !== '/') {
+            $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
+            newBase = newBase + '/';
+        }
+        var now = new Date();
+        newBase += appPathSegment + '/id'+ now.getTime() + '/'; // unique id 
+        
+        callbackWS(ws, newBase);
+    }
     
+
+
     var displayOptions = function(id, preferencesFile){
         var status = ''; 
         
@@ -465,8 +506,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         // if (pending !== undefined) pending.parentNode.removeChild(pending);
         if (w.length == 1) {
         
-            say( "Workspace used: " + w[0].uri);  
-            callbackWS(w[0]); 
+            say( "Workspace used: " + w[0].uri);  // @@ allow user to see URI
+            figureOutBase(w[0]);
 
         } else if (w.length == 0 ) {
             say("You don't seem to have any workspaces. You have "+storages.length +" storages.");
@@ -480,6 +521,38 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             
             // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
+            
+            
+            //  Add a field for directly adding the URI yourself
+            
+            var hr = box.appendChild(dom.createElement('hr')); // @@
+            
+            var p = box.appendChild(dom.createElement('p'));
+            p.textContent = "Where would you like to store the data for the " + noun + "?  " +
+            "Give the URL of the directory where you would like the data stored.";
+            var baseField = box.appendChild(dom.createElement('input'));
+            baseField.setAttribute("type", "text");
+            baseField.size = 80; // really a string
+            baseField.label = "base URL";
+            baseField.autocomplete = "on";
+
+            box.appendChild(dom.createElement('br')); // @@
+            
+            var button = box.appendChild(dom.createElement('button'));
+            button.textContent = "Start new " + noun + " at this URI";
+            button.addEventListener('click', function(e){
+                var newBase = baseField.value;
+                if (newBase.slice(-1) !== '/') {
+                    newBase += '/';
+                }
+                callbackWS(null, newBase);
+            });
+            
+            
+            
+            // Now go set up the table of spaces
+            
+            
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
                     tabulator.ns.space('MasterWorkspace')) ) });
@@ -538,7 +611,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                     // button.setAttribute('style', style);
                     button.addEventListener('click', function(e){
                         button.disabled = true;
-                        callbackWS(selectedWorkspace);
+                        figureOutBase(selectedWorkspace);
                         button.textContent = '---->';
                     }, true); // capture vs bubble
                     return button;
@@ -630,7 +703,7 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     b.innerHTML = label;
     // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
-        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, label, gotWS))}, false);
     div.appendChild(b);
     return div;
 };

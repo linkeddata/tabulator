@@ -21,12 +21,100 @@ tabulator.panes.utils.findOriginOwner = function(doc, callback) {
     
 }
 
+tabulator.panes.utils.webOperation = function(method, uri, options, callback) {
+    var xhr = $rdf.Util.XMLHTTPFactory();
+    xhr.onreadystatechange = function (){
+        if (xhr.readyState == 4){
+            var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+            callback(uri, ok, xhr.responseText, xhr);
+        }
+    };
+    xhr.open(method, uri, true);
+    if (options.contentType) {
+        xhr.setRequestHeader('Content-type', options.contentType);
+    }
+    xhr.send(options.data ? options.data : undefined);
+};
+
+tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
+    tabulator.panes.utils.webOperation('GET', here,  {}, function(uri, ok, body, xhr) {
+        if (ok) {
+            tabulator.panes.utils.webOperation('PUT',
+                there, { data: xhr.responseText, contentType: content_type},
+                callback);
+        } else {
+            callback(uri, ok, "(on read) " + body, xhr);
+        }
+    });
+};
+
+
+
+//////////////////////// Simple Accesss Control
+
+// This function sets up a simple default ACL for a resoirce, with
+// RWC for the owner, and a specified access (default none) for the public.
+// In all cases owner has read write control.
+// Parameter lists modes allowed to public
+// Parameters:
+//  me webid of user
+//  public = eg [ 'Read', 'Write']
+        
+tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) {
+    var genACLtext = function(docURI, aclURI, public) {
+        public = public || [];
+        var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
+        var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
+        g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+        g.add(a, auth('accessTo'), doc, acl)
+        g.add(a, auth('agent'), me, acl);
+        g.add(a, auth('mode'), auth('Read'), acl);
+        g.add(a, auth('mode'), auth('Write'), acl);
+        g.add(a, auth('mode'), auth('Control'), acl);
+        
+        if (public.length) {
+            a = g.sym(aclURI + '#a2');
+            g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+            g.add(a, auth('accessTo'), doc, acl)
+            g.add(a, auth('agentClass'), ns.foaf('Agent'), acl);
+            for (var p=0; p<public.length; p++) {
+                g.add(a, auth('mode'), auth(public[p]), acl); // Like 'Read' etc
+            }
+        }
+        return $rdf.serialize(acl, g, aclURI, 'text/turtle');
+    }
+    var kb = tabulator.kb;
+    var aclDoc = kb.any(kb.sym(docURI),
+        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+    if (aclDoc) { // Great we already know where it is
+        var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+        tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+    } else {
+    
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+            var aclDoc = kb.any(kb.sym(docURI),
+                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+            if (!aclDoc) {
+                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                callback(false, "No Link rel=ACL header for " + docURI);
+            } else {
+                var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+                tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+            }
+        })
+    }
+};
+              
+
+
+
 
 ////////////////////////////////////////// Boostrapping identity
 //
 //
 
-tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
+tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -40,7 +128,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     but.setAttribute('value', 'Log in');
     but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
         but.addEventListener('click', function(e){
-	Solid.auth.signup.withWebID().then(function(uri){
+	tabulator.solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
 	    gotOne(uri)
 	})
@@ -52,7 +140,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     but2.setAttribute('value', 'Sign Up');
     but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
     but2.addEventListener('click', function(e){
-	Solid.auth.signup.withWebID().then(function(uri){
+	tabulator.solid.auth.signup().then(function(uri){
 	    console.log('signInOrSignUpBox signed up '+ uri)
 	    gotOne(uri)
 	})
@@ -60,7 +148,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     return box;
 };
 
-tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
+tabulator.panes.utils.signInOrSignUpBox_original = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -498,13 +586,14 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         return;
     };
 
-    var gotIDChange = function(me) {
-        if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.uri.docpart(me.uri);
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+    var gotIDChange = function(uri) {
+        if (typeof uri == 'undefined') return undefined;
+        var me = $rdf.sym(uri);
+        var docURI = me.doc();
+        kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
             if (!ok) {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load profile file " + docURI));
+                    "Can't load profile file " + me.doc()));
                 return;
             }
             loadPrefs(me);

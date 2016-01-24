@@ -26711,7 +26711,7 @@ else {
     // Leak a global regardless of module system
     root['$rdf'] = $rdf;
 }
-$rdf.buildTime = "2016-01-09T12:26:17";
+$rdf.buildTime = "2016-01-14T17:20:52";
 })(this);
 
 // ###### Finished expanding js/rdf/dist/rdflib.js ##############
@@ -26720,6 +26720,7 @@ $rdf.buildTime = "2016-01-09T12:26:17";
     $rdf = this['$rdf'];
 
 // ###### Expanding js/solid/dist/solid.js ##############
+
 /*
 The MIT License (MIT)
 
@@ -26753,448 +26754,584 @@ https://github.com/solid/
 */
 
 // WebID authentication and signup
-var Solid = Solid || {};
-Solid.auth = (function(window) {
-    'use strict';
 
-   // default (preferred) authentication endpoint
-    var authEndpoint = 'https://databox.me/';
-    var signupEndpoint = 'https://solid.github.io/solid-idps/';
+var Solid = Solid || {}
+if (typeof tabulator !== 'undefined') {
+    tabulator.solid = Solid;
+}
+Solid.auth = (function () {
+  'use strict'
 
-    // attempt to find the current user's WebID from the User header if authenticated
-    // resolve(webid) - string
-    var login = function(url) {
-        url = url || window.location.origin+window.location.pathname;
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('HEAD', url);
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200) {
-                        var user = this.getResponseHeader('User');
-                        if (user && user.length > 0 && user.slice(0, 4) == 'http') {
-                            return resolve(user);
-                        }
-                    }
-                    // authenticate to a known endpoint
-                    var http = new XMLHttpRequest();
-                    http.open('HEAD', authEndpoint);
-                    http.withCredentials = true;
-                    http.onreadystatechange = function() {
-                        if (this.readyState == this.DONE) {
-                            if (this.status === 200) {
-                                var user = this.getResponseHeader('User');
-                                if (user && user.length > 0 && user.slice(0, 4) == 'http') {
-                                    return resolve(user);
-                                }
-                            }
-                            return reject({ok: false, status: this.status, body: this.responseText, xhr: this});
-                        }
-                    };
-                    http.send();
-                }
-            };
-            http.send();
-        });
+  // default (preferred) authentication endpoint
+  var authEndpoint = 'https://databox.me/'
+  var signupEndpoint = 'https://solid.github.io/solid-idps/'
 
-        return promise;
-    };
-
-    // Open signup window
-    var signup = function(url) {
-        url = url || signupEndpoint;
-        var leftPosition, topPosition;
-        var width = 1024;
-        var height = 600;
-        // set borders
-        leftPosition = (window.screen.width / 2) - ((width / 2) + 10);
-        // set title and status bars
-        topPosition = (window.screen.height / 2) - ((height / 2) + 50);
-        window.open(url+"?origin="+encodeURIComponent(window.location.origin), "Solid signup", "resizable,scrollbars,status,width="+width+",height="+height+",left="+ leftPosition + ",top=" + topPosition);
-
-        var promise = new Promise(function(resolve, reject) {
-            console.log("Starting listener");
-            listen().then(function(webid) {
-                return resolve(webid);
-            }).catch(function(err){
-                return reject(err);
-            });
-        });
-
-        return promise;
-    };
-
-    // Listen to login messages from child window/iframe
-    var listen = function() {
-        var promise = new Promise(function(resolve, reject){
-            console.log("In listen()");
-            var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
-            var eventListener = window[eventMethod];
-            var messageEvent = eventMethod == "attachEvent" ? "onmessage" : "message";
-            eventListener(messageEvent,function(e) {
-                var u = e.data;
-                if (u.slice(0,5) == 'User:') {
-                    var user = u.slice(5, u.length);
-                    if (user && user.length > 0 && user.slice(0,4) == 'http') {
-                        return resolve(user);
-                    } else {
-                        return reject(user);
-                    }
-                }
-            },true);
-        });
-
-        return promise;
-    };
-
-    // return public methods
-    return {
-        login: login,
-        signup: signup,
-        listen: listen,
-    };
-}(this));
-// Identity / WebID
-var Solid = Solid || {};
-Solid.identity = (function(window) {
-    'use strict';
-
-    // common vocabs
-    var OWL = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
-    var PIM = $rdf.Namespace("http://www.w3.org/ns/pim/space#");
-    var FOAF = $rdf.Namespace("http://xmlns.com/foaf/0.1/");
-
-    // fetch user profile (follow sameAs links) and return promise with a graph
-    // resolve(graph)
-    var getProfile = function(url) {
-        var promise = new Promise(function(resolve) {
-            // Load main profile
-            Solid.web.get(url).then(
-                function(graph) {
-                    // set WebID
-                    var webid = graph.any($rdf.sym(url), FOAF('primaryTopic'));
-                    // find additional resources to load
-                    var sameAs = graph.statementsMatching(webid, OWL('sameAs'), undefined);
-                    var seeAlso = graph.statementsMatching(webid, OWL('seeAlso'), undefined);
-                    var prefs = graph.statementsMatching(webid, PIM('preferencesFile'), undefined);
-                    var toLoad = sameAs.length + seeAlso.length + prefs.length;
-
-                    var checkAll = function() {
-                        if (toLoad === 0) {
-                            return resolve(graph);
-                        }
-                    }
-                    // Load sameAs files
-                    if (sameAs.length > 0) {
-                        sameAs.forEach(function(same){
-                            Solid.web.get(same.object.value, same.object.value).then(
-                                function(g) {
-                                    Solid.utils.appendGraph(graph, g);
-                                    toLoad--;
-                                    checkAll();
-                                }
-                            ).catch(
-                            function(err){
-                                console.log(err);
-                                toLoad--;
-                                checkAll();
-                            });
-                        });
-                    }
-                    // Load seeAlso files
-                    if (seeAlso.length > 0) {
-                        seeAlso.forEach(function(see){
-                            Solid.web.get(see.object.value).then(
-                                function(g) {
-                                    Solid.utils.appendGraph(graph, g, see.object.value);
-                                    toLoad--;
-                                    checkAll();
-                                }
-                            ).catch(
-                            function(err){
-                                console.log(err);
-                                toLoad--;
-                                checkAll();
-                            });
-                        });
-                    }
-                    // Load preferences files
-                    if (prefs.length > 0) {
-                        prefs.forEach(function(pref){
-                            Solid.web.get(pref.object.value).then(
-                                function(g) {
-                                    Solid.utils.appendGraph(graph, g, pref.object.value);
-                                    toLoad--;
-                                    checkAll();
-                                }
-                            ).catch(
-                            function(err){
-                                console.log(err);
-                                toLoad--;
-                                checkAll();
-                            });
-                        });
-                    }
-                }
-            )
-            .catch(
-                function(err) {
-                    console.log("Could not load",url);
-                    resolve(err);
-                }
-            );
-        });
-
-        return promise;
-    };
-
-    // Find the user's workspaces
-    var getWorkspaces = function(webid, graph) {
-        var promise = new Promise(function(resolve, reject){
-            if (!graph) {
-                // fetch profile
-                getProfile(webid).then(function(g) {
-                    return getWorkspaces(webid, g);
-                }).catch(function(err){
-                    reject(err);
-                });
-            } else {
-                // find workspaces
-                console.log(graph);
+  // attempt to find the current user's WebID from the User header if authenticated
+  // resolve(webid) - string
+  function login (url) {
+    url = url || window.location.origin + window.location.pathname
+    var promise = new Promise(function (resolve, reject) {
+      var http = new XMLHttpRequest()
+      http.open('HEAD', url)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200) {
+            var user = this.getResponseHeader('User')
+            if (user && user.length > 0 && user.slice(0, 4) === 'http') {
+              return resolve(user)
             }
-        });
-
-        return promise;
-    };
-
-    // return public methods
-    return {
-        getProfile: getProfile,
-        getWorkspaces: getWorkspaces
-    };
-}(this));
-// Events
-Solid = Solid || {};
-Solid.status = (function(window) {
-    'use strict';
-
-    // Get current online status
-    var isOnline = function() {
-        return window.navigator.onLine;
-    };
-
-    // Is offline
-    var onOffline = function(callback) {
-        window.addEventListener("offline", callback, false);
-    };
-    // Is online
-    var onOnline = function(callback) {
-        window.addEventListener("online", callback, false);
-    };
-
-    // return public methods
-    return {
-        isOnline: isOnline,
-        onOffline: onOffline,
-        onOnline: onOnline,
-    };
-}(this));
-// Helper functions
-var Solid = Solid || {};
-Solid.utils = (function(window) {
-    'use strict';
-
-    // parse a Link header
-    var parseLinkHeader = function(link) {
-        var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g;
-        var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g;
-
-        var matches = link.match(linkexp);
-        var rels = {};
-        for (var i = 0; i < matches.length; i++) {
-            var split = matches[i].split('>');
-            var href = split[0].substring(1);
-            var ps = split[1];
-            var s = ps.match(paramexp);
-            for (var j = 0; j < s.length; j++) {
-                var p = s[j];
-                var paramsplit = p.split('=');
-                var name = paramsplit[0];
-                var rel = paramsplit[1].replace(/["']/g, '');
-                rels[rel] = href;
+          }
+          // authenticate to a known endpoint
+          var http = new XMLHttpRequest()
+          http.open('HEAD', authEndpoint)
+          http.withCredentials = true
+          http.onreadystatechange = function () {
+            if (this.readyState === this.DONE) {
+              if (this.status === 200) {
+                var user = this.getResponseHeader('User')
+                if (user && user.length > 0 && user.slice(0, 4) === 'http') {
+                  return resolve(user)
+                }
+              }
+              return reject({status: this.status, xhr: this})
             }
+          }
+          http.send()
         }
-        return rels;
-    };
+      }
+      http.send()
+    })
 
-    // append statements from one graph object to another
-    var appendGraph = function(toGraph, fromGraph, docURI) {
-        var why = (docURI)?$rdf.sym(docURI):undefined;
-        fromGraph.statementsMatching(undefined, undefined, undefined, why).forEach(function(st) {
-            toGraph.add(st.subject, st.predicate, st.object, st.why);
-        });
-    };
+    return promise
+  }
 
-    return {
-        parseLinkHeader: parseLinkHeader,
-        appendGraph: appendGraph,
-    };
-}(this));
+  // Open signup window
+  function signup (url) {
+    url = url || signupEndpoint
+    var leftPosition, topPosition
+    var width = 1024
+    var height = 600
+    // set borders
+    leftPosition = (window.screen.width / 2) - ((width / 2) + 10)
+    // set title and status bars
+    topPosition = (window.screen.height / 2) - ((height / 2) + 50)
+    window.open(url + '?origin=' + encodeURIComponent(window.location.origin), 'Solid signup', 'resizable,scrollbars,status,width=' + width + ',height=' + height + ',left=' + leftPosition + ',top=' + topPosition)
+
+    var promise = new Promise(function (resolve, reject) {
+      listen().then(function (webid) {
+        return resolve(webid)
+      }).catch(function (err) {
+        return reject(err)
+      })
+    })
+
+    return promise
+  }
+
+  // Listen to login messages from child window/iframe
+  function listen () {
+    var promise = new Promise(function (resolve, reject) {
+      var eventMethod = window.addEventListener ? 'addEventListener' : 'attachEvent'
+      var eventListener = window[eventMethod]
+      var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message'
+      eventListener(messageEvent, function (e) {
+        var u = e.data
+        if (u.slice(0, 5) === 'User:') {
+          var user = u.slice(5, u.length)
+          if (user && user.length > 0 && user.slice(0, 4) === 'http') {
+            return resolve(user)
+          } else {
+            return reject(user)
+          }
+        }
+      }, true)
+    })
+
+    return promise
+  }
+
+  // return public methods
+  return {
+    login: login,
+    signup: signup,
+    listen: listen
+  }
+}(this))
+// Identity / WebID
+var Solid = Solid || {}
+Solid.identity = (function () {
+  'use strict'
+
+  // common vocabs
+  // var RDF = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
+  var OWL = $rdf.Namespace('http://www.w3.org/2002/07/owl#')
+  var PIM = $rdf.Namespace('http://www.w3.org/ns/pim/space#')
+  var FOAF = $rdf.Namespace('http://xmlns.com/foaf/0.1/')
+  var DCT = $rdf.Namespace('http://purl.org/dc/terms/')
+
+  // fetch user profile (follow sameAs links) and return promise with a graph
+  // resolve(graph)
+  function getProfile (url) {
+    var promise = new Promise(function (resolve, reject) {
+      // Load main profile
+      Solid.web.get(url).then(
+        function (graph) {
+          // set WebID
+          url = (url.indexOf('#') >= 0) ? url.slice(0, url.indexOf('#')) : url
+          var webid = graph.any($rdf.sym(url), FOAF('primaryTopic'))
+          // find additional resources to load
+          var toLoad = []
+          toLoad = toLoad.concat(graph.statementsMatching(webid, OWL('sameAs'), undefined, $rdf.sym(url)))
+          toLoad = toLoad.concat(graph.statementsMatching(webid, OWL('seeAlso'), undefined, $rdf.sym(url)))
+          toLoad = toLoad.concat(graph.statementsMatching(webid, PIM('preferencesFile'), undefined, $rdf.sym(url)))
+          var total = toLoad.length
+          // sync promises externally instead of using Promise.all() which fails if one GET fails
+          var syncAll = function () {
+            if (total === 0) {
+              return resolve(graph)
+            }
+          }
+          if (total === 0) {
+            return resolve(graph)
+          }
+          // Load other files
+          toLoad.forEach(function (prof) {
+            Solid.web.get(prof.object.uri).then(
+              function (g) {
+                Solid.utils.appendGraph(graph, g, prof.object.uri)
+                total--
+                syncAll()
+              }
+            ).catch(
+              function (err) {
+                if (err) throw err
+                total--
+                syncAll()
+              })
+          })
+        }
+      )
+        .catch(
+          function (err) {
+            reject(err)
+          }
+      )
+    })
+
+    return promise
+  }
+
+  // Find the user's workspaces
+  // Return an object with the list of objects (workspaces)
+  function getWorkspaces (webid, graph) {
+    var promise = new Promise(function (resolve, reject) {
+      if (!graph) {
+        // fetch profile and call function again
+        getProfile(webid).then(function (g) {
+          getWorkspaces(webid, g).then(function (ws) {
+            return resolve(ws)
+          }).catch(function (err) {
+            return reject(err)
+          })
+        }).catch(function (err) {
+          return reject(err)
+        })
+      } else {
+        // find workspaces
+        var workspaces = []
+        var ws = graph.statementsMatching($rdf.sym(webid), PIM('workspace'), undefined)
+        if (ws.length === 0) {
+          return resolve(workspaces)
+        }
+        ws.forEach(function (w) {
+          // try to get some additional info - i.e. desc/title
+          var workspace = {}
+          var title = graph.any(w.object, DCT('title'))
+          if (title && title.value) {
+            workspace.title = title.value
+          }
+          workspace.url = w.object.uri
+          workspace.statements = graph.statementsMatching(w.object, undefined, undefined)
+          workspaces.push(workspace)
+        })
+        return resolve(workspaces)
+      }
+    })
+
+    return promise
+  }
+
+  // Find the user's writable profiles
+  // Return an object with the list of profile URIs
+  function getWritableProfiles (webid, graph) {
+    var promise = new Promise(function (resolve, reject) {
+      if (!graph) {
+        // fetch profile and call function again
+        getProfile(webid).then(function (g) {
+          getWritableProfiles(webid, g).then(function (list) {
+            return resolve(list)
+          }).catch(function (err) {
+            return reject(err)
+          })
+        }).catch(function (err) {
+          return reject(err)
+        })
+      } else {
+        // find profiles
+        var profiles = []
+
+        webid = (webid.indexOf('#') >= 0) ? webid.slice(0, webid.indexOf('#')) : webid
+        var user = graph.any($rdf.sym(webid), FOAF('primaryTopic'))
+        // find additional resources to load
+        var toLoad = []
+        toLoad = toLoad.concat(graph.statementsMatching(user, OWL('sameAs'), undefined, $rdf.sym(webid)))
+        toLoad = toLoad.concat(graph.statementsMatching(user, OWL('seeAlso'), undefined, $rdf.sym(webid)))
+        toLoad = toLoad.concat(graph.statementsMatching(user, PIM('preferencesFile'), undefined, $rdf.sym(webid)))
+        // also check this (main) profile doc
+        toLoad = toLoad.concat({object: {uri: webid}})
+        var total = toLoad.length
+        // sync promises externally instead of using Promise.all() which fails if one GET fails
+        var syncAll = function () {
+          if (total === 0) {
+            return resolve(profiles)
+          }
+        }
+        if (total === 0) {
+          return resolve(profiles)
+        }
+
+        // Load sameAs files
+        toLoad.forEach(function (prof) {
+          var url = prof.object.uri
+          Solid.web.head(url).then(
+            function (meta) {
+              if (meta.editable.length > 0 && profiles.indexOf(url) < 0) {
+                profiles.push({url: url, editable: meta.editable})
+              }
+              total--
+              syncAll()
+            }
+          ).catch(
+            function (err) {
+              if (err) throw err
+              total--
+              syncAll()
+            })
+        })
+      }
+    })
+
+    return promise
+  }
+
+  // return public methods
+  return {
+    getProfile: getProfile,
+    getWorkspaces: getWorkspaces,
+    getWritableProfiles: getWritableProfiles
+  }
+}(this))
+// Events
+var Solid = Solid || {}
+Solid.status = (function () {
+  'use strict'
+
+  // Get current online status
+  function isOnline () {
+    return window.navigator.onLine
+  }
+
+  // Is offline
+  function onOffline (callback) {
+    window.addEventListener('offline', callback, false)
+  }
+  // Is online
+  function onOnline (callback) {
+    window.addEventListener('online', callback, false)
+  }
+
+  // return public methods
+  return {
+    isOnline: isOnline,
+    onOffline: onOffline,
+    onOnline: onOnline
+  }
+}(this))
+// Helper functions
+var Solid = Solid || {}
+Solid.utils = (function () {
+  'use strict'
+
+  // parse a Link header
+  function parseLinkHeader (link) {
+    var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g
+    var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g
+
+    var matches = link.match(linkexp)
+    var rels = {}
+    for (var i = 0; i < matches.length; i++) {
+      var split = matches[i].split('>')
+      var href = split[0].substring(1)
+      var ps = split[1]
+      var s = ps.match(paramexp)
+      for (var j = 0; j < s.length; j++) {
+        var p = s[j]
+        var paramsplit = p.split('=')
+        // var name = paramsplit[0]
+        var rel = paramsplit[1].replace(/["']/g, '')
+        rels[rel] = href
+      }
+    }
+    return rels
+  }
+
+  // append statements from one graph object to another
+  function appendGraph (toGraph, fromGraph, docURI) {
+    var why = (docURI) ? $rdf.sym(docURI) : undefined
+    fromGraph.statementsMatching(undefined, undefined, undefined, why).forEach(function (st) {
+      toGraph.add(st.subject, st.predicate, st.object, st.why)
+    })
+  }
+
+  return {
+    parseLinkHeader: parseLinkHeader,
+    appendGraph: appendGraph
+  }
+}(this))
 // LDP operations
-var Solid = Solid || {};
-Solid.web = (function(window) {
-    'use strict';
+var Solid = Solid || {}
+Solid.web = (function () {
+  'use strict'
 
-    // Init some defaults;
-    var PROXY = "https://databox.me/,proxy?uri={uri}";
-    var TIMEOUT = 5000;
+  // Init some defaults
+  var PROXY = 'https://databox.me/,proxy?uri={uri}'
+  var TIMEOUT = 5000
 
-    $rdf.Fetcher.crossSiteProxyTemplate = PROXY;
-    // common vocabs
-    var LDP = $rdf.Namespace("http://www.w3.org/ns/ldp#");
+  $rdf.Fetcher.crossSiteProxyTemplate = PROXY
+  // common vocabs
+  var LDP = $rdf.Namespace('http://www.w3.org/ns/ldp#')
 
-    // return metadata for a given request
-    var parseResponseMeta = function(resp) {
-        var h = Solid.utils.parseLinkHeader(resp.getResponseHeader('Link'));
-        var meta = {};
-        meta.url = resp.getResponseHeader('Location');
-        meta.acl = h['acl'];
-        meta.meta = (h['meta'])?h['meta']:h['describedBy'];
-        meta.user = (resp.getResponseHeader('User'))?resp.getResponseHeader('User'):'';
-        meta.exists = false;
-        meta.exists = (resp.status === 200)?true:false;
-        meta.xhr = resp;
-        return meta;
-    };
-
-    // check if a resource exists and return useful Solid info (acl, meta, type, etc)
-    // resolve(metaObj)
-    var head = function(url) {
-        var promise = new Promise(function(resolve) {
-            var http = new XMLHttpRequest();
-            http.open('HEAD', url);
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    resolve(parseResponseMeta(this));
-                }
-            };
-            http.send();
-        });
-
-        return promise;
-    };
-
-    // fetch an RDF resource
-    // resolve(graph) | reject(this)
-    var get = function(url) {
-        var promise = new Promise(function(resolve, reject) {
-            var g = new $rdf.graph();
-            var f = new $rdf.fetcher(g, TIMEOUT);
-
-            var docURI = (url.indexOf('#') >= 0)?url.slice(0, url.indexOf('#')):url;
-            f.nowOrWhenFetched(docURI,undefined,function(ok, body, xhr) {
-                if (!ok) {
-                    reject({status: xhr.status, xhr: xhr});
-                } else {
-                    resolve(g);
-                }
-            });
-        });
-
-        return promise;
-    };
-
-    // create new resource
-    // resolve(metaObj) | reject
-    var post = function(url, slug, data, isContainer) {
-        var resType = (isContainer)?LDP('BasicContainer').uri:LDP('Resource').uri;
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('POST', url);
-            http.setRequestHeader('Content-Type', 'text/turtle');
-            http.setRequestHeader('Link', '<'+resType+'>; rel="type"');
-            if (slug && slug.length > 0) {
-                http.setRequestHeader('Slug', slug);
-            }
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200 || this.status === 201) {
-                        resolve(parseResponseMeta(this));
-                    } else {
-                        reject({status: this.status, xhr: this});
-                    }
-                }
-            };
-            if (data && data.length > 0) {
-                http.send(data);
-            } else {
-                http.send();
-            }
-        });
-
-        return promise;
-    };
-
-    // update/create resource using HTTP PUT
-    // resolve(metaObj) | reject
-    var put = function(url, data) {
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('PUT', url);
-            http.setRequestHeader('Content-Type', 'text/turtle');
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200 || this.status === 201) {
-                        return resolve(parseResponseMeta(this));
-                    } else {
-                        reject({status: this.status, xhr: this});
-                    }
-                }
-            };
-            if (data) {
-                http.send(data);
-            } else {
-                http.send();
-            }
-        });
-
-        return promise;
-    };
-
-    // delete a resource
-    // resolve(true) | reject
-    var del = function(url) {
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('DELETE', url);
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200) {
-                        return resolve(true);
-                    } else {
-                        reject({status: this.status, xhr: this});
-                    }
-                }
-            };
-            http.send();
-        });
-
-        return promise;
+  // return metadata for a given request
+  function parseResponseMeta (resp) {
+    var h = Solid.utils.parseLinkHeader(resp.getResponseHeader('Link'))
+    var meta = {}
+    meta.url = (resp.getResponseHeader('Location')) ? resp.getResponseHeader('Location') : resp.responseURL
+    meta.acl = h['acl']
+    meta.meta = (h['meta']) ? h['meta'] : h['describedBy']
+    meta.user = (resp.getResponseHeader('User')) ? resp.getResponseHeader('User') : ''
+    meta.websocket = (resp.getResponseHeader('Updates-Via')) ? resp.getResponseHeader('Updates-Via') : ''
+    // writable/editable resource
+    meta.editable = []
+    var patch = resp.getResponseHeader('Accept-Patch')
+    if (patch && patch.indexOf('application/sparql-update') >= 0) {
+      meta.editable.push('patch')
+    }
+    var allow = resp.getResponseHeader('Allow')
+    if (allow) {
+      if (allow.indexOf('PUT') >= 0) {
+        meta.editable.push('put')
+      }
+      if (allow.indexOf('POST') >= 0) {
+        meta.editable.push('post')
+      }
+      if (allow.indexOf('DELETE') >= 0) {
+        meta.editable.push('delete')
+      }
     }
 
-    // return public methods
-    return {
-        head: head,
-        get: get,
-        post: post,
-        put: put,
-        del: del,
-    };
-}(this));
+    meta.exists = (resp.status === 200)
+    meta.xhr = resp
+    return meta
+  }
+
+  // check if a resource exists and return useful Solid info (acl, meta, type, etc)
+  // resolve(metaObj)
+  function head (url) {
+    var promise = new Promise(function (resolve) {
+      var http = new XMLHttpRequest()
+      http.open('HEAD', url)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          resolve(parseResponseMeta(this))
+        }
+      }
+      http.send()
+    })
+
+    return promise
+  }
+
+  // fetch an RDF resource
+  // resolve(graph) | reject(this)
+  function get (url) {
+    var promise = new Promise(function (resolve, reject) {
+      var g = $rdf.graph()
+      var f = new $rdf.Fetcher(g, TIMEOUT)
+
+      var docURI = (url.indexOf('#') >= 0) ? url.slice(0, url.indexOf('#')) : url
+      f.nowOrWhenFetched(docURI, undefined, function (ok, body, xhr) {
+        if (!ok) {
+          reject({status: xhr.status, xhr: xhr})
+        } else {
+          resolve(g)
+        }
+      })
+    })
+
+    return promise
+  }
+
+  // create new resource
+  // resolve(metaObj) | reject
+  function post (url, data, slug, isContainer, mime) {
+    var resType = LDP('Resource').uri
+    if (isContainer) {
+      resType = LDP('BasicContainer').uri
+      mime = 'text/turtle' // force right mime for containers only
+    }
+    mime = (mime) ? mime : 'text/turtle'
+    var promise = new Promise(function (resolve, reject) {
+      var http = new XMLHttpRequest()
+      http.open('POST', url)
+      http.setRequestHeader('Content-Type', mime)
+      http.setRequestHeader('Link', '<' + resType + '>; rel="type"')
+      if (slug && slug.length > 0) {
+        http.setRequestHeader('Slug', slug)
+      }
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200 || this.status === 201) {
+            resolve(parseResponseMeta(this))
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      if (data && data.length > 0) {
+        http.send(data)
+      } else {
+        http.send()
+      }
+    })
+
+    return promise
+  }
+
+  // update/create resource using HTTP PUT
+  // resolve(metaObj) | reject
+  function put (url, data, mime) {
+    var promise = new Promise(function (resolve, reject) {
+      mime = (mime) ? mime : 'text/turtle'
+      var http = new XMLHttpRequest()
+      http.open('PUT', url)
+      http.setRequestHeader('Content-Type', mime)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200 || this.status === 201) {
+            return resolve(parseResponseMeta(this))
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      if (data) {
+        http.send(data)
+      } else {
+        http.send()
+      }
+    })
+
+    return promise
+  }
+
+  // patch a resource
+  // accepts arrays of individual statements (turtle) as params
+  // e.g. [ '<a> <b> <c> .', '<d> <e> <f> .']
+  function patch (url, toDel, toIns) {
+    var promise = new Promise(function (resolve, reject) {
+      var data = ''
+      var i
+
+      if (toDel && toDel.length > 0) {
+        for (i = 0; i < toDel.length; i++) {
+          if (i > 0) {
+            data += ' ;\n'
+          }
+          data += 'DELETE DATA { ' + toDel[i] + ' }'
+        }
+      }
+      if (toIns && toIns.length > 0) {
+        for (i = 0; i < toIns.length; i++) {
+          if (i > 0 || (toDel && toDel.length > 0)) {
+            data += ' ;\n'
+          }
+          data += 'INSERT DATA { ' + toIns[i] + ' }'
+        }
+      }
+
+      var http = new XMLHttpRequest()
+      http.open('PATCH', url)
+      http.setRequestHeader('Content-Type', 'application/sparql-update')
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200) {
+            return resolve(parseResponseMeta(this))
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      if (data && data.length > 0) {
+        http.send(data)
+      } else {
+        http.send()
+      }
+    })
+
+    return promise
+  }
+
+  // delete a resource
+  // resolve(true) | reject
+  function del (url) {
+    var promise = new Promise(function (resolve, reject) {
+      var http = new XMLHttpRequest()
+      http.open('DELETE', url)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200) {
+            return resolve(true)
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      http.send()
+    })
+
+    return promise
+  }
+
+  // return public methods
+  // aliasing post -> create, put -> replace, patch -> update
+  return {
+    head: head,
+    get: get,
+    post: post,
+    create: post,
+    put: put,
+    replace: put,
+    patch: patch,
+    update: patch,
+    del: del
+  }
+}(this))
 
 // ###### Finished expanding js/solid/dist/solid.js ##############
     
@@ -29477,12 +29614,100 @@ tabulator.panes.utils.findOriginOwner = function(doc, callback) {
     
 }
 
+tabulator.panes.utils.webOperation = function(method, uri, options, callback) {
+    var xhr = $rdf.Util.XMLHTTPFactory();
+    xhr.onreadystatechange = function (){
+        if (xhr.readyState == 4){
+            var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+            callback(uri, ok, xhr.responseText, xhr);
+        }
+    };
+    xhr.open(method, uri, true);
+    if (options.contentType) {
+        xhr.setRequestHeader('Content-type', options.contentType);
+    }
+    xhr.send(options.data ? options.data : undefined);
+};
+
+tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
+    tabulator.panes.utils.webOperation('GET', here,  {}, function(uri, ok, body, xhr) {
+        if (ok) {
+            tabulator.panes.utils.webOperation('PUT',
+                there, { data: xhr.responseText, contentType: content_type},
+                callback);
+        } else {
+            callback(uri, ok, "(on read) " + body, xhr);
+        }
+    });
+};
+
+
+
+//////////////////////// Simple Accesss Control
+
+// This function sets up a simple default ACL for a resoirce, with
+// RWC for the owner, and a specified access (default none) for the public.
+// In all cases owner has read write control.
+// Parameter lists modes allowed to public
+// Parameters:
+//  me webid of user
+//  public = eg [ 'Read', 'Write']
+        
+tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) {
+    var genACLtext = function(docURI, aclURI, public) {
+        public = public || [];
+        var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
+        var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
+        g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+        g.add(a, auth('accessTo'), doc, acl)
+        g.add(a, auth('agent'), me, acl);
+        g.add(a, auth('mode'), auth('Read'), acl);
+        g.add(a, auth('mode'), auth('Write'), acl);
+        g.add(a, auth('mode'), auth('Control'), acl);
+        
+        if (public.length) {
+            a = g.sym(aclURI + '#a2');
+            g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+            g.add(a, auth('accessTo'), doc, acl)
+            g.add(a, auth('agentClass'), ns.foaf('Agent'), acl);
+            for (var p=0; p<public.length; p++) {
+                g.add(a, auth('mode'), auth(public[p]), acl); // Like 'Read' etc
+            }
+        }
+        return $rdf.serialize(acl, g, aclURI, 'text/turtle');
+    }
+    var kb = tabulator.kb;
+    var aclDoc = kb.any(kb.sym(docURI),
+        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+    if (aclDoc) { // Great we already know where it is
+        var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+        tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+    } else {
+    
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+            var aclDoc = kb.any(kb.sym(docURI),
+                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+            if (!aclDoc) {
+                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                callback(false, "No Link rel=ACL header for " + docURI);
+            } else {
+                var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+                tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+            }
+        })
+    }
+};
+              
+
+
+
 
 ////////////////////////////////////////// Boostrapping identity
 //
 //
 
-tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
+tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -29496,7 +29721,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     but.setAttribute('value', 'Log in');
     but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
         but.addEventListener('click', function(e){
-	Solid.auth.signup.withWebID().then(function(uri){
+	tabulator.solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
 	    gotOne(uri)
 	})
@@ -29508,7 +29733,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     but2.setAttribute('value', 'Sign Up');
     but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
     but2.addEventListener('click', function(e){
-	Solid.auth.signup.withWebID().then(function(uri){
+	tabulator.solid.auth.signup().then(function(uri){
 	    console.log('signInOrSignUpBox signed up '+ uri)
 	    gotOne(uri)
 	})
@@ -29516,7 +29741,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     return box;
 };
 
-tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
+tabulator.panes.utils.signInOrSignUpBox_original = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -29954,13 +30179,14 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         return;
     };
 
-    var gotIDChange = function(me) {
-        if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.uri.docpart(me.uri);
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+    var gotIDChange = function(uri) {
+        if (typeof uri == 'undefined') return undefined;
+        var me = $rdf.sym(uri);
+        var docURI = me.doc();
+        kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
             if (!ok) {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load profile file " + docURI));
+                    "Can't load profile file " + me.doc()));
                 return;
             }
             loadPrefs(me);

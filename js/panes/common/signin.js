@@ -61,13 +61,17 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 //  me webid of user
 //  public = eg [ 'Read', 'Write']
         
-tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) {
-    var genACLtext = function(docURI, aclURI, public) {
-        public = public || [];
+tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback) {
+    var genACLtext = function(docURI, aclURI, options) {
+        options = options || {}
+        var public = options.public || [];
         var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
         var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
         g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
         g.add(a, auth('accessTo'), doc, acl)
+        if (options.defaultForNew) {
+            g.add(a, auth('defaultForNew'), doc, acl)
+        }
         g.add(a, auth('agent'), me, acl);
         g.add(a, auth('mode'), auth('Read'), acl);
         g.add(a, auth('mode'), auth('Write'), acl);
@@ -88,7 +92,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
     var aclDoc = kb.any(kb.sym(docURI),
         kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
     if (aclDoc) { // Great we already know where it is
-        var aclText = genACLtext(docURI, aclDoc.uri, public);
+        var aclText = genACLtext(docURI, aclDoc.uri, options);
         tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
     } else {
     
@@ -100,7 +104,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
                 // complainIfBad(false, "No Link rel=ACL header for " + docURI);
                 callback(false, "No Link rel=ACL header for " + docURI);
             } else {
-                var aclText = genACLtext(docURI, aclDoc.uri, public);
+                var aclText = genACLtext(docURI, aclDoc.uri, options);
                 tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
             }
         })

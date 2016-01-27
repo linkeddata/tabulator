@@ -27850,7 +27850,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
             tabulator.panes.utils.getACL(doc2, function(ok, status, defaultACLDoc) {
 
                 if (!ok) {
-                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")")
+                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")" + defaultACLDoc)
                 } else if (status === 403) {
                     return callback(false, true, status,"( default ACL file FORBIDDEN. Stop." + uri + ")");
                 } else if (status === 404) {
@@ -27860,7 +27860,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
                         tryParent(uri);
                     }
                 } else if (status !== 200) {
-                        return callback(false, true, status, "Error searching for default");
+                        return callback(false, true, status, "Error status '"+status+"' searching for default for " + doc2);
                 } else { // 200
                     //statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
                     var defaults = kb.each(undefined, ACL('defaultForNew'), kb.sym(uri), defaultACLDoc);
@@ -27893,22 +27893,22 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
 
 //    Calls back (ok, status, acldoc, message)
 // 
-//   (false, errormessage)        no link header
+//   (false, 900, errormessage)        no link header
 //   (true, 403, documentSymbol, fileaccesserror) not authorized
 //   (true, 404, documentSymbol, fileaccesserror) if does not exist
 //   (true, 200, documentSymbol)   if file exitss and read OK
 //
 tabulator.panes.utils.getACL = function(doc, callback) {
     tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
-        if (!ok) return callback(ok, "Can't get headers to find ACL file: " + body);
+        if (!ok) return callback(ok, "Can't get headers to find ACL for " + doc + ": " + body);
         var kb = tabulator.kb;
         var aclDoc = kb.any(doc,
             kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
         if (!aclDoc) {
-            callback(false, "No Link rel=ACL header for " + doc);
+            callback(false, 900, "No Link rel=ACL header for " + doc);
         } else {
             if (tabulator.sf.nonexistant[aclDoc.uri]) {
-                return callback(true, 404, aclDoc, "ACL file does not exist.");
+                return callback(true, 404, aclDoc, "ACL file " + aclDoc + " does not exist.");
             }
             tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
                 if (!ok) {
@@ -29654,13 +29654,17 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 //  me webid of user
 //  public = eg [ 'Read', 'Write']
         
-tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) {
-    var genACLtext = function(docURI, aclURI, public) {
-        public = public || [];
+tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback) {
+    var genACLtext = function(docURI, aclURI, options) {
+        options = options || {}
+        var public = options.public || [];
         var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
         var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
         g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
         g.add(a, auth('accessTo'), doc, acl)
+        if (options.defaultForNew) {
+            g.add(a, auth('defaultForNew'), doc, acl)
+        }
         g.add(a, auth('agent'), me, acl);
         g.add(a, auth('mode'), auth('Read'), acl);
         g.add(a, auth('mode'), auth('Write'), acl);
@@ -29681,7 +29685,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
     var aclDoc = kb.any(kb.sym(docURI),
         kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
     if (aclDoc) { // Great we already know where it is
-        var aclText = genACLtext(docURI, aclDoc.uri, public);
+        var aclText = genACLtext(docURI, aclDoc.uri, options);
         tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
     } else {
     
@@ -29693,7 +29697,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, public, callback) 
                 // complainIfBad(false, "No Link rel=ACL header for " + docURI);
                 callback(false, "No Link rel=ACL header for " + docURI);
             } else {
-                var aclText = genACLtext(docURI, aclDoc.uri, public);
+                var aclText = genACLtext(docURI, aclDoc.uri, options);
                 tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
             }
         })
@@ -34783,11 +34787,11 @@ tabulator.panes.register( {
                                 groupRow.setAttribute('style', 'background-color: #cce;');
                                 refreshNames(); // @@ every time??
                             });
-                        //refreshGroups();
+                        //refreshGroupsSelected();
                         } // for each row
                     } else {
                         selectedGroups = {};
-                        refreshGroups();
+                        refreshGroupsSelected();
                     }
                 }); // on button click
 
@@ -34796,10 +34800,14 @@ tabulator.panes.register( {
                 peopleHeader.setAttribute('style', 'min-width: 18em;');
                 peopleMain.setAttribute('style','overflow:scroll;');
                 
+                var groups;
                 
-                var groups = kb.each(subject, ns.vcard('includesGroup'));
-                var groups2 = groups.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
-                groups.sort();
+                var sortGroups = function() {
+                    var gs = kb.each(subject, ns.vcard('includesGroup'));
+                    groups = gs.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
+                    groups.sort();
+                }
+                
                 var selectedGroups = {};
 
                 var cardPane = function(dom, subject, paneName) {
@@ -34848,7 +34856,7 @@ tabulator.panes.register( {
                             updater.deleteResource(doc);
                         }
                     }
-                    nextOne;
+                    nextOne();
                 };
 
                 var refreshNames = function() {
@@ -34911,7 +34919,7 @@ tabulator.panes.register( {
     
                 }
                 
-                var refreshGroups = function() {
+                var refreshGroupsSelected = function() {
                     for (i=0; i < groupsMainTable.children.length; i++) {
                         var row = groupsMainTable.children[i];
                         if (row.subject) {
@@ -34920,46 +34928,79 @@ tabulator.panes.register( {
                     }
                 };
                 
-                for (var i =0; i<groups2.length; i++) {
-                    var name = groups2[i][0];
-                    var group = groups2[i][1];
-                    //selectedGroups[group.uri] = false;
-                    var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
-                    groupRow.subject = group;
-                    groupRow.setAttribute('style', dataCellStyle);
-                    // var groupLeft = groupRow.appendChild(dom.createElement('td'));
-                    // var groupRight = groupRow.appendChild(dom.createElement('td'));
-                    groupRow.textContent = name;
-                    var foo = function toggle(groupRow, group, name) {
-                        tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, "group " + name, function(){
-                            deleteThing(group);
-                        });
-                        groupRow.addEventListener('click', function(event){
-                            event.preventDefault();
-                            var groupList = kb.sym(group.uri.split('#')[0]);
-                            if (!event.altKey) {
-                                selectedGroups = {}; // If alt key pressed, accumulate multiple
-                            }
-                            selectedGroups[group.uri] = selectedGroups[group.uri] ? false : true;
-                            refreshGroups();
-                            peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
-
-                            kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
-                                if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                refreshNames();
-
-                                if (!event.altKey) { // If only one group has beeen selected show ACL
-                                    cardMain.innerHTML = ''; 
-                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
-                                        if (!ok) cardMain.innerHTML = "Failed: " + body;
-                                    }));
-                                }
-                            })
-                        }, true);
-                    };
-                    foo(groupRow, group, name);
-                }
+                // Check every group is in the list and add it if not.
                 
+                var syncGroupTable = function() {
+                    var foundOne;
+                    sortGroups();
+
+                    for (i=0; i < groupsMainTable.children.length; i++) {
+                        var row = groupsMainTable.children[i];
+                        row.trashMe = true;
+                    }
+
+
+                    for (var g = 0; g<groups.length; g++) {
+                        var name = groups[g][0];
+                        var group = groups[g][1];
+                        
+                        //selectedGroups[group.uri] = false;
+                        foundOne = false;
+
+                        for (var i=0; i < groupsMainTable.children.length; i++) {
+                            var row = groupsMainTable.children[i];
+                            if (row.subject && row.subject.sameTerm(group)) {
+                                row.trashMe = false;
+                                foundOne = true;
+                                break;
+                            }
+                        }
+                        if (!foundOne) {
+                        
+                            var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
+                            groupRow.subject = group;
+                            groupRow.setAttribute('style', dataCellStyle);
+                            groupRow.textContent = name;
+                            var foo = function toggle(groupRow, group, name) {
+                                tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, "group " + name, function(){
+                                    deleteThing(group);
+                                });
+                                groupRow.addEventListener('click', function(event){
+                                    event.preventDefault();
+                                    var groupList = kb.sym(group.uri.split('#')[0]);
+                                    if (!event.altKey) {
+                                        selectedGroups = {}; // If alt key pressed, accumulate multiple
+                                    }
+                                    selectedGroups[group.uri] = selectedGroups[group.uri] ? false : true;
+                                    refreshGroupsSelected();
+                                    peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
+
+                                    kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
+                                        if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
+                                        refreshNames();
+
+                                        if (!event.altKey) { // If only one group has beeen selected show ACL
+                                            cardMain.innerHTML = ''; 
+                                            cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                                if (!ok) cardMain.innerHTML = "Failed: " + body;
+                                            }));
+                                        }
+                                    })
+                                }, true);
+                            };
+                            foo(groupRow, group, name);
+                        } // if not foundOne
+                    } // loop
+                    
+                    for (i=0; i < groupsMainTable.children.length; i++) {
+                        var row = groupsMainTable.children[i];
+                        if (row.trashMe) {
+                            groupsMainTable.removeChild(row);
+                        }
+                    }
+                } // syncGroupTable
+                
+                syncGroupTable();
  
                 // New Contact button
                 var newContactButton = dom.createElement("button");
@@ -35031,9 +35072,13 @@ tabulator.panes.register( {
                                      console.log("Error: can\'t save new group:" + body);
                                      cardMain.innerHTML = "Failed to save group" + body
                                 } else {
+                                    selectedGroups = {};
+                                    selectedGroups[body.uri] = true
+                                    syncGroupTable(); // Refresh list of groups
+
                                     cardMain.innerHTML = ''; 
                                     cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
-                                        if (!ok) cardMain.innerHTML = "Group creation failed: " + body;
+                                        if (!ok) cardMain.innerHTML = "Group sharing setup failed: " + body;
                                     }));
                                 }
                             });

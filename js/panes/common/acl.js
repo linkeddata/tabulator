@@ -301,7 +301,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
             tabulator.panes.utils.getACL(doc2, function(ok, status, defaultACLDoc) {
 
                 if (!ok) {
-                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")")
+                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")" + defaultACLDoc)
                 } else if (status === 403) {
                     return callback(false, true, status,"( default ACL file FORBIDDEN. Stop." + uri + ")");
                 } else if (status === 404) {
@@ -311,7 +311,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
                         tryParent(uri);
                     }
                 } else if (status !== 200) {
-                        return callback(false, true, status, "Error searching for default");
+                        return callback(false, true, status, "Error status '"+status+"' searching for default for " + doc2);
                 } else { // 200
                     //statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
                     var defaults = kb.each(undefined, ACL('defaultForNew'), kb.sym(uri), defaultACLDoc);
@@ -344,22 +344,22 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
 
 //    Calls back (ok, status, acldoc, message)
 // 
-//   (false, errormessage)        no link header
+//   (false, 900, errormessage)        no link header
 //   (true, 403, documentSymbol, fileaccesserror) not authorized
 //   (true, 404, documentSymbol, fileaccesserror) if does not exist
 //   (true, 200, documentSymbol)   if file exitss and read OK
 //
 tabulator.panes.utils.getACL = function(doc, callback) {
     tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
-        if (!ok) return callback(ok, "Can't get headers to find ACL file: " + body);
+        if (!ok) return callback(ok, "Can't get headers to find ACL for " + doc + ": " + body);
         var kb = tabulator.kb;
         var aclDoc = kb.any(doc,
             kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
         if (!aclDoc) {
-            callback(false, "No Link rel=ACL header for " + doc);
+            callback(false, 900, "No Link rel=ACL header for " + doc);
         } else {
             if (tabulator.sf.nonexistant[aclDoc.uri]) {
-                return callback(true, 404, aclDoc, "ACL file does not exist.");
+                return callback(true, 404, aclDoc, "ACL file " + aclDoc + " does not exist.");
             }
             tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
                 if (!ok) {

@@ -409,22 +409,6 @@ tabulator.panes.register( {
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                 });
-                /*
-                var refreshButton = dom.createElement('button');
-                refreshButton.textContent = "refresh";
-                refreshButton.addEventListener('click', function(e) {
-                    tabulator.fetcher.unload(messageStore);
-                    tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
-                        if (!ok) {
-                            console.log("Cant refresh messages" + body);
-                        } else {
-                            refreshTree(div);
-                            // syncMessages(subject, messageTable);
-                        };
-                    });
-                }, false);
-                div.appendChild(refreshButton);
-                */
 
 
             });  // End nowOrWhenFetched tracker
@@ -432,7 +416,7 @@ tabulator.panes.register( {
                     // Alas force ct for github.io 
             // was:  ,{ 'forceContentType': 'text/turtle'}
 
-    ///////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////
 
         //          Render a AddressBook instance
         
@@ -442,6 +426,8 @@ tabulator.panes.register( {
             var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
             
             var groupIndex = kb.any(subject, ns.vcard('groupIndex'));
+            var selectedGroups = {};
+
             
             //var cats = kb.each(subject, ns.wf('contactCategory')); // zero or more
             
@@ -603,88 +589,6 @@ tabulator.panes.register( {
         
 
 
-            var toolsPane = function(selectedGroups) {
-                var kb = tabulator.kb;
-                var updater = new tabulator.rdf.sparqlUpdate(kb);
-                var ACL = tabulator.ns.acl, VCARD = tabulator.ns.vcard;
-                var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
-
-                var pane = dom.createElement('div');
-                var table = pane.appendChild(dom.createElement('table'));
-                table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
-                var headerRow = table.appendChild(dom.createElement('tr'));
-                headerRow.textContent =  tabulator.Util.label(subject) + " - tools";
-                headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
-
-                var statusRow = table.appendChild(dom.createElement('tr'));
-                var statusBlock = statusRow.appendChild(dom.createElement('div'));
-                statusBlock.setAttribute('style', 'padding: 2em;');
-                var MainRow = table.appendChild(dom.createElement('tr'));
-                var box = MainRow.appendChild(dom.createElement('table'));
-                var bottomRow = table.appendChild(dom.createElement('tr'));
-                
-                var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
-                var p = MainRow.appendChild(dom.createElement('pre'));
-                var log = function(message) {
-                    p.textContent += message + '\n';
-                };
-                
-                log("" + totalCards + " cards alltogether. ");
-                
-                var gg = [], g;
-                for (g in selectedGroups) {
-                    gg.push(g);
-                }
-                log('' + gg.length + "groups. " );
-                
-                var loadIndexButton = pane.appendChild(dom.createElement('button'));
-                loadIndexButton.textContent = "Load main index";
-                loadIndexButton.addEventListener('click', function(e) {
-                    loadIndexButton.setAttribute('style', 'background-color: #ffc;');
-
-                    var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
-                    tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
-                        if (ok) {
-                            loadIndexButton.setAttribute('style', 'background-color: #cfc;');
-                            log(" People index has been loaded\n");
-                        } else {
-                            loadIndexButton.setAttribute('style', 'background-color: #fcc;');
-                            log("Error: People index has NOT been loaded" + message + "\n");
-                        };
-                    });
-                });
-
-                
-                var check = MainRow.appendChild(dom.createElement('button'));
-                check.textContent = "Check inidividual card access";
-                check.addEventListener('click', function(event){
-                    for (var i = 0; i< gg.length; i++) {
-                        g = kb.sym(gg[i]);
-                        var a = kb.each(g, ns.vcard('hasMember'));
-                        log(tabulator.Util.label(g)+ ': ' + a.length + " members");
-                        for (var j=0; j < a.length; j++) {
-                            var card = a[j];
-                            log(tabulator.Util.label(card));
-                            function doCard(card) {
-                                tabulator.panes.utils.fixIndividualCardACL(card, log, function(ok, message) {
-                                    if (ok) {
-                                        log("Sucess for "+tabulator.Util.label(card));
-                                    } else {
-                                        log("Failure for "+tabulator.Util.label(card) + ": " + message);
-                                    }
-                                });
-                            }
-                            doCard(card);
-                        } 
-                    }
-                });
-                // 
-                
-                return pane;
-            }
-
-
-
 
                        
             ////////////////////////////// Three-column Contact Browser
@@ -719,6 +623,157 @@ tabulator.panes.register( {
                     }
                 }
 
+
+                var selectAllGroups = function(selectedGroups, groupsMainTable, callback) {
+                    var todo = groupsMainTable.children.length;
+                    var badness = [];
+                    for (var k=0; k < groupsMainTable.children.length; k++) {
+                        var groupRow = groupsMainTable.children[k];
+                        var group = groupRow.subject;
+
+                        var groupList = kb.sym(group.uri.split('#')[0]);
+                        selectedGroups[group.uri] = true;
+
+                        kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
+                            if (!ok) {
+                                var  msg = "Can't load group file: " +  groupList + ": " + message;
+                                badness.push(msg)
+                                return complainIfBad(ok,msg);
+                            }
+                            groupRow.setAttribute('style', 'background-color: #cce;');
+                            refreshNames(); // @@ every time??
+                            todo -= 1;
+                            if (!todo) {
+                                if (callback) callback(badness.length === 0, badness);
+                            }
+                        });
+                    } // for each row
+                }
+
+                var toolsPane = function(selectedGroups, groupsMainTable) {
+                    var kb = tabulator.kb;
+                    var updater = new tabulator.rdf.sparqlUpdate(kb);
+                    var ACL = tabulator.ns.acl, VCARD = tabulator.ns.vcard;
+                    var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
+
+                    var pane = dom.createElement('div');
+                    var table = pane.appendChild(dom.createElement('table'));
+                    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
+                    var headerRow = table.appendChild(dom.createElement('tr'));
+                    headerRow.textContent =  tabulator.Util.label(subject) + " - tools";
+                    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
+
+                    var statusRow = table.appendChild(dom.createElement('tr'));
+                    var statusBlock = statusRow.appendChild(dom.createElement('div'));
+                    statusBlock.setAttribute('style', 'padding: 2em;');
+                    var MainRow = table.appendChild(dom.createElement('tr'));
+                    var box = MainRow.appendChild(dom.createElement('table'));
+                    var bottomRow = table.appendChild(dom.createElement('tr'));
+                    
+                    var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
+                    var p = MainRow.appendChild(dom.createElement('pre'));
+                    var log = function(message) {
+                        p.textContent += message + '\n';
+                    };
+                    
+                    log("" + totalCards + " cards alltogether. ");
+                    
+                    
+                    var groups = kb.each(subject, VCARD('includesGroup'));
+                    log('' + groups.length + " total groups. " );
+
+                    var gg = [], g;
+                    for (g in selectedGroups) {
+                        gg.push(g);
+                    }
+                    log('' + gg.length + " selected groups. " );
+                    
+                    var loadIndexButton = pane.appendChild(dom.createElement('button'));
+                    loadIndexButton.textContent = "Load main index";
+                    loadIndexButton.addEventListener('click', function(e) {
+                        loadIndexButton.setAttribute('style', 'background-color: #ffc;');
+
+                        var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
+                        tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
+                            if (ok) {
+                                loadIndexButton.setAttribute('style', 'background-color: #cfc;');
+                                log(" People index has been loaded\n");
+                            } else {
+                                loadIndexButton.setAttribute('style', 'background-color: #fcc;');
+                                log("Error: People index has NOT been loaded" + message + "\n");
+                            };
+                        });
+                    });
+
+                    
+                    
+                    var check = MainRow.appendChild(dom.createElement('button'));
+                    check.textContent = "Check inidividual card access of selected groups";
+                    check.addEventListener('click', function(event){
+                        for (var i = 0; i< gg.length; i++) {
+                            g = kb.sym(gg[i]);
+                            var a = kb.each(g, ns.vcard('hasMember'));
+                            log(tabulator.Util.label(g)+ ': ' + a.length + " members");
+                            for (var j=0; j < a.length; j++) {
+                                var card = a[j];
+                                log(tabulator.Util.label(card));
+                                function doCard(card) {
+                                    tabulator.panes.utils.fixIndividualCardACL(card, log, function(ok, message) {
+                                        if (ok) {
+                                            log("Sucess for "+tabulator.Util.label(card));
+                                        } else {
+                                            log("Failure for "+tabulator.Util.label(card) + ": " + message);
+                                        }
+                                    });
+                                }
+                                doCard(card);
+                            } 
+                        }
+                    });
+                    
+                    var checkGroupless = MainRow.appendChild(dom.createElement('button'));
+                    checkGroupless.textContent = "Find inidividuals with no group";
+                    checkGroupless.addEventListener('click', function(event){
+                        log("Loading groups...");
+                        selectAllGroups(selectedGroups, groupsMainTable, function(ok, message){
+                            if (!ok) {
+                                log("Failed: " + message)
+                                return;
+                            }
+                            tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined,
+                                function(ok, message) {
+                                    
+                                    log("Loaded groups and name index.");
+                                    var reverseIndex = {}, groupless = [];
+                                    for (var i = 0; i< groups.length; i++) {
+                                        g = groups[i];
+                                        var a = kb.each(g, ns.vcard('hasMember'));
+                                        log(tabulator.Util.label(g)+ ': ' + a.length + " members");
+                                        for (var j=0; j<a.length; j++) {
+                                            reverseIndex[a[j].uri] = true;
+                                        }
+                                    }
+                                    
+                                    
+                                    var cards = kb.each(undefined, VCARD('inAddressBook'), subject);
+                                    log("" + cards.length + " total cards");
+                                    var c, card;
+                                    for (var c=0; c < cards.length; c++) {
+                                        if (!reverseIndex[cards[c].uri]) {
+                                            groupless.push(cards[c]);
+                                            log("   groupless " + tabulator.Util.label(cards[c]));
+                                        }
+                                    }
+                                    log("" + groupless.length + " groupless cards.");
+                            });
+                        })
+                    });
+                    
+                    return pane;
+                }
+
+                ////////////////////   Body of 3-column browser
+                
                 var bookTable = dom.createElement('table');
                 bookTable.setAttribute('style', 'border-collapse: collapse; margin-right: 0;')
                 div.appendChild(bookTable);
@@ -753,6 +808,7 @@ tabulator.panes.register( {
                 
                 groupsHeader.textContent = "groups";
                 groupsHeader.setAttribute('style', 'min-width: 10em; padding-bottom 0.2em;');
+
                 var allGroups = groupsHeader.appendChild(dom.createElement('button'));
                 allGroups.textContent = "All";
                 allGroups.setAttribute('style', 'margin-left: 1em;');
@@ -760,20 +816,7 @@ tabulator.panes.register( {
                     allGroups.state = allGroups.state ? 0 : 1;
                     peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
                     if (allGroups.state) {
-                        for (var k=0; k < groupsMainTable.children.length; k++) {
-                            var groupRow = groupsMainTable.children[k];
-                            var group = groupRow.subject;
-
-                            var groupList = kb.sym(group.uri.split('#')[0]);
-                            selectedGroups[group.uri] = true;
-
-                            kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
-                                if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                groupRow.setAttribute('style', 'background-color: #cce;');
-                                refreshNames(); // @@ every time??
-                            });
-                        //refreshGroupsSelected();
-                        } // for each row
+                        selectAllGroups(selectedGroups, groupsMainTable);
                     } else {
                         selectedGroups = {};
                         refreshGroupsSelected();
@@ -793,8 +836,6 @@ tabulator.panes.register( {
                     groups.sort();
                 }
                 
-                var selectedGroups = {};
-
                 var cardPane = function(dom, subject, paneName) {
                     var p = tabulator.panes.byName(paneName);
                     var d = p.render(subject, dom);
@@ -984,6 +1025,7 @@ tabulator.panes.register( {
                             groupsMainTable.removeChild(row);
                         }
                     }
+                    refreshGroupsSelected();
                 } // syncGroupTable
                 
                 syncGroupTable();
@@ -1079,7 +1121,7 @@ tabulator.panes.register( {
                 toolsButton.innerHTML = "Tools";
                 toolsButton.addEventListener('click', function(e) {
                     cardMain.innerHTML = ''; 
-                    cardMain.appendChild(toolsPane(selectedGroups));
+                    cardMain.appendChild(toolsPane(selectedGroups, groupsMainTable));
                 });
                 
                 cardFooter.appendChild(newAddressBookButton(subject));
@@ -1110,25 +1152,6 @@ tabulator.panes.register( {
             console.log("Assuming user is " + me)   
         }
         
-        /////////////////  Obsolete log in out now?
-        /*
-        var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
-            // sayt.parent.removeChild(sayt);
-            if (webid) {
-                tabulator.preferences.set('me', webid);
-                console.log("(Logged in as "+ webid+")")
-                me = kb.sym(webid);
-            } else {
-                tabulator.preferences.set('me', '');
-                console.log("(Logged out)")
-                me = null;
-            }
-        });
-        
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end // float sucks
-
-        div.appendChild(loginOutButton);
-        */
         
         return div;
 

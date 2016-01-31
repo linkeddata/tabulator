@@ -21,6 +21,10 @@ tabulator.panes.utils.findOriginOwner = function(doc, callback) {
     
 }
 
+// Note for a PUT which will not overwrite existing file
+// A la  https://tools.ietf.org/html/rfc7232#section-3.2
+// Use header   If-None-Match: *
+
 tabulator.panes.utils.webOperation = function(method, uri, options, callback) {
     var xhr = $rdf.Util.XMLHTTPFactory();
     xhr.onreadystatechange = function (){
@@ -476,7 +480,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
 
     var figureOutBase = function(ws) {
-        var newBase = kb.any(ws, ns.space('uriPrefix'));
+        var newBase = kb.any(ws, tabulator.ns.space('uriPrefix'));
         if (!newBase) {
             newBase = ws.uri.split('#')[0];
         } else {

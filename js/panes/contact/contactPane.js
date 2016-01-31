@@ -811,7 +811,7 @@ tabulator.panes.register( {
 
                 var allGroups = groupsHeader.appendChild(dom.createElement('button'));
                 allGroups.textContent = "All";
-                allGroups.setAttribute('style', 'margin-left: 1em;');
+                allGroups.setAttribute('style', 'margin-left: 1em; font-size: 80%');
                 allGroups.addEventListener('click', function(event){
                     allGroups.state = allGroups.state ? 0 : 1;
                     peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason

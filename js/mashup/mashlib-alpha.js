@@ -30069,7 +30069,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
 
     var figureOutBase = function(ws) {
-        var newBase = kb.any(ws, ns.space('uriPrefix'));
+        var newBase = kb.any(ws, tabulator.ns.space('uriPrefix'));
         if (!newBase) {
             newBase = ws.uri.split('#')[0];
         } else {

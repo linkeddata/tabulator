@@ -21,24 +21,8 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 }
 
 
-
-// Sets the best name we have and looks up a better one
-tabulator.panes.utils.setName = function(element, subject) {
-    var kb = tabulator.kb, ns = tabulator.ns;
-    var name = kb.any(subject, ns.vcard('fn')) || kb.any(subject, ns.foaf('name'))
-        ||  kb.any(subject, ns.vcard('organization-name'));
-    element.textContent = name ? name.value : tabulator.Util.label(subject);
-    if (!name) {
-        tabulator.sf.nowOrWhenFetched(subject, undefined, function(ok) {
-             element.textContent = (ok ? '' : '?') +  tabulator.Util.label(subject);
-        });
-    }
-}
-
-
-
 // Delete button with a check you really mean it
-
+/*
 tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, deleteFunction) {
     var delButton = dom.createElement('button');
     container.appendChild(delButton);
@@ -65,7 +49,7 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, del
         }, false);
     }, false);
 }
-
+*/
 
     
 // These used to be in js/init/icons.js but are better in the pane.
@@ -89,6 +73,85 @@ tabulator.panes.register( {
         if (t[ns.vcard('AddressBook').uri]) return "Address book";
         return null; // No under other circumstances
     },
+    
+    
+    clone: function(thisInstance, newBase, dom, div, me) {
+    
+        var complain = function(message) {
+            div.appendChild(tabulator.panes.utils.errorMessageBlock(dom, message, 'pink'));
+        };
+
+
+        var bookContents = '@prefix vcard: <http://www.w3.org/2006/vcard/ns#>.\n\
+@prefix ab: <http://www.w3.org/ns/pim/ab#>.\n\
+@prefix dc: <http://purl.org/dc/elements/1.1/>.\n\
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.\n\
+\n\
+<#this> a vcard:AddressBook;\n\
+    dc:title "New address Book";\n\
+    vcard:nameEmailIndex <people.ttl>;\n\
+    vcard:groupIndex <groups.ttl>. \n\n'
+    
+        bookContents += '<#this> <http://www.w3.org/ns/auth/acl#owner> <' + me.uri + '>.\n\n';
+
+        var toBeWritten = [
+            { to:   'index.html', contentType: 'text/html' },
+            { to:   'book.ttl', content: bookContents, contentType: 'text/turtle' },
+            { to:   'groups.ttl', content: '', contentType: 'text/turtle' },
+            { to:   'people.ttl', content: '', contentType: 'text/turtle'},
+            { to:   '', existing: true, aclOptions: { defaultForNew: true}},
+        ];
+
+        var newAppPointer = newBase + 'index.html'; // @@ assuming we can't trust server with bare dir
+
+        var offline = tabulator.panes.utils.offlineTestID();
+        if (offline) {
+            toBeWritten.push( {to: 'local.html', from: 'local.html', contentType: 'text/html' });
+            newAppPointer = newBase + 'local.html'; // kludge for testing
+        }
+
+        // @@ Ask user abut ACLs?
+        
+        //
+        //   @@ Add header to PUT     If-None-Match: *       to prevent overwrite
+        //
+        var doNextTask = function() {
+            if (toBeWritten.length === 0) {
+                claimSuccess(newAppPointer, appInstanceNoun);
+            } else {
+                var task = toBeWritten.shift();
+                console.log("Creating new file "+ task.to + " in new instance ")
+                var dest = $rdf.uri.join(task.to, newBase); //
+                var aclOptions = task.aclOptions || {};
+                var checkOKSetACL = function(uri, ok) {
+                    if (ok) {
+                        tabulator.panes.utils.setACLUserPublic(dest, me, aclOptions, function(){
+                            if (ok) {
+                                doNextTask()
+                            } else {
+                                complain("Error setting access permisssions for " + task.to)
+                            };
+                        })
+                    } else {
+                        complain("Error writing new file " + task.to);
+                    }
+                };
+
+                if ('content' in task) {
+                    tabulator.panes.utils.webOperation('PUT', dest,
+                        { data: task.content, saveMetadata: true, contentType: task.contentType},
+                    checkOKSetACL);
+                } else if ('existing' in task) {
+                    checkOKSetACL(true, dest);
+                } else {
+                    var from = task.from || task.to; // default source to be same as dest
+                    tabulator.panes.utils.webCopy(base + from, dest, task.contentType, checkOKSetACL);
+                }
+            }
+        }
+
+        doNextTask();
+    },
 
     render: function(subject, dom) {
         var kb = tabulator.kb;
@@ -106,41 +169,14 @@ tabulator.panes.register( {
             return false
         }
         
-        var setModifiedDate = function(subj, kb, doc) {
-            if (!getOption(tracker, 'trackLastModified')) return;
-            var deletions = kb.statementsMatching(subject, DCT('modified'));
-            var deletions = deletions.concat(kb.statementsMatching(subject, ns.wf('modifiedBy')));
-            var insertions = [ $rdf.st(subject, DCT('modified'), new Date(), doc) ];
-            if (me) insertions.push($rdf.st(subject, ns.wf('modifiedBy'), me, doc) );
-            updater.update(deletions, insertions, function(uri, ok, body){});
-        }
-
-        var say = function say(message, style){
-            var pre = dom.createElement("pre");
-            pre.setAttribute('style', style ? style :'color: grey');
-            div.appendChild(pre);
-            pre.appendChild(dom.createTextNode(message));
-            return pre
-        } 
-
         var complainIfBad = function(ok,body){
             if (!ok) {
                 console.log("Error: " + body);
             }
         }
 
-        var getOption = function (tracker, option){ // eg 'allowSubContacts'
-            var opt = kb.any(tracker, ns.ui(option));
-            return !!(opt && opt.value);
-        }
-
 
         var thisPane = this;
-        var rerender = function(div) {
-            var parent  = div.parentNode;
-            var div2 = thisPane.render(subject, dom);
-            parent.replaceChild(div2, div);
-        };
 
         var timestring = function() {
             var now = new Date();
@@ -220,7 +256,7 @@ tabulator.panes.register( {
         /////////////////////// Reproduction: Spawn a new instance of this app
         
         var newAddressBookButton = function(thisAddressBook) {
-            return tabulator.panes.utils.newAppInstance(dom, "Start your own new address book", function(ws){
+            return tabulator.panes.utils.newAppInstance(dom, "Start a new address book", function(ws){
         
                 var appPathSegment = 'com.timbl.contactor'; // how to allocate this string and connect to 
 
@@ -235,13 +271,10 @@ tabulator.panes.register( {
                 }
                 base += appPathSegment + '/' + timestring() + '/'; // unique id 
 
-                var documentOf = function(x) {
-                    return kb.sym($rdf.uri.docpart(x.uri));
-                }
 
-                var newBook = kb.sym(base + 'book.ttl');
-                var newGroups = kb.sym(base + 'groups.ttl');
-                var newPeople = kb.sym(base + 'people.ttl');
+                // var newBook = kb.sym(base + 'book.ttl');
+                // var newGroups = kb.sym(base + 'groups.ttl');
+                // var newPeople = kb.sym(base + 'people.ttl');
 
                  
                 //

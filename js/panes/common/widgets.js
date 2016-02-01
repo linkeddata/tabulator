@@ -81,6 +81,69 @@ tabulator.panes.utils.newThing = function(store) {
     return $rdf.sym(store.uri + '#' + 'id'+(''+ now.getTime()));
 }
 
+/////////////////////// Handy UX widgets
+
+
+
+
+
+
+// Sets the best name we have and looks up a better one
+// @@ testMe
+tabulator.panes.utils.setName = function(element, x) {
+    var kb = tabulator.kb, ns = tabulator.ns;
+    var findName = function(x) {
+        var name = kb.any(x, ns.vcard('fn')) || kb.any(x, ns.foaf('name'))
+            ||  kb.any(x, ns.vcard('organization-name'));
+        return name ? name.value : null
+    }
+    element.textContent = findName(x) || tabulator.Util.label(x);
+    if (!name) {
+        tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
+             element.textContent = (ok ? '' : '? ') +  (findName(x) ||tabulator.Util.label(x));
+        });
+    }
+}
+
+
+
+
+
+// Delete button with a check you really mean it
+//
+//   @@ Supress check if command key held down?
+//
+tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, deleteFunction) {
+    var delButton = dom.createElement('button');
+    container.appendChild(delButton);
+    delButton.textContent = "-";
+    
+    container.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
+    delButton.setAttribute('class', 'hoverControlHide');
+    delButton.setAttribute('style', 'color: red; margin-right: 0.3em; foat:right; text-align:right');
+    delButton.addEventListener('click', function(e) {
+        container.removeChild(delButton);  // Ask -- are you sure?
+        var cancelButton = dom.createElement('button');
+        cancelButton.textContent = "cancel";
+        container.appendChild(cancelButton).addEventListener('click', function(e) {
+            container.removeChild(sureButton);
+            container.removeChild(cancelButton);
+            container.appendChild(delButton);
+        }, false);
+        var sureButton = dom.createElement('button');
+        sureButton.textContent = "Delete " + noun;
+        container.appendChild(sureButton).addEventListener('click', function(e) {
+            container.removeChild(sureButton);
+            container.removeChild(cancelButton);
+            deleteFunction();   
+        }, false);
+    }, false);
+}
+
+
+
+
+
 /////////////////////////////////////////////////////////////////////////
 
 

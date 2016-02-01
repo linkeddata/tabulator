@@ -10,9 +10,11 @@
 *  http://stackoverflow.com/questions/6756407/what-contenteditable-editors
 */
 
+if (typeof tabulator.panes.utils === 'undefined') {
+    tabulator.panes.utils = {};
+}
 
 // paneUtils = {};
-tabulator.panes.utils = {};
 tabulator.panes.field = {}; // Form field functions by URI of field type.
 
 // This is used to canonicalize an array
@@ -47,7 +49,7 @@ tabulator.panes.utils.shortDate = function(str) {
         var n = now.getTimezoneOffset(); // Minutes
         if (str.slice(0,10) == nowZ.slice(0,10)) return str.slice(11,16);
         if (str.slice(0,4) == nowZ.slice(0,4)) {
-            return ( month[parseInt(str.slice(5,7))] + ' ' + parseInt(str.slice(8,10)));
+            return ( month[parseInt(str.slice(5,7)) -1] + ' ' + parseInt(str.slice(8,10)));
         }
         return str.slice(0,10);
     } catch(e) {
@@ -78,6 +80,69 @@ tabulator.panes.utils.newThing = function(store) {
     // http://www.w3schools.com/jsref/jsref_obj_date.asp
     return $rdf.sym(store.uri + '#' + 'id'+(''+ now.getTime()));
 }
+
+/////////////////////// Handy UX widgets
+
+
+
+
+
+
+// Sets the best name we have and looks up a better one
+// @@ testMe
+tabulator.panes.utils.setName = function(element, x) {
+    var kb = tabulator.kb, ns = tabulator.ns;
+    var findName = function(x) {
+        var name = kb.any(x, ns.vcard('fn')) || kb.any(x, ns.foaf('name'))
+            ||  kb.any(x, ns.vcard('organization-name'));
+        return name ? name.value : null
+    }
+    element.textContent = findName(x) || tabulator.Util.label(x);
+    if (!name) {
+        tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
+             element.textContent = (ok ? '' : '? ') +  (findName(x) ||tabulator.Util.label(x));
+        });
+    }
+}
+
+
+
+
+
+// Delete button with a check you really mean it
+//
+//   @@ Supress check if command key held down?
+//
+tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, deleteFunction) {
+    var delButton = dom.createElement('button');
+    container.appendChild(delButton);
+    delButton.textContent = "-";
+    
+    container.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
+    delButton.setAttribute('class', 'hoverControlHide');
+    delButton.setAttribute('style', 'color: red; margin-right: 0.3em; foat:right; text-align:right');
+    delButton.addEventListener('click', function(e) {
+        container.removeChild(delButton);  // Ask -- are you sure?
+        var cancelButton = dom.createElement('button');
+        cancelButton.textContent = "cancel";
+        container.appendChild(cancelButton).addEventListener('click', function(e) {
+            container.removeChild(sureButton);
+            container.removeChild(cancelButton);
+            container.appendChild(delButton);
+        }, false);
+        var sureButton = dom.createElement('button');
+        sureButton.textContent = "Delete " + noun;
+        container.appendChild(sureButton).addEventListener('click', function(e) {
+            container.removeChild(sureButton);
+            container.removeChild(cancelButton);
+            deleteFunction();   
+        }, false);
+    }, false);
+}
+
+
+
+
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -295,6 +360,11 @@ tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri] = {
 tabulator.panes.fieldParams[tabulator.ns.ui('DateTimeField').uri].pattern = 
     /^\s*[0-9][0-9][0-9][0-9](-[0-1]?[0-9]-[0-3]?[0-9])?(T[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?)?Z?\s*$/;
 
+tabulator.panes.fieldParams[tabulator.ns.ui('TimeField').uri] = {
+    'size': 10, 'type': 'time', 'dt': 'time'};
+tabulator.panes.fieldParams[tabulator.ns.ui('TimeField').uri].pattern = 
+    /^\s*([0-2]?[0-9]:[0-5][0-9](:[0-5][0-9])?)\s*$/;
+
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri] = {
     'size': 12, 'style': 'text-align: right', 'dt': 'integer' };
 tabulator.panes.fieldParams[tabulator.ns.ui('IntegerField').uri].pattern =
@@ -328,6 +398,7 @@ tabulator.panes.field[tabulator.ns.ui('EmailField').uri] =
 tabulator.panes.field[tabulator.ns.ui('ColorField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DateTimeField').uri] = 
+tabulator.panes.field[tabulator.ns.ui('TimeField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('NumericField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('IntegerField').uri] = 
 tabulator.panes.field[tabulator.ns.ui('DecimalField').uri] = 
@@ -610,7 +681,7 @@ tabulator.panes.utils.openHrefInOutlineMode = function(e) {
     e.stopPropagation();
     var target = tabulator.Util.getTarget(e);
     var uri = target.getAttribute('href');
-    if (!uri) dump("No href found \n")
+    if (!uri) console.log("No href found \n")
     // subject term, expand, pane, solo, referrer
     // dump('click on link to:' +uri+'\n')
     tabulator.outline.GotoSubject(tabulator.kb.sym(uri), true, undefined, true, undefined);

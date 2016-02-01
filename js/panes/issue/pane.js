@@ -1,7 +1,7 @@
 /*   Issue Tracker Pane
 **
 **  This outline pane allows a user to interact with an issue,
-to change its state according to an ontology, comment on it, etc.
+** to change its state according to an ontology, comment on it, etc.
 **
 **
 ** I am using in places single quotes strings like 'this'
@@ -14,206 +14,6 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
     console = {};
     console.log = function(msg) { tabulator.log.info(msg);};
 }
-
-
-
-//////////////////////////////////////////////////////  SUBCRIPTIONS
-
-$rdf.subscription =  function(options, doc, onChange) {
-
-
-    //  for all Link: uuu; rel=rrr  --->  { rrr: uuu }
-    var linkRels = function(doc) {
-        var links = {}; // map relationship to uri
-        var linkHeaders = tabulator.fetcher.getHeader(doc, 'link');
-        if (!linkHeaders) return null;
-        linkHeaders.map(function(headerValue){
-            var arg = headerValue.trim().split(';');
-            var uri = arg[0];
-            arg.slice(1).map(function(a){
-                var key = a.split('=')[0].trim();
-                var val = a.split('=')[1].trim();
-                if (key ==='rel') {
-                    links[val] = uri.trim();
-                }
-            });        
-        });
-        return links;
-    };
-
-
-    var getChangesURI = function(doc, rel) {
-        var links = linkRels(doc);
-        if (!links[rel]) {
-            console.log("No link header rel=" + rel + " on " + doc.uri)
-            return null;
-        }
-        var changesURI = $rdf.uri.join(links[rel], doc.uri);
-        // console.log("Found rel=" + rel + " URI: " + changesURI);
-        return changesURI;
-    };
-
-
-
-///////////////  Subscribe to changes by SSE
-
-
-    var getChanges_SSE = function(doc, onChange) {
-        var streamURI = getChangesURI(doc, 'events');
-        if (!streamURI) return;
-        var source = new EventSource(streamURI); // @@@  just path??
-        console.log("Server Side Source");   
-
-        source.addEventListener('message', function(e) {
-            console.log("Server Side Event: " + e);   
-            alert("SSE: " + e)  
-            // $('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
-        }, false);
-    };
-
- 
-    
-
-    //////////////// Subscribe to changes websocket
-
-    // This implementation uses web sockets using update-via
-    
-    var getChanges_WS2 = function(doc, onChange) {
-        var router = new $rdf.UpdatesVia(tabulator.fetcher); // Pass fetcher do it can subscribe to headers
-        var wsuri = getChangesURI(doc, 'changes').replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
-        router.register(wsuri, doc.uri);
-    };
-    
-    var getChanges_WS = function(doc, onChange) {
-        var SQNS = $rdf.Namespace('http://www.w3.org/ns/pim/patch#');
-        var changesURI = getChangesURI(doc, 'updates'); //  @@@@ use single
-        var socket;
-        try {
-            socket = new WebSocket(changesURI);
-        } catch(e) {
-            socket = new MozWebSocket(changesURI);
-        };
-        
-        socket.onopen = function(event){
-            console.log("socket opened");
-        };
-        
-        socket.onmessage = function (event) {
-            console.log("socket received: " +event.data);
-            var patchText = event.data;
-            console.log("Success: patch received:" + patchText);
-            
-            // @@ check integrity of entire patch
-            var patchKB = $rdf.graph();
-            var sts;
-            try {
-                $rdf.parse(patchText, patchKB, doc.uri, 'text/n3');
-            } catch(e) {
-                console.log("Parse error in patch: "+e);
-            };
-            clauses = {};
-            ['where', 'insert', 'delete'].map(function(pred){
-                sts = patchKB.statementsMatching(undefined, SQNS(pred), undefined);
-                if (sts) clauses[pred] = sts[0].object;
-            });
-            console.log("Performing patch!");
-            kb.applyPatch(clauses, doc, function(err){
-                if (err) {
-                    console.log("Incoming patch failed!!!\n" + err)
-                    alert("Incoming patch failed!!!\n" + err)
-                    socket.close();
-                } else {
-                    console.log("Incoming patch worked!!!!!!\n" + err)
-                    onChange(); // callback user
-                };
-            });
-        };
-
-    }; // end getChanges
-    
-
-    ////////////////////////// Subscribe to changes using Long Poll
-
-    // This implementation uses link headers and a diff returned by plain HTTP
-    
-    var getChanges_LongPoll = function(doc, onChange) {
-        var changesURI = getChangesURI(doc, 'changes');
-        if (!changesURI) return "No advertized long poll URI";
-        console.log(tabulator.panes.utils.shortTime() + " Starting new long poll.")
-        var xhr = $rdf.Util.XMLHTTPFactory();
-        xhr.alreadyProcessed = 0;
-
-        xhr.onreadystatechange = function(){
-            switch (xhr.readyState) {
-            case 0:
-            case 1:
-                return;
-            case 3:
-                console.log("Mid delta stream (" + xhr.responseText.length + ") "+ changesURI);
-                handlePartial();
-                break;
-            case 4:
-                handlePartial();
-                console.log(tabulator.panes.utils.shortTime() + " End of delta stream " + changesURI);
-                break;
-             }   
-        };
-
-        try {
-            xhr.open('GET', changesURI);
-        } catch (er) {
-            console.log("XHR open for GET changes failed <"+changesURI+">:\n\t" + er);
-        }
-        try {
-            xhr.send();
-        } catch (er) {
-            console.log("XHR send failed <"+changesURI+">:\n\t" + er);
-        }
-
-        var handlePartial = function() {
-            // @@ check content type is text/n3
-
-            if (xhr.status >= 400) {
-                console.log("HTTP (" + xhr.readyState + ") error " + xhr.status + "on change stream:" + xhr.statusText);
-                console.log("     error body: " + xhr.responseText);
-                xhr.abort();
-                return;
-            } 
-            if (xhr.responseText.length > xhr.alreadyProcessed) {
-                var patchText = xhr.responseText.slice(xhr.alreadyProcessed);
-                xhr.alreadyProcessed = xhr.responseText.length;
-                
-                console.log(tabulator.panes.utils.shortTime() + " Long poll returns, processing...")
-                xhr.headers = $rdf.Util.getHTTPHeaders(xhr);
-                try {
-                    onChange(patchText);
-                } catch (e) {
-                    console.log("Exception in patch update handler: " + e)
-                    // @@ Where to report error e?
-                }
-                getChanges_LongPoll(doc, onChange); // Queue another one
-                
-            }        
-        };
-        return null; // No error
-
-    }; // end getChanges_LongPoll
-    
-    if (options.longPoll ) {
-        getChanges_LongPoll(doc, onChange);
-    }
-    if (options.SSE) {
-        getChanges_SSE(doc, onChange);
-    }
-    if (options.websockets) {
-        getChanges_WS(doc, onChange);
-    }
-
-}; // subscription
-
-///////////////////////////////// End of subscription stufff 
-
-
 
 
     
@@ -246,7 +46,6 @@ tabulator.panes.register( {
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var div = dom.createElement("div")
         div.setAttribute('class', 'issuePane');
-        div.innherHTML='<h1>Issue</h1><p>This is a pane under development</p>';
 
         var commentFlter = function(pred, inverse) {
             if (!inverse && pred.uri == 
@@ -369,7 +168,7 @@ tabulator.panes.register( {
         /////////////////////// Reproduction: Spawn a new instance of this app
         
         var newTrackerButton = function(thisTracker) {
-            return tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
+	    var button = tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
         
                 var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
 
@@ -451,7 +250,9 @@ tabulator.panes.register( {
                 // @@ Set up access control for new config and store. 
                 
             }); // callback to newAppInstance
-
+			 
+	    button.setAttribute('style', 'margin: 0.5em 1em;');
+	    return button;
             
         }; // newTrackerButton
 
@@ -460,8 +261,8 @@ tabulator.panes.register( {
 ///////////////////////////////////////////////////////////////////////////////
         
         
-        
-        var updater = new tabulator.rdf.sparqlUpdate(kb);
+        tabulator.updater = tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
+        var updater = tabulator.updater;
 
  
         var plist = kb.statementsMatching(subject)
@@ -499,6 +300,228 @@ tabulator.panes.register( {
                 refreshTree(root.children[i]);
             }
         }
+        
+        // All the UI for a single issue, without store load or listening for changes
+        //
+        var singleIssueUI = function(subject, div) {
+        
+            var ns = tabulator.ns
+            var predicateURIsDone = {};
+            var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
+            donePredicate(ns.rdf('type'));
+            donePredicate(ns.dc('title'));
+
+
+            var setPaneStyle = function() {
+                var types = kb.findTypeURIs(subject);
+                var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
+                var backgroundColor = null;
+                for (var uri in types) {
+                    backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
+                    if (backgroundColor) break;
+                }
+                backgroundColor = backgroundColor ? backgroundColor.value : '#eee'; // default grey
+                mystyle += "background-color: " + backgroundColor + "; ";
+                div.setAttribute('style', mystyle);
+            }
+            setPaneStyle();
+            
+            var stateStore = kb.any(tracker, WF('stateStore'));
+            var store = kb.sym(subject.uri.split('#')[0]);
+
+            // Unfinished -- need this for speed to save the reloadStore below
+            var incommingPatch = function(text) {
+                var contentType = xhr.headers['content-type'].trim();
+                var patchKB = $rdf.graph();
+                $rdf.parse(patchText, patchKB, doc.uri, contentType);
+                // @@ TBC: check this patch isn't one of ours
+                // @@ TBC: kb.applyPatch();  @@@@@ code me
+                setPaneStyle();
+                refreshTree(div);
+            }
+
+            tabulator.panes.utils.checkUserSetMe(stateStore);
+
+            
+            var states = kb.any(tracker, WF('issueClass'));
+            if (!states) throw 'This tracker '+tracker+' has no issueClass';
+            var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
+                    if (ok) {
+                        setModifiedDate(store, kb, store);
+                        refreshTree(div);
+                    }
+                    else console.log("Failed to change state:\n"+body);
+                })
+            div.appendChild(select);
+
+
+            var cats = kb.each(tracker, WF('issueCategory')); // zero or more
+            for (var i=0; i<cats.length; i++) {
+                div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
+                        kb, subject, cats[i], store, function(ok,body){
+                    if (ok) {
+                        setModifiedDate(store, kb, store);
+                        refreshTree(div);
+                    }
+                    else console.log("Failed to change category:\n"+body);
+                }));
+            }
+            
+            var a = dom.createElement('a');
+            a.setAttribute('href',tracker.uri);
+            a.setAttribute('style', 'float:right');
+            div.appendChild(a).textContent = tabulator.Util.label(tracker);
+            a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
+            donePredicate(ns.wf('tracker'));
+
+
+            div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
+                store, function(ok,body){
+                    if (ok) setModifiedDate(store, kb, store);
+                    else console.log("Failed to description:\n"+body);
+                }));
+            donePredicate(WF('description'));
+
+
+
+            // Assigned to whom?
+            
+            var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
+            if (assignments.length > 1) {
+                say("Weird, was assigned to more than one person. Fixing ..");
+                var deletions = assignments.slice(1);
+                updater.update(deletions, [], function(uri, ok, body){
+                    if (ok) {
+                        say("Now fixed.")
+                    } else {
+                        complain("Fixed failed: " + body)
+                    }
+                });
+
+                // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
+            }
+            
+            var assignee = assignments.length ? assignments[0].object : null;
+            // Who could be assigned to this?
+            // Anyone assigned to any issue we know about  @@ should be just for this tracker
+            var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
+            var devs = sts.map(function(st){return st.object});
+            // Anyone who is a developer of any project which uses this tracker
+            var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
+            if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
+            if (devs.length) {
+                devs.map(function(person){tabulator.fetcher.lookUpThing(person)}); // best effort async for names etc
+                var opts = { 'mint': "** Add new person **",
+                            'nullLabel': "(unassigned)",
+                            'mintStatementsFun': function(newDev) {
+                                var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
+                                if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
+                                return sts;
+                            }};
+                div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
+                    subject, ns.wf('assignee'), devs, opts, store,
+                    function(ok,body){
+                        if (ok) setModifiedDate(store, kb, store);
+                        else console.log("Failed to description:\n"+body);
+                    }));
+            }
+            donePredicate(ns.wf('assignee'));
+
+
+            if ( getOption(tracker, 'allowSubIssues')) {
+                // Sub issues
+                tabulator.outline.appendPropertyTRs(div, plist, false,
+                    function(pred, inverse) {
+                        if (!inverse && pred.sameTerm(WF('dependent'))) return true;
+                        return false
+                    });
+
+                // Super issues
+                tabulator.outline.appendPropertyTRs(div, qlist, true,
+                    function(pred, inverse) {
+                        if (inverse && pred.sameTerm(WF('dependent'))) return true;
+                        return false
+                    });
+                donePredicate(WF('dependent'));
+            }
+
+            div.appendChild(dom.createElement('br'));
+
+            if (getOption(tracker, 'allowSubIssues')) {
+                var b = dom.createElement("button");
+                b.setAttribute("type", "button");
+                div.appendChild(b)
+                classLabel = tabulator.Util.label(states);
+                b.innerHTML = "New sub "+classLabel;
+                b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+                b.addEventListener('click', function(e) {
+                    div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
+            };
+
+            var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
+            if (extrasForm) {
+                tabulator.panes.utils.appendForm(dom, div, {},
+                            subject, extrasForm, stateStore, complainIfBad);
+                var fields = kb.each(extrasForm, ns.ui('part'));
+                fields.map(function(field) {
+                    var p = kb.any(field, ns.ui('property'));
+                    if (p) {
+                        donePredicate(p); // Check that one off
+                    }
+                });
+                
+            };
+            
+            //   Comment/discussion area
+            
+            var spacer = div.appendChild(dom.createElement('tr'));
+	    spacer.setAttribute('style','height: 1em');  // spacer and placeHolder
+			
+            var messageStore = kb.any(tracker, ns.wf('messageStore'));
+            if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));
+	    kb.fetcher.nowOrWhenFetched(messageStore, function(ok, body, xhr){
+		if (!ok) {
+		    var er = dom.createElement('p')
+		    er.textContent = body; // @@ use nice error message
+		    div.insertBefore(er, spacer);
+		} else {
+		    var discussion = tabulator.panes.utils.messageArea(
+			dom, kb, subject, messageStore)
+		    div.insertBefore(discussion, spacer);
+		}
+	    })
+	    donePredicate(ns.wf('message'));
+			 
+			 
+            // Remaining properties
+	    var plist = kb.statementsMatching(subject)
+	    var qlist = kb.statementsMatching(undefined, undefined, subject)
+
+            tabulator.outline.appendPropertyTRs(div, plist, false,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+            tabulator.outline.appendPropertyTRs(div, qlist, true,
+                function(pred, inverse) {
+                    return !(pred.uri in predicateURIsDone)
+                });
+                
+            var refreshButton = dom.createElement('button');
+            refreshButton.textContent = "refresh";
+            refreshButton.addEventListener('click', function(e) {
+                tabulator.fetcher.unload(messageStore);
+                tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
+                    if (!ok) {
+                        console.log("Cant refresh messages" + body);
+                    } else {
+                        refreshTree(div);
+                        // syncMessages(subject, messageTable);
+                    };
+                });
+            }, false);
+	    refreshButton.setAttribute('style', 'margin: 0.5em 1em;');
+            div.appendChild(refreshButton);
+        }; // singleIssueUI
 
 
 
@@ -511,239 +534,16 @@ tabulator.panes.register( {
             
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
-            tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane(ok, body) {
-                if (!ok) return console.log("Failed to load " + trackerURI + ' '+body);
-                var ns = tabulator.ns
-                var predicateURIsDone = {};
-                var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
-                donePredicate(ns.rdf('type'));
-                donePredicate(ns.dc('title'));
-
-
-                var setPaneStyle = function() {
-                    var types = kb.findTypeURIs(subject);
-                    var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
-                    var backgroundColor = null;
-                    for (var uri in types) {
-                        backgroundColor = kb.any(kb.sym(uri), kb.sym('http://www.w3.org/ns/ui#backgroundColor'));
-                        if (backgroundColor) break;
-                    }
-                    backgroundColor = backgroundColor ? backgroundColor.value : '#eee'; // default grey
-                    mystyle += "background-color: " + backgroundColor + "; ";
-                    div.setAttribute('style', mystyle);
-                }
-                setPaneStyle();
-                
+            tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane1(ok, body) {
+                if (!ok) return console.log("Failed to load config " + trackerURI + ' '+body);
                 var stateStore = kb.any(tracker, WF('stateStore'));
-                var store = kb.sym(subject.uri.split('#')[0]);
-/*                if (stateStore != undefined && store.uri != stateStore.uri) {
-                    console.log('(This bug is not stored in the default state store)')
-                }
-*/
 
-                // Unfinished -- need this for speed to save the reloadStore below
-                var incommingPatch = function(text) {
-                    var contentType = xhr.headers['content-type'].trim();
-                    var patchKB = $rdf.graph();
-                    $rdf.parse(patchText, patchKB, doc.uri, contentType);
-                    // @@ TBC: check this patch isn't one of ours
-                    // @@ TBC: kb.applyPatch();  @@@@@ code me
-                    setPaneStyle();
-                    refreshTree(div);
-                }
-
-
-                var subopts = { 'longPoll': true };
-                $rdf.subscription(subopts, stateStore, function() {
-                    reloadStore(stateStore, function(deltaText) {
-                        setPaneStyle();
-                        refreshTree(div);
-                    });
+                tabulator.fetcher.nowOrWhenFetched(stateStore, subject, function drawIssuePane2(ok, body) {
+                    if (!ok) return console.log("Failed to load state " + stateStore + ' '+body);
+                    
+                    singleIssueUI(subject, div);
+                    updater.addDownstreamChangeListener(stateStore, function() {refreshTree(div)}); // Live update
                 });
-
-
-
-                tabulator.panes.utils.checkUserSetMe(stateStore);
-
-                
-                var states = kb.any(tracker, WF('issueClass'));
-                if (!states) throw 'This tracker '+tracker+' has no issueClass';
-                var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
-                        if (ok) {
-                            setModifiedDate(store, kb, store);
-                            refreshTree(div);
-                        }
-                        else console.log("Failed to change state:\n"+body);
-                    })
-                div.appendChild(select);
-
-
-                var cats = kb.each(tracker, WF('issueCategory')); // zero or more
-                for (var i=0; i<cats.length; i++) {
-                    div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
-                            kb, subject, cats[i], store, function(ok,body){
-                        if (ok) {
-                            setModifiedDate(store, kb, store);
-                            refreshTree(div);
-                        }
-                        else console.log("Failed to change category:\n"+body);
-                    }));
-                }
-                
-                var a = dom.createElement('a');
-                a.setAttribute('href',tracker.uri);
-                a.setAttribute('style', 'float:right');
-                div.appendChild(a).textContent = tabulator.Util.label(tracker);
-                a.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
-                donePredicate(ns.wf('tracker'));
-
-
-                div.appendChild(tabulator.panes.utils.makeDescription(dom, kb, subject, WF('description'),
-                    store, function(ok,body){
-                        if (ok) setModifiedDate(store, kb, store);
-                        else console.log("Failed to description:\n"+body);
-                    }));
-                donePredicate(WF('description'));
-
-
-
-                // Assigned to whom?
-                
-                var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
-                if (assignments.length > 1) {
-                    say("Weird, was assigned to more than one person. Fixing ..");
-                    var deletions = assignments.slice(1);
-                    updater.update(deletions, [], function(uri, ok, body){
-                        if (ok) {
-                            say("Now fixed.")
-                        } else {
-                            complain("Fixed failed: " + body)
-                        }
-                    });
-
-                    // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
-                }
-                
-                var assignee = assignments.length ? assignments[0].object : null;
-                // Who could be assigned to this?
-                // Anyone assigned to any issue we know about  @@ should be just for this tracker
-                var sts = kb.statementsMatching(undefined,  ns.wf('assignee'));
-                var devs = sts.map(function(st){return st.object});
-                // Anyone who is a developer of any project which uses this tracker
-                var proj = kb.any(undefined, ns.doap('bug-database'), tracker);
-                if (proj) devs = devs.concat(kb.each(proj, ns.doap('developer')));
-                if (devs.length) {
-                    devs.map(function(person){tabulator.fetcher.lookUpThing(person)}); // best effort async for names etc
-                    var opts = { 'mint': "** Add new person **",
-                                'nullLabel': "(unassigned)",
-                                'mintStatementsFun': function(newDev) {
-                                    var sts = [ $rdf.st(newDev, ns.rdf('type'), ns.foaf('Person'))];
-                                    if (proj) sts.push($rdf.st(proj, ns.doap('developer'), newDev))
-                                    return sts;
-                                }};
-                    div.appendChild(tabulator.panes.utils.makeSelectForOptions(dom, kb,
-                        subject, ns.wf('assignee'), devs, opts, store,
-                        function(ok,body){
-                            if (ok) setModifiedDate(store, kb, store);
-                            else console.log("Failed to description:\n"+body);
-                        }));
-                }
-                donePredicate(ns.wf('assignee'));
-
-
-                if ( getOption(tracker, 'allowSubIssues')) {
-                    // Sub issues
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(WF('dependent'))) return true;
-                            return false
-                        });
-
-                    // Super issues
-                    tabulator.outline.appendPropertyTRs(div, qlist, true,
-                        function(pred, inverse) {
-                            if (inverse && pred.sameTerm(WF('dependent'))) return true;
-                            return false
-                        });
-                    donePredicate(WF('dependent'));
-                }
-
-                div.appendChild(dom.createElement('br'));
-
-                if (getOption(tracker, 'allowSubIssues')) {
-                    var b = dom.createElement("button");
-                    b.setAttribute("type", "button");
-                    div.appendChild(b)
-                    classLabel = tabulator.Util.label(states);
-                    b.innerHTML = "New sub "+classLabel;
-                    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
-                    b.addEventListener('click', function(e) {
-                        div.appendChild(newIssueForm(dom, kb, tracker, subject))}, false);
-                };
-
-                var extrasForm = kb.any(tracker, ns.wf('extrasEntryForm'));
-                if (extrasForm) {
-                    tabulator.panes.utils.appendForm(dom, div, {},
-                                subject, extrasForm, stateStore, complainIfBad);
-                    var fields = kb.each(extrasForm, ns.ui('part'));
-                    fields.map(function(field) {
-                        var p = kb.any(field, ns.ui('property'));
-                        if (p) {
-                            donePredicate(p); // Check that one off
-                        }
-                    });
-                    
-                };
-                
-                //   Comment/discussion area
-                
-                var messageStore = kb.any(tracker, ns.wf('messageStore'));
-                if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));                
-                div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
-                donePredicate(ns.wf('message'));
-                
-
-/*
-                // Add in simple comments about the bug - if not already in extras form.
-                if (!predicateURIsDone[ns.rdfs('comment').uri]) {
-                    tabulator.outline.appendPropertyTRs(div, plist, false,
-                        function(pred, inverse) {
-                            if (!inverse && pred.sameTerm(ns.rdfs('comment'))) return true;
-                            return false
-                        });
-                    donePredicate(ns.rdfs('comment'));
-                };
-*/
-                div.appendChild(dom.createElement('tr'))
-                            .setAttribute('style','height: 1em'); // spacer
-                
-                // Remaining properties
-                tabulator.outline.appendPropertyTRs(div, plist, false,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                tabulator.outline.appendPropertyTRs(div, qlist, true,
-                    function(pred, inverse) {
-                        return !(pred.uri in predicateURIsDone)
-                    });
-                    
-                var refreshButton = dom.createElement('button');
-                refreshButton.textContent = "refresh";
-                refreshButton.addEventListener('click', function(e) {
-                    tabulator.fetcher.unload(messageStore);
-                    tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
-                        if (!ok) {
-                            console.log("Cant refresh messages" + body);
-                        } else {
-                            refreshTree(div);
-                            // syncMessages(subject, messageTable);
-                        };
-                    });
-                }, false);
-                div.appendChild(refreshButton);
-
-
-
                     
             });  // End nowOrWhenFetched tracker
 
@@ -833,12 +633,30 @@ tabulator.panes.register( {
                     };
                 });
                 
+                var overlay, overlayTable;
+                
+                var bringUpInOverlay = function(href) {
+                    overlayPane.innerHTML = ''; // clear existing
+                    var button = overlayPane.appendChild(dom.createElement('button'))
+                    button.textContent = 'X';
+                    button.addEventListener('click', function(event){
+                        overlayPane.innerHTML = ''; // clear overlay
+                    })
+                    singleIssueUI(kb.sym(href), overlayPane);
+                }
                         
-                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
-                    'hints': {
-                        '?created': { 'cellFormat': 'shortDate'},
-                        '?state': { 'initialSelection': selectedStates }}} );
+                var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {
+                    query: query,
+                    keyVariable: '?issue', // Charactersic of row
+                    hints: {
+                        '?issue':  { linkFunction: bringUpInOverlay },
+                        '?created': { cellFormat: 'shortDate'},
+                        '?state': { initialSelection: selectedStates }}} );
                 div.appendChild(tableDiv);
+                
+                overlay = div.appendChild(dom.createElement('div'));
+                overlay.setAttribute('style', ' position: absolute; top: 100px; right: 20px; margin: 1em white;');
+                overlayPane = overlay.appendChild(dom.createElement('div')); // avoid stomping on style by pane
 
                 if (tableDiv.refresh) { // Refresh function
                     var refreshButton = dom.createElement('button');
@@ -858,10 +676,12 @@ tabulator.panes.register( {
                     console.log('No refresh function?!');
                 }
                             
-                
+                updater.addDownstreamChangeListener(stateStore, tableDiv.refresh); // Live update
                 
                 
             });
+            
+            
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
             // end of Tracker instance
@@ -888,12 +708,9 @@ tabulator.panes.register( {
                 console.log("(Logged out)")
                 me = null;
             }
-        });
-        
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end
-
+        });        
+        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;'); 
         div.appendChild(loginOutButton);
-        
         
         return div;
 

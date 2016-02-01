@@ -1,4 +1,4 @@
-/* -*- coding: utf-8-dos -*-
+    /* -*- coding: utf-8-dos -*-
 @@No DOS CRLF please
 
      Outline Mode
@@ -67,7 +67,7 @@ tabulator.OutlineObject = function(doc) {
     //var selection = []  // Array of statements which have been selected
     this.focusTd; //the <td> that is being observed
     this.UserInput=new UserInput(this);
-    this.clipboardAddress="tabulator:clipboard";
+    this.clipboardAddress="tabulator:clipboard"; // Weird
     this.UserInput.clipboardInit(this.clipboardAddress);
     var outlineElement=this.outlineElement;
      
@@ -148,9 +148,12 @@ tabulator.OutlineObject = function(doc) {
     } //benchmark
     
     ///////////////////////// Representing data
+    
     //  Represent an object in summary form as a table cell
+    
     function appendRemoveIcon(node, subject, removeNode) {
         var image = tabulator.Util.AJARImage(tabulator.Icon.src.icon_remove_node, 'remove',undefined, myDocument)
+        image.addEventListener('click', remove_nodeIconMouseDownListener)
         // image.setAttribute('align', 'right')  Causes icon to be moved down
         image.node = removeNode
         image.setAttribute('about', subject.toNT())
@@ -180,30 +183,36 @@ tabulator.OutlineObject = function(doc) {
         var docuri = tabulator.rdf.uri.docpart(uri);
         if (docuri.slice(0,5) != 'http:') return '';
         var state = sf.getState(docuri);
-        var icon, alt;
+        var icon, alt, listener;
         switch (state) {
             case 'unrequested': 
                 icon = tabulator.Icon.src.icon_unrequested;
                 alt = 'fetch';
+                listener = unrequestedIconMouseDownListener;
             break;
             case 'requested':
                 icon = tabulator.Icon.src.icon_requested;
                 alt = 'fetching';
+                listener = failedIconMouseDownListener; // new: can retry yello blob
             break;
             case 'fetched':
                 icon = tabulator.Icon.src.icon_fetched;
+                listener = fetchedIconMouseDownListener;
                 alt = 'loaded';
             break;
             case 'failed':
                 icon = tabulator.Icon.src.icon_failed;
                 alt = 'failed';
+                listener = failedIconMouseDownListener;
             break;
             case 'unpermitted':
                 icon = tabulator.Icon.src.icon_failed;
+                listener = failedIconMouseDownListener;
                 alt = 'no perm';
             break;
             case 'unfetchable':
                 icon = tabulator.Icon.src.icon_failed;
+                listener = failedIconMouseDownListener;
                 alt = 'cannot fetch';
             break;
             default:
@@ -305,6 +314,7 @@ tabulator.OutlineObject = function(doc) {
     this.outline_objectTD = function outline_objectTD(obj, view, deleteNode, statement) {
         // tabulator.log.info("@outline_objectTD, myDocument is now " + this.document.location);
         var td = myDocument.createElement('td');
+        td.setAttribute('notSelectable','false');
         var theClass = "obj";
                 
         // check the IPR on the data.  Ok if there is any checked license which is one the document has.
@@ -320,7 +330,7 @@ tabulator.OutlineObject = function(doc) {
             for (i=0; i< licenses.length; i++) {
                 for (j=0; j<tabulator.options.checkedLicenses.length; j++) {
                     if (tabulator.options.checkedLicenses[j] && (licenses[i].uri == licenseURI[j])) {                
-                        theClass += ' licOkay';
+                        theClass += ' licOkay'; // icon_expand
                         break;
                     }
                 }
@@ -335,13 +345,11 @@ tabulator.OutlineObject = function(doc) {
                     obj.value.slice(0,7) == 'http://'))) {
             td.setAttribute('about', obj.toNT());
             td.appendChild(tabulator.Util.AJARImage(
-                tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument));
+                tabulator.Icon.src.icon_expand, 'expand',undefined,myDocument)
+                ).addEventListener('click', expandMouseDownListener)
         }
         td.setAttribute('class', theClass);      //this is how you find an object
-        // tabulator.log.info('class on '+td)
         var check = td.getAttribute('class')
-        // tabulator.log.info('td has class:' + check)
-        // tabulator.log.info("selection has " +selection.map(function(item){return item.textContent;}).join(", "));             
          
         if (kb.whether(obj, tabulator.ns.rdf('type'), tabulator.ns.link('Request')))
             td.className='undetermined'; //@@? why-timbl
@@ -378,6 +386,7 @@ tabulator.OutlineObject = function(doc) {
 	        td.appendChild(inquiry_span);
             }
         }
+        td.addEventListener('click', selectable_TD_ClickListener);
         return td;
     } //outline_objectTD
     
@@ -419,18 +428,10 @@ tabulator.OutlineObject = function(doc) {
         //set DOM methods
         td_p.tabulatorSelect = function (){setSelected(this,true);};
         td_p.tabulatorDeselect = function(){setSelected(this,false);}; 
+        td_p.addEventListener('click', selectable_TD_ClickListener);
         return td_p;              
     } //outline_predicateTD
-/*
-    ///////////////// Represent an arbirary subject by its properties
-    //These are public variables ---  @@@@ ugh
-    expandedHeaderTR.tr = myDocument.createElement('tr');
-    expandedHeaderTR.td = myDocument.createElement('td');
-    expandedHeaderTR.td.setAttribute('colspan', '2');
-    expandedHeaderTR.td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument));
-    expandedHeaderTR.td.appendChild(myDocument.createElement('strong'));
-    expandedHeaderTR.tr.appendChild(expandedHeaderTR.td);
-*/
+
     function makeExpandedHeaderTR(myDocument) {
         return tr;
     };
@@ -438,8 +439,11 @@ tabulator.OutlineObject = function(doc) {
     function expandedHeaderTR(subject, requiredPane) {
         var tr = myDocument.createElement('tr');
         var td = myDocument.createElement('td');
+        td.setAttribute('notSelectable','false');
+
         td.setAttribute('colspan', '2');
-        td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument));
+        td.appendChild(tabulator.Util.AJARImage(tabulator.Icon.src.icon_collapse, 'collapse',undefined,myDocument)
+            ).addEventListener('click', collapseMouseDownListener);
         td.appendChild(myDocument.createElement('strong'));
         tr.appendChild(td);
 
@@ -529,7 +533,7 @@ tabulator.OutlineObject = function(doc) {
                             paneDiv.pane = pane;
                         }
                         ico.setAttribute('class', state) // set the button state
-                        // outline_expand(p, subject, internalPane, true); //  pane, already
+                        // outline_expand(p, subject, { 'pane': internalPane, 'already': true}); //  pane, already
 
                     
                     
@@ -792,6 +796,7 @@ tabulator.OutlineObject = function(doc) {
                 if (show<predDups){ //Add the x more <TR> here
                     var moreTR=myDocument.createElement('tr');
                     var moreTD=moreTR.appendChild(myDocument.createElement('td'));
+                    moreTD.setAttribute('notSelectable','false');
                     if (predDups>n){ //what is this for??
                         var small=myDocument.createElement('a');
                         moreTD.appendChild(small);
@@ -849,7 +854,7 @@ tabulator.OutlineObject = function(doc) {
         td.style.width = '0px';
         return td
     }
-    termWidget.addIcon = function (td, icon) {
+    termWidget.addIcon = function (td, icon, listener) {
         var iconTD = td.childNodes[1];
         if (!iconTD) return;
         var width = iconTD.style.width;
@@ -858,6 +863,9 @@ tabulator.OutlineObject = function(doc) {
         width = width + icon.width;
         iconTD.style.width = width+'px';
         iconTD.appendChild(img);
+        if (listener) {
+            img.addEventListener('click', listener)
+        }
     }
     termWidget.removeIcon = function (td, icon) {
         var iconTD = td.childNodes[1];
@@ -879,9 +887,9 @@ tabulator.OutlineObject = function(doc) {
             }
         }
     }
-    termWidget.replaceIcon = function (td, oldIcon, newIcon) {
+    termWidget.replaceIcon = function (td, oldIcon, newIcon, listener) {
             termWidget.removeIcon (td, oldIcon)
-            termWidget.addIcon (td, newIcon)
+            termWidget.addIcon (td, newIcon, listener)
     }   
     
     
@@ -989,25 +997,45 @@ tabulator.OutlineObject = function(doc) {
         return false
     }
 
+    // These woulkd be simpler using closer variables below
+    function optOnIconMouseDownListener(e) { // tabulator.Icon.src.icon_opton  needed?
+        var target = thisOutline.targetOf(e);  
+        var p = target.parentNode;
+        termWidget.replaceIcon(p.parentNode,
+            tabulator.Icon.termWidgets.optOn,
+            tabulator.Icon.termWidgets.optOff, optOffIconMouseDownListener);
+        p.parentNode.parentNode.removeAttribute('optional');
+    }
+    
+    function optOffIconMouseDownListener(e) { // tabulator.Icon.src.icon_optoff needed?
+        var target = thisOutline.targetOf(e);  
+        var p = target.parentNode;
+        termWidget.replaceIcon(p.parentNode,
+            tabulator.Icon.termWidgets.optOff,
+            tabulator.Icon.termWidgets.optOn, optOnIconMouseDownListener);
+        p.parentNode.parentNode.setAttribute('optional','true');
+    }
+    
+
     function setSelectedParent(node, inc) {
         var onIcon = tabulator.Icon.termWidgets.optOn;
-            var offIcon = tabulator.Icon.termWidgets.optOff;
-            for (var n = node; n.parentNode; n=n.parentNode)
-            {
-            while (true)
-            {
-                if (n.getAttribute('predTR'))
-                {
+        var offIcon = tabulator.Icon.termWidgets.optOff;
+        for (var n = node; n.parentNode; n=n.parentNode) {
+            while (true) {
+                if (n.getAttribute('predTR')) {
                     var num = n.getAttribute('parentOfSelected')
                     if (!num) num = 0;
                     else num = parseInt(num);
-                    if (num==0 && inc>0) termWidget.addIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
+                    if (num==0 && inc>0) {
+                        termWidget.addIcon(n.childNodes[0],
+                            n.getAttribute('optional') ? onIcon : offIcon,
+                            n.getAttribute('optional') ? optOnIconMouseDownListener : optOffIconMouseDownListener)
+                    }
                     num = num+inc;
                     n.setAttribute('parentOfSelected',num)
-                    if (num==0) 
-                    {
+                    if (num==0) {
                         n.removeAttribute('parentOfSelected')
-                        termWidget.removeIcon(n.childNodes[0],n.getAttribute('optional')?onIcon:offIcon)
+                        termWidget.removeIcon(n.childNodes[0], n.getAttribute('optional')?onIcon:offIcon)
                     }
                     break;
                 }
@@ -1129,7 +1157,7 @@ tabulator.OutlineObject = function(doc) {
     }
     
     /////////  Hiding
-
+/*
     this.AJAR_hideNext = function(event) {
         var target = tabulator.Util.getTarget(event)
         var div = target.parentNode.nextSibling
@@ -1143,8 +1171,8 @@ tabulator.OutlineObject = function(doc) {
             target.src = tabulator.Icon.src.icon_collapse
         }
     }
-
-    this.TabulatorDoubleClick =function(event) {
+*/
+    this.TabulatorDoubleClick =function(event) { // used??
         var target = tabulator.Util.getTarget(event);
         var tname = target.tagName;
         tabulator.log.debug("TabulatorDoubleClick: " + tname + " in "+target.parentNode.tagName);
@@ -1336,7 +1364,7 @@ tabulator.OutlineObject = function(doc) {
                     if (selectedTd.firstChild.tagName!='TABLE'){//not expanded
                         sf.addCallback('done',setSelectedAfterward);
                         sf.addCallback('fail',setSelectedAfterward);
-                        outline_expand(selectedTd, obj, tabulator.panes.defaultPane);
+                        outline_expand(selectedTd, obj, { 'pane': tabulator.panes.defaultPane});
                     }
                     setSelectedAfterward();                   
                 }
@@ -1394,7 +1422,7 @@ tabulator.OutlineObject = function(doc) {
             if (PosY<window.scrollY+54) tabulator.Util.getEyeFocus(selection[0],true,undefined,window);
         }
     };
-    this.OutlinerMouseclickPanel=function(e){
+    this.OutlinerMouseclickPanel = function(e){
         switch(thisOutline.UserInput._tabulatorMode){
             case 0:
                 TabulatorMousedown(e);
@@ -1417,6 +1445,199 @@ tabulator.OutlineObject = function(doc) {
     // refocus
     // select
     // visit/open a page    
+    
+    function expandMouseDownListener(e) { // For icon tabulator.Icon.src.icon_expand
+        var target = thisOutline.targetOf(e);
+        var p = target.parentNode;
+        var subject = tabulator.Util.getAbout(kb, target);
+        var pane = e.altKey? tabulator.panes.internalPane : undefined; // set later: was tabulator.panes.defaultPane
+
+        if (e.shiftKey) { // Shift forces a refocuss - bring this to the top
+            outline_refocus(p, subject, pane);
+        } else {
+            if (e.altKey) { // To investigate screwups, dont wait show internals
+                outline_expand(p, subject,  {'pane': tabulator.panes.internalPane, 'immediate': true});
+            } else {
+                outline_expand(p, subject);
+            }
+        }
+    }
+    
+    function collapseMouseDownListener(e) { // for icon tabulator.Icon.src.icon_collapse
+        var target = thisOutline.targetOf(e);
+        var subject = tabulator.Util.getAbout(kb, target);
+        var pane = e.altKey? tabulator.panes.internalPane : undefined;
+        var p = target.parentNode;
+        outline_collapse(p, subject,  pane);
+    }
+    
+    function failedIconMouseDownListener(e) { // tabulator.Icon.src.icon_failed
+        var target = thisOutline.targetOf(e);
+        var uri = target.getAttribute('uri'); // Put on access buttons
+        if (e.altKey) {
+            sf.requestURI(tabulator.rdf.uri.docpart(uri), undefined, { 'force': true }); // Add 'force' bit?
+        } else {
+            sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
+        }
+    }
+    
+    function fetchedIconMouseDownListener(e) { // tabulator.Icon.src.icon_fetched
+        var target = thisOutline.targetOf(e);
+        var uri = target.getAttribute('uri'); // Put on access buttons
+        if (e.altKey) {
+            sf.requestURI(tabulator.rdf.uri.docpart(uri), undefined, { 'force': true })
+        } else {
+            sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
+        }
+    }
+    
+    function unrequestedIconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+        var uri = target.getAttribute('uri'); // Put on access buttons
+        sf.requestURI(tabulator.rdf.uri.docpart(uri))
+    }
+    
+    
+    function  remove_nodeIconMouseDownListener(e) { // icon_remove_node
+        var target = thisOutline.targetOf(e);        
+        var node = target.node;
+        if (node.childNodes.length>1) node=target.parentNode; //parallel outline view @@ Hack
+        removeAndRefresh(node); // @@ update icons for pane?
+    }
+    
+    function  add_tripleIconMouseDownListener(e) { // tabulator.Icon.src.icon_add_triple
+        var target = thisOutline.targetOf(e);        
+        var returnSignal = thisOutline.UserInput.addNewObject(e);
+        if (returnSignal){ //when expand signal returned
+            outline_expand(returnSignal[0],returnSignal[1], { 'pane': internalPane});
+            for (var trIterator = returnSignal[0].firstChild.childNodes[1].firstChild;
+                trIterator; trIterator=trIterator.nextSibling) {
+                var st = trIterator.AJAR_statement;
+                if (!st) continue;
+                if (st.predicate.termType=='collection') break;
+            }
+            thisOutline.UserInput.Click(e,trIterator.lastChild);
+            thisOutline.walk('moveTo',trIterator.lastChild);
+        }
+        //thisOutline.UserInput.clearMenu();
+        e.stopPropagation();
+        e.preventDefault();
+        return;
+    }
+    
+     function  show_choicesIconMouseDownListener(e) { // tabulator.Icon.src.icon_show_choices
+                                            //  A down-traingle like 'collapse'
+                                            // unused ???
+        // Query Error because of getAbout->kb.fromNT
+        var target = thisOutline.targetOf(e);  
+        var p = target.parentNode;
+        var choiceQuery = SPARQLToQuery(
+            "SELECT ?pred\nWHERE{ "+about+ tabulator.ns.link('element')+" ?pred.}");
+        thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
+            choiceQuery,{'clickedTd':p.parentNode});
+    }
+    
+    // Special to Proof explanation pane
+    /*     I think unused 2015-08
+    function  display_reasonsIconMouseDownListener(e) { // tabulator.Icon.src.icon_display_reasons
+        var target = thisOutline.targetOf(e);  
+        if(!tabulator.isExtension) return;
+        var TMS = $rdf.Namespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
+        var st_to_explain = tabulator.Util.ancestor(target, 'TR').AJAR_statement;
+        //the 'explanationID' triples are used to pass the information
+        //about the triple to be explained to the new tab
+        var one_statement_formula = new RDFIndexedFormula();
+        one_statement_formula.statements.push(st_to_explain);
+        var explained = kb.any(one_statement_formula,
+                               TMS('explanationID'));
+        if(!explained){
+            var explained_number = kb.each(undefined, 
+                                   TMS('explanationID')).length;
+            kb.add(one_statement_formula, TMS('explanationID'),
+                   kb.literal(String(explained_number)));
+        } else
+            var explained_number = explained.value;
+
+        //open new tab
+        gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
+    }
+    */
+    
+    function  selectable_TD_ClickListener(e) {
+
+        // Is we are in editing mode already
+        if (thisOutline.UserInput._tabulatorMode) {
+            return thisOutline.UserInput.Click(e);
+        }
+
+        var target = thisOutline.targetOf(e);  
+        // Originallt this was set on the whole tree and could happen anywhere
+        var p = target.parentNode;
+        var node;
+        for (node = tabulator.Util.ancestor(target, 'TD');
+             node && !(node.getAttribute('notSelectable') === 'false'); // Default now is not selectable
+             node = tabulator.Util.ancestor(node.parentNode, 'TD')) {}
+        if (!node) return;
+        
+        
+        
+        //var node = target;
+        
+        var sel = selected(node);
+        var cla = node.getAttribute('class')
+        tabulator.log.debug("Was node selected before: "+sel)
+        if (e.altKey) {
+            setSelected(node, !selected(node))
+        } else if  (e.shiftKey) {
+            setSelected(node, true)
+        } else {
+            //setSelected(node, !selected(node))
+            deselectAll()
+            thisOutline.UserInput.clearInputAndSave(e);   
+            setSelected(node, true)
+            
+            if (e.detail==2){//dobule click -> quit TabulatorMousedown()
+                e.stopPropagation();
+                return;
+            }
+            //if the node is already selected and the correspoding statement is editable,
+            //go to UserInput
+            var st = node.parentNode.AJAR_statement;
+            if (!st) return; // For example in the title TD of an expanded pane
+            var target = st.why;
+            var editable = tabulator.sparql.editable(target.uri, kb);
+            if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
+            // var text="TabulatorMouseDown@Outline()";
+            // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
+        }
+        tabulator.log.debug("Was node selected after: "+selected(node)
+            +", count="+selection.length)
+            var tr = node.parentNode;
+            if (tr.AJAR_statement) {
+                var why = tr.AJAR_statement.why
+                //tabulator.log.info("Information from "+why);
+            }
+        e.stopPropagation();
+        return; //this is important or conflict between deslect and userinput happens
+    }
+    
+    function  IconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+    }
+    
+    
+    function  IconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+    }
+    
+    function  IconMouseDownListener(e) {
+        var target = thisOutline.targetOf(e);        
+    }
+    
+    
+
+
+
     function TabulatorMousedown(e) {
         tabulator.log.info("@TabulatorMousedown, myDocument.location is now " + myDocument.location);
         var target = thisOutline.targetOf(e);
@@ -1429,204 +1650,36 @@ tabulator.OutlineObject = function(doc) {
         if (tname == "INPUT" || tname == "TEXTAREA") {
             return
         }
+        
         //not input then clear
         thisOutline.UserInput.clearMenu();
+        
         //ToDo:remove this and recover X
         if (thisOutline.UserInput.lastModified&&
             thisOutline.UserInput.lastModified.parentNode.nextSibling) thisOutline.UserInput.backOut();
-        if (tname != "IMG") {
-            /*
-            if(about && myDocument.getElementById('UserURI')) { 
-                myDocument.getElementById('UserURI').value = 
-                     (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-            } else if(about && tabulator.isExtension) {
-                var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
-                tabStatusBar.setAttribute('style','display:block');
-                tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
-                if(tabStatusBar.label=="") {
-                    tabStatusBar.setAttribute('style','display:none');
-                }
-            }
-            */
-            var node;
-            for (node = tabulator.Util.ancestor(target, 'TD');
-                 node && node.getAttribute('notSelectable');
-                 node = tabulator.Util.ancestor(node.parentNode, 'TD')) {}
-            if (!node) return;
-            var sel = selected(node);
-            var cla = node.getAttribute('class')
-            tabulator.log.debug("Was node selected before: "+sel)
-            if (e.altKey) {
-                setSelected(node, !selected(node))
-            } else if  (e.shiftKey) {
-                setSelected(node, true)
-            } else {
-                //setSelected(node, !selected(node))
-                deselectAll()
-                thisOutline.UserInput.clearInputAndSave(e);   
-                setSelected(node, true)
-                
-                if (e.detail==2){//dobule click -> quit TabulatorMousedown()
-                    e.stopPropagation();
-                    return;
-                }
-                //if the node is already selected and the correspoding statement is editable,
-                //go to UserInput
-                var st = node.parentNode.AJAR_statement;
-                if (!st) return; // For example in the title TD of an expanded pane
-                var target = st.why;
-                var editable = tabulator.sparql.editable(target.uri, kb);
-                if (sel && editable) thisOutline.UserInput.Click(e, selection[0]); // was next 2 lines
-                // var text="TabulatorMouseDown@Outline()";
-                // HCIoptions["able to edit in Discovery Mode by mouse"].setupHere([sel,e,thisOutline,selection[0]],text); 
-            }
-            tabulator.log.debug("Was node selected after: "+selected(node)
-                +", count="+selection.length)
-                var tr = node.parentNode;
-                if (tr.AJAR_statement) {
-                    var why = tr.AJAR_statement.why
-                    //tabulator.log.info("Information from "+why);
-                }
-            e.stopPropagation();
-            return; //this is important or conflict between deslect and userinput happens
-        } else { // IMG
-            var tsrc = target.src
-            var outer
-            var i = tsrc.indexOf('/icons/')
-            //TODO: This check could definitely be made cleaner.
-            // if (i >=0 && tsrc.search('chrome://tabulator/content/icons') == -1) tsrc=tsrc.slice(i+1) // get just relative bit we use
-            tabulator.log.debug("\nEvent: You clicked on an image, src=" + tsrc)
-            tabulator.log.debug("\nEvent: about=" + about)
-									   
-										//@@ What's the reason for the following check?	  
-            if (!about && tsrc!=tabulator.Icon.src.icon_add_new_triple
-		       && tsrc!=tabulator.Icon.src.icon_display_reasons) {
-                //alert("No about attribute");
-                return;
-            }
-            var subject = about;
-            tabulator.log.debug("TabulatorMousedown: subject=" + subject);
-            
-            switch (tsrc) {
-            case tabulator.Icon.src.icon_expand:
-            case tabulator.Icon.src.icon_collapse:
-                var pane = e.altKey? tabulator.panes.internalPane : undefined; // set later: was tabulator.panes.defaultPane
-                var mode = e.shiftKey ? outline_refocus :
-                    (tsrc == tabulator.Icon.src.icon_expand ? outline_expand : outline_collapse);
-                mode(p, subject, pane);
-                break;
-                //  case Icon.src.icon_visit:
-                //emptyNode(p.parentNode).appendChild(documentContentTABLE(subject));
-                //document.url = subject.uri;   // How to jump to new page?
-                //var newWin = window.open(''+subject.uri,''+subject.uri,'width=500,height=500,resizable=1,scrollbars=1');
-                //newWin.focus();
-                //break;
-            case tabulator.Icon.src.icon_failed:
-            case tabulator.Icon.src.icon_fetched:
-                var uri = target.getAttribute('uri'); // Put on access buttons
-                sf.refresh(kb.sym(tabulator.rdf.uri.docpart(uri))); // just one
-                // sf.objectRefresh(subject);
-                break;
-            case tabulator.Icon.src.icon_unrequested:
-                var uri = target.getAttribute('uri'); // Put on access buttons
-                if (!uri) alert('Interal error: No URI on unrequested icon! @@');
-                sf.requestURI(tabulator.rdf.uri.docpart(uri))
-                // if (subject.uri) sf.lookUpThing(subject);
-                break;
-            case tabulator.Icon.src.icon_opton:
-            case tabulator.Icon.src.icon_optoff:
-                oldIcon = (tsrc==tabulator.Icon.src.icon_opton)? tabulator.Icon.termWidgets.optOn : tabulator.Icon.termWidgets.optOff;
-                newIcon = (tsrc==tabulator.Icon.src.icon_opton)? tabulator.Icon.termWidgets.optOff : tabulator.Icon.termWidgets.optOn;
-                termWidget.replaceIcon(p.parentNode,oldIcon,newIcon);
-                if (tsrc==tabulator.Icon.src.icon_opton)
-                    p.parentNode.parentNode.removeAttribute('optional');
-                else p.parentNode.parentNode.setAttribute('optional','true');
-                break;
-            case tabulator.Icon.src.icon_remove_node:
-                var node = target.node;
-                if (node.childNodes.length>1) node=target.parentNode; //parallel outline view @@ Hack
-                removeAndRefresh(node); // @@ update icons for pane?
-                
-                break;
-            case tabulator.Icon.src.icon_map:
-                var node = target.node;
-                    setSelected(node, true);
-                    viewAndSaveQuery();
-                break;
-            case tabulator.Icon.src.icon_add_triple:
-                var returnSignal=thisOutline.UserInput.addNewObject(e);
-                if (returnSignal){ //when expand signal returned
-                    outline_expand(returnSignal[0],returnSignal[1],internalPane);
-                    for (var trIterator=returnSignal[0].firstChild.childNodes[1].firstChild;
-                        trIterator; trIterator=trIterator.nextSibling) {
-                        var st=trIterator.AJAR_statement;
-                        if (!st) continue;
-                        if (st.predicate.termType=='collection') break;
-                    }
-                    thisOutline.UserInput.Click(e,trIterator.lastChild);
-                    thisOutline.walk('moveTo',trIterator.lastChild);
-                }
-                //thisOutline.UserInput.clearMenu();
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-                break;
-            case tabulator.Icon.src.icon_add_new_triple:
-                thisOutline.UserInput.addNewPredicateObject(e);
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-                break;     
-            case tabulator.Icon.src.icon_show_choices: // @what is this? A down-traingle like 'collapse'
-                /*  SELECT ?pred 
-                            WHERE{
-                            about tabont:element ?pred.
-                                }
-                */
-                // Query Error because of getAbout->kb.fromNT
-                var choiceQuery=SPARQLToQuery(
-                    "SELECT ?pred\nWHERE{ "+about+ tabulator.ns.link('element')+" ?pred.}");
-                thisOutline.UserInput.showMenu(e,'LimitedPredicateChoice',
-                    choiceQuery,{'clickedTd':p.parentNode});
-                break;
-            case tabulator.Icon.src.icon_display_reasons:
-                if(!tabulator.isExtension) return;
-                var TMS = RDFNamespace('http://dig.csail.mit.edu/TAMI/2007/amord/tms#');
-                var st_to_explain = tabulator.Util.ancestor(target, 'TR').AJAR_statement;
-                //the 'explanationID' triples are used to pass the information
-                //about the triple to be explained to the new tab
-                var one_statement_formula = new RDFIndexedFormula();
-                one_statement_formula.statements.push(st_to_explain);
-                var explained = kb.any(one_statement_formula,
-                                       TMS('explanationID'));
-                if(!explained){
-                    var explained_number = kb.each(undefined, 
-                                           TMS('explanationID')).length;
-                    kb.add(one_statement_formula, TMS('explanationID'),
-                           kb.literal(String(explained_number)));
-                } else
-                    var explained_number = explained.value;
 
-                //open new tab
-                gBrowser.selectedTab = gBrowser.addTab('chrome://tabulator/content/justification.html?explanationID=' + explained_number);
-                break;
-            default:  // Look up any icons for panes
-                // paneButtonClick(@@@)
-           }
-        }  // else IMG
+
         //if (typeof rav=='undefined') //uncommnet this for javascript2rdf
         //have to put this here or this conflicts with deselectAll()
-        if (!target.src||(target.src.slice(target.src.indexOf('/icons/')+1)!=tabulator.Icon.src.icon_show_choices
-                       &&target.src.slice(target.src.indexOf('/icons/')+1)!=tabulator.Icon.src.icon_add_triple))
+        
+        if (!target.src||(target.src.slice(target.src.indexOf('/icons/')+1) != tabulator.Icon.src.icon_show_choices
+                       &&target.src.slice(target.src.indexOf('/icons/')+1) != tabulator.Icon.src.icon_add_triple))
             thisOutline.UserInput.clearInputAndSave(e);
-        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1)!=tabulator.Icon.src.icon_show_choices)        
+            
+        if (!target.src||target.src.slice(target.src.indexOf('/icons/')+1) != tabulator.Icon.src.icon_show_choices)        
             thisOutline.UserInput.clearMenu();
+            
         if (e) e.stopPropagation();
-    } //function
+    } //function TabulatorMousedown
     
 
  
-    function outline_expand(p, subject1, pane, already) {
+    function outline_expand(p, subject1, options) {
+        options = options || {}
+        var pane = options.pane
+        var already = options.already
+        var immediate = options.immediate
+        
         tabulator.log.info("@outline_expand, myDocument is now " + myDocument.location);
         //remove callback to prevent unexpected repaint
         sf.removeCallback('done','expand');
@@ -1663,7 +1716,7 @@ tabulator.OutlineObject = function(doc) {
             }
             try{if (YAHOO.util.Event.off) YAHOO.util.Event.off(p,'mousedown','dragMouseDown');}catch(e){dump("YAHOO")}
             tabulator.Util.emptyNode(p).appendChild(newTable)
-            thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...
+            thisOutline.focusTd=p; //I don't know why I couldn't use 'this'...because not defined in callbacks
             tabulator.log.debug("expand: Node for " + subject + " expanded")
             //fetch seeAlso when render()
             //var seeAlsoStats = sf.store.statementsMatching(subject, tabulator.ns.rdfs('seeAlso'))
@@ -1750,8 +1803,11 @@ tabulator.OutlineObject = function(doc) {
                 return;
             }
         }
-        if (subj_uri) {
+        // dump('outline_expand 1773 subj_uri ' + subj_uri + ' type ' + typeof subj_uri + '\n');
+        if (subj_uri && !immediate) {
             var doc = tabulator.rdf.uri.docpart(subj_uri);
+            //dump('@@@@ Fetching before expanding ' + subj_uri + ' type ' + typeof subj_uri + '\n');
+            if (subject.termType == 'bnode') alert('@@@@@ bnode ' + subj_uri)
             // Wait till at least the main URI is loaded before expanding:
             sf.nowOrWhenFetched(doc, undefined, function(ok, body) {
                 if (ok) {
@@ -1886,8 +1942,8 @@ tabulator.OutlineObject = function(doc) {
 
         if (tabulator.isExtension) newURI = function(spec) {
             // e.g. see http://www.nexgenmedia.net/docs/protocol/
-            const kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
-            const nsIURI = Components.interfaces.nsIURI;
+            var kSIMPLEURI_CONTRACTID = "@mozilla.org/network/simple-uri;1";
+            var nsIURI = Components.interfaces.nsIURI;
             var uri = Components.classes[kSIMPLEURI_CONTRACTID].createInstance(nsIURI);
             uri.spec = spec;
             return uri;
@@ -1895,7 +1951,7 @@ tabulator.OutlineObject = function(doc) {
         var td = GotoSubject_default();
         if (!td) td = GotoSubject_default(); //the first tr is required       
         if (expand) {
-            outline_expand(td, subject, pane);
+            outline_expand(td, subject, { 'pane': pane});
             myDocument.title = tabulator.Util.label(subject);  // "Tabulator: "+  No need to advertize
             tr=td.parentNode;
             tabulator.Util.getEyeFocus(tr,false,undefined,window);//instantly: false
@@ -2023,6 +2079,7 @@ tabulator.OutlineObject = function(doc) {
                 var elt = obj.elements[i];
                 var row = rep.appendChild(myDocument.createElement('tr'));
                 var numcell = row.appendChild(myDocument.createElement('td'));
+                numcell .setAttribute('notSelectable','false')
                 numcell.setAttribute('about', obj.toNT());
                 numcell.innerHTML = (i+1) + ')';
                 row.appendChild(thisOutline.outline_objectTD(elt));
@@ -2154,8 +2211,11 @@ tabulator.OutlineObject = function(doc) {
     var wholeDoc = doc.getElementById('docHTML');
     if (wholeDoc) wholeDoc.addEventListener('keypress',function(e){thisOutline.OutlinerKeypressPanel.apply(thisOutline,[e])},false);
     
+    /*   2015-08-30  Removed this global overal listerner - should have been on individual elelments
+    
     var outlinePart = doc.getElementById('outline');
     if (outlinePart) outlinePart.addEventListener('mousedown',thisOutline.OutlinerMouseclickPanel,false);
+    */
     
     //doc.getElementById('outline').addEventListener('keypress',thisOutline.OutlinerKeypressPanel,false);
     //Kenny: I cannot make this work. The target of keypress is always <html>.

@@ -21,7 +21,7 @@ tabulator.panes.register({
                        'text/html','application/xhtml+xml',
                         'image/png', 'image/jpeg', 'application/pdf'];
  
-        var displayable = function(kb, x, displayables) {
+        var hasContentTypeIn = function(kb, x, displayables) {
             var cts = kb.fetcher.getHeader(x, 'content-type');
             if (cts) {
                 for (var j=0; j<cts.length; j++) {
@@ -35,10 +35,12 @@ tabulator.panes.register({
             return false;
         };
         
+        if (!subject.uri) return null; // no bnodes
+        
         var t = kb.findTypeURIs(subject);
         if (t[ns.link('WebPage').uri]) return "view";
 
-        if (displayable(kb, subject, allowed)) return "View";
+        if (subject.uri && hasContentTypeIn(kb, subject, allowed)) return "View";
 
         return null;
     },

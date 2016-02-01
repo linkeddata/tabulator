@@ -21,6 +21,8 @@ var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
     .getService(Components.interfaces.mozIJSSubScriptLoader);
 
 tabulator.isExtension = true;
+tabulator.mode = 'extension'; // can also be 'webapp'
+
 tabulator.iconPrefix = 'chrome://tabulator/content/';
 
 tabulator.loadScript = function(uri) {
@@ -48,8 +50,10 @@ if (tabulator.jQuery) {
     dump("Hmmm, tabulator.jQuery not defined. Not loading RDFa\n");
     tabulator.loadScript("js/rdf/dist/rdflib.js");
 };
-tabulator.rdf = $rdf;
+    tabulator.rdf = $rdf;
 
+    tabulator.loadScript("js/solid/dist/solid.js"); // Defines Solid
+    
 
 
 //Common code has  stackString used reporting errors in catch() below
@@ -82,6 +86,9 @@ try {
     tabulator.loadScript("js/init/views.js");
 
 /////////// code below was in init-mashup for FF ext is in xpcom.js (which loaded init.js)
+//
+// See ../../../components/xpcom.js
+//
 /*
     tabulator.kb = new tabulator.rdf.IndexedFormula();
     tabulator.sf = tabulator.fetcher = new tabulator.rdf.Fetcher(tabulator.kb); // .sf deprecated
@@ -112,8 +119,8 @@ try {
 
     tabulator.requestUUIDs = {};
 
-    const Cc = Components.classes;
-    const Ci = Components.interfaces;
+    var Cc = Components.classes;
+    var Ci = Components.interfaces;
 
     function CCIN(cName, ifaceName) {
         return Cc[cName].createInstance(Ci[ifaceName]);

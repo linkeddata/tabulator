@@ -1,6 +1,8 @@
 tabulator.ns = {};
 
 
+tabulator.ns.auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#'); // @@ obsolete - use acl:
+tabulator.ns.acl = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
 tabulator.ns.arg = $rdf.Namespace('http://www.w3.org/ns/pim/arg#');
 tabulator.ns.cal = $rdf.Namespace('http://www.w3.org/2002/12/cal/ical#');
 tabulator.ns.contact = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/contact#');
@@ -23,6 +25,7 @@ tabulator.ns.rdf = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
 tabulator.ns.rdfs = $rdf.Namespace('http://www.w3.org/2000/01/rdf-schema#');
 tabulator.ns.rss = $rdf.Namespace('http://purl.org/rss/1.0/');
 tabulator.ns.sched =  $rdf.Namespace('http://www.w3.org/ns/pim/schedule#');
+tabulator.ns.schema =  $rdf.Namespace('http:/schema.org/'); // @@ beware confusion with documents no 303
 tabulator.ns.sioc =  $rdf.Namespace('http://rdfs.org/sioc/ns#');
 // was - tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-');
 tabulator.ns.space = $rdf.Namespace('http://www.w3.org/ns/pim/space#');

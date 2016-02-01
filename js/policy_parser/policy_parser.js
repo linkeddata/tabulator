@@ -24,7 +24,7 @@ function predefined()
 }
 
 function createProgressBar(){
-	const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+	var XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 	var item = document.createElementNS(XUL_NS, "progressmeter"); 
 	item.setAttribute("id", "pm");
 	item.setAttribute("mode", "undetermined");

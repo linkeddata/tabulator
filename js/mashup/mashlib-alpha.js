@@ -26720,6 +26720,7 @@ $rdf.buildTime = "2016-01-14T17:20:52";
     $rdf = this['$rdf'];
 
 // ###### Expanding js/solid/dist/solid.js ##############
+
 /*
 The MIT License (MIT)
 
@@ -26753,448 +26754,584 @@ https://github.com/solid/
 */
 
 // WebID authentication and signup
-var Solid = Solid || {};
-Solid.auth = (function(window) {
-    'use strict';
 
-   // default (preferred) authentication endpoint
-    var authEndpoint = 'https://databox.me/';
-    var signupEndpoint = 'https://solid.github.io/solid-idps/';
+var Solid = Solid || {}
+if (typeof tabulator !== 'undefined') {
+    tabulator.solid = Solid;
+}
+Solid.auth = (function () {
+  'use strict'
 
-    // attempt to find the current user's WebID from the User header if authenticated
-    // resolve(webid) - string
-    var login = function(url) {
-        url = url || window.location.origin+window.location.pathname;
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('HEAD', url);
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200) {
-                        var user = this.getResponseHeader('User');
-                        if (user && user.length > 0 && user.slice(0, 4) == 'http') {
-                            return resolve(user);
-                        }
-                    }
-                    // authenticate to a known endpoint
-                    var http = new XMLHttpRequest();
-                    http.open('HEAD', authEndpoint);
-                    http.withCredentials = true;
-                    http.onreadystatechange = function() {
-                        if (this.readyState == this.DONE) {
-                            if (this.status === 200) {
-                                var user = this.getResponseHeader('User');
-                                if (user && user.length > 0 && user.slice(0, 4) == 'http') {
-                                    return resolve(user);
-                                }
-                            }
-                            return reject({ok: false, status: this.status, body: this.responseText, xhr: this});
-                        }
-                    };
-                    http.send();
-                }
-            };
-            http.send();
-        });
+  // default (preferred) authentication endpoint
+  var authEndpoint = 'https://databox.me/'
+  var signupEndpoint = 'https://solid.github.io/solid-idps/'
 
-        return promise;
-    };
-
-    // Open signup window
-    var signup = function(url) {
-        url = url || signupEndpoint;
-        var leftPosition, topPosition;
-        var width = 1024;
-        var height = 600;
-        // set borders
-        leftPosition = (window.screen.width / 2) - ((width / 2) + 10);
-        // set title and status bars
-        topPosition = (window.screen.height / 2) - ((height / 2) + 50);
-        window.open(url+"?origin="+encodeURIComponent(window.location.origin), "Solid signup", "resizable,scrollbars,status,width="+width+",height="+height+",left="+ leftPosition + ",top=" + topPosition);
-
-        var promise = new Promise(function(resolve, reject) {
-            console.log("Starting listener");
-            listen().then(function(webid) {
-                return resolve(webid);
-            }).catch(function(err){
-                return reject(err);
-            });
-        });
-
-        return promise;
-    };
-
-    // Listen to login messages from child window/iframe
-    var listen = function() {
-        var promise = new Promise(function(resolve, reject){
-            console.log("In listen()");
-            var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
-            var eventListener = window[eventMethod];
-            var messageEvent = eventMethod == "attachEvent" ? "onmessage" : "message";
-            eventListener(messageEvent,function(e) {
-                var u = e.data;
-                if (u.slice(0,5) == 'User:') {
-                    var user = u.slice(5, u.length);
-                    if (user && user.length > 0 && user.slice(0,4) == 'http') {
-                        return resolve(user);
-                    } else {
-                        return reject(user);
-                    }
-                }
-            },true);
-        });
-
-        return promise;
-    };
-
-    // return public methods
-    return {
-        login: login,
-        signup: signup,
-        listen: listen,
-    };
-}(this));
-// Identity / WebID
-var Solid = Solid || {};
-Solid.identity = (function(window) {
-    'use strict';
-
-    // common vocabs
-    var OWL = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
-    var PIM = $rdf.Namespace("http://www.w3.org/ns/pim/space#");
-    var FOAF = $rdf.Namespace("http://xmlns.com/foaf/0.1/");
-
-    // fetch user profile (follow sameAs links) and return promise with a graph
-    // resolve(graph)
-    var getProfile = function(url) {
-        var promise = new Promise(function(resolve) {
-            // Load main profile
-            Solid.web.get(url).then(
-                function(graph) {
-                    // set WebID
-                    var webid = graph.any($rdf.sym(url), FOAF('primaryTopic'));
-                    // find additional resources to load
-                    var sameAs = graph.statementsMatching(webid, OWL('sameAs'), undefined);
-                    var seeAlso = graph.statementsMatching(webid, OWL('seeAlso'), undefined);
-                    var prefs = graph.statementsMatching(webid, PIM('preferencesFile'), undefined);
-                    var toLoad = sameAs.length + seeAlso.length + prefs.length;
-
-                    var checkAll = function() {
-                        if (toLoad === 0) {
-                            return resolve(graph);
-                        }
-                    }
-                    // Load sameAs files
-                    if (sameAs.length > 0) {
-                        sameAs.forEach(function(same){
-                            Solid.web.get(same.object.value, same.object.value).then(
-                                function(g) {
-                                    Solid.utils.appendGraph(graph, g);
-                                    toLoad--;
-                                    checkAll();
-                                }
-                            ).catch(
-                            function(err){
-                                console.log(err);
-                                toLoad--;
-                                checkAll();
-                            });
-                        });
-                    }
-                    // Load seeAlso files
-                    if (seeAlso.length > 0) {
-                        seeAlso.forEach(function(see){
-                            Solid.web.get(see.object.value).then(
-                                function(g) {
-                                    Solid.utils.appendGraph(graph, g, see.object.value);
-                                    toLoad--;
-                                    checkAll();
-                                }
-                            ).catch(
-                            function(err){
-                                console.log(err);
-                                toLoad--;
-                                checkAll();
-                            });
-                        });
-                    }
-                    // Load preferences files
-                    if (prefs.length > 0) {
-                        prefs.forEach(function(pref){
-                            Solid.web.get(pref.object.value).then(
-                                function(g) {
-                                    Solid.utils.appendGraph(graph, g, pref.object.value);
-                                    toLoad--;
-                                    checkAll();
-                                }
-                            ).catch(
-                            function(err){
-                                console.log(err);
-                                toLoad--;
-                                checkAll();
-                            });
-                        });
-                    }
-                }
-            )
-            .catch(
-                function(err) {
-                    console.log("Could not load",url);
-                    resolve(err);
-                }
-            );
-        });
-
-        return promise;
-    };
-
-    // Find the user's workspaces
-    var getWorkspaces = function(webid, graph) {
-        var promise = new Promise(function(resolve, reject){
-            if (!graph) {
-                // fetch profile
-                getProfile(webid).then(function(g) {
-                    return getWorkspaces(webid, g);
-                }).catch(function(err){
-                    reject(err);
-                });
-            } else {
-                // find workspaces
-                console.log(graph);
+  // attempt to find the current user's WebID from the User header if authenticated
+  // resolve(webid) - string
+  function login (url) {
+    url = url || window.location.origin + window.location.pathname
+    var promise = new Promise(function (resolve, reject) {
+      var http = new XMLHttpRequest()
+      http.open('HEAD', url)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200) {
+            var user = this.getResponseHeader('User')
+            if (user && user.length > 0 && user.slice(0, 4) === 'http') {
+              return resolve(user)
             }
-        });
-
-        return promise;
-    };
-
-    // return public methods
-    return {
-        getProfile: getProfile,
-        getWorkspaces: getWorkspaces
-    };
-}(this));
-// Events
-Solid = Solid || {};
-Solid.status = (function(window) {
-    'use strict';
-
-    // Get current online status
-    var isOnline = function() {
-        return window.navigator.onLine;
-    };
-
-    // Is offline
-    var onOffline = function(callback) {
-        window.addEventListener("offline", callback, false);
-    };
-    // Is online
-    var onOnline = function(callback) {
-        window.addEventListener("online", callback, false);
-    };
-
-    // return public methods
-    return {
-        isOnline: isOnline,
-        onOffline: onOffline,
-        onOnline: onOnline,
-    };
-}(this));
-// Helper functions
-var Solid = Solid || {};
-Solid.utils = (function(window) {
-    'use strict';
-
-    // parse a Link header
-    var parseLinkHeader = function(link) {
-        var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g;
-        var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g;
-
-        var matches = link.match(linkexp);
-        var rels = {};
-        for (var i = 0; i < matches.length; i++) {
-            var split = matches[i].split('>');
-            var href = split[0].substring(1);
-            var ps = split[1];
-            var s = ps.match(paramexp);
-            for (var j = 0; j < s.length; j++) {
-                var p = s[j];
-                var paramsplit = p.split('=');
-                var name = paramsplit[0];
-                var rel = paramsplit[1].replace(/["']/g, '');
-                rels[rel] = href;
+          }
+          // authenticate to a known endpoint
+          var http = new XMLHttpRequest()
+          http.open('HEAD', authEndpoint)
+          http.withCredentials = true
+          http.onreadystatechange = function () {
+            if (this.readyState === this.DONE) {
+              if (this.status === 200) {
+                var user = this.getResponseHeader('User')
+                if (user && user.length > 0 && user.slice(0, 4) === 'http') {
+                  return resolve(user)
+                }
+              }
+              return reject({status: this.status, xhr: this})
             }
+          }
+          http.send()
         }
-        return rels;
-    };
+      }
+      http.send()
+    })
 
-    // append statements from one graph object to another
-    var appendGraph = function(toGraph, fromGraph, docURI) {
-        var why = (docURI)?$rdf.sym(docURI):undefined;
-        fromGraph.statementsMatching(undefined, undefined, undefined, why).forEach(function(st) {
-            toGraph.add(st.subject, st.predicate, st.object, st.why);
-        });
-    };
+    return promise
+  }
 
-    return {
-        parseLinkHeader: parseLinkHeader,
-        appendGraph: appendGraph,
-    };
-}(this));
+  // Open signup window
+  function signup (url) {
+    url = url || signupEndpoint
+    var leftPosition, topPosition
+    var width = 1024
+    var height = 600
+    // set borders
+    leftPosition = (window.screen.width / 2) - ((width / 2) + 10)
+    // set title and status bars
+    topPosition = (window.screen.height / 2) - ((height / 2) + 50)
+    window.open(url + '?origin=' + encodeURIComponent(window.location.origin), 'Solid signup', 'resizable,scrollbars,status,width=' + width + ',height=' + height + ',left=' + leftPosition + ',top=' + topPosition)
+
+    var promise = new Promise(function (resolve, reject) {
+      listen().then(function (webid) {
+        return resolve(webid)
+      }).catch(function (err) {
+        return reject(err)
+      })
+    })
+
+    return promise
+  }
+
+  // Listen to login messages from child window/iframe
+  function listen () {
+    var promise = new Promise(function (resolve, reject) {
+      var eventMethod = window.addEventListener ? 'addEventListener' : 'attachEvent'
+      var eventListener = window[eventMethod]
+      var messageEvent = eventMethod === 'attachEvent' ? 'onmessage' : 'message'
+      eventListener(messageEvent, function (e) {
+        var u = e.data
+        if (u.slice(0, 5) === 'User:') {
+          var user = u.slice(5, u.length)
+          if (user && user.length > 0 && user.slice(0, 4) === 'http') {
+            return resolve(user)
+          } else {
+            return reject(user)
+          }
+        }
+      }, true)
+    })
+
+    return promise
+  }
+
+  // return public methods
+  return {
+    login: login,
+    signup: signup,
+    listen: listen
+  }
+}(this))
+// Identity / WebID
+var Solid = Solid || {}
+Solid.identity = (function () {
+  'use strict'
+
+  // common vocabs
+  // var RDF = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#')
+  var OWL = $rdf.Namespace('http://www.w3.org/2002/07/owl#')
+  var PIM = $rdf.Namespace('http://www.w3.org/ns/pim/space#')
+  var FOAF = $rdf.Namespace('http://xmlns.com/foaf/0.1/')
+  var DCT = $rdf.Namespace('http://purl.org/dc/terms/')
+
+  // fetch user profile (follow sameAs links) and return promise with a graph
+  // resolve(graph)
+  function getProfile (url) {
+    var promise = new Promise(function (resolve, reject) {
+      // Load main profile
+      Solid.web.get(url).then(
+        function (graph) {
+          // set WebID
+          url = (url.indexOf('#') >= 0) ? url.slice(0, url.indexOf('#')) : url
+          var webid = graph.any($rdf.sym(url), FOAF('primaryTopic'))
+          // find additional resources to load
+          var toLoad = []
+          toLoad = toLoad.concat(graph.statementsMatching(webid, OWL('sameAs'), undefined, $rdf.sym(url)))
+          toLoad = toLoad.concat(graph.statementsMatching(webid, OWL('seeAlso'), undefined, $rdf.sym(url)))
+          toLoad = toLoad.concat(graph.statementsMatching(webid, PIM('preferencesFile'), undefined, $rdf.sym(url)))
+          var total = toLoad.length
+          // sync promises externally instead of using Promise.all() which fails if one GET fails
+          var syncAll = function () {
+            if (total === 0) {
+              return resolve(graph)
+            }
+          }
+          if (total === 0) {
+            return resolve(graph)
+          }
+          // Load other files
+          toLoad.forEach(function (prof) {
+            Solid.web.get(prof.object.uri).then(
+              function (g) {
+                Solid.utils.appendGraph(graph, g, prof.object.uri)
+                total--
+                syncAll()
+              }
+            ).catch(
+              function (err) {
+                if (err) throw err
+                total--
+                syncAll()
+              })
+          })
+        }
+      )
+        .catch(
+          function (err) {
+            reject(err)
+          }
+      )
+    })
+
+    return promise
+  }
+
+  // Find the user's workspaces
+  // Return an object with the list of objects (workspaces)
+  function getWorkspaces (webid, graph) {
+    var promise = new Promise(function (resolve, reject) {
+      if (!graph) {
+        // fetch profile and call function again
+        getProfile(webid).then(function (g) {
+          getWorkspaces(webid, g).then(function (ws) {
+            return resolve(ws)
+          }).catch(function (err) {
+            return reject(err)
+          })
+        }).catch(function (err) {
+          return reject(err)
+        })
+      } else {
+        // find workspaces
+        var workspaces = []
+        var ws = graph.statementsMatching($rdf.sym(webid), PIM('workspace'), undefined)
+        if (ws.length === 0) {
+          return resolve(workspaces)
+        }
+        ws.forEach(function (w) {
+          // try to get some additional info - i.e. desc/title
+          var workspace = {}
+          var title = graph.any(w.object, DCT('title'))
+          if (title && title.value) {
+            workspace.title = title.value
+          }
+          workspace.url = w.object.uri
+          workspace.statements = graph.statementsMatching(w.object, undefined, undefined)
+          workspaces.push(workspace)
+        })
+        return resolve(workspaces)
+      }
+    })
+
+    return promise
+  }
+
+  // Find the user's writable profiles
+  // Return an object with the list of profile URIs
+  function getWritableProfiles (webid, graph) {
+    var promise = new Promise(function (resolve, reject) {
+      if (!graph) {
+        // fetch profile and call function again
+        getProfile(webid).then(function (g) {
+          getWritableProfiles(webid, g).then(function (list) {
+            return resolve(list)
+          }).catch(function (err) {
+            return reject(err)
+          })
+        }).catch(function (err) {
+          return reject(err)
+        })
+      } else {
+        // find profiles
+        var profiles = []
+
+        webid = (webid.indexOf('#') >= 0) ? webid.slice(0, webid.indexOf('#')) : webid
+        var user = graph.any($rdf.sym(webid), FOAF('primaryTopic'))
+        // find additional resources to load
+        var toLoad = []
+        toLoad = toLoad.concat(graph.statementsMatching(user, OWL('sameAs'), undefined, $rdf.sym(webid)))
+        toLoad = toLoad.concat(graph.statementsMatching(user, OWL('seeAlso'), undefined, $rdf.sym(webid)))
+        toLoad = toLoad.concat(graph.statementsMatching(user, PIM('preferencesFile'), undefined, $rdf.sym(webid)))
+        // also check this (main) profile doc
+        toLoad = toLoad.concat({object: {uri: webid}})
+        var total = toLoad.length
+        // sync promises externally instead of using Promise.all() which fails if one GET fails
+        var syncAll = function () {
+          if (total === 0) {
+            return resolve(profiles)
+          }
+        }
+        if (total === 0) {
+          return resolve(profiles)
+        }
+
+        // Load sameAs files
+        toLoad.forEach(function (prof) {
+          var url = prof.object.uri
+          Solid.web.head(url).then(
+            function (meta) {
+              if (meta.editable.length > 0 && profiles.indexOf(url) < 0) {
+                profiles.push({url: url, editable: meta.editable})
+              }
+              total--
+              syncAll()
+            }
+          ).catch(
+            function (err) {
+              if (err) throw err
+              total--
+              syncAll()
+            })
+        })
+      }
+    })
+
+    return promise
+  }
+
+  // return public methods
+  return {
+    getProfile: getProfile,
+    getWorkspaces: getWorkspaces,
+    getWritableProfiles: getWritableProfiles
+  }
+}(this))
+// Events
+var Solid = Solid || {}
+Solid.status = (function () {
+  'use strict'
+
+  // Get current online status
+  function isOnline () {
+    return window.navigator.onLine
+  }
+
+  // Is offline
+  function onOffline (callback) {
+    window.addEventListener('offline', callback, false)
+  }
+  // Is online
+  function onOnline (callback) {
+    window.addEventListener('online', callback, false)
+  }
+
+  // return public methods
+  return {
+    isOnline: isOnline,
+    onOffline: onOffline,
+    onOnline: onOnline
+  }
+}(this))
+// Helper functions
+var Solid = Solid || {}
+Solid.utils = (function () {
+  'use strict'
+
+  // parse a Link header
+  function parseLinkHeader (link) {
+    var linkexp = /<[^>]*>\s*(\s*;\s*[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*")))*(,|$)/g
+    var paramexp = /[^\(\)<>@,;:"\/\[\]\?={} \t]+=(([^\(\)<>@,;:"\/\[\]\?={} \t]+)|("[^"]*"))/g
+
+    var matches = link.match(linkexp)
+    var rels = {}
+    for (var i = 0; i < matches.length; i++) {
+      var split = matches[i].split('>')
+      var href = split[0].substring(1)
+      var ps = split[1]
+      var s = ps.match(paramexp)
+      for (var j = 0; j < s.length; j++) {
+        var p = s[j]
+        var paramsplit = p.split('=')
+        // var name = paramsplit[0]
+        var rel = paramsplit[1].replace(/["']/g, '')
+        rels[rel] = href
+      }
+    }
+    return rels
+  }
+
+  // append statements from one graph object to another
+  function appendGraph (toGraph, fromGraph, docURI) {
+    var why = (docURI) ? $rdf.sym(docURI) : undefined
+    fromGraph.statementsMatching(undefined, undefined, undefined, why).forEach(function (st) {
+      toGraph.add(st.subject, st.predicate, st.object, st.why)
+    })
+  }
+
+  return {
+    parseLinkHeader: parseLinkHeader,
+    appendGraph: appendGraph
+  }
+}(this))
 // LDP operations
-var Solid = Solid || {};
-Solid.web = (function(window) {
-    'use strict';
+var Solid = Solid || {}
+Solid.web = (function () {
+  'use strict'
 
-    // Init some defaults;
-    var PROXY = "https://databox.me/,proxy?uri={uri}";
-    var TIMEOUT = 5000;
+  // Init some defaults
+  var PROXY = 'https://databox.me/,proxy?uri={uri}'
+  var TIMEOUT = 5000
 
-    $rdf.Fetcher.crossSiteProxyTemplate = PROXY;
-    // common vocabs
-    var LDP = $rdf.Namespace("http://www.w3.org/ns/ldp#");
+  $rdf.Fetcher.crossSiteProxyTemplate = PROXY
+  // common vocabs
+  var LDP = $rdf.Namespace('http://www.w3.org/ns/ldp#')
 
-    // return metadata for a given request
-    var parseResponseMeta = function(resp) {
-        var h = Solid.utils.parseLinkHeader(resp.getResponseHeader('Link'));
-        var meta = {};
-        meta.url = resp.getResponseHeader('Location');
-        meta.acl = h['acl'];
-        meta.meta = (h['meta'])?h['meta']:h['describedBy'];
-        meta.user = (resp.getResponseHeader('User'))?resp.getResponseHeader('User'):'';
-        meta.exists = false;
-        meta.exists = (resp.status === 200)?true:false;
-        meta.xhr = resp;
-        return meta;
-    };
-
-    // check if a resource exists and return useful Solid info (acl, meta, type, etc)
-    // resolve(metaObj)
-    var head = function(url) {
-        var promise = new Promise(function(resolve) {
-            var http = new XMLHttpRequest();
-            http.open('HEAD', url);
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    resolve(parseResponseMeta(this));
-                }
-            };
-            http.send();
-        });
-
-        return promise;
-    };
-
-    // fetch an RDF resource
-    // resolve(graph) | reject(this)
-    var get = function(url) {
-        var promise = new Promise(function(resolve, reject) {
-            var g = new $rdf.graph();
-            var f = new $rdf.fetcher(g, TIMEOUT);
-
-            var docURI = (url.indexOf('#') >= 0)?url.slice(0, url.indexOf('#')):url;
-            f.nowOrWhenFetched(docURI,undefined,function(ok, body, xhr) {
-                if (!ok) {
-                    reject({status: xhr.status, xhr: xhr});
-                } else {
-                    resolve(g);
-                }
-            });
-        });
-
-        return promise;
-    };
-
-    // create new resource
-    // resolve(metaObj) | reject
-    var post = function(url, slug, data, isContainer) {
-        var resType = (isContainer)?LDP('BasicContainer').uri:LDP('Resource').uri;
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('POST', url);
-            http.setRequestHeader('Content-Type', 'text/turtle');
-            http.setRequestHeader('Link', '<'+resType+'>; rel="type"');
-            if (slug && slug.length > 0) {
-                http.setRequestHeader('Slug', slug);
-            }
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200 || this.status === 201) {
-                        resolve(parseResponseMeta(this));
-                    } else {
-                        reject({status: this.status, xhr: this});
-                    }
-                }
-            };
-            if (data && data.length > 0) {
-                http.send(data);
-            } else {
-                http.send();
-            }
-        });
-
-        return promise;
-    };
-
-    // update/create resource using HTTP PUT
-    // resolve(metaObj) | reject
-    var put = function(url, data) {
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('PUT', url);
-            http.setRequestHeader('Content-Type', 'text/turtle');
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200 || this.status === 201) {
-                        return resolve(parseResponseMeta(this));
-                    } else {
-                        reject({status: this.status, xhr: this});
-                    }
-                }
-            };
-            if (data) {
-                http.send(data);
-            } else {
-                http.send();
-            }
-        });
-
-        return promise;
-    };
-
-    // delete a resource
-    // resolve(true) | reject
-    var del = function(url) {
-        var promise = new Promise(function(resolve, reject) {
-            var http = new XMLHttpRequest();
-            http.open('DELETE', url);
-            http.withCredentials = true;
-            http.onreadystatechange = function() {
-                if (this.readyState == this.DONE) {
-                    if (this.status === 200) {
-                        return resolve(true);
-                    } else {
-                        reject({status: this.status, xhr: this});
-                    }
-                }
-            };
-            http.send();
-        });
-
-        return promise;
+  // return metadata for a given request
+  function parseResponseMeta (resp) {
+    var h = Solid.utils.parseLinkHeader(resp.getResponseHeader('Link'))
+    var meta = {}
+    meta.url = (resp.getResponseHeader('Location')) ? resp.getResponseHeader('Location') : resp.responseURL
+    meta.acl = h['acl']
+    meta.meta = (h['meta']) ? h['meta'] : h['describedBy']
+    meta.user = (resp.getResponseHeader('User')) ? resp.getResponseHeader('User') : ''
+    meta.websocket = (resp.getResponseHeader('Updates-Via')) ? resp.getResponseHeader('Updates-Via') : ''
+    // writable/editable resource
+    meta.editable = []
+    var patch = resp.getResponseHeader('Accept-Patch')
+    if (patch && patch.indexOf('application/sparql-update') >= 0) {
+      meta.editable.push('patch')
+    }
+    var allow = resp.getResponseHeader('Allow')
+    if (allow) {
+      if (allow.indexOf('PUT') >= 0) {
+        meta.editable.push('put')
+      }
+      if (allow.indexOf('POST') >= 0) {
+        meta.editable.push('post')
+      }
+      if (allow.indexOf('DELETE') >= 0) {
+        meta.editable.push('delete')
+      }
     }
 
-    // return public methods
-    return {
-        head: head,
-        get: get,
-        post: post,
-        put: put,
-        del: del,
-    };
-}(this));
+    meta.exists = (resp.status === 200)
+    meta.xhr = resp
+    return meta
+  }
+
+  // check if a resource exists and return useful Solid info (acl, meta, type, etc)
+  // resolve(metaObj)
+  function head (url) {
+    var promise = new Promise(function (resolve) {
+      var http = new XMLHttpRequest()
+      http.open('HEAD', url)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          resolve(parseResponseMeta(this))
+        }
+      }
+      http.send()
+    })
+
+    return promise
+  }
+
+  // fetch an RDF resource
+  // resolve(graph) | reject(this)
+  function get (url) {
+    var promise = new Promise(function (resolve, reject) {
+      var g = $rdf.graph()
+      var f = new $rdf.Fetcher(g, TIMEOUT)
+
+      var docURI = (url.indexOf('#') >= 0) ? url.slice(0, url.indexOf('#')) : url
+      f.nowOrWhenFetched(docURI, undefined, function (ok, body, xhr) {
+        if (!ok) {
+          reject({status: xhr.status, xhr: xhr})
+        } else {
+          resolve(g)
+        }
+      })
+    })
+
+    return promise
+  }
+
+  // create new resource
+  // resolve(metaObj) | reject
+  function post (url, data, slug, isContainer, mime) {
+    var resType = LDP('Resource').uri
+    if (isContainer) {
+      resType = LDP('BasicContainer').uri
+      mime = 'text/turtle' // force right mime for containers only
+    }
+    mime = (mime) ? mime : 'text/turtle'
+    var promise = new Promise(function (resolve, reject) {
+      var http = new XMLHttpRequest()
+      http.open('POST', url)
+      http.setRequestHeader('Content-Type', mime)
+      http.setRequestHeader('Link', '<' + resType + '>; rel="type"')
+      if (slug && slug.length > 0) {
+        http.setRequestHeader('Slug', slug)
+      }
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200 || this.status === 201) {
+            resolve(parseResponseMeta(this))
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      if (data && data.length > 0) {
+        http.send(data)
+      } else {
+        http.send()
+      }
+    })
+
+    return promise
+  }
+
+  // update/create resource using HTTP PUT
+  // resolve(metaObj) | reject
+  function put (url, data, mime) {
+    var promise = new Promise(function (resolve, reject) {
+      mime = (mime) ? mime : 'text/turtle'
+      var http = new XMLHttpRequest()
+      http.open('PUT', url)
+      http.setRequestHeader('Content-Type', mime)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200 || this.status === 201) {
+            return resolve(parseResponseMeta(this))
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      if (data) {
+        http.send(data)
+      } else {
+        http.send()
+      }
+    })
+
+    return promise
+  }
+
+  // patch a resource
+  // accepts arrays of individual statements (turtle) as params
+  // e.g. [ '<a> <b> <c> .', '<d> <e> <f> .']
+  function patch (url, toDel, toIns) {
+    var promise = new Promise(function (resolve, reject) {
+      var data = ''
+      var i
+
+      if (toDel && toDel.length > 0) {
+        for (i = 0; i < toDel.length; i++) {
+          if (i > 0) {
+            data += ' ;\n'
+          }
+          data += 'DELETE DATA { ' + toDel[i] + ' }'
+        }
+      }
+      if (toIns && toIns.length > 0) {
+        for (i = 0; i < toIns.length; i++) {
+          if (i > 0 || (toDel && toDel.length > 0)) {
+            data += ' ;\n'
+          }
+          data += 'INSERT DATA { ' + toIns[i] + ' }'
+        }
+      }
+
+      var http = new XMLHttpRequest()
+      http.open('PATCH', url)
+      http.setRequestHeader('Content-Type', 'application/sparql-update')
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200) {
+            return resolve(parseResponseMeta(this))
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      if (data && data.length > 0) {
+        http.send(data)
+      } else {
+        http.send()
+      }
+    })
+
+    return promise
+  }
+
+  // delete a resource
+  // resolve(true) | reject
+  function del (url) {
+    var promise = new Promise(function (resolve, reject) {
+      var http = new XMLHttpRequest()
+      http.open('DELETE', url)
+      http.withCredentials = true
+      http.onreadystatechange = function () {
+        if (this.readyState === this.DONE) {
+          if (this.status === 200) {
+            return resolve(true)
+          } else {
+            reject({status: this.status, xhr: this})
+          }
+        }
+      }
+      http.send()
+    })
+
+    return promise
+  }
+
+  // return public methods
+  // aliasing post -> create, put -> replace, patch -> update
+  return {
+    head: head,
+    get: get,
+    post: post,
+    create: post,
+    put: put,
+    replace: put,
+    patch: patch,
+    update: patch,
+    del: del
+  }
+}(this))
 
 // ###### Finished expanding js/solid/dist/solid.js ##############
     
@@ -27713,7 +27850,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
             tabulator.panes.utils.getACL(doc2, function(ok, status, defaultACLDoc) {
 
                 if (!ok) {
-                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")")
+                    return callback(false, true, status, "( No ACL pointer " + uri + ' ' + status + ")" + defaultACLDoc)
                 } else if (status === 403) {
                     return callback(false, true, status,"( default ACL file FORBIDDEN. Stop." + uri + ")");
                 } else if (status === 404) {
@@ -27723,7 +27860,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
                         tryParent(uri);
                     }
                 } else if (status !== 200) {
-                        return callback(false, true, status, "Error searching for default");
+                        return callback(false, true, status, "Error status '"+status+"' searching for default for " + doc2);
                 } else { // 200
                     //statusBlock.textContent += (" ACCESS set at " + uri + ". End search.");
                     var defaults = kb.each(undefined, ACL('defaultForNew'), kb.sym(uri), defaultACLDoc);
@@ -27756,22 +27893,22 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
 
 //    Calls back (ok, status, acldoc, message)
 // 
-//   (false, errormessage)        no link header
+//   (false, 900, errormessage)        no link header
 //   (true, 403, documentSymbol, fileaccesserror) not authorized
 //   (true, 404, documentSymbol, fileaccesserror) if does not exist
 //   (true, 200, documentSymbol)   if file exitss and read OK
 //
 tabulator.panes.utils.getACL = function(doc, callback) {
     tabulator.sf.nowOrWhenFetched(doc, undefined, function(ok, body){
-        if (!ok) return callback(ok, "Can't get headers to find ACL file: " + body);
+        if (!ok) return callback(ok, "Can't get headers to find ACL for " + doc + ": " + body);
         var kb = tabulator.kb;
         var aclDoc = kb.any(doc,
             kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
         if (!aclDoc) {
-            callback(false, "No Link rel=ACL header for " + doc);
+            callback(false, 900, "No Link rel=ACL header for " + doc);
         } else {
             if (tabulator.sf.nonexistant[aclDoc.uri]) {
-                return callback(true, 404, aclDoc, "ACL file does not exist.");
+                return callback(true, 404, aclDoc, "ACL file " + aclDoc + " does not exist.");
             }
             tabulator.sf.nowOrWhenFetched(aclDoc, undefined, function(ok, message, xhr){
                 if (!ok) {
@@ -29477,12 +29614,118 @@ tabulator.panes.utils.findOriginOwner = function(doc, callback) {
     
 }
 
+tabulator.panes.utils.webOperation = function(method, uri, options, callback) {
+    var xhr = $rdf.Util.XMLHTTPFactory();
+    xhr.onreadystatechange = function (){
+        if (xhr.readyState == 4){
+            var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+            // @@@ Optionally  options.saveMetadata Save metadata to preseve headers
+            callback(uri, ok, xhr.responseText, xhr);
+        }
+    };
+    xhr.open(method, uri, true);
+    if (options.contentType) {
+        xhr.setRequestHeader('Content-type', options.contentType);
+    }
+    xhr.send(options.data ? options.data : undefined);
+};
+
+tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
+    tabulator.panes.utils.webOperation('GET', here,  {}, function(uri, ok, body, xhr) {
+        if (ok) {
+            tabulator.panes.utils.webOperation('PUT',
+                there, { data: xhr.responseText, contentType: content_type},
+                callback);
+        } else {
+            callback(uri, ok, "(on read) " + body, xhr);
+        }
+    });
+};
+
+
+
+//////////////////////// Simple Accesss Control
+
+// This function sets up a simple default ACL for a resoirce, with
+// RWC for the owner, and a specified access (default none) for the public.
+// In all cases owner has read write control.
+// Parameter lists modes allowed to public
+// Parameters:
+//  me webid of user
+//  public = eg [ 'Read', 'Write']
+        
+tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback) {
+    var genACLtext = function(docURI, aclURI, options) {
+        options = options || {}
+        var public = options.public || [];
+        var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
+        var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
+        g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+        g.add(a, auth('accessTo'), doc, acl)
+        if (options.defaultForNew) {
+            g.add(a, auth('defaultForNew'), doc, acl)
+        }
+        g.add(a, auth('agent'), me, acl);
+        g.add(a, auth('mode'), auth('Read'), acl);
+        g.add(a, auth('mode'), auth('Write'), acl);
+        g.add(a, auth('mode'), auth('Control'), acl);
+        
+        if (public.length) {
+            a = g.sym(aclURI + '#a2');
+            g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+            g.add(a, auth('accessTo'), doc, acl)
+            g.add(a, auth('agentClass'), ns.foaf('Agent'), acl);
+            for (var p=0; p<public.length; p++) {
+                g.add(a, auth('mode'), auth(public[p]), acl); // Like 'Read' etc
+            }
+        }
+        return $rdf.serialize(acl, g, aclURI, 'text/turtle');
+    }
+    var kb = tabulator.kb;
+    var aclDoc = kb.any(kb.sym(docURI),
+        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+    if (aclDoc) { // Great we already know where it is
+        var aclText = genACLtext(docURI, aclDoc.uri, options);
+        tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+    } else {
+    
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+            var aclDoc = kb.any(kb.sym(docURI),
+                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+            if (!aclDoc) {
+                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                callback(false, "No Link rel=ACL header for " + docURI);
+            } else {
+                var aclText = genACLtext(docURI, aclDoc.uri, options);
+                tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+            }
+        })
+    }
+};
+              
+
+tabulator.panes.utils.offlineTestID = function() {
+
+    if (tabulator.mode == 'webapp' && typeof document !== 'undefined' &&
+        document.location &&  ('' + document.location).slice(0,16) === 'http://localhost') {
+        var div = document.getElementById('appTarget');
+        var id = div.getAttribute('testID');
+        if (!id) return null;
+        /* me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid
+        */
+        console.log("Assuming user is " + id);
+        return id
+    }
+    return null;
+};
+
 
 ////////////////////////////////////////// Boostrapping identity
 //
 //
 
-tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
+tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -29490,13 +29733,16 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     p.innerHTML = ("You need to log in with a Web ID");
     console.log('tabulator.panes.utils.signInOrSignUpBox')
     
+    
     var but = myDocument.createElement('input');
     box.appendChild(but);
     but.setAttribute('type', 'button');
     but.setAttribute('value', 'Log in');
     but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
         but.addEventListener('click', function(e){
-	Solid.auth.signup.withWebID().then(function(uri){
+        var offline = tabulator.panes.utils.offlineTestID();
+        if (offline) return gotOne(offline);
+	tabulator.solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
 	    gotOne(uri)
 	})
@@ -29508,7 +29754,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     but2.setAttribute('value', 'Sign Up');
     but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
     but2.addEventListener('click', function(e){
-	Solid.auth.signup.withWebID().then(function(uri){
+	tabulator.solid.auth.signup().then(function(uri){
 	    console.log('signInOrSignUpBox signed up '+ uri)
 	    gotOne(uri)
 	})
@@ -29516,7 +29762,7 @@ tabulator.panes.utils.signInOrSignUpBox_Solid = function(myDocument, gotOne) {
     return box;
 };
 
-tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
+tabulator.panes.utils.signInOrSignUpBox_original = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -29808,15 +30054,39 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 //  - If not logged in, log in.
 //  - Load preferences file
 //  - Prompt user for workspaces
+//  - Allows the user to just type in a URI by hand
+//
+//  Callsback with the ws and the base URI
+//
 // 
-tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
+tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
     var box;
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
+
+
+    var figureOutBase = function(ws) {
+        var newBase = kb.any(ws, tabulator.ns.space('uriPrefix'));
+        if (!newBase) {
+            newBase = ws.uri.split('#')[0];
+        } else {
+	    newBase = newBase.value;
+	}
+        if (newBase.slice(-1) !== '/') {
+            $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
+            newBase = newBase + '/';
+        }
+        var now = new Date();
+        newBase += appPathSegment + '/id'+ now.getTime() + '/'; // unique id 
+        
+        callbackWS(ws, newBase);
+    }
     
+
+
     var displayOptions = function(id, preferencesFile){
         var status = ''; 
         
@@ -29833,8 +30103,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         // if (pending !== undefined) pending.parentNode.removeChild(pending);
         if (w.length == 1) {
         
-            say( "Workspace used: " + w[0].uri);  
-            callbackWS(w[0]); 
+            say( "Workspace used: " + w[0].uri);  // @@ allow user to see URI
+            figureOutBase(w[0]);
 
         } else if (w.length == 0 ) {
             say("You don't seem to have any workspaces. You have "+storages.length +" storages.");
@@ -29848,6 +30118,38 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             
             // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
+            
+            
+            //  Add a field for directly adding the URI yourself
+            
+            var hr = box.appendChild(dom.createElement('hr')); // @@
+            
+            var p = box.appendChild(dom.createElement('p'));
+            p.textContent = "Where would you like to store the data for the " + noun + "?  " +
+            "Give the URL of the directory where you would like the data stored.";
+            var baseField = box.appendChild(dom.createElement('input'));
+            baseField.setAttribute("type", "text");
+            baseField.size = 80; // really a string
+            baseField.label = "base URL";
+            baseField.autocomplete = "on";
+
+            box.appendChild(dom.createElement('br')); // @@
+            
+            var button = box.appendChild(dom.createElement('button'));
+            button.textContent = "Start new " + noun + " at this URI";
+            button.addEventListener('click', function(e){
+                var newBase = baseField.value;
+                if (newBase.slice(-1) !== '/') {
+                    newBase += '/';
+                }
+                callbackWS(null, newBase);
+            });
+            
+            
+            
+            // Now go set up the table of spaces
+            
+            
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
                     tabulator.ns.space('MasterWorkspace')) ) });
@@ -29906,7 +30208,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                     // button.setAttribute('style', style);
                     button.addEventListener('click', function(e){
                         button.disabled = true;
-                        callbackWS(selectedWorkspace);
+                        figureOutBase(selectedWorkspace);
                         button.textContent = '---->';
                     }, true); // capture vs bubble
                     return button;
@@ -29954,13 +30256,14 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         return;
     };
 
-    var gotIDChange = function(me) {
-        if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.uri.docpart(me.uri);
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+    var gotIDChange = function(uri) {
+        if (typeof uri == 'undefined') return undefined;
+        var me = $rdf.sym(uri);
+        var docURI = me.doc();
+        kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
             if (!ok) {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load profile file " + docURI));
+                    "Can't load profile file " + me.doc()));
                 return;
             }
             loadPrefs(me);
@@ -29997,7 +30300,7 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     b.innerHTML = label;
     // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
-        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, label, gotWS))}, false);
     div.appendChild(b);
     return div;
 };
@@ -34121,22 +34424,6 @@ tabulator.panes.register( {
                     function(pred, inverse) {
                         return !(pred.uri in predicateURIsDone)
                 });
-                /*
-                var refreshButton = dom.createElement('button');
-                refreshButton.textContent = "refresh";
-                refreshButton.addEventListener('click', function(e) {
-                    tabulator.fetcher.unload(messageStore);
-                    tabulator.fetcher.nowOrWhenFetched(messageStore.uri, undefined, function(ok, body){
-                        if (!ok) {
-                            console.log("Cant refresh messages" + body);
-                        } else {
-                            refreshTree(div);
-                            // syncMessages(subject, messageTable);
-                        };
-                    });
-                }, false);
-                div.appendChild(refreshButton);
-                */
 
 
             });  // End nowOrWhenFetched tracker
@@ -34144,7 +34431,7 @@ tabulator.panes.register( {
                     // Alas force ct for github.io 
             // was:  ,{ 'forceContentType': 'text/turtle'}
 
-    ///////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////
 
         //          Render a AddressBook instance
         
@@ -34154,6 +34441,8 @@ tabulator.panes.register( {
             var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
             
             var groupIndex = kb.any(subject, ns.vcard('groupIndex'));
+            var selectedGroups = {};
+
             
             //var cats = kb.each(subject, ns.wf('contactCategory')); // zero or more
             
@@ -34315,88 +34604,6 @@ tabulator.panes.register( {
         
 
 
-            var toolsPane = function(selectedGroups) {
-                var kb = tabulator.kb;
-                var updater = new tabulator.rdf.sparqlUpdate(kb);
-                var ACL = tabulator.ns.acl, VCARD = tabulator.ns.vcard;
-                var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
-
-                var pane = dom.createElement('div');
-                var table = pane.appendChild(dom.createElement('table'));
-                table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
-                var headerRow = table.appendChild(dom.createElement('tr'));
-                headerRow.textContent =  tabulator.Util.label(subject) + " - tools";
-                headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
-
-                var statusRow = table.appendChild(dom.createElement('tr'));
-                var statusBlock = statusRow.appendChild(dom.createElement('div'));
-                statusBlock.setAttribute('style', 'padding: 2em;');
-                var MainRow = table.appendChild(dom.createElement('tr'));
-                var box = MainRow.appendChild(dom.createElement('table'));
-                var bottomRow = table.appendChild(dom.createElement('tr'));
-                
-                var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
-                var p = MainRow.appendChild(dom.createElement('pre'));
-                var log = function(message) {
-                    p.textContent += message + '\n';
-                };
-                
-                log("" + totalCards + " cards alltogether. ");
-                
-                var gg = [], g;
-                for (g in selectedGroups) {
-                    gg.push(g);
-                }
-                log('' + gg.length + "groups. " );
-                
-                var loadIndexButton = pane.appendChild(dom.createElement('button'));
-                loadIndexButton.textContent = "Load main index";
-                loadIndexButton.addEventListener('click', function(e) {
-                    loadIndexButton.setAttribute('style', 'background-color: #ffc;');
-
-                    var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
-                    tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
-                        if (ok) {
-                            loadIndexButton.setAttribute('style', 'background-color: #cfc;');
-                            log(" People index has been loaded\n");
-                        } else {
-                            loadIndexButton.setAttribute('style', 'background-color: #fcc;');
-                            log("Error: People index has NOT been loaded" + message + "\n");
-                        };
-                    });
-                });
-
-                
-                var check = MainRow.appendChild(dom.createElement('button'));
-                check.textContent = "Check inidividual card access";
-                check.addEventListener('click', function(event){
-                    for (var i = 0; i< gg.length; i++) {
-                        g = kb.sym(gg[i]);
-                        var a = kb.each(g, ns.vcard('hasMember'));
-                        log(tabulator.Util.label(g)+ ': ' + a.length + " members");
-                        for (var j=0; j < a.length; j++) {
-                            var card = a[j];
-                            log(tabulator.Util.label(card));
-                            function doCard(card) {
-                                tabulator.panes.utils.fixIndividualCardACL(card, log, function(ok, message) {
-                                    if (ok) {
-                                        log("Sucess for "+tabulator.Util.label(card));
-                                    } else {
-                                        log("Failure for "+tabulator.Util.label(card) + ": " + message);
-                                    }
-                                });
-                            }
-                            doCard(card);
-                        } 
-                    }
-                });
-                // 
-                
-                return pane;
-            }
-
-
-
 
                        
             ////////////////////////////// Three-column Contact Browser
@@ -34431,6 +34638,157 @@ tabulator.panes.register( {
                     }
                 }
 
+
+                var selectAllGroups = function(selectedGroups, groupsMainTable, callback) {
+                    var todo = groupsMainTable.children.length;
+                    var badness = [];
+                    for (var k=0; k < groupsMainTable.children.length; k++) {
+                        var groupRow = groupsMainTable.children[k];
+                        var group = groupRow.subject;
+
+                        var groupList = kb.sym(group.uri.split('#')[0]);
+                        selectedGroups[group.uri] = true;
+
+                        kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
+                            if (!ok) {
+                                var  msg = "Can't load group file: " +  groupList + ": " + message;
+                                badness.push(msg)
+                                return complainIfBad(ok,msg);
+                            }
+                            groupRow.setAttribute('style', 'background-color: #cce;');
+                            refreshNames(); // @@ every time??
+                            todo -= 1;
+                            if (!todo) {
+                                if (callback) callback(badness.length === 0, badness);
+                            }
+                        });
+                    } // for each row
+                }
+
+                var toolsPane = function(selectedGroups, groupsMainTable) {
+                    var kb = tabulator.kb;
+                    var updater = new tabulator.rdf.sparqlUpdate(kb);
+                    var ACL = tabulator.ns.acl, VCARD = tabulator.ns.vcard;
+                    var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
+
+                    var pane = dom.createElement('div');
+                    var table = pane.appendChild(dom.createElement('table'));
+                    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
+                    var headerRow = table.appendChild(dom.createElement('tr'));
+                    headerRow.textContent =  tabulator.Util.label(subject) + " - tools";
+                    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
+
+                    var statusRow = table.appendChild(dom.createElement('tr'));
+                    var statusBlock = statusRow.appendChild(dom.createElement('div'));
+                    statusBlock.setAttribute('style', 'padding: 2em;');
+                    var MainRow = table.appendChild(dom.createElement('tr'));
+                    var box = MainRow.appendChild(dom.createElement('table'));
+                    var bottomRow = table.appendChild(dom.createElement('tr'));
+                    
+                    var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
+                    var p = MainRow.appendChild(dom.createElement('pre'));
+                    var log = function(message) {
+                        p.textContent += message + '\n';
+                    };
+                    
+                    log("" + totalCards + " cards alltogether. ");
+                    
+                    
+                    var groups = kb.each(subject, VCARD('includesGroup'));
+                    log('' + groups.length + " total groups. " );
+
+                    var gg = [], g;
+                    for (g in selectedGroups) {
+                        gg.push(g);
+                    }
+                    log('' + gg.length + " selected groups. " );
+                    
+                    var loadIndexButton = pane.appendChild(dom.createElement('button'));
+                    loadIndexButton.textContent = "Load main index";
+                    loadIndexButton.addEventListener('click', function(e) {
+                        loadIndexButton.setAttribute('style', 'background-color: #ffc;');
+
+                        var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
+                        tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined, function(ok, message) {
+                            if (ok) {
+                                loadIndexButton.setAttribute('style', 'background-color: #cfc;');
+                                log(" People index has been loaded\n");
+                            } else {
+                                loadIndexButton.setAttribute('style', 'background-color: #fcc;');
+                                log("Error: People index has NOT been loaded" + message + "\n");
+                            };
+                        });
+                    });
+
+                    
+                    
+                    var check = MainRow.appendChild(dom.createElement('button'));
+                    check.textContent = "Check inidividual card access of selected groups";
+                    check.addEventListener('click', function(event){
+                        for (var i = 0; i< gg.length; i++) {
+                            g = kb.sym(gg[i]);
+                            var a = kb.each(g, ns.vcard('hasMember'));
+                            log(tabulator.Util.label(g)+ ': ' + a.length + " members");
+                            for (var j=0; j < a.length; j++) {
+                                var card = a[j];
+                                log(tabulator.Util.label(card));
+                                function doCard(card) {
+                                    tabulator.panes.utils.fixIndividualCardACL(card, log, function(ok, message) {
+                                        if (ok) {
+                                            log("Sucess for "+tabulator.Util.label(card));
+                                        } else {
+                                            log("Failure for "+tabulator.Util.label(card) + ": " + message);
+                                        }
+                                    });
+                                }
+                                doCard(card);
+                            } 
+                        }
+                    });
+                    
+                    var checkGroupless = MainRow.appendChild(dom.createElement('button'));
+                    checkGroupless.textContent = "Find inidividuals with no group";
+                    checkGroupless.addEventListener('click', function(event){
+                        log("Loading groups...");
+                        selectAllGroups(selectedGroups, groupsMainTable, function(ok, message){
+                            if (!ok) {
+                                log("Failed: " + message)
+                                return;
+                            }
+                            tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined,
+                                function(ok, message) {
+                                    
+                                    log("Loaded groups and name index.");
+                                    var reverseIndex = {}, groupless = [];
+                                    for (var i = 0; i< groups.length; i++) {
+                                        g = groups[i];
+                                        var a = kb.each(g, ns.vcard('hasMember'));
+                                        log(tabulator.Util.label(g)+ ': ' + a.length + " members");
+                                        for (var j=0; j<a.length; j++) {
+                                            reverseIndex[a[j].uri] = true;
+                                        }
+                                    }
+                                    
+                                    
+                                    var cards = kb.each(undefined, VCARD('inAddressBook'), subject);
+                                    log("" + cards.length + " total cards");
+                                    var c, card;
+                                    for (var c=0; c < cards.length; c++) {
+                                        if (!reverseIndex[cards[c].uri]) {
+                                            groupless.push(cards[c]);
+                                            log("   groupless " + tabulator.Util.label(cards[c]));
+                                        }
+                                    }
+                                    log("" + groupless.length + " groupless cards.");
+                            });
+                        })
+                    });
+                    
+                    return pane;
+                }
+
+                ////////////////////   Body of 3-column browser
+                
                 var bookTable = dom.createElement('table');
                 bookTable.setAttribute('style', 'border-collapse: collapse; margin-right: 0;')
                 div.appendChild(bookTable);
@@ -34465,6 +34823,7 @@ tabulator.panes.register( {
                 
                 groupsHeader.textContent = "groups";
                 groupsHeader.setAttribute('style', 'min-width: 10em; padding-bottom 0.2em;');
+
                 var allGroups = groupsHeader.appendChild(dom.createElement('button'));
                 allGroups.textContent = "All";
                 allGroups.setAttribute('style', 'margin-left: 1em;');
@@ -34472,23 +34831,10 @@ tabulator.panes.register( {
                     allGroups.state = allGroups.state ? 0 : 1;
                     peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
                     if (allGroups.state) {
-                        for (var k=0; k < groupsMainTable.children.length; k++) {
-                            var groupRow = groupsMainTable.children[k];
-                            var group = groupRow.subject;
-
-                            var groupList = kb.sym(group.uri.split('#')[0]);
-                            selectedGroups[group.uri] = true;
-
-                            kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
-                                if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                groupRow.setAttribute('style', 'background-color: #cce;');
-                                refreshNames(); // @@ every time??
-                            });
-                        //refreshGroups();
-                        } // for each row
+                        selectAllGroups(selectedGroups, groupsMainTable);
                     } else {
                         selectedGroups = {};
-                        refreshGroups();
+                        refreshGroupsSelected();
                     }
                 }); // on button click
 
@@ -34497,12 +34843,14 @@ tabulator.panes.register( {
                 peopleHeader.setAttribute('style', 'min-width: 18em;');
                 peopleMain.setAttribute('style','overflow:scroll;');
                 
+                var groups;
                 
-                var groups = kb.each(subject, ns.vcard('includesGroup'));
-                var groups2 = groups.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
-                groups.sort();
-                var selectedGroups = {};
-
+                var sortGroups = function() {
+                    var gs = kb.each(subject, ns.vcard('includesGroup'));
+                    groups = gs.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
+                    groups.sort();
+                }
+                
                 var cardPane = function(dom, subject, paneName) {
                     var p = tabulator.panes.byName(paneName);
                     var d = p.render(subject, dom);
@@ -34549,7 +34897,7 @@ tabulator.panes.register( {
                             updater.deleteResource(doc);
                         }
                     }
-                    nextOne;
+                    nextOne();
                 };
 
                 var refreshNames = function() {
@@ -34612,7 +34960,7 @@ tabulator.panes.register( {
     
                 }
                 
-                var refreshGroups = function() {
+                var refreshGroupsSelected = function() {
                     for (i=0; i < groupsMainTable.children.length; i++) {
                         var row = groupsMainTable.children[i];
                         if (row.subject) {
@@ -34621,46 +34969,81 @@ tabulator.panes.register( {
                     }
                 };
                 
-                for (var i =0; i<groups2.length; i++) {
-                    var name = groups2[i][0];
-                    var group = groups2[i][1];
-                    //selectedGroups[group.uri] = false;
-                    var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
-                    groupRow.subject = group;
-                    groupRow.setAttribute('style', dataCellStyle);
-                    // var groupLeft = groupRow.appendChild(dom.createElement('td'));
-                    // var groupRight = groupRow.appendChild(dom.createElement('td'));
-                    groupRow.textContent = name;
-                    var foo = function toggle(groupRow, group, name) {
-                        tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, "group " + name, function(){
-                            deleteThing(group);
-                        });
-                        groupRow.addEventListener('click', function(event){
-                            event.preventDefault();
-                            var groupList = kb.sym(group.uri.split('#')[0]);
-                            if (!event.altKey) {
-                                selectedGroups = {}; // If alt key pressed, accumulate multiple
-                            }
-                            selectedGroups[group.uri] = selectedGroups[group.uri] ? false : true;
-                            refreshGroups();
-                            peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
-
-                            kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
-                                if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
-                                refreshNames();
-
-                                if (!event.altKey) { // If only one group has beeen selected show ACL
-                                    cardMain.innerHTML = ''; 
-                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
-                                        if (!ok) cardMain.innerHTML = "Failed: " + body;
-                                    }));
-                                }
-                            })
-                        }, true);
-                    };
-                    foo(groupRow, group, name);
-                }
+                // Check every group is in the list and add it if not.
                 
+                var syncGroupTable = function() {
+                    var foundOne;
+                    sortGroups();
+
+                    for (i=0; i < groupsMainTable.children.length; i++) {
+                        var row = groupsMainTable.children[i];
+                        row.trashMe = true;
+                    }
+
+
+                    for (var g = 0; g<groups.length; g++) {
+                        var name = groups[g][0];
+                        var group = groups[g][1];
+                        
+                        //selectedGroups[group.uri] = false;
+                        foundOne = false;
+
+                        for (var i=0; i < groupsMainTable.children.length; i++) {
+                            var row = groupsMainTable.children[i];
+                            if (row.subject && row.subject.sameTerm(group)) {
+                                row.trashMe = false;
+                                foundOne = true;
+                                break;
+                            }
+                        }
+                        if (!foundOne) {
+                        
+                            var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
+                            groupRow.subject = group;
+                            groupRow.setAttribute('style', dataCellStyle);
+                            groupRow.textContent = name;
+                            var foo = function toggle(groupRow, group, name) {
+                                tabulator.panes.utils.deleteButtonWithCheck(dom, groupRow, "group " + name, function(){
+                                    deleteThing(group);
+                                    syncGroupTable();
+                                });
+                                groupRow.addEventListener('click', function(event){
+                                    event.preventDefault();
+                                    var groupList = kb.sym(group.uri.split('#')[0]);
+                                    if (!event.altKey) {
+                                        selectedGroups = {}; // If alt key pressed, accumulate multiple
+                                    }
+                                    selectedGroups[group.uri] = selectedGroups[group.uri] ? false : true;
+                                    refreshGroupsSelected();
+                                    peopleMainTable.innerHTML = ''; // clear in case refreshNames doesn't work for unknown reason
+
+                                    kb.fetcher.nowOrWhenFetched(groupList.uri, undefined, function(ok, message){
+                                        if (!ok) return complainIfBad(ok, "Can't load group file: " +  groupList + ": " + message);
+                                        refreshNames();
+
+                                        if (!event.altKey) { // If only one group has beeen selected show ACL
+                                            cardMain.innerHTML = ''; 
+                                            cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                                if (!ok) cardMain.innerHTML = "Failed: " + body;
+                                            }));
+                                        }
+                                    })
+                                }, true);
+                            };
+                            foo(groupRow, group, name);
+                        } // if not foundOne
+                    } // loop g
+                    
+                    for (i=0; i < groupsMainTable.children.length; i++) {
+                        var row = groupsMainTable.children[i];
+                        if (row.trashMe) {
+                            groupsMainTable.removeChild(row);
+                        }
+                    }
+                    refreshGroupsSelected();
+                } // syncGroupTable
+                
+                syncGroupTable();
  
                 // New Contact button
                 var newContactButton = dom.createElement("button");
@@ -34732,9 +35115,13 @@ tabulator.panes.register( {
                                      console.log("Error: can\'t save new group:" + body);
                                      cardMain.innerHTML = "Failed to save group" + body
                                 } else {
+                                    selectedGroups = {};
+                                    selectedGroups[body.uri] = true
+                                    syncGroupTable(); // Refresh list of groups
+
                                     cardMain.innerHTML = ''; 
                                     cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
-                                        if (!ok) cardMain.innerHTML = "Group creation failed: " + body;
+                                        if (!ok) cardMain.innerHTML = "Group sharing setup failed: " + body;
                                     }));
                                 }
                             });
@@ -34749,7 +35136,7 @@ tabulator.panes.register( {
                 toolsButton.innerHTML = "Tools";
                 toolsButton.addEventListener('click', function(e) {
                     cardMain.innerHTML = ''; 
-                    cardMain.appendChild(toolsPane(selectedGroups));
+                    cardMain.appendChild(toolsPane(selectedGroups, groupsMainTable));
                 });
                 
                 cardFooter.appendChild(newAddressBookButton(subject));
@@ -34780,25 +35167,6 @@ tabulator.panes.register( {
             console.log("Assuming user is " + me)   
         }
         
-        /////////////////  Obsolete log in out now?
-        /*
-        var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
-            // sayt.parent.removeChild(sayt);
-            if (webid) {
-                tabulator.preferences.set('me', webid);
-                console.log("(Logged in as "+ webid+")")
-                me = kb.sym(webid);
-            } else {
-                tabulator.preferences.set('me', '');
-                console.log("(Logged out)")
-                me = null;
-            }
-        });
-        
-        loginOutButton.setAttribute('style', 'float: right'); // float the beginning of the end // float sucks
-
-        div.appendChild(loginOutButton);
-        */
         
         return div;
 

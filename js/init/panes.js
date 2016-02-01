@@ -39,22 +39,36 @@ Also lower could be optional tools for various classes.
 /* First we load the common utilities so panes can add them (while developing) as well as use them */
 // Pattern of adding code where it used then moving it back out into a common code.
 
-// Form and general UI widgets 
+// General low-level ACL access routine
+tabulator.loadScript("js/panes/common/acl.js");
+
+// User interface for ACL management
+tabulator.loadScript("js/panes/common/acl-control.js");
+
+// Form and general UI widgets
 tabulator.loadScript("js/panes/common/widgets.js");
-// Sign-in, sign-up, workspce and identity UI widgets 
+
+// Sign-in, sign-up, workspce and identity UI widgets
 tabulator.loadScript("js/panes/common/signin.js");
+
 // A discussion area for discussing anything
 tabulator.loadScript("js/panes/common/discussion.js");
+
 // A relationsal table widget
 tabulator.loadScript("js/panes/common/table.js");
-// A 2-D matrix of values 
+
+// A 2-D matrix of values
 tabulator.loadScript("js/panes/common/matrix.js");
 
-/*  Note that hte earliest panes have priority. So the most specific ones are first.
+// A line-oriented collaborative notepad
+tabulator.loadScript("js/panes/common/pad.js");
+
+/*  Note that the earliest panes have priority. So the most specific ones are first.
 **
 */
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
+tabulator.loadScript("js/panes/contact/contactPane.js");
 tabulator.loadScript("js/panes/argument/argumentPane.js"); // A posistion in an argumnent tree
 
 tabulator.loadScript("js/panes/transaction/pane.js");

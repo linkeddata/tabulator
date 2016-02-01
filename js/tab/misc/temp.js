@@ -42,8 +42,8 @@
         if (!clip) return false;
         var clipid = Components.interfaces.nsIClipboard;
         
-        const supportsContractID = "@mozilla.org/supports-array;1";
-        const supportsIID = Components.interfaces.nsISupportsArray;
+        var supportsContractID = "@mozilla.org/supports-array;1";
+        var supportsIID = Components.interfaces.nsISupportsArray;
         var supportsArray = Components.classes[supportsContractID].createInstance(supportsIID);
         var trans = nsTransferable.createTransferable();
         //for (var flavour in aFlavourList) 

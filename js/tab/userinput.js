@@ -161,8 +161,7 @@ function UserInput(outline){
     //  Called when paste is called (Ctrl+v)
     pasteFromClipboard: function pasteFromClipboard(address,selectedTd){  
         function termFrom(fromCode){
-            function theCollection(from){return kb.the(kb.sym(address),tabulator.ns.link(from));}
-            var term=theCollection(fromCode).shift();
+            var term = tabulator.clipboard[fromCode].shift();
             if (term==null){
                  tabulator.log.warn("no more element in clipboard!");
                  return;
@@ -170,7 +169,7 @@ function UserInput(outline){
             switch (fromCode){
                 case 'predicates':
                 case 'objects':
-                    var allArray=theCollection('all').elements;
+                    var allArry = tabulator.clipboard.all;
                     for(var i=0;true;i++){
                         if (term.sameTerm(allArray[i])){
                             allArray.splice(i,1);
@@ -180,7 +179,7 @@ function UserInput(outline){
                     break;
                 case 'all':
                     var isObject=term.sameTerm(theCollection('objects').elements[0]);
-                    isObject ? theCollection('objects').shift():theCollection('predicates').shift(); //drop the corresponding term
+                    isObject ? tabulator.clipboard.objecs.shift() : tabulator.clipboard.predicates.shift(); //drop the corresponding term
                     return [term,isObject];
                     break;
             }
@@ -441,7 +440,7 @@ function UserInput(outline){
                                 //this add will cause a repainting
                             }
                             var enclosingTd=tabulator.Util.ancestor(this.lastModified.parentNode.parentNode,'TD');
-                            outline.outline_expand(enclosingTd,s.subject,defaultPane,true);
+                            outline.outline_expand(enclosingTd,s.subject, { 'pane': defaultPane, 'already': true});
                             outline.walk('right',outline.focusTd);
                         //</Feature>                         
                         }else{
@@ -573,12 +572,11 @@ function UserInput(outline){
       2. copy from more than one selectedTd: 1.sequece 2.collection
       3. make a clipboard class?
     */
-    clipboardInit: function clipboardInit(address){
-        kb.add(kb.sym(address),tabulator.ns.link('objects'),kb.collection())
-        kb.add(kb.sym(address),tabulator.ns.link('predicates'),kb.collection())
-        kb.add(kb.sym(address),tabulator.ns.link('all'),kb.collection())
-        //tabulator.log.warn('clipboardInit');
-        //tabulator.log.warn(kb instanceof RDFIndexedFormula); this returns false for some reason...
+    clipboardInit: function clipboardInit(){
+        tabulator.clipboard = {};
+        tabulator.clipboard.objects = [];
+        tabulator.clipboard.predicates = [];
+        tabulator.clipboard.all = [];
     },
 
     copyToClipboard: function copyToClipboard(address,selectedTd){
@@ -608,20 +606,15 @@ function UserInput(outline){
         switch (selectedTd.className){
             case 'selected': //table header
             case 'obj selected':
-                var objects=kb.the(kb.sym(address),tabulator.ns.link('objects'));
-                if (!objects) objects=kb.add(kb.sym(address),kb.sym(address+"#objects"),kb.collection()).object
-                objects.unshift(term);
+                var objects = tabulator.clipboard.objects;
+                tabulator.clipboard.objects.unshift(term);
                 break;
             case 'pred selected':
             case 'pred internal selected':
-                var predicates=kb.the(kb.sym(address),tabulator.ns.link('predicates'));
-                if (!predicates) predicates=kb.add(kb.sym(address),kb.sym(address+"#predicates"),kb.collection()).object;
-                predicates.unshift(term);
+                tabulator.clipboard.predicates.unshift(term);
         }
 
-        var all=kb.the(kb.sym(address),tabulator.ns.link('all'));
-        if (!all) all=kb.add(kb.sym(address),tabulator.ns.link('all'),kb.collection()).object
-        all.unshift(term);
+        tabulator.clipboard.all.unshift(term);
     },
 
     insertTermTo: function insertTermTo(selectedTd,term,isObject){
@@ -1134,7 +1127,7 @@ function UserInput(outline){
         var newTerm=kb.nextSymbol(targetdoc);
         outline.UserInput.fillInRequest('object',selectedTd,newTerm);
         //selection is changed
-        outline.outline_expand(outline.getSelection()[0],newTerm);
+        outline.outline_expand(outline.getSelection()[0], newTerm);
     },
     
     

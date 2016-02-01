@@ -1,14 +1,20 @@
 //  Common code for a discussion are a of messages about something
 //
 
-tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
+tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, options) {
     var kb = tabulator.kb;
     var ns = tabulator.ns;
     var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
     var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
     var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
     
-    var newestFirst = true;
+    options = options || {};
+    
+    var newestFirst = !!options.newestFirst;
+    
+    var messageBodyStyle = 'width: 90%; font-size:100%; \
+	    background-color: white; border: 0.07em solid gray; padding: 0.15em; margin: 0.1em 1em 0.1em 1em'
+//	'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  background-color: white; white-space: pre-wrap; padding: 0.1em;'
     
     var div = dom.createElement("div")
     var messageTable; // Shared by initial build and addMessageFromBindings
@@ -98,12 +104,11 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         middle.appendChild(field);
         field.rows = 3;
         // field.cols = 40;
-        field.setAttribute('style', 'width: 90%; font-size:100%; \
-                background-color: white; border: 0.07em solid gray; padding: 0.1em; margin: 0.1em 1em 0.1em 1em')
+        field.setAttribute('style', messageBodyStyle)
 
         submit = dom.createElement('button');
         //submit.disabled = true; // until the filled has been modified
-        submit.textContent = "Comment"; //@@ I18n
+        submit.textContent = "send"; //@@ I18n
         submit.setAttribute('style', 'float: right;');
         submit.addEventListener('click', sendMessage, false);
         rhs.appendChild(submit);
@@ -199,7 +204,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
         var  td2 = dom.createElement('td');
         tr.appendChild(td2);
         var pre = dom.createElement('p')            
-        pre.setAttribute('style', 'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  white-space: pre-wrap;')
+        pre.setAttribute('style', messageBodyStyle)
         td2.appendChild(pre);
         pre.textContent = kb.any(message, ns.sioc('content')).value;  
         
@@ -237,6 +242,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore) {
 
     messageTable = dom.createElement('table');
     div.appendChild(messageTable);
+    messageTable.setAttribute('style', 'width: 100%;'); // fill that div!
 
     if (tabulator.preferences.get('me')) {
         var tr = newMessageForm();

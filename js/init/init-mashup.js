@@ -2,9 +2,10 @@
 
 tabulator = {};
 tabulator.isExtension = false;
+tabulator.mode = 'webapp';
 
 // base for icons etc
-tabulator.scriptBase = 'https://linkeddata.github.com/tabulator/'; // Or app dev overwrite to point to your app's own copy
+tabulator.scriptBase = 'https://linkeddata.github.io/tabulator/'; // Or app dev overwrite to point to your app's own copy
 
 tabulator.iconPrefix = tabulator.scriptBase;
 
@@ -26,6 +27,8 @@ tabulator.setup = function() {
     tabulator.rdf = this['$rdf'];
     $rdf = this['$rdf'];
 
+    tabulator.loadScript("js/solid/dist/solid.js"); // Defines Solid
+    
     //Load the icons namespace onto tabulator.
     tabulator.loadScript("js/init/icons.js");
     //And Namespaces..
@@ -59,7 +62,12 @@ tabulator.setup = function() {
     tabulator.qs = new tabulator.rdf.QuerySource();
     // tabulator.sourceWidget = new SourceWidget();
     tabulator.sourceURI = "resource://tabulator/";
-    tabulator.sparql = new tabulator.rdf.sparqlUpdate(tabulator.kb);
+    
+    // There must be only one of these as it coordinates upstream and downstream changes
+    tabulator.kb.updater = new tabulator.rdf.sparqlUpdate(tabulator.kb); // Main way to find
+    tabulator.updater = tabulator.kb.updater; // shortcuts
+    tabulator.sparql = tabulator.kb.updater; // obsolete but still used
+    
     // tabulator.rc = new RequestConnector();
     tabulator.requestCache = [];
     tabulator.cacheEntry = {};
@@ -78,7 +86,8 @@ tabulator.setup = function() {
     tabulator.outline.init();
 };
 
-jQuery(function() {
+document.addEventListener('DOMContentLoaded', function() {
+// jQuery(function() {
     if (tabulator.rdf == undefined)
         tabulator.setup();
 });

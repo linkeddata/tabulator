@@ -87,7 +87,7 @@ function ACLEditor(metadatafileURI){
 		var results = kb.statementsMatching(
 						undefined, 
 						undefined, 
-						new RDFSymbol('http://www.w3.org/2001/02/acls/ns#ResourceAccessRule'));
+						kb.sym('http://www.w3.org/2001/02/acls/ns#ResourceAccessRule'));
 		
 		/** For each of the rules populate the users specified and based on the
 		HTTP methods specify whether the resource in question is Readable,
@@ -97,15 +97,15 @@ function ACLEditor(metadatafileURI){
 			rule = results[i].subject;
 			var resource = kb.statementsMatching(
 						rule, 
-						new RDFSymbol('http://www.w3.org/2001/02/acls/ns#hasAccessTo'),
+						kb.sym('http://www.w3.org/2001/02/acls/ns#hasAccessTo'),
 						undefined);
 			var people = kb.statementsMatching(
 						rule, 
-						new RDFSymbol('http://www.w3.org/2001/02/acls/ns#allow'),
+						kb.sym('http://www.w3.org/2001/02/acls/ns#allow'),
 						undefined);
 			var httpMethod = kb.statementsMatching(
 						rule, 
-						new RDFSymbol('http://www.w3.org/2001/02/acls/ns#methods'),
+						kb.sym('http://www.w3.org/2001/02/acls/ns#methods'),
 						undefined);
 			resourceList[rule] = resource[0].object;
 			if (people[0].object == "*") 

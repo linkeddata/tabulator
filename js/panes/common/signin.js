@@ -2,12 +2,178 @@
 //
 
 
+tabulator.panes.utils.clearElement = function(ele) {
+    while (ele.firstChild) {
+        ele.removeChild(ele.firstChild);
+    }
+    return ele;
+};
+
+
+// Look for and load the User who has control over it
+tabulator.panes.utils.findOriginOwner = function(doc, callback) {
+    var uri = doc.uri || doc;
+    var i = uri.indexOf('://');
+    if (i<0) return false;
+    var j = uri.indexOf('/', i+3);
+    if (j <0) return false;
+    var orgin = uri.slice(0, j+1); // @@ TBC
+    
+}
+
+// Note for a PUT which will not overwrite existing file
+// A la  https://tools.ietf.org/html/rfc7232#section-3.2
+// Use header   If-None-Match: *
+
+tabulator.panes.utils.webOperation = function(method, uri, options, callback) {
+    var xhr = $rdf.Util.XMLHTTPFactory();
+    xhr.onreadystatechange = function (){
+        if (xhr.readyState == 4){
+            var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+            // @@@ Optionally  options.saveMetadata Save metadata to preseve headers
+            callback(uri, ok, xhr.responseText, xhr);
+        }
+    };
+    xhr.open(method, uri, true);
+    if (options.contentType) {
+        xhr.setRequestHeader('Content-type', options.contentType);
+    }
+    xhr.send(options.data ? options.data : undefined);
+};
+
+tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
+    tabulator.panes.utils.webOperation('GET', here,  {}, function(uri, ok, body, xhr) {
+        if (ok) {
+            tabulator.panes.utils.webOperation('PUT',
+                there, { data: xhr.responseText, contentType: content_type},
+                callback);
+        } else {
+            callback(uri, ok, "(on read) " + body, xhr);
+        }
+    });
+};
+
+
+
+//////////////////////// Simple Accesss Control
+
+// This function sets up a simple default ACL for a resoirce, with
+// RWC for the owner, and a specified access (default none) for the public.
+// In all cases owner has read write control.
+// Parameter lists modes allowed to public
+// Parameters:
+//  me webid of user
+//  public = eg [ 'Read', 'Write']
+        
+tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback) {
+    var genACLtext = function(docURI, aclURI, options) {
+        options = options || {}
+        var public = options.public || [];
+        var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
+        var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
+        g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+        g.add(a, auth('accessTo'), doc, acl)
+        if (options.defaultForNew) {
+            g.add(a, auth('defaultForNew'), doc, acl)
+        }
+        g.add(a, auth('agent'), me, acl);
+        g.add(a, auth('mode'), auth('Read'), acl);
+        g.add(a, auth('mode'), auth('Write'), acl);
+        g.add(a, auth('mode'), auth('Control'), acl);
+        
+        if (public.length) {
+            a = g.sym(aclURI + '#a2');
+            g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+            g.add(a, auth('accessTo'), doc, acl)
+            g.add(a, auth('agentClass'), ns.foaf('Agent'), acl);
+            for (var p=0; p<public.length; p++) {
+                g.add(a, auth('mode'), auth(public[p]), acl); // Like 'Read' etc
+            }
+        }
+        return $rdf.serialize(acl, g, aclURI, 'text/turtle');
+    }
+    var kb = tabulator.kb;
+    var aclDoc = kb.any(kb.sym(docURI),
+        kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+    if (aclDoc) { // Great we already know where it is
+        var aclText = genACLtext(docURI, aclDoc.uri, options);
+        tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+    } else {
+    
+        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+            if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+            var aclDoc = kb.any(kb.sym(docURI),
+                kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+            if (!aclDoc) {
+                // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                callback(false, "No Link rel=ACL header for " + docURI);
+            } else {
+                var aclText = genACLtext(docURI, aclDoc.uri, options);
+                tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+            }
+        })
+    }
+};
+              
+
+tabulator.panes.utils.offlineTestID = function() {
+
+    if (tabulator.mode == 'webapp' && typeof document !== 'undefined' &&
+        document.location &&  ('' + document.location).slice(0,16) === 'http://localhost') {
+        var div = document.getElementById('appTarget');
+        var id = div.getAttribute('testID');
+        if (!id) return null;
+        /* me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid
+        */
+        console.log("Assuming user is " + id);
+        return id
+    }
+    return null;
+};
+
 
 ////////////////////////////////////////// Boostrapping identity
 //
 //
 
 tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
+    var box = myDocument.createElement('div');
+    var p = myDocument.createElement('p');
+    box.appendChild(p);
+    box.className="mildNotice";
+    p.innerHTML = ("You need to log in with a Web ID");
+    console.log('tabulator.panes.utils.signInOrSignUpBox')
+    
+    
+    var but = myDocument.createElement('input');
+    box.appendChild(but);
+    but.setAttribute('type', 'button');
+    but.setAttribute('value', 'Log in');
+    but.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
+        but.addEventListener('click', function(e){
+        var offline = tabulator.panes.utils.offlineTestID();
+        if (offline) return gotOne(offline);
+	tabulator.solid.auth.login().then(function(uri){
+	    console.log('signInOrSignUpBox logged in up '+ uri)
+	    gotOne(uri)
+	})
+    }, false);
+    
+    var but2 = myDocument.createElement('input');
+    box.appendChild(but2);
+    but2.setAttribute('type', 'button');
+    but2.setAttribute('value', 'Sign Up');
+    but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
+    but2.addEventListener('click', function(e){
+	tabulator.solid.auth.signup().then(function(uri){
+	    console.log('signInOrSignUpBox signed up '+ uri)
+	    gotOne(uri)
+	})
+    }, false);
+    return box;
+};
+
+tabulator.panes.utils.signInOrSignUpBox_original = function(myDocument, gotOne) {
     var box = myDocument.createElement('div');
     var p = myDocument.createElement('p');
     box.appendChild(p);
@@ -158,6 +324,8 @@ tabulator.panes.utils.checkUserSetMe = function(doc) {
 // One way is for the server to send the information back as a User: header.
 // This function looks for a linked 
 
+tabulator.panes.utils.userCheckSite = 'https://databox.me/';
+
 tabulator.panes.utils.checkUser = function(doc, setIt) {
     var userMirror = tabulator.kb.any(doc, tabulator.ns.link('userMirror'));
     if (!userMirror) userMirror = doc;
@@ -165,19 +333,32 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
     kb.fetcher.nowOrWhenFetched(userMirror.uri, undefined, function(ok, body) {
         var done = false;
         if (ok) {
-            kb.each(undefined, tabulator.ns.link("requestedURI"), $rdf.uri.docpart(userMirror.uri))
+            kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
             .map(function(request){
-                var response = kb.any(request, tabulator.ns.link("response"));
+		 
+                var response = kb.any(request, tabulator.ns.link('response'));
                 if (request !== undefined) {
-                    kb.each(response, tabulator.ns.httph("user")).map(function(userHeader){
-                        setIt(userHeader.value.trim());
-                        done = true;
-                    });
+		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+		    if (userHeaders.length === 0) {
+			console.log("CheckUser: non-solid server: trying "
+			    + tabulator.panes.utils.userCheckSite);
+			tabulator.panes.utils.checkUser(
+			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+		    } else {
+			userHeaders.map(function(userHeader){
+			    var username = userHeader.value.trim();
+			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+				setIt(username);
+				done = true;
+			    }
+			});
+		    }
                 }
             });
         } else {
-            var message = "checkUser: Unable to load " + userMirror.uri;
+            var message = "checkUser: Unable to load " + userMirror.uri + ": " + body;
             try {  // Ugh
+                console.log(message);
                 tabulator.log.alert(message);
             } catch(e) {
                 try {
@@ -190,26 +371,38 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
 };
 
 //              Login status box
-
+//
+//   Shows 
 tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
-    var logoutLabel = 'Web ID Logout';
-    if (me) {
-        var nick = tabulator.kb.any(me, tabulator.ns.foaf('nick'));
-        if (nick) {
-            logoutLabel = 'Logout ' + nick.value;
-        }
+ 
+    var box = myDocument.createElement('div');
+
+    var logoutButton = function(me) {
+        var logoutLabel = 'Web ID logout';
+        if (me) {
+            var nick = tabulator.kb.any(me, tabulator.ns.foaf('nick')) ||
+                tabulator.kb.any(me, tabulator.ns.foaf('name'));
+            if (nick) {
+                logoutLabel = 'Logout ' + nick.value;
+            };
+        };
+        var signOutButton = myDocument.createElement('input');  
+        signOutButton.className = 'WebIDCancelButton';
+        signOutButton.setAttribute('type', 'button');
+        signOutButton.setAttribute('value', logoutLabel);
+        signOutButton.addEventListener('click', zapIt, false);
+        return signOutButton;
     };
 
-    // If the user has no WebID that we know of
-    var box = myDocument.createElement('div');
-    var signOutButton = myDocument.createElement('input');  
+    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
+
     var setIt = function(newid) {
         tabulator.preferences.set('me',newid);
         me_uri = newid;
         me = me_uri && tabulator.kb.sym(me_uri)
-        var message = 'Your Web ID is now <'+me_uri+'> .';
+        var message = 'Your Web ID is now ' + me +' .';
         try { 
             tabulator.log.alert(message);
         } catch(e) {
@@ -218,16 +411,13 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
             } catch (e) {
             };
         }
-
-
-        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(sisu);
-        box.appendChild(signOutButton); 
+        box.refresh();
         if (listener) listener(newid);
     };
+    
     var zapIt = function() {
         tabulator.preferences.set('me','');
-        var message = 'Your Web ID was <'+me_uri+'>. It has been forgotten.';
+        var message = 'Your Web ID was ' + me + '. It has been forgotten.';
         me_uri = '';
         me = null
         try { 
@@ -238,24 +428,27 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
             } catch (e) {
             };
         }
-        // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
-        box.removeChild(signOutButton);
-        sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, listener);
-        box.appendChild(sisu); 
+        box.refresh();
         if (listener) listener(undefined);
     }
+    
+    box.refresh = function() {
+        var me_uri = tabulator.preferences.get('me') || '';
+        var me = me_uri ? tabulator.kb.sym(me_uri) : null;
+        if (box.me !== me_uri) { 
+            tabulator.panes.utils.clearElement(box);
+            if (me) {
+                box.appendChild(logoutButton(me));
+            } else {
+                box.appendChild(tabulator.panes.utils.signInOrSignUpBox(myDocument, listener));
+            }; 
+        }
+        box.me = me_uri;
+    }
 
-    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
-
-    if (me) {
-        box.appendChild(signOutButton);
-    } else {
-        box.appendChild(sisu);
-    };
-    signOutButton.className = 'WebIDCancelButton';
-    signOutButton.setAttribute('type', 'button');
-    signOutButton.setAttribute('value', logoutLabel);
-    signOutButton.addEventListener('click', zapIt, false);
+    box.me = '99999';  // Force refresh    
+    box.refresh();
+    
     return box;
 }
 
@@ -272,15 +465,39 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 //  - If not logged in, log in.
 //  - Load preferences file
 //  - Prompt user for workspaces
+//  - Allows the user to just type in a URI by hand
+//
+//  Callsback with the ws and the base URI
+//
 // 
-tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
+tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
     var box;
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
+
+
+    var figureOutBase = function(ws) {
+        var newBase = kb.any(ws, tabulator.ns.space('uriPrefix'));
+        if (!newBase) {
+            newBase = ws.uri.split('#')[0];
+        } else {
+	    newBase = newBase.value;
+	}
+        if (newBase.slice(-1) !== '/') {
+            $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
+            newBase = newBase + '/';
+        }
+        var now = new Date();
+        newBase += appPathSegment + '/id'+ now.getTime() + '/'; // unique id 
+        
+        callbackWS(ws, newBase);
+    }
     
+
+
     var displayOptions = function(id, preferencesFile){
         var status = ''; 
         
@@ -297,8 +514,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         // if (pending !== undefined) pending.parentNode.removeChild(pending);
         if (w.length == 1) {
         
-            say( "Workspace used: " + w[0].uri);  
-            callbackWS(w[0]); 
+            say( "Workspace used: " + w[0].uri);  // @@ allow user to see URI
+            figureOutBase(w[0]);
 
         } else if (w.length == 0 ) {
             say("You don't seem to have any workspaces. You have "+storages.length +" storages.");
@@ -312,6 +529,38 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
             
             // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
+            
+            
+            //  Add a field for directly adding the URI yourself
+            
+            var hr = box.appendChild(dom.createElement('hr')); // @@
+            
+            var p = box.appendChild(dom.createElement('p'));
+            p.textContent = "Where would you like to store the data for the " + noun + "?  " +
+            "Give the URL of the directory where you would like the data stored.";
+            var baseField = box.appendChild(dom.createElement('input'));
+            baseField.setAttribute("type", "text");
+            baseField.size = 80; // really a string
+            baseField.label = "base URL";
+            baseField.autocomplete = "on";
+
+            box.appendChild(dom.createElement('br')); // @@
+            
+            var button = box.appendChild(dom.createElement('button'));
+            button.textContent = "Start new " + noun + " at this URI";
+            button.addEventListener('click', function(e){
+                var newBase = baseField.value;
+                if (newBase.slice(-1) !== '/') {
+                    newBase += '/';
+                }
+                callbackWS(null, newBase);
+            });
+            
+            
+            
+            // Now go set up the table of spaces
+            
+            
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
                     tabulator.ns.space('MasterWorkspace')) ) });
@@ -329,11 +578,20 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                 }
                 col2 = dom.createElement('td');
                 style = kb.any(ws, tabulator.ns.ui('style'));
-                style = style ? style.value : ''
+		if (style) {
+		    style = style.value;
+		} else { // Otherise make up arbitrary colour
+		    var hash = function(x){return x.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0); }
+		    var bgcolor = '#' + ((hash(ws.uri) & 0xffffff) | 0xc0c0c0).toString(16); // c0c0c0  forces pale
+		    style = 'color: black ; background-color: ' + bgcolor + ';'
+		}
                 col2.setAttribute('style', deselectedStyle + style);
                 tr.target = ws.uri;
                 var label = kb.any(ws, tabulator.ns.rdfs('label'))
-                col2.textContent = label || "";
+		if (!label) {
+		    label = ws.uri.split('/').slice(-1)[0] || ws.uri.split('/').slice(-2)[0]
+		}
+                col2.textContent = label || "???";
                 tr.appendChild(col2);
                 if (i == 0) {
                     col3 = dom.createElement('td');
@@ -361,13 +619,14 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
                     // button.setAttribute('style', style);
                     button.addEventListener('click', function(e){
                         button.disabled = true;
-                        callbackWS(selectedWorkspace);
+                        figureOutBase(selectedWorkspace);
                         button.textContent = '---->';
                     }, true); // capture vs bubble
                     return button;
                 };
 
                 var comment = kb.any(ws, tabulator.ns.rdfs('comment'));
+		comment = comment ? comment.value : "Use this workspace";
                 addMyListener(col2, comment? comment.value : '',
                                  deselectedStyle + style, ws);
             };
@@ -408,13 +667,14 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
         return;
     };
 
-    var gotIDChange = function(me) {
-        if (typeof me == 'undefined') return undefined;
-        var docURI = $rdf.uri.docpart(me.uri);
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+    var gotIDChange = function(uri) {
+        if (typeof uri == 'undefined') return undefined;
+        var me = $rdf.sym(uri);
+        var docURI = me.doc();
+        kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
             if (!ok) {
                 box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load profile file " + docURI));
+                    "Can't load profile file " + me.doc()));
                 return;
             }
             loadPrefs(me);
@@ -431,12 +691,13 @@ tabulator.panes.utils.selectWorkspace = function(dom, callbackWS) {
 
 };
 
-//////////////////// Craete a new instance of an app
+//////////////////// Create a new instance of an app
 //
 //  An instance of an app could be e.g. an issue tracker for a given project,
 // or a chess game, or calendar, or a health/fitness record for a person.
 //
 
+// Returns a div with a button in it for making a new app instance
 
 tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     var gotWS = function(ws) {
@@ -448,9 +709,9 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
     b.setAttribute('type', 'button');
     div.appendChild(b)
     b.innerHTML = label;
-    b.setAttribute('style', 'float: right; margin: 0.5em 1em;');
+    // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
-        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, gotWS))}, false);
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, label, gotWS))}, false);
     div.appendChild(b);
     return div;
 };

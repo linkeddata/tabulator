@@ -97,6 +97,7 @@ tabulator.Util.emptyNode = function(node) {
         return node
 }
 
+
 tabulator.Util.getTarget = function(e) {
     var target
     if (!e) var e = window.event

@@ -1,6 +1,11 @@
 //  signin.js     Signing in, signing up, workspace selection, app spawning
 //
 
+try {
+    var Solid = require('solid.js');
+} catch (e) {
+   var Solid = require('solid');
+}
 
 tabulator.panes.utils.clearElement = function(ele) {
     while (ele.firstChild) {
@@ -18,7 +23,7 @@ tabulator.panes.utils.findOriginOwner = function(doc, callback) {
     var j = uri.indexOf('/', i+3);
     if (j <0) return false;
     var orgin = uri.slice(0, j+1); // @@ TBC
-    
+
 }
 
 // Note for a PUT which will not overwrite existing file
@@ -54,6 +59,142 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 };
 
 
+// Promises versions
+
+// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
+
+tabulator.panes.utils.findAppInstances = function(context, klass) {
+    return new Promise(function(resolve, reject){
+        var ns = tabulator.ns;
+        var kb = tabulator.kb;
+        var me = context.me;
+        var tis = kb.each(me, tabulator.ns.solid('typeIndex'));
+        console.log("Type indeces: " + tis.length);
+        var ps = tis.map(function(ti){return kb.fetcher.load(ti)})
+        Promise.all(ps).then(function(value){
+            resolve(context.instances = kb.each(undefined, ns.solid('forClass'), klass)
+                .filter(function(x){return kb.holds(x, ns.rdf('type'), ns.solid('TypeRegistration'))}));
+        }).catch(function(e){reject(e)});
+    })
+};
+/*
+    <#ab09fd> a solid:TypeRegistration;
+        solid:forClass vcard:AddressBook;
+        solid:instance </contacts/>.
+*/
+tabulator.panes.utils.registerAppInstance = function(inst, klass, public, options) {
+    var ns = tabulator.ns;
+    var kb = tabulator.kb;
+    var ti;
+    if (public) {
+        ti = kb.any(me, tabulator.ns.solid('typeIndex'), undefined, context.profile);
+    } else {
+        tabulator.panes.utils.loadPreferences(context)
+        .then(function(){})
+        return new Promise(function(resolve, reject){
+            var p1 = tabulator.panes.utils.loadPreferences(context);
+            p1.then(function(pf){
+                var x = tabulator.panes.utils.newThing(ti);
+                var ins = [
+                $rdf.st(x,  tabulator.ns.rdf('type'), tabulator.ns.solid('TypeRegistration')),
+                $rdf.st(x,  tabulator.ns.solid('forClass'), klass),
+                $rdf.st(x,  tabulator.ns.solid('instance'), inst)
+                    ];
+                var tis = kb.each(me, tabulator.ns.solid('typeIndex'));
+                var ps = tis.map(function(ti){return kb.fetcher.load(ti)})
+                Promise.all(ps).then(function(value){
+                    resolve(kb.each(undefined, tabulator.ns.rdf('type'),
+                        tabulator.ns.solid('TypeRegistration')));
+                }).catch(function(e){reject(e)});
+            }).catch(function(err){reject(err)});
+        })
+
+    }
+};
+
+
+tabulator.panes.utils.loadPreferences = function(context) {
+    var kb = tabulator.kb;
+    var preferencesFile = kb.any(context.me, tabulator.ns.space('preferencesFile'));
+    var box = context.statusArea || null;
+    return new Promise(function(resolve, reject) {
+
+        var message;
+        if (!preferencesFile) {
+            message = "Can't find a preferences file for user: " + context.me;
+            tabulator.panes.utils.errorMessageBlock(context.dom, message);
+            reject(message);
+        }
+        context.preferencesFile = preferencesFile;
+        var pending;
+        pending = tabulator.panes.utils.errorMessageBlock(context.dom,
+            "(loading preferences " + preferencesFile+ ")");
+        box.appendChild(pending);
+        kb.fetcher.load(preferencesFile).then(function(xhr){
+            pending.parentNode.removeChild(pending);
+            resolve(context);
+        }).catch(function(err){
+            reject("Error loading preferences file" + err)
+        });
+    });
+};
+
+
+tabulator.panes.utils.getUserLoadProfile = function(context) {
+    return new Promise(function(resolve, reject){
+        var gotIDChange = function(uri) {
+            if (typeof uri == 'undefined') return undefined;
+            var me = $rdf.sym(uri);
+            context.me = me;
+            var docURI = me.doc();
+            tabulator.kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
+                if (!ok) {
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
+                        "Can't load profile file " + me.doc()));
+                    reject("Can't load profile file " + me.doc());
+                } else {
+                    resolve(context);
+                }
+            });
+        }
+        var lsb = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
+        context.div.appendChild(lsb); // remove later
+    })
+}
+
+
+
+
+/////  Non-promises version
+
+tabulator.panes.utils.loadPrefs = function(ok, id, box, callback_ok_id_preferencesFile) {
+    var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));
+    var message;
+    if (!preferencesFile) {
+        message = "Can't find a preferences file for user: " + id;
+        callback_ok_id_preferencesFile(false, message);
+        return tabulator.panes.utils.errorMessageBlock(dom, message);
+    }
+    var docURI = $rdf.uri.docpart(preferencesFile.uri);
+    var pending;
+    pending = tabulator.panes.utils.errorMessageBlock(dom,
+        "(loading preferences " + docURI+ ")");
+    box.appendChild(pending);
+    kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body) {
+        if (!ok) {
+            message ="Can't load a preferences file " + docURI;
+            box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
+                message));
+            callback_id_preferencesFile(false, message);
+            return;
+        }
+        pending.parentNode.removeChild(pending);
+        callback_ok_id_preferencesFile(true, id, preferencesFile);
+    });
+    return;
+};
+
+
 
 //////////////////////// Simple Accesss Control
 
@@ -64,7 +205,7 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 // Parameters:
 //  me webid of user
 //  public = eg [ 'Read', 'Write']
-        
+
 tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback) {
     var genACLtext = function(docURI, aclURI, options) {
         options = options || {}
@@ -80,7 +221,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback)
         g.add(a, auth('mode'), auth('Read'), acl);
         g.add(a, auth('mode'), auth('Write'), acl);
         g.add(a, auth('mode'), auth('Control'), acl);
-        
+
         if (public.length) {
             a = g.sym(aclURI + '#a2');
             g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
@@ -99,7 +240,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback)
         var aclText = genACLtext(docURI, aclDoc.uri, options);
         tabulator.panes.utils.webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
     } else {
-    
+
         kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
             if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
             var aclDoc = kb.any(kb.sym(docURI),
@@ -114,7 +255,7 @@ tabulator.panes.utils.setACLUserPublic = function(docURI, me, options, callback)
         })
     }
 };
-              
+
 
 tabulator.panes.utils.offlineTestID = function() {
 
@@ -143,8 +284,8 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     box.className="mildNotice";
     p.innerHTML = ("You need to log in with a Web ID");
     console.log('tabulator.panes.utils.signInOrSignUpBox')
-    
-    
+
+
     var but = myDocument.createElement('input');
     box.appendChild(but);
     but.setAttribute('type', 'button');
@@ -153,19 +294,19 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
         but.addEventListener('click', function(e){
         var offline = tabulator.panes.utils.offlineTestID();
         if (offline) return gotOne(offline);
-	tabulator.solid.auth.login().then(function(uri){
+	Solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
 	    gotOne(uri)
 	})
     }, false);
-    
+
     var but2 = myDocument.createElement('input');
     box.appendChild(but2);
     but2.setAttribute('type', 'button');
     but2.setAttribute('value', 'Sign Up');
     but2.setAttribute('style', 'padding: 1em; border-radius:0.5em; margin: 2em;')
     but2.addEventListener('click', function(e){
-	tabulator.solid.auth.signup().then(function(uri){
+	Solid.auth.signup().then(function(uri){
 	    console.log('signInOrSignUpBox signed up '+ uri)
 	    gotOne(uri)
 	})
@@ -186,7 +327,7 @@ tabulator.panes.utils.signInOrSignUpBox_original = function(myDocument, gotOne) 
     but.setAttribute('value', 'Log in or Sign Up');
     var makeOne = function() {
         box.removeChild(box.firstChild); // Tip has been taken up!
-        box.removeChild(but); // Button has been pressed now now appropriate (unless cancel) 
+        box.removeChild(but); // Button has been pressed now now appropriate (unless cancel)
         var foo = myDocument.createElement('div');
         //main.insertBefore(foo, main.firstChild);
         box.insertBefore(foo, box.firstChild);
@@ -290,7 +431,7 @@ web ID</a>?<br/>\
         }, false);
     }
     but.addEventListener('click', makeOne, false);
-    return box; 
+    return box;
 };
 
 //  Check user and set 'me' if found
@@ -322,7 +463,7 @@ tabulator.panes.utils.checkUserSetMe = function(doc) {
 // For a user authenticated using webid (or possibly other methods) it
 // is not immedaietly available to the client which person(a) it is.
 // One way is for the server to send the information back as a User: header.
-// This function looks for a linked 
+// This function looks for a linked
 
 tabulator.panes.utils.userCheckSite = 'https://databox.me/';
 
@@ -335,7 +476,7 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
         if (ok) {
             kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
             .map(function(request){
-		 
+
                 var response = kb.any(request, tabulator.ns.link('response'));
                 if (request !== undefined) {
 		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
@@ -372,11 +513,11 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
 
 //              Login status box
 //
-//   Shows 
+//   Shows
 tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
- 
+
     var box = myDocument.createElement('div');
 
     var logoutButton = function(me) {
@@ -388,7 +529,7 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
                 logoutLabel = 'Logout ' + nick.value;
             };
         };
-        var signOutButton = myDocument.createElement('input');  
+        var signOutButton = myDocument.createElement('input');
         signOutButton.className = 'WebIDCancelButton';
         signOutButton.setAttribute('type', 'button');
         signOutButton.setAttribute('value', logoutLabel);
@@ -403,7 +544,7 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
         me_uri = newid;
         me = me_uri && tabulator.kb.sym(me_uri)
         var message = 'Your Web ID is now ' + me +' .';
-        try { 
+        try {
             tabulator.log.alert(message);
         } catch(e) {
             try {
@@ -414,13 +555,13 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
         box.refresh();
         if (listener) listener(newid);
     };
-    
+
     var zapIt = function() {
         tabulator.preferences.set('me','');
         var message = 'Your Web ID was ' + me + '. It has been forgotten.';
         me_uri = '';
         me = null
-        try { 
+        try {
             tabulator.log.alert(message);
         } catch(e) {
             try {
@@ -431,24 +572,24 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
         box.refresh();
         if (listener) listener(undefined);
     }
-    
+
     box.refresh = function() {
         var me_uri = tabulator.preferences.get('me') || '';
         var me = me_uri ? tabulator.kb.sym(me_uri) : null;
-        if (box.me !== me_uri) { 
+        if (box.me !== me_uri) {
             tabulator.panes.utils.clearElement(box);
             if (me) {
                 box.appendChild(logoutButton(me));
             } else {
                 box.appendChild(tabulator.panes.utils.signInOrSignUpBox(myDocument, listener));
-            }; 
+            };
         }
         box.me = me_uri;
     }
 
-    box.me = '99999';  // Force refresh    
+    box.me = '99999';  // Force refresh
     box.refresh();
-    
+
     return box;
 }
 
@@ -469,7 +610,7 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 //
 //  Callsback with the ws and the base URI
 //
-// 
+//
 tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
     var me_uri = tabulator.preferences.get('me');
@@ -491,20 +632,21 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             newBase = newBase + '/';
         }
         var now = new Date();
-        newBase += appPathSegment + '/id'+ now.getTime() + '/'; // unique id 
-        
+        newBase += appPathSegment + '/id'+ now.getTime() + '/'; // unique id
+
         callbackWS(ws, newBase);
     }
-    
 
 
-    var displayOptions = function(id, preferencesFile){
-        var status = ''; 
-        
+
+    var displayOptions = function(ok, id, preferencesFile){
+        var status = '';
+        if (!ok) return say(id); // message
+
         // A workspace specifically defined in the private preferences file:
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
             undefined, preferencesFile).map(function(st){return st.object;});
-            
+
         // A workspace in a storage in the public profile:
         var storages = kb.each(id, tabulator.ns.space('storage'));  // @@ No provenance requirement at the moment
         storages.map(function(s){
@@ -513,7 +655,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
         // if (pending !== undefined) pending.parentNode.removeChild(pending);
         if (w.length == 1) {
-        
+
             say( "Workspace used: " + w[0].uri);  // @@ allow user to see URI
             figureOutBase(w[0]);
 
@@ -521,20 +663,20 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             say("You don't seem to have any workspaces. You have "+storages.length +" storages.");
             say("@@ code me: create new workspace.")
         } else {
-        
+
             // Prompt for ws selection or creation
             // say( w.length + " workspaces for " + id + "Chose one.");
             var table = dom.createElement('table');
             table.setAttribute('style', 'border-collapse:separate; border-spacing: 0.5em;')
-            
+
             // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
-            
-            
+
+
             //  Add a field for directly adding the URI yourself
-            
+
             var hr = box.appendChild(dom.createElement('hr')); // @@
-            
+
             var p = box.appendChild(dom.createElement('p'));
             p.textContent = "Where would you like to store the data for the " + noun + "?  " +
             "Give the URL of the directory where you would like the data stored.";
@@ -545,7 +687,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             baseField.autocomplete = "on";
 
             box.appendChild(dom.createElement('br')); // @@
-            
+
             var button = box.appendChild(dom.createElement('button'));
             button.textContent = "Start new " + noun + " at this URI";
             button.addEventListener('click', function(e){
@@ -555,12 +697,12 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
                 }
                 callbackWS(null, newBase);
             });
-            
-            
-            
+
+
+
             // Now go set up the table of spaces
-            
-            
+
+
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
                     tabulator.ns.space('MasterWorkspace')) ) });
@@ -645,27 +787,6 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
         };
     };
-        
-    var loadPrefs = function(id) {
-        var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));  
-        if (!preferencesFile) return tabulator.panes.utils.errorMessageBlock(dom,
-            "Can't find a preferences file for user: " + id); 
-        var docURI = $rdf.uri.docpart(preferencesFile.uri);
-        var pending;
-        pending = tabulator.panes.utils.errorMessageBlock(dom,
-            "(loading preferences " + docURI+ ")");
-        box.appendChild(pending);
-        kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body) {
-            if (!ok) {
-                box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load a preferences file " + docURI));
-                return;
-            }
-            pending.parentNode.removeChild(pending);
-            displayOptions(id, preferencesFile);
-        });
-        return;
-    };
 
     var gotIDChange = function(uri) {
         if (typeof uri == 'undefined') return undefined;
@@ -677,7 +798,10 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
                     "Can't load profile file " + me.doc()));
                 return;
             }
-            loadPrefs(me);
+            // tabulator.panes.utils.loadPrefs(me, id, box, displayOptions);
+            tabulator.panes.utils.loadPreferences(context)
+            .then(function(preferencesFile){displayOptions(true, id, preferencesFile)})
+            .catch(function(err){displayOptions(false, err)});
         });
     };
 
@@ -690,6 +814,33 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
     return box;
 
 };
+
+tabulator.panes.utils.logInLoadProfileLoadPreferences = function(context){
+    var p0 = new Promise(function(resolve, reject){
+        var gotIDChange = function(uri) {
+            if (typeof uri == 'undefined') return undefined;
+            var me = $rdf.sym(uri);
+            var docURI = me.doc();
+            tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
+                if (!ok) {
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
+                        "Can't load profile file " + me.doc()));
+                    reject("Can't load profile file " + me.doc())
+                    return;
+                }
+                // tabulator.panes.utils.loadPrefs(me, id, box, displayOptions);
+                tabulator.panes.utils.loadPreferences(context)
+                .then(function(preferencesFile){resolve({ me: me, preferencesFile: preferencesFile})})
+                .catch(function(err){reject(err)});
+            });
+        };
+        box = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
+        context.div.appendChild(box);
+
+    });
+    return p0;
+}
+
 
 //////////////////// Create a new instance of an app
 //
@@ -718,4 +869,3 @@ tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
 
 
 // ends
-

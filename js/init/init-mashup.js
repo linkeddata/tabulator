@@ -22,13 +22,13 @@ tabulator.setup = function() {
     //Load the RDF Library, which defines itself in the namespace $rdf.
     // see the script rdf/create-lib (this script creates one file -rdflib.js that concatenates all the js files)
 
-    tabulator.loadScript("js/rdf/dist/rdflib.js"); // Sets this.$rdf 
-    
-    tabulator.rdf = this['$rdf'];
-    $rdf = this['$rdf'];
+    tabulator.loadScript("js/rdf/dist/rdflib.js"); // Sets this.$rdf
+
+    tabulator.rdf = $rdf;
+//    $rdf = this['$rdf'];
 
     tabulator.loadScript("js/solid/dist/solid.js"); // Defines Solid
-    
+
     //Load the icons namespace onto tabulator.
     tabulator.loadScript("js/init/icons.js");
     //And Namespaces..
@@ -62,12 +62,12 @@ tabulator.setup = function() {
     tabulator.qs = new tabulator.rdf.QuerySource();
     // tabulator.sourceWidget = new SourceWidget();
     tabulator.sourceURI = "resource://tabulator/";
-    
+
     // There must be only one of these as it coordinates upstream and downstream changes
     tabulator.kb.updater = new tabulator.rdf.sparqlUpdate(tabulator.kb); // Main way to find
     tabulator.updater = tabulator.kb.updater; // shortcuts
     tabulator.sparql = tabulator.kb.updater; // obsolete but still used
-    
+
     // tabulator.rc = new RequestConnector();
     tabulator.requestCache = [];
     tabulator.cacheEntry = {};
@@ -93,4 +93,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // init-mashup ends
-

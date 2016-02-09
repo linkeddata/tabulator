@@ -28,6 +28,7 @@ tabulator.ns.sched =  $rdf.Namespace('http://www.w3.org/ns/pim/schedule#');
 tabulator.ns.schema =  $rdf.Namespace('http:/schema.org/'); // @@ beware confusion with documents no 303
 tabulator.ns.sioc =  $rdf.Namespace('http://rdfs.org/sioc/ns#');
 // was - tabulator.ns.xsd = $rdf.Namespace('http://www.w3.org/TR/2004/REC-xmlschema-2-20041028/#dt-');
+tabulator.ns.solid = $rdf.Namespace('https://www.w3.org/ns/solid/terms#');
 tabulator.ns.space = $rdf.Namespace('http://www.w3.org/ns/pim/space#');
 tabulator.ns.stat = $rdf.Namespace('http://www.w3.org/ns/posix/stat#');
 tabulator.ns.ui = $rdf.Namespace('http://www.w3.org/ns/ui#');

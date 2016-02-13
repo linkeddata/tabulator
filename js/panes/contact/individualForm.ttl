@@ -9,7 +9,7 @@
     <http://purl.org/dc/elements/1.1/title> "Contact Details" ;
     a <http://www.w3.org/ns/ui#Form> ;
     <http://www.w3.org/ns/ui#part>
-        <#fullNameField>, <#addresses>, 
+        <#fullNameField>, <#addressesComment>, <#addresses>,
         <#emailComment>, <#eMails>,
         <#telephoneComment>, <#telephones>, <#noteComment>, <#noteField> .
 
@@ -18,6 +18,12 @@
     <http://www.w3.org/ns/ui#maxLength> "128" ;
     <http://www.w3.org/ns/ui#property> <http://www.w3.org/2006/vcard/ns#fn> ;
     <http://www.w3.org/ns/ui#size> "40" .
+
+
+<#addressesComment>
+    a <http://www.w3.org/ns/ui#Comment> ;
+    <http://www.w3.org/ns/ui#contents> "Address" .
+
 
 <#addresses>
     <http://purl.org/dc/elements/1.1/title> "Address details" ;

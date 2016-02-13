@@ -1,5 +1,11 @@
-tabulator.ns = {};
+//tabulator.ns = {};
 
+tabulator.ns = function(prefixed) {
+    var pair = prefixed.split(':')
+    if (pair.length === 0) throw "Prefixed name has no colon: " + prefixed
+    if (!(pair[0] in tabulator.ns)) throw "Unregistered namespace prefix in: " + prefixed
+    return tabulator.ns[pair[0]](pair[1]);
+};
 
 tabulator.ns.auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#'); // @@ obsolete - use acl:
 tabulator.ns.acl = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');

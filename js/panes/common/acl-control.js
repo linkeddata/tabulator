@@ -41,18 +41,18 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             var right = rowrow.appendChild(dom.createElement('td'));
             var rightTable = right.appendChild(dom.createElement('table'));
             var a = authorizations[i];
-            
+
             kb.each(a,  ACL('agent')).map(function(x){
                 var tr = leftTable.appendChild(dom.createElement('tr'));
                 tabulator.panes.utils.setName(tr, x);
                 tr.setAttribute('style', 'min-width: 12em');
             });
-            
+
             kb.each(a,  ACL('agentClass')).map(function(x){
                 var tr = leftTable.appendChild(dom.createElement('tr'));
                 tr.textContent = tabulator.Util.label(x) + ' *'; // for now // later add # or members
             });
-            
+
             kb.each(a,  ACL('mode')).map(function(x){
                 var tr = rightTable.appendChild(dom.createElement('tr'));
                 tr.textContent = tabulator.Util.label(x); // for now // later add # or members
@@ -73,9 +73,10 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                     statusBlock.textContent += " (No defaults given.)";
                 } else {
                     statusBlock.textContent = "The sharing for this group is the default.";
-                    var kb2 = tabulator.panes.utils.adoptACLDefault(doc, targetACLDoc, defaultHolder, defaultACLDoc) 
+                    var kb2 = tabulator.panes.utils.adoptACLDefault(doc, targetACLDoc, defaultHolder, defaultACLDoc)
                     ACLControl(box, doc, targetACLDoc, kb2); // Add btton to save them as actual
-                    
+                    box.style = 'color: #777;';
+
                     var editPlease = bottomRow.appendChild(dom.createElement('button'));
                     editPlease.textContent = "Set specific sharing\nfor this group";
                     editPlease.addEventListener('click', function(event) {
@@ -85,6 +86,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                                 statusBlock.textContent += " (Error writing back access control file: "+message+")";
                             } else {
                                 statusBlock.textContent = " (Now editing specific access for this group)";
+                                box.style = 'color: black;';
                                 bottomRow.removeChild(editPlease);
                             }
                         });
@@ -94,43 +96,45 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             } else { // Not using defaults
 
                 ACLControl(box, targetDoc, targetACLDoc, kb);
-                
+                box.style = 'color: black;';
+
                 var useDefault;
                 var addDefaultButton = function() {
                     useDefault = bottomRow.appendChild(dom.createElement('button'));
                     useDefault.textContent = "Stop specific sharing for this group -- just use default.";
                     useDefault.addEventListener('click', function(event) {
-                        updater.delete(doc, function(uri, ok, message){
-                            if (!ok) {
-                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
-                            } else {
+                        tabulator.fetcher.webOperation('DELETE', targetACLDoc)
+                            .then(function(xhr) {
                                 statusBlock.textContent = " The sharing for this group is now the default.";
                                 bottomRow.removeChild(useDefault);
-                            }
-                        });
-         
+                                box.style = 'color: #777;';
+
+                            })
+                            .catch(function(e){
+                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
+                            });
+
                     });
                 }
                 addDefaultButton();
-            
+
                 var checkIndividualACLsButton;
                 var addCheckButton = function() {
                     bottomRow.appendChild(dom.createElement('br'));
                     checkIndividualACLsButton = bottomRow.appendChild(dom.createElement('button'));
-                    checkIndividualACLsButton.textContent = "Check individalcards ACLs";
+                    checkIndividualACLsButton.textContent = "Check individal cards ACLs";
                     checkIndividualACLsButton.addEventListener('click', function(event) {
-                        
-                        
+
+
                     });
                 }
                 addCheckButton();
-            
+
             } // Not using defaults
         }
-            
+
     });
 
     return table
-    
-}; // ACLControl
 
+}; // ACLControl

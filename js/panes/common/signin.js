@@ -61,22 +61,209 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 
 // Promises versions
 
-// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
 
+tabulator.panes.utils.logInLoadProfile = function(context){
+    if (context.publicProfile) return Promise.resolve(context); // already done
+    var box = context.div;
+    var uri = tabulator.preferences.get('me');
+    context.me =  uri ? $rdf.sym(uri) : null;
+
+    return new Promise(function(resolve, reject){
+        var gotIDChange = function(me) {
+            if (!me) return;
+            context.me = me;
+            tabulator.preferences.set('me', me.uri)
+            tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
+                if (!ok) {
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
+                        "Can't load profile file " + me.doc()));
+                    reject("Can't load profile file " + me.doc())
+
+                } else {
+                    context.publicProfile = me.doc();
+                    resolve(context)
+                }
+            });
+        };
+        box = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
+        context.div.appendChild(box);
+        if (context.me){
+            gotIDChange(context.me); // trigger continuation if already set
+        }
+    });
+}
+
+// Load preferences file
+//
+// Do this after having done log in and load profile
+
+tabulator.panes.utils.loadPreferences = function(context) {
+    if (context.preferencesFile) return Promise.resolve(context); // already done
+    var kb = tabulator.kb;
+    var preferencesFile = kb.any(context.me, tabulator.ns.space('preferencesFile'));
+    var box = context.statusArea || context.div || null;
+    return new Promise(function(resolve, reject) {
+
+        var message;
+        if (!preferencesFile) {
+            message = "Can't find a preferences file for user: " + context.me;
+            tabulator.panes.utils.errorMessageBlock(context.dom, message);
+            reject(message);
+        }
+        context.preferencesFile = preferencesFile;
+        var pending;
+        if (box) {
+            pending = tabulator.panes.utils.errorMessageBlock(context.dom,
+                "(loading preferences " + preferencesFile+ ")");
+            box.appendChild(pending);
+        }
+        kb.fetcher.load(preferencesFile).then(function(xhr){
+            if (pending) {
+                pending.parentNode.removeChild(pending);
+            }
+            resolve(context);
+        }).catch(function(err){
+            reject("Error loading preferences file" + err)
+        });
+    });
+};
+
+
+// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
+// Returns a promose the same context, outputting
+//
+// output: index.public, index.public
+//
+//
+tabulator.panes.utils.loadTypeIndexes = function(context) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb, tns = tabulator.ns, me = context.me;
+        return tabulator.panes.utils.logInLoadProfile(context)
+        .then(tabulator.panes.utils.loadPreferences)
+        .then(function(context){
+            var ns = tabulator.ns, kb = tabulator.kb, me = context.me;
+            context.index = context.index || {}
+            context.index.private = kb.each(me, ns.solid('typeIndex'), undefined, context.preferencesFile);
+            context.index.public = kb.each(me, ns.solid('typeIndex'), undefined, context.publicProfile);
+            var ix = context.index.private.concat(context.index.public);
+            if (ix.length === 0) {
+                resolve(context);
+            } else {
+                tabulator.fetcher.load(ix).then(function(xhrs){
+                    resolve(context);
+                })
+            }
+        })
+    });
+}
+
+// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
+// Returns a promose the same context, outputting
+//
+// input: index.private
+//         index.public
+//
+tabulator.panes.utils.ensureTypeIndexes = function(context) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb, tns = tabulator.ns, me = context.me;
+        return tabulator.panes.utils.loadTypeIndexes(context)
+        .then(function(context){
+            var ns = tabulator.ns, kb = tabulator.kb, me = context.me;
+            var newIndex;
+
+            var makeIndex = function(visibility) {
+                var relevant = {'private': context.preferencesFile), 'public': context.publicProfile}[visibility];
+                if (context.index[visibility].length == 0) {
+                    newIndex = $rdf.sym(context.preferencesFile.dir().uri + '/' + visibility + 'TypeIndex.ttl');
+                    console.log("Creating new fresh type index " + newIndex)
+                    return kb.fetcher.webOperation('PUT', newIndex, {data: '# Type index'})
+                        .then(function(xhr){
+                            return new Promise(function(resolve, reject) {
+                                var ins = [$rdf.st(context.me, ns.solid('typeIndex'), newIndex, relevant)];
+                                tabulator.updater.update([], ins, function(uri, ok, body){
+                                    if (ok) {
+                                        context.index[visibility].push(newIndex);
+                                        resolve(context);
+                                    } else {
+                                        reject("Adding link to new index file in " + relevant);
+                                    }
+                                })
+                            });
+                        })
+                        .catch(function(e){reject("Creating new index file " + e)})
+                } else {
+                    return Promise.resolve(context.index[visibility][0]); // exists
+                }
+            }
+            var ps = [ makeIndex('private'), makeIndex('public')];
+            Promise.all(ps).then(function(privPub){
+                resolve(context)
+            });
+        })
+    });
+}
+
+// Returns promise of array of symbols
+//
 tabulator.panes.utils.findAppInstances = function(context, klass) {
     return new Promise(function(resolve, reject){
-        var ns = tabulator.ns;
-        var kb = tabulator.kb;
-        var me = context.me;
-        var tis = kb.each(me, tabulator.ns.solid('typeIndex'));
-        console.log("Type indeces: " + tis.length);
-        var ps = tis.map(function(ti){return kb.fetcher.load(ti)})
-        Promise.all(ps).then(function(value){
-            resolve(context.instances = kb.each(undefined, ns.solid('forClass'), klass)
-                .filter(function(x){return kb.holds(x, ns.rdf('type'), ns.solid('TypeRegistration'))}));
-        }).catch(function(e){reject(e)});
+        var kb = tabulator.kb, ns = tabulator.ns, me = context.me, fetcher = tabulator.fetcher;
+        tabulator.panes.utils.loadTypeIndexes(context)
+        .then(function(indexes){
+            var ix = context.index.private.concat(context.index.public);
+            var instances = context.instances = kb.each(klass, ns.solid('instance'));
+            var containers = context.instances = kb.each(klass, ns.solid('instanceContainer'));
+            if (containers.length) {
+                fetcher.load(containers).then(function(xhrs){
+                    var iii = instances.slice();
+                    for (var i=0; i<containers.length; i++) {
+                        var cont = containers[i];
+                        iii = iii.concat(kb.each(cont, ns.ldp('contains')));
+                    }
+                    resolve(iii);
+                });
+            } else {
+                resolve(instances);
+            }
+        })
     })
-};
+}
+
+//  UI to control registratin of instance
+//
+
+tabulator.panes.utils.registrationControl = function(context, instance, klass) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb, ns = tabulator.ns, me = context.me, fetcher = tabulator.fetcher;
+
+        var box = context.dom.createElement('div');
+        context.div.appendChild(box);
+        return tabulator.panes.utils.ensureTypeIndexes(context)
+            .then(function(indexes){
+                box.innerHTML = '<table><tbody><tr></tr><tr></tr></tbody></table>'; // tbody will be inserted anyway
+                var tbody = box.children[0].children[0];
+                var form = kb.bnode();// @@ say for now
+
+                if (context.index.public && context.index.public.length >0) {
+                    var index = context.index.public[0];
+                    var statement = $rdf.st(klass, ns.solid('instance'), instance, index);
+                    tbody.children[0].appendChild(tabulator.panes.utils.buildCheckboxForm(
+                        context.dom, tabulator.kb, "Public note of this " + context.noun, null, statement, form, index));
+                }
+
+                if (context.index.private && context.index.private.length >0) {
+                    var index = context.index.private[0];
+                    var statement = $rdf.st(klass, ns.solid('instance'), instance, index);
+                    tbody.children[1].appendChild(tabulator.panes.utils.buildCheckboxForm(
+                        context.dom, tabulator.kb, "Personal note of this " + context.noun, null, statement, form, index));
+                }
+                // tabulator.panes.utils.buildCheckboxForm(dom, kb, lab, del, ins, form, store)
+                resolve(box);
+            });
+    })
+}
+
+
 /*
     <#ab09fd> a solid:TypeRegistration;
         solid:forClass vcard:AddressBook;
@@ -87,7 +274,7 @@ tabulator.panes.utils.registerAppInstance = function(inst, klass, public, option
     var kb = tabulator.kb;
     var ti;
     if (public) {
-        ti = kb.any(me, tabulator.ns.solid('typeIndex'), undefined, context.profile);
+        ti = kb.any(me, tabulator.ns.solid('typeIndex'), undefined, context.publicProfile); // @@@ TBD
     } else {
         tabulator.panes.utils.loadPreferences(context)
         .then(function(){})
@@ -113,59 +300,7 @@ tabulator.panes.utils.registerAppInstance = function(inst, klass, public, option
 };
 
 
-tabulator.panes.utils.loadPreferences = function(context) {
-    var kb = tabulator.kb;
-    var preferencesFile = kb.any(context.me, tabulator.ns.space('preferencesFile'));
-    var box = context.statusArea || null;
-    return new Promise(function(resolve, reject) {
-
-        var message;
-        if (!preferencesFile) {
-            message = "Can't find a preferences file for user: " + context.me;
-            tabulator.panes.utils.errorMessageBlock(context.dom, message);
-            reject(message);
-        }
-        context.preferencesFile = preferencesFile;
-        var pending;
-        pending = tabulator.panes.utils.errorMessageBlock(context.dom,
-            "(loading preferences " + preferencesFile+ ")");
-        box.appendChild(pending);
-        kb.fetcher.load(preferencesFile).then(function(xhr){
-            pending.parentNode.removeChild(pending);
-            resolve(context);
-        }).catch(function(err){
-            reject("Error loading preferences file" + err)
-        });
-    });
-};
-
-
-tabulator.panes.utils.getUserLoadProfile = function(context) {
-    return new Promise(function(resolve, reject){
-        var gotIDChange = function(uri) {
-            if (typeof uri == 'undefined') return undefined;
-            var me = $rdf.sym(uri);
-            context.me = me;
-            var docURI = me.doc();
-            tabulator.kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
-                if (!ok) {
-                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
-                        "Can't load profile file " + me.doc()));
-                    reject("Can't load profile file " + me.doc());
-                } else {
-                    resolve(context);
-                }
-            });
-        }
-        var lsb = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
-        context.div.appendChild(lsb); // remove later
-    })
-}
-
-
-
-
-/////  Non-promises version
+/////  Non-promises version - obsolete
 
 tabulator.panes.utils.loadPrefs = function(ok, id, box, callback_ok_id_preferencesFile) {
     var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));
@@ -267,7 +402,7 @@ tabulator.panes.utils.offlineTestID = function() {
         /* me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid
         */
         console.log("Assuming user is " + id);
-        return id
+        return $rdf.sym(id)
     }
     return null;
 };
@@ -296,7 +431,7 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
         if (offline) return gotOne(offline);
 	Solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
-	    gotOne(uri)
+	    gotOne($rdf.sym(uri))
 	})
     }, false);
 
@@ -308,7 +443,7 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     but2.addEventListener('click', function(e){
 	Solid.auth.signup().then(function(uri){
 	    console.log('signInOrSignUpBox signed up '+ uri)
-	    gotOne(uri)
+	    gotOne($rdf.sym(uri))
 	})
     }, false);
     return box;
@@ -427,7 +562,7 @@ web ID</a>?<br/>\
         button.addEventListener('click', function(){
             var webid1 = myDocument.getElementById('webidField').value; // @@@
             tabulator.preferences.set('me', webid1);
-            return gotOne(webid1);
+            return gotOne($rdf.sym(webid1));
         }, false);
     }
     but.addEventListener('click', makeOne, false);
@@ -462,8 +597,7 @@ tabulator.panes.utils.checkUserSetMe = function(doc) {
 
 // For a user authenticated using webid (or possibly other methods) it
 // is not immedaietly available to the client which person(a) it is.
-// One way is for the server to send the information back as a User: header.
-// This function looks for a linked
+// The solid standard way is for the server to send the information back as a User: header.
 
 tabulator.panes.utils.userCheckSite = 'https://databox.me/';
 
@@ -478,19 +612,19 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
             .map(function(request){
 
                 var response = kb.any(request, tabulator.ns.link('response'));
-                if (request !== undefined) {
-		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
-		    if (userHeaders.length === 0) {
-			console.log("CheckUser: non-solid server: trying "
-			    + tabulator.panes.utils.userCheckSite);
-			tabulator.panes.utils.checkUser(
-			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
-		    } else {
-			userHeaders.map(function(userHeader){
-			    var username = userHeader.value.trim();
-			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
-				setIt(username);
-				done = true;
+                if (response !== undefined) {
+        		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+        		    if (userHeaders.length === 0) {
+        			console.log("CheckUser: non-solid server: trying "
+        			    + tabulator.panes.utils.userCheckSite);
+        			tabulator.panes.utils.checkUser(
+        			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+        		    } else {
+        			userHeaders.map(function(userHeader){
+        			    var username = userHeader.value.trim();
+        			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+        				setIt(username);
+        				done = true;
 			    }
 			});
 		    }
@@ -510,6 +644,39 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
         }
     });
 };
+
+// What ID does the user use to log into the given target?
+tabulator.panes.utils.checkUserForTarget = function(context) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb
+        kb.fetcher.load(conext.target).then(function(xhr) {
+            kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
+            .map(function(request){
+                var response = kb.any(request, tabulator.ns.link('response'));
+                if (response) {
+                    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+                    if (userHeaders.length === 0) {
+                    console.log("CheckUser: non-solid server: trying "
+                        + tabulator.panes.utils.userCheckSite);
+                    tabulator.panes.utils.checkUser(
+                        kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+                    } else {
+                        userHeaders.map(function(userHeader){
+                            var username = userHeader.value.trim();
+                            if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+                            context.me = $rdf.sym(username);
+                            tabulator.preferences.set('me', username);
+                            resolve(context)
+                            }
+                        });
+                    }
+                }
+                resolve(context);
+            });
+        }).catch(e)(function(e){reject(e)});
+    });
+}
+
 
 //              Login status box
 //
@@ -611,12 +778,16 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 //  Callsback with the ws and the base URI
 //
 //
-tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
+tabulator.panes.utils.selectWorkspace = function(dom, appDetails, callbackWS) {
+    var noun = appDetails.noun;
+    var appPathSegment = appDetails.appPathSegment;
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
-    var box;
+    var box = dom.createElement('div');
+    var context = { me: me, dom:dom, div:box}
+
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
 
 
@@ -625,10 +796,10 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
         if (!newBase) {
             newBase = ws.uri.split('#')[0];
         } else {
-	    newBase = newBase.value;
-	}
+            newBase = newBase.value;
+	    }
         if (newBase.slice(-1) !== '/') {
-            $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
+            console.log(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
             newBase = newBase + '/';
         }
         var now = new Date();
@@ -639,9 +810,9 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
 
 
-    var displayOptions = function(ok, id, preferencesFile){
+    var displayOptions = function(context){
         var status = '';
-        if (!ok) return say(id); // message
+        var id = context.me, preferencesFile = context.preferencesFile;
 
         // A workspace specifically defined in the private preferences file:
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
@@ -672,7 +843,6 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
 
-
             //  Add a field for directly adding the URI yourself
 
             var hr = box.appendChild(dom.createElement('hr')); // @@
@@ -686,6 +856,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             baseField.label = "base URL";
             baseField.autocomplete = "on";
 
+            context.baseField = baseField;
+
             box.appendChild(dom.createElement('br')); // @@
 
             var button = box.appendChild(dom.createElement('button'));
@@ -698,10 +870,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
                 callbackWS(null, newBase);
             });
 
-
-
             // Now go set up the table of spaces
-
 
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
@@ -768,7 +937,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
                 };
 
                 var comment = kb.any(ws, tabulator.ns.rdfs('comment'));
-		comment = comment ? comment.value : "Use this workspace";
+                comment = comment ? comment.value : "Use this workspace";
                 addMyListener(col2, comment? comment.value : '',
                                  deselectedStyle + style, ws);
             };
@@ -788,58 +957,11 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
         };
     };
 
-    var gotIDChange = function(uri) {
-        if (typeof uri == 'undefined') return undefined;
-        var me = $rdf.sym(uri);
-        var docURI = me.doc();
-        kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
-            if (!ok) {
-                box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load profile file " + me.doc()));
-                return;
-            }
-            // tabulator.panes.utils.loadPrefs(me, id, box, displayOptions);
-            tabulator.panes.utils.loadPreferences(context)
-            .then(function(preferencesFile){displayOptions(true, id, preferencesFile)})
-            .catch(function(err){displayOptions(false, err)});
-        });
-    };
-
-    if (me) {
-        box = dom.createElement('div');
-        gotIDChange(me);
-        return box;
-    }
-    box = tabulator.panes.utils.loginStatusBox(dom, gotIDChange);
+    tabulator.panes.utils.logInLoadProfile(context)
+    .then(tabulator.panes.utils.loadPreferences)
+    .then(displayOptions);
     return box;
-
-};
-
-tabulator.panes.utils.logInLoadProfileLoadPreferences = function(context){
-    var p0 = new Promise(function(resolve, reject){
-        var gotIDChange = function(uri) {
-            if (typeof uri == 'undefined') return undefined;
-            var me = $rdf.sym(uri);
-            var docURI = me.doc();
-            tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
-                if (!ok) {
-                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
-                        "Can't load profile file " + me.doc()));
-                    reject("Can't load profile file " + me.doc())
-                    return;
-                }
-                // tabulator.panes.utils.loadPrefs(me, id, box, displayOptions);
-                tabulator.panes.utils.loadPreferences(context)
-                .then(function(preferencesFile){resolve({ me: me, preferencesFile: preferencesFile})})
-                .catch(function(err){reject(err)});
-            });
-        };
-        box = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
-        context.div.appendChild(box);
-
-    });
-    return p0;
-}
+}; // selectWorkspace
 
 
 //////////////////// Create a new instance of an app
@@ -850,19 +972,19 @@ tabulator.panes.utils.logInLoadProfileLoadPreferences = function(context){
 
 // Returns a div with a button in it for making a new app instance
 
-tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
-    var gotWS = function(ws) {
+tabulator.panes.utils.newAppInstance = function(dom, appDetails, callback) {
+    var gotWS = function(ws, base) {
         //$rdf.log.debug("newAppInstance: Selected workspace = " + (ws? ws.uri : 'none'))
-        callback(ws);
+        callback(ws, base);
     };
     var div = dom.createElement('div');
     var b = dom.createElement('button');
     b.setAttribute('type', 'button');
     div.appendChild(b)
-    b.innerHTML = label;
+    b.innerHTML = "Make new " + appDetails.noun;
     // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
-        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, label, gotWS))}, false);
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, appDetails, gotWS))}, false);
     div.appendChild(b);
     return div;
 };

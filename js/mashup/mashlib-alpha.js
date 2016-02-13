@@ -19412,13 +19412,13 @@ $rdf.Util = {
     */
     XMLHTTPFactory: function () {
       // Running inside the Tabulator Firefox extension
-      if (tabulator !== undefined && tabulator.isExtension) {
+      if (typeof tabulator !== 'undefined' && tabulator.isExtension) {
         // Cannot use XMLHttpRequest natively, must request it through SDK
         return Components
           .classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
           .createInstance()
           .QueryInterface(Components.interfaces.nsIXMLHttpRequest)
-      } else if (window !== undefined && 'XMLHttpRequest' in window) {
+      } else if (typeof window !== 'undefined' && 'XMLHttpRequest' in window) {
         // Running inside the browser
         var XMLHttpRequest = window.XMLHttpRequest
         return new XMLHttpRequest()
@@ -20017,7 +20017,7 @@ $rdf.Empty = (function(superClass) {
 
 /*
    A named node in an RDF graph
-    todo: badly named. 
+    todo: badly named.
     No, formally a URI is a string, this is a node whose name is a URI.
     Connolly pointed out it isa symbol on the language.
     @param uri the uri as string
@@ -20044,6 +20044,16 @@ $rdf.Symbol = (function(superClass) {
     } else {
       return new $rdf.Symbol(this.uri.split('#')[0]);
     }
+  };
+
+  Symbol.prototype.dir = function() {
+    var p, str;
+    str = this.uri.split('#')[0]
+    p = str.lastIndexOf('/');
+    if (p < 0) {
+      throw "dir: No slash in path: " + str;
+    }
+    return new $rdf.Symbol(str.slice(0, p));
   };
 
   Symbol.prototype.sameTerm = function(other) {
@@ -26020,7 +26030,7 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 };
 // Joe Presbrey <presbrey@mit.edu>
 // 2007-07-15
-// 2010-08-08 TimBL folded in Kenny's WEBDAV 
+// 2010-08-08 TimBL folded in Kenny's WEBDAV
 // 2010-12-07 TimBL addred local file write code
 
 $rdf.sparqlUpdate = function() {
@@ -26033,11 +26043,12 @@ $rdf.sparqlUpdate = function() {
         this.ns.link = $rdf.Namespace("http://www.w3.org/2007/ont/link#");
         this.ns.http = $rdf.Namespace("http://www.w3.org/2007/ont/http#");
         this.ns.httph = $rdf.Namespace("http://www.w3.org/2007/ont/httph#");
+        this.ns.ldp = $rdf.Namespace('http://www.w3.org/ns/ldp#');
         this.ns.rdf =  $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         this.ns.rdfs = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
         this.ns.rdf = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         this.ns.owl = $rdf.Namespace("http://www.w3.org/2002/07/owl#");
-        
+
         this.patchControl = []; // index of objects fro coordinating incomng and outgoing patches
     }
 
@@ -26061,7 +26072,7 @@ $rdf.sparqlUpdate = function() {
             if (kb.holds(kb.sym(uri), tabulator.ns.rdf('type'), tabulator.ns.link('MachineEditableDocument')))
                 return 'LOCALFILE';
             var sts = kb.statementsMatching(kb.sym(uri),undefined,undefined);
-            
+
             console.log("sparql.editable: Not MachineEditableDocument file "+uri+"\n");
             console.log(sts.map(function(x){return x.toNT();}).join('\n'))
             return false;
@@ -26071,6 +26082,12 @@ $rdf.sparqlUpdate = function() {
         var request;
         var definitive = false;
         var requests = kb.each(undefined, this.ns.link("requestedURI"), $rdf.uri.docpart(uri));
+
+        // Hack for the moment @@@@ 2016-02-12
+        if (kb.holds($rdf.sym(uri), this.ns.rdf('type'), this.ns.ldp('Resource'))){
+            return 'SPARQL';
+        }
+
         for (var r=0; r<requests.length; r++) {
             request = requests[r];
             if (request !== undefined) {
@@ -26179,7 +26196,7 @@ $rdf.sparqlUpdate = function() {
                     if (res != null)
                         return res.concat([ sts[i] ]);
                 }
-            }        
+            }
         }
         var sts = this.store.statementsMatching(x, undefined, undefined, source); // outgoing links
         for (var i=0; i<sts.length; i++) {
@@ -26192,7 +26209,7 @@ $rdf.sparqlUpdate = function() {
                     if (res != undefined)
                         return res.concat([ sts[i] ]);
                 }
-            }        
+            }
         }
         return null; // Failure
     }
@@ -26201,18 +26218,18 @@ $rdf.sparqlUpdate = function() {
     sparql.prototype._bnode_context_1 = function(x, source) {
         // Return a list of statements which indirectly identify a node
         //   Breadth-first
-        for (var depth = 0; depth < 3; depth++) { // Try simple first 
+        for (var depth = 0; depth < 3; depth++) { // Try simple first
             var con = this._bnode_context2(x, source, depth);
             if (con !== null) return con;
         }
         throw ('Unable to uniquely identify bnode: '+ x.toNT());
     }
-    
+
     sparql.prototype._mentioned = function(x) {
         return (this.store.statementsMatching(x).length !== 0) || // Don't pin fresh bnodes
                 (this.store.statementsMatching(undefined, x).length !== 0) ||
-                (this.store.statementsMatching(undefined, undefined, x).length !== 0);    
-    
+                (this.store.statementsMatching(undefined, undefined, x).length !== 0);
+
     }
 
     sparql.prototype._bnode_context = function(bnodes, doc) {
@@ -26221,13 +26238,13 @@ $rdf.sparqlUpdate = function() {
             this._cache_ifps();
             for (var i = 0; i < bnodes.length; i++) { // Does this occur in old graph?
                 var bnode = bnodes[i];
-                if (!this._mentioned(bnode)) continue;                   
+                if (!this._mentioned(bnode)) continue;
                 context = context.concat(this._bnode_context_1(bnode, doc));
             }
         }
         return context;
     }
-    
+
 /*  Weird code does not make sense -- some code corruption along the line -- st undefined -- weird
     sparql.prototype._bnode_context = function(bnodes) {
         var context = [];
@@ -26304,7 +26321,7 @@ $rdf.sparqlUpdate = function() {
                     this.anonymize(this.statement[0]) + " " +
                     this.anonymize(this.statement[1]) + " " +
                     this.anonymize(obj) + " " + " . }\n";
-     
+
                 sparql._fire(this.statement[3].uri, query, callback);
             }
         }
@@ -26313,7 +26330,7 @@ $rdf.sparqlUpdate = function() {
     sparql.prototype.insert_statement = function(st, callback) {
         var st0 = st instanceof Array ? st[0] : st;
         var query = this._context_where(this._statement_context(st0));
-        
+
         if (st instanceof Array) {
             var stText="";
             for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
@@ -26324,7 +26341,7 @@ $rdf.sparqlUpdate = function() {
                 this.anonymize(st.predicate) + " " +
                 this.anonymize(st.object) + " " + " . }\n";
         }
-        
+
         this._fire(st0.why.uri, query, callback);
     }
 
@@ -26332,7 +26349,7 @@ $rdf.sparqlUpdate = function() {
 
         var st0 = st instanceof Array ? st[0] : st;
         var query = this._context_where(this._statement_context(st0));
-        
+
         if (st instanceof Array) {
             var stText="";
             for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
@@ -26343,7 +26360,7 @@ $rdf.sparqlUpdate = function() {
                 this.anonymize(st.predicate) + " " +
                 this.anonymize(st.object) + " " + " . }\n";
         }
-        
+
         this._fire(st0.why.uri, query, callback);
     }
 
@@ -26370,7 +26387,7 @@ $rdf.sparqlUpdate = function() {
             }
         }
     }
-    
+
     // We want to start counting websockt notifications
     // to distinguish the ones from others from our own.
     sparql.prototype.clearUpstreamCount = function(doc) {
@@ -26395,10 +26412,10 @@ $rdf.sparqlUpdate = function() {
         this.setRefreshHandler(doc, this.reloadAndSync);
     }
 
-    
+
     sparql.prototype.reloadAndSync = function(doc) {
         var control = tabulator.sparql.patchControlFor(doc);
-        
+
         if (control.reloading) {
             console.log("   Already reloading - stop")
             return; // once only needed
@@ -26432,14 +26449,14 @@ $rdf.sparqlUpdate = function() {
         }
         tryReload();
     }
-    
 
 
-    // Set up websocket to listen on 
+
+    // Set up websocket to listen on
     //
     // There is coordination between upstream changes and downstream ones
     // so that a reload is not done in the middle of an upsteeam patch.
-    // If you usie this API then you get called when a change happens, and you 
+    // If you usie this API then you get called when a change happens, and you
     // have to reload the file yourself, and then refresh the UI.
     // Alternative is addDownstreamChangeListener(), where you do not
     // have to do the reload yourslf. Do mot mix them.
@@ -26458,12 +26475,12 @@ $rdf.sparqlUpdate = function() {
             return false;
         }
 
-        wssURI = $rdf.uri.join(wssURI, doc.uri); 
+        wssURI = $rdf.uri.join(wssURI, doc.uri);
         wssURI = wssURI.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
         console.log("Web socket URI " + wssURI);
-        
+
         var openWebsocket = function() {
-        
+
             // From https://github.com/solid/solid-spec#live-updates
             var socket;
             if (typeof WebSocket !== 'undefined') {
@@ -26477,7 +26494,7 @@ $rdf.sparqlUpdate = function() {
                 return;
             }
             socket.onopen = function() {
-            
+
                 console.log("    websocket open");
                 retryTimeout = 1500; // reset timeout to fast on success
                 this.send('sub ' + doc.uri);
@@ -26488,7 +26505,7 @@ $rdf.sparqlUpdate = function() {
             };
             var control = self.patchControlFor(doc);
             control.upstreamCount = 0;
-            
+
             // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
             //
             // 1000	CLOSE_NORMAL	Normal closure; the connection successfully completed whatever purpose for which it was created.
@@ -26502,8 +26519,8 @@ $rdf.sparqlUpdate = function() {
             // 1006	CLOSE_ABNORMAL	Reserved. Used to indicate that a connection was closed abnormally (
             //
             //
-            socket.onclose = function(event) { 
-                console.log("*** Websocket closed with code " + event.code + 
+            socket.onclose = function(event) {
+                console.log("*** Websocket closed with code " + event.code +
                     ", reason '" + event.reason + "' clean = " + event.clean);
                 retryTimeout *= 2;
                 retries += 1;
@@ -26529,12 +26546,12 @@ $rdf.sparqlUpdate = function() {
             };
         }; // openWebsocket
         openWebsocket();
-        
+
         return true;
     };
 
 
-    // This high-level function updates the local store iff the web is changed successfully. 
+    // This high-level function updates the local store iff the web is changed successfully.
     //
     //  - deletions, insertions may be undefined or single statements or lists or formulae.
     //
@@ -26556,7 +26573,7 @@ $rdf.sparqlUpdate = function() {
         var doc = ds.length ? ds[0].why : is[0].why;
         var control = this.patchControlFor(doc);
         var startTime = Date.now();
-        
+
         var props = ['subject', 'predicate', 'object', 'why'];
         var verbs = ['insert', 'delete'];
         var clauses = { 'delete': ds, 'insert': is};
@@ -26570,13 +26587,13 @@ $rdf.sparqlUpdate = function() {
                         throw "update: undefined "+prop+" of statement."
                     }
                 })
-                
+
             });
         });
 
         /*
         });
-        
+
         ds.map(function(st){
             if (!doc.sameTerm(st.why)) {
                 throw "Update: destination "+doc+" inconsistent with delete quad "+st.why;
@@ -26586,7 +26603,7 @@ $rdf.sparqlUpdate = function() {
                     throw "Update: undefined "+prop+" of statement."
                 }
             })
-            
+
         });
         is.map(function(st){i
             f (!doc.sameTerm(st.why))
@@ -26594,7 +26611,7 @@ $rdf.sparqlUpdate = function() {
             }
         });
         */
-        
+
         var protocol = this.editable(doc.uri, kb);
         if (!protocol) throw "Can't make changes in uneditable "+doc;
 
@@ -26647,16 +26664,16 @@ $rdf.sparqlUpdate = function() {
                         } catch(e) {
                             success = false;
                             body = "Remote Ok BUT error deleting "+ds.length+" from store!!! " + e;
-                        } // Add in any case -- help recover from weirdness?? 
+                        } // Add in any case -- help recover from weirdness??
                         for (var i=0; i<is.length;i++) {
-                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
+                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc);
                         }
                     }
-                    
+
 
                     callback(uri, success, body, xhr);
                     control.pendingUpstream -= 1;
-                    // When upstream patches have been sent, reload state if downstream waiting 
+                    // When upstream patches have been sent, reload state if downstream waiting
                     if (control.pendingUpstream  === 0 && control.downstreamAction) {
                         var downstreamAction = control.downstreamAction;
                         delete  control.downstreamAction;
@@ -26664,7 +26681,7 @@ $rdf.sparqlUpdate = function() {
                         downstreamAction(doc);
                     }
                 });
-            
+
         } else if (protocol.indexOf('DAV') >=0) {
 
             // The code below is derived from Kenny's UpdateCenter.js
@@ -26673,19 +26690,19 @@ $rdf.sparqlUpdate = function() {
             if (!request) throw "No record of our HTTP GET request for document: "+doc; //should not happen
             var response =  kb.any(request, this.ns.link("response"));
             if (!response)  return null; // throw "No record HTTP GET response for document: "+doc;
-            var content_type = kb.the(response, this.ns.httph("content-type")).value;            
+            var content_type = kb.the(response, this.ns.httph("content-type")).value;
 
             //prepare contents of revised document
             var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
             for (var i=0;i<ds.length;i++) $rdf.Util.RDFArrayRemove(newSts, ds[i]);
-            for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
-            
+            for (var i=0;i<is.length;i++) newSts.push(is[i]);
+
             //serialize to te appropriate format
             var sz = $rdf.Serializer(kb);
             sz.suggestNamespaces(kb.namespaces);
-            sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)                   
+            sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)
             switch(content_type){
-                case 'application/rdf+xml': 
+                case 'application/rdf+xml':
                     documentString = sz.statementsToXML(newSts);
                     break;
                 case 'text/n3':
@@ -26695,11 +26712,11 @@ $rdf.sparqlUpdate = function() {
                     documentString = sz.statementsToN3(newSts);
                     break;
                 default:
-                    throw "Content-type "+content_type +" not supported for data write";                                                                            
+                    throw "Content-type "+content_type +" not supported for data write";
             }
-            
+
             // Write the new version back
-            
+
             var candidateTarget = kb.the(response, this.ns.httph("content-location"));
             if (candidateTarget) targetURI = $rdf.uri.join(candidateTarget.value, targetURI);
             var xhr = $rdf.Util.XMLHTTPFactory();
@@ -26711,7 +26728,7 @@ $rdf.sparqlUpdate = function() {
                     if (success) {
                         for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
                         for (var i=0; i<is.length;i++)
-                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc);                
+                            kb.add(is[i].subject, is[i].predicate, is[i].object, doc);
                     }
                     callback(doc.uri, success, xhr.responseText);
                 }
@@ -26728,8 +26745,8 @@ $rdf.sparqlUpdate = function() {
                 //prepare contents of revised document
                 var newSts = kb.statementsMatching(undefined, undefined, undefined, doc).slice(); // copy!
                 for (var i=0;i<ds.length;i++) $rdf.Util.RDFArrayRemove(newSts, ds[i]);
-                for (var i=0;i<is.length;i++) newSts.push(is[i]);                                     
-                
+                for (var i=0;i<is.length;i++) newSts.push(is[i]);
+
                 //serialize to the appropriate format
                 var documentString;
                 var sz = $rdf.Serializer(kb);
@@ -26737,11 +26754,11 @@ $rdf.sparqlUpdate = function() {
                 sz.setBase(doc.uri);//?? beware of this - kenny (why? tim)
                 var dot = doc.uri.lastIndexOf('.');
                 if (dot < 1) throw "Rewriting file: No filename extension: "+doc.uri;
-                var ext = doc.uri.slice(dot+1);                  
+                var ext = doc.uri.slice(dot+1);
                 switch(ext){
-                    case 'rdf': 
+                    case 'rdf':
                     case 'owl':  // Just my experence   ...@@ we should keep the format in which it was parsed
-                    case 'xml': 
+                    case 'xml':
                         documentString = sz.statementsToXML(newSts);
                         break;
                     case 'n3':
@@ -26750,11 +26767,11 @@ $rdf.sparqlUpdate = function() {
                         documentString = sz.statementsToN3(newSts);
                         break;
                     default:
-                        throw "File extension ."+ext +" not supported for data write";                                                                            
+                        throw "File extension ."+ext +" not supported for data write";
                 }
-                
+
                 // Write the new version back
-                
+
                 //create component for file writing
                 dump("Writing back: <<<"+documentString+">>>\n")
                 var filename = doc.uri.slice(7); // chop off   file://  leaving /path
@@ -26763,7 +26780,7 @@ $rdf.sparqlUpdate = function() {
                     .createInstance(Components.interfaces.nsILocalFile);
                 file.initWithPath(filename);
                 if(!file.exists()) throw "Rewriting file <"+doc.uri+"> but it does not exist!";
-                    
+
                 //{
                 //file.create( Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 420);
                 //}
@@ -26781,15 +26798,15 @@ $rdf.sparqlUpdate = function() {
 
                 for (var i=0; i<ds.length;i++) kb.remove(ds[i]);
                 for (var i=0; i<is.length;i++)
-                    kb.add(is[i].subject, is[i].predicate, is[i].object, doc); 
-                                
+                    kb.add(is[i].subject, is[i].predicate, is[i].object, doc);
+
                 callback(doc.uri, true, ""); // success!
             } catch(e) {
-                callback(doc.uri, false, 
+                callback(doc.uri, false,
                 "Exception trying to write back file <"+doc.uri+">\n"+
                         tabulator.Util.stackString(e))
             }
-            
+
         } else throw "Unhandled edit method: '"+protocol+"' for "+doc;
     };
 
@@ -26801,16 +26818,16 @@ $rdf.sparqlUpdate = function() {
 
         var documentString;
         var kb = this.store;
-       
+
         if (typeof data === typeof '') {
             documentString = data;
         } else {
             //serialize to te appropriate format
             var sz = $rdf.Serializer(kb);
             sz.suggestNamespaces(kb.namespaces);
-            sz.setBase(doc.uri);                   
+            sz.setBase(doc.uri);
             switch(content_type){
-                case 'application/rdf+xml': 
+                case 'application/rdf+xml':
                     documentString = sz.statementsToXML(data);
                     break;
                 case 'text/n3':
@@ -26820,7 +26837,7 @@ $rdf.sparqlUpdate = function() {
                     documentString = sz.statementsToN3(data);
                     break;
                 default:
-                    throw "Content-type "+content_type +" not supported for data PUT";                                                                            
+                    throw "Content-type "+content_type +" not supported for data PUT";
             }
         }
         var xhr = $rdf.Util.XMLHTTPFactory();
@@ -26847,19 +26864,19 @@ $rdf.sparqlUpdate = function() {
         xhr.setRequestHeader('Content-type', content_type);
         xhr.send(documentString);
     };
-    
+
 
     // Reload a document.
     //
     // Fast and cheap, no metaata
-    // Measure times for the document 
-    // Load it provisionally 
+    // Measure times for the document
+    // Load it provisionally
     // Don't delete the statemenst before the load, or it will leave a broken document
     // in the meantime.
-    
+
     sparql.prototype.reload = function(kb, doc, callback) {
         var startTime = Date.now();
-        // force sets no-cache and 
+        // force sets no-cache and
         kb.fetcher.nowOrWhenFetched(doc.uri, {force: true, noMeta: true, clearPreviousData: true}, function(ok, body, xhr){
             if (!ok) {
                 console.log("    ERROR reloading data: " + body);
@@ -26868,7 +26885,7 @@ $rdf.sparqlUpdate = function() {
                 console.log("    Non-HTTP error reloading data! onErrorWasCalled="
                     + xhr.onErrorWasCalled + " status: " + xhr.status);
                 callback(false, "Non-HTTP error reloading data: " + body, xhr)
-                
+
             } else {
                 elapsedTime_ms = Date.now() - startTime;
                 if (!doc.reloadTime_total) doc.reloadTime_total = 0;
@@ -26886,7 +26903,7 @@ $rdf.sparqlUpdate = function() {
         var g2 = $rdf.graph(); // A separate store to hold the data as we load it
         var f2 = $rdf.fetcher(g2);
         var startTime = Date.now();
-        // force sets no-cache and 
+        // force sets no-cache and
         f2.nowOrWhenFetched(doc.uri, {force: true, noMeta: true, clearPreviousData: true}, function(ok, body, xhr){
             if (!ok) {
                 console.log("    ERROR reloading data: " + body);
@@ -26895,7 +26912,7 @@ $rdf.sparqlUpdate = function() {
                 console.log("    Non-HTTP error reloading data! onErrorWasCalled="
                     + xhr.onErrorWasCalled + " status: " + xhr.status);
                 callback(false, "Non-HTTP error reloading data: " + body, xhr)
-                
+
             } else {
                 var sts1 = kb.statementsMatching(undefined, undefined, undefined, doc).slice();// Take a copy!!
                 var sts2 = g2.statementsMatching(undefined, undefined, undefined, doc).slice();
@@ -26921,7 +26938,7 @@ $rdf.sparqlUpdate = function() {
 
 
 
-    
+
 
     return sparql;
 
@@ -28675,6 +28692,8 @@ $rdf.Fetcher = function(store, timeout, async) {
         if (rel == 'alternate' || rel == 'seeAlso' || rel == 'meta' || rel == 'describedby') {
             if (obj.uri === xhr.resource.uri) return;
             predicate = ns.rdfs('seeAlso');
+        } else if (rel == 'type') {
+            predicate = tabulator.ns.rdf('type')
         } else {
         // See https://www.iana.org/assignments/link-relations/link-relations.xml
         // Alas not yet in RDF yet for each predicate
@@ -28749,6 +28768,49 @@ $rdf.Fetcher = function(store, timeout, async) {
     }
 
 
+    // Returns promise of XHR
+    //
+    this.webOperation = function(method, uri, options) {
+        uri = uri.uri || uri; options = options || {}
+        var fetcher = this;
+        return new Promise(function(resolve, reject){
+            var xhr = $rdf.Util.XMLHTTPFactory();
+            xhr.options = options;
+            if (!options.noMeta) {
+                fetcher.saveRequestMetadata(xhr, tabulator.kb, uri);
+            }
+            xhr.onreadystatechange = function (){
+                if (xhr.readyState == 4){ // NOte a 404 can be not afailure
+                    var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+                    if (!options.noMeta) {
+                        var response = fetcher.saveResponseMetadata(xhr, tabulator.kb)
+                    }
+                    if (ok) resolve(xhr);
+                    reject(xhr.status + ' ' + xhr.statusText);
+                }
+            };
+            xhr.open(method, uri, true);
+            if (options.contentType) {
+                xhr.setRequestHeader('Content-type', options.contentType);
+            }
+            xhr.send(options.data ? options.data : undefined);
+        });
+    };
+
+
+    this.webCopy = function(here, there, content_type) {
+        var fetcher = this;
+        here = here.uri || here;
+        return new Promise(function(resolve, reject){
+            this.webOperation('GET', here)
+                .then(function(xhr){
+                    fetcher.webOperation('PUT', // @@@ change to binary from text
+                        there, { data: xhr.responseText, contentType: content_type})
+                    })
+                .then(function(xhr){resolve(xhr)})
+                .catch(function(e) {reject(e)});
+        });
+    }
 
 
 
@@ -28810,13 +28872,19 @@ $rdf.Fetcher = function(store, timeout, async) {
 
     /* Promise-based load function
     **
-    ** Promise delivers xhr
+    ** Symbol -> Promise of xhr
+    ** uri string -> Promise of xhr
+    ** Array of the above -> Promise of array of xhr
     **
     ** @@ todo: If p1 is array then sequence or parallel fetch of all
     */
     this.load = function(uri, options) {
-        uri = uri.uri || uri;
         var fetcher = this;
+        if (uri instanceof Array) {
+            var ps = uri.map(function(x){return fetcher.load(x)})
+            return Promise.all(ps);
+        }
+        uri = uri.uri || uri; // Symbol or URI string
 	    return new Promise(function(resolve, reject){
     	    fetcher.nowOrWhenFetched(uri, options, function(ok, message, xhr){
         		if (ok) {
@@ -30017,7 +30085,7 @@ else {
     // Leak a global regardless of module system
     root['$rdf'] = $rdf;
 }
-$rdf.buildTime = "2016-02-09T10:20:47";
+$rdf.buildTime = "2016-02-12T10:56:59";
 })(this);
 
 },{"async":1,"jsonld":30,"n3":32,"xmldom":40,"xmlhttprequest":undefined}]},{},[])("rdflib.js")
@@ -31004,8 +31072,14 @@ tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Ic
 // ###### Finished expanding js/init/icons.js ##############
     //And Namespaces..
 // ###### Expanding js/init/namespaces.js ##############
-tabulator.ns = {};
+//tabulator.ns = {};
 
+tabulator.ns = function(prefixed) {
+    var pair = prefixed.split(':')
+    if (pair.length === 0) throw "Prefixed name has no colon: " + prefixed
+    if (!(pair[0] in tabulator.ns)) throw "Unregistered namespace prefix in: " + prefixed
+    return tabulator.ns[pair[0]](pair[1]);
+};
 
 tabulator.ns.auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#'); // @@ obsolete - use acl:
 tabulator.ns.acl = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
@@ -31514,18 +31588,18 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             var right = rowrow.appendChild(dom.createElement('td'));
             var rightTable = right.appendChild(dom.createElement('table'));
             var a = authorizations[i];
-            
+
             kb.each(a,  ACL('agent')).map(function(x){
                 var tr = leftTable.appendChild(dom.createElement('tr'));
                 tabulator.panes.utils.setName(tr, x);
                 tr.setAttribute('style', 'min-width: 12em');
             });
-            
+
             kb.each(a,  ACL('agentClass')).map(function(x){
                 var tr = leftTable.appendChild(dom.createElement('tr'));
                 tr.textContent = tabulator.Util.label(x) + ' *'; // for now // later add # or members
             });
-            
+
             kb.each(a,  ACL('mode')).map(function(x){
                 var tr = rightTable.appendChild(dom.createElement('tr'));
                 tr.textContent = tabulator.Util.label(x); // for now // later add # or members
@@ -31546,9 +31620,10 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                     statusBlock.textContent += " (No defaults given.)";
                 } else {
                     statusBlock.textContent = "The sharing for this group is the default.";
-                    var kb2 = tabulator.panes.utils.adoptACLDefault(doc, targetACLDoc, defaultHolder, defaultACLDoc) 
+                    var kb2 = tabulator.panes.utils.adoptACLDefault(doc, targetACLDoc, defaultHolder, defaultACLDoc)
                     ACLControl(box, doc, targetACLDoc, kb2); // Add btton to save them as actual
-                    
+                    box.style = 'color: #777;';
+
                     var editPlease = bottomRow.appendChild(dom.createElement('button'));
                     editPlease.textContent = "Set specific sharing\nfor this group";
                     editPlease.addEventListener('click', function(event) {
@@ -31558,6 +31633,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                                 statusBlock.textContent += " (Error writing back access control file: "+message+")";
                             } else {
                                 statusBlock.textContent = " (Now editing specific access for this group)";
+                                box.style = 'color: black;';
                                 bottomRow.removeChild(editPlease);
                             }
                         });
@@ -31567,46 +31643,48 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             } else { // Not using defaults
 
                 ACLControl(box, targetDoc, targetACLDoc, kb);
-                
+                box.style = 'color: black;';
+
                 var useDefault;
                 var addDefaultButton = function() {
                     useDefault = bottomRow.appendChild(dom.createElement('button'));
                     useDefault.textContent = "Stop specific sharing for this group -- just use default.";
                     useDefault.addEventListener('click', function(event) {
-                        updater.delete(doc, function(uri, ok, message){
-                            if (!ok) {
-                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
-                            } else {
+                        tabulator.fetcher.webOperation('DELETE', targetACLDoc)
+                            .then(function(xhr) {
                                 statusBlock.textContent = " The sharing for this group is now the default.";
                                 bottomRow.removeChild(useDefault);
-                            }
-                        });
-         
+                                box.style = 'color: #777;';
+
+                            })
+                            .catch(function(e){
+                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
+                            });
+
                     });
                 }
                 addDefaultButton();
-            
+
                 var checkIndividualACLsButton;
                 var addCheckButton = function() {
                     bottomRow.appendChild(dom.createElement('br'));
                     checkIndividualACLsButton = bottomRow.appendChild(dom.createElement('button'));
-                    checkIndividualACLsButton.textContent = "Check individalcards ACLs";
+                    checkIndividualACLsButton.textContent = "Check individal cards ACLs";
                     checkIndividualACLsButton.addEventListener('click', function(event) {
-                        
-                        
+
+
                     });
                 }
                 addCheckButton();
-            
+
             } // Not using defaults
         }
-            
+
     });
 
     return table
-    
-}; // ACLControl
 
+}; // ACLControl
 
 // ###### Finished expanding js/panes/common/acl-control.js ##############
 
@@ -33258,22 +33336,212 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 
 // Promises versions
 
-// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
 
+tabulator.panes.utils.logInLoadProfile = function(context){
+    if (context.publicProfile) return Promise.resolve(context); // already done
+    var box = context.div;
+    var uri = tabulator.preferences.get('me');
+    context.me =  uri ? $rdf.sym(uri) : null;
+
+    return new Promise(function(resolve, reject){
+        var gotIDChange = function(me) {
+            if (!me) return;
+            context.me = me;
+            tabulator.preferences.set('me', me.uri)
+            tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
+                if (!ok) {
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
+                        "Can't load profile file " + me.doc()));
+                    reject("Can't load profile file " + me.doc())
+
+                } else {
+                    context.publicProfile = me.doc();
+                    resolve(context)
+                }
+            });
+        };
+        box = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
+        context.div.appendChild(box);
+        if (context.me){
+            gotIDChange(context.me); // trigger continuation if already set
+        }
+    });
+}
+
+// Load preferences file
+//
+// Do this after having done log in and load profile
+
+tabulator.panes.utils.loadPreferences = function(context) {
+    if (context.preferencesFile) return Promise.resolve(context); // already done
+    var kb = tabulator.kb;
+    var preferencesFile = kb.any(context.me, tabulator.ns.space('preferencesFile'));
+    var box = context.statusArea || context.div || null;
+    return new Promise(function(resolve, reject) {
+
+        var message;
+        if (!preferencesFile) {
+            message = "Can't find a preferences file for user: " + context.me;
+            tabulator.panes.utils.errorMessageBlock(context.dom, message);
+            reject(message);
+        }
+        context.preferencesFile = preferencesFile;
+        var pending;
+        if (box) {
+            pending = tabulator.panes.utils.errorMessageBlock(context.dom,
+                "(loading preferences " + preferencesFile+ ")");
+            box.appendChild(pending);
+        }
+        kb.fetcher.load(preferencesFile).then(function(xhr){
+            if (pending) {
+                pending.parentNode.removeChild(pending);
+            }
+            resolve(context);
+        }).catch(function(err){
+            reject("Error loading preferences file" + err)
+        });
+    });
+};
+
+
+// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
+// Returns a promose the same context, outputting
+//
+// output: index.public, index.public
+//
+//
+tabulator.panes.utils.loadTypeIndexes = function(context) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb, tns = tabulator.ns, me = context.me;
+        return tabulator.panes.utils.logInLoadProfile(context)
+        .then(tabulator.panes.utils.loadPreferences)
+        .then(function(context){
+            var ns = tabulator.ns, kb = tabulator.kb, me = context.me;
+            context.index = context.index || {}
+            context.index.private = kb.each(me, ns.solid('typeIndex'), undefined, context.preferencesFile);
+            context.index.public = kb.each(me, ns.solid('typeIndex'), undefined, context.publicProfile);
+            var ix = context.index.private.concat(context.index.public);
+            if (ix.length === 0) {
+                resolve(context);
+            } else {
+                tabulator.fetcher.load(ix).then(function(xhrs){
+                    resolve(context);
+                })
+            }
+        })
+    });
+}
+
+// See https://github.com/solid/solid/blob/master/proposals/data-discovery.md#discoverability
+// Returns a promose the same context, outputting
+//
+// input: index.private
+//         index.public
+//
+tabulator.panes.utils.ensureTypeIndexes = function(context) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb, tns = tabulator.ns, me = context.me;
+        return tabulator.panes.utils.loadTypeIndexes(context)
+        .then(function(context){
+            var ns = tabulator.ns, kb = tabulator.kb, me = context.me;
+            var newIndex;
+            var makeIndex = function(visibility) {
+                if (context.index[visibility].length == 0) {
+                    newIndex = $rdf.sym(context.preferencesFile.dir().uri + '/' + visibility + 'TypeIndex.ttl');
+                    console.log("Creating new fresh type index " + newIndex)
+                    return kb.fetcher.webOperation('PUT', newIndex, {data: '# Type index'})
+                        .then(function(xhr){
+                            return new Promise(function(resolve, reject) {
+                                var ins = [$rdf.st(context.me, ns.solid('typeIndex'), newIndex, context.preferencesFile)];
+                                tabulator.updater.update([], ins, function(uri, ok, body){
+                                    if (ok) {
+                                        context.index[visibility].push(newIndex);
+                                        resolve(context);
+                                    } else {
+                                        reject("Adding link to new index file in " + context.preferencesFile);
+                                    }
+                                })
+                            });
+                        })
+                        .catch(function(e){reject("Creating new index file " + e)})
+                } else {
+                    return Promise.resolve(context.index[visibility][0]); // exists
+                }
+            }
+            var ps = [ makeIndex('private'), makeIndex('public')];
+            Promise.all(ps).then(function(privPub){
+                resolve(context)
+            });
+        })
+    });
+}
+
+// Returns promise of array of symbols
+//
 tabulator.panes.utils.findAppInstances = function(context, klass) {
     return new Promise(function(resolve, reject){
-        var ns = tabulator.ns;
-        var kb = tabulator.kb;
-        var me = context.me;
-        var tis = kb.each(me, tabulator.ns.solid('typeIndex'));
-        console.log("Type indeces: " + tis.length);
-        var ps = tis.map(function(ti){return kb.fetcher.load(ti)})
-        Promise.all(ps).then(function(value){
-            resolve(context.instances = kb.each(undefined, ns.solid('forClass'), klass)
-                .filter(function(x){return kb.holds(x, ns.rdf('type'), ns.solid('TypeRegistration'))}));
-        }).catch(function(e){reject(e)});
+        var kb = tabulator.kb, ns = tabulator.ns, me = context.me, fetcher = tabulator.fetcher;
+        tabulator.panes.utils.loadTypeIndexes(context)
+        .then(function(indexes){
+            var ix = context.index.private.concat(context.index.public);
+            var instances = context.instances = kb.each(klass, ns.solid('instance'));
+            var containers = context.instances = kb.each(klass, ns.solid('instanceContainer'));
+            if (containers.length) {
+                fetcher.load(containers).then(function(xhrs){
+                    var iii = instances.slice();
+                    for (var i=0; i<containers.length; i++) {
+                        var cont = containers[i];
+                        iii = iii.concat(kb.each(cont, ns.ldp('contains')));
+                    }
+                    resolve(iii);
+                });
+            } else {
+                resolve(instances);
+            }
+        })
     })
-};
+}
+
+//  UI to control registratin of instance
+//
+
+tabulator.panes.utils.registrationControl = function(context, instance, klass) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb, ns = tabulator.ns, me = context.me, fetcher = tabulator.fetcher;
+
+        var box = context.dom.createElement('div');
+        context.div.appendChild(box);
+        return tabulator.panes.utils.ensureTypeIndexes(context)
+            .then(function(indexes){
+                box.innerHTML = '<table><tbody><tr></tr><tr></tr></tbody></table>'; // tbody will be inserted anyway
+                var tbody = box.children[0].children[0];
+                //table.children[0].children[1].textContent = "Person note of this " + context.noun;
+                //table.children[1].children[1].textContent = "Public note of this " + context.noun;
+                var form = kb.bnode();// @@ say for now
+
+                if (context.index.public && context.index.public.length >0) {
+                    var index = context.index.public[0];
+                    var statement = $rdf.st(klass, ns.solid('instance'), instance, index);
+                    tbody.children[0].appendChild(tabulator.panes.utils.buildCheckboxForm(
+                        context.dom, tabulator.kb, "Public note of this " + context.noun, null, statement, form, index));
+                }
+
+                if (context.index.private && context.index.private.length >0) {
+                    var index = context.index.private[0];
+                    var statement = $rdf.st(klass, ns.solid('instance'), instance, index);
+                    tbody.children[1].appendChild(tabulator.panes.utils.buildCheckboxForm(
+                        context.dom, tabulator.kb, "Personal note of this " + context.noun, null, statement, form, index));
+                }
+                // tabulator.panes.utils.buildCheckboxForm(dom, kb, lab, del, ins, form, store)
+                resolve(box);
+
+            });
+
+
+    })
+}
+
+
 /*
     <#ab09fd> a solid:TypeRegistration;
         solid:forClass vcard:AddressBook;
@@ -33284,7 +33552,7 @@ tabulator.panes.utils.registerAppInstance = function(inst, klass, public, option
     var kb = tabulator.kb;
     var ti;
     if (public) {
-        ti = kb.any(me, tabulator.ns.solid('typeIndex'), undefined, context.profile);
+        ti = kb.any(me, tabulator.ns.solid('typeIndex'), undefined, context.publicProfile); // @@@ TBD
     } else {
         tabulator.panes.utils.loadPreferences(context)
         .then(function(){})
@@ -33310,59 +33578,7 @@ tabulator.panes.utils.registerAppInstance = function(inst, klass, public, option
 };
 
 
-tabulator.panes.utils.loadPreferences = function(context) {
-    var kb = tabulator.kb;
-    var preferencesFile = kb.any(context.me, tabulator.ns.space('preferencesFile'));
-    var box = context.statusArea || null;
-    return new Promise(function(resolve, reject) {
-
-        var message;
-        if (!preferencesFile) {
-            message = "Can't find a preferences file for user: " + context.me;
-            tabulator.panes.utils.errorMessageBlock(context.dom, message);
-            reject(message);
-        }
-        context.preferencesFile = preferencesFile;
-        var pending;
-        pending = tabulator.panes.utils.errorMessageBlock(context.dom,
-            "(loading preferences " + preferencesFile+ ")");
-        box.appendChild(pending);
-        kb.fetcher.load(preferencesFile).then(function(xhr){
-            pending.parentNode.removeChild(pending);
-            resolve(context);
-        }).catch(function(err){
-            reject("Error loading preferences file" + err)
-        });
-    });
-};
-
-
-tabulator.panes.utils.getUserLoadProfile = function(context) {
-    return new Promise(function(resolve, reject){
-        var gotIDChange = function(uri) {
-            if (typeof uri == 'undefined') return undefined;
-            var me = $rdf.sym(uri);
-            context.me = me;
-            var docURI = me.doc();
-            tabulator.kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
-                if (!ok) {
-                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
-                        "Can't load profile file " + me.doc()));
-                    reject("Can't load profile file " + me.doc());
-                } else {
-                    resolve(context);
-                }
-            });
-        }
-        var lsb = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
-        context.div.appendChild(lsb); // remove later
-    })
-}
-
-
-
-
-/////  Non-promises version
+/////  Non-promises version - obsolete
 
 tabulator.panes.utils.loadPrefs = function(ok, id, box, callback_ok_id_preferencesFile) {
     var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));
@@ -33464,7 +33680,7 @@ tabulator.panes.utils.offlineTestID = function() {
         /* me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid
         */
         console.log("Assuming user is " + id);
-        return id
+        return $rdf.sym(id)
     }
     return null;
 };
@@ -33493,7 +33709,7 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
         if (offline) return gotOne(offline);
 	Solid.auth.login().then(function(uri){
 	    console.log('signInOrSignUpBox logged in up '+ uri)
-	    gotOne(uri)
+	    gotOne($rdf.sym(uri))
 	})
     }, false);
 
@@ -33505,7 +33721,7 @@ tabulator.panes.utils.signInOrSignUpBox = function(myDocument, gotOne) {
     but2.addEventListener('click', function(e){
 	Solid.auth.signup().then(function(uri){
 	    console.log('signInOrSignUpBox signed up '+ uri)
-	    gotOne(uri)
+	    gotOne($rdf.sym(uri))
 	})
     }, false);
     return box;
@@ -33624,7 +33840,7 @@ web ID</a>?<br/>\
         button.addEventListener('click', function(){
             var webid1 = myDocument.getElementById('webidField').value; // @@@
             tabulator.preferences.set('me', webid1);
-            return gotOne(webid1);
+            return gotOne($rdf.sym(webid1));
         }, false);
     }
     but.addEventListener('click', makeOne, false);
@@ -33659,8 +33875,7 @@ tabulator.panes.utils.checkUserSetMe = function(doc) {
 
 // For a user authenticated using webid (or possibly other methods) it
 // is not immedaietly available to the client which person(a) it is.
-// One way is for the server to send the information back as a User: header.
-// This function looks for a linked
+// The solid standard way is for the server to send the information back as a User: header.
 
 tabulator.panes.utils.userCheckSite = 'https://databox.me/';
 
@@ -33675,19 +33890,19 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
             .map(function(request){
 
                 var response = kb.any(request, tabulator.ns.link('response'));
-                if (request !== undefined) {
-		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
-		    if (userHeaders.length === 0) {
-			console.log("CheckUser: non-solid server: trying "
-			    + tabulator.panes.utils.userCheckSite);
-			tabulator.panes.utils.checkUser(
-			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
-		    } else {
-			userHeaders.map(function(userHeader){
-			    var username = userHeader.value.trim();
-			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
-				setIt(username);
-				done = true;
+                if (response !== undefined) {
+        		    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+        		    if (userHeaders.length === 0) {
+        			console.log("CheckUser: non-solid server: trying "
+        			    + tabulator.panes.utils.userCheckSite);
+        			tabulator.panes.utils.checkUser(
+        			    kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+        		    } else {
+        			userHeaders.map(function(userHeader){
+        			    var username = userHeader.value.trim();
+        			    if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+        				setIt(username);
+        				done = true;
 			    }
 			});
 		    }
@@ -33707,6 +33922,39 @@ tabulator.panes.utils.checkUser = function(doc, setIt) {
         }
     });
 };
+
+// What ID does the user use to log into the given target?
+tabulator.panes.utils.checkUserForTarget = function(context) {
+    return new Promise(function(resolve, reject){
+        var kb = tabulator.kb
+        kb.fetcher.load(conext.target).then(function(xhr) {
+            kb.each(undefined, tabulator.ns.link('requestedURI'), $rdf.uri.docpart(userMirror.uri))
+            .map(function(request){
+                var response = kb.any(request, tabulator.ns.link('response'));
+                if (response) {
+                    var userHeaders = kb.each(response, tabulator.ns.httph('user'));
+                    if (userHeaders.length === 0) {
+                    console.log("CheckUser: non-solid server: trying "
+                        + tabulator.panes.utils.userCheckSite);
+                    tabulator.panes.utils.checkUser(
+                        kb.sym(tabulator.panes.utils.userCheckSite), setIt)
+                    } else {
+                        userHeaders.map(function(userHeader){
+                            var username = userHeader.value.trim();
+                            if (username.slice(0,4) !== 'dns:') { // dns: are pseudo-usernames from rww.io and don't count
+                            context.me = $rdf.sym(username);
+                            tabulator.preferences.set('me', username);
+                            resolve(context)
+                            }
+                        });
+                    }
+                }
+                resolve(context);
+            });
+        }).catch(e)(function(e){reject(e)});
+    });
+}
+
 
 //              Login status box
 //
@@ -33808,12 +34056,16 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
 //  Callsback with the ws and the base URI
 //
 //
-tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
+tabulator.panes.utils.selectWorkspace = function(dom, appDetails, callbackWS) {
+    var noun = appDetails.noun;
+    var appPathSegment = appDetails.appPathSegment;
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri && tabulator.kb.sym(me_uri);
     var kb = tabulator.kb;
-    var box;
+    var box = dom.createElement('div');
+    var context = { me: me, dom:dom, div:box}
+
     var say = function(s) {box.appendChild(tabulator.panes.utils.errorMessageBlock(dom, s))};
 
 
@@ -33822,10 +34074,10 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
         if (!newBase) {
             newBase = ws.uri.split('#')[0];
         } else {
-	    newBase = newBase.value;
-	}
+            newBase = newBase.value;
+	    }
         if (newBase.slice(-1) !== '/') {
-            $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
+            console.log(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
             newBase = newBase + '/';
         }
         var now = new Date();
@@ -33836,9 +34088,9 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
 
 
 
-    var displayOptions = function(ok, id, preferencesFile){
+    var displayOptions = function(context){
         var status = '';
-        if (!ok) return say(id); // message
+        var id = context.me, preferencesFile = context.preferencesFile;
 
         // A workspace specifically defined in the private preferences file:
         var w = kb.statementsMatching(id, tabulator.ns.space('workspace'), // Only trust prefs file here
@@ -33869,7 +34121,6 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             // var popup = window.open(undefined, '_blank', { height: 300, width:400 }, false)
             box.appendChild(table);
 
-
             //  Add a field for directly adding the URI yourself
 
             var hr = box.appendChild(dom.createElement('hr')); // @@
@@ -33883,6 +34134,8 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
             baseField.label = "base URL";
             baseField.autocomplete = "on";
 
+            context.baseField = baseField;
+
             box.appendChild(dom.createElement('br')); // @@
 
             var button = box.appendChild(dom.createElement('button'));
@@ -33895,10 +34148,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
                 callbackWS(null, newBase);
             });
 
-
-
             // Now go set up the table of spaces
-
 
             var row = 0;
             w = w.filter(function(x){ return !(kb.holds(x, tabulator.ns.rdf('type'), // Ignore master workspaces
@@ -33965,7 +34215,7 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
                 };
 
                 var comment = kb.any(ws, tabulator.ns.rdfs('comment'));
-		comment = comment ? comment.value : "Use this workspace";
+                comment = comment ? comment.value : "Use this workspace";
                 addMyListener(col2, comment? comment.value : '',
                                  deselectedStyle + style, ws);
             };
@@ -33985,58 +34235,11 @@ tabulator.panes.utils.selectWorkspace = function(dom, noun, callbackWS) {
         };
     };
 
-    var gotIDChange = function(uri) {
-        if (typeof uri == 'undefined') return undefined;
-        var me = $rdf.sym(uri);
-        var docURI = me.doc();
-        kb.fetcher.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
-            if (!ok) {
-                box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                    "Can't load profile file " + me.doc()));
-                return;
-            }
-            // tabulator.panes.utils.loadPrefs(me, id, box, displayOptions);
-            tabulator.panes.utils.loadPreferences(context)
-            .then(function(preferencesFile){displayOptions(true, id, preferencesFile)})
-            .catch(function(err){displayOptions(false, err)});
-        });
-    };
-
-    if (me) {
-        box = dom.createElement('div');
-        gotIDChange(me);
-        return box;
-    }
-    box = tabulator.panes.utils.loginStatusBox(dom, gotIDChange);
+    tabulator.panes.utils.logInLoadProfile(context)
+    .then(tabulator.panes.utils.loadPreferences)
+    .then(displayOptions);
     return box;
-
-};
-
-tabulator.panes.utils.logInLoadProfileLoadPreferences = function(context){
-    var p0 = new Promise(function(resolve, reject){
-        var gotIDChange = function(uri) {
-            if (typeof uri == 'undefined') return undefined;
-            var me = $rdf.sym(uri);
-            var docURI = me.doc();
-            tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
-                if (!ok) {
-                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
-                        "Can't load profile file " + me.doc()));
-                    reject("Can't load profile file " + me.doc())
-                    return;
-                }
-                // tabulator.panes.utils.loadPrefs(me, id, box, displayOptions);
-                tabulator.panes.utils.loadPreferences(context)
-                .then(function(preferencesFile){resolve({ me: me, preferencesFile: preferencesFile})})
-                .catch(function(err){reject(err)});
-            });
-        };
-        box = tabulator.panes.utils.loginStatusBox(context.dom, gotIDChange);
-        context.div.appendChild(box);
-
-    });
-    return p0;
-}
+}; // selectWorkspace
 
 
 //////////////////// Create a new instance of an app
@@ -34047,19 +34250,19 @@ tabulator.panes.utils.logInLoadProfileLoadPreferences = function(context){
 
 // Returns a div with a button in it for making a new app instance
 
-tabulator.panes.utils.newAppInstance = function(dom, label, callback) {
-    var gotWS = function(ws) {
+tabulator.panes.utils.newAppInstance = function(dom, appDetails, callback) {
+    var gotWS = function(ws, base) {
         //$rdf.log.debug("newAppInstance: Selected workspace = " + (ws? ws.uri : 'none'))
-        callback(ws);
+        callback(ws, base);
     };
     var div = dom.createElement('div');
     var b = dom.createElement('button');
     b.setAttribute('type', 'button');
     div.appendChild(b)
-    b.innerHTML = label;
+    b.innerHTML = "Make new " + appDetails.noun;
     // b.setAttribute('style', 'float: right; margin: 0.5em 1em;'); // Caller should set
     b.addEventListener('click', function(e) {
-        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, label, gotWS))}, false);
+        div.appendChild(tabulator.panes.utils.selectWorkspace(dom, appDetails, gotWS))}, false);
     div.appendChild(b);
     return div;
 };
@@ -37800,7 +38003,7 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, del
     var delButton = dom.createElement('button');
     container.appendChild(delButton);
     delButton.textContent = "-";
-    
+
     container.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
     delButton.setAttribute('class', 'hoverControlHide');
     delButton.setAttribute('style', 'color: red; margin-right: 0.3em; foat:right; text-align:right');
@@ -37818,13 +38021,13 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, del
         container.appendChild(sureButton).addEventListener('click', function(e) {
             container.removeChild(sureButton);
             container.removeChild(cancelButton);
-            deleteFunction();   
+            deleteFunction();
         }, false);
     }, false);
 }
 */
 
-    
+
 // These used to be in js/init/icons.js but are better in the pane.
 tabulator.Icon.src.icon_contactCard = iconPrefix + 'js/panes/contact/card.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_contactCard] = 'Contact'
@@ -37832,9 +38035,9 @@ tabulator.Icon.tooltips[tabulator.Icon.src.icon_contactCard] = 'Contact'
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_contactCard,
-    
+
     name: 'contact',
-    
+
     // Does the subject deserve an contact pane?
     label: function(subject) {
         var kb = tabulator.kb;
@@ -37846,10 +38049,14 @@ tabulator.panes.register( {
         if (t[ns.vcard('AddressBook').uri]) return "Address book";
         return null; // No under other circumstances
     },
-    
-    
-    clone: function(thisInstance, newBase, dom, div, me) {
-    
+
+
+    clone: function(thisInstance, newBase, context) {
+
+        var dom = context.dom, me = context.me, div = context.div;
+        var appInstanceNoun = 'address book';
+        var base = thisInstance.uri.slice(0, thisInstance.uri.lastIndexOf('/')+1);
+
         var complain = function(message) {
             div.appendChild(tabulator.panes.utils.errorMessageBlock(dom, message, 'pink'));
         };
@@ -37864,7 +38071,7 @@ tabulator.panes.register( {
     dc:title "New address Book";\n\
     vcard:nameEmailIndex <people.ttl>;\n\
     vcard:groupIndex <groups.ttl>. \n\n'
-    
+
         bookContents += '<#this> <http://www.w3.org/ns/auth/acl#owner> <' + me.uri + '>.\n\n';
 
         var toBeWritten = [
@@ -37884,10 +38091,21 @@ tabulator.panes.register( {
         }
 
         // @@ Ask user abut ACLs?
-        
+
         //
         //   @@ Add header to PUT     If-None-Match: *       to prevent overwrite
         //
+
+
+        var claimSuccess = function(uri, appInstanceNoun) { // @@ delete or grey other stuff
+            console.log("Files created. App ready at " + uri)
+            var p = div.appendChild(dom.createElement('p'));
+            p.setAttribute('style', 'font-size: 140%;')
+            p.innerHTML =
+                "Your <a href='" + uri + "'><b>new " + appInstanceNoun + "</b></a> is ready. "+
+                "<br/><br/><a href='" + uri + "'>Go to new " + appInstanceNoun + "</a>";
+        }
+
         var doNextTask = function() {
             if (toBeWritten.length === 0) {
                 claimSuccess(newAppPointer, appInstanceNoun);
@@ -37933,15 +38151,15 @@ tabulator.panes.register( {
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var div = dom.createElement("div")
         var cardDoc = subject.doc();
-        
+
         div.setAttribute('class', 'contactPane');
 
         var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
+            if (!inverse && pred.uri ==
                 'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
-        
+
         var complainIfBad = function(ok,body){
             if (!ok) {
                 console.log("Error: " + body);
@@ -37966,7 +38184,7 @@ tabulator.panes.register( {
         };
 
 
-        
+
         // Unused and untested but could be handy: a facetted browser view
         //
         var addressBookAsTable = function() {
@@ -37979,7 +38197,7 @@ tabulator.panes.register( {
             query.pat.add(v['contact'], ns.vcard('hasEmail'), v['em']);
             query.pat.add(v['contact'], ns.vcard('value'), v['email']);
             query.pat.optional = [];
-            
+
             var propertyList = kb.any(subject, ns.wf('propertyList')); // List of extra properties
             // console.log('Property list: '+propertyList); //
             if (propertyList) {
@@ -37996,14 +38214,14 @@ tabulator.panes.register( {
                     oneOpt.add(v['contact'], prop, v[vname]);
                 }
             }
-                    
+
             var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {'query': query,
    /*             'hints': {
                     '?created': { 'cellFormat': 'shortDate'},
                     '?state': { 'initialSelection': selectedStates }}
                     */
                 } );
-                    
+
             div.appendChild(tableDiv);
 
             if (tableDiv.refresh) { // Refresh function
@@ -38025,91 +38243,26 @@ tabulator.panes.register( {
             }
         };
 
-                                                  
+
         /////////////////////// Reproduction: Spawn a new instance of this app
-        
+
         var newAddressBookButton = function(thisAddressBook) {
-            return tabulator.panes.utils.newAppInstance(dom, "Start a new address book", function(ws){
-        
-                var appPathSegment = 'com.timbl.contactor'; // how to allocate this string and connect to 
+            return tabulator.panes.utils.newAppInstance(dom,
+                {noun: "address book", appPathSegment: "contactorator.timbl.com"}, function(ws, newBase){
 
-                // console.log("Ready to make new instance at "+ws);
-                var sp = tabulator.ns.space;
-                var kb = tabulator.kb;
-                
-                var base = kb.any(ws, sp('uriPrefix')).value;
-                if (base.slice(-1) !== '/') {
-                    $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + base );
-                    base = base + '/';
-                }
-                base += appPathSegment + '/' + timestring() + '/'; // unique id 
-
-
-                // var newBook = kb.sym(base + 'book.ttl');
-                // var newGroups = kb.sym(base + 'groups.ttl');
-                // var newPeople = kb.sym(base + 'people.ttl');
-
-                 
-                //
-                // kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, doc);
-                
-                //kb.add(newAddressBook, tabulator.ns.space('inspiration'), thisAddressBook, there);
-                
-                // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
-
-
-                //  @@@  MAKE SURE NOT OVERWRITING EXISTING FILES
-                
-                agenda = [];
-                
-                prefixes = '@prefix vcard: <http://www.w3.org/2006/vcard/ns#>. \n\
-@prefix ab: <http://www.w3.org/ns/pim/ab#>. \n\
-@prefix dc: <http://purl.org/dc/elements/1.1/>.\n\
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.\n\
-'
-
-                bookData = prefixes + '\n<#this> a vcard:AddressBook;\n\
-                    vcard:nameEmailIndex <people.ttl>; \n\
-                    vcard:groupIndex <groups.ttl>. \n\n';  // @@ Add title?
-
-
-                agenda.push(function() {
-                    webOperation('PUT', base + 'groups.ttl', { data: bookData, contentType: 'text/turtle'}, function(ok, body) {
-                        complainIfBad(ok, "Failed to initialize empty results file: " + body);
-                        if (ok) agenda.shift()();
-                    })
+                    thisPane.clone(thisAddressBook, newBase, {me: me, div: div, dom: dom})
                 });
-
-
-                groupsData = prefixes + '<book.ttl#this> vcard:includesGroup  <Group/Home.ttl#this>. <Group/Home.ttl#this> a vcard:Group; vcard:fn "Home"\n' 
-                     + '<book.ttl#this> vcard:includesGroup  <Group/Work.ttl#this>. <Group/Work.ttl#this> a vcard:Group; vcard:fn "Work"\n' 
-
-                 agenda.push(function() {
-                    webOperation('PUT', base + 'groups.ttl', { data: groupsData, contentType: 'text/turtle'}, function(ok, body) {
-                        complainIfBad(ok, "Failed to initialize empty results file: " + body);
-                        if (ok) agenda.shift()();
-                    })
-                });
-
-           ////////////
-
-                agenda.shift()();
-                
-                 
-            }); // callback to newAppInstance
-
-            
         }; // newAddressBookButton
 
- 
- 
+
+
 ///////////////////////////////////////////////////////////////////////////////
-        
-        
-        
+
+
+
         var updater = new tabulator.rdf.sparqlUpdate(kb);
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -38120,7 +38273,7 @@ tabulator.panes.register( {
 
 
         // Reload resorce then
-        
+
         var reloadStore = function(store, callBack) {
             tabulator.fetcher.unload(store);
             tabulator.fetcher.nowOrWhenFetched(store.uri, undefined, function(ok, body){
@@ -38135,7 +38288,7 @@ tabulator.panes.register( {
 
 
         // Refresh the DOM tree
-      
+
         var refreshTree = function(root) {
             if (root.refresh) {
                 root.refresh();
@@ -38145,7 +38298,7 @@ tabulator.panes.register( {
                 refreshTree(root.children[i]);
             }
         }
-        
+
 
 
 
@@ -38153,7 +38306,7 @@ tabulator.panes.register( {
 
 
         //              Render a single contact Individual
-        
+
         if (t[ns.vcard('Individual').uri]|| t[ns.vcard('Organization').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
 
             // var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
@@ -38164,16 +38317,16 @@ tabulator.panes.register( {
                 if (!ok) return console.log("Failed to load form " + individualFormDoc.uri + ' '+body);
                 var predicateURIsDone = {};
                 var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
-                
+
                 donePredicate(ns.rdf('type'));
                 donePredicate(ns.dc('title'));
                 donePredicate(ns.dc('modified'));
-                
+
                 [ 'hasUID', 'fn', 'hasEmail', 'hasTelephone', 'hasName',
                     'hasAddress', 'note'].map(function(p) {
                     donePredicate(ns.vcard(p));
                 });
-                
+
 
                 var setPaneStyle = function() {
                     var types = kb.findTypeURIs(subject);
@@ -38188,24 +38341,24 @@ tabulator.panes.register( {
                     div.setAttribute('style', mystyle);
                 }
                 setPaneStyle();
-                
+
 
                 tabulator.panes.utils.checkUserSetMe(cardDoc);
 
                 tabulator.panes.utils.appendForm(dom, div, {}, subject, individualForm, cardDoc, complainIfBad);
-                 
-                 
+
+
                  //   Comment/discussion area
                 /*
                 var messageStore = kb.any(tracker, ns.wf('messageStore'));
-                if (!messageStore) messageStore = kb.any(tracker, ns.wf('doc'));                
+                if (!messageStore) messageStore = kb.any(tracker, ns.wf('doc'));
                 div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore));
                 donePredicate(ns.wf('message'));
                 */
 
                 div.appendChild(dom.createElement('tr'))
                             .setAttribute('style','height: 1em'); // spacer
-                
+
                 // Remaining properties from whatever ontollogy
                 tabulator.outline.appendPropertyTRs(div, plist, false,
                     function(pred, inverse) {
@@ -38218,56 +38371,56 @@ tabulator.panes.register( {
 
 
             });  // End nowOrWhenFetched tracker
-            
-                    // Alas force ct for github.io 
+
+                    // Alas force ct for github.io
             // was:  ,{ 'forceContentType': 'text/turtle'}
 
         ///////////////////////////////////////////////////////////
 
         //          Render a AddressBook instance
-        
+
         } else if (t[ns.vcard('AddressBook').uri]) {
             var tracker = subject;
-            
+
             var nameEmailIndex = kb.any(subject, ns.vcard('nameEmailIndex'));
-            
+
             var groupIndex = kb.any(subject, ns.vcard('groupIndex'));
             var selectedGroups = {};
 
-            
+
             //var cats = kb.each(subject, ns.wf('contactCategory')); // zero or more
-            
+
             classLabel = tabulator.Util.label(ns.vcard('AddressBook'));
             IndividualClassLabel = tabulator.Util.label(ns.vcard('Individual'));
-            
+
             var title = kb.any(subject, ns.dc('title'));
             title = title ? title.value : classLabel;
-            
+
             //  Write a new contact to the web
             //
             var createNewContact = function(book, name, selectedGroups, callback) {
                 var nameEmailIndex = kb.any(book, ns.vcard('nameEmailIndex'));
-                
+
                 var uuid = gen_uuid();
                 var x = subject.uri.split('#')[0]
                 var doc  = kb.sym(x.slice(0, x.lastIndexOf('/')+1) + 'Person/' + uuid + '.ttl');
                 var person = kb.sym(doc.uri + '#this');
-                
+
                 // Sets of statements to different files
                 agenda = [    // Patch the main index to add the person
-                        
+
                     [   $rdf.st(person, ns.vcard('inAddressBook'), book, nameEmailIndex), // The people index
                         $rdf.st(person, ns.vcard('fn'), name, nameEmailIndex) ]
                 ];
 
                 //@@ May be missing email - sync that differently
-                
+
                 // sts.push(new $rdf.Statement(person, DCT('created'), new Date(), doc));  ??? include this?
                 for (gu in selectedGroups) {
                     var g = kb.sym(gu);
                     var gd = g.doc();
                     agenda.push( [  $rdf.st(g, ns.vcard('hasMember'), person, gd),
-                                    $rdf.st(person, ns.vcard('fn'), name, gd) 
+                                    $rdf.st(person, ns.vcard('fn'), name, gd)
                     ]);
                 }
 
@@ -38298,7 +38451,7 @@ tabulator.panes.register( {
                     if (ok) {
                         dump(" People index must be loaded\n");
                         updater.put(doc, [
-                                $rdf.st(person, ns.vcard('fn'), name, doc), 
+                                $rdf.st(person, ns.vcard('fn'), name, doc),
                                 $rdf.st(person, ns.rdf('type'), ns.vcard('Individual'), doc) ],
                             'text/turtle', updateCallback);
                     } else {
@@ -38308,23 +38461,23 @@ tabulator.panes.register( {
                 });
 
             };
-            
+
            // Write new group to web
            // Creates an empty new group file and adds it to the index
            //
            var saveNewGroup = function(book, name, callback) {
                 var gix = kb.any(book, ns.vcard('groupIndex'));
-                
+
                 var x = subject.uri.split('#')[0]
                 var gname = name.replace(' ', '_');
                 var doc  = kb.sym(x.slice(0, x.lastIndexOf('/')+1) + 'Group/' + gname + '.ttl');
                 var group = kb.sym(doc.uri + '#this');
                 dump(" New group will be: "+ group + '\n');
-                
+
                 tabulator.fetcher.nowOrWhenFetched(gix, undefined, function(ok, message) {
                     if (ok) {
                         dump(" Group index must be loaded\n");
-                        updater.update([], 
+                        updater.update([],
                             [   $rdf.st(subject, ns.vcard('includesGroup'), group, gix),
                                 $rdf.st(group, ns.rdf('type'), ns.vcard('Group'), gix) ,
                                 $rdf.st(group, ns.vcard('fn'), name, gix) ], function(uri, success, body){
@@ -38343,14 +38496,14 @@ tabulator.panes.register( {
                 });
 
             };
- 
-            // Form to get the name of a new thing before we create it        
+
+            // Form to get the name of a new thing before we create it
             var getNameForm = function(dom, kb, classLabel, selectedGroups, gotNameCallback) {
                 var form = dom.createElement('div');  // form is broken as HTML behaviour can resurface on js error
 
                 tabulator.fetcher.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
-                tabulator.fetcher.removeCallback('fail','expand'); // @@ ?? 
-                
+                tabulator.fetcher.removeCallback('fail','expand'); // @@ ??
+
                 // classLabel = tabulator.Util.label(ns.vcard('Individual'));
                 form.innerHTML = "<h2>Add new "+
                         classLabel+"</h2><p>name of new "+classLabel+":</p>";
@@ -38359,20 +38512,20 @@ tabulator.panes.register( {
                 namefield.setAttribute('size','100');
                 namefield.setAttribute('maxLength','2048');// No arbitrary limits
                 namefield.select() // focus next user input
-                
+
                 var gotName = function() {
                     namefield.setAttribute('class','pendingedit');
                     namefield.disabled = true;
                     gotNameCallback(true, subject, namefield.value, selectedGroups);
                 }
-                
+
                 namefield.addEventListener('keyup', function(e) {
                     if(e.keyCode == 13) {
                         gotName();
                     }
                 }, false);
                 form.appendChild(namefield);
-                
+
                 var br = form.appendChild(dom.createElement("br"));
 
                 var cancel = form.appendChild(dom.createElement("button"));
@@ -38389,27 +38542,27 @@ tabulator.panes.register( {
                 b.addEventListener('click', function(e) {
                     gotName();
                 }, false);
-                
+
                 return form;
             };
-        
 
 
 
-                       
+
+
             ////////////////////////////// Three-column Contact Browser
-            
+
             tabulator.fetcher.nowOrWhenFetched(groupIndex.uri, subject, function(ok, body) {
-        
+
                 if (!ok) return console.log("Cannot load group index: "+body);
-                
+
                 // organization-name is a hack for Mac records with no FN which is mandatory.
-                var nameFor = function(x) { 
-                    var name = kb.any(x, ns.vcard('fn')) || 
-                        kb.any(x, ns.foaf('name')) || kb.any(x, ns.vcard('organization-name')); 
+                var nameFor = function(x) {
+                    var name = kb.any(x, ns.vcard('fn')) ||
+                        kb.any(x, ns.foaf('name')) || kb.any(x, ns.vcard('organization-name'));
                     return name ? name.value : '???';
                 }
-                
+
                 var filterName = function(name) {
                     var filter = searchInput.value.trim().toLowerCase();
                     if (filter.length === 0) return true;
@@ -38420,10 +38573,10 @@ tabulator.panes.register( {
                     }
                     return true;
                 }
-                
+
                 var searchFilterNames = function() {
                     for (var i=0; i < peopleMainTable.children.length; i++) {
-                        row = peopleMainTable.children[i] 
+                        row = peopleMainTable.children[i]
                         row.setAttribute('style',
                             filterName(nameFor(row.subject)) ? '' : 'display: none;');
                     }
@@ -38457,7 +38610,7 @@ tabulator.panes.register( {
                 }
 
                 var toolsPane = function(selectedGroups, groupsMainTable) {
-                    var kb = tabulator.kb;
+                    var kb = tabulator.kb, ns = tabulator.ns;
                     var updater = new tabulator.rdf.sparqlUpdate(kb);
                     var ACL = tabulator.ns.acl, VCARD = tabulator.ns.vcard;
                     var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
@@ -38475,16 +38628,16 @@ tabulator.panes.register( {
                     var MainRow = table.appendChild(dom.createElement('tr'));
                     var box = MainRow.appendChild(dom.createElement('table'));
                     var bottomRow = table.appendChild(dom.createElement('tr'));
-                    
+
                     var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
                     var p = MainRow.appendChild(dom.createElement('pre'));
                     var log = function(message) {
                         p.textContent += message + '\n';
                     };
-                    
+
                     log("" + totalCards + " cards alltogether. ");
-                    
-                    
+
+
                     var groups = kb.each(subject, VCARD('includesGroup'));
                     log('' + groups.length + " total groups. " );
 
@@ -38493,7 +38646,16 @@ tabulator.panes.register( {
                         gg.push(g);
                     }
                     log('' + gg.length + " selected groups. " );
+
+                    context = { target: subject, me: me, div: pane, dom: dom, statusRegion: statusBlock };
+
                     
+                    tabulator.panes.utils.registrationControl(
+                        context, subject, ns.vcard('AddressBook'))
+                        .then(function(box){
+                            pane.appendChild(box)
+                        });
+
                     var loadIndexButton = pane.appendChild(dom.createElement('button'));
                     loadIndexButton.textContent = "Load main index";
                     loadIndexButton.addEventListener('click', function(e) {
@@ -38511,8 +38673,8 @@ tabulator.panes.register( {
                         });
                     });
 
-                    
-                    
+
+
                     var check = MainRow.appendChild(dom.createElement('button'));
                     check.textContent = "Check inidividual card access of selected groups";
                     check.addEventListener('click', function(event){
@@ -38533,10 +38695,10 @@ tabulator.panes.register( {
                                     });
                                 }
                                 doCard(card);
-                            } 
+                            }
                         }
                     });
-                    
+
                     var checkGroupless = MainRow.appendChild(dom.createElement('button'));
                     checkGroupless.textContent = "Find inidividuals with no group";
                     checkGroupless.addEventListener('click', function(event){
@@ -38548,7 +38710,7 @@ tabulator.panes.register( {
                             }
                             tabulator.fetcher.nowOrWhenFetched(nameEmailIndex, undefined,
                                 function(ok, message) {
-                                    
+
                                     log("Loaded groups and name index.");
                                     var reverseIndex = {}, groupless = [];
                                     for (var i = 0; i< groups.length; i++) {
@@ -38559,8 +38721,8 @@ tabulator.panes.register( {
                                             reverseIndex[a[j].uri] = true;
                                         }
                                     }
-                                    
-                                    
+
+
                                     var cards = kb.each(undefined, VCARD('inAddressBook'), subject);
                                     log("" + cards.length + " total cards");
                                     var c, card;
@@ -38574,12 +38736,12 @@ tabulator.panes.register( {
                             });
                         })
                     });
-                    
+
                     return pane;
                 }
 
                 ////////////////////   Body of 3-column browser
-                
+
                 var bookTable = dom.createElement('table');
                 bookTable.setAttribute('style', 'border-collapse: collapse; margin-right: 0;')
                 div.appendChild(bookTable);
@@ -38597,7 +38759,7 @@ tabulator.panes.register( {
                 var groupsFooter =  bookFooter.appendChild(dom.createElement('td'));
                 var peopleFooter =  bookFooter.appendChild(dom.createElement('td'));
                 var cardFooter =  bookFooter.appendChild(dom.createElement('td'));
-                
+
                 var  searchDiv = cardHeader.appendChild(dom.createElement('div'));
                 // searchDiv.setAttribute('style', 'border: 0.1em solid #888; border-radius: 0.5em');
                 searchInput = cardHeader.appendChild(dom.createElement('input'));
@@ -38611,7 +38773,7 @@ tabulator.panes.register( {
                 var cardMain = bookMain.appendChild(dom.createElement('td'));
                 cardMain.setAttribute('style', 'margin: 0;'); // fill space available
                 var dataCellStyle =  'padding: 0.1em;'
-                
+
                 groupsHeader.textContent = "groups";
                 groupsHeader.setAttribute('style', 'min-width: 10em; padding-bottom 0.2em;');
 
@@ -38629,19 +38791,19 @@ tabulator.panes.register( {
                     }
                 }); // on button click
 
-                
+
                 peopleHeader.textContent = "name";
                 peopleHeader.setAttribute('style', 'min-width: 18em;');
                 peopleMain.setAttribute('style','overflow:scroll;');
-                
+
                 var groups;
-                
+
                 var sortGroups = function() {
                     var gs = kb.each(subject, ns.vcard('includesGroup'));
                     groups = gs.map(function(g){return [ kb.any(g, ns.vcard('fn')), g] })
                     groups.sort();
                 }
-                
+
                 var cardPane = function(dom, subject, paneName) {
                     var p = tabulator.panes.byName(paneName);
                     var d = p.render(subject, dom);
@@ -38665,7 +38827,7 @@ tabulator.panes.register( {
 
                 // In a LDP work, deletes the whole document describing a thing
                 // plus patch out ALL mentiosn of it!    Use with care!
-                // beware of other dta picked up from other places being smushed 
+                // beware of other dta picked up from other places being smushed
                 // together and then deleted.
 
                 var deleteThing = function(x) {
@@ -38709,7 +38871,7 @@ tabulator.panes.register( {
                             k++;
                         }
                     }
-                    
+
                     peopleMainTable.innerHTML = ''; // clear
                     peopleHeader.textContent = (cards.length > 5 ? '' + cards.length + " contacts" : "contact");
 
@@ -38737,7 +38899,7 @@ tabulator.panes.register( {
                                     cardMain.innerHTML = '';
                                     if (!ok) return complainIfBad(ok, "Can't load card: " +  group.uri.split('#')[0] + ": " + message)
                                     // dump("Loaded card " + cardURI + '\n')
-                                    cardMain.appendChild(cardPane(dom, person, 'contact'));  
+                                    cardMain.appendChild(cardPane(dom, person, 'contact'));
                                     cardMain.appendChild(dom.createElement('br'));
                                     var anchor = cardMain.appendChild(dom.createElement('a'));
                                     anchor.setAttribute('href', person.uri);
@@ -38748,9 +38910,9 @@ tabulator.panes.register( {
                         setPersonListener(personRow, person);
                     };
                     searchFilterNames();
-    
+
                 }
-                
+
                 var refreshGroupsSelected = function() {
                     for (i=0; i < groupsMainTable.children.length; i++) {
                         var row = groupsMainTable.children[i];
@@ -38759,9 +38921,9 @@ tabulator.panes.register( {
                         }
                     }
                 };
-                
+
                 // Check every group is in the list and add it if not.
-                
+
                 var syncGroupTable = function() {
                     var foundOne;
                     sortGroups();
@@ -38775,7 +38937,7 @@ tabulator.panes.register( {
                     for (var g = 0; g<groups.length; g++) {
                         var name = groups[g][0];
                         var group = groups[g][1];
-                        
+
                         //selectedGroups[group.uri] = false;
                         foundOne = false;
 
@@ -38788,7 +38950,7 @@ tabulator.panes.register( {
                             }
                         }
                         if (!foundOne) {
-                        
+
                             var groupRow = groupsMainTable.appendChild(dom.createElement('tr'));
                             groupRow.subject = group;
                             groupRow.setAttribute('style', dataCellStyle);
@@ -38813,7 +38975,7 @@ tabulator.panes.register( {
                                         refreshNames();
 
                                         if (!event.altKey) { // If only one group has beeen selected show ACL
-                                            cardMain.innerHTML = ''; 
+                                            cardMain.innerHTML = '';
                                             cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
                                                 if (!ok) cardMain.innerHTML = "Failed: " + body;
                                             }));
@@ -38824,7 +38986,7 @@ tabulator.panes.register( {
                             foo(groupRow, group, name);
                         } // if not foundOne
                     } // loop g
-                    
+
                     for (i=0; i < groupsMainTable.children.length; i++) {
                         var row = groupsMainTable.children[i];
                         if (row.trashMe) {
@@ -38833,21 +38995,24 @@ tabulator.panes.register( {
                     }
                     refreshGroupsSelected();
                 } // syncGroupTable
-                
+
                 syncGroupTable();
- 
+
                 // New Contact button
                 var newContactButton = dom.createElement("button");
                 var container = dom.createElement("div");
                 newContactButton.setAttribute("type", "button");
                 if (!me) newContactButton.setAttribute('disabled', 'true')
+                tabulator.panes.utils.checkUser(subject.doc(), function(uri){
+                     newContactButton.removeAttribute('disabled');
+                });
                 container.appendChild(newContactButton);
                 newContactButton.innerHTML = "New Contact" // + IndividualClassLabel;
                 peopleFooter.appendChild(container);
-                
+
                 var createdNewContactCallback1 = function(ok, person) {
                     dump("createdNewContactCallback1 "+ok+" - "+person +"\n");
-                    cardMain.innerHTML = ''; 
+                    cardMain.innerHTML = '';
                     if (ok) {
                         cardMain.appendChild(cardPane(dom, person, 'contact'));
                     } // else no harm done delete form
@@ -38874,14 +39039,14 @@ tabulator.panes.register( {
                                 if (!success) {
                                      console.log("Error: can't save new contact:" + body);
                                 } else {
-                                    cardMain.innerHTML = ''; 
+                                    cardMain.innerHTML = '';
                                     refreshNames(); // Add name to list of group
                                     cardMain.appendChild(cardPane(dom, body, 'contact'));
                                 }
                             });
                         }));
                 }, false);
- 
+
                 // New Group button
                 var newGroupButton = groupsFooter.appendChild(dom.createElement("button"));
                 newGroupButton.setAttribute("type", "button");
@@ -38910,15 +39075,15 @@ tabulator.panes.register( {
                                     selectedGroups[body.uri] = true
                                     syncGroupTable(); // Refresh list of groups
 
-                                    cardMain.innerHTML = ''; 
-                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                    cardMain.innerHTML = '';
+                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(body, dom, function(ok, body){
                                         if (!ok) cardMain.innerHTML = "Group sharing setup failed: " + body;
                                     }));
                                 }
                             });
                         }));
                 }, false);
-                
+
 
 
                 // Tools button
@@ -38926,47 +39091,46 @@ tabulator.panes.register( {
                 toolsButton.setAttribute("type", "button");
                 toolsButton.innerHTML = "Tools";
                 toolsButton.addEventListener('click', function(e) {
-                    cardMain.innerHTML = ''; 
+                    cardMain.innerHTML = '';
                     cardMain.appendChild(toolsPane(selectedGroups, groupsMainTable));
                 });
-                
+
                 cardFooter.appendChild(newAddressBookButton(subject));
-             
-                                     
+
+
+
             });
-                                             
+
             div.appendChild(dom.createElement('hr'));
             //  div.appendChild(newAddressBookButton(subject));       // later
             // end of AddressBook instance
 
 
-        } else { 
+        } else {
             console.log("Error: Contact pane: No evidence that "+subject+" is either a bug or a tracker.");
-        }         
+        }
         if (!tabulator.preferences.get('me')) {
             console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
             // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
-        
+
         ///////////////// Fix user when testing on a plane
 
         if (tabulator.mode == 'webapp' && typeof document !== 'undefined' &&
             document.location &&  ('' + document.location).slice(0,16) === 'http://localhost') {
-         
+
             me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid
-            console.log("Assuming user is " + me)   
+            console.log("Assuming user is " + me)
         }
-        
-        
+
+
         return div;
 
     }
 }, true);
 
 //ends
-
-
 
 // ###### Finished expanding js/panes/contact/contactPane.js ##############
 // ###### Expanding js/panes/argument/argumentPane.js ##############

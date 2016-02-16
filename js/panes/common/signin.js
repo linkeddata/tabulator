@@ -60,6 +60,22 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 
 
 // Promises versions
+//
+// These pass a context object which hold various RDF symbols
+// as they becaome availale
+//
+//  me               RDF symbol for the users' webid
+//  publicProfile    The user's public pofile, iff loaded
+//  preferencesFile  The user's personal preferences file, iff loaded
+//  index.public     The user's public type index file
+//  index.private     The user's private type index file
+//   not RDF symbols:
+//  noun              A string in english for the tpe of thing -- like "address book"
+//  instance          An array of nodes which are existing instances
+//  containers        An array of nodes of containers of instances
+//  div               A DOM element where UI can be displayed
+//  statusArea        A DOM element (opt) proogress stuff can be displayed, or error messages
+
 
 
 tabulator.panes.utils.logInLoadProfile = function(context){
@@ -172,7 +188,7 @@ tabulator.panes.utils.ensureTypeIndexes = function(context) {
             var newIndex;
 
             var makeIndex = function(visibility) {
-                var relevant = {'private': context.preferencesFile), 'public': context.publicProfile}[visibility];
+                var relevant = {'private': context.preferencesFile, 'public': context.publicProfile}[visibility];
                 if (context.index[visibility].length == 0) {
                     newIndex = $rdf.sym(context.preferencesFile.dir().uri + '/' + visibility + 'TypeIndex.ttl');
                     console.log("Creating new fresh type index " + newIndex)
@@ -212,7 +228,7 @@ tabulator.panes.utils.findAppInstances = function(context, klass) {
         .then(function(indexes){
             var ix = context.index.private.concat(context.index.public);
             var instances = context.instances = kb.each(klass, ns.solid('instance'));
-            var containers = context.instances = kb.each(klass, ns.solid('instanceContainer'));
+            var containers = context.containers = kb.each(klass, ns.solid('instanceContainer'));
             if (containers.length) {
                 fetcher.load(containers).then(function(xhrs){
                     var iii = instances.slice();

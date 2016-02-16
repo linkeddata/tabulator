@@ -33335,6 +33335,22 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 
 
 // Promises versions
+//
+// These pass a context object which hold various RDF symbols
+// as they becaome availale
+//
+//  me               RDF symbol for the users' webid
+//  publicProfile    The user's public pofile, iff loaded
+//  preferencesFile  The user's personal preferences file, iff loaded
+//  index.public     The user's public type index file
+//  index.private     The user's private type index file
+//   not RDF symbols:
+//  noun              A string in english for the tpe of thing -- like "address book"
+//  instance          An array of nodes which are existing instances
+//  containers        An array of nodes of containers of instances
+//  div               A DOM element where UI can be displayed
+//  statusArea        A DOM element (opt) proogress stuff can be displayed, or error messages
+
 
 
 tabulator.panes.utils.logInLoadProfile = function(context){
@@ -33445,20 +33461,22 @@ tabulator.panes.utils.ensureTypeIndexes = function(context) {
         .then(function(context){
             var ns = tabulator.ns, kb = tabulator.kb, me = context.me;
             var newIndex;
+
             var makeIndex = function(visibility) {
+                var relevant = {'private': context.preferencesFile, 'public': context.publicProfile}[visibility];
                 if (context.index[visibility].length == 0) {
                     newIndex = $rdf.sym(context.preferencesFile.dir().uri + '/' + visibility + 'TypeIndex.ttl');
                     console.log("Creating new fresh type index " + newIndex)
                     return kb.fetcher.webOperation('PUT', newIndex, {data: '# Type index'})
                         .then(function(xhr){
                             return new Promise(function(resolve, reject) {
-                                var ins = [$rdf.st(context.me, ns.solid('typeIndex'), newIndex, context.preferencesFile)];
+                                var ins = [$rdf.st(context.me, ns.solid('typeIndex'), newIndex, relevant)];
                                 tabulator.updater.update([], ins, function(uri, ok, body){
                                     if (ok) {
                                         context.index[visibility].push(newIndex);
                                         resolve(context);
                                     } else {
-                                        reject("Adding link to new index file in " + context.preferencesFile);
+                                        reject("Adding link to new index file in " + relevant);
                                     }
                                 })
                             });
@@ -33485,7 +33503,7 @@ tabulator.panes.utils.findAppInstances = function(context, klass) {
         .then(function(indexes){
             var ix = context.index.private.concat(context.index.public);
             var instances = context.instances = kb.each(klass, ns.solid('instance'));
-            var containers = context.instances = kb.each(klass, ns.solid('instanceContainer'));
+            var containers = context.containers = kb.each(klass, ns.solid('instanceContainer'));
             if (containers.length) {
                 fetcher.load(containers).then(function(xhrs){
                     var iii = instances.slice();
@@ -33515,8 +33533,6 @@ tabulator.panes.utils.registrationControl = function(context, instance, klass) {
             .then(function(indexes){
                 box.innerHTML = '<table><tbody><tr></tr><tr></tr></tbody></table>'; // tbody will be inserted anyway
                 var tbody = box.children[0].children[0];
-                //table.children[0].children[1].textContent = "Person note of this " + context.noun;
-                //table.children[1].children[1].textContent = "Public note of this " + context.noun;
                 var form = kb.bnode();// @@ say for now
 
                 if (context.index.public && context.index.public.length >0) {
@@ -33534,10 +33550,7 @@ tabulator.panes.utils.registrationControl = function(context, instance, klass) {
                 }
                 // tabulator.panes.utils.buildCheckboxForm(dom, kb, lab, del, ins, form, store)
                 resolve(box);
-
             });
-
-
     })
 }
 

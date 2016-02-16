@@ -33502,20 +33502,19 @@ tabulator.panes.utils.findAppInstances = function(context, klass) {
         tabulator.panes.utils.loadTypeIndexes(context)
         .then(function(indexes){
             var ix = context.index.private.concat(context.index.public);
-            var instances = context.instances = kb.each(klass, ns.solid('instance'));
-            var containers = context.containers = kb.each(klass, ns.solid('instanceContainer'));
+            var instances = kb.each(klass, ns.solid('instance'));
+            var containers = kb.each(klass, ns.solid('instanceContainer'));
             if (containers.length) {
                 fetcher.load(containers).then(function(xhrs){
-                    var iii = instances.slice();
                     for (var i=0; i<containers.length; i++) {
                         var cont = containers[i];
-                        iii = iii.concat(kb.each(cont, ns.ldp('contains')));
+                        instances = instances.concat(kb.each(cont, ns.ldp('contains')));
                     }
-                    resolve(iii);
                 });
-            } else {
-                resolve(instances);
             }
+            context.instances = instances;
+            context.containers = containers
+            resolve(context);
         })
     })
 }

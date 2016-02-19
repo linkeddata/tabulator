@@ -671,9 +671,10 @@ tabulator.panes.register( {
                     }
                     log('' + gg.length + " selected groups. " );
 
-                    context = { target: subject, me: me, div: pane, dom: dom, statusRegion: statusBlock };
+                    context = { target: subject, me: me, noun: "address book",
+                        div: pane, dom: dom, statusRegion: statusBlock };
 
-                    
+
                     tabulator.panes.utils.registrationControl(
                         context, subject, ns.vcard('AddressBook'))
                         .then(function(box){

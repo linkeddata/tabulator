@@ -58,6 +58,10 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
     });
 };
 
+tabulator.panes.utils.complain = function(context, err) {
+    var ele = context.statusArea || context.div;
+    return ele.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom, err));
+}
 
 // Promises versions
 //
@@ -91,10 +95,9 @@ tabulator.panes.utils.logInLoadProfile = function(context){
             tabulator.preferences.set('me', me.uri)
             tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
                 if (!ok) {
-                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
-                        "Can't load profile file " + me.doc()));
-                    reject("Can't load profile file " + me.doc())
-
+                    var message = "Can't load profile file " + me.doc() + ": " + body;
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom, message));
+                    reject(message);
                 } else {
                     context.publicProfile = me.doc();
                     resolve(context)
@@ -167,8 +170,11 @@ tabulator.panes.utils.loadTypeIndexes = function(context) {
             } else {
                 tabulator.fetcher.load(ix).then(function(xhrs){
                     resolve(context);
-                })
+                }).catch(function(e){reject(e)});
             }
+        }).catch(function(e){
+            tabulator.panes.utils.complain(context, e);
+            reject("Error loading type indexes: " + e)
         })
     });
 }

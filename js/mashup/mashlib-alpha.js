@@ -28308,10 +28308,11 @@ $rdf.Fetcher = function(store, timeout, async) {
     $rdf.Fetcher.RDFXMLHandler.pattern = new RegExp("application/rdf\\+xml");
 
     // This would much better use on-board XSLT engine. @@
+    /*  deprocated 2016-02-17  timbl
     $rdf.Fetcher.doGRDDL = function(kb, doc, xslturi, xmluri) {
         sf.requestURI('http://www.w3.org/2005/08/' + 'online_xslt/xslt?' + 'xslfile=' + escape(xslturi) + '&xmlfile=' + escape(xmluri), doc)
     };
-
+*/
     $rdf.Fetcher.XHTMLHandler = function(args) {
         if (args) {
             this.dom = args[0]
@@ -28357,25 +28358,19 @@ $rdf.Fetcher = function(store, timeout, async) {
                 }
 
                 //GRDDL
+                /*
                 var head = this.dom.getElementsByTagName('head')[0]
                 if (head) {
                     var profile = head.getAttribute('profile');
                     if (profile && $rdf.uri.protocol(profile) == 'http') {
                         // $rdf.log.info("GRDDL: Using generic " + "2003/11/rdf-in-xhtml-processor.");
                          $rdf.Fetcher.doGRDDL(kb, xhr.resource, "http://www.w3.org/2003/11/rdf-in-xhtml-processor", xhr.resource.uri)
-/*			sf.requestURI('http://www.w3.org/2005/08/'
-					  + 'online_xslt/xslt?'
-					  + 'xslfile=http://www.w3.org'
-					  + '/2003/11/'
-					  + 'rdf-in-xhtml-processor'
-					  + '&xmlfile='
-					  + escape(xhr.resource.uri),
-				      xhr.resource)
-                        */
+
                     } else {
                         // $rdf.log.info("GRDDL: No GRDDL profile in " + xhr.resource)
                     }
                 }
+                */
                 if (!xhr.options.noMeta) {
                     kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode);
                 }
@@ -28424,12 +28419,14 @@ $rdf.Fetcher = function(store, timeout, async) {
                         // it isn't RDF/XML or we can't tell
                         // Are there any GRDDL transforms for this namespace?
                         // @@ assumes ns documents have already been loaded
+                        /*
                         var xforms = kb.each(kb.sym(ns), kb.sym("http://www.w3.org/2003/g/data-view#namespaceTransformation"));
                         for (var i = 0; i < xforms.length; i++) {
                             var xform = xforms[i];
                             // $rdf.log.info(xhr.resource.uri + " namespace " + ns + " has GRDDL ns transform" + xform.uri);
                              $rdf.Fetcher.doGRDDL(kb, xhr.resource, xform.uri, xhr.resource.uri);
                         }
+                        */
                         break
                     }
                 }
@@ -30085,7 +30082,7 @@ else {
     // Leak a global regardless of module system
     root['$rdf'] = $rdf;
 }
-$rdf.buildTime = "2016-02-12T10:56:59";
+$rdf.buildTime = "2016-02-17T16:12:07";
 })(this);
 
 },{"async":1,"jsonld":30,"n3":32,"xmldom":40,"xmlhttprequest":undefined}]},{},[])("rdflib.js")
@@ -33333,6 +33330,10 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
     });
 };
 
+tabulator.panes.utils.complain = function(context, err) {
+    var ele = context.statusArea || context.div;
+    return ele.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom, err));
+}
 
 // Promises versions
 //
@@ -33366,10 +33367,9 @@ tabulator.panes.utils.logInLoadProfile = function(context){
             tabulator.preferences.set('me', me.uri)
             tabulator.sf.nowOrWhenFetched(me.doc(), undefined, function(ok, body){
                 if (!ok) {
-                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom,
-                        "Can't load profile file " + me.doc()));
-                    reject("Can't load profile file " + me.doc())
-
+                    var message = "Can't load profile file " + me.doc() + ": " + body;
+                    box.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom, message));
+                    reject(message);
                 } else {
                     context.publicProfile = me.doc();
                     resolve(context)
@@ -33442,8 +33442,11 @@ tabulator.panes.utils.loadTypeIndexes = function(context) {
             } else {
                 tabulator.fetcher.load(ix).then(function(xhrs){
                     resolve(context);
-                })
+                }).catch(function(e){reject(e)});
             }
+        }).catch(function(e){
+            tabulator.panes.utils.complain(context, e);
+            reject("Error loading type indexes: " + e)
         })
     });
 }
@@ -38659,9 +38662,10 @@ tabulator.panes.register( {
                     }
                     log('' + gg.length + " selected groups. " );
 
-                    context = { target: subject, me: me, div: pane, dom: dom, statusRegion: statusBlock };
+                    context = { target: subject, me: me, noun: "address book",
+                        div: pane, dom: dom, statusRegion: statusBlock };
 
-                    
+
                     tabulator.panes.utils.registrationControl(
                         context, subject, ns.vcard('AddressBook'))
                         .then(function(box){

@@ -246,6 +246,8 @@ tabulator.panes.utils.findAppInstances = function(context, klass) {
             context.instances = instances;
             context.containers = containers
             resolve(context);
+        }).catch(function(e){
+            reject("Error looking for instances of " + klass + ": " + e)
         })
     })
 }
@@ -262,6 +264,7 @@ tabulator.panes.utils.registrationControl = function(context, instance, klass) {
         return tabulator.panes.utils.ensureTypeIndexes(context)
             .then(function(indexes){
                 box.innerHTML = '<table><tbody><tr></tr><tr></tr></tbody></table>'; // tbody will be inserted anyway
+                box.setAttribute('style', 'font-size: 120%; text-align: right; padding: 1em; border: solid gray 0.05em;')
                 var tbody = box.children[0].children[0];
                 var form = kb.bnode();// @@ say for now
 
@@ -269,7 +272,7 @@ tabulator.panes.utils.registrationControl = function(context, instance, klass) {
                     var index = context.index.public[0];
                     var statement = $rdf.st(klass, ns.solid('instance'), instance, index);
                     tbody.children[0].appendChild(tabulator.panes.utils.buildCheckboxForm(
-                        context.dom, tabulator.kb, "Public note of this " + context.noun, null, statement, form, index));
+                        context.dom, tabulator.kb, "Public link to this " + context.noun, null, statement, form, index));
                 }
 
                 if (context.index.private && context.index.private.length >0) {
@@ -280,75 +283,11 @@ tabulator.panes.utils.registrationControl = function(context, instance, klass) {
                 }
                 // tabulator.panes.utils.buildCheckboxForm(dom, kb, lab, del, ins, form, store)
                 resolve(box);
-            });
+            }).catch(function(e){reject(e)});
     })
 }
 
 
-/*
-    <#ab09fd> a solid:TypeRegistration;
-        solid:forClass vcard:AddressBook;
-        solid:instance </contacts/>.
-*/
-tabulator.panes.utils.registerAppInstance = function(inst, klass, public, options) {
-    var ns = tabulator.ns;
-    var kb = tabulator.kb;
-    var ti;
-    if (public) {
-        ti = kb.any(me, tabulator.ns.solid('typeIndex'), undefined, context.publicProfile); // @@@ TBD
-    } else {
-        tabulator.panes.utils.loadPreferences(context)
-        .then(function(){})
-        return new Promise(function(resolve, reject){
-            var p1 = tabulator.panes.utils.loadPreferences(context);
-            p1.then(function(pf){
-                var x = tabulator.panes.utils.newThing(ti);
-                var ins = [
-                $rdf.st(x,  tabulator.ns.rdf('type'), tabulator.ns.solid('TypeRegistration')),
-                $rdf.st(x,  tabulator.ns.solid('forClass'), klass),
-                $rdf.st(x,  tabulator.ns.solid('instance'), inst)
-                    ];
-                var tis = kb.each(me, tabulator.ns.solid('typeIndex'));
-                var ps = tis.map(function(ti){return kb.fetcher.load(ti)})
-                Promise.all(ps).then(function(value){
-                    resolve(kb.each(undefined, tabulator.ns.rdf('type'),
-                        tabulator.ns.solid('TypeRegistration')));
-                }).catch(function(e){reject(e)});
-            }).catch(function(err){reject(err)});
-        })
-
-    }
-};
-
-
-/////  Non-promises version - obsolete
-
-tabulator.panes.utils.loadPrefs = function(ok, id, box, callback_ok_id_preferencesFile) {
-    var preferencesFile = kb.any(id, tabulator.ns.space('preferencesFile'));
-    var message;
-    if (!preferencesFile) {
-        message = "Can't find a preferences file for user: " + id;
-        callback_ok_id_preferencesFile(false, message);
-        return tabulator.panes.utils.errorMessageBlock(dom, message);
-    }
-    var docURI = $rdf.uri.docpart(preferencesFile.uri);
-    var pending;
-    pending = tabulator.panes.utils.errorMessageBlock(dom,
-        "(loading preferences " + docURI+ ")");
-    box.appendChild(pending);
-    kb.fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body) {
-        if (!ok) {
-            message ="Can't load a preferences file " + docURI;
-            box.appendChild(tabulator.panes.utils.errorMessageBlock(dom,
-                message));
-            callback_id_preferencesFile(false, message);
-            return;
-        }
-        pending.parentNode.removeChild(pending);
-        callback_ok_id_preferencesFile(true, id, preferencesFile);
-    });
-    return;
-};
 
 
 

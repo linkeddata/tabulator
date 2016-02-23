@@ -653,33 +653,46 @@ tabulator.panes.register( {
                     var box = MainRow.appendChild(dom.createElement('table'));
                     var bottomRow = table.appendChild(dom.createElement('tr'));
 
-                    var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
+
+                    context = { target: subject, me: me, noun: "address book",
+                        div: pane, dom: dom, statusRegion: statusBlock };
+
+                    box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, function(ok, body){
+                        if (!ok) box.innerHTML = "ACL control box Failed: " + body;
+                    }));
+
+
+                    //
+                    tabulator.panes.utils.registrationControl(
+                        context, subject, ns.vcard('AddressBook'))
+                    .then(function(box){
+                            pane.appendChild(box)
+                    }).catch(function(e){tabulator.panes.utils.complain(context, e)});
+
+
+                    //  Output stats in line mode form
                     var p = MainRow.appendChild(dom.createElement('pre'));
                     var log = function(message) {
                         p.textContent += message + '\n';
                     };
 
-                    log("" + totalCards + " cards alltogether. ");
-
-
-                    var groups = kb.each(subject, VCARD('includesGroup'));
-                    log('' + groups.length + " total groups. " );
-
-                    var gg = [], g;
-                    for (g in selectedGroups) {
-                        gg.push(g);
+                    var stats = function() {
+                        var totalCards = kb.each(undefined, VCARD('inAddressBook'), subject).length;
+                        log("" + totalCards + " cards loaded. ");
+                        var groups = kb.each(subject, VCARD('includesGroup'));
+                        log('' + groups.length + " total groups. " );
+                        var gg = [], g;
+                        for (g in selectedGroups) {
+                            gg.push(g);
+                        }
+                        log('' + gg.length + " selected groups. " );
                     }
-                    log('' + gg.length + " selected groups. " );
 
-                    context = { target: subject, me: me, noun: "address book",
-                        div: pane, dom: dom, statusRegion: statusBlock };
+                    var statButton = pane.appendChild(dom.createElement('button'));
+                    statButton.textContent = "Statistics";
+                    statButton.addEventListener('click', stats);
 
 
-                    tabulator.panes.utils.registrationControl(
-                        context, subject, ns.vcard('AddressBook'))
-                        .then(function(box){
-                            pane.appendChild(box)
-                        });
 
                     var loadIndexButton = pane.appendChild(dom.createElement('button'));
                     loadIndexButton.textContent = "Load main index";

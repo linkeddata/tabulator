@@ -9,7 +9,7 @@ if (typeof tabulator.panes.utils === 'undefined') {
 ////////////////////////////////////// Start ACL stuff
 //
 
-// Take the "defaltForNew" ACL and convert it into the equivlent ACL 
+// Take the "defaltForNew" ACL and convert it into the equivlent ACL
 // which the resource would have had.  Retur it as a new separate store.
 
 tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
@@ -22,7 +22,7 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
         proposed = proposed.concat(kb.statementsMatching(da, ACL('agent'), undefined, defaultACLdoc))
             .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
             .concat(kb.statementsMatching(da, ACL('mode'), undefined, defaultACLdoc));
-        proposed.push($rdf.st(da, ACL('accessTo'), doc, defaultACLdoc)); // Suppose 
+        proposed.push($rdf.st(da, ACL('accessTo'), doc, defaultACLdoc)); // Suppose
     });
     var kb2 = $rdf.graph(); // Potential - derived is kept apart
     proposed.map(function(st){
@@ -33,7 +33,7 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
         }
         kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
     });
-    
+
     //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
     var ccc = kb2.each(undefined, ACL('accessTo'), doc)
         .filter(function(au){ return  kb2.holds(au, ACL('mode'), ACL('Control'))});
@@ -50,7 +50,7 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
             kb2.add(au2, ACL('agentClass'), who, aclDoc);
         });
     });
-    
+
     return kb2;
 }
 
@@ -59,8 +59,8 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
 //
 // Accumulate the access rights which each agent or class has
 //
-tabulator.panes.utils.readACL = function(x, aclDoc) {
-    var kb = tabulator.kb;
+tabulator.panes.utils.readACL = function(x, aclDoc, kb) {
+    var kb = kb || tabulator.kb;
     var ACL = tabulator.ns.acl;
     var ac = {'agent': [], 'agentClass': []};
     var auths = kb.each(undefined, ACL('accessTo'), x);
@@ -68,7 +68,7 @@ tabulator.panes.utils.readACL = function(x, aclDoc) {
 //    ['agent', 'agentClass'].map(function(pred){
         auths.map(function(a){
             kb.each(a,  ACL('mode')).map(function(mode){
-                 kb.each(a,  ACL(pred)).map(function(agent){                 
+                 kb.each(a,  ACL(pred)).map(function(agent){
                     if (!ac[pred][agent.uri]) ac[pred][agent.uri] = [];
                     ac[pred][agent.uri][mode.uri] = a; // could be "true" but leave pointer just in case
                 });
@@ -140,7 +140,7 @@ tabulator.panes.utils.loadUnionACL = function(subjectList, callback) {
 
 // Represents these as a RDF graph by combination of modes
 //
-tabulator.panes.utils.ACLbyCombination = function(x, ac, aclDoc) {
+tabulator.panes.utils.ACLbyCombination = function(ac) {
     var byCombo = [];
     ['agent', 'agentClass'].map(function(pred){
         for (var agent in ac[pred]) {
@@ -149,7 +149,7 @@ tabulator.panes.utils.ACLbyCombination = function(x, ac, aclDoc) {
                 combo.push(mode)
             }
             combo.sort()
-            combo = combo.join('\n'); 
+            combo = combo.join('\n');
             if (!byCombo[combo]) byCombo[combo] = [];
             byCombo[combo].push([pred, agent])
         }
@@ -159,7 +159,7 @@ tabulator.panes.utils.ACLbyCombination = function(x, ac, aclDoc) {
 //    Write ACL graph to store
 //
 tabulator.panes.utils.makeACLGraph = function(kb, x, ac, aclDoc) {
-    var byCombo = tabulator.panes.utils.ACLbyCombination(x, ac, aclDoc);
+    var byCombo = tabulator.panes.utils.ACLbyCombination(ac);
     var ACL = tabulator.ns.acl;
     for (combo in byCombo) {
         var modeURIs = combo.split('\n');
@@ -175,7 +175,7 @@ tabulator.panes.utils.makeACLGraph = function(kb, x, ac, aclDoc) {
         for (i=0; i< pairs.length; i++) {
             var pred = pairs[i][0], ag = pairs[i][1];
             kb.add(a, ACL(pred), kb.sym(ag), aclDoc);
-        } 
+        }
     }
 }
 
@@ -192,7 +192,7 @@ tabulator.panes.utils.makeACLString = function(x, ac, aclDoc) {
 tabulator.panes.utils.putACLGraph = function(kb, x, ac, aclDoc, callback) {
     var kb2 = $rdf.graph();
     tabulator.panes.utils.makeACLGraph(kb2, x, ac, aclDoc);
-    
+
     //var str = tabulator.panes.utils.makeACLString = function(x, ac, aclDoc);
     var updater =  new tabulator.rdf.sparqlUpdate(kb);
     updater.put(aclDoc, kb2.statementsMatching(undefined, undefined, undefined, aclDoc),
@@ -211,12 +211,12 @@ tabulator.panes.utils.putACLGraph = function(kb, x, ac, aclDoc, callback) {
 
 
 // Fix the ACl for an individual card as a function of the groups it is in
-// 
+//
 // All group files must be loaded first
 //
 
 tabulator.panes.utils.fixIndividualCardACL = function(person, log, callback)  {
-    var groups =  tabulator.kb.each(undefined, tabulator.ns.vcard('hasMember'), person); 
+    var groups =  tabulator.kb.each(undefined, tabulator.ns.vcard('hasMember'), person);
     var doc = person.doc();
     if (groups) {
         tabulator.panes.utils.fixIndividualACL(person, groups, log, callback);
@@ -230,7 +230,7 @@ tabulator.panes.utils.fixIndividualCardACL = function(person, log, callback)  {
 tabulator.panes.utils.fixIndividualACL = function(item, subjects, log, callback)  {
     log = log || console.log;
     var doc = item.doc();
-    tabulator.panes.utils.getACLorDefault(doc, function(ok, exists, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){ 
+    tabulator.panes.utils.getACLorDefault(doc, function(ok, exists, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
         if (!ok) return callback(false, targetACLDoc); // ie message
         var ac = (exists) ? tabulator.panes.utils.readACL(targetDoc, targetACLDoc) : tabulator.panes.utils.readACL(defaultHolder, defaultACLDoc) ;
         tabulator.panes.utils.loadUnionACL(subjects, function(ok, union){
@@ -256,9 +256,9 @@ tabulator.panes.utils.setACL = function(docURI, aclText, callback) {
     var aclDoc = kb.any(kb.sym(docURI),
         kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
     if (aclDoc) { // Great we already know where it is
-        webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);        
+        webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
     } else {
-    
+
         fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
             if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
             var aclDoc = kb.any(kb.sym(docURI),
@@ -288,7 +288,7 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
         var kb = tabulator.kb;
         var ACL = tabulator.ns.acl;
         if (!ok) return callback(false, false, status, message);
-        
+
         // Recursively search for the ACL file which gives default access
         var tryParent = function(uri) {
             if (uri.slice(-1) === '/') {
@@ -334,16 +334,16 @@ tabulator.panes.utils.getACLorDefault = function(doc, callback) {
             return callback(false, false, status, "(Sharing not available to you)" + message);
         } else  if (status !== 200) {
             return callback(false, false, status, "Error " + status +
-                " accessing Access Control information for " + doc + ": " + message); 
+                " accessing Access Control information for " + doc + ": " + message);
         } else { // 200
             return callback(true, true, doc, aclDoc);
-        }  
+        }
     }); // Call to getACL
 } // getACLorDefault
 
 
 //    Calls back (ok, status, acldoc, message)
-// 
+//
 //   (false, 900, errormessage)        no link header
 //   (true, 403, documentSymbol, fileaccesserror) not authorized
 //   (true, 404, documentSymbol, fileaccesserror) if does not exist

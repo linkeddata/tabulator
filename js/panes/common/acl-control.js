@@ -97,9 +97,25 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             box.setAttribute('style', 'font-color: #777;')
         }
 
-        var addCombo = function(byCombo, combo){
+        var removeAgentFromCombos = function(uri) {
+            for (var k=0; k < 16; k++) {
+                var combo = kToCombo(k);
+                var a = byCombo[combo];
+                if (a) {
+                    for (var i=0; i<a.length; i++){
+                        while (i<a.length && a[i][1] == uri) {
+                            a.splice(i, 1)
+                        }
+                    }
+                }
+            }
+        }
+
+        var renderCombo = function(byCombo, combo){
             var row = box.appendChild(dom.createElement('tr'));
-            row.setAttribute('style', 'border: 3px solid black; padding: 0.4em; margin: 4px solid red; color: ' + (kToColor[k] || 'black') + ';')
+            row.combo = combo;
+            row.setAttribute('style', 'border: 3px solid black; padding: 0.4em; margin: 4px solid red; color: '
+                + (kToColor[k] || 'black') + ';')
 
             var left = row.appendChild(dom.createElement('td'));
 
@@ -119,6 +135,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                     delete middleTable.NoneTR;
                 }
                 var tr = middleTable.appendChild(dom.createElement('tr'));
+                tr.predObj = [pred, obj];
                 tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
                 var td1 = tr.appendChild(dom.createElement('td'));
                 var td2 = tr.appendChild(dom.createElement('td'));
@@ -136,30 +153,83 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                     // @@@ save byCombo back to ACLDoc
                     middleTable.removeChild(tr);
                 })
-                tr.addEventListener('drag', function(ev){
-                    ev.dataTransfer.setData("text/uri-list", obj);
+                tr.addEventListener('drag', function(e){
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                    // e.dataTransfer.setData("text/uri-list", obj);
+                    // console.log("Drag: " + obj)//    miiions of them
+                }, false);
+                tr.addEventListener('dragstart', function(e){
+                    tr.style.fontWeight = 'bold';
+                    // e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    e.dataTransfer.setData("text/uri-list", obj);
+                    console.log("Dragstart: " + tr + " -> " + obj)
                 }, false);
             };
 
-
-            var arr = byCombo[combo];
-            if (arr) {
-                arr.sort();
-                for (var a=0; a<arr.length; a++) {
-                    addAgent(arr[a][0], arr[a][1]);
+            var syncCombo = function(combo) {
+                var arr = byCombo[combo];
+                if (arr && arr.length) {
+                    var already = middleTable.children;
+                    arr.sort();
+                    for (var i=0; i<already.length; i++) {
+                        already[i].trashme = true;
+                    }
+                    for (var a=0; a<arr.length; a++) {
+                        var found = false;
+                        for (var i=0; i<already.length; i++) {
+                            if (already[i].predObj  // skip NoneTR
+                                && already[i].predObj[0] === arr[a][0]
+                                && already[i].predObj[1] === arr[a][1]){
+                                found = true;
+                                delete already[i].trashme;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            addAgent(arr[a][0], arr[a][1]);
+                        }
+                    }
+                    for (var i=already.length-1; i >=0; i--) {
+                        if (already[i].trashme){
+                            middleTable.removeChild(already[i]);
+                        }
+                    }
+                } else {
+                    tabulator.panes.utils.clearElement(middleTable);
+                    var tr = middleTable.appendChild(dom.createElement('tr'));
+                    tr.textContent = 'None';
+                    tr.setAttribute('style', 'padding: 1em;')
+                    middleTable.NoneTR = tr;
                 }
-            } else {
-                var tr = middleTable.appendChild(dom.createElement('tr'));
-                tr.textContent = 'None';
-                tr.setAttribute('style', 'padding: 1em;')
-                middleTable.NoneTR = tr;
             }
+
+            syncCombo(combo);
+            row.refresh = function(){
+                syncCombo(combo);
+            }
+
             // see http://html5demos.com/drag-anything
+            row.addEventListener('dragover', function (e) {
+                e.preventDefault(); // Neeed else drop does not work [sic]
+                e.dataTransfer.dropEffect = 'move';
+                // console.log('dragover event') // millions of them
+            });
+            row.addEventListener('dragenter', function (e) {
+                console.log('dragenter event')
+                this.style.backgroundColor = '#ccc';
+            });
+            row.addEventListener('dragleave', function (e) {
+                console.log('dragleave event')
+                this.style.backgroundColor = 'white';
+            });
             row.addEventListener('drop', function (e) {
                 if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
                 console.log("Drop event!")
                 /** THIS IS THE MAGIC: we read from getData based on the content type - so it grabs the item matching that format **/
                 var uris = null;
+                var thisEle = this;
                 if (e.dataTransfer.types) {
                     for (var t=0; t<e.dataTransfer.types.length; t++){
                         var type = e.dataTransfer.types[t];
@@ -180,8 +250,19 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                         if (!(combo in byCombo)) {
                             byCombo[combo] = [];
                         }
+                        // @@@ Find out - person or group? - if group, use agentClass
+                        removeAgentFromCombos(u); // Combos are mutually distinct
                         byCombo[combo].push(['agent', u]);
-                        addAgent('agent', u);
+                        console.log('setting access by ' + u + ' to ' + subject)
+                        tabulator.panes.utils.putACLbyCombo(kb, doc, byCombo, aclDoc, function(ok, message){
+                            if (ok) {
+                                thisEle.style.backgroundColor = 'white'; // restore look to before drag
+                                syncPanel();
+                                console.log("ACL modification: success!")
+                            } else {
+                                console.log("ACL file save failed: " + message)
+                            }
+                        });
                     })
                 }
 
@@ -189,12 +270,20 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             });
 
         };
+        var syncPanel = function(){
+            var kids = box.children;
+            for (var i=0; i< kids.length; i++) {
+                if (kids[i].refresh) {
+                    kids[i].refresh();
+                }
+            } // @@ later -- need to addd combos not in the box?
+        }
 
         var k, combo, label;
         for (k=15; k>0; k--) {
             combo = kToCombo(k);
             if (( options.modify && colloquial[k]) || byCombo[combo]){
-                addCombo(byCombo, combo);
+                renderCombo(byCombo, combo);
             } // if
         } // for
     } // ACLControlEditable

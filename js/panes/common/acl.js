@@ -6,7 +6,7 @@ if (typeof tabulator.panes.utils === 'undefined') {
 }
 
 
-////////////////////////////////////// Start ACL stuff
+////////////////////////////////////// Solid ACL non-UI functions
 //
 
 // Take the "defaltForNew" ACL and convert it into the equivlent ACL
@@ -140,6 +140,9 @@ tabulator.panes.utils.loadUnionACL = function(subjectList, callback) {
 
 // Represents these as a RDF graph by combination of modes
 //
+// Each agent can only be in one place in this model, one combination of modes.
+// Combos are like full control, read append, read only etc.
+//
 tabulator.panes.utils.ACLbyCombination = function(ac) {
     var byCombo = [];
     ['agent', 'agentClass'].map(function(pred){
@@ -156,10 +159,17 @@ tabulator.panes.utils.ACLbyCombination = function(ac) {
     });
     return byCombo;
 }
-//    Write ACL graph to store
+
+//    Write ACL graph to store from AC
 //
 tabulator.panes.utils.makeACLGraph = function(kb, x, ac, aclDoc) {
     var byCombo = tabulator.panes.utils.ACLbyCombination(ac);
+    return tabulator.panes.utils.makeACLGraphbyCombo(kb, x, byCombo, aclDoc);
+}
+
+//    Write ACL graph to store from combo
+//
+tabulator.panes.utils.makeACLGraphbyCombo = function(kb, x, byCombo, aclDoc) {
     var ACL = tabulator.ns.acl;
     for (combo in byCombo) {
         var modeURIs = combo.split('\n');
@@ -189,9 +199,17 @@ tabulator.panes.utils.makeACLString = function(x, ac, aclDoc) {
 
 //    Write ACL graph to web
 //
-tabulator.panes.utils.putACLGraph = function(kb, x, ac, aclDoc, callback) {
+tabulator.panes.utils.putACLObject = function(kb, x, ac, aclDoc, callback) {
+    var byCombo = tabulator.panes.utils.ACLbyCombination(ac);
+    return tabulator.panes.utils.putACLbyCombo(kb, x, byCombo, aclDoc, callback);
+}
+
+
+//    Write ACL graph to web from combo
+//
+tabulator.panes.utils.putACLbyCombo = function(kb, x, byCombo, aclDoc, callback) {
     var kb2 = $rdf.graph();
-    tabulator.panes.utils.makeACLGraph(kb2, x, ac, aclDoc);
+    tabulator.panes.utils.makeACLGraphbyCombo(kb2, x, byCombo, aclDoc);
 
     //var str = tabulator.panes.utils.makeACLString = function(x, ac, aclDoc);
     var updater =  new tabulator.rdf.sparqlUpdate(kb);
@@ -201,8 +219,9 @@ tabulator.panes.utils.putACLGraph = function(kb, x, ac, aclDoc, callback) {
             callback(ok, message);
         } else {
             kb.fetcher.unload(aclDoc);
-            tabulator.panes.utils.makeACLGraph(kb, x, ac, aclDoc);
+            tabulator.panes.utils.makeACLGraphbyCombo(kb, x, byCombo, aclDoc);
             kb.fetcher.requested[aclDoc.uri] = 'done'; // missing: save headers
+            callback(ok)
         }
     });
 }
@@ -244,7 +263,7 @@ tabulator.panes.utils.fixIndividualACL = function(item, subjects, log, callback)
                 // log((exists ? "Previous set" : "Default") + " ACLs: " +
                     // tabulator.panes.utils.makeACLString(targetDoc, ac, targetACLDoc));
 
-                tabulator.panes.utils.putACLGraph(tabulator.kb, targetDoc, union, targetACLDoc, callback);
+                tabulator.panes.utils.putACLObject(tabulator.kb, targetDoc, union, targetACLDoc, callback);
             }
         });
     })

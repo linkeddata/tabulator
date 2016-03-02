@@ -162,8 +162,8 @@ tabulator.panes.utils.loadTypeIndexes = function(context) {
         .then(function(context){
             var ns = tabulator.ns, kb = tabulator.kb, me = context.me;
             context.index = context.index || {}
-            context.index.private = kb.each(me, ns.solid('typeIndex'), undefined, context.preferencesFile);
-            context.index.public = kb.each(me, ns.solid('typeIndex'), undefined, context.publicProfile);
+            context.index.private = kb.each(me, ns.solid('privateTypeIndex'), undefined, context.preferencesFile);
+            context.index.public = kb.each(me, ns.solid('publicTypeIndex'), undefined, context.publicProfile);
             var ix = context.index.private.concat(context.index.public);
             if (ix.length === 0) {
                 resolve(context);
@@ -201,7 +201,7 @@ tabulator.panes.utils.ensureTypeIndexes = function(context) {
                     return kb.fetcher.webOperation('PUT', newIndex, {data: '# Type index'})
                         .then(function(xhr){
                             return new Promise(function(resolve, reject) {
-                                var ins = [$rdf.st(context.me, ns.solid('typeIndex'), newIndex, relevant)];
+                                var ins = [$rdf.st(context.me, ns.solid(visibility + 'TypeIndex'), newIndex, relevant)];
                                 tabulator.updater.update([], ins, function(uri, ok, body){
                                     if (ok) {
                                         context.index[visibility].push(newIndex);

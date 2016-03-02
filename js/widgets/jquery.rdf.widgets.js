@@ -61,7 +61,7 @@ jQuery.rdfwidgets = function($) {
         /**
          * @description Get a valid term given a string input by the user, according to the options the user provided to the widget such as prefixes.
          * @param {String | Object} term The string or Term object provided by the user.
-         * @returns {Object} A Literal or Symbol that matches the term supplied by the user.
+         * @returns {Object} A Literal or NamedNode that matches the term supplied by the user.
          */
         _resource: function( term ) {
             return processResource( term, this.options );
@@ -131,7 +131,7 @@ jQuery.rdfwidgets = function($) {
                 var s_v = processVar( s );
                 var p_v = processVar( p );
                 var o_v = processVar( o );
-                
+
                 var newBindings = [];
                 var matches;
                 for( var i=0; i < bindings.length; i++ ) {
@@ -190,7 +190,7 @@ jQuery.rdfwidgets = function($) {
                 history.push({f:this.match, args:[s,p,o,optional]});
                 return this;
             },
-            
+
             optional: function( s,p,o ) {
                 return this.match( s,p,o,true );
             },
@@ -200,7 +200,7 @@ jQuery.rdfwidgets = function($) {
                 history.push({f:this.filter, args:[f]});
                 return this;
             },
-            
+
             draw: function( template, element, justOne ) {
                 var target = element ? $(element, document) : elt;
                 var output = "";
@@ -209,7 +209,7 @@ jQuery.rdfwidgets = function($) {
                     temp = template;
                     for( x in bindings[i] ) {
                         temp = temp.replace( new RegExp("\\?"+x,"g"), (bindings[i][x] ? bindings[i][x].value : "None" ));
-                        temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" )); 
+                        temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" ));
                     }
                     output += temp;
                 }
@@ -218,7 +218,7 @@ jQuery.rdfwidgets = function($) {
                 history.push({f:this.draw, args:[template, element, justOne]});
                 return this;
             },
-            
+
             page: function( template, perPage, element ) {
                 //split bindings into ceil(bindings.length/perPage) pages.
                 if( !perPage ) { perPage = 10 }
@@ -230,7 +230,7 @@ jQuery.rdfwidgets = function($) {
                 var left = $('<div style="float:left"><a href="#">&lt; Previous</a></div>', document);
                 var center = $('<div style="clear:both"> </div>', document);
                 var right = $('<div style="float:right"><a href="#">Next &gt;</a></div>', document);
-                
+
                 left.click( function( e ) {
                     e.preventDefault();
                     if( currentPage > 0 ) {
@@ -238,21 +238,21 @@ jQuery.rdfwidgets = function($) {
                         drawPage( currentPage );
                     }
                 });
-                
-                right.click( function( e ) { 
+
+                right.click( function( e ) {
                     e.preventDefault();
                     if( (currentPage+1)*perPage < bindings.length ) {
                         currentPage++;
                         drawPage( currentPage );
                     }
                 });
-                
+
                 area.append( page );
                 area.append( left );
                 area.append( right );
                 area.append( center );
                 var drawPage = function( pnumber ) {
-                    
+
                     if( pnumber === 0 ) {
                         left.hide();
                         if( (pnumber+1)*perPage < bindings.length ) {
@@ -267,25 +267,25 @@ jQuery.rdfwidgets = function($) {
                         left.show();
                         right.show();
                     }
-                    
+
                     var output = "";
                     for( var i = pnumber * perPage; ( i < (pnumber+1)*perPage && (i < bindings.length) ); i++ ) {
                         temp = template;
                         for( x in bindings[i] ) {
                             temp = temp.replace( new RegExp("\\?"+x,"g"), (bindings[i][x] ? bindings[i][x].value : "None" ));
-                            temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" )); 
+                            temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" ));
                         }
                         output += temp;
                     }
                     page.html( output );
-                    processHTMLWidgets( target );                    
+                    processHTMLWidgets( target );
                 }
                 drawPage( currentPage );
                 target.empty().append(area);
                 history.push({f:this.page, args:[template, perPage, element]});
                 return this;
             },
-            
+
             replay: function() {
                 bindings = [{}];
                 cstring = "";
@@ -483,15 +483,15 @@ jQuery.rdfwidgets = function($) {
             return;
         }
         var format = (t === "application/json" ? "json" :
-                      (t === "application/jsonp" ? "jsonp" : 
+                      (t === "application/jsonp" ? "jsonp" :
                        (t === "application/rdf+xml" ? "xml" :
-                        ((t === "text/n3" || t === "text/turtle") ? "text" : 
+                        ((t === "text/n3" || t === "text/turtle") ? "text" :
                          "text") ) ) );
         try {
             requestedURIs[docpart( uri )] = true;
             if( originalURI ) { requestedURIs[docpart( originalURI )] = true; }
             $.ajax({
-                url: uri, 
+                url: uri,
                 beforeSend: function( xhr ) {
                     if( xhr.withCredentials !== undefined ) {
                         xhr.withCredentials = true;
@@ -506,9 +506,9 @@ jQuery.rdfwidgets = function($) {
                             contenttype = t;
                         }
                         format = (contenttype === "application/json" ? "json" :
-                                  (contenttype === "application/jsonp" ? "jsonp" : 
+                                  (contenttype === "application/jsonp" ? "jsonp" :
                                    (contenttype === "application/rdf+xml" ? "xml" :
-                                    ((contenttype === "text/n3" || contenttype === "text/turtle") ? "text" : 
+                                    ((contenttype === "text/n3" || contenttype === "text/turtle") ? "text" :
                                      null) ) ) );
                     }
                     if( xhr && xhr.status >= 400  || ( !xhr && format !== "jsonp" ) ) {
@@ -667,7 +667,7 @@ jQuery.rdfwidgets = function($) {
         var lit = db.literal( v );
         return lit;
     }
-    
+
     function processObject( v, o ) {
         if( v === null || v === undefined ) { return null; }
         if( typeof( v ) === "object" && v.termType ) {
@@ -695,7 +695,7 @@ jQuery.rdfwidgets = function($) {
         }  else if ( o.subject && o.object ) {
             o.editTerm = "predicate";
             return o.editTerm;
-        }  else if ( o.subject && o.predicate ) { 
+        }  else if ( o.subject && o.predicate ) {
             o.editTerm = "object";
             return o.editTerm;
         }
@@ -832,7 +832,7 @@ jQuery.rdfwidgets = function($) {
                 }
             }
         }
-        
+
         var props = [];
         if( ranges.length > 0 ) {
             for( var i = 0; i < ranges.length; i++ ) {
@@ -918,7 +918,7 @@ jQuery.rdfwidgets = function($) {
         }
     }
 
-    function doInsert( triples, callback, o ){ 
+    function doInsert( triples, callback, o ){
         if( !triples || triples.length == 0 ) { callback( true, triples, null );return; }
         var endpoint = getEndpoint( triples[0], o );
         var queryString = "INSERT ";
@@ -991,7 +991,7 @@ jQuery.rdfwidgets = function($) {
         });
     }
 
-    function doDelete( triples, callback, o ){ 
+    function doDelete( triples, callback, o ){
         if( !triples || triples.length == 0 ) { callback( true, triples, null );return; }
         var endpoint = getEndpoint( triples[0], o );
         var queryString = "DELETE ";
@@ -1063,7 +1063,7 @@ jQuery.rdfwidgets = function($) {
             //dataType:"xml"
         });
     }
-    
+
     //when i feel confident that its being implemented, this will use the w3c spec which allows multiple update actions in one query
     function doUpdate( triples, callback,  o ) {
         doDelete( triples['delete_triples'], function( success, t, xhr ) {
@@ -1199,7 +1199,7 @@ jQuery.rdfwidgets = function($) {
 
     function doAutocomplete( jq, o ) {
         var options;
-        
+
         if( o.menuOptions !== null && o.menuOptions !== undefined ) {
             options = o.menuOptions;
         } else if( o.editTerm === "object" && $.rdfwidgets.whether(processResource( o.predicate, o ), db.sym("http://www.w3.org/2000/01/rdf-schema#range" ), db.sym("http://www.w3.org/2000/01/rdf-schema#Literal"), undefined, o ) ) {
@@ -1221,7 +1221,7 @@ jQuery.rdfwidgets = function($) {
         function getEvent( val ) {
             //perform label-> uri OR uri -> label.
             if( lastSelect && lastSelect.value === jq.val() ) {
-                return { type: "autocompletechoice", uri:lastSelect.uri,  input: jq.val(), label:lastSelect.value };                
+                return { type: "autocompletechoice", uri:lastSelect.uri,  input: jq.val(), label:lastSelect.value };
             } else if ( validURI( jq.val() ) ) {
                 return { type: "autocompletechoice", uri:jq.val(), input: jq.val(), label:( options.uriToValue[ jq.val() ] ? options.uriToValue[ jq.val() ] : jq.val() ) };
             } else if ( options.valueToURI[jq.val()] ) {
@@ -1236,11 +1236,11 @@ jQuery.rdfwidgets = function($) {
         return jq.autocomplete("destroy").autocomplete({
                     source: preds,
                     open: function() {
-                      open = true; 
+                      open = true;
                       passedUp = false;
                       selected = false;
                     },
-                    close: function() { 
+                    close: function() {
                       open = false;
                       if( passedUp && !selected ) {
                           var evt = getEvent( jq.val() );
@@ -1251,7 +1251,7 @@ jQuery.rdfwidgets = function($) {
                               jq.data( "uri", null );
                               jq.data( "val", evt.input );
                           }
-                          $(this, document).trigger( evt ); 
+                          $(this, document).trigger( evt );
                       }
                     },
                     focus: function( e, ui ) {
@@ -1261,7 +1261,7 @@ jQuery.rdfwidgets = function($) {
                       selected = true;
                       lastSelect = ui.item;
                     }
-               }).blur( function() { 
+               }).blur( function() {
                     if( !open ) {
                         var evt = getEvent( jq.val() );
                         if( evt.uri ) {
@@ -1271,10 +1271,10 @@ jQuery.rdfwidgets = function($) {
                             jq.data( "uri", null );
                             jq.data( "val", evt.input );
                         }
-                        $(this, document).trigger( evt ); 
+                        $(this, document).trigger( evt );
                     } else {
-                        passedUp = true; 
-                    } 
+                        passedUp = true;
+                    }
                });
     }
 
@@ -1294,7 +1294,7 @@ jQuery.rdfwidgets = function($) {
             var obj = processObject( o.object, o );
             if( original ) { delete_triples = $.rdfwidgets.statementsMatching( subj, original, obj,undefined,false,o ); }
             if( term ) {
-                insert_triples = [ new $rdf.Statement( subj, term, obj ) ]; 
+                insert_triples = [ new $rdf.Statement( subj, term, obj ) ];
                 if( delete_triples && delete_triples[0] && delete_triples[0].why ) { insert_triples[0].why = delete_triples[0].why; }
             }
         } else if ( o.editTerm === "object" ) {
@@ -1570,7 +1570,7 @@ jQuery.rdfwidgets = function($) {
             } else if( o.predicateElement ) {
                 return $(o.predicateElement, document).edit('getTriple');
             } else if( o.objectElement) {
-                return $(o.objectElement, document).edit('getTriple');                
+                return $(o.objectElement, document).edit('getTriple');
             }
             return null;
         },
@@ -1826,9 +1826,9 @@ jQuery.rdfwidgets = function($) {
             html+= "</tbody></table>";
             element.bind( "rdfdelete", function( e ) {
                 var triple = $(e.target, document).edit("getTriple");
-                
+
                 if( triple ) {
-                    doDelete( [ triple ] , function( success, foobar, xhr ) { 
+                    doDelete( [ triple ] , function( success, foobar, xhr ) {
                         if( success ) {
                             var parent = $(e.target, document).parent();
                             $(e.target, document).remove();
@@ -1855,7 +1855,7 @@ jQuery.rdfwidgets = function($) {
                 }
             });
             element.html(html);
-            
+
             $(element, document).find('div').each( function() {
                     var p = optsArray[this.id]
                         if( p ) {
@@ -1865,7 +1865,7 @@ jQuery.rdfwidgets = function($) {
                                 $(this, document).label( optsArray[this.id] );
                             }
                         }
-                });           
+                });
             }
         });
 
@@ -1905,7 +1905,7 @@ jQuery.rdfwidgets = function($) {
             doAutocomplete( input, {menuOptions: getMenuUsedOptions( { type: o.type, sources:o.sources } ) } );
             input.bind( "autocompletechoice", function(e) {
                 if( e.uri ) {
-                    element.trigger( "rdfselect", [db.sym(e.uri)] ); 
+                    element.trigger( "rdfselect", [db.sym(e.uri)] );
                 } else {
                     alert( "Please enter a valid menu selection." );
                 }
@@ -2376,7 +2376,7 @@ jQuery.rdfwidgets = function($) {
                 var row = $(e.target, document).parent();
                 var triple = row.tripleedit( "getTriple" );
                 if( triple ) {
-                    doDelete( [ triple ] , function( success, foobar, xhr ) { 
+                    doDelete( [ triple ] , function( success, foobar, xhr ) {
                         if( success ) {
                             row.remove();
                         } else {
@@ -2446,13 +2446,13 @@ jQuery.rdfwidgets = function($) {
         },
 
         disable: function() {
-            element.find( "td" ).each( function() { 
+            element.find( "td" ).each( function() {
                 $(this, document).image("disable");
             });
         },
 
         enable: function() {
-            element.find( "td" ).each( function() { 
+            element.find( "td" ).each( function() {
                 $(this, document).image("enable");
             });
         },
@@ -2479,7 +2479,7 @@ jQuery.rdfwidgets = function($) {
             }
             html += "</tr></table>";
             element.html(html);
-            element.find( "td" ).each( function(i) { 
+            element.find( "td" ).each( function(i) {
                     var opts = {};
                     var tripopts = {subject: actual[i], selectable:true};
                     $.extend( opts, o, tripopts );
@@ -2529,7 +2529,7 @@ jQuery.rdfwidgets = function($) {
                 var row = $(e.target, document).parent();
                 var triple = row.tripleedit( "getTriple" );
                 if( triple ) {
-                    doDelete( [ triple ] , function( success, foobar, xhr ) { 
+                    doDelete( [ triple ] , function( success, foobar, xhr ) {
                         if( success ) {
                             row.remove();
                         } else {
@@ -2563,7 +2563,7 @@ jQuery.rdfwidgets = function($) {
             }
             tbody += "</tbody>";
             table.append( tbody );
-            
+
             for( var i = 0; i < this.triples.length; i++ ) {
                 $('#'+ids[i].r, document).tripleedit( sopts[i] );
             }
@@ -2578,17 +2578,17 @@ jQuery.rdfwidgets = function($) {
                 var secondRow = $('<tr><td><label for="'+rowid2+'">Value: </label></td></tr>', document);
                 var firstInput = $('<input name="'+rowid1+'" type="text"></input>', document);
                 var secondInput = $('<input name="'+rowid2+'" type="text"></input>', document);
-                
+
                 doAutocomplete( firstInput, { menuOptions:getMenuPredicateOptions( {} ) } );
                 doAutocomplete( secondInput, { menuOptions:getMenuInstanceOptions( {} ) } );
-                
+
                 var lastPred, lastPredInput, lastObj, lastObjInput;
-                
+
                 firstInput.bind( "autocompletechoice", function(e) {
                     lastPred = e.uri;
                     lastPredInput = e.input;
                 });
-                
+
                 secondInput.bind( "autocompletechoice", function(e) {
                     lastObj = e.uri;
                     lastObjInput = e.input;
@@ -2624,7 +2624,7 @@ jQuery.rdfwidgets = function($) {
                                     var predicateTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>', document);
                                     var objectTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>', document);
                                     var TR = $('<tr class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></tr>', document);
-                                    
+
                                     table.append(TR);
                                     TR.append(predicateTD);
                                     TR.append(objectTD);
@@ -2654,7 +2654,7 @@ jQuery.rdfwidgets = function($) {
                 div.append( addPopup );
                 closeButton.css( { "right": "2px", "top": "2px" } );
                 addPopup.css( {"left": (pos.left + width) + "px", "top":(pos.top+height) + "px" } );
-                
+
                 addPopup.show("fast");
             });
         }
@@ -2756,7 +2756,7 @@ jQuery.rdfwidgets = function($) {
                 for( var i=0; i<itemIDs.length; i++ ) { $('#'+itemIDs[i], document).attr("disabled",false); }
                 submit.attr("disabled",false);
             };
-            form.submit( function(e) { 
+            form.submit( function(e) {
                 e.preventDefault();
                 disableAll();
                 var subject = o.subject ? processResource(o.subject) : (o.baseURI ? db.sym(docpart(o.baseURI) + '#' + randomID()) : db.sym( docpart(window.location.toString()) + '#' + randomID() ) );
@@ -2782,7 +2782,7 @@ jQuery.rdfwidgets = function($) {
                     triples.push( new $rdf.Statement( subject, processResource( staticTriples[i].predicate ), processObject( staticTriples[i].object ), subject ) );
                 }
 
-                doInsert( triples , function(success, foobar, xhr) { 
+                doInsert( triples , function(success, foobar, xhr) {
                     if( success ) {
                     } else {
                         alert( "Sorry, an error occurred during the submission of your information.  Server Response: " + (xhr ? (xhr.status + " " + xhr.responseText) : "" ) );
@@ -3030,7 +3030,7 @@ jQuery.rdfwidgets = function($) {
             } else {
                 text = s.toN3( db );
             }
-            
+
             pre.text( text );
             element.append(pre);
         }
@@ -3062,7 +3062,7 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var that = this;
             o.editTerm = this.originalEditTerm;
-            
+
             if( !( o.subject && !o.predicate && !o.object ) ) {
                 processEditTerm( o );
             } else {
@@ -3073,7 +3073,7 @@ jQuery.rdfwidgets = function($) {
             if( o.subject ) { subject = processResource(o.subject, o); }
             if( o.predicate ) { predicate = processResource(o.predicate, o); }
             if( o.object ) { object = processObject( o.object, o ); }
-            
+
             var temp;
             var output = null;
             var type;
@@ -3111,7 +3111,7 @@ jQuery.rdfwidgets = function($) {
             }
 
             if( o.selectable ) {
-                element.click( function(e) { 
+                element.click( function(e) {
                         e.stopPropagation();
                         setSelected( element, that.rdfvalue );
                     } );
@@ -3135,7 +3135,7 @@ jQuery.rdfwidgets = function($) {
             if( imageuri ) {
                 output = "<span class='rdfimage'><img class='rdfimage' style='display:none' "+"src='"+imageuri+"' title='"+doLabel(output,o)+" "+output.value+"'></img></span>";
                 this.element.empty().html(output);
-                $(element, document).find( "img" ).one( "load", function() { 
+                $(element, document).find( "img" ).one( "load", function() {
                     var im = $(this, document).show(0);
                     var width = im.width();    // Current image width
                     var height = im.height();  // Current image height
@@ -3143,14 +3143,14 @@ jQuery.rdfwidgets = function($) {
                     var maxWidth = o.width?o.width:width; // Max width for the image
                     var maxHeight = o.height?o.height:height;    // Max height for the image
                     var ratio = 0;  // Used for aspect ratio
-                    
+
                     // Check if the current width is larger than the max
                     if(width > maxWidth){
                         ratio = maxWidth / width;   // get ratio for scaling image
                         height = height * ratio;    // Reset height to match scaled image
                         width = width * ratio;    // Reset width to match scaled image
                     }
-                    
+
                     // Check if current height is larger than max
                     if(height > maxHeight){
                         ratio = maxHeight / height; // get ratio for scaling image
@@ -3193,7 +3193,7 @@ jQuery.rdfwidgets = function($) {
      * @param {String | Object} [options.subject] The resource to display a label for OR if predicate or object is defined, the subject of a statement to be matched.
      * @param {String | Object} [options.predicate] The predicate of a statement to be matched.
      * @param {String | Object} [options.object] The object of a statement to be matched.
-     * @param {Boolean} [options.showlinks=true] If false, labels for Symbols will not contain hyperlinks.
+     * @param {Boolean} [options.showlinks=true] If false, labels for NamedNodes will not contain hyperlinks.
      * @param {Boolean} [options.selectable=true] If false, the item will not be selectable and will not fire the rdfselect event.
      * @function
      * @param {Object} [options] @see CommonOptions
@@ -3214,7 +3214,7 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var that = this;
             o.editTerm = this.originalEditTerm;
-            
+
 
             if( !( o.subject && !o.predicate && !o.object ) ) {
                 processEditTerm( o );
@@ -3241,7 +3241,7 @@ jQuery.rdfwidgets = function($) {
                     temp = $.rdfwidgets.any( (subject ? subject : undefined), (predicate ? predicate : undefined), undefined, undefined, o);
                     if( temp ) { o.object = temp; output = temp; }
                 }
-                
+
             } else if( o.editTerm==="predicate" ) {
                 if( predicate ) {
                     output = predicate;
@@ -3358,7 +3358,7 @@ jQuery.rdfwidgets = function($) {
         /**
          * @description Set the default SPARUL endpoint to be used for user-generated content.
          * @memberOf jQuery.rdfwidgets
-         * @param {String | $rdf.Symbol} uri The URI of the new default endpoint.
+         * @param {String | $rdf.NamedNode} uri The URI of the new default endpoint.
          */
         setDefaultEndpoint: function( uri ) {
             if( typeof(uri) === "object" && "symbol" === object.termType ) {
@@ -3544,17 +3544,17 @@ jQuery.rdfwidgets = function($) {
         /**
          * @description Get all statements matching a given triple pattern.
          * @memberOf jQuery.rdfwidgets
-         * @param {String | Object} [s] Subject. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [p] Predicate. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [o] Object. A URI, prefixed name, Symbol, or Literal.
-         * @param {String | Object} [w] Data Source. A URI, prefixed name, or Symbol.
+         * @param {String | Object} [s] Subject. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [p] Predicate. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [o] Object. A URI, prefixed name, NamedNode, or Literal.
+         * @param {String | Object} [w] Data Source. A URI, prefixed name, or NamedNode.
          * @param {Boolean} [justOne] If true, only return the first result (still in an Array).
          * @param {Object} [opts] @see CommonOptions
          * @returns {Array} An Array of $rdf.Statement objects that match the provided pattern.
          */
         statementsMatching: function( s, p, o, w, justOne, opts ) {
             var f = null;
-            if( opts ) { 
+            if( opts ) {
                 f = processSourceFilter( opts.sources, opts );
             }
             var sts = db.statementsMatching( s, p, o, w, justOne );
@@ -3575,28 +3575,28 @@ jQuery.rdfwidgets = function($) {
         /**
          * @description Get a single statement matching a given triple pattern.
          * @memberOf jQuery.rdfwidgets
-         * @param {String | Object} [s] Subject. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [p] Predicate. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [o] Object. A URI, prefixed name, Symbol, or Literal.
-         * @param {String | Object} [w] Data Source. A URI, prefixed name, or Symbol.
+         * @param {String | Object} [s] Subject. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [p] Predicate. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [o] Object. A URI, prefixed name, NamedNode, or Literal.
+         * @param {String | Object} [w] Data Source. A URI, prefixed name, or NamedNode.
          * @param {Object} [opts] @see CommonOptions
          * @returns {Array} An Array of $rdf.Statement objects that match the provided pattern.
          */
         anyStatementMatching: function( s, p, o, w, opts ) {
             var x = $.rdfwidgets.statementsMatching(s,p,o,w,true,opts);
             if (!x || x == []) return undefined;
-            return x[0];            
+            return x[0];
         },
 
         /**
          * @description Given two of s, p, o, return any match for the missing term.
          * @memberOf jQuery.rdfwidgets
-         * @param {String | Object} [s] Subject. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [p] Predicate. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [o] Object. A URI, prefixed name, Symbol, or Literal.
-         * @param {String | Object} [w] Data Source. A URI, prefixed name, or Symbol.
+         * @param {String | Object} [s] Subject. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [p] Predicate. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [o] Object. A URI, prefixed name, NamedNode, or Literal.
+         * @param {String | Object} [w] Data Source. A URI, prefixed name, or NamedNode.
          * @param {Object} [opts] @see CommonOptions
-         * @returns {Object} A Symbol, Literal, or BlankNode representing a match for the missing term, or undefined if none was found.
+         * @returns {Object} A NamedNode, Literal, or BlankNode representing a match for the missing term, or undefined if none was found.
          */
         any: function( s, p, o, w, opts ) {
             var st = $.rdfwidgets.anyStatementMatching(s,p,o,w,opts);
@@ -3610,12 +3610,12 @@ jQuery.rdfwidgets = function($) {
         /**
          * @description Given two of s, p, o, return all matches for the missing term.
          * @memberOf jQuery.rdfwidgets
-         * @param {String | Object} [s] Subject. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [p] Predicate. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [o] Object. A URI, prefixed name, Symbol, or Literal.
-         * @param {String | Object} [w] Data Source. A URI, prefixed name, or Symbol.
+         * @param {String | Object} [s] Subject. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [p] Predicate. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [o] Object. A URI, prefixed name, NamedNode, or Literal.
+         * @param {String | Object} [w] Data Source. A URI, prefixed name, or NamedNode.
          * @param {Object} [opts] @see CommonOptions
-         * @returns {Array} An Array of Symbols, Literals, and/or BlankNodes representing matches for the missing term.
+         * @returns {Array} An Array of NamedNodes, Literals, and/or BlankNodes representing matches for the missing term.
          */
         each: function( s, p, o, w, opts ) {
             var results = []
@@ -3636,15 +3636,15 @@ jQuery.rdfwidgets = function($) {
         /**
          * @description Given any of s, p, o, and w, see if any valid match exists.
          * @memberOf jQuery.rdfwidgets
-         * @param {String | Object} [s] Subject. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [p] Predicate. A URI, prefixed name, or Symbol.
-         * @param {String | Object} [o] Object. A URI, prefixed name, Symbol, or Literal.
-         * @param {String | Object} [w] Data Source. A URI, prefixed name, or Symbol.
+         * @param {String | Object} [s] Subject. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [p] Predicate. A URI, prefixed name, or NamedNode.
+         * @param {String | Object} [o] Object. A URI, prefixed name, NamedNode, or Literal.
+         * @param {String | Object} [w] Data Source. A URI, prefixed name, or NamedNode.
          * @param {Object} [opts] @see CommonOptions
          * @returns {Boolean} True if a match exists, false otherwise.
          */
         whether: function( s, p, o, w, opts ) {
-            return $.rdfwidgets.statementsMatching(s,p,o,w,false,opts).length;            
+            return $.rdfwidgets.statementsMatching(s,p,o,w,false,opts).length;
         }
 
     };
@@ -3725,7 +3725,7 @@ jQuery.rdfwidgets = function($) {
      * @type Object
      * @memberOf CommonOptions
      * @field
-     * @description An anonymous object containing namespace->URI mappings, e.g. {"foaf":"http://xmlns.com/foaf/0.1/"}. 
+     * @description An anonymous object containing namespace->URI mappings, e.g. {"foaf":"http://xmlns.com/foaf/0.1/"}.
      */
 
 }(jQuery);

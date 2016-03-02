@@ -5,17 +5,17 @@
   The photos will be described using the photo access control ontology:
   http://people.csail.mit.edu/albert08/project/ont/pac.rdf
 */
-    
+
     photoImportPane = {};
     photoImportPane.icon = tabulator.Icon.src.icon_photoImportPane;
     photoImportPane.name = 'Photo Import Pane';
-    
+
     // namespace and shorthand for concepts in the tag ontology
     var RDF = tabulator.rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     var RDFS = tabulator.rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
     var TAGS = tabulator.rdf.Namespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
     var PAC = tabulator.rdf.Namespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
-    
+
     photoImportPane.label = function(subject) {
         var kb = tabulator.kb
         if (subject.uri == undefined) {
@@ -24,9 +24,9 @@
         var docURI = subject.uri.substring(0,subject.uri.lastIndexOf("#"));
         var outline = tabulator.outline;
         var editable = outline.UserInput.sparqler.editable(docURI, kb);
-        
+
         //alert(photoImportPane.render.ReadCookie("pacoidcookie_uri"));
-        
+
         if (!kb.whether(subject, RDF("type"), PAC("PhotoAlbum"))) {
             return null;
         }
@@ -38,14 +38,14 @@
         }
         return "Photo Album Import";
     }
-    
-    
+
+
     photoImportPane.render = function(subject, myDocument) {
         var kb = tabulator.kb
         var new_photos = [];
         var docURI = subject.uri.substring(0,subject.uri.lastIndexOf("#"));
-        var stWhy = new tabulator.rdf.Symbol(docURI);
-        
+        var stWhy = new tabulator.rdf.NamedNode(docURI);
+
         // ##########################################################################
         photoImportPane.render.ReadCookie = function(name) {
             var nameEQ = name + "=";
@@ -57,35 +57,35 @@
             }
             return null;
         }
-        
+
         // #########################################################################
-        
-        
+
+
         // #########################################################################
         // Get information of the photo album
-        
+
         // Obtain the photos currently included in the album
         var existing_photos = []
         ps = kb.each(subject, PAC("Contains"), undefined, stWhy);
         for (i = 0; i < ps.length; i++) {
             existing_photos.push(ps[i].uri);
         }
-        
+
         // Owner of the album
         var owner = kb.the(subject, PAC("Owner"), undefined);
-        
+
         // Tags in the album
         var existing_tags = [];
         var tag_uris = {};
-        var ts = kb.each(undefined, RDF("type"), TAGS("Tag"), stWhy);     
+        var ts = kb.each(undefined, RDF("type"), TAGS("Tag"), stWhy);
         for (i = 0; i < ts.length; i++) {
             var label = kb.the(ts[i], RDFS("label"), undefined, stWhy);
             existing_tags.push(label.toString());
             tag_uris[label] = ts[i].uri;
         }
         // #########################################################################
-        
-        
+
+
         // A function to insert a photo and its metadata to the RDF file using SPARQL
         photoImportPane.render.InsertPhotoItem = function(e) {
             var id = e.target.id;
@@ -93,36 +93,36 @@
 
             var time = new Date();
             var taggingID = time.getTime();
-            
+
             // insert triples into the RDF file
             var triples = [];
-            var tagging = new tabulator.rdf.Symbol(docURI+"#tagging"+taggingID);
-            var photo = new tabulator.rdf.Symbol(new_photos[id].url);
-            
+            var tagging = new tabulator.rdf.NamedNode(docURI+"#tagging"+taggingID);
+            var photo = new tabulator.rdf.NamedNode(new_photos[id].url);
+
             triples.push(new tabulator.rdf.Statement(subject, PAC("Contains"), photo, stWhy));
             triples.push(new tabulator.rdf.Statement(photo, PAC("hasTagging"), tagging, stWhy));
             triples.push(new tabulator.rdf.Statement(tagging, TAGS("taggedResource"), photo, stWhy));
             triples.push(new tabulator.rdf.Statement(tagging, TAGS("taggedBy"), owner, stWhy));
-            
+
             for (var i=0; i < new_photos[id].tags.length; i++) {
                 tag = new_photos[id].tags[i];
                 var tag_uri = docURI + "#" + tag;
                 var seeAlso = "http://www.flickr.com/photos/tags/" + tag;
                 if (existing_tags.indexOf(tag) == -1) {
-                    tag_ref = new tabulator.rdf.Symbol(tag_uri);
+                    tag_ref = new tabulator.rdf.NamedNode(tag_uri);
                     triples.push(new tabulator.rdf.Statement(tag_ref, RDF("type"), TAGS("Tag"), stWhy));
-                    triples.push(new tabulator.rdf.Statement(tag_ref, RDFS("seeAlso"), new tabulator.rdf.Symbol(seeAlso), stWhy));
+                    triples.push(new tabulator.rdf.Statement(tag_ref, RDFS("seeAlso"), new tabulator.rdf.NamedNode(seeAlso), stWhy));
                     triples.push(new tabulator.rdf.Statement(tag_ref, RDFS("label"), new tabulator.rdf.Literal(tag), stWhy));
                 }
-                triples.push(new tabulator.rdf.Statement(tagging, TAGS("associatedTag"), new tabulator.rdf.Symbol(tag_uri), stWhy));
+                triples.push(new tabulator.rdf.Statement(tagging, TAGS("associatedTag"), new tabulator.rdf.NamedNode(tag_uri), stWhy));
                 existing_tags.push(tag);
                 tag_uris[tag] = tag_uri;
             }
-            
+
             photoImportPane.render.InsertTriples(triples, id);
         }
-        
-        
+
+
         // A function to remove a photo when the close icon is pressed
         photoImportPane.render.RemovePhotoItem = function(e) {
             var id = e.target.id;
@@ -130,65 +130,65 @@
             var item = myDocument.getElementById(id);
             photoPanel.removeChild(item);
         }
-        
-        
+
+
         /* A function for creating a panel for a photo
            Require parameters: 1. URL of the photo (img src)
                                2. tags (an array)
                                3. ID of this DIV element
         */
         photoImportPane.render.CreatePhotoPanel = function(url, tags, id) {
-            
+
             var photo_item_div = myDocument.createElement("div");
             photo_item_div.setAttribute("class","photoItem");
             photo_item_div.setAttribute("id",id);
             var photo_frame_div = myDocument.createElement("div");
             photo_frame_div.setAttribute("class","photoFrame");
-            
+
             var img = myDocument.createElement("img");
             img.setAttribute("src",url);
             img.setAttribute("class","photoThumbnail");
             photo_frame_div.appendChild(img);
             photo_item_div.appendChild(photo_frame_div);
-            
+
             var photo_item_tags_div = myDocument.createElement("div");
             photo_item_tags_div.setAttribute("class","photoListTags");
-            
+
             for (var j = 0; j < tags.length; j++) {
                 var tag_div = myDocument.createElement("div");
                 tag_div.setAttribute("class","photoList_tag");
                 tag_div.appendChild(myDocument.createTextNode(tags[j]));
                 photo_item_tags_div.appendChild(tag_div);
             }
-            
+
             photo_item_div.appendChild(photo_item_tags_div);
-            
+
             // Add control buttons
             var controls = myDocument.createElement("div");
             controls.setAttribute("class","controls");
-            
+
             var addButton = myDocument.createElement("input");
             addButton.setAttribute("type","button");
             addButton.setAttribute("value","Add to Album");
             addButton.setAttribute("class","controlButton");
             addButton.setAttribute("id","addButton_"+id.toString());
             addButton.addEventListener("click",photoImportPane.render.InsertPhotoItem,false);
-            
+
             var closeButton = myDocument.createElement("input");
             closeButton.setAttribute("type","button");
             closeButton.setAttribute("value","Remove");
             closeButton.setAttribute("class","controlButton");
             closeButton.setAttribute("id","closeButton_"+id.toString());
             closeButton.addEventListener("click",photoImportPane.render.RemovePhotoItem,false);
-            
+
             controls.appendChild(addButton);
             controls.appendChild(closeButton);
             photo_item_div.appendChild(controls);
-            
+
             return photo_item_div;
         }
-        
-        
+
+
         photoImportPane.render.InsertTriples = function(triples, id) {
             //var st = new RDFStatement(PAC('PhotoAlbum'),PAC('Owner'),ME('me'));
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
@@ -205,8 +205,8 @@
                 }
             });
         }
-        
-        
+
+
         // Code for handling the download of Flickr Data
         // The Callback function for JSON data from Flickr
         jsonFlickrApi = function(rsp) {
@@ -229,17 +229,17 @@
                 if (existing_photos.indexOf(url) > -1) {
                     continue;
                 }
-                
+
                 // Add the photo to the array for future retrieval
                 var temp_photo = new Object();
                 temp_photo.tags = tags;
                 temp_photo.url = url;
                 pid = farm + ":" + server + ":" + id + ":" + secret;
                 new_photos[pid] = temp_photo;
-                
+
                 photoPanel.appendChild(photoImportPane.render.CreatePhotoPanel(url_m, tags, pid));
             }
-            
+
         }
         // Function for Using the Flickr JSON API to obtain photo data
         photoImportPane.render.LoadFlickrData = function() {
@@ -260,17 +260,17 @@
                 }
             }
         }
-        
-        
+
+
         // Create the main panel
 		var main_div = myDocument.createElement("div");
         main_div.setAttribute('class', 'photoImportContentPane');
         main_div.setAttribute('id', 'photoImportContentPane');
-        
+
         var FlickrID = "";
         var stsFlickrID = kb.statementsMatching(undefined, PAC('OwnerFlickrID'), undefined);
         FlickrID = stsFlickrID[0].object.toString();
-        
+
         var title_div = myDocument.createElement("div");
         var titlespan = myDocument.createElement("span");
         titlespan.setAttribute('class','photoImportTitle');
@@ -282,17 +282,17 @@
         title_div.appendChild(myDocument.createTextNode(FlickrID));
         title_div.appendChild(myDocument.createElement("br"));
         title_div.appendChild(myDocument.createElement("br"));
-        
+
         // Create the DIV element for holding the photo list
         var photoPanel = myDocument.createElement("div");
         photoPanel.setAttribute('class', 'LoadPhotoPanel');
         photoPanel.setAttribute('id', 'LoadPhotoPanel');
-        
+
         photoImportPane.render.LoadFlickrData();
-        
+
         main_div.appendChild(title_div);
         main_div.appendChild(photoPanel);
-        
+
         return main_div;
     }
 

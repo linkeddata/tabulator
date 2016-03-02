@@ -4,47 +4,47 @@
 //
 // Written by: albert08, 2009
 //
-     
+
     tagPane = {};
     tagPane.icon = tabulator.Icon.src.icon_tagPane;
     tagPane.name = 'Tag';
-    
+
     // namespace
     var RDF = tabulator.rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     var RDFS = tabulator.rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
     var TAGS = tabulator.rdf.Namespace("http://www.holygoat.co.uk/owl/redwood/0.1/tags/");
     var PAC = tabulator.rdf.Namespace("http://dig.csail.mit.edu/2008/PAC/ontology/pac#");
     var OWL = tabulator.rdf.Namespace("http://www.w3.org/2002/07/owl#");
-    
+
     tagPane.label = function(subject) {
-        
+
         if (!tabulator.kb.whether(subject, RDF('type'), TAGS("Tag"))) {
             return null;
         }
         return "Tag";
     }
 
-    
+
     tagPane.render = function(subject, myDocument) {
         var kb = tabulator.kb
         var docURI = subject.uri.substring(0,subject.uri.lastIndexOf("#"));
-        var stWhy = new tabulator.rdf.Symbol(docURI);
+        var stWhy = new tabulator.rdf.NamedNode(docURI);
         var outline = tabulator.outline;
         var editable = outline.UserInput.sparqler.editable(docURI, kb);
         var tag = kb.the(subject, RDFS("label"), undefined, stWhy);
-        
+
         // Create the main panel
 		var main_div = myDocument.createElement("div");
         main_div.setAttribute("class", "TagPane");
         main_div.setAttribute("id", "TagPane");
-        
+
         tagPane.render.removeSameAs = function(e) {
             var id = e.target.id;
             id = id.substring(id.lastIndexOf("_")+1,id.length);
             var uri = myDocument.getElementById("sameAs_"+id).textContent;
             var s = subject;
             var p = OWL("sameAs");
-            var o = new tabulator.rdf.Symbol(uri);
+            var o = new tabulator.rdf.NamedNode(uri);
             var triple = new tabulator.rdf.Statement(s, p, o, stWhy);
             var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
             sparqlService.delete_statement(triple, function(uri,success,error){
@@ -57,8 +57,8 @@
                 }
             });
         }
-        
-        
+
+
         // Display the current semantics of the tag
         tagPane.render.DisplaySemantics = function() {
             sem_div.innerHTML = "";
@@ -71,7 +71,7 @@
                 bold1.appendChild(myDocument.createTextNode("Semantics"));
                 sem_div.appendChild(bold1);
                 sem_div.appendChild(myDocument.createElement("hr"));
-                
+
                 var sem_table = myDocument.createElement("table");
                 sem_table.setAttribute('class', 'TagSemanticsTable');
                 var tr = myDocument.createElement("tr");
@@ -80,7 +80,7 @@
                 td1.appendChild(myDocument.createTextNode("owl:sameAs"));
                 tr.appendChild(td1);
                 var td2 = myDocument.createElement("td");
-                
+
                 for (var i = 0; i < sem_sts.length; i++) {
                     var span = myDocument.createElement("span");
                     span.setAttribute("id","sameAs_"+i);
@@ -100,8 +100,8 @@
                 sem_div.appendChild(sem_table);
             }
         }
-        
-        
+
+
         tagPane.render.queryEndpoint = function() {
             var list = myDocument.getElementById("suggestList");
             list.options[0].text = "Querying SPARQL endpoint...";
@@ -115,7 +115,7 @@
             sparql_query = sparql_query + "SELECT DISTINCT ?x WHERE ";
             sparql_query = sparql_query + "{ ?x rdfs:label ?l FILTER regex(?l, \"" + tag + "\", \"i\" ) }";
             xmlhttp.open("POST", endpoint, true);
-            xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");          
+            xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
             xmlhttp.send(sparql_query);
             function state_Change(){
                 if (xmlhttp.readyState==4){
@@ -135,8 +135,8 @@
                 }
             }
         }
-        
-        
+
+
         // Insert a triple saying (subject, owl:sameAs, selected_uri)
         // (From suggestion)
         tagPane.render.addProperty1 = function() {
@@ -146,7 +146,7 @@
             if ((uri != undefined) && (uri != "")) {
                 var s = subject;
                 var p = OWL("sameAs");
-                var o = new tabulator.rdf.Symbol(uri);
+                var o = new tabulator.rdf.NamedNode(uri);
                 var triple = new tabulator.rdf.Statement(s, p, o, stWhy);
                 var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
                 sparqlService.insert_statement(triple, function(uri,success,error){
@@ -160,8 +160,8 @@
                 });
             }
         }
-        
-        
+
+
         // Insert a triple saying (subject, owl:sameAs, selected_uri)
         // Use given URI
         tagPane.render.addProperty2 = function() {
@@ -169,7 +169,7 @@
             if ((uri != undefined) && (uri != "")) {
                 var s = subject;
                 var p = OWL("sameAs");
-                var o = new tabulator.rdf.Symbol(uri);
+                var o = new tabulator.rdf.NamedNode(uri);
                 var triple = new tabulator.rdf.Statement(s, p, o, stWhy);
                 var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
                 sparqlService.insert_statement(triple, function(uri,success,error){
@@ -183,8 +183,8 @@
                 });
             }
         }
-        
-        
+
+
         tagPane.render.EnableButton2 = function() {
             var uri = myDocument.getElementById("sameAsURI").value;
             if (uri == "") {
@@ -193,7 +193,7 @@
                 myDocument.getElementById("addButton2").disabled = false;
             }
         }
-        
+
         // Display the interface for adding semantics (sameAs properties)
         tagPane.render.DisplayAddSemantics = function() {
 
@@ -201,7 +201,7 @@
             bold2.appendChild(myDocument.createTextNode("Add Semantics"));
             add_div.appendChild(bold2);
             add_div.appendChild(myDocument.createElement("hr"));
-            
+
             var endpoints_select = myDocument.createElement("select");
             endpoints_select.setAttribute("id","endpoints");
             endpoints_select.setAttribute("class","controlSelect");
@@ -216,7 +216,7 @@
             bold3.appendChild(myDocument.createTextNode("SPARQL Endpoints: "));
             add_div.appendChild(bold3);
             add_div.appendChild(endpoints_select);
-            
+
             var getbutton = myDocument.createElement("input");
             getbutton.setAttribute("class","controlButton");
             getbutton.setAttribute("id","suggestButton");
@@ -225,11 +225,11 @@
             getbutton.addEventListener("click",tagPane.render.queryEndpoint,false);
             add_div.appendChild(getbutton);
             add_div.appendChild(myDocument.createElement("br"));
-            
+
             var bold4 = myDocument.createElement("b");
             bold4.appendChild(myDocument.createTextNode("1. Choose from: "));
             add_div.appendChild(bold4);
-            
+
             var sg_list = myDocument.createElement("select");
             sg_list.setAttribute("class","controlSelect");
             sg_list.setAttribute("id","suggestList");
@@ -246,11 +246,11 @@
             add_div.appendChild(sg_list);
             add_div.appendChild(addbutton1);
             add_div.appendChild(myDocument.createElement("br"));
-            
+
             var bold5 = myDocument.createElement("b");
             bold5.appendChild(myDocument.createTextNode("2. Give URI: "));
             add_div.appendChild(bold5);
-            
+
             var uri_input = myDocument.createElement("input");
             uri_input.setAttribute("class","tagURIInput");
             uri_input.setAttribute("id","sameAsURI");
@@ -264,28 +264,27 @@
             addbutton2.addEventListener("click",tagPane.render.addProperty2,false);
             addbutton2.disabled = true;
             add_div.appendChild(addbutton2);
-            
-        }
-        
 
-        
+        }
+
+
+
         var sem_div = myDocument.createElement("div");
         sem_div.setAttribute('class', 'TagSemanticsPanel');
         var add_div = myDocument.createElement("div");
         add_div.setAttribute("class", "AddTagSemantics");
-        
+
         tagPane.render.DisplaySemantics();
         if (editable) {
             tagPane.render.DisplayAddSemantics();
         }
-        
+
         main_div.appendChild(sem_div);
         main_div.appendChild(add_div);
-        
+
         return main_div;
     }
 
     tabulator.panes.register(tagPane, false);
 
 // ends
-

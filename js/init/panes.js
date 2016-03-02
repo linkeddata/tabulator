@@ -120,8 +120,11 @@ tabulator.loadScript("js/panes/socialPane.js");
 //tabulator.loadScript("js/panes/tagPane.js");
 //tabulator.loadScript("js/panes/photoImportPane.js");
 
+// The sharing pane is fairly generic and administrative  201
+tabulator.loadScript("js/panes/sharing/sharingPane.js");
+
+
 // The internals pane is always the last as it is the least user-friendly
 tabulator.loadScript("js/panes/internalPane.js");
 
 // ENDS
-

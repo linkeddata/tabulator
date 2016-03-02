@@ -21,36 +21,6 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 }
 
 
-// Delete button with a check you really mean it
-/*
-tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, deleteFunction) {
-    var delButton = dom.createElement('button');
-    container.appendChild(delButton);
-    delButton.textContent = "-";
-
-    container.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
-    delButton.setAttribute('class', 'hoverControlHide');
-    delButton.setAttribute('style', 'color: red; margin-right: 0.3em; foat:right; text-align:right');
-    delButton.addEventListener('click', function(e) {
-        container.removeChild(delButton);  // Ask -- are you sure?
-        var cancelButton = dom.createElement('button');
-        cancelButton.textContent = "cancel";
-        container.appendChild(cancelButton).addEventListener('click', function(e) {
-            container.removeChild(sureButton);
-            container.removeChild(cancelButton);
-            container.appendChild(delButton);
-        }, false);
-        var sureButton = dom.createElement('button');
-        sureButton.textContent = "Delete " + noun;
-        container.appendChild(sureButton).addEventListener('click', function(e) {
-            container.removeChild(sureButton);
-            container.removeChild(cancelButton);
-            deleteFunction();
-        }, false);
-    }, false);
-}
-*/
-
 
 // These used to be in js/init/icons.js but are better in the pane.
 tabulator.Icon.src.icon_contactCard = iconPrefix + 'js/panes/contact/card.png';
@@ -285,7 +255,7 @@ tabulator.panes.register( {
 
 
         var updater = new tabulator.rdf.sparqlUpdate(kb);
-
+        tabulator.panes.utils.preventBrowserDropEvents(dom);
 
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
@@ -333,8 +303,8 @@ tabulator.panes.register( {
 
         if (t[ns.vcard('Individual').uri]|| t[ns.vcard('Organization').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
 
-            // var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
-            var individualFormDoc = kb.sym('https://timbl.rww.io/Apps/Contactator/individualForm.ttl');
+            var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
+            // var individualFormDoc = kb.sym('https://timbl.rww.io/Apps/Contactator/individualForm.ttl');
             var individualForm = kb.sym(individualFormDoc.uri + '#form1')
 
             tabulator.fetcher.nowOrWhenFetched(individualFormDoc.uri, subject, function drawContactPane(ok, body) {

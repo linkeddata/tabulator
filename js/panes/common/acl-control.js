@@ -94,13 +94,12 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
         }
 
         if (!options.modify) {
-            box.setAttribute('style', 'font-color: #777;')
+            box.setAttribute('style', 'color: #777;')
         }
 
         var removeAgentFromCombos = function(uri) {
             for (var k=0; k < 16; k++) {
-                var combo = kToCombo(k);
-                var a = byCombo[combo];
+                var a = byCombo[kToCombo(k)];
                 if (a) {
                     for (var i=0; i<a.length; i++){
                         while (i<a.length && a[i][1] == uri) {
@@ -120,7 +119,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
             var left = row.appendChild(dom.createElement('td'));
 
             left.textContent = colloquial[k] || ktToList[k];
-            left.setAttribute('style', 'padding: 1em;')
+            left.setAttribute('style', 'padding-bottom: 2em;')
 
             var middle = row.appendChild(dom.createElement('td'));
             var middleTable = middle.appendChild(dom.createElement('table'));
@@ -140,7 +139,11 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                 var td1 = tr.appendChild(dom.createElement('td'));
                 var td2 = tr.appendChild(dom.createElement('td'));
                 var td3 = tr.appendChild(dom.createElement('td'));
+
                 var agent = $rdf.sym(obj);
+                var image = td1.appendChild(dom.createElement('img'));
+                image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
+                tabulator.panes.utils.setImage(image, agent);
                 tabulator.panes.utils.setName(td2, agent);
                 tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', function deletePerson(){
                     var arr =  byCombo[combo];
@@ -153,18 +156,23 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                     // @@@ save byCombo back to ACLDoc
                     middleTable.removeChild(tr);
                 })
+/*
                 tr.addEventListener('drag', function(e){
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'copy';
-                    // e.dataTransfer.setData("text/uri-list", obj);
-                    // console.log("Drag: " + obj)//    miiions of them
+                    // e.preventDefault();
+                    // e.dataTransfer.dropEffect = 'copy';
                 }, false);
+*/
                 tr.addEventListener('dragstart', function(e){
                     tr.style.fontWeight = 'bold';
                     // e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
                     e.dataTransfer.setData("text/uri-list", obj);
                     console.log("Dragstart: " + tr + " -> " + obj)
+                }, false);
+
+                tr.addEventListener('dragend', function(e){
+                    tr.style.fontWeight = 'normal';
+                    console.log("Dragend: " + tr + " -> " + obj)
                 }, false);
             };
 
@@ -210,65 +218,66 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, callback) {
                 syncCombo(combo);
             }
 
-            // see http://html5demos.com/drag-anything
-            row.addEventListener('dragover', function (e) {
-                e.preventDefault(); // Neeed else drop does not work [sic]
-                e.dataTransfer.dropEffect = 'move';
-                // console.log('dragover event') // millions of them
-            });
-            row.addEventListener('dragenter', function (e) {
-                console.log('dragenter event')
-                this.style.backgroundColor = '#ccc';
-            });
-            row.addEventListener('dragleave', function (e) {
-                console.log('dragleave event')
-                this.style.backgroundColor = 'white';
-            });
-            row.addEventListener('drop', function (e) {
-                if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
-                console.log("Drop event!")
-                /** THIS IS THE MAGIC: we read from getData based on the content type - so it grabs the item matching that format **/
-                var uris = null;
-                var thisEle = this;
-                if (e.dataTransfer.types) {
-                    for (var t=0; t<e.dataTransfer.types.length; t++){
-                        var type = e.dataTransfer.types[t];
-                        if (type === 'text/uri-list') {
-                            uris = e.dataTransfer.getData(type).split('\n'); // @ ignore those starting with #
-                            console.log("Dropped URI list: " + uris)
-                        }
-                    }
-                } else {
-                // ... however, if we're IE, we don't have the .types property, so we'll just get the Text value
-                    var uris = [ e.dataTransfer.getData('Text') ];
-                    console.log("@@ WARNING non-standrad drop event: " + uris[0]);
-                }
-                console.log("Dropped URI list: 2 " + uris);
-                if (uris) {
-                    // @@@ save byCombo back to ACLDoc
-                    uris.map(function(u){
-                        if (!(combo in byCombo)) {
-                            byCombo[combo] = [];
-                        }
-                        // @@@ Find out - person or group? - if group, use agentClass
-                        removeAgentFromCombos(u); // Combos are mutually distinct
-                        byCombo[combo].push(['agent', u]);
-                        console.log('setting access by ' + u + ' to ' + subject)
-                        tabulator.panes.utils.putACLbyCombo(kb, doc, byCombo, aclDoc, function(ok, message){
-                            if (ok) {
-                                thisEle.style.backgroundColor = 'white'; // restore look to before drag
-                                syncPanel();
-                                console.log("ACL modification: success!")
-                            } else {
-                                console.log("ACL file save failed: " + message)
+            if (options.modify){
+                // see http://html5demos.com/drag-anything
+                row.addEventListener('dragover', function (e) {
+                    e.preventDefault(); // Neeed else drop does not work [sic]
+                    e.dataTransfer.dropEffect = 'move';
+                    // console.log('dragover event') // millions of them
+                });
+                row.addEventListener('dragenter', function (e) {
+                    console.log('dragenter event')
+                    this.style.backgroundColor = '#ccc';
+                });
+                row.addEventListener('dragleave', function (e) {
+                    console.log('dragleave event')
+                    this.style.backgroundColor = 'white';
+                });
+                row.addEventListener('drop', function (e) {
+                    if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
+                    console.log("Drop event!")
+                    /** THIS IS THE MAGIC: we read from getData based on the content type - so it grabs the item matching that format **/
+                    var uris = null;
+                    var thisEle = this;
+                    if (e.dataTransfer.types) {
+                        for (var t=0; t<e.dataTransfer.types.length; t++){
+                            var type = e.dataTransfer.types[t];
+                            if (type === 'text/uri-list') {
+                                uris = e.dataTransfer.getData(type).split('\n'); // @ ignore those starting with #
+                                console.log("Dropped URI list: " + uris)
                             }
-                        });
-                    })
-                }
+                        }
+                    } else {
+                    // ... however, if we're IE, we don't have the .types property, so we'll just get the Text value
+                        var uris = [ e.dataTransfer.getData('Text') ];
+                        console.log("@@ WARNING non-standrad drop event: " + uris[0]);
+                    }
+                    console.log("Dropped URI list: 2 " + uris);
+                    if (uris) {
+                        // @@@ save byCombo back to ACLDoc
+                        uris.map(function(u){
+                            if (!(combo in byCombo)) {
+                                byCombo[combo] = [];
+                            }
+                            // @@@ Find out - person or group? - if group, use agentClass
+                            removeAgentFromCombos(u); // Combos are mutually distinct
+                            byCombo[combo].push(['agent', u]);
+                            console.log('setting access by ' + u + ' to ' + subject)
+                            tabulator.panes.utils.putACLbyCombo(kb, doc, byCombo, aclDoc, function(ok, message){
+                                if (ok) {
+                                    thisEle.style.backgroundColor = 'white'; // restore look to before drag
+                                    syncPanel();
+                                    console.log("ACL modification: success!")
+                                } else {
+                                    console.log("ACL file save failed: " + message)
+                                }
+                            });
+                        })
+                    }
+                  return false;
+                });
 
-              return false;
-            });
-
+            } // if modify
         };
         var syncPanel = function(){
             var kids = box.children;

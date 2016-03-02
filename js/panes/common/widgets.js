@@ -95,12 +95,34 @@ tabulator.panes.utils.setName = function(element, x) {
     var findName = function(x) {
         var name = kb.any(x, ns.vcard('fn')) || kb.any(x, ns.foaf('name'))
             ||  kb.any(x, ns.vcard('organization-name'));
-        return name ? name.value : null
+        return name ? name.value : "null"
     }
     element.textContent = findName(x) || tabulator.Util.label(x);
     if (!name) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
              element.textContent = (ok ? '' : '? ') +  (findName(x) ||tabulator.Util.label(x));
+        });
+    }
+}
+
+// Best logo or avater or photo etc to represent someone or some group etc
+//
+tabulator.panes.utils.setImage = function(element, x) {
+    var kb = tabulator.kb, ns = tabulator.ns;
+    var fallback = "https://webizen.org/img/photo.png";
+    var findImage = function(x) {
+        var image = kb.any(x, ns.sioc('avatar'))
+            || kb.any(x, ns.foaf('img'))
+            || kb.any(x, ns.vcard('logo'))
+            || kb.any(x, ns.vcard('photo'))
+            || kb.any(x, ns.foaf('depiction'));
+        return image ? image.uri : fallback;
+    }
+    var uri = findImage(x);
+    element.setAttribute('src', uri);
+    if (uri === fallback) {
+        tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
+            element.setAttribute('src', findImage(x));
         });
     }
 }

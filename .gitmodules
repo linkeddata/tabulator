@@ -4,3 +4,6 @@
 [submodule "js/solid"]
 	path = js/solid
 	url = https://github.com/solid/solid.js
+[submodule "js/panes/slideshow/better-simple-slideshow"]
+	path = js/panes/slideshow/better-simple-slideshow
+	url = https://github.com/leemark/better-simple-slideshow

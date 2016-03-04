@@ -23,69 +23,58 @@ tabulator.Icon.tooltips[tabulator.Icon.src.icon_sharing] = 'Sharing'
 
 tabulator.panes.register( {
 
-    icon: tabulator.Icon.src.icon_sharing,
+  icon: tabulator.Icon.src.icon_sharing,
 
-    name: 'sharing',
+  name: 'sharing',
 
-    // Does the subject deserve an contact pane?
-    label: function(subject) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var t = kb.findTypeURIs(subject);
-        if (t[ns.ldp('Resource').uri]) return "Sharing"; // @@ be more sophisticated?
-        if (t[ns.ldp('Container').uri]) return "Sharing"; // @@ be more sophisticated?
-        if (t[ns.ldp('BasicContainer').uri]) return "Sharing"; // @@ be more sophisticated?
-        // check being allowed to see/change shgaring?
-        return null; // No under other circumstances
-    },
-
-
-    render: function(subject, dom) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-        var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-        var div = dom.createElement("div")
-        var cardDoc = subject.doc();
-
-        div.setAttribute('class', 'sharingPane');
+  // Does the subject deserve an contact pane?
+  label: function(subject) {
+    var kb = tabulator.kb;
+    var ns = tabulator.ns;
+    var t = kb.findTypeURIs(subject);
+    if (t[ns.ldp('Resource').uri]) return "Sharing"; // @@ be more sophisticated?
+    if (t[ns.ldp('Container').uri]) return "Sharing"; // @@ be more sophisticated?
+    if (t[ns.ldp('BasicContainer').uri]) return "Sharing"; // @@ be more sophisticated?
+    // check being allowed to see/change shgaring?
+    return null; // No under other circumstances
+  },
 
 
-        // Set up a frame with status Block
+  render: function(subject, dom) {
+    var kb = tabulator.kb;
+    var ns = tabulator.ns;
+    var div = dom.createElement("div")
+    div.setAttribute('class', 'sharingPane');
 
-        var toolsPane = function() {
-            var kb = tabulator.kb, ns = tabulator.ns;
-            var doc = $rdf.sym(subject.uri.split('#')[0]); // The ACL is actually to the doc describing the thing
+    var t = kb.findTypeURIs(subject);
+    var noun = "file";
+    if (t[ns.ldp('BasicContainer').uri] || t[ns.ldp('Container').uri]) noun = "folder";
 
-            var pane = dom.createElement('div');
-            var table = pane.appendChild(dom.createElement('table'));
-            table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
-            var headerRow = table.appendChild(dom.createElement('tr'));
-            headerRow.textContent =  tabulator.Util.label(subject) + " - tools";
-            headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
+    var pane = dom.createElement('div');
+    var table = pane.appendChild(dom.createElement('table'));
+    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
 
-            var statusRow = table.appendChild(dom.createElement('tr'));
-            var statusBlock = statusRow.appendChild(dom.createElement('div'));
-            statusBlock.setAttribute('style', 'padding: 2em;');
-            var MainRow = table.appendChild(dom.createElement('tr'));
-            var box = MainRow.appendChild(dom.createElement('table'));
-            // var bottomRow = table.appendChild(dom.createElement('tr'));
+    var statusRow = table.appendChild(dom.createElement('tr'));
+    var statusBlock = statusRow.appendChild(dom.createElement('div'));
+    statusBlock.setAttribute('style', 'padding: 2em;');
+    var MainRow = table.appendChild(dom.createElement('tr'));
+    var box = MainRow.appendChild(dom.createElement('table'));
+    // var bottomRow = table.appendChild(dom.createElement('tr'));
 
 
-            context = { target: subject, me: me, noun: "resource",
-                div: pane, dom: dom, statusRegion: statusBlock };
-
-            box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, function(ok, body){
-                if (!ok) box.innerHTML = "ACL control box Failed: " + body;
-            }));
-
-            return pane;
+    context = { target: subject, me: null, noun: noun,
+        div: pane, dom: dom, statusRegion: statusBlock };
+    tabulator.panes.utils.preventBrowserDropEvents(dom);
+    tabulator.panes.utils.logInLoadProfile(context).then(function(context){
+      box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, noun, function(ok, body){
+        if (!ok) {
+          box.innerHTML = "ACL control box Failed: " + body
         }
-
-        tabulator.panes.utils.preventBrowserDropEvents(dom);
-        div.appendChild(toolsPane());
-        return div;
-    }
+      }))
+    })
+    div.appendChild(pane);
+    return div;
+  }
 }, true);
 
 //ends

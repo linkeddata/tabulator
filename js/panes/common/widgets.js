@@ -95,9 +95,10 @@ tabulator.panes.utils.setName = function(element, x) {
     var findName = function(x) {
         var name = kb.any(x, ns.vcard('fn')) || kb.any(x, ns.foaf('name'))
             ||  kb.any(x, ns.vcard('organization-name'));
-        return name ? name.value : "null"
+        return name ? name.value : null
     }
-    element.textContent = findName(x) || tabulator.Util.label(x);
+    var name = findName(x)
+    element.textContent = name || tabulator.Util.label(x)
     if (!name) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
              element.textContent = (ok ? '' : '? ') +  (findName(x) ||tabulator.Util.label(x));

@@ -78,6 +78,7 @@ tabulator.loadScript("js/panes/trip/tripPane.js");
 tabulator.loadScript("js/panes/airPane.js");
 
 // Content views
+tabulator.loadScript("js/panes/slideshow/slideshowPane.js");
 
 tabulator.loadScript("js/panes/imagePane.js");   // Basic image view
 

@@ -357,6 +357,7 @@ tabulator.panes.utils.offlineTestID = function() {
     if (tabulator.mode == 'webapp' && typeof document !== 'undefined' &&
         document.location &&  ('' + document.location).slice(0,16) === 'http://localhost') {
         var div = document.getElementById('appTarget');
+        if (!div) return null
         var id = div.getAttribute('testID');
         if (!id) return null;
         /* me = kb.any(subject, tabulator.ns.acl('owner')); // when testing on plane with no webid

@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset='UTF-8'>
-<link type="text/css" rel="stylesheet" href="https://raw.github.com/linkeddata/tabulator/master/tabbedtab.css" />
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-<script type="text/javascript" src="https://raw.github.com/linkeddata/tabulator/master/js/mashup/mashlib.js"></script>
+<head>
+<title>Data viewer loading...</title>
+<script src="https://linkeddata.github.io/tabulator/js/mashup/mahlib.js"/>
+<link rel="stylesheet" href="https://linkeddata.github.io/tabulator/tabbedtab.css">
 <script>
-jQuery(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    tabulator.scriptBase = 'https://linkeddata.github.io/tabulator/'
+    $rdf.Fetcher.crossSiteProxyTemplate = 'https://databox.me/,proxy?uri={uri}'
     var uri = window.location.href
-    window.document.title = uri;
-    var kb = tabulator.kb;
-    var subject = kb.sym(uri);
-    tabulator.outline.GotoSubject(subject, true, undefined, true, undefined);
+    tabulator.outline.GotoSubject($rdf.sym(uri), true, undefined, true)
 });
 </script>
 </head>
 <body>
+<!-- below to make outline code to put stuff -->
 <div class="TabulatorOutline" id="DummyUUID">
-    <table id="outline"></table>
+  <table id="outline"></table>
 </div>
 </body>
 </html>

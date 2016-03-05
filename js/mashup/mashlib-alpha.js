@@ -33049,7 +33049,10 @@ tabulator.panes.utils.setImage = function(element, x) {
             || kb.any(x, ns.foaf('depiction'));
         return image ? image.uri : fallback;
     }
-    var uri = findImage(x);
+
+    var uri = x.sameTerm(ns.foaf('Agent'))
+      ? tabulator.scriptBase + 'js/panes/common/icons/noun_98053.svg'
+      : findImage(x);
     element.setAttribute('src', uri);
     if (uri === fallback) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {

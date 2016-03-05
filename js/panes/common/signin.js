@@ -665,8 +665,6 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
         return signOutButton;
     };
 
-    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
-
     var setIt = function(newid) {
         tabulator.preferences.set('me',newid);
         me_uri = newid;
@@ -683,6 +681,8 @@ tabulator.panes.utils.loginStatusBox = function(myDocument, listener) {
         box.refresh();
         if (listener) listener(newid);
     };
+
+    var sisu = tabulator.panes.utils.signInOrSignUpBox(myDocument, setIt);
 
     var zapIt = function() {
         tabulator.preferences.set('me','');

@@ -22,22 +22,14 @@ gh-pages: update
 	git push origin gh-pages
 
 
+alpha :
+	(cd $J/rdf; make dist/rdflib.js)
+	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib-alpha.js
+
 mashlib-alpha.js :
 	(cd $J/rdf; make dist/rdflib.js)
 	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib-alpha.js
 
-#dist :
-#	(cd $J/rdf; make dist/rdflib.js)
-#	(cd $J/init; node expand.js js/init/init-mashup.js ) > mashlib.js
-#	cp mashlib.js ~/Documents/Automation/Library/Mashup/mashlib.js
-#	cp ../../tabbedtab.css ~/Documents/Automation/Library/Mashup/tabbedtab.css
-#	hg commit -m "Distribute mashup - see content/js/mashup/Makefile"  ~/Documents/Automation/Library/Mashup
-#	(cd ~/Documents/Automation/Library/Mashup/; hg push)
-
-distribute12 : mashlib.js
-	cp mashlib.js ~/Documents/2014/Financial/Data/skin-related/mashlib.js
-	hg commit -m distribute12 ~/Documents/2014/Financial/Data/skin-related/mashlib.js
-	(cd ~/Documents/2014/Financial/Data/skin-related/; hg push)
 
 $J/rdf/dist/rdflib.js :
 	(cd $J/rdf; make dist/rdflib.js)

@@ -38,6 +38,52 @@ tabulator.panes.utils.preventBrowserDropEvents = function(document) {
     document.addEventListener('dragover', preventDrag, false);
 }
 
+
+tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
+  var tr = dom.createElement('tr');
+  options = options || {}
+  tr.predObj = [pred.uri, obj.uri];
+  var td1 = tr.appendChild(dom.createElement('td'));
+  var td2 = tr.appendChild(dom.createElement('td'));
+  var td3 = tr.appendChild(dom.createElement('td'));
+
+  var agent = obj;
+  var image = td1.appendChild(dom.createElement('img'));
+  image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
+  tabulator.panes.utils.setImage(image, agent);
+  tabulator.panes.utils.setName(td2, agent);
+  if (options.deleteFunction){
+    tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
+  }
+  if (options.link !== false) {
+    var anchor = td3.appendChild(dom.createElement('a'))
+    anchor.setAttribute('href', obj.uri);
+    anchor.classList.add('HoverControlHide')
+    var linkImage = anchor.appendChild(dom.createElement('img'));
+    linkImage.setAttribute('src', tabulator.scriptBase + 'icons/go-to-this.png');
+    td3.appendChild(dom.createElement('br'))
+  }
+  if (options.draggable !== false){ // default is on
+    tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
+    tr.addEventListener('dragstart', function(e){
+        tr.style.fontWeight = 'bold';
+        e.dataTransfer.dropEffect = 'move';
+        e.dataTransfer.setData("text/uri-list", obj);
+        console.log("Dragstart: " + tr + " -> " + obj)
+    }, false);
+
+    // icons/go-to-this.png
+
+    tr.addEventListener('dragend', function(e){
+        tr.style.fontWeight = 'normal';
+        console.log("Dragend dropeffect" + e.dataTransfer.dropEffect )
+        console.log("Dragend: " + tr + " -> " + obj)
+    }, false);
+  }
+  return tr;
+}
+
+
 tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
     var kb = tabulator.kb;
     var updater = new tabulator.rdf.sparqlUpdate(kb);
@@ -93,10 +139,6 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             }
         }
 
-        if (!options.modify) {
-            box.setAttribute('style', 'color: #777;')
-        }
-
         var removeAgentFromCombos = function(uri) {
             for (var k=0; k < 16; k++) {
                 var a = byCombo[kToCombo(k)];
@@ -123,6 +165,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
 
             var middle = row.appendChild(dom.createElement('td'));
             var middleTable = middle.appendChild(dom.createElement('table'));
+            middleTable.style.width = '100%';
 
             var right = row.appendChild(dom.createElement('td'));
             right.textContent = explanation[k] || "Unusual combination";
@@ -133,47 +176,22 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     middleTable.removeChild(middleTable.NoneTR);
                     delete middleTable.NoneTR;
                 }
-                var tr = middleTable.appendChild(dom.createElement('tr'));
-                tr.predObj = [pred, obj];
-                tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
-                var td1 = tr.appendChild(dom.createElement('td'));
-                var td2 = tr.appendChild(dom.createElement('td'));
-                var td3 = tr.appendChild(dom.createElement('td'));
-
-                var agent = $rdf.sym(obj);
-                var image = td1.appendChild(dom.createElement('img'));
-                image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
-                tabulator.panes.utils.setImage(image, agent);
-                tabulator.panes.utils.setName(td2, agent);
-                tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', function deletePerson(){
-                    var arr =  byCombo[combo];
-                    for (var b=0; b < arr.length; b++) {
-                        if  (arr[b][0] === pred && arr[b][1] === obj ) {
-                            arr.splice(b, 1); // remove from ACL
-                            break;
-                        }
-                    };
-                    // @@@ save byCombo back to ACLDoc
-                    middleTable.removeChild(tr);
-                })
-/*
-                tr.addEventListener('drag', function(e){
-                    // e.preventDefault();
-                    // e.dataTransfer.dropEffect = 'copy';
-                }, false);
-*/
-                tr.addEventListener('dragstart', function(e){
-                    tr.style.fontWeight = 'bold';
-                    // e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    e.dataTransfer.setData("text/uri-list", obj);
-                    console.log("Dragstart: " + tr + " -> " + obj)
-                }, false);
-
-                tr.addEventListener('dragend', function(e){
-                    tr.style.fontWeight = 'normal';
-                    console.log("Dragend: " + tr + " -> " + obj)
-                }, false);
+                var opt = {
+                  deleteFunction: function deletePerson(){
+                      var arr =  byCombo[combo];
+                      for (var b=0; b < arr.length; b++) {
+                          if  (arr[b][0] === pred && arr[b][1] === obj ) {
+                              arr.splice(b, 1); // remove from ACL
+                              break;
+                          }
+                      };
+                      // @@@ save byCombo back to ACLDoc
+                      middleTable.removeChild(tr);
+                  }
+                }
+                var tr = middleTable.appendChild(
+                  tabulator.panes.utils.personTR(
+                    dom, $rdf.sym(pred), $rdf.sym(obj), opt));
             };
 
             var syncCombo = function(combo) {
@@ -226,7 +244,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     // console.log('dragover event') // millions of them
                 });
                 row.addEventListener('dragenter', function (e) {
-                    console.log('dragenter event')
+                    console.log('dragenter event' + e.dataTransfer.dropEffect )
                     this.style.backgroundColor = '#ccc';
                 });
                 row.addEventListener('dragleave', function (e) {

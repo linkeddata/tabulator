@@ -69,6 +69,7 @@ tabulator.loadScript("js/panes/common/pad.js");
 // Developer designed:
 tabulator.loadScript("js/panes/issue/pane.js");
 tabulator.loadScript("js/panes/contact/contactPane.js");
+tabulator.loadScript("js/panes/pad/padPane.js");
 tabulator.loadScript("js/panes/argument/argumentPane.js"); // A posistion in an argumnent tree
 
 tabulator.loadScript("js/panes/transaction/pane.js");
@@ -102,7 +103,7 @@ tabulator.loadScript("js/panes/defaultPane.js");
 //tabulator.loadScript("js/panes/newOutline.js");
 tabulator.loadScript("js/panes/ui/pane.js");
 // tabulator.loadScript("js/panes/categoryPane.js");  // Not useful enough
-tabulator.loadScript("js/panes/pubsPane.js");
+// tabulator.loadScript("js/panes/pubsPane.js"); // not finished
 
 //@@ jambo commented these things out to pare things down temporarily.
 // Note must use // not /* to comment out to make sure expander sees it
@@ -112,7 +113,7 @@ tabulator.loadScript("js/panes/microblogPane/microblogPane.js");
 
 
 tabulator.loadScript("js/panes/socialPane.js");
-//tabulator.loadScript("js/panes/social/pane.js");
+//tabulator.loadScript("js/panes/social/pane.js"); // competitor to other social
 //tabulator.loadScript("js/panes/airPane.js");
 //tabulator.loadScript("js/panes/lawPane.js");
 //tabulator.loadScript("js/panes/pushbackPane.js");

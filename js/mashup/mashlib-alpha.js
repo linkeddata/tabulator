@@ -28515,7 +28515,7 @@ $rdf.Fetcher = function (store, timeout, async) {
   //   'redirected'  In attempt to counter CORS problems retried.
   //   other strings mean various other erros, such as parse errros.
   //
-
+  this.redirectedTo = {} // Wehn 'redireced'
   this.fetchCallbacks = {} // fetchCallbacks[uri].push(callback)
 
   this.nonexistant = {} // keep track of explict 404s -> we can overwrite etc
@@ -28571,7 +28571,12 @@ $rdf.Fetcher = function (store, timeout, async) {
         }
         var parser = new $rdf.RDFParser(kb)
         // sf.addStatus(xhr.req, 'parsing as RDF/XML...')
-        parser.parse(this.dom, lastRequested.uri, lastRequested)
+        try {
+          parser.parse(this.dom, lastRequested.uri, lastRequested)
+        } catch (e) {
+          sf.addStatus(xhr.req, 'Syntax error parsing RDF/XML! ' + e)
+          console.log('Syntax error parsing RDF/XML! ' + e)
+        }
         if (!xhr.options.noMeta) {
           kb.add(lastRequested, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode)
         }
@@ -29377,7 +29382,11 @@ $rdf.Fetcher = function (store, timeout, async) {
     var checkCredentialsRetry = function () {
       if (!xhr.withCredentials) return false // not dealt with
 
-      console.log('@@ Retrying with no credentials for ' + xhr.resource)
+      if (xhr.retriedWithCredentials) {
+        return true
+      }
+      xhr.retriedWithCredentials = true // protect against called twice
+      console.log('web: Retrying with no credentials for ' + xhr.resource)
       xhr.abort()
       delete sf.requested[docuri] // forget the original request happened
       var newopt = {}
@@ -29400,11 +29409,17 @@ $rdf.Fetcher = function (store, timeout, async) {
             var hostpart = $rdf.uri.hostpart
             var here = '' + document.location
             var uri = xhr.resource.uri
-            if (hostpart(here) && hostpart(uri) && hostpart(here) !== hostpart(uri)) {
+            if (hostpart(here) && hostpart(uri) && hostpart(here) !== hostpart(uri)) { // If cross-site
               if (xhr.status === 401 || xhr.status === 403 || xhr.status === 404) {
                 onreadystatechangeFactory(xhr)()
               } else {
+                // IT IS A PAIN THAT NO PROPER ERROR REPORTING
+                if (checkCredentialsRetry(xhr)) { // If credentials flag set, retry without,
+                  return
+                }
+                // If it wasn't, or we already tried that
                 var newURI = $rdf.Fetcher.crossSiteProxy(uri)
+                console.log('web: Direct failed so trying proxy ' + newURI)
                 sf.addStatus(xhr.req, 'BLOCKED -> Cross-site Proxy to <' + newURI + '>')
                 if (xhr.aborted) return
 
@@ -29420,6 +29435,7 @@ $rdf.Fetcher = function (store, timeout, async) {
                 // the callback throws an exception when called from xhr.onerror (so removed)
                 // sf.fireCallbacks('done', args) // Are these args right? @@@   Not done yet! done means success
                 sf.requested[xhr.resource.uri] = 'redirected'
+                sf.redirectedTo[xhr.resource.uri] = newURI
 
                 if (sf.fetchCallbacks[xhr.resource.uri]) {
                   if (!sf.fetchCallbacks[newURI]) {
@@ -29445,9 +29461,6 @@ $rdf.Fetcher = function (store, timeout, async) {
               }
             }
 
-            if (checkCredentialsRetry(xhr)) {
-              return
-            }
             xhr.status = 999 //
           }
         } // mashu
@@ -29821,6 +29834,7 @@ $rdf.Fetcher = function (store, timeout, async) {
                   sf.addStatus(oldreq, 'redirected') // why
                   sf.fireCallbacks('redirected', args) // Are these args right? @@@
                   sf.requested[xhr.resource.uri] = 'redirected'
+                  sf.redirectedTo[xhr.ressource.uri] = newURI
 
                   var hash = newURI.indexOf('#')
                   if (hash >= 0) {
@@ -29999,6 +30013,8 @@ $rdf.Fetcher = function (store, timeout, async) {
       return 'requested'
     } else if (this.requested[docuri] === 'done') {
       return 'fetched'
+    } else if (this.requested[docuri] === 'redirected') {
+      return this.getState(this.redirectedTo[docuri])
     } else { // An non-200 HTTP error status
       return 'failed'
     }
@@ -30295,7 +30311,7 @@ if (typeof exports !== 'undefined') {
   // Leak a global regardless of module system
   root['$rdf'] = $rdf
 }
-$rdf.buildTime = "2016-03-04T16:51:15";
+$rdf.buildTime = "2016-03-07T19:47:44";
 })(this);
 
 },{"async":1,"jsonld":30,"n3":32,"xmldom":40,"xmlhttprequest":undefined}]},{},[])("rdflib")
@@ -32545,6 +32561,52 @@ tabulator.panes.utils.preventBrowserDropEvents = function(document) {
     document.addEventListener('dragover', preventDrag, false);
 }
 
+
+tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
+  var tr = dom.createElement('tr');
+  options = options || {}
+  tr.predObj = [pred.uri, obj.uri];
+  var td1 = tr.appendChild(dom.createElement('td'));
+  var td2 = tr.appendChild(dom.createElement('td'));
+  var td3 = tr.appendChild(dom.createElement('td'));
+
+  var agent = obj;
+  var image = td1.appendChild(dom.createElement('img'));
+  image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
+  tabulator.panes.utils.setImage(image, agent);
+  tabulator.panes.utils.setName(td2, agent);
+  if (options.deleteFunction){
+    tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
+  }
+  if (options.link !== false) {
+    var anchor = td3.appendChild(dom.createElement('a'))
+    anchor.setAttribute('href', obj.uri);
+    anchor.classList.add('HoverControlHide')
+    var linkImage = anchor.appendChild(dom.createElement('img'));
+    linkImage.setAttribute('src', tabulator.scriptBase + 'icons/go-to-this.png');
+    td3.appendChild(dom.createElement('br'))
+  }
+  if (options.draggable !== false){ // default is on
+    tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
+    tr.addEventListener('dragstart', function(e){
+        tr.style.fontWeight = 'bold';
+        e.dataTransfer.dropEffect = 'move';
+        e.dataTransfer.setData("text/uri-list", obj);
+        console.log("Dragstart: " + tr + " -> " + obj)
+    }, false);
+
+    // icons/go-to-this.png
+
+    tr.addEventListener('dragend', function(e){
+        tr.style.fontWeight = 'normal';
+        console.log("Dragend dropeffect" + e.dataTransfer.dropEffect )
+        console.log("Dragend: " + tr + " -> " + obj)
+    }, false);
+  }
+  return tr;
+}
+
+
 tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
     var kb = tabulator.kb;
     var updater = new tabulator.rdf.sparqlUpdate(kb);
@@ -32600,10 +32662,6 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             }
         }
 
-        if (!options.modify) {
-            box.setAttribute('style', 'color: #777;')
-        }
-
         var removeAgentFromCombos = function(uri) {
             for (var k=0; k < 16; k++) {
                 var a = byCombo[kToCombo(k)];
@@ -32630,6 +32688,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
 
             var middle = row.appendChild(dom.createElement('td'));
             var middleTable = middle.appendChild(dom.createElement('table'));
+            middleTable.style.width = '100%';
 
             var right = row.appendChild(dom.createElement('td'));
             right.textContent = explanation[k] || "Unusual combination";
@@ -32640,47 +32699,22 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     middleTable.removeChild(middleTable.NoneTR);
                     delete middleTable.NoneTR;
                 }
-                var tr = middleTable.appendChild(dom.createElement('tr'));
-                tr.predObj = [pred, obj];
-                tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
-                var td1 = tr.appendChild(dom.createElement('td'));
-                var td2 = tr.appendChild(dom.createElement('td'));
-                var td3 = tr.appendChild(dom.createElement('td'));
-
-                var agent = $rdf.sym(obj);
-                var image = td1.appendChild(dom.createElement('img'));
-                image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
-                tabulator.panes.utils.setImage(image, agent);
-                tabulator.panes.utils.setName(td2, agent);
-                tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', function deletePerson(){
-                    var arr =  byCombo[combo];
-                    for (var b=0; b < arr.length; b++) {
-                        if  (arr[b][0] === pred && arr[b][1] === obj ) {
-                            arr.splice(b, 1); // remove from ACL
-                            break;
-                        }
-                    };
-                    // @@@ save byCombo back to ACLDoc
-                    middleTable.removeChild(tr);
-                })
-/*
-                tr.addEventListener('drag', function(e){
-                    // e.preventDefault();
-                    // e.dataTransfer.dropEffect = 'copy';
-                }, false);
-*/
-                tr.addEventListener('dragstart', function(e){
-                    tr.style.fontWeight = 'bold';
-                    // e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    e.dataTransfer.setData("text/uri-list", obj);
-                    console.log("Dragstart: " + tr + " -> " + obj)
-                }, false);
-
-                tr.addEventListener('dragend', function(e){
-                    tr.style.fontWeight = 'normal';
-                    console.log("Dragend: " + tr + " -> " + obj)
-                }, false);
+                var opt = {
+                  deleteFunction: function deletePerson(){
+                      var arr =  byCombo[combo];
+                      for (var b=0; b < arr.length; b++) {
+                          if  (arr[b][0] === pred && arr[b][1] === obj ) {
+                              arr.splice(b, 1); // remove from ACL
+                              break;
+                          }
+                      };
+                      // @@@ save byCombo back to ACLDoc
+                      middleTable.removeChild(tr);
+                  }
+                }
+                var tr = middleTable.appendChild(
+                  tabulator.panes.utils.personTR(
+                    dom, $rdf.sym(pred), $rdf.sym(obj), opt));
             };
 
             var syncCombo = function(combo) {
@@ -32733,7 +32767,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     // console.log('dragover event') // millions of them
                 });
                 row.addEventListener('dragenter', function (e) {
-                    console.log('dragenter event')
+                    console.log('dragenter event' + e.dataTransfer.dropEffect )
                     this.style.backgroundColor = '#ccc';
                 });
                 row.addEventListener('dragleave', function (e) {
@@ -33029,7 +33063,7 @@ tabulator.panes.utils.setName = function(element, x) {
     }
     var name = findName(x)
     element.textContent = name || tabulator.Util.label(x)
-    if (!name) {
+    if (!name && x.uri) { // Note this is only a fetch, not a lookUP of all sameAs etc
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
              element.textContent = (ok ? '' : '? ') +  (findName(x) ||tabulator.Util.label(x));
         });
@@ -33054,7 +33088,7 @@ tabulator.panes.utils.setImage = function(element, x) {
       ? tabulator.scriptBase + 'js/panes/common/icons/noun_98053.svg'
       : findImage(x);
     element.setAttribute('src', uri);
-    if (uri === fallback) {
+    if (uri === fallback && x.uri) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
             element.setAttribute('src', findImage(x));
         });
@@ -39823,7 +39857,7 @@ tabulator.panes.register( {
                     context = { target: subject, me: me, noun: "address book",
                         div: pane, dom: dom, statusRegion: statusBlock };
 
-                    box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, function(ok, body){
+                    box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, "book", function(ok, body){
                         if (!ok) box.innerHTML = "ACL control box Failed: " + body;
                     }));
 
@@ -40180,7 +40214,7 @@ tabulator.panes.register( {
 
                                         if (!event.altKey) { // If only one group has beeen selected show ACL
                                             cardMain.innerHTML = '';
-                                            cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                            cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, "group", function(ok, body){
                                                 if (!ok) cardMain.innerHTML = "Failed: " + body;
                                             }));
                                         }
@@ -40280,7 +40314,7 @@ tabulator.panes.register( {
                                     syncGroupTable(); // Refresh list of groups
 
                                     cardMain.innerHTML = '';
-                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(body, dom, function(ok, body){
+                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(body, dom, "group", function(ok, body){
                                         if (!ok) cardMain.innerHTML = "Group sharing setup failed: " + body;
                                     }));
                                 }
@@ -40337,6 +40371,564 @@ tabulator.panes.register( {
 //ends
 
 // ###### Finished expanding js/panes/contact/contactPane.js ##############
+// ###### Expanding js/panes/pad/padPane.js ##############
+/*   pad Pane
+**
+*/
+
+
+// load also js/panes/pad/better-simple-pad/css/simple-pad-styles.css
+
+// These used to be in js/init/icons.js but are better in the pane.
+tabulator.Icon.src.icon_pad = iconPrefix + 'js/panes/pad/images/ColourOn.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_pad] = 'notepad'
+
+tabulator.panes.register( {
+
+  icon: tabulator.Icon.src.icon_pad,
+
+  name: 'pad',
+
+  // Does the subject deserve an pad pane?
+  label: function(subject) {
+    var kb = tabulator.kb;
+    var ns = tabulator.ns;
+    var t = kb.findTypeURIs(subject);
+    if (t['http://www.w3.org/ns/pim/pad#Notepad']) {
+      return "pad";
+    }
+    return null; // No under other circumstances
+  },
+
+  // and follow instructions there
+  render: function(subject, dom) {
+
+
+
+    // Utility functions
+
+    var complainIfBad = function(ok, message) {
+        if (!ok) {
+            div.appendChild(tabulator.panes.utils.errorMessageBlock(dom, message, 'pink'));
+        }
+    };
+
+    var clearElement = function(ele) {
+        while (ele.firstChild) {
+            ele.removeChild(ele.firstChild);
+        }
+        return ele;
+    }
+
+    var webOperation = function(method, uri, options, callback) {
+        var xhr = $rdf.Util.XMLHTTPFactory();
+        xhr.onreadystatechange = function (){
+            if (xhr.readyState == 4){
+                var ok = (!xhr.status || (xhr.status >= 200 && xhr.status < 300));
+                callback(uri, ok, xhr.responseText, xhr);
+            }
+        };
+        xhr.open(method, uri, true);
+        if (options.contentType) {
+            xhr.setRequestHeader('Content-type', options.contentType);
+        }
+        xhr.send(options.data ? options.data : undefined);
+    };
+
+    var webCopy = function(here, there, content_type, callback) {
+        webOperation('GET', here,  {}, function(uri, ok, body, xhr) {
+            if (ok) {
+                webOperation('PUT', there, { data: xhr.responseText, contentType: content_type}, callback);
+            } else {
+                callback(uri, ok, "(on read) " + body, xhr);
+            }
+        });
+    };
+
+    //////////////////////// Accesss control
+
+
+    // Two variations of ACL for this app, public read and public read/write
+    // In all cases owner has read write control
+
+    var genACLtext = function(docURI, aclURI, allWrite) {
+        var g = $rdf.graph(), auth = $rdf.Namespace('http://www.w3.org/ns/auth/acl#');
+        var a = g.sym(aclURI + '#a1'), acl = g.sym(aclURI), doc = g.sym(docURI);
+        g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+        g.add(a, auth('accessTo'), doc, acl)
+        g.add(a, auth('agent'), me, acl);
+        g.add(a, auth('mode'), auth('Read'), acl);
+        g.add(a, auth('mode'), auth('Write'), acl);
+        g.add(a, auth('mode'), auth('Control'), acl);
+
+        a = g.sym(aclURI + '#a2');
+        g.add(a, tabulator.ns.rdf('type'), auth('Authorization'), acl);
+        g.add(a, auth('accessTo'), doc, acl)
+        g.add(a, auth('agentClass'), ns.foaf('Agent'), acl);
+        g.add(a, auth('mode'), auth('Read'), acl);
+        if (allWrite) {
+            g.add(a, auth('mode'), auth('Write'), acl);
+        }
+        return $rdf.serialize(acl, g, aclURI, 'text/turtle');
+    }
+
+    var setACL = function(docURI, allWrite, callback) {
+        var aclDoc = kb.any(kb.sym(docURI),
+            kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+        if (aclDoc) { // Great we already know where it is
+            var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+            webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+        } else {
+
+            fetcher.nowOrWhenFetched(docURI, undefined, function(ok, body){
+                if (!ok) return callback(ok, "Gettting headers for ACL: " + body);
+                var aclDoc = kb.any(kb.sym(docURI),
+                    kb.sym('http://www.iana.org/assignments/link-relations/acl')); // @@ check that this get set by web.js
+                if (!aclDoc) {
+                    // complainIfBad(false, "No Link rel=ACL header for " + docURI);
+                    callback(false, "No Link rel=ACL header for " + docURI);
+                } else {
+                    var aclText = genACLtext(docURI, aclDoc.uri, allWrite);
+                    webOperation('PUT', aclDoc.uri, { data: aclText, contentType: 'text/turtle'}, callback);
+                }
+            })
+        }
+    };
+
+
+    ////////////////////////////////////// Getting logged in with a WebId
+
+    var setUser = function(webid) {
+        if (webid) {
+            tabulator.preferences.set('me', webid);
+            console.log("(SetUser: Logged in as "+ webid+")")
+            me = kb.sym(webid);
+            // @@ Here enable all kinds of stuff
+        } else {
+            tabulator.preferences.set('me', '');
+            console.log("(SetUser: Logged out)")
+            me = null;
+        }
+        if (logInOutButton) {
+            logInOutButton.refresh();
+        }
+        if (webid && waitingForLogin) {
+            waitingForLogin = false;
+            showAppropriateDisplay();
+        }
+    }
+
+
+    ////////// Who am I
+
+    var whoAmI = function() {
+        var me_uri = tabulator.preferences.get('me');
+        me = me_uri? kb.sym(me_uri) : null;
+        tabulator.panes.utils.checkUser(padDoc, setUser);
+
+        if (!tabulator.preferences.get('me')) {
+            console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
+
+            if (tabulator.mode == 'webapp' && typeof document !== 'undefined' &&
+                document.location &&  ('' + document.location).slice(0,16) === 'http://localhost') {
+
+                me = kb.any(subject, tabulator.ns.dc('author')); // when testing on plane with no webid
+                console.log("Assuming user is " + me)
+            }
+
+        } else {
+            me = kb.sym(tabulator.preferences.get('me'))
+            // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
+        };
+    }
+
+
+
+
+    ////////////////////////////////  Reproduction: spawn a new instance
+    //
+    // Viral growth path: user of app decides to make another instance
+    //
+    //
+
+    var newInstanceButton = function() {
+        var button = div.appendChild(dom.createElement('button'));
+        button.textContent = "Start another pad";
+        button.addEventListener('click', function() {
+            return showBootstrap(subject, spawnArea, "pad")
+        })
+        return button;
+    };
+
+
+    // Option of either using the workspace system or just typing in a URI
+    //
+    var showBootstrap = function showBootstrap(thisInstance, container, noun) {
+        var div = clearElement(container);
+        var na = div.appendChild(tabulator.panes.utils.newAppInstance(
+            dom, "Start a new " + noun + " in a workspace", initializeNewInstanceInWorkspace));
+
+        var hr = div.appendChild(dom.createElement('hr')); // @@
+
+        var p = div.appendChild(dom.createElement('p'));
+        p.textContent = "Where would you like to store the data for the " + noun + "?  " +
+        "Give the URL of the directory where you would like the data stored.";
+        var baseField = div.appendChild(dom.createElement('input'));
+        baseField.setAttribute("type", "text");
+        baseField.size = 80; // really a string
+        baseField.label = "base URL";
+        baseField.autocomplete = "on";
+
+        div.appendChild(dom.createElement('br')); // @@
+
+        var button = div.appendChild(dom.createElement('button'));
+        button.textContent = "Start new " + noun + " at this URI";
+        button.addEventListener('click', function(e){
+            var newBase = baseField.value;
+            if (newBase.slice(-1) !== '/') {
+                newBase += '/';
+            }
+            initializeNewInstanceAtBase(thisInstance, newBase);
+        });
+    }
+
+
+    /////////  Create new document files for new instance of app
+
+    var initializeNewInstanceInWorkspace = function(ws) {
+        var newBase = kb.any(ws, ns.space('uriPrefix'));
+        if (!newBase) {
+            newBase = ws.uri.split('#')[0];
+        } else {
+	    newBase = newBase.value;
+	}
+        if (newBase.slice(-1) !== '/') {
+            $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + newBase ); // @@ paramater?
+            newBase = newBase + '/';
+        }
+        var now = new Date();
+        newBase += appPathSegment + '/id'+ now.getTime() + '/'; // unique id
+
+        initializeNewInstanceAtBase(thisInstance, newBase);
+    }
+
+    var initializeNewInstanceAtBase = function(thisInstance, newBase) {
+
+        var here = $rdf.sym(thisInstance.uri.split('#')[0]);
+
+        var sp = tabulator.ns.space;
+        var kb = tabulator.kb;
+
+
+        var newPadDoc = kb.sym(newBase + 'pad.ttl');
+        var newIndexDoc = kb.sym(newBase + 'index.html');
+
+        toBeCopied = [
+            { local: 'index.html', contentType: 'text/html'}
+        ];
+
+        newInstance = kb.sym(newPadDoc.uri + '#thisPad');
+
+
+        // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
+
+
+        agenda = [];
+
+        var f, fi, fn; //   @@ This needs some form of visible progress bar
+        for (f=0; f < toBeCopied.length; f++) {
+            var item = toBeCopied[f];
+            var fun = function copyItem(item) {
+                agenda.push(function(){
+                    var newURI = newBase + item.local;
+                    console.log("Copying " + base + item.local + " to " +  newURI);
+                    webCopy(base + item.local, newBase + item.local, item.contentType, function(uri, ok, message, xhr) {
+                        if (!ok) {
+                            complainIfBad(ok, "FAILED to copy "+ base + item.local +' : ' + message);
+                            console.log("FAILED to copy "+ base + item.local +' : ' + message);
+                        } else {
+                            xhr.resource = kb.sym(newURI);
+                            kb.fetcher.parseLinkHeader(xhr, kb.bnode()); // Dont save the whole headers, just the links
+
+			    var setThatACL = function() {
+				setACL(newURI, false, function(ok, message){
+				    if (!ok) {
+					complainIfBad(ok, "FAILED to set ACL "+ newURI +' : ' + message);
+					console.log("FAILED to set ACL "+ newURI +' : ' + message);
+				    } else {
+					agenda.shift()(); // beware too much nesting
+				    }
+				})
+			    }
+			    if (!me) {
+				console.log("Waiting to find out id user users to access " + xhr.resource)
+				tabulator.panes.utils.checkUser(xhr.resource, function(webid){
+				    me = kb.sym(webid);
+				    console.log("Got user id: "+ me);
+				    setThatACL();
+				});
+			    } else {
+				setThatACL();
+			    }
+                        }
+                    });
+                });
+            };
+            fun(item);
+        };
+        /*
+	if (!me) {
+	    agenda.push(function(){
+		console.log("Waiting to dind out id user users to access " + newIndexDoc)
+		tabulator.panes.utils.checkUser(newIndexDoc, function(webid){
+		    me = kb.sym(webid);
+		    conole.log("Got user id: "+ me);
+		    agenda.shift()();
+		});
+	    });
+	};
+	*/
+	//   me  is now defined
+
+        agenda.push(function createNewPadDataFile(){
+
+	    kb.add(newInstance, ns.rdf('type'), PAD('Notepad'), newPadDoc);
+
+	    kb.add(newInstance, ns.dc('created'), new Date(), newPadDoc);
+	    if (me) {
+		kb.add(newInstance, ns.dc('author'), me, newPadDoc);
+	    }
+	    kb.add(newInstance, PAD('next'), newInstance, newPadDoc); // linked list empty
+
+	    // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
+	    kb.add(newInstance, tabulator.ns.space('inspiration'), thisInstance, padDoc);
+	    kb.add(newInstance, tabulator.ns.space('inspiration'), thisInstance, newPadDoc);
+
+            updater.put(
+                newPadDoc,
+                kb.statementsMatching(undefined, undefined, undefined, newPadDoc),
+                'text/turtle',
+                function(uri2, ok, message) {
+                    if (ok) {
+                        agenda.shift()();
+                    } else {
+                        complainIfBad(ok, "FAILED to save new notepad at: "+ there.uri +' : ' + message);
+                        console.log("FAILED to save new notepad at: "+ there.uri +' : ' + message);
+                    };
+                }
+            );
+        });
+
+
+
+        agenda.push(function() {
+            setACL(newPadDoc.uri, true, function(ok, body) {
+                complainIfBad(ok, "Failed to set Read-Write ACL on pad data file: " + body);
+                if (ok) agenda.shift()();
+            })
+        });
+
+
+        agenda.push(function(){  // give the user links to the new app
+
+            var p = div.appendChild(dom.createElement('p'));
+            p.setAttribute('style', 'font-size: 140%;')
+            p.innerHTML =
+                "Your <a href='" + newIndexDoc.uri + "'><b>new notepad</b></a> is ready. "+
+                "<br/><br/><a href='" + newIndexDoc.uri + "'>Go to new pad</a>";
+            });
+
+        agenda.shift()();
+        // Created new data files.
+    }
+
+
+
+    ///////////////  Update on incoming changes
+
+
+    // Manage participation in this session
+    //
+    //  This is more general tham the pad.
+    //
+    var manageParticipation = function(subject) {
+        if (!me) throw "Unknown user";
+        var parps = kb.each(subject, ns.wf('participation')).filter(function(pn){
+            kb.hold(pn, ns.dc('author'), me)});
+        if (parps.length > 1) throw "Multiple participations";
+        if (!parps.length) {
+            participation = tabulator.panes.utils.newThing(padDoc);
+        }
+
+    }
+
+
+
+
+    /////////////////////////
+
+
+    var listenToIframe = function() {
+        // Event listener for login (from child iframe)
+        var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+        var eventListener = window[eventMethod];
+        var messageEvent = eventMethod == "attachEvent" ? "onmessage" : "message";
+
+        // Listen to message from child window
+        eventListener(messageEvent,function(e) {
+          if (e.data.slice(0,5) == 'User:') {
+            // the URI of the user (currently either http* or dns:* values)
+            var user = e.data.slice(5, e.data.length);
+            if (user.slice(0, 4) == 'http') {
+              // we have an HTTP URI (probably a WebID), do something with the user variable
+              // i.e. app.login(user);
+                setUser(user);
+            }
+          }
+        },false);
+    }
+
+    var showResults = function(exists) {
+        console.log("showResults()");
+
+        whoAmI(); // Set me  even if on a plane
+
+        var title = kb.any(subject, ns.dc('title'))
+        if (window && title) {
+            window.document.title = title.value;
+        }
+        options.exists = exists;
+        padEle = (tabulator.panes.utils.notepad(dom, padDoc, subject, me, options));
+        naviMain.appendChild(padEle);
+
+        var initiated = tabulator.sparql.setRefreshHandler(padDoc, padEle.reloadAndSync);
+    };
+
+    var showSignon = function showSignon() {
+        var d = clearElement(naviMain);
+        // var d = div.appendChild(dom.createElement('div'));
+        var origin =  window && window.location ? window.location.origin : '';
+        d.innerHTML = '<p style="font-size: 120%; background-color: #ffe; padding: 2em; margin: 1em; border-radius: 1em;">'+
+        'You need to be logged in.<br />To be able to use this app'+
+            ' you need to log in with webid account at a storage provider.</p> '+
+            '<iframe class="text-center" src="https://linkeddata.github.io/signup/?ref=' + origin + '" '+
+            'style="margin-left: 1em; margin-right: 1em; width: 95%; height: 40em;" '+
+            ' sandbox="allow-same-origin allow-scripts allow-forms" frameborder="0"></iframe>';
+            listenToIframe();
+            waitingForLogin = true; // hack
+    };
+
+
+
+    // Read or create empty data file
+
+    var loadPadData = function () {
+        var div = naviMain;
+        fetcher.nowOrWhenFetched(padDoc.uri, undefined, function(ok, body, xhr){
+            if (!ok) {
+                if (0 + xhr.status === 404) { ///  Check explictly for 404 error
+                    console.log("Initializing results file " + padDoc)
+                    updater.put(padDoc, [], 'text/turtle', function(uri2, ok, message, xhr) {
+                        if (ok) {
+                            kb.fetcher.saveRequestMetadata(xhr, kb, padDoc.uri);
+                            kb.fetcher.saveResponseMetadata(xhr, kb); // Drives the isEditable question
+                            clearElement(naviMain);
+                            showResults(false);
+                        } else {
+                            complainIfBad(ok, "FAILED to create results file at: "+ padDoc.uri +' : ' + message);
+                            console.log("FAILED to craete results file at: "+ padDoc.uri +' : ' + message);
+                        };
+                    });
+                } else { // Other error, not 404 -- do not try to overwite the file
+                    complainIfBad(ok, "FAILED to read results file: " + body);
+                }
+            } else { // Happy read
+                clearElement(naviMain);
+                if (kb.holds(subject, ns.rdf('type'), ns.wf('TemplateInstance'))) {
+                    showBootstrap(subject, naviMain, 'pad');
+                }
+                showResults(true);
+                naviMiddle3.appendChild(newInstanceButton());
+
+            }
+        });
+    };
+
+    ////////////////////////////////////////////// Body of Pane
+
+
+
+    var appPathSegment = 'app-pad.timbl.com'; // how to allocate this string and connect to
+
+    var kb = tabulator.kb;
+    var fetcher = tabulator.sf;
+    var ns = tabulator.ns;
+    var me;
+    var updater = new $rdf.sparqlUpdate(kb);
+    var waitingForLogin = false;
+
+    var PAD = $rdf.Namespace('http://www.w3.org/ns/pim/pad#');
+
+
+    //window.document.title = "Pad";
+
+    //var subject = kb.sym(subject_uri);
+    var thisInstance = subject;
+
+    var padDoc = $rdf.sym(base + 'pad.ttl');
+    var padEle;
+
+    var div = dom.createElement('div');
+
+
+
+    //  Build the DOM
+
+    var structure = div.appendChild(dom.createElement('table')); // @@ make responsive style
+    structure.setAttribute('style', 'background-color: white; min-width: 94%; margin-right:3% margin-left: 3%; min-height: 13em;');
+
+    var naviLoginoutTR = structure.appendChild(dom.createElement('tr'));
+    var naviLoginout1 = naviLoginoutTR.appendChild(dom.createElement('td'));
+    var naviLoginout2 = naviLoginoutTR.appendChild(dom.createElement('td'));
+    var naviLoginout3 = naviLoginoutTR.appendChild(dom.createElement('td'));
+
+    var logInOutButton = null;
+
+    var naviTop = structure.appendChild(dom.createElement('tr')); // stuff
+    var naviMain = naviTop.appendChild(dom.createElement('td'));
+    naviMain.setAttribute('colspan', '3');
+
+    var naviMiddle = structure.appendChild(dom.createElement('tr')); // controls
+    var naviMiddle1 = naviMiddle.appendChild(dom.createElement('td'));
+    var naviMiddle2 = naviMiddle.appendChild(dom.createElement('td'));
+    var naviMiddle3 = naviMiddle.appendChild(dom.createElement('td'));
+
+    var naviStatus = structure.appendChild(dom.createElement('tr')); // status etc
+    var statusArea = naviStatus.appendChild(dom.createElement('div'));
+
+    var naviSpawn = structure.appendChild(dom.createElement('tr')); // create new
+    var spawnArea = naviSpawn.appendChild(dom.createElement('div'));
+
+
+    var naviMenu = structure.appendChild(dom.createElement('tr'));
+    naviMenu.setAttribute('class', 'naviMenu');
+//    naviMenu.setAttribute('style', 'margin-top: 3em;');
+    var naviLeft = naviMenu.appendChild(dom.createElement('td'));
+    var naviCenter = naviMenu.appendChild(dom.createElement('td'));
+    var naviRight = naviMenu.appendChild(dom.createElement('td'));
+
+    var options = { statusArea: statusArea, timingArea: naviMiddle1 }
+
+	  loadPadData();
+
+    return div
+
+  }
+}, false);
+
+//ends
+
+// ###### Finished expanding js/panes/pad/padPane.js ##############
 // ###### Expanding js/panes/argument/argumentPane.js ##############
 /*      View argument Pane
 **
@@ -44773,480 +45365,7 @@ tabulator.panes.register( {
 
 // ###### Finished expanding js/panes/ui/pane.js ##############
 // tabulator.loadScript("js/panes/categoryPane.js");  // Not useful enough
-// ###### Expanding js/panes/pubsPane.js ##############
-/*
-    Summer 2010
-    haoqili@mit.edu
-    
-This commit: - Autocomplete is done EXCEPT for clicking.  
-             - User output for uri links
-
-NOTE: Dropdown only shows if 
-1. you first visit http://dig.csail.mit.edu/2007/wiki/docs/collections
-2. refresh your foaf page
-
-    //TODO:
-    1 autocomplete clickable
-    2 Enable Tab == Enter
-    3 Disable typing in lines that depend on incompleted previous lines.
-    4 Show words fading after entered into wiki
-    - Load journal titles
-    
-    //small
-    - Add co-authors
-    - If Autocompleted a Journal title, check if the journal has an URL in its page before taking away the URL input box
-    - Fix in userinput.js menu dropdown place
-    - Background encorporates abstract textarea
-    - Get pdf
-    - Height of the input box
-    
-    NB:
-    - When you want to select the first dropdown item, you have to arrow down and up again, not enter directly.
- */
-
-tabulator.Icon.src.icon_pubs = tabulator.iconPrefix + 'icons/publication/publicationPaneIcon.gif';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_pubs] = 'pubs'; //hover show word
-
-
-tabulator.panes.pubsPane = {
-    icon: tabulator.Icon.src.icon_pubs,
-
-    name: 'pubs',
-
-    label: function(subject) {  // Subject is the source of the document
-        //criteria for display satisfied: return string that would be title for icon, else return null
-        // only displays if it is a person, copied from social/pane.js
-        if (tabulator.kb.whether(
-            subject, tabulator.ns.rdf('type'),
-            tabulator.ns.foaf('Person'))){
-            //dump("pubsPane: the subject is: "+subject);
-                return 'pubs';
-            } else {
-                return null;
-            }
-
-    },
-
-    render: function(subject, myDocument) { //Subject is source of doc, document is HTML doc element we are attaching elements to
-        
-        //NAMESPACES ------------------------------------------------------
-        var foaf = tabulator.rdf.Namespace("http://xmlns.com/foaf/0.1/");
-        //var rdf= tabulator.ns.rdf;
-        var rdf = tabulator.rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        var owl = tabulator.rdf.Namespace("http://www.w3.org/2002/07/owl/");
-        var bibo = tabulator.rdf.Namespace("http://purl.org/ontology/bibo/");
-        var dcterms = tabulator.rdf.Namespace('http://purl.org/dc/terms/');
-        var dcelems = tabulator.rdf.Namespace('http://purl.org/dc/elements/1.1/');
-        var soics = tabulator.rdf.Namespace('http://rdfs.org/sioc/spec/');
-        var kb = tabulator.kb;
-        var sparqlUpdater = new tabulator.rdf.sparqlUpdate(kb);
-
-        var collections_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/collections';
-        var journalURI = "";
-        
-        var works_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/works'
-        var jarticleURI = "";
-        
-        var bookURI = "";
-                
-        var doctitle_value ="";
-       
-        // Functions -------------------------------------------------------
-        
-        // Generic insert_statement return function
-        var returnFunc = function(uri, success, error){
-          //  dump('In title, 4 in update Service \n');
-            if (success){
-                dump("In title, editing successful! :D\n");
-            } else {
-                dump("In title, Error when editing\n");
-            }
-        };
-        
-        // Creates "tag" thing as a child under "p"
-        function newElement(tag, p){
-            var x = myDocument.createElement(tag);
-            x['child'] = function(tag){return newElement(tag,x)};
-            if(!p){ pubsPane.appendChild(x); }
-            else{ p.appendChild(x); }
-            return x;
-        }
-
-        
-        function removeSpaces(str){
-            return str.split(' ').join('');
-        }
-        
-        function spacetoUline(str){
-            return str.split(' ').join('_').toLowerCase();
-            
-        }
-        
-        function pl(str){
-            return dump(str+"\n");
-        }
-        
-        function newFormRowID(form, wordori, type){
-            var outer_div = newElement('div', form);
-            var word = spacetoUline(wordori);
-            outer_div.id =  'divid_' + word;
-            //if (word == 'journal') {
-            //outer_div.className = 'active';
-            // } else {
-                outer_div.className = 'hideit';
-            // }
-            var inner_div = newElement('div', outer_div);
-            inner_div.setAttribute('class', 'pubsRow');
-            var word_span = newElement('span', inner_div);
-            word_span.setAttribute('class', 'pubsWord');
-            
-            word_span.innerHTML = wordori + ': ';
-            var word_box = newElement(type, inner_div);
-            word_box.id = "inpid_" + word;
-            return word_box;
-        }
-        
-        function newOutputRow(form, wordori){
-            var outer_div = newElement('div', form);
-            var word = spacetoUline(wordori);
-            outer_div.id =  'outid_' + word;
-            outer_div.className = 'hideit';
-            return  outer_div;
-        }
-
-        // Called first thing by Journal and Book
-        // this function creates a new first row in the form that
-        // asks for a document title,
-        // makes the document's URI, and
-        // inserts the input title into the URI 
-        // For "Book Title", puts creator into URI too 
-        var rootlistenRow = function(theForm, caption_title, typeofinp, storeURI, typeofdoc){
-            // Variables:
-            // create new row, with id: "inpid_"+sapcetoUline(caption_title)
-            var doctitle = newFormRowID(theForm, caption_title, typeofinp);
-            doctitle.select();
-            var userinputResult = "";
-            
-            var docOutput = newOutputRow(theForm, caption_title);
-            
-            // Add the listener
-            doctitle.addEventListener("keypress", function(e){
-                // Only register legal chars
-
-                //NB not using elementId.value because it's offbyone
-                // only for userinput.js stuff, otherwise use:
-                //var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
-                //var doctitle_value = doctitle_id.value;
-                doctitle_value += String.fromCharCode(e.charCode);
-                
-                // When keys other than "enter" are entered, Journal Title should autocomplete
-                dump("\n\n\n=========start in pubsPane ==========\n");
-                dump("In " + caption_title + ", pressed the key="+e.keyCode+" with char=" + e.charCode +" the curinput is="+doctitle_value+"\n");
-                switch (caption_title) {
-                    case 'Journal Title':
-                        dump("It's case Journal Title\n");
-                        dump("TxtStr.formCharCode=" + doctitle_value+"\n");
-                        
-                        // Journal Title has dropdown menu option
-                        // THIS ONE LINE LINKS TO USERINPUT.JS:
-                        userinputResult = tabulator.outline.UserInput.getAutoCompleteHandler("JournalTAC")(e); //**This (e) is passed to event in userinput.js that will handle keypresses, including up and down in menu
-                        // If AC used: userinputResult = ['gotdptitle', str title, str uri]
-                        // -- else: userinputResult = A string
-                        dump("\nACRESULT!!="+userinputResult+"\n");
-
-                        dump("========OVER=========\n");
-                        break;
-                    case 'Book Title':
-                        dump("yo book\n");
-                        break;
-                    default:
-                        dump("neither\n");
-                }
-                 
-                
-                // For both Journal and Book, Enter Key creates new journal/book URI's
-                if (e.keyCode == 13 ){
-                    dump("In " + caption_title + ", 2 Enter PRESSED title=" + doctitle_value+"\n");
-                    // clear dropdown menu, the function will check if one exists
-                    tabulator.outline.UserInput.clearMenu();
-                    
-                    // ======== If autocomplete was selected ==========
-                    // Right now "got dropdown title" only is for Journal
-                    if (userinputResult[0] == "gotdptitle"){
-                    
-                        // If AC used: userinputResult = ['gotdptitle', str title, str uri]
-                        // -- else: userinputResult = A string
-                    
-                        journalURI = userinputResult[2];
-                        dump("FROM DROP DOWN, journalURI="+journalURI+"\n");
-                        
-                        // put complete name in journal input box:
-                        var changeinpbox = myDocument.getElementById("inpid_journal_title");
-                        changeinpbox.value = userinputResult[1];
-                        
-                        // Show user the journal URI
-                        docOutput.innerHTML = "Journal URI = <i>"+journalURI+"</i>";
-                        docOutput.className = 'active';
-                        
-                        // Hide Journal URL row
-                        // TODO: First check that the Journal has a URL
-                        var urlrow = myDocument.getElementById("divid_journal_url");
-                        urlrow.className = 'hideit';
-                        
-                        // Focus on the next part
-                        var articleinp = myDocument.getElementById("inpid_journal_article_title");
-                        articleinp.focus();
-                    } else {
-                        // ======== Traditional, no dropdown =========
-                        
-                        // 0. Make a URI for this doc, storeURI#[millisecs epoch time]
-                        dump("If NOT from title dropdown\n");
-                        var now = new Date();
-                        var docURI = storeURI + "#" + now.getTime();
-                        if (caption_title == "Journal Title"){
-                            journalURI = docURI;
-                            docOutput.innerHTML = "Journal URI = <i>"+journalURI+"</i>";
-                            dump("journalURI="+journalURI+"\n");
-                        } else if (caption_title == "Book Title"){
-                            bookURI = docURI;
-                            docOutput.innerHTML = "Book URI = <i>"+bookURI+"</i>";
-                            dump("bookURI="+bookURI+"\n");
-                        }
-                        dump("docURI="+docURI+"\n");
-                        // Show user the URI
-                        docOutput.className = 'active';
-                        
-                        // 1. Make this doc URI type specified
-                        var doctype_addst = new tabulator.rdf.Statement(kb.sym(docURI), tabulator.ns.rdf('type'), typeofdoc, kb.sym(storeURI));     
-                        
-                        // 2. Add the title for the journal (NB, not article title)
-                        //NB, not using above doctitle_value because it will
-                        // add "enter" to the string, messing it up
-                        var doctitle_id = myDocument.getElementById("inpid_"+ spacetoUline(caption_title));
-                        doctitle_value = doctitle_id.value;
-                        var doctitle_addst = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('title'), doctitle_value, kb.sym(storeURI));
-
-                        var totalst = [doctype_addst, doctitle_addst];
-                                            
-                        // 3. Only for books, add creator:
-                        if (caption_title == "Book Title"){
-                            var creator_add = new tabulator.rdf.Statement(kb.sym(docURI), dcelems('creator'), subject, kb.sym(storeURI));
-                            totalst.push(creator_add);
-                        }
-
-                        dump('Start SU' + caption_title + '\n');
-                        dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
-                        sparqlUpdater.insert_statement(totalst, returnFunc);
-                        dump('DONE SU' + caption_title + '\n');
-                    }
-                }
-            
-            }, false);
-        };
-
-        // this function makes a leaf level (knowing subjectURI) newFormRow
-        // to put extracted info under the known subject URI
-        var leaflistenRow = function(theForm, namestr, type, thesubject, thepredicate, storeURI){
-            // Makes the new row, with id: "inpid_"+sapcetoUline(namestr)
-            var item = newFormRowID(theForm, namestr, type);
-            item.addEventListener("keypress", function(e){
-                dump("In " + namestr + ", 1 pressing a key\n");
-                if (e.keyCode == 13) {
-                    dump("1\n");
-                    var item_id = myDocument.getElementById("inpid_"+ spacetoUline(namestr) );
-                    var item_value = item_id.value;
-                    var item_trim = removeSpaces(item_value);
-                    if (namestr == "Book Description") item_trim = item_value;
-                    dump("2\n");
-                    // Add to URI
-                    var subjectURI = "undef";
-                    if (thesubject == "journal") {
-                        dump("journalURI=" + journalURI + "\n");
-                        subjectURI = journalURI;
-                    } else if (thesubject == "jarticle") {
-                        dump("jarticleURI=" + jarticleURI + "\n");
-                        subjectURI = jarticleURI;
-                    } else if (thesubject == "book") {
-                        dump("book\n");
-                        subjectURI = bookURI;
-                    }
-                    dump("3\n");
-                    var item_st = new tabulator.rdf.Statement(kb.sym(subjectURI), thepredicate, item_trim, kb.sym(storeURI));
-                    dump('start SU for ' + namestr + "\n\n");
-                    dump('Inserting start:\n' + item_st + '\nInserting ///////\n');
-                    sparqlUpdater.insert_statement(item_st, returnFunc);
-                    dump("DONE SU for " + namestr + "\n");
-                }
-            }, false);
-        };
-    
-        // Building the HTML of the Pane, top to bottom ------------
-        /// Headers
-        var pubsPane = myDocument.createElement('div');
-        pubsPane.setAttribute('class', 'pubsPane');
-
-        var caption_h2 = myDocument.createElement('h2');
-        caption_h2.appendChild(myDocument.createTextNode('Add your new publication'));
-        pubsPane.appendChild(caption_h2);
-        
-        /// The form, starting with common pubs stuff
-        var theForm = newElement('form', pubsPane);
-        theForm.id = "the_form_id";
-
-        /*// --- Co-Authors ----------
-        newFormRowID(theForm, 'coAuthor1', 'input');
-        newFormRowID(theForm, 'coAuthor2', 'input');
-        newFormRowID(theForm, 'coAuthor3', 'input');  
-        
-        var r_moreaut = newElement('div', theForm);
-        r_moreaut.setAttribute('class', 'pubsRow');
-        var b_moreaut = newElement('button', r_moreaut);
-        b_moreaut.id = "b_moreaut";
-        b_moreaut.type = "button";
-        b_moreaut.innerHTML = "More authors?";
-        
-        b_moreaut.addEventListener("click", function(){
-            var row2 = myDocument.getElementById('divid_coAuthor2');
-            var row3 = myDocument.getElementById('divid_coAuthor3');
-            row2.className = 'active';
-            row3.className = 'active';
-        }, false);*/
-        
-
-        /// === Dropdown ----------
-        // NB: The names MUST be lowercase, ' '->_ names
-        var jnlist = ['journal_title', 'journal_url', 'journal_article_title', 'article_published_date'];
-        var bklist = ['book_title', 'book_url', 'book_published_date', 'book_description'];
-        //Hiding all uri output displays during every dropdown switch
-        var outputlist = ['journal_title', 'journal_article_title', 'book_title'];
-        
-        // Making the dropdown
-        var dropdiv = newElement('div', theForm);
-        dropdiv.setAttribute('class', 'pubsRow');
-        var drop = newElement('select', dropdiv);
-        drop.id = 'select_id';
-        var op0 = newElement('option', drop);
-        op0.innerHTML = "choose publication type";
-        
-        var op1 = newElement('option', drop);
-        op1.id = 'op1_id';
-        op1.innerHTML = "journal";
-        op1.addEventListener("click", function(){
-            for (var i=0; i<jnlist.length; i++){
-                var jnitm = myDocument.getElementById("divid_"+jnlist[i]);
-                jnitm.className = 'active';
-            }
-            for (var x=0; x<bklist.length; x++){
-                var bkitm = myDocument.getElementById("divid_"+bklist[x]);
-                bkitm.className = 'hideit';
-            }
-            for (var y=0; y<outputlist.length; y++){
-                var ouitm = myDocument.getElementById("outid_"+outputlist[y]);
-                ouitm.className = 'hideit';
-            }
-        }, false);
-        var op2 = newElement('option', drop);
-        op2.id = 'op2_id';
-        op2.innerHTML = "book";
-        op2.addEventListener("click", function(){
-            for (var i=0; i<jnlist.length; i++){
-                var jnitm = myDocument.getElementById("divid_"+jnlist[i]);
-                jnitm.className = 'hideit';
-            }
-            for (var x=0; x<bklist.length; x++){
-                var bkitm = myDocument.getElementById("divid_"+bklist[x]);
-                bkitm.className = 'active';
-            }
-            for (var y=0; y<outputlist.length; y++){
-                var ouitm = myDocument.getElementById("outid_"+outputlist[y]);
-                ouitm.className = 'hideit';
-            }
-        }, false);
-        
-        // This is where the "journal" and "book" sections are created. Each id is "divid_" + 2ndarg
-        //// ======== JOURNAL ===============================================================
-        // J1. Make journal URI, with correct type (Journal), and title
-        rootlistenRow(theForm, 'Journal Title', 'input', collections_URI, bibo('Journal'));
-        
-        // J2. Make journal url
-        leaflistenRow(theForm, 'Journal URL', 'input', "journal", foaf('homepage'), collections_URI);
-        
-        // J3. Journal Article title, a new URI that links to the journal URI
-        var jarttitle = newFormRowID(theForm, 'Journal Article Title', 'input');
-        
-        var jartoutp = newOutputRow(theForm, 'Journal Article Title');
-        
-        jarttitle.addEventListener("keypress", function(e){
-            dump("In Journal_article_title, 1 pressing a key \n");
-            if (e.keyCode == 13 ){
-                dump("In Journal article title, 2 Enter PRESSED\n");
-
-                var jarttitle_id = myDocument.getElementById("inpid_journal_article_title");
-                var jarttitle_value = jarttitle_id.value;
-                
-                // 0. Make a URI for this Journal Article
-                // works_URI = 'http://dig.csail.mit.edu/2007/wiki/docs/works';
-                var now = new Date();
-                jarticleURI = works_URI + "#" + now.getTime();
-                // Show user the URI
-                jartoutp.innerHTML = "Article URI = <i>"+jarticleURI+"</i>";
-                jartoutp.className = 'active';
-
-                dump("jartURI="+jarticleURI+"\n");
-                
-                // 1. Make this journal article URI type AcademicArticle
-                var jarttype_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), tabulator.ns.rdf('type'), bibo('AcademicArticle'), kb.sym(works_URI));
-                                
-                // 2. Add the title for this journal article
-                var jart_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), dcelems('title'), jarttitle_value, kb.sym(works_URI));
-                
-                dump("The SUBJECT = "+subject+"\n");
-                // 3. Add author to a creator of the journal article
-                var auth_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), dcterms('creator'), subject, kb.sym(jarticleURI));
-                dump("1\n");
-                // 4. Connect this journal article to the journal before
-                var connect_add = new tabulator.rdf.Statement(kb.sym(jarticleURI), dcterms('isPartOf'), kb.sym(journalURI), kb.sym(works_URI));
-                dump("2\n");
-                var totalst = [jarttype_add, jart_add, auth_add, connect_add];
-                dump("3\n");
-                dump('Start SU journal article\n');
-                dump('Inserting start:\n' + totalst + '\nInserting ///////\n');
-                sparqlUpdater.insert_statement(totalst, returnFunc);
-                dump('DONE SU journal article\n');
-            }
-        }, false);
-        
-        // J4. Add Date 
-        leaflistenRow(theForm, 'Article Published Date', 'input', 'jarticle', dcterms('date'), works_URI);
-        
-        
-        //// ======== BOOK ===============================================================
-        // B1. Make "Book Title" row, with correct type (Journal), title, and creator
-        rootlistenRow(theForm, 'Book Title', 'input', works_URI, bibo('Book'));
-        
-        // B2. Make book url
-        leaflistenRow(theForm, 'Book URL', 'input', "book", foaf('homepage'), works_URI);
-        
-        // B3. Add Date 
-        leaflistenRow(theForm, 'Book Published Date', 'input', 'book', dcterms('date'), works_URI);
-
-        // B4. Make the abstract
-        leaflistenRow(theForm, 'Book Description', 'textarea', "book", dcterms('description'), works_URI);
-
-        
-        
-        /* TODO Minor: empty row, but to make background stretch down below the abstract box
-        var r_empty = newElement('div', theForm);
-        r_empty.setAttribute('class', 'emptyRow');
-        r_empty.innerHTML = " Hi ";*/
-      
-        return pubsPane;
-    }
-};
-
-tabulator.panes.register(tabulator.panes.pubsPane, true);
-
-// ###### Finished expanding js/panes/pubsPane.js ##############
+// tabulator.loadScript("js/panes/pubsPane.js"); // not finished
 
 //@@ jambo commented these things out to pare things down temporarily.
 // Note must use // not /* to comment out to make sure expander sees it
@@ -46383,7 +46502,7 @@ true);
 tabulator.panes.register( tabulator.panes.socialPane = {
 
     icon: tabulator.Icon.src.icon_foaf,
-    
+
     name: 'social',
 
     label: function(subject) {
@@ -46391,12 +46510,11 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))) return null;
         return "Friends";
     },
-    
+
     tb: tabulator,
 
-    render: function(s, myDocument) {
+    render: function(s, dom) {
 
- 
         var common = function(x,y) { // Find common members of two lists
             var both = [];
             for(var i=0; i<x.length; i++) {
@@ -46410,7 +46528,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             }
             return both;
         }
-            
+
         var plural = function(n, s) {
             var res = ' ';
             res+= (n ? n : 'No');
@@ -46418,7 +46536,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             if (n != 1) res += 's';
             return res;
         }
-        
+
         var people = function(n) {
             var res = ' ';
             res+= (n ? n : 'no');
@@ -46426,29 +46544,29 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             return res + ' people';
         }
         var say = function(str) {
-            var tx = myDocument.createTextNode(str);
-            var p = myDocument.createElement('p');
+            var tx = dom.createTextNode(str);
+            var p = dom.createElement('p');
             p.appendChild(tx);
             tips.appendChild(p);
         }
-        
+
         var link = function(contents, uri) {
             if (!uri) return contents;
-            var a =  myDocument.createElement('a');
+            var a =  dom.createElement('a');
             a.setAttribute('href', uri);
             a.appendChild(contents);
             return a;
         }
-        
+
         var text = function(str) {
-            return myDocument.createTextNode(str);
+            return dom.createTextNode(str);
         }
-        
+
         var buildCheckboxForm = function(lab, statement, state) {
-            var f = myDocument.createElement('form');
-            var input = myDocument.createElement('input');
+            var f = dom.createElement('form');
+            var input = dom.createElement('input');
             f.appendChild(input);
-            var tx = myDocument.createTextNode(lab);
+            var tx = dom.createTextNode(lab);
             tx.className = 'question';
             f.appendChild(tx);
             input.setAttribute('type', 'checkbox');
@@ -46464,7 +46582,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                                 input.checked = false; //rollback UI
                                 return;
                             }
-                            kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
+                            kb.add(statement.subject, statement.predicate, statement.object, statement.why);
                         })
                     }catch(e){
                         tabulator.log.error("Data write fails:" + e);
@@ -46494,54 +46612,20 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             input.addEventListener('click', boxHandler, false)
             return f;
         }
-        
+
         var span = function(html) {
-            var s = myDocument.createElement('span');
+            var s = dom.createElement('span');
             s.innerHTML = html;
             return s;
         }
-        
+
         var oneFriend = function(friend, confirmed) {
-            var box = myDocument.createElement('div');
-            box.className = 'friendBox';
-
-            var src = kb.any(friend, foaf('img')) || kb.any(friend, foaf('depiction'));
-			//Should we try to add an empty image box here? If the image is not fetched we use this default image
-			//The names would be aligned and the layout would look nice - Oshani
-            var img;
-            if (src) {
-                img = myDocument.createElement("IMG")
-                img.setAttribute('src', src.uri);
-            } else {
-                img = myDocument.createElement("div") // Spacer
-            }
-            img.className = 'foafThumb';
-            box.appendChild(img)
-
-			
-            var t = myDocument.createTextNode(tabulator.Util.label(friend));
-			if (confirmed) t.className = 'confirmed';
-			if (friend.uri) {
-				var a = myDocument.createElement('a');
-				// a.setAttribute('href', friend.uri);
-				a.addEventListener('click', function(){ // @@ No history left :-(
-                                        return outline.GotoSubject(
-                                            friend, true, tabulator.panes.socialPane, true)},
-                                    false);
-				a.appendChild(t);
-				box.appendChild(a);
-			} 
-			else {
-				box.appendChild(t);
-			}
-			
-            outline.appendAccessIcons(kb, box, friend);
-            return box;
+            return tabulator.panes.utils.personTR(dom, tabulator.ns.foaf('knows'), friend, {})
         }
-        
+
         //////////////////////////////// Event handler for existing file
         gotOne = function(ele) {
-            var webid = myDocument.getElementById("webidField").value;
+            var webid = dom.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
             tabulator.log.alert("You are now logged in as "+webid);
             ele.parentNode.removeChild(ele);
@@ -46550,14 +46634,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         //////////////////////////////// EVent handler for new FOAF file
         tryFoaf = function() {
 
-            myDocument.getElementById("saveStatus").className = "unknown";
+            dom.getElementById("saveStatus").className = "unknown";
 
             // Construct the initial FOAF file when the form bellow is submitted
-            var inputField = myDocument.getElementById("fileuri_input");
+            var inputField = dom.getElementById("fileuri_input");
             var targetURI = inputField.value;
-            var foafname = myDocument.getElementById("foafname_input").value;
-            var nick = myDocument.getElementById("nick_input").value;
-            var initials = myDocument.getElementById("initials_input").value;
+            var foafname = dom.getElementById("foafname_input").value;
+            var nick = dom.getElementById("nick_input").value;
+            var initials = dom.getElementById("initials_input").value;
             var webid;
             var contents = "<rdf:RDF  xmlns='http://xmlns.com/foaf/0.1/'\n"+
                 "    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'\n" +
@@ -46582,7 +46666,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
             var content_type = "application/rdf+xml";
             var xhr = tabulator.util.XMLHTTPFactory();
-            var doc = myDocument;
+            var doc = dom;
             xhr.onreadystatechange = function (){
                 if (xhr.readyState == 4){
                     var result = xhr.status
@@ -46602,7 +46686,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                        "<tr><td>Status text:</td><td>"+xhr.statusText+"</td></tr>" +
                        "</table>" +
                        "If you can work out what was wrong with the URI, " +
-                       "you can change it above and try again.</p>";            
+                       "you can change it above and try again.</p>";
                     }
                 }
             };
@@ -46614,24 +46698,24 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
 
         }
-        
+
         //////////// Body of render():
-        
+
         if (typeof tabulator == 'undefined') tabulator = this.tb;
         var outline = tabulator.outline;
         var thisPane = this; // For re-render
         var kb = tabulator.kb
-        var div = myDocument.createElement("div")
+        var div = dom.createElement("div")
         div.setAttribute('class', 'socialPane');
         var foaf = tabulator.ns.foaf;
 
-        var tools = myDocument.createElement('div');
+        var tools = dom.createElement('div');
         tools.className = 'navBlock';
         div.appendChild(tools);
-        var main = myDocument.createElement('div');
+        var main = dom.createElement('table');
         main.className = 'mainBlock';
         div.appendChild(main);
-        var tips = myDocument.createElement('div');
+        var tips = dom.createElement('div');
         tips.className ='navBlock';
         div.appendChild(tips);
 
@@ -46639,33 +46723,33 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         // Image top left
         var src = kb.any(s, foaf('img')) || kb.any(s, foaf('depiction'));
         if (src) {
-            var img = myDocument.createElement("IMG")
+            var img = dom.createElement("IMG")
             img.setAttribute('src', src.uri) // w640 h480
             img.className = 'foafPic';
             tools.appendChild(img)
         }
         var name = kb.any(s, foaf('name'));
         if (!name) name = '???';
-        var h3 = myDocument.createElement("H3");
-        h3.appendChild(myDocument.createTextNode(name));
+        var h3 = dom.createElement("H3");
+        h3.appendChild(dom.createTextNode(name));
 
-        var div2 = myDocument.createElement("div");
+        var div2 = dom.createElement("div");
 
         // @@ Addd: event handler to redraw the stuff below when me changes.
-        tips.appendChild(tabulator.panes.utils.loginStatusBox(myDocument));
-        
+        tips.appendChild(tabulator.panes.utils.loginStatusBox(dom));
+
         var me_uri = tabulator.preferences.get('me');
         var me = me_uri && kb.sym(me_uri);
-        
+
         var thisIsYou = (me && kb.sameThings(me,s));
 
         if (!me || thisIsYou) {  // If we know who me is, don't ask for other people
-        
-            var f = myDocument.createElement('form');
+
+            var f = dom.createElement('form');
             tools.appendChild(f);
-            var input = myDocument.createElement('input');
+            var input = dom.createElement('input');
             f.appendChild(input);
-            var tx = myDocument.createTextNode("This is you");
+            var tx = dom.createTextNode("This is you");
             tx.className = 'question';
             f.appendChild(tx);
             var myHandler = function(e) {
@@ -46673,7 +46757,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                 tabulator.preferences.set('me', uri);
                 tabulator.log.alert('You are now '+ (uri ? 'logged in as ' + uri :
                     'logged out. To log in again, find yourself and check "This is you".'));
-                // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+                // div.parentNode.replaceChild(thisPane.render(s, dom), div);
             }
             input.setAttribute('type', 'checkbox');
             input.checked = (thisIsYou);
@@ -46681,8 +46765,8 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         }
 /*
         if (thisIsYou) {  // This is you
-            var h = myDocument.createElement('h2');
-            h.appendChild(myDocument.createTextNode('Your public profile'));
+            var h = dom.createElement('h2');
+            h.appendChild(dom.createTextNode('Your public profile'));
             tools.appendChild(h);
         }
 */
@@ -46692,7 +46776,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     kb.any(s, foaf('nick')) || kb.any(s, foaf('name'));
         if (familiar) familiar = familiar.value;
         var friends = kb.each(s, knows);
-        
+
         // Do I have a public profile document?
         var profile = null; // This could be  SPARQL { ?me foaf:primaryTopic [ a foaf:PersonalProfileDocument ] }
         var editable = false;
@@ -46704,7 +46788,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                                             foaf('PersonalProfileDocument'))) {
 
                     editable = outline.UserInput.sparqler.editable(works[i].uri, kb);
-                    if (!editable) { 
+                    if (!editable) {
                         message += ("Your profile <"+tabulator.Util.escapeForXML(works[i].uri)+"> is not remotely editable.");
                     } else {
                         profile = works[i];
@@ -46724,8 +46808,8 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             } else { // This is about someone else
                 // My relationship with this person
 
-                var h3 = myDocument.createElement('h3');
-                h3.appendChild(myDocument.createTextNode('You and '+familiar));
+                var h3 = dom.createElement('h3');
+                h3.appendChild(dom.createTextNode('You and '+familiar));
                 tools.appendChild(h3);
 
                 cme = kb.canon(me);
@@ -46737,9 +46821,9 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     if (!profile) profile = outgoingSt.why;
                 }
 
-                var tr = myDocument.createElement('tr');
+                var tr = dom.createElement('tr');
                 tools.appendChild(tr);
-                
+
                 var youAndThem = function() {
                     tr.appendChild(link(text('You'), me_uri));
                     tr.appendChild(text(' and '));
@@ -46778,31 +46862,31 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                             new tabulator.rdf.Statement(me, knows, s, profile), outgoing)
                     tools.appendChild(f);
                 } // editable
-                 
+
                 if (friends) {
                     var myFriends = kb.each(me, foaf('knows'));
                     if (myFriends) {
                         var mutualFriends = common(friends, myFriends);
-                        var tr = myDocument.createElement('tr');
+                        var tr = dom.createElement('tr');
                         tools.appendChild(tr);
-                        tr.appendChild(myDocument.createTextNode(
+                        tr.appendChild(dom.createTextNode(
                                     'You'+ (familiar? ' and '+familiar:'') +' know'+
                                     people(mutualFriends.length)+' found in common'))
                         if (mutualFriends) {
                             for (var i=0; i<mutualFriends.length; i++) {
-                                tr.appendChild(myDocument.createTextNode(
+                                tr.appendChild(dom.createTextNode(
                                     ',  '+ tabulator.Util.label(mutualFriends[i])));
                             }
                         }
                     }
-                    var tr = myDocument.createElement('tr');
+                    var tr = dom.createElement('tr');
                     tools.appendChild(tr);
                 } // friends
             } // About someone else
         } // me is defined
         // End of you and s
-        
-        // div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
+
+        // div.appendChild(dom.createTextNode(plural(friends.length, 'acqaintance') +'. '));
 
 
         // Find the intersection and difference sets
@@ -46811,7 +46895,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         var confirmed = [];
         var unconfirmed = [];
         var requests = [];
-        
+
         for (var i=0; i<outgoing.length; i++) {
             var friend = outgoing[i];
             var found = false;
@@ -46820,7 +46904,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     found = true;
                     break;
                 }
-                
+
             }
             if (found) confirmed.push(friend);
             else unconfirmed.push(friend);
@@ -46835,7 +46919,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     found = true;
                     break;
                 }
-                
+
             }
             if (!found) requests.push(friend);
         } // incoming
@@ -46846,10 +46930,12 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             var thisCase = cases[i];
             var friends = thisCase[1];
 			if (friends.length == 0) continue; // Skip empty sections (sure?)
-            
-            var h3 = myDocument.createElement('h3');
-            h3.appendChild(myDocument.createTextNode(thisCase[0]));
-            main.appendChild(h3);
+
+            var h3 = dom.createElement('h3');
+            h3.textContent = thisCase[0];
+            var htr = dom.createElement('tr')
+            htr.appendChild(h3);
+            main.appendChild(htr);
 
             var items = [];
             for (var j=0; j<friends.length; j++) {
@@ -46860,24 +46946,24 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             for (var j=0; j<items.length; j++) {
                 var friend = items[j][1];
 				if (friend.sameTerm(last)) continue; // unique
-                last = friend; 
-				if (tabulator.Util.label(friend) != "..."){	//This check is to avoid bnodes with no labels attached 
+                last = friend;
+				if (tabulator.Util.label(friend) != "..."){	//This check is to avoid bnodes with no labels attached
 												//appearing in the friends list with "..." - Oshani
 					main.appendChild(oneFriend(friend));
 				}
             }
-                
+
         }
-            
+
         // var plist = kb.statementsMatching(s, knows)
         // outline.appendPropertyTRs(div, plist, false, function(pred){return true;})
 
-        var h3 = myDocument.createElement('h3');
-        h3.appendChild(myDocument.createTextNode('Basic Information'));
+        var h3 = dom.createElement('h3');
+        h3.appendChild(dom.createTextNode('Basic Information'));
         tools.appendChild(h3);
 
-        var preds = [ tabulator.ns.foaf('homepage') , 
-                tabulator.ns.foaf('weblog'), 
+        var preds = [ tabulator.ns.foaf('homepage') ,
+                tabulator.ns.foaf('weblog'),
                 tabulator.ns.foaf('workplaceHomepage'),  tabulator.ns.foaf('schoolHomepage')];
         for (var i=0; i<preds.length; i++) {
             var pred = preds[i];
@@ -46908,15 +46994,15 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         }
                     }
                     if (hostlabel) lab = hostlabel + ' ' + lab; // disambiguate
-                    var t = myDocument.createTextNode(lab);
-                    var a = myDocument.createElement('a');
+                    var t = dom.createTextNode(lab);
+                    var a = dom.createElement('a');
                     a.appendChild(t);
                     a.setAttribute('href', uri);
-                    var d = myDocument.createElement('div');
+                    var d = dom.createElement('div');
                     d.className = 'social_linkButton';
                     d.appendChild(a);
                     tools.appendChild(d);
-                
+
                 }
             }
         }
@@ -46935,17 +47021,17 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         }
 
 /*
-        var h3 = myDocument.createElement('h3');
-        h3.appendChild(myDocument.createTextNode('Look up'));
+        var h3 = dom.createElement('h3');
+        h3.appendChild(dom.createTextNode('Look up'));
         tools.appendChild(h3);
 
         // Experimental: Use QDOS's reverse index to get incoming links - defunct
         var uri = 'http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri);
-        var t = myDocument.createTextNode('Qdos reverse links');
-        //var a = myDocument.createElement('a');
+        var t = dom.createTextNode('Qdos reverse links');
+        //var a = dom.createElement('a');
         //a.appendChild(t);
         //a.setAttribute('href', uri);
-        var d = myDocument.createElement('div');
+        var d = dom.createElement('div');
         d.className = 'social_linkButton';
         d.appendChild(t);
         outline.appendAccessIcon(d, uri);
@@ -46964,9 +47050,8 @@ if (tabulator.preferences && tabulator.preferences.get('me')) {
 };
 //ends
 
-
 // ###### Finished expanding js/panes/socialPane.js ##############
-//tabulator.loadScript("js/panes/social/pane.js");
+//tabulator.loadScript("js/panes/social/pane.js"); // competitor to other social
 //tabulator.loadScript("js/panes/airPane.js");
 //tabulator.loadScript("js/panes/lawPane.js");
 //tabulator.loadScript("js/panes/pushbackPane.js");

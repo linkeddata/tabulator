@@ -627,7 +627,7 @@ tabulator.panes.register( {
                     context = { target: subject, me: me, noun: "address book",
                         div: pane, dom: dom, statusRegion: statusBlock };
 
-                    box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, function(ok, body){
+                    box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, "book", function(ok, body){
                         if (!ok) box.innerHTML = "ACL control box Failed: " + body;
                     }));
 
@@ -984,7 +984,7 @@ tabulator.panes.register( {
 
                                         if (!event.altKey) { // If only one group has beeen selected show ACL
                                             cardMain.innerHTML = '';
-                                            cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, function(ok, body){
+                                            cardMain.appendChild(tabulator.panes.utils.ACLControlBox(group, dom, "group", function(ok, body){
                                                 if (!ok) cardMain.innerHTML = "Failed: " + body;
                                             }));
                                         }
@@ -1084,7 +1084,7 @@ tabulator.panes.register( {
                                     syncGroupTable(); // Refresh list of groups
 
                                     cardMain.innerHTML = '';
-                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(body, dom, function(ok, body){
+                                    cardMain.appendChild(tabulator.panes.utils.ACLControlBox(body, dom, "group", function(ok, body){
                                         if (!ok) cardMain.innerHTML = "Group sharing setup failed: " + body;
                                     }));
                                 }

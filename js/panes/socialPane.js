@@ -9,7 +9,7 @@
 tabulator.panes.register( tabulator.panes.socialPane = {
 
     icon: tabulator.Icon.src.icon_foaf,
-    
+
     name: 'social',
 
     label: function(subject) {
@@ -17,12 +17,11 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             subject, tabulator.ns.rdf( 'type'), tabulator.ns.foaf('Person'))) return null;
         return "Friends";
     },
-    
+
     tb: tabulator,
 
-    render: function(s, myDocument) {
+    render: function(s, dom) {
 
- 
         var common = function(x,y) { // Find common members of two lists
             var both = [];
             for(var i=0; i<x.length; i++) {
@@ -36,7 +35,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             }
             return both;
         }
-            
+
         var plural = function(n, s) {
             var res = ' ';
             res+= (n ? n : 'No');
@@ -44,7 +43,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             if (n != 1) res += 's';
             return res;
         }
-        
+
         var people = function(n) {
             var res = ' ';
             res+= (n ? n : 'no');
@@ -52,29 +51,29 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             return res + ' people';
         }
         var say = function(str) {
-            var tx = myDocument.createTextNode(str);
-            var p = myDocument.createElement('p');
+            var tx = dom.createTextNode(str);
+            var p = dom.createElement('p');
             p.appendChild(tx);
             tips.appendChild(p);
         }
-        
+
         var link = function(contents, uri) {
             if (!uri) return contents;
-            var a =  myDocument.createElement('a');
+            var a =  dom.createElement('a');
             a.setAttribute('href', uri);
             a.appendChild(contents);
             return a;
         }
-        
+
         var text = function(str) {
-            return myDocument.createTextNode(str);
+            return dom.createTextNode(str);
         }
-        
+
         var buildCheckboxForm = function(lab, statement, state) {
-            var f = myDocument.createElement('form');
-            var input = myDocument.createElement('input');
+            var f = dom.createElement('form');
+            var input = dom.createElement('input');
             f.appendChild(input);
-            var tx = myDocument.createTextNode(lab);
+            var tx = dom.createTextNode(lab);
             tx.className = 'question';
             f.appendChild(tx);
             input.setAttribute('type', 'checkbox');
@@ -90,7 +89,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                                 input.checked = false; //rollback UI
                                 return;
                             }
-                            kb.add(statement.subject, statement.predicate, statement.object, statement.why);                        
+                            kb.add(statement.subject, statement.predicate, statement.object, statement.why);
                         })
                     }catch(e){
                         tabulator.log.error("Data write fails:" + e);
@@ -120,54 +119,20 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             input.addEventListener('click', boxHandler, false)
             return f;
         }
-        
+
         var span = function(html) {
-            var s = myDocument.createElement('span');
+            var s = dom.createElement('span');
             s.innerHTML = html;
             return s;
         }
-        
+
         var oneFriend = function(friend, confirmed) {
-            var box = myDocument.createElement('div');
-            box.className = 'friendBox';
-
-            var src = kb.any(friend, foaf('img')) || kb.any(friend, foaf('depiction'));
-			//Should we try to add an empty image box here? If the image is not fetched we use this default image
-			//The names would be aligned and the layout would look nice - Oshani
-            var img;
-            if (src) {
-                img = myDocument.createElement("IMG")
-                img.setAttribute('src', src.uri);
-            } else {
-                img = myDocument.createElement("div") // Spacer
-            }
-            img.className = 'foafThumb';
-            box.appendChild(img)
-
-			
-            var t = myDocument.createTextNode(tabulator.Util.label(friend));
-			if (confirmed) t.className = 'confirmed';
-			if (friend.uri) {
-				var a = myDocument.createElement('a');
-				// a.setAttribute('href', friend.uri);
-				a.addEventListener('click', function(){ // @@ No history left :-(
-                                        return outline.GotoSubject(
-                                            friend, true, tabulator.panes.socialPane, true)},
-                                    false);
-				a.appendChild(t);
-				box.appendChild(a);
-			} 
-			else {
-				box.appendChild(t);
-			}
-			
-            outline.appendAccessIcons(kb, box, friend);
-            return box;
+            return tabulator.panes.utils.personTR(dom, tabulator.ns.foaf('knows'), friend, {})
         }
-        
+
         //////////////////////////////// Event handler for existing file
         gotOne = function(ele) {
-            var webid = myDocument.getElementById("webidField").value;
+            var webid = dom.getElementById("webidField").value;
             tabulator.preferences.set('me', webid);
             tabulator.log.alert("You are now logged in as "+webid);
             ele.parentNode.removeChild(ele);
@@ -176,14 +141,14 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         //////////////////////////////// EVent handler for new FOAF file
         tryFoaf = function() {
 
-            myDocument.getElementById("saveStatus").className = "unknown";
+            dom.getElementById("saveStatus").className = "unknown";
 
             // Construct the initial FOAF file when the form bellow is submitted
-            var inputField = myDocument.getElementById("fileuri_input");
+            var inputField = dom.getElementById("fileuri_input");
             var targetURI = inputField.value;
-            var foafname = myDocument.getElementById("foafname_input").value;
-            var nick = myDocument.getElementById("nick_input").value;
-            var initials = myDocument.getElementById("initials_input").value;
+            var foafname = dom.getElementById("foafname_input").value;
+            var nick = dom.getElementById("nick_input").value;
+            var initials = dom.getElementById("initials_input").value;
             var webid;
             var contents = "<rdf:RDF  xmlns='http://xmlns.com/foaf/0.1/'\n"+
                 "    xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'\n" +
@@ -208,7 +173,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
             var content_type = "application/rdf+xml";
             var xhr = tabulator.util.XMLHTTPFactory();
-            var doc = myDocument;
+            var doc = dom;
             xhr.onreadystatechange = function (){
                 if (xhr.readyState == 4){
                     var result = xhr.status
@@ -228,7 +193,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                        "<tr><td>Status text:</td><td>"+xhr.statusText+"</td></tr>" +
                        "</table>" +
                        "If you can work out what was wrong with the URI, " +
-                       "you can change it above and try again.</p>";            
+                       "you can change it above and try again.</p>";
                     }
                 }
             };
@@ -240,24 +205,24 @@ tabulator.panes.register( tabulator.panes.socialPane = {
 
 
         }
-        
+
         //////////// Body of render():
-        
+
         if (typeof tabulator == 'undefined') tabulator = this.tb;
         var outline = tabulator.outline;
         var thisPane = this; // For re-render
         var kb = tabulator.kb
-        var div = myDocument.createElement("div")
+        var div = dom.createElement("div")
         div.setAttribute('class', 'socialPane');
         var foaf = tabulator.ns.foaf;
 
-        var tools = myDocument.createElement('div');
+        var tools = dom.createElement('div');
         tools.className = 'navBlock';
         div.appendChild(tools);
-        var main = myDocument.createElement('div');
+        var main = dom.createElement('table');
         main.className = 'mainBlock';
         div.appendChild(main);
-        var tips = myDocument.createElement('div');
+        var tips = dom.createElement('div');
         tips.className ='navBlock';
         div.appendChild(tips);
 
@@ -265,33 +230,33 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         // Image top left
         var src = kb.any(s, foaf('img')) || kb.any(s, foaf('depiction'));
         if (src) {
-            var img = myDocument.createElement("IMG")
+            var img = dom.createElement("IMG")
             img.setAttribute('src', src.uri) // w640 h480
             img.className = 'foafPic';
             tools.appendChild(img)
         }
         var name = kb.any(s, foaf('name'));
         if (!name) name = '???';
-        var h3 = myDocument.createElement("H3");
-        h3.appendChild(myDocument.createTextNode(name));
+        var h3 = dom.createElement("H3");
+        h3.appendChild(dom.createTextNode(name));
 
-        var div2 = myDocument.createElement("div");
+        var div2 = dom.createElement("div");
 
         // @@ Addd: event handler to redraw the stuff below when me changes.
-        tips.appendChild(tabulator.panes.utils.loginStatusBox(myDocument));
-        
+        tips.appendChild(tabulator.panes.utils.loginStatusBox(dom));
+
         var me_uri = tabulator.preferences.get('me');
         var me = me_uri && kb.sym(me_uri);
-        
+
         var thisIsYou = (me && kb.sameThings(me,s));
 
         if (!me || thisIsYou) {  // If we know who me is, don't ask for other people
-        
-            var f = myDocument.createElement('form');
+
+            var f = dom.createElement('form');
             tools.appendChild(f);
-            var input = myDocument.createElement('input');
+            var input = dom.createElement('input');
             f.appendChild(input);
-            var tx = myDocument.createTextNode("This is you");
+            var tx = dom.createTextNode("This is you");
             tx.className = 'question';
             f.appendChild(tx);
             var myHandler = function(e) {
@@ -299,7 +264,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                 tabulator.preferences.set('me', uri);
                 tabulator.log.alert('You are now '+ (uri ? 'logged in as ' + uri :
                     'logged out. To log in again, find yourself and check "This is you".'));
-                // div.parentNode.replaceChild(thisPane.render(s, myDocument), div);
+                // div.parentNode.replaceChild(thisPane.render(s, dom), div);
             }
             input.setAttribute('type', 'checkbox');
             input.checked = (thisIsYou);
@@ -307,8 +272,8 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         }
 /*
         if (thisIsYou) {  // This is you
-            var h = myDocument.createElement('h2');
-            h.appendChild(myDocument.createTextNode('Your public profile'));
+            var h = dom.createElement('h2');
+            h.appendChild(dom.createTextNode('Your public profile'));
             tools.appendChild(h);
         }
 */
@@ -318,7 +283,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     kb.any(s, foaf('nick')) || kb.any(s, foaf('name'));
         if (familiar) familiar = familiar.value;
         var friends = kb.each(s, knows);
-        
+
         // Do I have a public profile document?
         var profile = null; // This could be  SPARQL { ?me foaf:primaryTopic [ a foaf:PersonalProfileDocument ] }
         var editable = false;
@@ -330,7 +295,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                                             foaf('PersonalProfileDocument'))) {
 
                     editable = outline.UserInput.sparqler.editable(works[i].uri, kb);
-                    if (!editable) { 
+                    if (!editable) {
                         message += ("Your profile <"+tabulator.Util.escapeForXML(works[i].uri)+"> is not remotely editable.");
                     } else {
                         profile = works[i];
@@ -350,8 +315,8 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             } else { // This is about someone else
                 // My relationship with this person
 
-                var h3 = myDocument.createElement('h3');
-                h3.appendChild(myDocument.createTextNode('You and '+familiar));
+                var h3 = dom.createElement('h3');
+                h3.appendChild(dom.createTextNode('You and '+familiar));
                 tools.appendChild(h3);
 
                 cme = kb.canon(me);
@@ -363,9 +328,9 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     if (!profile) profile = outgoingSt.why;
                 }
 
-                var tr = myDocument.createElement('tr');
+                var tr = dom.createElement('tr');
                 tools.appendChild(tr);
-                
+
                 var youAndThem = function() {
                     tr.appendChild(link(text('You'), me_uri));
                     tr.appendChild(text(' and '));
@@ -404,31 +369,31 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                             new tabulator.rdf.Statement(me, knows, s, profile), outgoing)
                     tools.appendChild(f);
                 } // editable
-                 
+
                 if (friends) {
                     var myFriends = kb.each(me, foaf('knows'));
                     if (myFriends) {
                         var mutualFriends = common(friends, myFriends);
-                        var tr = myDocument.createElement('tr');
+                        var tr = dom.createElement('tr');
                         tools.appendChild(tr);
-                        tr.appendChild(myDocument.createTextNode(
+                        tr.appendChild(dom.createTextNode(
                                     'You'+ (familiar? ' and '+familiar:'') +' know'+
                                     people(mutualFriends.length)+' found in common'))
                         if (mutualFriends) {
                             for (var i=0; i<mutualFriends.length; i++) {
-                                tr.appendChild(myDocument.createTextNode(
+                                tr.appendChild(dom.createTextNode(
                                     ',  '+ tabulator.Util.label(mutualFriends[i])));
                             }
                         }
                     }
-                    var tr = myDocument.createElement('tr');
+                    var tr = dom.createElement('tr');
                     tools.appendChild(tr);
                 } // friends
             } // About someone else
         } // me is defined
         // End of you and s
-        
-        // div.appendChild(myDocument.createTextNode(plural(friends.length, 'acqaintance') +'. '));
+
+        // div.appendChild(dom.createTextNode(plural(friends.length, 'acqaintance') +'. '));
 
 
         // Find the intersection and difference sets
@@ -437,7 +402,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         var confirmed = [];
         var unconfirmed = [];
         var requests = [];
-        
+
         for (var i=0; i<outgoing.length; i++) {
             var friend = outgoing[i];
             var found = false;
@@ -446,7 +411,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     found = true;
                     break;
                 }
-                
+
             }
             if (found) confirmed.push(friend);
             else unconfirmed.push(friend);
@@ -461,7 +426,7 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                     found = true;
                     break;
                 }
-                
+
             }
             if (!found) requests.push(friend);
         } // incoming
@@ -472,10 +437,12 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             var thisCase = cases[i];
             var friends = thisCase[1];
 			if (friends.length == 0) continue; // Skip empty sections (sure?)
-            
-            var h3 = myDocument.createElement('h3');
-            h3.appendChild(myDocument.createTextNode(thisCase[0]));
-            main.appendChild(h3);
+
+            var h3 = dom.createElement('h3');
+            h3.textContent = thisCase[0];
+            var htr = dom.createElement('tr')
+            htr.appendChild(h3);
+            main.appendChild(htr);
 
             var items = [];
             for (var j=0; j<friends.length; j++) {
@@ -486,24 +453,24 @@ tabulator.panes.register( tabulator.panes.socialPane = {
             for (var j=0; j<items.length; j++) {
                 var friend = items[j][1];
 				if (friend.sameTerm(last)) continue; // unique
-                last = friend; 
-				if (tabulator.Util.label(friend) != "..."){	//This check is to avoid bnodes with no labels attached 
+                last = friend;
+				if (tabulator.Util.label(friend) != "..."){	//This check is to avoid bnodes with no labels attached
 												//appearing in the friends list with "..." - Oshani
 					main.appendChild(oneFriend(friend));
 				}
             }
-                
+
         }
-            
+
         // var plist = kb.statementsMatching(s, knows)
         // outline.appendPropertyTRs(div, plist, false, function(pred){return true;})
 
-        var h3 = myDocument.createElement('h3');
-        h3.appendChild(myDocument.createTextNode('Basic Information'));
+        var h3 = dom.createElement('h3');
+        h3.appendChild(dom.createTextNode('Basic Information'));
         tools.appendChild(h3);
 
-        var preds = [ tabulator.ns.foaf('homepage') , 
-                tabulator.ns.foaf('weblog'), 
+        var preds = [ tabulator.ns.foaf('homepage') ,
+                tabulator.ns.foaf('weblog'),
                 tabulator.ns.foaf('workplaceHomepage'),  tabulator.ns.foaf('schoolHomepage')];
         for (var i=0; i<preds.length; i++) {
             var pred = preds[i];
@@ -534,15 +501,15 @@ tabulator.panes.register( tabulator.panes.socialPane = {
                         }
                     }
                     if (hostlabel) lab = hostlabel + ' ' + lab; // disambiguate
-                    var t = myDocument.createTextNode(lab);
-                    var a = myDocument.createElement('a');
+                    var t = dom.createTextNode(lab);
+                    var a = dom.createElement('a');
                     a.appendChild(t);
                     a.setAttribute('href', uri);
-                    var d = myDocument.createElement('div');
+                    var d = dom.createElement('div');
                     d.className = 'social_linkButton';
                     d.appendChild(a);
                     tools.appendChild(d);
-                
+
                 }
             }
         }
@@ -561,17 +528,17 @@ tabulator.panes.register( tabulator.panes.socialPane = {
         }
 
 /*
-        var h3 = myDocument.createElement('h3');
-        h3.appendChild(myDocument.createTextNode('Look up'));
+        var h3 = dom.createElement('h3');
+        h3.appendChild(dom.createTextNode('Look up'));
         tools.appendChild(h3);
 
         // Experimental: Use QDOS's reverse index to get incoming links - defunct
         var uri = 'http://foaf.qdos.com/reverse/?path=' + encodeURIComponent(s.uri);
-        var t = myDocument.createTextNode('Qdos reverse links');
-        //var a = myDocument.createElement('a');
+        var t = dom.createTextNode('Qdos reverse links');
+        //var a = dom.createElement('a');
         //a.appendChild(t);
         //a.setAttribute('href', uri);
-        var d = myDocument.createElement('div');
+        var d = dom.createElement('div');
         d.className = 'social_linkButton';
         d.appendChild(t);
         outline.appendAccessIcon(d, uri);
@@ -589,4 +556,3 @@ if (tabulator.preferences && tabulator.preferences.get('me')) {
     tabulator.fetcher.lookUpThing(tabulator.kb.sym(tabulator.preferences.get('me')));
 };
 //ends
-

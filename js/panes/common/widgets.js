@@ -99,7 +99,7 @@ tabulator.panes.utils.setName = function(element, x) {
     }
     var name = findName(x)
     element.textContent = name || tabulator.Util.label(x)
-    if (!name) {
+    if (!name && x.uri) { // Note this is only a fetch, not a lookUP of all sameAs etc
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
              element.textContent = (ok ? '' : '? ') +  (findName(x) ||tabulator.Util.label(x));
         });
@@ -124,7 +124,7 @@ tabulator.panes.utils.setImage = function(element, x) {
       ? tabulator.scriptBase + 'js/panes/common/icons/noun_98053.svg'
       : findImage(x);
     element.setAttribute('src', uri);
-    if (uri === fallback) {
+    if (uri === fallback && x.uri) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
             element.setAttribute('src', findImage(x));
         });

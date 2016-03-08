@@ -32531,12 +32531,14 @@ tabulator.panes.utils.getACL = function(doc, callback) {
 
 tabulator.panes.utils.preventBrowserDropEvents = function(document) {
 
+    console.log('preventBrowserDropEvents called.')
     if (tabulator.preventBrowserDropEventsDone) return;
     tabulator.preventBrowserDropEventsDone = true;
 
     function preventDrag(e) {
       e.stopPropagation();
       e.preventDefault();
+      // console.log("@@@@ document-level drag suppressed: " + e.dataTransfer.dropEffect)
     }
 
     function handleDrop(e) {
@@ -32545,6 +32547,7 @@ tabulator.panes.utils.preventBrowserDropEvents = function(document) {
                     +"(Cancel opens it in a new tab)")) {
           e.stopPropagation();
           e.preventDefault();
+          console.log("@@@@ document-level DROP suppressed: " + e.dataTransfer.dropEffect)
 
           var file = e.dataTransfer.files[0];
           var reader = new FileReader();
@@ -32588,18 +32591,30 @@ tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
   }
   if (options.draggable !== false){ // default is on
     tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
+
     tr.addEventListener('dragstart', function(e){
         tr.style.fontWeight = 'bold';
-        e.dataTransfer.dropEffect = 'move';
-        e.dataTransfer.setData("text/uri-list", obj);
-        console.log("Dragstart: " + tr + " -> " + obj)
+        // e.dataTransfer.dropEffect = 'move';
+        // e.dataTransfer.effectAllowed = 'all'  // same as default
+        e.dataTransfer.setData("text/uri-list", obj.uri);
+        e.dataTransfer.setData("text/plain", obj.uri);
+        e.dataTransfer.setData("text/html", tr.outerHTML);
+        console.log("Dragstart: " + tr + " -> " + obj + "de: "+ e.dataTransfer.dropEffect)
+    }, false);
+
+    tr.addEventListener('drag', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        //e.dataTransfer.dropEffect = 'copy';
+        // e.dataTransfer.setData("text/uri-list", obj);
+        console.log("Drag: dropEffect: "+ e.dataTransfer.dropEffect)
     }, false);
 
     // icons/go-to-this.png
 
     tr.addEventListener('dragend', function(e){
         tr.style.fontWeight = 'normal';
-        console.log("Dragend dropeffect" + e.dataTransfer.dropEffect )
+        console.log("Dragend dropeffect: " + e.dataTransfer.dropEffect )
         console.log("Dragend: " + tr + " -> " + obj)
     }, false);
   }
@@ -32763,30 +32778,43 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 // see http://html5demos.com/drag-anything
                 row.addEventListener('dragover', function (e) {
                     e.preventDefault(); // Neeed else drop does not work [sic]
-                    e.dataTransfer.dropEffect = 'move';
+                    e.dataTransfer.dropEffect = 'copy';
                     // console.log('dragover event') // millions of them
                 });
+                /* cut out uin case source of bugs @@@ leave in long term
                 row.addEventListener('dragenter', function (e) {
-                    console.log('dragenter event' + e.dataTransfer.dropEffect )
-                    this.style.backgroundColor = '#ccc';
+                  console.log('dragenter event dropEffect: ' + e.dataTransfer.dropEffect )
+                  this.style.backgroundColor = '#ccc';
+                   e.dataTransfer.dropEffect = 'link';
+                  console.log('dragenter event dropEffect 2: ' + e.dataTransfer.dropEffect )
                 });
                 row.addEventListener('dragleave', function (e) {
-                    console.log('dragleave event')
+                    console.log('dragleave event dropEffect: ' + e.dataTransfer.dropEffect )
                     this.style.backgroundColor = 'white';
                 });
+                */
                 row.addEventListener('drop', function (e) {
                     if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
-                    console.log("Drop event!")
+                    console.log("Drop event. dropEffect: " + e.dataTransfer.dropEffect )
+                    console.log("Drop event. types: " + (e.dataTransfer.types ? e.dataTransfer.types.join(', ') : 'NOPE') )
+
                     /** THIS IS THE MAGIC: we read from getData based on the content type - so it grabs the item matching that format **/
                     var uris = null;
+                    var text;
                     var thisEle = this;
                     if (e.dataTransfer.types) {
                         for (var t=0; t<e.dataTransfer.types.length; t++){
                             var type = e.dataTransfer.types[t];
                             if (type === 'text/uri-list') {
                                 uris = e.dataTransfer.getData(type).split('\n'); // @ ignore those starting with #
-                                console.log("Dropped URI list: " + uris)
+                                console.log("Dropped text/uri-list: " + uris)
+                            } else if (type === 'text/plain') {
+                                text = e.dataTransfer.getData(type);
                             }
+                        }
+                        if (uris === null && text && text.slice(0,4) === 'http'){
+                            uris = text;
+                            console.log("Waring: Poor man's drop: using text for URI");// chrome disables text/uri-list??
                         }
                     } else {
                     // ... however, if we're IE, we don't have the .types property, so we'll just get the Text value
@@ -40794,7 +40822,7 @@ tabulator.panes.register( {
         whoAmI(); // Set me  even if on a plane
 
         var title = kb.any(subject, ns.dc('title'))
-        if (window && title) {
+        if (typeof window  !== 'undefined' && title) {
             window.document.title = title.value;
         }
         options.exists = exists;
@@ -40873,9 +40901,9 @@ tabulator.panes.register( {
     //window.document.title = "Pad";
 
     //var subject = kb.sym(subject_uri);
-    var thisInstance = subject;
+    var thisInstance = subject
+    var padDoc = subject.doc()
 
-    var padDoc = $rdf.sym(base + 'pad.ttl');
     var padEle;
 
     var div = dom.createElement('div');

@@ -4,7 +4,7 @@
 // This can operate in one of three modes: when the class of object is given
 // or when the source document from whuch data is taken is given,
 // or if a prepared query object is given.
-// (In principle it could operate with neither class nor document 
+// (In principle it could operate with neither class nor document
 // given but typically
 // there would be too much data.)
 // When the tableClass is not given, it looks for common  classes in the data,
@@ -26,6 +26,11 @@ tabulator.panes.register({
     label: function(subject) {
             //if (!tabulator.kb.holds(subject, tabulator.ns.rdf('type'),tabulator.ns.rdfs('Class'))) return null;
             if (!tabulator.kb.any(undefined, tabulator.ns.rdf('type'),subject)) return null;
+            var n = tabulator.kb.statementsMatching(
+                undefined, tabulator.ns.rdf( 'type'), subject).length;
+            if (n == 0) return null;  // None, suppress pane
+            if (n > 15) return null;  // @@ At the moment this pane can be slow with too many @@ fixme by using limits
+            return "List "+n;     // Show how many in hover text
             return tabulator.Util.label(subject)+ " table";
         },
 
@@ -37,12 +42,12 @@ tabulator.panes.register({
     }
 });
 
-/* Table view pane -- as a view of a document 
+/* Table view pane -- as a view of a document
 */
 /*
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table2.png",   
+    icon: iconPrefix + "icons/table2.png",
     @@@@@@  Needs to be different from other icons used eg above as eems to be used as to fire up the pane
     @@@@@@ Needs to be lower prio for a document than the data content pane
 
@@ -52,7 +57,7 @@ tabulator.panes.register({
 
         // Returns true if the specified list of statements contains
         // information on a single subject.
- 
+
         function singleSubject(statements) {
             var subj = null;
 
@@ -68,9 +73,9 @@ tabulator.panes.register({
         }
 
         var sts = tabulator.kb.statementsMatching(undefined, undefined, undefined,
-                                        subject); 
+                                        subject);
 
-        // If all the statements are on a single subject, a table view 
+        // If all the statements are on a single subject, a table view
         // is futile, so hide the table view icon.
 
         if (!singleSubject(sts)) {

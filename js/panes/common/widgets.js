@@ -97,7 +97,7 @@ tabulator.panes.utils.setName = function(element, x) {
             ||  kb.any(x, ns.vcard('organization-name'));
         return name ? name.value : null
     }
-    var name = findName(x)
+    var name = x.sameTerm(ns.foaf('Agent')) ? "Everyone" : findName(x)
     element.textContent = name || tabulator.Util.label(x)
     if (!name && x.uri) { // Note this is only a fetch, not a lookUP of all sameAs etc
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {

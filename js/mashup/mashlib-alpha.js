@@ -32781,7 +32781,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     e.dataTransfer.dropEffect = 'copy';
                     // console.log('dragover event') // millions of them
                 });
-                /* cut out uin case source of bugs @@@ leave in long term
+
                 row.addEventListener('dragenter', function (e) {
                   console.log('dragenter event dropEffect: ' + e.dataTransfer.dropEffect )
                   this.style.backgroundColor = '#ccc';
@@ -32792,7 +32792,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     console.log('dragleave event dropEffect: ' + e.dataTransfer.dropEffect )
                     this.style.backgroundColor = 'white';
                 });
-                */
+  
                 row.addEventListener('drop', function (e) {
                     if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
                     console.log("Drop event. dropEffect: " + e.dataTransfer.dropEffect )
@@ -33089,7 +33089,7 @@ tabulator.panes.utils.setName = function(element, x) {
             ||  kb.any(x, ns.vcard('organization-name'));
         return name ? name.value : null
     }
-    var name = findName(x)
+    var name = x.sameTerm(ns.foaf('Agent')) ? "Everyone" : findName(x)
     element.textContent = name || tabulator.Util.label(x)
     if (!name && x.uri) { // Note this is only a fetch, not a lookUP of all sameAs etc
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
@@ -43454,6 +43454,151 @@ tabulator.panes.register(airPane, false);
 // ###### Finished expanding js/panes/airPane.js ##############
 
 // Content views
+
+// ###### Expanding js/panes/imagePane.js ##############
+/*   Image Pane
+**
+**  This outline pane contains the document contents for an Image document
+*/
+tabulator.panes.register( {
+    icon: tabulator.Icon.src.icon_imageContents,
+    
+    name: 'image',
+    
+    label: function(subject) {
+        var kb = tabulator.kb;
+        var ns = tabulator.ns;
+
+        if (!kb.anyStatementMatching(
+            subject, tabulator.ns.rdf( 'type'),
+            kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
+            return null;
+
+        //   See aslo the source pane, which has lower precedence.
+ 
+        var contentTypeMatch = function(kb, x, contentTypes) {
+            var cts = kb.fetcher.getHeader(x, 'content-type');
+            if (cts) {
+                for (var j=0; j<cts.length; j++) {
+                    for (var k=0; k < contentTypes.length; k++) {
+                        if (cts[j].indexOf(contentTypes[k]) >= 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        
+        var suppressed = [ 'application/pdf'];
+        if (contentTypeMatch(kb, subject, suppressed)) return null;
+
+        return "view";
+    },
+
+    render: function(subject, myDocument) {
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'imageView')
+        var img = myDocument.createElement("IMG")
+        img.setAttribute('src', subject.uri) // w640 h480
+        img.setAttribute('style','max-width: 100%; max-height: 100%;')
+//        div.style['max-width'] = '640';
+//        div.style['max-height'] = '480';
+        var tr = myDocument.createElement('TR')  // why need tr?
+        tr.appendChild(img)
+        div.appendChild(tr)
+        return div
+    }
+}, true);
+
+//ends
+
+
+
+// ###### Finished expanding js/panes/imagePane.js ##############
+
+
+// ###### Expanding js/panes/classInstancePane.js ##############
+/*   Class member Pane
+**
+**  This outline pane lists the members of a class
+*/
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_instances,
+
+    name: 'classInstance', // @@ 'folder'
+
+    label: function(subject) {
+      var n = tabulator.kb.each(
+          undefined, tabulator.ns.rdf( 'type'), subject).length;
+      if (n > 0) return "List (" + n + ")";  // Show how many in hover text
+      n = tabulator.kb.each(
+          subject, tabulator.ns.ldp( 'contains')).length;
+      if (n > 0) {
+        return "Contents (" + n + ")"  // Show how many in hover text
+      }
+      return null;     // Suppress pane otherwise
+    },
+
+    render: function(subject, myDocument) {
+        var kb = tabulator.kb
+        var complain = function complain(message, color){
+            var pre = myDocument.createElement("pre");
+            pre.setAttribute('style', 'background-color: '+ color || '#eed' +';');
+            div.appendChild(pre);
+            pre.appendChild(myDocument.createTextNode(message));
+        }
+        var div = myDocument.createElement("div")
+        div.setAttribute('class', 'instancePane');
+
+        // If this is an LDP container just list the directory
+        var contentsStatements = kb.statementsMatching(subject, tabulator.ns.ldp( 'contains'));
+        if (contentsStatements.length) {
+            // complain("Contents:", 'white'); // filter out hidden files?
+            tabulator.outline.appendPropertyTRs(div, contentsStatements, false, function(pred){return true;})
+        }
+
+        // If this is a class, look for all both explicit and implicit
+        var sts = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
+        if (sts.length > 0) {
+          var already = {}, more = [];
+          sts.map(function(st){already[st.subject.toNT()] = st});
+          for (var nt in kb.findMembersNT(subject)) if (!already[nt])
+              more.push($rdf.st(kb.fromNT(nt), tabulator.ns.rdf( 'type'), subject)); // @@ no provenence
+          if (more.length) complain("There are "+sts.length+" explicit and "+
+                  more.length+" implicit members of "+tabulator.Util.label(subject));
+          if (subject.sameTerm(tabulator.ns.rdf('Property'))) {
+                  /// Do not find all properties used as properties .. unlesss look at kb index
+          } else if (subject.sameTerm(tabulator.ns.rdfs('Class'))) {
+              var uses = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), undefined);
+              var usedTypes = {}; uses.map(function(st){usedTypes[st.object] = st}); // Get unique
+              var used = []; for (var i in usedTypes) used.push($rdf.st(
+                      st.object,tabulator.ns.rdf( 'type'),tabulator.ns.rdfs('Class')));
+              complain("Total of "+uses.length+" type statments and "+used.length+" unique types.");
+          }
+
+          if (sts.length > 10) {
+              var tr = myDocument.createElement('TR');
+              tr.appendChild(myDocument.createTextNode(''+sts.length));
+              //tr.AJAR_statement=sts[i];
+              div.appendChild(tr);
+          }
+
+          tabulator.outline.appendPropertyTRs(div, sts, true, function(pred){return true;})
+
+          if (more.length) {
+              complain('Implcit:')
+              tabulator.outline.appendPropertyTRs(div, more, true, function(pred){return true;})
+          }
+        }
+        return div;
+    }
+}, true);
+
+//ends
+
+// ###### Finished expanding js/panes/classInstancePane.js ##############
 // ###### Expanding js/panes/slideshow/slideshowPane.js ##############
 /*   slideshow Pane
 **
@@ -43706,68 +43851,6 @@ tabulator.panes.register( {
 
 // ###### Finished expanding js/panes/slideshow/slideshowPane.js ##############
 
-// ###### Expanding js/panes/imagePane.js ##############
-/*   Image Pane
-**
-**  This outline pane contains the document contents for an Image document
-*/
-tabulator.panes.register( {
-    icon: tabulator.Icon.src.icon_imageContents,
-    
-    name: 'image',
-    
-    label: function(subject) {
-        var kb = tabulator.kb;
-        var ns = tabulator.ns;
-
-        if (!kb.anyStatementMatching(
-            subject, tabulator.ns.rdf( 'type'),
-            kb.sym('http://purl.org/dc/terms/Image'))) // NB: Not dc: namespace!
-            return null;
-
-        //   See aslo the source pane, which has lower precedence.
- 
-        var contentTypeMatch = function(kb, x, contentTypes) {
-            var cts = kb.fetcher.getHeader(x, 'content-type');
-            if (cts) {
-                for (var j=0; j<cts.length; j++) {
-                    for (var k=0; k < contentTypes.length; k++) {
-                        if (cts[j].indexOf(contentTypes[k]) >= 0) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        };
-        
-        var suppressed = [ 'application/pdf'];
-        if (contentTypeMatch(kb, subject, suppressed)) return null;
-
-        return "view";
-    },
-
-    render: function(subject, myDocument) {
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'imageView')
-        var img = myDocument.createElement("IMG")
-        img.setAttribute('src', subject.uri) // w640 h480
-        img.setAttribute('style','max-width: 100%; max-height: 100%;')
-//        div.style['max-width'] = '640';
-//        div.style['max-height'] = '480';
-        var tr = myDocument.createElement('TR')  // why need tr?
-        tr.appendChild(img)
-        div.appendChild(tr)
-        return div
-    }
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/imagePane.js ##############
-
 // ###### Expanding js/panes/humanReadablePane.js ##############
 /*   Human-readable Pane
 **
@@ -43840,7 +43923,6 @@ tabulator.panes.register({
 
 
 // ###### Finished expanding js/panes/humanReadablePane.js ##############
-
 // ###### Expanding js/panes/dataContentPane.js ##############
 /*      Data content Pane
 **
@@ -44914,7 +44996,7 @@ tabulator.panes.register( {
 // This can operate in one of three modes: when the class of object is given
 // or when the source document from whuch data is taken is given,
 // or if a prepared query object is given.
-// (In principle it could operate with neither class nor document 
+// (In principle it could operate with neither class nor document
 // given but typically
 // there would be too much data.)
 // When the tableClass is not given, it looks for common  classes in the data,
@@ -44936,6 +45018,11 @@ tabulator.panes.register({
     label: function(subject) {
             //if (!tabulator.kb.holds(subject, tabulator.ns.rdf('type'),tabulator.ns.rdfs('Class'))) return null;
             if (!tabulator.kb.any(undefined, tabulator.ns.rdf('type'),subject)) return null;
+            var n = tabulator.kb.statementsMatching(
+                undefined, tabulator.ns.rdf( 'type'), subject).length;
+            if (n == 0) return null;  // None, suppress pane
+            if (n > 15) return null;  // @@ At the moment this pane can be slow with too many @@ fixme by using limits
+            return "List "+n;     // Show how many in hover text
             return tabulator.Util.label(subject)+ " table";
         },
 
@@ -44947,12 +45034,12 @@ tabulator.panes.register({
     }
 });
 
-/* Table view pane -- as a view of a document 
+/* Table view pane -- as a view of a document
 */
 /*
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table2.png",   
+    icon: iconPrefix + "icons/table2.png",
     @@@@@@  Needs to be different from other icons used eg above as eems to be used as to fire up the pane
     @@@@@@ Needs to be lower prio for a document than the data content pane
 
@@ -44962,7 +45049,7 @@ tabulator.panes.register({
 
         // Returns true if the specified list of statements contains
         // information on a single subject.
- 
+
         function singleSubject(statements) {
             var subj = null;
 
@@ -44978,9 +45065,9 @@ tabulator.panes.register({
         }
 
         var sts = tabulator.kb.statementsMatching(undefined, undefined, undefined,
-                                        subject); 
+                                        subject);
 
-        // If all the statements are on a single subject, a table view 
+        // If all the statements are on a single subject, a table view
         // is futile, so hide the table view icon.
 
         if (!singleSubject(sts)) {
@@ -45000,74 +45087,6 @@ tabulator.panes.register({
 */
 
 // ###### Finished expanding js/panes/tableViewPane.js ##############
-// ###### Expanding js/panes/classInstancePane.js ##############
-/*   Class member Pane
-**
-**  This outline pane lists the members of a class
-*/
-tabulator.panes.register( {
-
-    icon: tabulator.Icon.src.icon_instances,
-    
-    name: 'classInstance',
-    
-    label: function(subject) {
-        var n = tabulator.kb.statementsMatching(
-            undefined, tabulator.ns.rdf( 'type'), subject).length;
-        if (n == 0) return null;  // None, suppress pane
-        if (n > 15) return null;  // @@ At the moment this pane can be slow with too many @@ fixme by using limits
-        return "List "+n;     // Show how many in hover text
-    },
-
-    render: function(subject, myDocument) {
-        var kb = tabulator.kb
-        var complain = function complain(message){
-            var pre = myDocument.createElement("pre");
-            pre.setAttribute('style', 'background-color: #eed;');
-            div.appendChild(pre);
-            pre.appendChild(myDocument.createTextNode(message));
-        } 
-        var div = myDocument.createElement("div")
-        div.setAttribute('class', 'instancePane');
-        var sts = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), subject)
-        var already = {}, more = [];
-        sts.map(function(st){already[st.subject.toNT()] = st});
-        for (var nt in kb.findMembersNT(subject)) if (!already[nt])
-            more.push($rdf.st(kb.fromNT(nt), tabulator.ns.rdf( 'type'), subject)); // @@ no provenence
-        if (more.length) complain("There are "+sts.length+" explicit and "+
-                more.length+" implicit members of "+tabulator.Util.label(subject));
-        if (subject.sameTerm(tabulator.ns.rdf('Property'))) {
-                /// Do not find all properties used as properties .. unlesss look at kb index
-        } else if (subject.sameTerm(tabulator.ns.rdfs('Class'))) {
-            var uses = kb.statementsMatching(undefined, tabulator.ns.rdf( 'type'), undefined);
-            var usedTypes = {}; uses.map(function(st){usedTypes[st.object] = st}); // Get unique
-            var used = []; for (var i in usedTypes) used.push($rdf.st(
-                    st.object,tabulator.ns.rdf( 'type'),tabulator.ns.rdfs('Class')));
-            complain("Total of "+uses.length+" type statments and "+used.length+" unique types.");
-        }
-
-        if (sts.length > 10) {
-            var tr = myDocument.createElement('TR');
-            tr.appendChild(myDocument.createTextNode(''+sts.length));
-            //tr.AJAR_statement=sts[i];
-            div.appendChild(tr);
-        }
-
-        tabulator.outline.appendPropertyTRs(div, sts, true, function(pred){return true;})
-
-        if (more.length) {
-            complain('Implcit:')
-            tabulator.outline.appendPropertyTRs(div, more, true, function(pred){return true;})
-        }
-        return div;
-    }
-}, true);
-
-//ends
-
-
-
-// ###### Finished expanding js/panes/classInstancePane.js ##############
 
 // Fallback totally generic:
 // ###### Expanding js/panes/defaultPane.js ##############

@@ -79,12 +79,14 @@ tabulator.loadScript("js/panes/trip/tripPane.js");
 tabulator.loadScript("js/panes/airPane.js");
 
 // Content views
-tabulator.loadScript("js/panes/slideshow/slideshowPane.js");
 
 tabulator.loadScript("js/panes/imagePane.js");   // Basic image view
 
-tabulator.loadScript("js/panes/humanReadablePane.js"); // A web page as a web page
 
+tabulator.loadScript("js/panes/classInstancePane.js"); // Should be above dataContentPane
+tabulator.loadScript("js/panes/slideshow/slideshowPane.js");
+
+tabulator.loadScript("js/panes/humanReadablePane.js"); // A web page as a web page -- how to escape to tabr?
 tabulator.loadScript("js/panes/dataContentPane.js");  // Prefered for a data file
 tabulator.loadScript("js/panes/n3Pane.js");
 tabulator.loadScript("js/panes/RDFXMLPane.js");
@@ -95,7 +97,6 @@ tabulator.loadScript("js/panes/form/pane.js");
 // Generic:
 tabulator.loadScript("js/panes/attach/attachPane.js");
 tabulator.loadScript("js/panes/tableViewPane.js");
-tabulator.loadScript("js/panes/classInstancePane.js");
 
 // Fallback totally generic:
 tabulator.loadScript("js/panes/defaultPane.js");

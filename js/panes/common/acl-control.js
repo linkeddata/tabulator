@@ -258,7 +258,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     e.dataTransfer.dropEffect = 'copy';
                     // console.log('dragover event') // millions of them
                 });
-                /* cut out uin case source of bugs @@@ leave in long term
+
                 row.addEventListener('dragenter', function (e) {
                   console.log('dragenter event dropEffect: ' + e.dataTransfer.dropEffect )
                   this.style.backgroundColor = '#ccc';
@@ -269,7 +269,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     console.log('dragleave event dropEffect: ' + e.dataTransfer.dropEffect )
                     this.style.backgroundColor = 'white';
                 });
-                */
+  
                 row.addEventListener('drop', function (e) {
                     if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
                     console.log("Drop event. dropEffect: " + e.dataTransfer.dropEffect )

@@ -1,11 +1,11 @@
 // mashlib-init.js
 
-tabulator = {};
+if (typeof tabulator === 'undefined') tabulator = {} // allow pre-loading of options
 tabulator.isExtension = false;
 tabulator.mode = 'webapp';
 
 // base for icons etc
-tabulator.scriptBase = 'https://linkeddata.github.io/tabulator/'; // Or app dev overwrite to point to your app's own copy
+tabulator.scriptBase = tabulator.scriptBase  || 'https://linkeddata.github.io/tabulator/'; // Or app dev overwrite to point to your app's own copy
 
 tabulator.iconPrefix = tabulator.scriptBase;
 

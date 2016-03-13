@@ -55,15 +55,17 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
 }
 
 
-// Read and conaonicalize the ACL for x in aclDoc
+// Read and canonicalize the ACL for x in aclDoc
 //
 // Accumulate the access rights which each agent or class has
 //
-tabulator.panes.utils.readACL = function(x, aclDoc, kb) {
+tabulator.panes.utils.readACL = function(x, aclDoc, kb, getDefaults) {
     var kb = kb || tabulator.kb;
+    var ns = tabulator.ns
+    var predicate = getDefaults ? ns.acl('defaultForNew') : ns.acl('accessTo')
     var ACL = tabulator.ns.acl;
     var ac = {'agent': [], 'agentClass': []};
-    var auths = kb.each(undefined, ACL('accessTo'), x);
+    var auths = kb.each(undefined, predicate, x);
     for (var pred in { 'agent': true, 'agentClass': true}) {
 //    ['agent', 'agentClass'].map(function(pred){
         auths.map(function(a){
@@ -169,15 +171,20 @@ tabulator.panes.utils.makeACLGraph = function(kb, x, ac, aclDoc) {
 
 //    Write ACL graph to store from combo
 //
-tabulator.panes.utils.makeACLGraphbyCombo = function(kb, x, byCombo, aclDoc) {
+tabulator.panes.utils.makeACLGraphbyCombo = function(kb, x, byCombo, aclDoc, main, defa) {
     var ACL = tabulator.ns.acl;
     for (combo in byCombo) {
         var modeURIs = combo.split('\n');
         var short = modeURIs.map(function(u){return u.split('#')[1]}).join('');
+        if (defa && !main) short += 'Default'; // don't muddle authorizations
         var a = kb.sym(aclDoc.uri + '#' + short);
         kb.add(a, tabulator.ns.rdf('type'), ACL('Authorization'), aclDoc);
-        kb.add(a, ACL('accessTo'), x, aclDoc);
-
+        if (main){
+          kb.add(a, ACL('accessTo'), x, aclDoc);
+        }
+        if (defa){
+          kb.add(a, ACL('defaultForNew'), x, aclDoc);
+        }
         for (var i=0; i < modeURIs.length; i++) {
             kb.add(a, ACL('mode'), kb.sym(modeURIs[i]), aclDoc);
         }
@@ -187,6 +194,32 @@ tabulator.panes.utils.makeACLGraphbyCombo = function(kb, x, byCombo, aclDoc) {
             kb.add(a, ACL(pred), kb.sym(ag), aclDoc);
         }
     }
+}
+
+//    Debugguing short strings for dumping ACL
+//  and who knows maybe in the UI
+//
+tabulator.panes.utils.ACLToString = function(ac) {
+  return tabulator.panes.utils.comboToString(
+    tabulator.panes.utils.ACLbyCombination(ac))
+}
+tabulator.panes.utils.comboToString = function(byCombo) {
+    str = ''
+    for (combo in byCombo) {
+        var modeURIs = combo.split('\n')
+        var initials = modeURIs.map(function(u){return u.split('#')[1][0]}).join('')
+        str += initials + ':'
+        var pairs = byCombo[combo];
+        for (i=0; i< pairs.length; i++) {
+            var pred = pairs[i][0], ag = $rdf.sym(pairs[i][1]);
+            str += (pred === 'agent') ? '@' : ''
+            str += (ag.sameTerm(tabulator.ns.foaf('Agent')) ? '*'
+                :  tabulator.Util.label(ag))
+            if (i < pairs.length -1 ) str += ','
+        }
+        str += ';'
+    }
+    return '{' + str.slice(0, -1) + '}' // drop extra semicolon
 }
 
 //    Write ACL graph to string
@@ -209,7 +242,7 @@ tabulator.panes.utils.putACLObject = function(kb, x, ac, aclDoc, callback) {
 //
 tabulator.panes.utils.putACLbyCombo = function(kb, x, byCombo, aclDoc, callback) {
     var kb2 = $rdf.graph();
-    tabulator.panes.utils.makeACLGraphbyCombo(kb2, x, byCombo, aclDoc);
+    tabulator.panes.utils.makeACLGraphbyCombo(kb2, x, byCombo, aclDoc, true);
 
     //var str = tabulator.panes.utils.makeACLString = function(x, ac, aclDoc);
     var updater =  new tabulator.rdf.sparqlUpdate(kb);
@@ -219,7 +252,7 @@ tabulator.panes.utils.putACLbyCombo = function(kb, x, byCombo, aclDoc, callback)
             callback(ok, message);
         } else {
             kb.fetcher.unload(aclDoc);
-            tabulator.panes.utils.makeACLGraphbyCombo(kb, x, byCombo, aclDoc);
+            tabulator.panes.utils.makeACLGraphbyCombo(kb, x, byCombo, aclDoc, true);
             kb.fetcher.requested[aclDoc.uri] = 'done'; // missing: save headers
             callback(ok)
         }

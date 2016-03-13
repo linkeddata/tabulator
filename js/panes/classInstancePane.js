@@ -32,6 +32,10 @@ tabulator.panes.register( {
         div.setAttribute('class', 'instancePane');
 
         // If this is an LDP container just list the directory
+        var noHiddenFiles = function(st){
+          var lastbit = st.object.uri.slice(st.object.dir().length +1)
+          return !(lastbit.length && lastbit[0] === '.' || lastbit.slice(-3) === '.acl' );
+        }
         var contentsStatements = kb.statementsMatching(subject, tabulator.ns.ldp( 'contains'));
         if (contentsStatements.length) {
             // complain("Contents:", 'white'); // filter out hidden files?

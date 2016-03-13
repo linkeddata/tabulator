@@ -432,10 +432,6 @@ tabulator.OutlineObject = function(doc) {
         return td_p;
     } //outline_predicateTD
 
-    function makeExpandedHeaderTR(myDocument) {
-        return tr;
-    };
-
     function expandedHeaderTR(subject, requiredPane) {
         var tr = myDocument.createElement('tr');
         var td = myDocument.createElement('td');
@@ -447,7 +443,6 @@ tabulator.OutlineObject = function(doc) {
         td.appendChild(myDocument.createElement('strong'));
         tr.appendChild(td);
 
-        // var tr = makeExpandedHeaderTR(myDocument); //This sets the private tr as a clone of the public tr
         tr.firstChild.setAttribute('about', subject.toNT());
         tr.firstChild.childNodes[1].appendChild(myDocument.createTextNode(tabulator.Util.label(subject)));
         tr.firstPane = null;
@@ -492,13 +487,16 @@ tabulator.OutlineObject = function(doc) {
                             if (t.nodeName == 'TABLE') break;
                         }
                         if  (t.nodeName != 'TABLE') throw "outline: internal error: "
-                        var removePanes = function(exclude) {
+                        var removePanes = function(specific) {
                             for (var d = t.firstChild; d; d = d.nextSibling) {
                                 if (typeof d.pane != 'undefined') {
-                                    if (d.pane == exclude) { // shift means keep others
+                                    if (!specific || d.pane === specific) {
+                                        if (d.paneButton) {
+                                            d.paneButton.setAttribute('class', 'paneHidden')
+                                        }
                                         removeAndRefresh(d)
                                         // If we just delete the node d, ffox doesn't refresh the display properly.
-                                        state = 'paneHidden';
+                                        //state = 'paneHidden';
                                         if (d.pane.requireQueryButton && t.parentNode.className /*outer table*/
                                             && numberOfPanesRequiringQueryButton == 1 && myDocument.getElementById('queryButton'))
                                             myDocument.getElementById('queryButton').setAttribute('style','display:none;');
@@ -525,11 +523,12 @@ tabulator.OutlineObject = function(doc) {
                             if (second) t.insertBefore(paneDiv, second);
                             else t.appendChild(paneDiv);
                             paneDiv.pane = pane;
+                            paneDiv.paneButton = ico
                         }
 
                         var state = ico.getAttribute('class')
                         if (state === 'paneHidden' ){
-                            if (event.shiftKey) {
+                            if (!event.shiftKey) { // shift means multiple select
                                 removePanes();
                             }
                             renderPane(pane);
@@ -551,7 +550,8 @@ tabulator.OutlineObject = function(doc) {
                 }; // listen
 
                 listen(ico, pane);
-                ico.setAttribute('class',  (i!=paneNumber) ? 'paneHidden':'paneShown')
+                ico.setAttribute('class',  (i != paneNumber) ? 'paneHidden':'paneShown')
+                if (i === paneNumber) tr.paneButton = ico;
                 tr.firstChild.childNodes[1].appendChild(ico);
             }
         }
@@ -638,6 +638,7 @@ tabulator.OutlineObject = function(doc) {
                     myDocument.getElementById('queryButton').removeAttribute('style');
                 table.appendChild(paneDiv);
                 paneDiv.pane = tr1.firstPane;
+                paneDiv.paneButton = tr1.paneButton;
             }
 
             return table
@@ -645,40 +646,6 @@ tabulator.OutlineObject = function(doc) {
         } else {  // New display of existing table, keeping expanded bits
 
             tabulator.log.info('Re-expand: '+table);
-            /*    /// Removed as evil.   Destroys user's work by reloading.  SHould just insert new info
-            try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
-            catch(e){}   // kludge... Todo: remove this (seeAlso UserInput::clearInputAndSave)
-            var row, s
-            var expandedNodes = {}
-
-            for (row = table.firstChild; row; row = row.nextSibling) { // Note which p,o pairs are exppanded
-                if (row.childNodes[1]
-                    && row.childNodes[1].firstChild.nodeName == 'TABLE') {
-                    s = row.AJAR_statement
-                    if (!expandedNodes[s.predicate.toString()]) {
-                        expandedNodes[s.predicate.toString()] = {}
-                    }
-                    expandedNodes[s.predicate.toString()][s.object.toString()] =
-                        row.childNodes[1].childNodes[1]
-                }
-            }
-
-            table = propertyTable(subject, undefined, pane)  // Re-build table
-
-            for (row = table.firstChild; row; row = row.nextSibling) {
-                s = row.AJAR_statement
-                if (s) {
-                    if (expandedNodes[s.predicate.toString()]) {
-                        var node =
-                            expandedNodes[s.predicate.toString()][s.object.toString()]
-                        if (node) {
-                            row.childNodes[1].replaceChild(node,
-                                            row.childNodes[1].firstChild)
-                        }
-                    }
-                }
-            }
-    */
             // do some other stuff here
             return table
         }

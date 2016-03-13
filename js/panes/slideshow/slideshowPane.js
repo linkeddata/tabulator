@@ -16,6 +16,14 @@ tabulator.panes.utils.addStyleSheet = function(dom, href) {
   dom.getElementsByTagName("head")[0].appendChild(link)
 }
 
+tabulator.panes.utils.isImage = function(file){
+  var imageExtensions = {'jpg': 1, 'png':1, 'jpeg':1, 'gif':1}
+  return  (tabulator.ns.dct('Image') in tabulator.kb.findTypeURIs(file)
+        || file.uri.split('.').slice(-1)[0] in imageExtensions) // @@cheating
+}
+
+
+
 tabulator.loadScript("js/panes/slideshow/better-simple-slideshow/js/better-simple-slideshow.js");
 
 // load also js/panes/slideshow/better-simple-slideshow/css/simple-slideshow-styles.css
@@ -36,9 +44,13 @@ tabulator.panes.register( {
     var ns = tabulator.ns;
     var t = kb.findTypeURIs(subject);
     if (t[ns.ldp('Container').uri]|| t[ns.ldp('BasicContainer').uri]) {
-      return "Slideshow";
+      var contents = kb.each(subject, ns.ldp('contains'))
+      var count = 0; contents.map(function(file){
+          if(tabulator.panes.utils.isImage(file)) count++
+      })
+      return count > 0 ? "Slideshow" : null;
     }
-    return null; // No under other circumstances
+    return null;
   },
 
   // See https://github.com/leemark/better-simple-slideshow
@@ -61,8 +73,9 @@ tabulator.panes.register( {
       noun = "image"
       predicate = ns.ldp('contains')
     }
-    var images = kb.each(subject, predicate);
+    var images = kb.each(subject, predicate); // @@ random order?
     for (i=0; i<images.length; i++){
+      if (!tabulator.panes.utils.isImage(images[i])) continue;
       var figure = div.appendChild(dom.createElement('figure'))
       var img = figure.appendChild(dom.createElement('img'))
       img.setAttribute('src', images[i].uri)

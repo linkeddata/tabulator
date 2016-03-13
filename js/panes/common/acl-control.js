@@ -118,10 +118,14 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
     var box = MainRow.appendChild(dom.createElement('table'));
     var bottomRow = table.appendChild(dom.createElement('tr'));
 
-    var ACLControlEditable = function(box, doc, aclDoc, kb, options) {
+    var bigButtonStyle = 'border-radius: 0.3em; background-color: white; border: 0.01em solid #888;'
 
-        var ac = tabulator.panes.utils.readACL(doc, aclDoc, kb); // Note kb might not be normal one
-        var byCombo = tabulator.panes.utils.ACLbyCombination(ac);
+    var ACLControlEditable = function(box, doc, aclDoc, kb, options) {
+        var defaultOrMain = options.doingDefault ? 'default' : 'main'
+        options = options || {}
+        var ac = tabulator.panes.utils.readACL(doc, aclDoc, kb, options.doingDefaults); // Note kb might not be normal one
+        var byCombo;
+        box[defaultOrMain] = byCombo = tabulator.panes.utils.ACLbyCombination(ac);
         var kToCombo = function(k){
             var y = [ 'Read', 'Append', 'Write', 'Control'];
             var combo = [];
@@ -167,10 +171,36 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             }
         }
 
+        box.saveBack = function(callback){
+          var kb2 = $rdf.graph()
+          if (!box.isContainer) {
+              tabulator.panes.utils.makeACLGraphbyCombo(kb2, doc, box.mainByCombo, aclDoc, true);
+          } else if (box.defaultsDiffer){ // Pair of controls
+              tabulator.panes.utils.makeACLGraphbyCombo(kb2, doc, box.mainByCombo, aclDoc, true);
+              tabulator.panes.utils.makeACLGraphbyCombo(kb2, doc, box.defByCombo, aclDoc, false, true);
+          } else { // Linked controls
+              tabulator.panes.utils.makeACLGraphbyCombo(kb2, doc, box.mainByCombo, aclDoc, true, true);
+          }
+          var updater =  tabulator.updater = tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
+          updater.put(aclDoc, kb2.statementsMatching(undefined, undefined, undefined, aclDoc),
+              'text/turtle', function(uri, ok, message){
+              if (!ok) {
+                console.log("ACL file save failed: " + message)
+              } else {
+                  kb.fetcher.unload(aclDoc);
+                  kb.add(kb2.statements);
+                  kb.fetcher.requested[aclDoc.uri] = 'done'; // missing: save headers
+                  console.log("ACL modification: success!")
+              }
+              callback(ok);
+          });
+
+        }
+
         var renderCombo = function(byCombo, combo){
             var row = box.appendChild(dom.createElement('tr'));
             row.combo = combo;
-            row.setAttribute('style', 'border: 3px solid black; padding: 0.4em; margin: 4px solid red; color: '
+            row.setAttribute('style', 'color: '
                 + (kToColor[k] || 'black') + ';')
 
             var left = row.appendChild(dom.createElement('td'));
@@ -208,6 +238,9 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                   tabulator.panes.utils.personTR(
                     dom, $rdf.sym(pred), $rdf.sym(obj), opt));
             };
+
+
+
 
             var syncCombo = function(combo) {
                 var arr = byCombo[combo];
@@ -269,7 +302,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     console.log('dragleave event dropEffect: ' + e.dataTransfer.dropEffect )
                     this.style.backgroundColor = 'white';
                 });
-  
+
                 row.addEventListener('drop', function (e) {
                     if (e.preventDefault) e.preventDefault(); // stops the browser from redirecting off to the text.
                     console.log("Drop event. dropEffect: " + e.dataTransfer.dropEffect )
@@ -298,7 +331,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                         var uris = [ e.dataTransfer.getData('Text') ];
                         console.log("@@ WARNING non-standrad drop event: " + uris[0]);
                     }
-                    console.log("Dropped URI list: 2 " + uris);
+                    console.log("Dropped URI list (2): " + uris);
                     if (uris) {
                         uris.map(function(u){
                             if (!(combo in byCombo)) {
@@ -308,15 +341,12 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                             removeAgentFromCombos(u); // Combos are mutually distinct
                             byCombo[combo].push(['agent', u]);
                             console.log('setting access by ' + u + ' to ' + subject)
-                            tabulator.panes.utils.putACLbyCombo(kb, doc, byCombo, aclDoc, function(ok, message){
-                                if (ok) {
-                                    thisEle.style.backgroundColor = 'white'; // restore look to before drag
-                                    syncPanel();
-                                    console.log("ACL modification: success!")
-                                } else {
-                                    console.log("ACL file save failed: " + message)
-                                }
-                            });
+                            box.saveBack(function(ok){
+                              if (ok) {
+                                thisEle.style.backgroundColor = 'white'; // restore look to before drag
+                                syncPanel();
+                              }
+                            })
                         })
                     }
                   return false;
@@ -340,48 +370,8 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 renderCombo(byCombo, combo);
             } // if
         } // for
+        return byCombo
     } // ACLControlEditable
-
-
-    var ACLControl = function(box, doc, aclDoc, kb) {
-        var authorizations = kb.each(undefined, ACL('accessTo'), doc, aclDoc); // ONLY LOOK IN ACL DOC
-        if (authorizations.length === 0) {
-            statusBlock.textContent += "Access control file exists but contains no authorizations! " + aclDoc + ")";
-        }
-        for (i=0; i < authorizations.length; i++) {
-            var row = box.appendChild(dom.createElement('tr'));
-            var rowdiv1 = row.appendChild(dom.createElement('div'));
-
-            rowdiv1.setAttribute('style', 'margin: 1em; border: 0.1em solid #444; border-radius: 0.5em; padding: 1em;');
-            rowtable1 = rowdiv1.appendChild(dom.createElement('table'));
-            rowrow = rowtable1.appendChild(dom.createElement('tr'));
-            var left = rowrow.appendChild(dom.createElement('td'));
-            var middle = rowrow.appendChild(dom.createElement('td'));
-            middle.textContent = "can:"
-            middle.setAttribute('style', 'font-size:100%; padding: 1em;');
-            var leftTable = left.appendChild(dom.createElement('table'));
-            var right = rowrow.appendChild(dom.createElement('td'));
-            var rightTable = right.appendChild(dom.createElement('table'));
-            var a = authorizations[i];
-
-            kb.each(a,  ACL('agent')).map(function(x){
-                var tr = leftTable.appendChild(dom.createElement('tr'));
-                tabulator.panes.utils.setName(tr, x);
-                tr.setAttribute('style', 'min-width: 12em');
-            });
-
-            kb.each(a,  ACL('agentClass')).map(function(x){
-                var tr = leftTable.appendChild(dom.createElement('tr'));
-                tr.textContent = tabulator.Util.label(x) + ' *'; // for now // later add # or members
-            });
-
-            kb.each(a,  ACL('mode')).map(function(x){
-                var tr = rightTable.appendChild(dom.createElement('tr'));
-                tr.textContent = tabulator.Util.label(x); // for now // later add # or members
-            });
-        }
-    }
-
 
     tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
         var defa = !p2;
@@ -402,6 +392,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
 
                     var editPlease = bottomRow.appendChild(dom.createElement('button'));
                     editPlease.textContent = "Set specific sharing\nfor this " + noun;
+                    editPlease.style = bigButtonStyle;
                     editPlease.addEventListener('click', function(event) {
                         updater.put(targetACLDoc, kb2.statements,
                             'text/turtle', function(uri, ok, message){
@@ -418,42 +409,98 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 } // defaults.length
             } else { // Not using defaults
 
-                ACLControlEditable(box, targetDoc, targetACLDoc, kb, {modify: true}); // yes can edit
-                box.style = 'color: black;';
-
                 var useDefault;
-                var addDefaultButton = function() {
+                var addDefaultButton = function(prospectiveDefaultHolder) {
                     useDefault = bottomRow.appendChild(dom.createElement('button'));
-                    useDefault.textContent = "Stop specific sharing for this " + noun + " -- just use default.";
+                    useDefault.textContent = "Stop specific sharing for this " + noun
+                     + " -- just use default" // + tabulator.Util.label(thisDefaultHolder);
+                    if (prospectiveDefaultHolder){
+                      useDefault.textContent += " for " + tabulator.Util.label(prospectiveDefaultHolder)
+                    }
+                    useDefault.style = bigButtonStyle
                     useDefault.addEventListener('click', function(event) {
                         tabulator.fetcher.webOperation('DELETE', targetACLDoc)
-                            .then(function(xhr) {
-                                statusBlock.textContent = " The sharing for this " + noun + " is now the default.";
-                                bottomRow.removeChild(useDefault);
-                                box.style = 'color: #777;';
-
-                            })
-                            .catch(function(e){
-                                statusBlock.textContent += " (Error deleting access control file: "+message+")";
-                            });
-
+                        .then(function(xhr) {
+                            statusBlock.textContent = " The sharing for this " + noun + " is now the default.";
+                            bottomRow.removeChild(useDefault);
+                            box.style = 'color: #777;';
+                        })
+                        .catch(function(e){
+                            statusBlock.textContent += " (Error deleting access control file: "+message+")";
+                        });
                     });
                 }
-                addDefaultButton();
+                var prospectiveDefaultHolder
 
-                /*  This is for the case of a an addressbook group only where the ACLs of cards are
-                complex relationship with the groups..
-                var checkIndividualACLsButton;
-                var addCheckButton = function() {
-                    bottomRow.appendChild(dom.createElement('br'));
-                    checkIndividualACLsButton = bottomRow.appendChild(dom.createElement('button'));
-                    checkIndividualACLsButton.textContent = "Check individal cards ACLs";
-                    checkIndividualACLsButton.addEventListener('click', function(event) {
-                    });
+                var str = targetDoc.uri.split('#')[0]
+                var p = str.slice(0,-1).lastIndexOf('/')
+                var q = str.indexOf('//')
+                var targetDocDir =  ((q >= 0 && p < q +2 )|| p < 0 ) ? null : str.slice(0, p+1);
+
+                if (targetDocDir) {
+                  var prospectiveDefaultHolder
+                  tabulator.panes.utils.getACLorDefault($rdf.sym(targetDocDir), function(ok2, p22, targetDoc2, targetACLDoc2, defaultHolder2, defaultACLDoc2){
+                    if (ok2) {
+                      prospectiveDefaultHolder = p22? targetDoc2 : defaultHolder2;
+                    }
+                    addDefaultButton($rdf.sym(targetDocDir));
+                  })
+                } else {
+                  addDefaultButton();
                 }
-                addCheckButton();
-                */
 
+                box.addControlForDefaults = function() {
+                  box.notice.textContent = "Defaults for things within this folder:"
+                  var mergeButton = tabulator.panes.utils.clearElement(box.offer).appendChild(dom.createElement('button'))
+                  mergeButton.innerHTML = "<p>Set default for folder contents to<br />just track the sharing for the folder</p>"
+                  mergeButton.style = bigButtonStyle;
+                  mergeButton.addEventListener('click', function(e){
+                      delete box.defaultsDiffer
+                      delete box.defByCombo
+                      box.saveBack(function(ok){
+                        if (ok) {
+                          box.removeControlForDefaults()
+                        }
+                      })
+                  }, false)
+                  box.defaultsDiffer = true
+                  box.defByCombo = ACLControlEditable(box, targetDoc, targetACLDoc, kb, {modify: true, doingDefaults: true});
+                }
+                box.removeControlForDefaults = function(){
+                  statusBlock.textContent = "This is also the default for things in this folder."
+                  box.notice.textContent = "Sharing for things within the folder currently tracks sharing for the folder."
+                  var splitButton = tabulator.panes.utils.clearElement(box.offer).appendChild(dom.createElement('button'))
+                  splitButton.innerHTML = "<p>Set the sharing of folder contets <br />separately from the sharing for the folder</p>"
+                  splitButton.style = bigButtonStyle;
+                  splitButton.addEventListener('click', function(e){
+                      box.addControlForDefaults()
+                      statusBlock.textContent = ''
+                  })
+                  while (box.divider.nextSibling) {
+                    box.removeChild(box.divider.nextSibling)
+                  }
+                  statusBlock.textContent = "This is now also the default for things in this folder."
+                }
+
+                box.isContainer = targetDoc.uri.slice(-1) === '/' // Give default for all directories
+                // @@ Could also set from classes ldp:Container etc etc
+                if (box.isContainer){
+                    var ac = tabulator.panes.utils.readACL(targetDoc, targetACLDoc, kb);
+                    var acd = tabulator.panes.utils.readACL(targetDoc, targetACLDoc, kb, true);
+                    box.defaultsDiffer = !tabulator.panes.utils.sameACL(ac, acd);
+                    console.log("Defaults differ ACL: " + box.defaultsDiffer)
+                }
+                box.mainByCombo = ACLControlEditable(box, targetDoc, targetACLDoc, kb, {modify: true}); // yes can edit
+                box.divider = box.appendChild(dom.createElement('tr'))
+                box.notice = box.divider.appendChild(dom.createElement('td'))
+                box.offer = box.divider.appendChild(dom.createElement('td'))
+                box.notice.setAttribute('colspan', '2');
+
+                if (box.defaultsDiffer){
+                  box.addControlForDefaults();
+                } else {
+                  box.removeControlForDefaults();
+                }
             } // Not using defaults
         }
 

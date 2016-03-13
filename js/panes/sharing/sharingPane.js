@@ -71,7 +71,13 @@ tabulator.panes.register( {
           box.innerHTML = "ACL control box Failed: " + body
         }
       }))
-    })
+    }).catch( // If we don't have a profile, we can manaagwe wihout esp when testing
+      box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, noun, function(ok, body){
+        if (!ok) {
+          box.innerHTML = "ACL control box Failed (with no profile): " + body
+        }
+      }))
+    )
     div.appendChild(pane);
     return div;
   }

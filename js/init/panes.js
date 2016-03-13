@@ -91,6 +91,8 @@ tabulator.loadScript("js/panes/dataContentPane.js");  // Prefered for a data fil
 tabulator.loadScript("js/panes/n3Pane.js");
 tabulator.loadScript("js/panes/RDFXMLPane.js");
 
+tabulator.loadScript("js/panes/dynamic/dynamicPanes.js"); // warp etc
+
 // User configured:
 tabulator.loadScript("js/panes/form/pane.js");
 

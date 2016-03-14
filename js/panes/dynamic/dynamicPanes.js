@@ -46,8 +46,9 @@ tabulator.panes.panesFromData = function(subject){
     }
   }
 }
-
-tabulator.Icon.src.icon_warp = tabulator.scriptBase + 'js/panes/common/icons/noun_113198.svg';
+// black rocket not ongh-pages: js/panes/common/icons/noun_113198.svg
+// red rocket:  js/panes/warp/icons/warp-icon.png
+tabulator.Icon.src.icon_warp = tabulator.scriptBase + 'js/panes/warp/icons/warp-icon.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_warp] = 'warp'
 tabulator.panes.register({
 

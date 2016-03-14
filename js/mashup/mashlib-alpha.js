@@ -28492,9 +28492,9 @@ if ((typeof module !== 'undefined' && module !== null ? module.exports : void 0)
  * Firing up a mail client for mid:  (message:) URLs
  */
 
-var asyncLib = require('async')
+var asyncLib = require('async') // @@ Goal: remove this dependency
 var jsonld = require('jsonld')
-var N3 = require('n3')
+var N3 = require('n3')  // @@ Goal: remove this dependency
 
 $rdf.Fetcher = function (store, timeout, async) {
   this.store = store
@@ -29918,8 +29918,10 @@ $rdf.Fetcher = function (store, timeout, async) {
                   }
 
                   sf.requested[xhr.resource.uri] = 'redirected'
+                  sf.redirectedTo[xhr.ressource.uri] = newURI
 
                   var xhr2 = sf.requestURI(newURI, xhr.resource)
+                  xhr2.originalXHR = xhr  // use this for finding base
                   if (xhr2 && xhr2.req) {
                     kb.add(
                       xhr.req,
@@ -30311,7 +30313,7 @@ if (typeof exports !== 'undefined') {
   // Leak a global regardless of module system
   root['$rdf'] = $rdf
 }
-$rdf.buildTime = "2016-03-12T17:54:26";
+$rdf.buildTime = "2016-03-14T09:10:14";
 })(this);
 
 },{"async":1,"jsonld":30,"n3":32,"xmldom":40,"xmlhttprequest":undefined}]},{},[])("rdflib")
@@ -44444,8 +44446,9 @@ tabulator.panes.panesFromData = function(subject){
     }
   }
 }
-
-tabulator.Icon.src.icon_warp = tabulator.scriptBase + 'js/panes/common/icons/noun_113198.svg';
+// black rocket not ongh-pages: js/panes/common/icons/noun_113198.svg
+// red rocket:  js/panes/warp/icons/warp-icon.png
+tabulator.Icon.src.icon_warp = tabulator.scriptBase + 'js/panes/warp/icons/warp-icon.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_warp] = 'warp'
 tabulator.panes.register({
 

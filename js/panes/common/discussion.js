@@ -7,22 +7,22 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
     var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
     var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-    
+
     options = options || {};
-    
+
     var newestFirst = !!options.newestFirst;
-    
+
     var messageBodyStyle = 'width: 90%; font-size:100%; \
 	    background-color: white; border: 0.07em solid gray; padding: 0.15em; margin: 0.1em 1em 0.1em 1em'
 //	'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  background-color: white; white-space: pre-wrap; padding: 0.1em;'
-    
+
     var div = dom.createElement("div")
     var messageTable; // Shared by initial build and addMessageFromBindings
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri? kb.sym(me_uri) : null;
 
-    var updater = new tabulator.rdf.sparqlUpdate(kb);
+    var updater = tabulator.updater || tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
 
     var anchor = function(text, term) {
         var a = dom.createElement('a');
@@ -39,15 +39,15 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         div.appendChild(pre);
         pre.appendChild(dom.createTextNode(message));
         return pre
-    } 
-    
+    }
+
     var console = {
         log: function(message) {mention(message, 'color: #111;')},
         warn: function(message) {mention(message, 'color: #880;')},
         error: function(message) {mention(message, 'color: #800;')}
     };
 
-    
+
     //       Form for a new message
     //
     var newMessageForm = function() {
@@ -59,14 +59,14 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         form.appendChild(middle);
         form.appendChild(rhs);
         form.AJAR_date = "9999-01-01T00:00:00Z"; // ISO format for field sort
-        
+
         var sendMessage = function() {
             // titlefield.setAttribute('class','pendingedit');
             // titlefield.disabled = true;
             field.setAttribute('class','pendingedit');
             field.disabled = true;
             sts = [];
-            
+
             var now = new Date();
             var timestamp = ''+ now.getTime();
             var dateStamp = $rdf.term(now);
@@ -88,7 +88,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
                                     '?date':  dateStamp,
                                     '?creator': me};
                     addMessageFromBindings(bindings);
-                    
+
                     field.value = ''; // clear from out for reuse
                     field.setAttribute('class','');
                     field.disabled = false;
@@ -115,7 +115,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
 
         return form;
     };
-    
+
     var nick = function(person) {
         var s = tabulator.kb.any(person, tabulator.ns.foaf('nick'));
         if (s) return ''+s.value
@@ -123,7 +123,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     }
 
 /////////////////////////////////////////////////////////////////////////
-    
+
     var syncMessages = function(about, messageTable) {
         var displayed = {};
         for (var ele = messageTable.firstChild; ele ;ele = ele.nextSibling) {
@@ -152,9 +152,9 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     }
 
     var addMessageFromBindings = function(bindings) {
-        return addMessage(bindings['?msg']);            
+        return addMessage(bindings['?msg']);
     }
-    
+
     var deleteMessage = function(message) {
         deletions = kb.statementsMatching(message).concat(
                 kb.statementsMatching(undefined, undefined, message));
@@ -166,7 +166,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
             };
         });
     };
-    
+
     var addMessage = function(message) {
         var tr = dom.createElement('tr');
         var date = kb.any(message,  DCT('created'));
@@ -189,10 +189,10 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         if (!done) {
             messageTable.appendChild(tr);
         }
-        
+
         var  td1 = dom.createElement('td');
         tr.appendChild(td1);
-        
+
         var creator = kb.any(message, ns.foaf('maker'));
         var nickAnchor = td1.appendChild(anchor(nick(creator), creator));
         tabulator.fetcher.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
@@ -200,21 +200,21 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         });
         td1.appendChild(dom.createElement('br'));
         td1.appendChild(anchor(tabulator.panes.utils.shortDate(dateString), message));
-        
+
         var  td2 = dom.createElement('td');
         tr.appendChild(td2);
-        var pre = dom.createElement('p')            
+        var pre = dom.createElement('p')
         pre.setAttribute('style', messageBodyStyle)
         td2.appendChild(pre);
-        pre.textContent = kb.any(message, ns.sioc('content')).value;  
-        
+        pre.textContent = kb.any(message, ns.sioc('content')).value;
+
         var td3 = dom.createElement('td');
         tr.appendChild(td3);
-        
+
         var delButton = dom.createElement('button');
         td3.appendChild(delButton);
         delButton.textContent = "-";
-        
+
         tr.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
         delButton.setAttribute('class', 'hoverControlHide');
         delButton.setAttribute('style', 'color: red;');
@@ -232,7 +232,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
             td3.appendChild(sureButton).addEventListener('click', function(e) {
                 td3.removeChild(sureButton);
                 td3.removeChild(cancelButton);
-                deleteMessage(message);   
+                deleteMessage(message);
             }, false);
         }, false);
     };
@@ -252,23 +252,22 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
             messageTable.appendChild(tr); // not newestFirst
         }
     };
-    
-    var msg = kb.any(subject, WF('message'));
-    if (msg != undefined) {
-        var str = ''
-        // Do this with a live query to pull in messages from web
-        var query = new $rdf.Query('Messages');
-        var v = {};
-        ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
-             query.vars.push(v[x]=$rdf.variable(x))});
-        query.pat.add(subject, WF('message'), v['msg']);
-//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
-        query.pat.add(v['msg'], ns.dct('created'), v['date']);
-        query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
-        query.pat.add(v['msg'], ns.sioc('content'), v['content']);
-        var esc = tabulator.Util.escapeForXML;
-        // dump("\nquery.pat = "+query.pat+"\n");
 
+    var query, msg = kb.any(subject, WF('message'));
+    if (msg != undefined) {
+        // Do this with a live query to pull in messages from web
+        if (options.query){
+          query = options.query
+        } else {
+          query = new $rdf.Query('Messages');
+          var v = {};
+          ['msg', 'date', 'creator', 'content'].map(function(x){
+               query.vars.push(v[x]=$rdf.variable(x))});
+          query.pat.add(subject, WF('message'), v['msg']);
+          query.pat.add(v['msg'], ns.dct('created'), v['date']);
+          query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
+          query.pat.add(v['msg'], ns.sioc('content'), v['content']);
+        }
         kb.query(query, addMessageFromBindings);
     }
 /*
@@ -285,14 +284,11 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         });
     }, false);
     div.appendChild(refreshButton);
-*/    
+*/
     div.refresh = function() {
         syncMessages(subject, messageTable);
     };
-    
+
 
     return div;
 };
-
-
-

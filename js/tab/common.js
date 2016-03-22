@@ -9,7 +9,7 @@ if (typeof tabulator.Util.nextVariable == "undefined") tabulator.Util.nextVariab
 tabulator.Util.newVariableName = function() {
     return 'v' + tabulator.Util.nextVariable++;
 }
-tabulator.Util.clearVariableNames = function() { 
+tabulator.Util.clearVariableNames = function() {
     tabulator.Util.nextVariable = 0;
 }
 
@@ -20,8 +20,8 @@ tabulator.Util.clearVariableNames = function() {
 */
 
 tabulator.Util.stackString = function(e){
-	
-    var str = "" + e + "\n";    
+
+    var str = "" + e + "\n";
     if (!e.stack) {
             return str + 'No stack available.\n'
     };
@@ -40,7 +40,7 @@ tabulator.Util.stackString = function(e){
             toprint.push(chunks);
     };
     //toprint.reverse();  No - I prefer the latest at the top by the error message -tbl
-    
+
     for (var i = 0; i < toprint.length; i++) {
             str += '  ' + toprint[i][1] + '\n    '+ toprint[i][0];
     };
@@ -51,7 +51,7 @@ tabulator.Util.stackString = function(e){
 
 
 
-// Now  --afetr the rdflib.js scripts set up a dummy -- 
+// Now  --afetr the rdflib.js scripts set up a dummy --
 // overwrite RDF's dummy logger with Tabulator's :
 // Overwrite the default dummy logger in rdf/Utils.js with a real one//
 // $rdf.log = tabulator.log;    // @@ Doesn't work :-( tbl
@@ -116,7 +116,7 @@ tabulator.Util.ancestor = function(target, tagName) {
         try {
             if (level.tagName == tagName) return level;
         } catch(e) { // can hit "TypeError: can't access dead object" in ffox
-            return undefined; 
+            return undefined;
         };
     }
     return undefined
@@ -133,7 +133,7 @@ tabulator.Util.getAbout = function(kb, target) {
             return kb.fromNT(aa);
 //        } else {
 //            if (level.tagName=='TR') return undefined;//this is to prevent literals passing through
-                    
+
         }
     }
     tabulator.log.debug("getAbout: No about found");
@@ -145,7 +145,7 @@ tabulator.Util.getTerm = function(target){
     var statementTr=target.parentNode;
     var st=statementTr?statementTr.AJAR_statement:undefined;
 
-    var className=st?target.className:'';//if no st then it's necessary to use getAbout    
+    var className=st?target.className:'';//if no st then it's necessary to use getAbout
     switch (className){
         case 'pred':
         case 'pred selected':
@@ -158,7 +158,7 @@ tabulator.Util.getTerm = function(target){
             else
                 return st.subject;
             break;
-        case '':    
+        case '':
         case 'selected': //header TD
             return tabulator.Util.getAbout(tabulator.kb,target); //kb to be changed
         case 'undetermined selected':
@@ -167,7 +167,7 @@ tabulator.Util.getTerm = function(target){
 }
 
 tabulator.Util.include = function(document,linkstr){
-    
+
     var lnk = document.createElement('script');
     lnk.setAttribute('type', 'text/javascript');
     lnk.setAttribute('src', linkstr);
@@ -209,7 +209,7 @@ tabulator.Util.getEyeFocus = function(element,instantly,isBottom,myWindow) {
         if (isBottom){
             myWindow.scrollBy(0,elementPosY+element.clientHeight-(myWindow.scrollY+myWindow.innerHeight));
             return;
-        }            
+        }
         myWindow.scrollBy(0,totalScroll);
         return;
     }
@@ -289,7 +289,7 @@ tabulator.Util.shortName = function(uri) {
         if (canUse(p.slice(0,4))) return pok;
         if (canUse(p.slice(0,1))) return pok;
         if (canUse(p.slice(0,5))) return pok;
-        for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
+        for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok;
     }
 };
 
@@ -308,10 +308,10 @@ tabulator.Util.ontologyLabel = function(term) {
     } else {
         i = s.lastIndexOf('/');
         if (i >=0 ) {
-            s = s.slice(0, i+1); 
+            s = s.slice(0, i+1);
         } else {
             return term.uri + '?!';    // strange should have # or /
-        }; 
+        };
     };
     for (var ns in tabulator.ns) {
         namespaces[tabulator.ns[ns]] = ns; // reverse index
@@ -320,14 +320,14 @@ tabulator.Util.ontologyLabel = function(term) {
         return namespaces[s];
     } catch (e) {
     };
-    
-    s = s.slice(0, -1); // Chop off delimiter ... now have just 
-    
+
+    s = s.slice(0, -1); // Chop off delimiter ... now have just
+
     while(s) {
         i = s.lastIndexOf('/');
         if (i >=0 ) {
             part = s.slice(i+1);
-            s = s.slice(0, i); 
+            s = s.slice(0, i);
             if ((part !== 'ns') && ( '0123456789'.indexOf(part[0]) < 0))
                 return part;
         } else {
@@ -339,9 +339,9 @@ tabulator.Util.ontologyLabel = function(term) {
 
 tabulator.Util.labelWithOntology = function(x, initialCap) {
     var t = tabulator.kb.findTypeURIs(x);
-    if (t[tabulator.ns.rdf('Predicate').uri] || 
+    if (t[tabulator.ns.rdf('Predicate').uri] ||
         t[tabulator.ns.rdfs('Class').uri]) {
-        return tabulator.Util.label(x, initialCap) + 
+        return tabulator.Util.label(x, initialCap) +
             ' (' + tabulator.Util.ontologyLabel(x) + ')';
     }
     return tabulator.Util.label(x, initialCap);
@@ -360,16 +360,17 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
         //s = s.toString();
         if (initialCap) return s.slice(0,1).toUpperCase() + s.slice(1);
         return s;
-    } 
+    }
     function cleanUp(s1) {
         var s2 = "";
+        if (s1.slice(-1) === '/') s1 = s1.slice(0,-1) // chop trailing slash
         for (var i=0; i<s1.length; i++) {
             if (s1[i] == '_' || s1[i] == '-') {
                 s2 += " ";
                 continue;
             }
             s2 += s1[i];
-            if (i+1 < s1.length && 
+            if (i+1 < s1.length &&
                 s1[i].toUpperCase() != s1[i] &&
                 s1[i+1].toLowerCase() != s1[i+1]) {
                 s2 += " ";
@@ -378,11 +379,11 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
         if (s2.slice(0,4) == 'has ') s2 = s2.slice(4);
         return doCap(s2);
     }
-    
+
     var lab=tabulator.lb.label(x);
     if (lab) return doCap(lab.value);
     //load #foo to Labeler?
-    
+
     if (x.termType == 'bnode') {
         return "...";
     }
@@ -393,13 +394,13 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
     if (typeof s == 'undefined') return x.toString(); // can't be a symbol
     if (s.slice(-5) == '#this') s = s.slice(0,-5)
     else if (s.slice(-3) == '#me') s = s.slice(0,-3);
-    
+
     var hash = s.indexOf("#")
     if (hash >=0) return cleanUp(s.slice(hash+1));
 
     if (s.slice(-9) == '/foaf.rdf') s = s.slice(0,-9)
     else if (s.slice(-5) == '/foaf') s = s.slice(0,-5);
-    
+
     if (1) { //   Eh? Why not do this? e.g. dc:title needs it only trim URIs, not rdfs:labels
         var slash = s.lastIndexOf("/", s.length-2); // (len-2) excludes trailing slash
         if ((slash >=0) && (slash < x.uri.length)) return cleanUp(s.slice(slash+1));
@@ -424,14 +425,14 @@ tabulator.Util.predicateLabelForXML = function(p, inverse) {
 	if (!ip) ip = tabulator.kb.any(undefined, tabulator.ns.owl('inverseOf'), p);
 	if (ip) return tabulator.Util.labelForXML(ip)
     }
-        
+
     lab = tabulator.Util.labelForXML(p)
         if (inverse) {
             if (lab =='type') return '...'; // Not "is type of"
             return "is "+lab+" of";
         }
     return lab
-} 
+}
 
 // Not a method. For use in sorts
 tabulator.Util.RDFComparePredicateObject = function(self, other) {
@@ -467,14 +468,14 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     //predtr = predParentOf(tr);
     var nodes = tr.childNodes, n = tr.childNodes.length, inverse=tr.AJAR_inverse,
         i, hasVar = 0, pattern, v, c, parentVar=null, level, pat;
-    
+
     function makeRDFStatement(freeVar, parent) {
     	if (inverse)
 	    return new tabulator.rdf.Statement(freeVar, st.predicate, parent)
 	else
 	    return new tabulator.rdf.Statement(parent, st.predicate, freeVar)
     }
-    
+
     var optionalSubqueryIndex = null;
 
     for (level=tr.parentNode; level; level=level.parentNode) {
@@ -488,22 +489,22 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
                 tabulator.Util.makeQueryRow(q, level);
             parentVar = level.AJAR_variable
             var predLevel = tabulator.Util.predParentOf(level)
-            if (predLevel.getAttribute('optionalSubqueriesIndex')) { 
+            if (predLevel.getAttribute('optionalSubqueriesIndex')) {
             	optionalSubqueryIndex = predLevel.getAttribute('optionalSubqueriesIndex')
             	pat = optionalSubqueriesIndex[optionalSubqueryIndex]
             }
             break;
         }
     }
-    
+
     if (!pat)
     	var pat = q.pat
-    
+
     var predtr = tabulator.Util.predParentOf(tr)
     ///////OPTIONAL KLUDGE///////////
     var opt = (predtr.getAttribute('optional'))
     if (!opt) {
-    	if (optionalSubqueryIndex) 
+    	if (optionalSubqueryIndex)
     		predtr.setAttribute('optionalSubqueriesIndex',optionalSubqueryIndex)
     	else
     		predtr.removeAttribute('optionalSubqueriesIndex')}
@@ -514,15 +515,15 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     	pat.optional.push(optForm)
     	pat=optForm
     }
-    
+
     ////////////////////////////////
 
-    
-    var st = tr.AJAR_statement; 
-       
+
+    var st = tr.AJAR_statement;
+
     var constraintVar = tr.AJAR_inverse? st.subject:st.object; //this is only used for constraints
     var hasParent=true
-    if (constraintVar.isBlank && constraint) 
+    if (constraintVar.isBlank && constraint)
 			alert("You cannot constrain a query with a blank node. No constraint will be added.");
     if (!parentVar) {
     	hasParent=false;
@@ -546,12 +547,12 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
         }
         return this;
     }
-    
 
-    
+
+
     if (constraint)   //binds the constrained variable to its selected value
     	pat.constraints[v]=new constraintEqualTo(constraintVar);
-    	
+
     tabulator.log.info('Pattern: '+pattern);
     pattern.tr = tr
     tr.AJAR_pattern = pattern    // Cross-link UI and query line

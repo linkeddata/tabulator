@@ -52,8 +52,12 @@ tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
 
   var agent = obj;
   var image = td1.appendChild(dom.createElement('img'));
+  td1.setAttribute('style','width:4em; padding:0.5em; height: 4em;')
+  td2.setAttribute('style', 'text-align:left;')
+  td3.setAttribute('style','width:2em; padding:0.5em; height: 4em;')
   image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
   tabulator.panes.utils.setImage(image, agent);
+
   tabulator.panes.utils.setName(td2, agent);
   if (options.deleteFunction){
     tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
@@ -171,6 +175,29 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             }
         }
 
+        //
+        var agentTriage = function(uri) {
+          var ns = tabulator.ns, kb = tabulator.kb, obj = $rdf.sym(uri);
+          var obj = $rdf.sym(uri)
+          var types = kb.findTypeURIs(obj);
+          console.log('Drop object types: ' + types)
+          if (ns.vcard('WebID').uri in types) return {pred: 'agent', obj: obj}
+          if (ns.vcard('Individual').uri in types || ns.foaf('Person').uri in types || ns.foaf('Agent').uri in types) {
+            var pref = kb.any(obj, ns.foaf('preferredURI'))
+            if (pref) return { pred: 'agent', obj: $rdf.sym(pref)}
+            return { pred: 'agent', obj: obj}
+          }
+          if (ns.vcard('Group').uri in types) {
+            return { pred: 'agentClass', obj: obj} // @@ note vcard membership not RDFs
+          }
+          if (ns.solid('AppProvider').uri in types) {
+            return { pred: 'origin', obj: obj}
+          }
+          if (ns.solid('AppProviderClass').uri in types) {
+            return { pred: 'originClass', obj: obj}
+          }
+        }
+
         box.saveBack = function(callback){
           var kb2 = $rdf.graph()
           if (!box.isContainer) {
@@ -201,7 +228,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             var row = box.appendChild(dom.createElement('tr'));
             row.combo = combo;
             row.setAttribute('style', 'color: '
-                + (kToColor[k] || 'black') + ';')
+                + (options.modify ? (kToColor[k] || 'black'): '#888') + ';')
 
             var left = row.appendChild(dom.createElement('td'));
 
@@ -221,26 +248,27 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     middleTable.removeChild(middleTable.NoneTR);
                     delete middleTable.NoneTR;
                 }
-                var opt = {
-                  deleteFunction: function deletePerson(){
-                      var arr =  byCombo[combo];
-                      for (var b=0; b < arr.length; b++) {
-                          if  (arr[b][0] === pred && arr[b][1] === obj ) {
-                              arr.splice(b, 1); // remove from ACL
-                              break;
-                          }
-                      };
-                      // @@@ save byCombo back to ACLDoc
-                      middleTable.removeChild(tr);
+                var opt = {}
+                if (options.modify) {
+                  opt.deleteFunction = function deletePerson(){
+                    var arr =  byCombo[combo];
+                    for (var b=0; b < arr.length; b++) {
+                      if  (arr[b][0] === pred && arr[b][1] === obj ) {
+                        arr.splice(b, 1); // remove from ACL
+                        break;
+                      }
+                    };
+                    box.saveBack(function(ok){
+                      if (ok) {
+                        middleTable.removeChild(tr);
+                      } // @@ else?
+                    });
                   }
                 }
                 var tr = middleTable.appendChild(
                   tabulator.panes.utils.personTR(
                     dom, $rdf.sym(pred), $rdf.sym(obj), opt));
             };
-
-
-
 
             var syncCombo = function(combo) {
                 var arr = byCombo[combo];
@@ -334,13 +362,17 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     console.log("Dropped URI list (2): " + uris);
                     if (uris) {
                         uris.map(function(u){
+                            var res = agentTriage(u); // eg 'agent', 'origin', agentClass'
+                            if (!res) {
+                                console.log("Error: Drop fails to drop appropriate thing! " + u)
+                                return;
+                            }
                             if (!(combo in byCombo)) {
                                 byCombo[combo] = [];
                             }
-                            // @@@ Find out - person or group? - if group, use agentClass
                             removeAgentFromCombos(u); // Combos are mutually distinct
-                            byCombo[combo].push(['agent', u]);
-                            console.log('setting access by ' + u + ' to ' + subject)
+                            byCombo[combo].push([res.pred, res.obj.uri]);
+                            console.log('ACL: setting access to ' + subject + ' by ' + res.pred + ': ' + res.obj)
                             box.saveBack(function(ok){
                               if (ok) {
                                 thisEle.style.backgroundColor = 'white'; // restore look to before drag
@@ -493,6 +525,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 box.mainByCombo = ACLControlEditable(box, targetDoc, targetACLDoc, kb, {modify: true}); // yes can edit
                 box.divider = box.appendChild(dom.createElement('tr'))
                 box.notice = box.divider.appendChild(dom.createElement('td'))
+                box.notice.style = 'font-size: 80%; color: #888;'
                 box.offer = box.divider.appendChild(dom.createElement('td'))
                 box.notice.setAttribute('colspan', '2');
 

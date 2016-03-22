@@ -2,11 +2,12 @@
 **
 **  This outline pane lists the members of a class
 */
+
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_instances,
 
-    name: 'classInstance', // @@ 'folder'
+    name: 'classInstance',
 
     label: function(subject) {
       var n = tabulator.kb.each(

@@ -74,6 +74,8 @@ tabulator.loadScript("js/panes/argument/argumentPane.js"); // A posistion in an 
 
 tabulator.loadScript("js/panes/transaction/pane.js");
 tabulator.loadScript("js/panes/transaction/period.js");
+tabulator.loadScript("js/panes/chat/chatPane.js");
+
 
 tabulator.loadScript("js/panes/trip/tripPane.js");
 tabulator.loadScript("js/panes/airPane.js");
@@ -84,6 +86,7 @@ tabulator.loadScript("js/panes/imagePane.js");   // Basic image view
 
 
 tabulator.loadScript("js/panes/classInstancePane.js"); // Should be above dataContentPane
+tabulator.loadScript("js/panes/dynamic/dynamicPanes.js"); // warp etc
 tabulator.loadScript("js/panes/slideshow/slideshowPane.js");
 
 tabulator.loadScript("js/panes/humanReadablePane.js"); // A web page as a web page -- how to escape to tabr?
@@ -91,7 +94,6 @@ tabulator.loadScript("js/panes/dataContentPane.js");  // Prefered for a data fil
 tabulator.loadScript("js/panes/n3Pane.js");
 tabulator.loadScript("js/panes/RDFXMLPane.js");
 
-tabulator.loadScript("js/panes/dynamic/dynamicPanes.js"); // warp etc
 
 // User configured:
 tabulator.loadScript("js/panes/form/pane.js");

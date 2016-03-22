@@ -31,7 +31,7 @@ tabulator.panes.register({
             if (n == 0) return null;  // None, suppress pane
             if (n > 15) return null;  // @@ At the moment this pane can be slow with too many @@ fixme by using limits
             return "List "+n;     // Show how many in hover text
-            return tabulator.Util.label(subject)+ " table";
+            return (tabulator.Util.label(subject) + " table")
         },
 
     render: function(subject, myDocument) {

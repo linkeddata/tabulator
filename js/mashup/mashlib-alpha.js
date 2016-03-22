@@ -28545,6 +28545,7 @@ $rdf.Fetcher = function (store, timeout, async) {
       return undefined
     }
   }
+
   $rdf.Fetcher.RDFXMLHandler = function (args) {
     if (args) {
       this.dom = args[0]
@@ -28559,24 +28560,15 @@ $rdf.Fetcher = function (store, timeout, async) {
           sf.failFetch(xhr, 'Badly formed XML in ' + xhr.resource.uri) // have to fail the request
           throw new Error('Badly formed XML in ' + xhr.resource.uri) // @@ Add details
         }
-        // Find the last URI we actual URI in a series of redirects
-        // (xhr.resource.uri is the original one)
-        var lastRequested = kb.any(xhr.req, ns.link('requestedURI'))
-        if (!lastRequested) {
-          lastRequested = xhr.resource
-        } else {
-          lastRequested = kb.sym(lastRequested.value)
-        }
         var parser = new $rdf.RDFParser(kb)
-        // sf.addStatus(xhr.req, 'parsing as RDF/XML...')
         try {
-          parser.parse(this.dom, lastRequested.uri, lastRequested)
+          parser.parse(this.dom, xhr.original.uri, xhr.original)
         } catch (e) {
           sf.addStatus(xhr.req, 'Syntax error parsing RDF/XML! ' + e)
           console.log('Syntax error parsing RDF/XML! ' + e)
         }
         if (!xhr.options.noMeta) {
-          kb.add(lastRequested, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode)
+          kb.add(xhr.original, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode)
         }
         cb()
       }
@@ -28636,31 +28628,18 @@ $rdf.Fetcher = function (store, timeout, async) {
         for (var i = 0; i < scripts.length; i++) {
           var contentType = scripts[i].getAttribute('type')
           if ($rdf.parsable[contentType]) {
-            $rdf.parse(scripts[i].textContent, kb, xhr.resource.uri, contentType)
+            $rdf.parse(scripts[i].textContent, kb, xhr.original.uri, contentType)
           }
         }
 
-        // GRDDL
-        /*
-        var head = this.dom.getElementsByTagName('head')[0]
-        if (head) {
-            var profile = head.getAttribute('profile')
-            if (profile && $rdf.uri.protocol(profile) === 'http') {
-                // $rdf.log.info("GRDDL: Using generic " + "2003/11/rdf-in-xhtml-processor.")
-                 $rdf.Fetcher.doGRDDL(kb, xhr.resource, "http://www.w3.org/2003/11/rdf-in-xhtml-processor", xhr.resource.uri)
-
-            } else {
-                // $rdf.log.info("GRDDL: No GRDDL profile in " + xhr.resource)
-            }
-        }
-        */
         if (!xhr.options.noMeta) {
           kb.add(xhr.resource, ns.rdf('type'), ns.link('WebPage'), sf.appNode)
         }
         // Do RDFa here
 
-        if ($rdf.parseDOM_RDFa) {
-          $rdf.parseDOM_RDFa(this.dom, kb, xhr.resource.uri)
+        // Warning the RDFa parser in NOT working yet 2016-03
+        if (xhr.options.doRDFa && $rdf.parseDOM_RDFa) {
+          $rdf.parseDOM_RDFa(this.dom, kb, xhr.original)
         }
         cb() // Fire done callbacks
       }
@@ -28797,7 +28776,7 @@ $rdf.Fetcher = function (store, timeout, async) {
           return
         }
         sf.addStatus(xhr.req, 'non-XML HTML document, not parsed for data.')
-        sf.doneFetch(xhr, [xhr.resource.uri])
+        sf.doneFetch(xhr)
         // sf.failFetch(xhr, "Sorry, can't yet parse non-XML HTML")
       }
     }
@@ -28837,7 +28816,7 @@ $rdf.Fetcher = function (store, timeout, async) {
 
         // We give up finding semantics - this is not an error, just no data
         sf.addStatus(xhr.req, 'Plain text document, no known RDF semantics.')
-        sf.doneFetch(xhr, [xhr.resource.uri])
+        sf.doneFetch(xhr)
         //                sf.failFetch(xhr, "unparseable - text/plain not visibly XML")
         //                dump(xhr.resource + " unparseable - text/plain not visibly XML, starts:\n" + rt.slice(0, 500)+"\n")
       }
@@ -28858,9 +28837,10 @@ $rdf.Fetcher = function (store, timeout, async) {
     this.handlerFactory = function (xhr) {
       xhr.handle = function (cb) {
         // Parse the text of this non-XML file
-        $rdf.log.debug('web.js: Parsing as N3 ' + xhr.resource.uri) // @@@@ comment me out
+
+        console.log('web.js: Parsing as N3 ' + xhr.resource.uri + ' base: ' + xhr.original.uri) // @@@@ comment me out
         // sf.addStatus(xhr.req, "N3 not parsed yet...")
-        var p = $rdf.N3Parser(kb, kb, xhr.resource.uri, xhr.resource.uri, null, null, '', null)
+        var p = $rdf.N3Parser(kb, kb, xhr.original.uri, xhr.original.uri, null, null, '', null)
         //                p.loadBuf(xhr.responseText)
         try {
           p.loadBuf(xhr.responseText)
@@ -28872,9 +28852,9 @@ $rdf.Fetcher = function (store, timeout, async) {
         }
 
         sf.addStatus(xhr.req, 'N3 parsed: ' + p.statementCount + ' triples in ' + p.lines + ' lines.')
-        sf.store.add(xhr.resource, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode)
-        var args = [xhr.resource.uri] // Other args needed ever?
-        sf.doneFetch(xhr, args)
+        sf.store.add(xhr.original, ns.rdf('type'), ns.link('RDFDocument'), sf.appNode)
+        var args = [xhr.original.uri] // Other args needed ever?
+        sf.doneFetch(xhr)
       }
     }
   }
@@ -28939,15 +28919,19 @@ $rdf.Fetcher = function (store, timeout, async) {
   this.failFetch = function (xhr, status) {
     this.addStatus(xhr.req, status)
     if (!xhr.options.noMeta) {
-      kb.add(xhr.resource, ns.link('error'), status)
+      kb.add(xhr.original, ns.link('error'), status)
     }
-    console.log('@@ Recording failure for ' + xhr.resource + ': ' + xhr.status)
-    this.requested[$rdf.uri.docpart(xhr.resource.uri)] = xhr.status // changed 2015 was false
-    while (this.fetchCallbacks[xhr.resource.uri] && this.fetchCallbacks[xhr.resource.uri].length) {
-      this.fetchCallbacks[xhr.resource.uri].shift()(false, 'Fetch of <' + xhr.resource.uri + '> failed: ' + status, xhr)
+    if (!xhr.resource.sameTerm(xhr.original)) {
+      console.log('@@ Recording failure original ' + xhr.original + '( as ' + xhr.resource + ') : ' + xhr.status)
+    } else {
+      console.log('@@ Recording failure for ' + xhr.original + ': ' + xhr.status)
     }
-    delete this.fetchCallbacks[xhr.resource.uri]
-    this.fireCallbacks('fail', [xhr.requestedURI, status])
+    this.requested[$rdf.uri.docpart(xhr.original.uri)] = xhr.status // changed 2015 was false
+    while (this.fetchCallbacks[xhr.original.uri] && this.fetchCallbacks[xhr.original.uri].length) {
+      this.fetchCallbacks[xhr.original.uri].shift()(false, 'Fetch of <' + xhr.original.uri + '> failed: ' + status, xhr)
+    }
+    delete this.fetchCallbacks[xhr.original.uri]
+    this.fireCallbacks('fail', [xhr.original.uri, status])
     xhr.abort()
     return xhr
   }
@@ -28958,9 +28942,9 @@ $rdf.Fetcher = function (store, timeout, async) {
     if (!uri) return
     var predicate
     // See http://www.w3.org/TR/powder-dr/#httplink for describedby 2008-12-10
-    var obj = kb.sym($rdf.uri.join(uri, xhr.resource.uri))
+    var obj = kb.sym($rdf.uri.join(uri, xhr.original.uri))
     if (rel === 'alternate' || rel === 'seeAlso' || rel === 'meta' || rel === 'describedby') {
-      if (obj.uri === xhr.resource.uri) return
+      if (obj.uri === xhr.original.uri) return
       predicate = ns.rdfs('seeAlso')
     } else if (rel === 'type') {
       predicate = tabulator.ns.rdf('type')
@@ -28970,9 +28954,9 @@ $rdf.Fetcher = function (store, timeout, async) {
       predicate = kb.sym($rdf.uri.join(rel, 'http://www.iana.org/assignments/link-relations/'))
     }
     if (reverse) {
-      kb.add(obj, predicate, xhr.resource, why)
+      kb.add(obj, predicate, xhr.original, why)
     } else {
-      kb.add(xhr.resource, predicate, obj, why)
+      kb.add(xhr.original, predicate, obj, why)
     }
   }
 
@@ -29002,15 +28986,14 @@ $rdf.Fetcher = function (store, timeout, async) {
     }
   }
 
-  this.doneFetch = function (xhr, args) {
+  this.doneFetch = function (xhr) {
     this.addStatus(xhr.req, 'Done.')
-    // $rdf.log.info("Done with parse, firing 'done' callbacks for " + xhr.resource)
-    this.requested[xhr.resource.uri] = 'done' // Kenny
-    while (this.fetchCallbacks[xhr.resource.uri] && this.fetchCallbacks[xhr.resource.uri].length) {
-      this.fetchCallbacks[xhr.resource.uri].shift()(true, undefined, xhr)
+    this.requested[xhr.original.uri] = 'done' // Kenny
+    while (this.fetchCallbacks[xhr.original.uri] && this.fetchCallbacks[xhr.original.uri].length) {
+      this.fetchCallbacks[xhr.original.uri].shift()(true, undefined, xhr)
     }
-    delete this.fetchCallbacks[xhr.resource.uri]
-    this.fireCallbacks('done', args)
+    delete this.fetchCallbacks[xhr.original.uri]
+    this.fireCallbacks('done', [xhr.original.uri])
   }
   var handlerList = [
     $rdf.Fetcher.RDFXMLHandler, $rdf.Fetcher.XHTMLHandler,
@@ -29258,7 +29241,9 @@ $rdf.Fetcher = function (store, timeout, async) {
       var timeNow = '[' + now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds() + '] '
       kb.add(request, ns.rdfs('label'), kb.literal(timeNow + ' Request for ' + docuri), this.appNode)
       kb.add(request, ns.link('requestedURI'), kb.literal(docuri), this.appNode)
-
+      if (xhr.original && xhr.original.uri !== docuri) {
+        kb.add(request, ns.link('orginalURI'), kb.literal(xhr.original.uri), this.appNode)
+      }
       kb.add(request, ns.link('status'), kb.collection(), this.appNode)
     }
     return request
@@ -29295,21 +29280,25 @@ $rdf.Fetcher = function (store, timeout, async) {
    **              or URI has already been loaded
    */
   this.requestURI = function (docuri, rterm, options, userCallback) { // sources_request_new
-    docuri = docuri.uri || docuri // NamedNode or string
-    // Remove #localid
-    docuri = docuri.split('#')[0]
 
+    // Various calling conventions
+    docuri = docuri.uri || docuri // NamedNode or string
+    docuri = docuri.split('#')[0]
     if (typeof options === 'boolean') {
       options = { 'force': options } // Ols dignature
     }
     if (typeof options === 'undefined') options = {}
+
     var force = !!options.force
     var kb = this.store
     var args = arguments
+    var baseURI = options.baseURI || docuri  // Preseve though proxying etc
+    options.userCallback = userCallback
 
     var pcol = $rdf.uri.protocol(docuri)
     if (pcol === 'tel' || pcol === 'mailto' || pcol === 'urn') {
       // "No look-up operation on these, but they are not errors?"
+      console.log('Unsupported protocol in: ' + docuri)
       return userCallback(false, 'Unsupported protocol', { 'status': 900 }) ||
         undefined
     }
@@ -29355,13 +29344,13 @@ $rdf.Fetcher = function (store, timeout, async) {
     if (!options.noMeta && rterm && rterm.uri) {
       kb.add(docterm.uri, ns.link('requestedBy'), rterm.uri, this.appNode)
     }
-    var xhr, req
 
-    xhr = $rdf.Util.XMLHTTPFactory()
-    req = xhr.req = kb.bnode()
+    var xhr = $rdf.Util.XMLHTTPFactory()
+    var req = xhr.req = kb.bnode()
+    xhr.original = $rdf.sym(baseURI)
+    console.log('XHR original: ' + xhr.original)
     xhr.options = options
-    xhr.resource = docterm
-    xhr.requestedURI = args[0]
+    xhr.resource = docterm  // This might be proxified
     var sf = this
 
     var now = new Date()
@@ -29371,14 +29360,7 @@ $rdf.Fetcher = function (store, timeout, async) {
       kb.add(req, ns.link('requestedURI'), kb.literal(docuri), this.appNode)
       kb.add(req, ns.link('status'), kb.collection(), this.appNode)
     }
-    // This should not be stored in the store, but in the JS data
-    /*
-    if (typeof kb.anyStatementMatching(this.appNode, ns.link("protocol"), $rdf.uri.protocol(docuri)) === "undefined") {
-        // update the status before we break out
-        this.failFetch(xhr, "Unsupported protocol: "+$rdf.uri.protocol(docuri))
-        return xhr
-    }
-    */
+
     var checkCredentialsRetry = function () {
       if (!xhr.withCredentials) return false // not dealt with
 
@@ -29390,14 +29372,14 @@ $rdf.Fetcher = function (store, timeout, async) {
       xhr.abort()
       delete sf.requested[docuri] // forget the original request happened
       var newopt = {}
-      for (var opt in options) {
+      for (var opt in options) { // transfer baseURI etc
         if (options.hasOwnProperty(opt)) {
           newopt[opt] = options[opt]
         }
       }
       newopt.withCredentials = false
       sf.addStatus(xhr.req, 'Abort: Will retry with credentials SUPPRESSED to see if that helps')
-      sf.requestURI(docuri, rterm, newopt, xhr.userCallback) // usercallback already registered (with where?)
+      sf.requestURI(docuri, rterm, newopt, xhr.userCallback) // userCallback already registered (with where?)
       return true
     }
 
@@ -29445,9 +29427,11 @@ $rdf.Fetcher = function (store, timeout, async) {
                   delete sf.fetchCallbacks[xhr.resource.uri]
                 }
 
-                var xhr2 = sf.requestURI(newURI, xhr.resource, options)
+                var xhr2 = sf.requestURI(newURI, xhr.resource, xhr.options, xhr.userCallback)
                 if (xhr2) {
                   xhr2.proxyUsed = true // only try the proxy once
+                  xhr2.original = xhr.original
+                  console.log('Proxying but original still ' + xhr2.original)
                 }
                 if (xhr2 && xhr2.req) {
                   if (!xhr.options.noMeta) {
@@ -29584,7 +29568,7 @@ $rdf.Fetcher = function (store, timeout, async) {
                 sf.requested[udoc] && sf.requested[udoc] === 'done') { // we have already fetched this in fact.
               // should we smush too?
               // $rdf.log.info("HTTP headers indicate we have already" + " retrieved " + xhr.resource + " as " + udoc + ". Aborting.")
-              sf.doneFetch(xhr, args)
+              sf.doneFetch(xhr)
               xhr.abort()
               return
             }
@@ -29607,7 +29591,7 @@ $rdf.Fetcher = function (store, timeout, async) {
               sf.failFetch(xhr, 'Exception handling content-type ' + xhr.headers['content-type'] + ' was: ' + e)
             }
           } else {
-            sf.doneFetch(xhr, args) //  Not a problem, we just don't extract data.
+            sf.doneFetch(xhr) //  Not a problem, we just don't extract data.
             /*
             // sf.failFetch(xhr, "Unhandled content type: " + xhr.headers['content-type']+
             //        ", readyState = "+xhr.readyState)
@@ -29672,7 +29656,7 @@ $rdf.Fetcher = function (store, timeout, async) {
                 sf.fireCallbacks('redirected', args) // Are these args right? @@@
                 sf.requested[xhr.resource.uri] = 'redirected'
 
-                var xhr2 = sf.requestURI(newURI, xhr.resource, xhr.options || {})
+                var xhr2 = sf.requestURI(newURI, xhr.resource, xhr.options || {}, xhr.userCallback)
                 if (xhr2 && xhr2.req) {
                   kb.add(
                     xhr.req,
@@ -29702,7 +29686,7 @@ $rdf.Fetcher = function (store, timeout, async) {
               }
               sf.fireCallbacks('load', args)
               xhr.handle(function () {
-                sf.doneFetch(xhr, args)
+                sf.doneFetch(xhr)
               })
             } else {
               if (xhr.redirected) {
@@ -29746,7 +29730,7 @@ $rdf.Fetcher = function (store, timeout, async) {
 
     // Setup the request
     // var xhr
-    xhr = $rdf.Util.XMLHTTPFactory()
+    // xhr = $rdf.Util.XMLHTTPFactory()
     xhr.onerror = onerrorFactory(xhr)
     xhr.onreadystatechange = onreadystatechangeFactory(xhr)
     xhr.timeout = sf.timeout
@@ -29834,7 +29818,7 @@ $rdf.Fetcher = function (store, timeout, async) {
                   sf.addStatus(oldreq, 'redirected') // why
                   sf.fireCallbacks('redirected', args) // Are these args right? @@@
                   sf.requested[xhr.resource.uri] = 'redirected'
-                  sf.redirectedTo[xhr.ressource.uri] = newURI
+                  sf.redirectedTo[xhr.resource.uri] = newURI
 
                   var hash = newURI.indexOf('#')
                   if (hash >= 0) {
@@ -29844,7 +29828,7 @@ $rdf.Fetcher = function (store, timeout, async) {
                     }
                     newURI = newURI.slice(0, hash)
                   }
-                  var xhr2 = sf.requestURI(newURI, xhr.resource)
+                  var xhr2 = sf.requestURI(newURI, xhr.resource, xhr.options, xhr.userCallback)
                   if (xhr2 && xhr2.req && !options.noMeta) {
                     kb.add(
                       xhr.req,
@@ -29904,11 +29888,12 @@ $rdf.Fetcher = function (store, timeout, async) {
 
                   var hash = newURI.indexOf('#')
                   if (hash >= 0) {
-                    var msg2 = ('Warning: ' + xhr.resource + ' HTTP redirects to' + newURI + ' which should not contain a "#" sign')
+                    var msg2 = ('Warning: ' + xhr.resource + ' HTTP redirects to' + newURI + ' which do not normally contain a "#" sign')
                     // dump(msg+"\n")
                     kb.add(xhr.resource, kb.sym('http://www.w3.org/2007/ont/link#warning'), msg2)
                     newURI = newURI.slice(0, hash)
                   }
+                  /*
                   if (sf.fetchCallbacks[xhr.resource.uri]) {
                     if (!sf.fetchCallbacks[newURI]) {
                       sf.fetchCallbacks[newURI] = []
@@ -29916,19 +29901,21 @@ $rdf.Fetcher = function (store, timeout, async) {
                     sf.fetchCallbacks[newURI] = sf.fetchCallbacks[newURI].concat(sf.fetchCallbacks[xhr.resource.uri])
                     delete sf.fetchCallbacks[xhr.resource.uri]
                   }
-
+                  */
                   sf.requested[xhr.resource.uri] = 'redirected'
-                  sf.redirectedTo[xhr.ressource.uri] = newURI
+                  sf.redirectedTo[xhr.resource.uri] = newURI
 
-                  var xhr2 = sf.requestURI(newURI, xhr.resource)
-                  xhr2.originalXHR = xhr  // use this for finding base
-                  if (xhr2 && xhr2.req) {
-                    kb.add(
-                      xhr.req,
-                      kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
-                      xhr2.req,
-                      sf.appNode
-                    )
+                  var xhr2 = sf.requestURI(newURI, xhr.resource, xhr.options, xhr.userCallback)
+                  if (xhr2) { // may be no XHR is other URI already loaded
+                    xhr2.original = xhr.original  // use this for finding base
+                    if (xhr2.req) {
+                      kb.add(
+                        xhr.req,
+                        kb.sym('http://www.w3.org/2007/ont/link#redirectedRequest'),
+                        xhr2.req,
+                        sf.appNode
+                      )
+                    }
                   }
                 // else dump("No xhr.req available for redirect from "+xhr.resource+" to "+newURI+"\n")
                 } // asyncOnChannelRedirect
@@ -30313,7 +30300,7 @@ if (typeof exports !== 'undefined') {
   // Leak a global regardless of module system
   root['$rdf'] = $rdf
 }
-$rdf.buildTime = "2016-03-14T09:10:14";
+$rdf.buildTime = "2016-03-21T17:46:08";
 })(this);
 
 },{"async":1,"jsonld":30,"n3":32,"xmldom":40,"xmlhttprequest":undefined}]},{},[])("rdflib")
@@ -32610,8 +32597,12 @@ tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
 
   var agent = obj;
   var image = td1.appendChild(dom.createElement('img'));
+  td1.setAttribute('style','width:4em; padding:0.5em; height: 4em;')
+  td2.setAttribute('style', 'text-align:left;')
+  td3.setAttribute('style','width:2em; padding:0.5em; height: 4em;')
   image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
   tabulator.panes.utils.setImage(image, agent);
+
   tabulator.panes.utils.setName(td2, agent);
   if (options.deleteFunction){
     tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
@@ -32729,6 +32720,29 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             }
         }
 
+        //
+        var agentTriage = function(uri) {
+          var ns = tabulator.ns, kb = tabulator.kb, obj = $rdf.sym(uri);
+          var obj = $rdf.sym(uri)
+          var types = kb.findTypeURIs(obj);
+          console.log('Drop object types: ' + types)
+          if (ns.vcard('WebID').uri in types) return {pred: 'agent', obj: obj}
+          if (ns.vcard('Individual').uri in types || ns.foaf('Person').uri in types || ns.foaf('Agent').uri in types) {
+            var pref = kb.any(obj, ns.foaf('preferredURI'))
+            if (pref) return { pred: 'agent', obj: $rdf.sym(pref)}
+            return { pred: 'agent', obj: obj}
+          }
+          if (ns.vcard('Group').uri in types) {
+            return { pred: 'agentClass', obj: obj} // @@ note vcard membership not RDFs
+          }
+          if (ns.solid('AppProvider').uri in types) {
+            return { pred: 'origin', obj: obj}
+          }
+          if (ns.solid('AppProviderClass').uri in types) {
+            return { pred: 'originClass', obj: obj}
+          }
+        }
+
         box.saveBack = function(callback){
           var kb2 = $rdf.graph()
           if (!box.isContainer) {
@@ -32759,7 +32773,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             var row = box.appendChild(dom.createElement('tr'));
             row.combo = combo;
             row.setAttribute('style', 'color: '
-                + (kToColor[k] || 'black') + ';')
+                + (options.modify ? (kToColor[k] || 'black'): '#888') + ';')
 
             var left = row.appendChild(dom.createElement('td'));
 
@@ -32779,26 +32793,27 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     middleTable.removeChild(middleTable.NoneTR);
                     delete middleTable.NoneTR;
                 }
-                var opt = {
-                  deleteFunction: function deletePerson(){
-                      var arr =  byCombo[combo];
-                      for (var b=0; b < arr.length; b++) {
-                          if  (arr[b][0] === pred && arr[b][1] === obj ) {
-                              arr.splice(b, 1); // remove from ACL
-                              break;
-                          }
-                      };
-                      // @@@ save byCombo back to ACLDoc
-                      middleTable.removeChild(tr);
+                var opt = {}
+                if (options.modify) {
+                  opt.deleteFunction = function deletePerson(){
+                    var arr =  byCombo[combo];
+                    for (var b=0; b < arr.length; b++) {
+                      if  (arr[b][0] === pred && arr[b][1] === obj ) {
+                        arr.splice(b, 1); // remove from ACL
+                        break;
+                      }
+                    };
+                    box.saveBack(function(ok){
+                      if (ok) {
+                        middleTable.removeChild(tr);
+                      } // @@ else
+                    });
                   }
                 }
                 var tr = middleTable.appendChild(
                   tabulator.panes.utils.personTR(
                     dom, $rdf.sym(pred), $rdf.sym(obj), opt));
             };
-
-
-
 
             var syncCombo = function(combo) {
                 var arr = byCombo[combo];
@@ -32892,13 +32907,17 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     console.log("Dropped URI list (2): " + uris);
                     if (uris) {
                         uris.map(function(u){
+                            var res = agentTriage(u); // eg 'agent', 'origin', agentClass'
+                            if (!res) {
+                                console.log("Error: Drop fails to drop appropriate thing! " + u)
+                                return;
+                            }
                             if (!(combo in byCombo)) {
                                 byCombo[combo] = [];
                             }
-                            // @@@ Find out - person or group? - if group, use agentClass
                             removeAgentFromCombos(u); // Combos are mutually distinct
-                            byCombo[combo].push(['agent', u]);
-                            console.log('setting access by ' + u + ' to ' + subject)
+                            byCombo[combo].push([res.pred, res.obj.uri]);
+                            console.log('ACL: setting access to ' + subject + ' by ' + res.pred + ': ' + res.obj)
                             box.saveBack(function(ok){
                               if (ok) {
                                 thisEle.style.backgroundColor = 'white'; // restore look to before drag
@@ -33051,6 +33070,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 box.mainByCombo = ACLControlEditable(box, targetDoc, targetACLDoc, kb, {modify: true}); // yes can edit
                 box.divider = box.appendChild(dom.createElement('tr'))
                 box.notice = box.divider.appendChild(dom.createElement('td'))
+                box.notice.style = 'font-size: 80%; color: #888;'
                 box.offer = box.divider.appendChild(dom.createElement('td'))
                 box.notice.setAttribute('colspan', '2');
 
@@ -35647,22 +35667,22 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     var WF = $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#');
     var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
     var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
-    
+
     options = options || {};
-    
+
     var newestFirst = !!options.newestFirst;
-    
+
     var messageBodyStyle = 'width: 90%; font-size:100%; \
 	    background-color: white; border: 0.07em solid gray; padding: 0.15em; margin: 0.1em 1em 0.1em 1em'
 //	'font-size: 100%; margin: 0.1em 1em 0.1em 1em;  background-color: white; white-space: pre-wrap; padding: 0.1em;'
-    
+
     var div = dom.createElement("div")
     var messageTable; // Shared by initial build and addMessageFromBindings
 
     var me_uri = tabulator.preferences.get('me');
     var me = me_uri? kb.sym(me_uri) : null;
 
-    var updater = new tabulator.rdf.sparqlUpdate(kb);
+    var updater = tabulator.updater || tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
 
     var anchor = function(text, term) {
         var a = dom.createElement('a');
@@ -35679,15 +35699,15 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         div.appendChild(pre);
         pre.appendChild(dom.createTextNode(message));
         return pre
-    } 
-    
+    }
+
     var console = {
         log: function(message) {mention(message, 'color: #111;')},
         warn: function(message) {mention(message, 'color: #880;')},
         error: function(message) {mention(message, 'color: #800;')}
     };
 
-    
+
     //       Form for a new message
     //
     var newMessageForm = function() {
@@ -35699,14 +35719,14 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         form.appendChild(middle);
         form.appendChild(rhs);
         form.AJAR_date = "9999-01-01T00:00:00Z"; // ISO format for field sort
-        
+
         var sendMessage = function() {
             // titlefield.setAttribute('class','pendingedit');
             // titlefield.disabled = true;
             field.setAttribute('class','pendingedit');
             field.disabled = true;
             sts = [];
-            
+
             var now = new Date();
             var timestamp = ''+ now.getTime();
             var dateStamp = $rdf.term(now);
@@ -35728,7 +35748,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
                                     '?date':  dateStamp,
                                     '?creator': me};
                     addMessageFromBindings(bindings);
-                    
+
                     field.value = ''; // clear from out for reuse
                     field.setAttribute('class','');
                     field.disabled = false;
@@ -35755,7 +35775,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
 
         return form;
     };
-    
+
     var nick = function(person) {
         var s = tabulator.kb.any(person, tabulator.ns.foaf('nick'));
         if (s) return ''+s.value
@@ -35763,7 +35783,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     }
 
 /////////////////////////////////////////////////////////////////////////
-    
+
     var syncMessages = function(about, messageTable) {
         var displayed = {};
         for (var ele = messageTable.firstChild; ele ;ele = ele.nextSibling) {
@@ -35792,9 +35812,9 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     }
 
     var addMessageFromBindings = function(bindings) {
-        return addMessage(bindings['?msg']);            
+        return addMessage(bindings['?msg']);
     }
-    
+
     var deleteMessage = function(message) {
         deletions = kb.statementsMatching(message).concat(
                 kb.statementsMatching(undefined, undefined, message));
@@ -35806,7 +35826,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
             };
         });
     };
-    
+
     var addMessage = function(message) {
         var tr = dom.createElement('tr');
         var date = kb.any(message,  DCT('created'));
@@ -35829,10 +35849,10 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         if (!done) {
             messageTable.appendChild(tr);
         }
-        
+
         var  td1 = dom.createElement('td');
         tr.appendChild(td1);
-        
+
         var creator = kb.any(message, ns.foaf('maker'));
         var nickAnchor = td1.appendChild(anchor(nick(creator), creator));
         tabulator.fetcher.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
@@ -35840,21 +35860,21 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         });
         td1.appendChild(dom.createElement('br'));
         td1.appendChild(anchor(tabulator.panes.utils.shortDate(dateString), message));
-        
+
         var  td2 = dom.createElement('td');
         tr.appendChild(td2);
-        var pre = dom.createElement('p')            
+        var pre = dom.createElement('p')
         pre.setAttribute('style', messageBodyStyle)
         td2.appendChild(pre);
-        pre.textContent = kb.any(message, ns.sioc('content')).value;  
-        
+        pre.textContent = kb.any(message, ns.sioc('content')).value;
+
         var td3 = dom.createElement('td');
         tr.appendChild(td3);
-        
+
         var delButton = dom.createElement('button');
         td3.appendChild(delButton);
         delButton.textContent = "-";
-        
+
         tr.setAttribute('class', 'hoverControl'); // See tabbedtab.css (sigh global CSS)
         delButton.setAttribute('class', 'hoverControlHide');
         delButton.setAttribute('style', 'color: red;');
@@ -35872,7 +35892,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
             td3.appendChild(sureButton).addEventListener('click', function(e) {
                 td3.removeChild(sureButton);
                 td3.removeChild(cancelButton);
-                deleteMessage(message);   
+                deleteMessage(message);
             }, false);
         }, false);
     };
@@ -35892,23 +35912,22 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
             messageTable.appendChild(tr); // not newestFirst
         }
     };
-    
-    var msg = kb.any(subject, WF('message'));
-    if (msg != undefined) {
-        var str = ''
-        // Do this with a live query to pull in messages from web
-        var query = new $rdf.Query('Messages');
-        var v = {};
-        ['msg', 'title', 'date', 'creator', 'content'].map(function(x){
-             query.vars.push(v[x]=$rdf.variable(x))});
-        query.pat.add(subject, WF('message'), v['msg']);
-//                    query.pat.add(v['msg'], ns.dc('title'), v['title']);
-        query.pat.add(v['msg'], ns.dct('created'), v['date']);
-        query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
-        query.pat.add(v['msg'], ns.sioc('content'), v['content']);
-        var esc = tabulator.Util.escapeForXML;
-        // dump("\nquery.pat = "+query.pat+"\n");
 
+    var query, msg = kb.any(subject, WF('message'));
+    if (msg != undefined) {
+        // Do this with a live query to pull in messages from web
+        if (options.query){
+          query = options.query
+        } else {
+          query = new $rdf.Query('Messages');
+          var v = {};
+          ['msg', 'date', 'creator', 'content'].map(function(x){
+               query.vars.push(v[x]=$rdf.variable(x))});
+          query.pat.add(subject, WF('message'), v['msg']);
+          query.pat.add(v['msg'], ns.dct('created'), v['date']);
+          query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
+          query.pat.add(v['msg'], ns.sioc('content'), v['content']);
+        }
         kb.query(query, addMessageFromBindings);
     }
 /*
@@ -35925,17 +35944,14 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         });
     }, false);
     div.appendChild(refreshButton);
-*/    
+*/
     div.refresh = function() {
         syncMessages(subject, messageTable);
     };
-    
+
 
     return div;
 };
-
-
-
 
 // ###### Finished expanding js/panes/common/discussion.js ##############
 
@@ -42234,6 +42250,105 @@ tabulator.panes.register( {
 
 
 // ###### Finished expanding js/panes/transaction/period.js ##############
+// ###### Expanding js/panes/chat/chatPane.js ##############
+/*   Chat Pane
+**
+**  Plan is to support a finte number of chat graph shapes
+** and investigate the interop between them.
+*/
+
+tabulator.Icon.src.icon_chat = iconPrefix + 'js/panes/common/icons/noun_346319.svg';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_chat] = 'chat'
+
+tabulator.panes.register( {
+
+    icon: tabulator.Icon.src.icon_chat,
+
+    name: 'chat',
+
+/*   AN RRSAgent IRC log:
+
+<irc://localhost:6667/&mit>
+    a    foaf:ChatChannel;
+    foaf:chatEventList
+            [ rdf:_100
+               <#T19-10-58>;
+            rdf:_101
+               <#T19-10-58-1>;
+            rdf:_102
+..
+<#T19-28-47-1>
+    dc:creator
+       [ a wn:Person; foaf:nick "timbl" ];
+    dc:date
+       "2016-03-15T19:28:47Z";
+    dc:description
+       "timbl has joined &mit";
+    a    foaf:chatEvent.
+
+*/
+
+
+
+    label: function(subject) {
+      var kb = tabulator.kb, ns = tabulator.ns
+      var n = tabulator.kb.each(subject, ns.wf( 'message')).length;
+      if (n > 0) return "Chat (" + n + ")";  // Show how many in hover text
+
+      if (kb.holds(undefined, ns.rdf('type'), ns.foaf('ChatChannel'), subject)) { // subject is the file
+        return "IRC log"
+      }
+      return null;     // Suppress pane otherwise
+    },
+
+    render: function(subject, dom) {
+        var kb = tabulator.kb, ns = tabulator.ns
+        var complain = function complain(message, color){
+            var pre = dom.createElement("pre");
+            pre.setAttribute('style', 'background-color: '+ color || '#eed' +';');
+            div.appendChild(pre);
+            pre.appendChild(dom.createTextNode(message));
+        }
+
+        var div = dom.createElement("div")
+        div.setAttribute('class', 'chatPane');
+        options = {}  // Like newestFirst
+        var messageStore
+
+        if (kb.any(subject, tabulator.ns.wf( 'message'))){
+          messageStore = tabulator.kb.any(subject, tabulator.ns.wf('message')).doc()
+
+        } else if (kb.holds(undefined, ns.rdf('type'), ns.foaf('ChatChannel'), subject)) { // subject is the file
+
+          var ircLogQuery = function(){
+            var query = new $rdf.Query('IRC log entries');
+            var v = {};
+            ['chan', 'msg', 'date', 'list', 'pred', 'creator', 'content'].map(function(x){
+                 query.vars.push(v[x]=$rdf.variable(x))});
+                 query.pat.add(v['chan'], ns.foaf('chatEventList'), v['list']); // chatEventList
+                 query.pat.add( v['list'], v['pred'], v['msg']); //
+            query.pat.add(v['msg'], ns.dc('date'), v['date']);
+            query.pat.add(v['msg'], ns.dc('creator'), v['creator']);
+            query.pat.add(v['msg'], ns.dc('description'), v['content']);
+            return query
+          }
+          messageStore = subject
+          options.query = ircLogQuery()
+
+        } else {
+          complain('Unknown chat type')
+        }
+
+        div.appendChild(tabulator.panes.utils.messageArea(dom, kb, subject, messageStore, options))
+
+        return div;
+    }
+}, true);
+
+//ends
+
+// ###### Finished expanding js/panes/chat/chatPane.js ##############
+
 
 // ###### Expanding js/panes/trip/tripPane.js ##############
 /*   Trip Pane
@@ -43605,11 +43720,12 @@ tabulator.panes.register( {
 **
 **  This outline pane lists the members of a class
 */
+
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_instances,
 
-    name: 'classInstance', // @@ 'folder'
+    name: 'classInstance',
 
     label: function(subject) {
       var n = tabulator.kb.each(
@@ -43685,6 +43801,109 @@ tabulator.panes.register( {
 //ends
 
 // ###### Finished expanding js/panes/classInstancePane.js ##############
+// ###### Expanding js/panes/dynamic/dynamicPanes.js ##############
+/*   Dynamic loading of panes from metadata
+**
+**  This outline pane shows an external sanboxed viewer for the subject
+**  according to metadata
+*/
+
+tabulator.panes.panesFromData = function(subject){
+  var ns = tabulator.ns, kb = tabulator.kb
+  var apps = kb.each(undefined, ns.rdf('type'), ns.solid('ApplicationRegistration'))
+  var t = kb.findTypeURIs(subject)
+  for (var i=0; i<apps.length; i++){
+    var app = apps[i]
+    try {
+      var icon = kb.any(app, ns.foaf('img')).value  // @@ check doap voab
+      var label = kb.any(app, ns.rdfs('label')).value
+      var URITemplate = kb.any(app, ns.solid('URITemplate')).value
+      var appPage = kb.any(app, ns.solid('appPage')).uri
+      var matches, types = kb.each(app, ns.solid('forClass'))
+    } catch(e) {
+      console.log("Error getting app details " + app + ": " + e)
+      continue;
+    }
+    for (var j=0; j< types.length; j++){
+      if (t[types[j].uri]) {
+        matches = true; break;
+      }
+    }
+    var render = function(subject, dom, template){
+      var div = myDocument.createElement("div");
+      div.setAttribute('class', 'docView')
+      var iframe = myDocument.createElement("IFRAME")
+      iframe.setAttribute('src', subject.uri)    // allow-same-origin
+      iframe.setAttribute('class', 'doc')
+      iframe.setAttribute('sandbox', 'allow-same-origin allow-forms'); // allow-scripts ?? no documents should be static
+      // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
+      iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
+//        iframe.setAttribute('height', '480')
+//        iframe.setAttribute('width', '640')
+      var tr = myDocument.createElement('TR')
+      tr.appendChild(iframe)
+      div.appendChild(tr)
+      return div
+    }
+    if (matches){
+      var pane = { icon: icon, label: function(){return label}}
+    }
+  }
+}
+// black rocket not ongh-pages: js/panes/common/icons/noun_113198.svg
+// red rocket:  js/panes/warp/icons/warp-icon.png
+tabulator.Icon.src.icon_warp = tabulator.scriptBase + 'js/panes/warp/icons/warp-icon.png';
+tabulator.Icon.tooltips[tabulator.Icon.src.icon_warp] = 'warp'
+tabulator.panes.register({
+
+    icon: tabulator.Icon.src.icon_warp,
+
+    name: 'warp',
+
+    // same as classInstancePane
+    label: function(subject, myDocument) {
+      var n = tabulator.kb.each(
+          undefined, tabulator.ns.rdf( 'type'), subject).length;
+      if (n > 0) return "List (" + n + ")";  // Show how many in hover text
+      n = tabulator.kb.each(
+          subject, tabulator.ns.ldp( 'contains')).length;
+      if (n > 0) {
+        return "Contents (" + n + ")"  // Show how many in hover text
+      }
+      return null;     // Suppress pane otherwise
+    },
+
+    render: function(subject, myDocument) {
+        var div = myDocument.createElement("div")
+
+        //  @@ When we can, use CSP to turn off scripts within the iframe
+        div.setAttribute('class', 'warp')
+        var iframe = myDocument.createElement("IFRAME")
+        iframe.setAttribute('src', subject.uri)    // allow-same-origin
+        iframe.setAttribute('class', 'doc')
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-forms allow-scripts'); // allow-scripts ?? no documents should be static
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
+
+        // Like https://linkeddata.github.io/warp/#/list/http/localhost:3080/timbl/Public/Test/Warp/
+        var warpURI = 'https://linkeddata.github.io/warp/#/list/http'
+        var p = subject.uri.indexOf('//')
+        if (subject.uri.slice(0,6) === 'https:') {
+          warpURI += 's'
+        }
+        warpURI += subject.uri.slice(p + 1)
+        iframe.setAttribute('src', warpURI)
+        iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
+//        iframe.setAttribute('height', '480')
+//        iframe.setAttribute('width', '640')
+        var tr = myDocument.createElement('TR')
+        tr.appendChild(iframe)
+        div.appendChild(tr)
+        return div
+    }
+}, true);
+//ends
+
+// ###### Finished expanding js/panes/dynamic/dynamicPanes.js ##############
 // ###### Expanding js/panes/slideshow/slideshowPane.js ##############
 /*   slideshow Pane
 **
@@ -44397,109 +44616,6 @@ tabulator.panes.register ({
 
 // ###### Finished expanding js/panes/RDFXMLPane.js ##############
 
-// ###### Expanding js/panes/dynamic/dynamicPanes.js ##############
-/*   Dynamic loading of panes from metadata
-**
-**  This outline pane shows an external sanboxed viewer for the subject
-**  according to metadata
-*/
-
-tabulator.panes.panesFromData = function(subject){
-  var ns = tabulator.ns, kb = tabulator.kb
-  var apps = kb.each(undefined, ns.rdf('type'), ns.solid('ApplicationRegistration'))
-  var t = kb.findTypeURIs(subject)
-  for (var i=0; i<apps.length; i++){
-    var app = apps[i]
-    try {
-      var icon = kb.any(app, ns.foaf('img')).value  // @@ check doap voab
-      var label = kb.any(app, ns.rdfs('label')).value
-      var URITemplate = kb.any(app, ns.solid('URITemplate')).value
-      var appPage = kb.any(app, ns.solid('appPage')).uri
-      var matches, types = kb.each(app, ns.solid('forClass'))
-    } catch(e) {
-      console.log("Error getting app details " + app + ": " + e)
-      continue;
-    }
-    for (var j=0; j< types.length; j++){
-      if (t[types[j].uri]) {
-        matches = true; break;
-      }
-    }
-    var render = function(subject, dom, template){
-      var div = myDocument.createElement("div");
-      div.setAttribute('class', 'docView')
-      var iframe = myDocument.createElement("IFRAME")
-      iframe.setAttribute('src', subject.uri)    // allow-same-origin
-      iframe.setAttribute('class', 'doc')
-      iframe.setAttribute('sandbox', 'allow-same-origin allow-forms'); // allow-scripts ?? no documents should be static
-      // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
-      iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
-//        iframe.setAttribute('height', '480')
-//        iframe.setAttribute('width', '640')
-      var tr = myDocument.createElement('TR')
-      tr.appendChild(iframe)
-      div.appendChild(tr)
-      return div
-    }
-    if (matches){
-      var pane = { icon: icon, label: function(){return label}}
-    }
-  }
-}
-// black rocket not ongh-pages: js/panes/common/icons/noun_113198.svg
-// red rocket:  js/panes/warp/icons/warp-icon.png
-tabulator.Icon.src.icon_warp = tabulator.scriptBase + 'js/panes/warp/icons/warp-icon.png';
-tabulator.Icon.tooltips[tabulator.Icon.src.icon_warp] = 'warp'
-tabulator.panes.register({
-
-    icon: tabulator.Icon.src.icon_warp,
-
-    name: 'warp',
-
-    // same as classInstancePane
-    label: function(subject, myDocument) {
-      var n = tabulator.kb.each(
-          undefined, tabulator.ns.rdf( 'type'), subject).length;
-      if (n > 0) return "List (" + n + ")";  // Show how many in hover text
-      n = tabulator.kb.each(
-          subject, tabulator.ns.ldp( 'contains')).length;
-      if (n > 0) {
-        return "Contents (" + n + ")"  // Show how many in hover text
-      }
-      return null;     // Suppress pane otherwise
-    },
-
-    render: function(subject, myDocument) {
-        var div = myDocument.createElement("div")
-
-        //  @@ When we can, use CSP to turn off scripts within the iframe
-        div.setAttribute('class', 'warp')
-        var iframe = myDocument.createElement("IFRAME")
-        iframe.setAttribute('src', subject.uri)    // allow-same-origin
-        iframe.setAttribute('class', 'doc')
-        iframe.setAttribute('sandbox', 'allow-same-origin allow-forms allow-scripts'); // allow-scripts ?? no documents should be static
-        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe
-
-        // Like https://linkeddata.github.io/warp/#/list/http/localhost:3080/timbl/Public/Test/Warp/
-        var warpURI = 'https://linkeddata.github.io/warp/#/list/http'
-        var p = subject.uri.indexOf('//')
-        if (subject.uri.slice(0,6) === 'https:') {
-          warpURI += 's'
-        }
-        warpURI += subject.uri.slice(p + 1)
-        iframe.setAttribute('src', warpURI)
-        iframe.setAttribute('style', 'resize = both; height: 120em; width:80em;')
-//        iframe.setAttribute('height', '480')
-//        iframe.setAttribute('width', '640')
-        var tr = myDocument.createElement('TR')
-        tr.appendChild(iframe)
-        div.appendChild(tr)
-        return div
-    }
-}, true);
-//ends
-
-// ###### Finished expanding js/panes/dynamic/dynamicPanes.js ##############
 
 // User configured:
 // ###### Expanding js/panes/form/pane.js ##############
@@ -45226,7 +45342,7 @@ tabulator.panes.register({
             if (n == 0) return null;  // None, suppress pane
             if (n > 15) return null;  // @@ At the moment this pane can be slow with too many @@ fixme by using limits
             return "List "+n;     // Show how many in hover text
-            return tabulator.Util.label(subject)+ " table";
+            return (tabulator.Util.label(subject) + " table")
         },
 
     render: function(subject, myDocument) {
@@ -47375,23 +47491,30 @@ tabulator.panes.register( {
     var box = MainRow.appendChild(dom.createElement('table'));
     // var bottomRow = table.appendChild(dom.createElement('tr'));
 
-
     context = { target: subject, me: null, noun: noun,
         div: pane, dom: dom, statusRegion: statusBlock };
+    var uri = tabulator.preferences.get('me');
+    context.me =  uri ? $rdf.sym(uri) : null;
     tabulator.panes.utils.preventBrowserDropEvents(dom);
+
+    box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, noun, function(ok, body){
+      if (!ok) {
+        box.innerHTML = "ACL control box Failed: " + body
+      }
+    }))
+
+    /*
     tabulator.panes.utils.logInLoadProfile(context).then(function(context){
-      box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, noun, function(ok, body){
-        if (!ok) {
-          box.innerHTML = "ACL control box Failed: " + body
-        }
-      }))
-    }).catch( // If we don't have a profile, we can manaagwe wihout esp when testing
+    }).catch(function(err){
+      console.log('Catch from ACLControlBox: ' + err)
       box.appendChild(tabulator.panes.utils.ACLControlBox(subject, dom, noun, function(ok, body){
         if (!ok) {
           box.innerHTML = "ACL control box Failed (with no profile): " + body
         }
       }))
+    } // If we don't have a profile, we can manaagwe wihout esp when testing
     )
+    */
     div.appendChild(pane);
     return div;
   }
@@ -48423,7 +48546,7 @@ if (typeof tabulator.Util.nextVariable == "undefined") tabulator.Util.nextVariab
 tabulator.Util.newVariableName = function() {
     return 'v' + tabulator.Util.nextVariable++;
 }
-tabulator.Util.clearVariableNames = function() { 
+tabulator.Util.clearVariableNames = function() {
     tabulator.Util.nextVariable = 0;
 }
 
@@ -48434,8 +48557,8 @@ tabulator.Util.clearVariableNames = function() {
 */
 
 tabulator.Util.stackString = function(e){
-	
-    var str = "" + e + "\n";    
+
+    var str = "" + e + "\n";
     if (!e.stack) {
             return str + 'No stack available.\n'
     };
@@ -48454,7 +48577,7 @@ tabulator.Util.stackString = function(e){
             toprint.push(chunks);
     };
     //toprint.reverse();  No - I prefer the latest at the top by the error message -tbl
-    
+
     for (var i = 0; i < toprint.length; i++) {
             str += '  ' + toprint[i][1] + '\n    '+ toprint[i][0];
     };
@@ -48465,7 +48588,7 @@ tabulator.Util.stackString = function(e){
 
 
 
-// Now  --afetr the rdflib.js scripts set up a dummy -- 
+// Now  --afetr the rdflib.js scripts set up a dummy --
 // overwrite RDF's dummy logger with Tabulator's :
 // Overwrite the default dummy logger in rdf/Utils.js with a real one//
 // $rdf.log = tabulator.log;    // @@ Doesn't work :-( tbl
@@ -48530,7 +48653,7 @@ tabulator.Util.ancestor = function(target, tagName) {
         try {
             if (level.tagName == tagName) return level;
         } catch(e) { // can hit "TypeError: can't access dead object" in ffox
-            return undefined; 
+            return undefined;
         };
     }
     return undefined
@@ -48547,7 +48670,7 @@ tabulator.Util.getAbout = function(kb, target) {
             return kb.fromNT(aa);
 //        } else {
 //            if (level.tagName=='TR') return undefined;//this is to prevent literals passing through
-                    
+
         }
     }
     tabulator.log.debug("getAbout: No about found");
@@ -48559,7 +48682,7 @@ tabulator.Util.getTerm = function(target){
     var statementTr=target.parentNode;
     var st=statementTr?statementTr.AJAR_statement:undefined;
 
-    var className=st?target.className:'';//if no st then it's necessary to use getAbout    
+    var className=st?target.className:'';//if no st then it's necessary to use getAbout
     switch (className){
         case 'pred':
         case 'pred selected':
@@ -48572,7 +48695,7 @@ tabulator.Util.getTerm = function(target){
             else
                 return st.subject;
             break;
-        case '':    
+        case '':
         case 'selected': //header TD
             return tabulator.Util.getAbout(tabulator.kb,target); //kb to be changed
         case 'undetermined selected':
@@ -48581,7 +48704,7 @@ tabulator.Util.getTerm = function(target){
 }
 
 tabulator.Util.include = function(document,linkstr){
-    
+
     var lnk = document.createElement('script');
     lnk.setAttribute('type', 'text/javascript');
     lnk.setAttribute('src', linkstr);
@@ -48623,7 +48746,7 @@ tabulator.Util.getEyeFocus = function(element,instantly,isBottom,myWindow) {
         if (isBottom){
             myWindow.scrollBy(0,elementPosY+element.clientHeight-(myWindow.scrollY+myWindow.innerHeight));
             return;
-        }            
+        }
         myWindow.scrollBy(0,totalScroll);
         return;
     }
@@ -48703,7 +48826,7 @@ tabulator.Util.shortName = function(uri) {
         if (canUse(p.slice(0,4))) return pok;
         if (canUse(p.slice(0,1))) return pok;
         if (canUse(p.slice(0,5))) return pok;
-        for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
+        for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok;
     }
 };
 
@@ -48722,10 +48845,10 @@ tabulator.Util.ontologyLabel = function(term) {
     } else {
         i = s.lastIndexOf('/');
         if (i >=0 ) {
-            s = s.slice(0, i+1); 
+            s = s.slice(0, i+1);
         } else {
             return term.uri + '?!';    // strange should have # or /
-        }; 
+        };
     };
     for (var ns in tabulator.ns) {
         namespaces[tabulator.ns[ns]] = ns; // reverse index
@@ -48734,14 +48857,14 @@ tabulator.Util.ontologyLabel = function(term) {
         return namespaces[s];
     } catch (e) {
     };
-    
-    s = s.slice(0, -1); // Chop off delimiter ... now have just 
-    
+
+    s = s.slice(0, -1); // Chop off delimiter ... now have just
+
     while(s) {
         i = s.lastIndexOf('/');
         if (i >=0 ) {
             part = s.slice(i+1);
-            s = s.slice(0, i); 
+            s = s.slice(0, i);
             if ((part !== 'ns') && ( '0123456789'.indexOf(part[0]) < 0))
                 return part;
         } else {
@@ -48753,9 +48876,9 @@ tabulator.Util.ontologyLabel = function(term) {
 
 tabulator.Util.labelWithOntology = function(x, initialCap) {
     var t = tabulator.kb.findTypeURIs(x);
-    if (t[tabulator.ns.rdf('Predicate').uri] || 
+    if (t[tabulator.ns.rdf('Predicate').uri] ||
         t[tabulator.ns.rdfs('Class').uri]) {
-        return tabulator.Util.label(x, initialCap) + 
+        return tabulator.Util.label(x, initialCap) +
             ' (' + tabulator.Util.ontologyLabel(x) + ')';
     }
     return tabulator.Util.label(x, initialCap);
@@ -48774,16 +48897,17 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
         //s = s.toString();
         if (initialCap) return s.slice(0,1).toUpperCase() + s.slice(1);
         return s;
-    } 
+    }
     function cleanUp(s1) {
         var s2 = "";
+        if (s1.slice(-1) === '/') s1 = s1.slice(0,-1) // chop trailing slash
         for (var i=0; i<s1.length; i++) {
             if (s1[i] == '_' || s1[i] == '-') {
                 s2 += " ";
                 continue;
             }
             s2 += s1[i];
-            if (i+1 < s1.length && 
+            if (i+1 < s1.length &&
                 s1[i].toUpperCase() != s1[i] &&
                 s1[i+1].toLowerCase() != s1[i+1]) {
                 s2 += " ";
@@ -48792,11 +48916,11 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
         if (s2.slice(0,4) == 'has ') s2 = s2.slice(4);
         return doCap(s2);
     }
-    
+
     var lab=tabulator.lb.label(x);
     if (lab) return doCap(lab.value);
     //load #foo to Labeler?
-    
+
     if (x.termType == 'bnode') {
         return "...";
     }
@@ -48807,13 +48931,13 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
     if (typeof s == 'undefined') return x.toString(); // can't be a symbol
     if (s.slice(-5) == '#this') s = s.slice(0,-5)
     else if (s.slice(-3) == '#me') s = s.slice(0,-3);
-    
+
     var hash = s.indexOf("#")
     if (hash >=0) return cleanUp(s.slice(hash+1));
 
     if (s.slice(-9) == '/foaf.rdf') s = s.slice(0,-9)
     else if (s.slice(-5) == '/foaf') s = s.slice(0,-5);
-    
+
     if (1) { //   Eh? Why not do this? e.g. dc:title needs it only trim URIs, not rdfs:labels
         var slash = s.lastIndexOf("/", s.length-2); // (len-2) excludes trailing slash
         if ((slash >=0) && (slash < x.uri.length)) return cleanUp(s.slice(slash+1));
@@ -48838,14 +48962,14 @@ tabulator.Util.predicateLabelForXML = function(p, inverse) {
 	if (!ip) ip = tabulator.kb.any(undefined, tabulator.ns.owl('inverseOf'), p);
 	if (ip) return tabulator.Util.labelForXML(ip)
     }
-        
+
     lab = tabulator.Util.labelForXML(p)
         if (inverse) {
             if (lab =='type') return '...'; // Not "is type of"
             return "is "+lab+" of";
         }
     return lab
-} 
+}
 
 // Not a method. For use in sorts
 tabulator.Util.RDFComparePredicateObject = function(self, other) {
@@ -48881,14 +49005,14 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     //predtr = predParentOf(tr);
     var nodes = tr.childNodes, n = tr.childNodes.length, inverse=tr.AJAR_inverse,
         i, hasVar = 0, pattern, v, c, parentVar=null, level, pat;
-    
+
     function makeRDFStatement(freeVar, parent) {
     	if (inverse)
 	    return new tabulator.rdf.Statement(freeVar, st.predicate, parent)
 	else
 	    return new tabulator.rdf.Statement(parent, st.predicate, freeVar)
     }
-    
+
     var optionalSubqueryIndex = null;
 
     for (level=tr.parentNode; level; level=level.parentNode) {
@@ -48902,22 +49026,22 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
                 tabulator.Util.makeQueryRow(q, level);
             parentVar = level.AJAR_variable
             var predLevel = tabulator.Util.predParentOf(level)
-            if (predLevel.getAttribute('optionalSubqueriesIndex')) { 
+            if (predLevel.getAttribute('optionalSubqueriesIndex')) {
             	optionalSubqueryIndex = predLevel.getAttribute('optionalSubqueriesIndex')
             	pat = optionalSubqueriesIndex[optionalSubqueryIndex]
             }
             break;
         }
     }
-    
+
     if (!pat)
     	var pat = q.pat
-    
+
     var predtr = tabulator.Util.predParentOf(tr)
     ///////OPTIONAL KLUDGE///////////
     var opt = (predtr.getAttribute('optional'))
     if (!opt) {
-    	if (optionalSubqueryIndex) 
+    	if (optionalSubqueryIndex)
     		predtr.setAttribute('optionalSubqueriesIndex',optionalSubqueryIndex)
     	else
     		predtr.removeAttribute('optionalSubqueriesIndex')}
@@ -48928,15 +49052,15 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
     	pat.optional.push(optForm)
     	pat=optForm
     }
-    
+
     ////////////////////////////////
 
-    
-    var st = tr.AJAR_statement; 
-       
+
+    var st = tr.AJAR_statement;
+
     var constraintVar = tr.AJAR_inverse? st.subject:st.object; //this is only used for constraints
     var hasParent=true
-    if (constraintVar.isBlank && constraint) 
+    if (constraintVar.isBlank && constraint)
 			alert("You cannot constrain a query with a blank node. No constraint will be added.");
     if (!parentVar) {
     	hasParent=false;
@@ -48960,12 +49084,12 @@ tabulator.Util.makeQueryRow = function(q, tr, constraint) {
         }
         return this;
     }
-    
 
-    
+
+
     if (constraint)   //binds the constrained variable to its selected value
     	pat.constraints[v]=new constraintEqualTo(constraintVar);
-    	
+
     tabulator.log.info('Pattern: '+pattern);
     pattern.tr = tr
     tr.AJAR_pattern = pattern    // Cross-link UI and query line

@@ -32655,10 +32655,10 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
     var doc = subject.doc(); // The ACL is actually to the doc describing the thing
 
     var table = dom.createElement('table');
-    table.setAttribute('style', 'font-size:120%; margin: 1em; border: 0.1em #ccc ;');
+    table.setAttribute('style', 'margin: 1em; border: 0.1em #ccc ;');
     var headerRow = table.appendChild(dom.createElement('tr'));
     headerRow.textContent = "Sharing for " + noun + " " + tabulator.Util.label(subject);
-    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 150%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
+    headerRow.setAttribute('style', 'min-width: 20em; padding: 1em; font-size: 120%; border-bottom: 0.1em solid red; margin-bottom: 2em;');
 
     var statusRow = table.appendChild(dom.createElement('tr'));
     var statusBlock = statusRow.appendChild(dom.createElement('div'));
@@ -32998,6 +32998,9 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                     useDefault.addEventListener('click', function(event) {
                         tabulator.fetcher.webOperation('DELETE', targetACLDoc)
                         .then(function(xhr) {
+                            tabulator.fetcher.requested[targetACLDoc.uri] = 404
+                            tabulator.fetcher.nonexistant[xhr.resource.uri] = true
+                            tabulator.fetcher.unload(targetACLDoc)
                             statusBlock.textContent = " The sharing for this " + noun + " is now the default.";
                             bottomRow.removeChild(useDefault);
                             box.style = 'color: #777;';

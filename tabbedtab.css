@@ -3,7 +3,7 @@
 **
 **  Do NOT use physical measures, but font-relative measures.
 **  2006-10-21  timbl  cconverted px to em at approx 1em = 12px
-** 
+**
 */
 @import url("js/panes/microblogPane/mbStyle.css"); /*microblog pane*/
 @import url("js/panes/social/style.css"); /*social pane*/
@@ -16,7 +16,7 @@ to make the collapsing easier to use ( the triangles dont jump 20 pixels). ~cm2
 img[title="Hide details."]{
   float:left;
 }
-body {background-color: white ; font-size: 80%; font-family: sans-serif}
+body {background-color: white ; font-family: sans-serif} /*  was: font-size: 80%; */
 
 .warning { color: red; }
 .selected {background-color: #8F3}
@@ -56,7 +56,7 @@ div.internalPane { background-color: #ddddff; padding: 0.5em;
  -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
 
 div.instancePane {
-        border-top: solid 1px #777; border-bottom: solid 1px #777; 
+        border-top: solid 1px #777; border-bottom: solid 1px #777;
         margin-top: 0.5em; margin-bottom: 0.5em }
 
 /* ***************** For the Justification UI Panes **********/
@@ -66,7 +66,7 @@ div.container {
     border-left: solid 5px black;
     border-bottom: solid 5px black;
     border-right: solid 5px black;
-    margin-top: 0.5em; 
+    margin-top: 0.5em;
     margin-bottom: 0.5em;
     -moz-border-radius: 0.75em;
 }
@@ -76,8 +76,8 @@ div.nonCompliantPane {
     border-left: solid 1px red;
     border-bottom: solid 1px red;
     border-right: solid 1px red;
-    padding: 0.5em;  
-    background-color: #fbf0f7; 
+    padding: 0.5em;
+    background-color: #fbf0f7;
     margin-top: 0.5em; margin-bottom: 0.5em;
     -moz-border-radius: 1em;
 }
@@ -87,8 +87,8 @@ div.compliantPane {
     border-left: solid 1px green;
     border-bottom: solid 1px green;
     border-right: solid 1px green;
-    padding: 0.5em;  
-    background-color: #def8e0; 
+    padding: 0.5em;
+    background-color: #def8e0;
     margin-top: 0.5em; margin-bottom: 0.5em;
     -moz-border-radius: 1em;
 }
@@ -97,7 +97,7 @@ div.justification {
     font-size: 100%;
     padding: 0 5px;
     width: 80%; /* @@ Don't use pixels -- use em */
-    background-color: white; 
+    background-color: white;
     margin-top: 0.5em; margin-bottom: 0.5em;
 }
 
@@ -109,9 +109,9 @@ div.description {
     border-bottom: solid 1px yellow;
     border-right: solid 1px yellow;
     padding: 15px;
-    width: 100%; 
-    background-color: #ffffdd; 
-    margin-top: 0.5em; 
+    width: 100%;
+    background-color: #ffffdd;
+    margin-top: 0.5em;
     margin-bottom: 0.5em;
     margin-left: 0.5em;
     margin-right: 0.5em;
@@ -127,9 +127,9 @@ div.premises {
     border-bottom: solid 1px #3399ff;
     border-right: solid 1px #3399ff;
     padding: 0.5px;
-    width: 100%; 
-    background-color: #ccccff; 
-    margin-top: 0.5em; 
+    width: 100%;
+    background-color: #ccccff;
+    margin-top: 0.5em;
     margin-bottom: 0.5em;
     margin-left: 0.5em;
     margin-right: 0.5em;
@@ -141,7 +141,7 @@ div.premises {
 /* ***************** Social Pane **********/
 
 div.socialPane {
-        border-top: solid 1px #777; border-bottom: solid 1px #777; 
+        border-top: solid 1px #777; border-bottom: solid 1px #777;
         padding-top: 0.5em; padding-bottom: 0.5em;
         margin: 0 }
 
@@ -196,9 +196,9 @@ table.inputForm { font-size: 100% }
 .navBlock .navSection {
     border: solid 0.05em gray;
     padding: 0.5em;
- -moz-border-radius: 0.5em; /* CSS3: border-radius: .4em; */ 
+ -moz-border-radius: 0.5em; /* CSS3: border-radius: .4em; */
 }
- 
+
 div.socialPane h2 { color: #202 }
 div.socialPane h3 { color: #202 }
 
@@ -221,20 +221,20 @@ div.social_linkButton {
   }
   .success {background-color: #efe }
   .failure {background-color: white ; border: 0.5em red}
-  div.unknown { display:none } 
-  div.yes > div.negative { display: none } 
-  div.no > div.affirmative { display: none } 
+  div.unknown { display:none }
+  div.yes > div.negative { display: none }
+  div.no > div.affirmative { display: none }
 
 /******************* Exception Pane ********
 **
-** A pane created when the loading of a pane 
+** A pane created when the loading of a pane
 ** throws an exception
 **/
 
 div.exceptionPane pre { background-color: #fee; }
 
 
-  
+
 /******************* Category Pane *********/
 
 .categoryPane a      { color: #3B5998; text-decoration: none; font-weight: bold}
@@ -247,7 +247,7 @@ div.exceptionPane pre { background-color: #fee; }
 
 .categoryTable { padding-left: 2em;}
 .categoryPane { background-color: #f8fff8; padding: 0.5em;
-    border-width: 0.1em; border-color: #777777; 
+    border-width: 0.1em; border-color: #777777;
  -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
 
 .categoryPane a.categoryWhy      { color: #ddd}
@@ -262,14 +262,14 @@ div.exceptionPane pre { background-color: #fee; }
 
 /******************* PubsPane *********/
 
-.pubsPane { 
-    background-color: #F2F6DA; 
-    border-width: 0.1em; 
+.pubsPane {
+    background-color: #F2F6DA;
+    border-width: 0.1em;
     border-color: #777777;
-    -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ 
+    -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */
     padding: 1em;
 
-    text-decoration: none; 
+    text-decoration: none;
     font-weight: bold;
 }
 
@@ -374,11 +374,11 @@ div.dataContentPane td {
                 /* background-color: white; */
                  }
 
-div.dataContentPane tr { 
+div.dataContentPane tr {
 	margin-bottom: 0.6em;
 	padding-top: 1em;
 	padding-bottom: 1em;
-    
+
 }
 
 .dataContentPane a      { color: #3B5998; text-decoration: none; font-weight: bold}
@@ -391,7 +391,7 @@ div.dataContentPane tr {
 .dataContentPane.embeddedXHTML {}
 
 /* div.dataContentPane a { text-decoration: none; color: #006} /* Only very slightly blue */
-div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */ 
+div.dataContentPane td.pred  { min-width: 12em } /* Keep aligned with others better */
 div.dataContentPane td.pred a { color: #444 } /* Greyish as form field names have less info value */
 
 /* .collectionAsTables  {border-right: green 1px; margin: 0.2em;} */
@@ -409,10 +409,10 @@ div.n3Pane {
 
 .imageView { border: 1em white; margin: 1em; }
 
-.n3Pane pre { font-size: 120%; } 
+.n3Pane pre { font-size: 120%; }
 div.n3Pane  { }
 
-.RDFXMLPane pre { font-size: 120%; } 
+.RDFXMLPane pre { font-size: 120%; }
 div.RDFXMLPane  { }
 
 div.RDFXMLPane {
@@ -455,12 +455,12 @@ img.hideTillHover:hover  {
 
 /* Pane icons: */
 .paneShown{ -moz-border-radius: 0.5em;
-            border-top:         solid #222 1px; 
+            border-top:         solid #222 1px;
             border-left:        solid #222 0.1em; border-bottom: solid #eee 0.1em;
-            border-right:       solid #eee 0.1em; 
+            border-right:       solid #eee 0.1em;
             margin-left:        1em; padding: 3px;
             background-color:   #ffd; }
-            
+
 .paneHidden { -moz-border-radius: 0.5em; margin-left: 1em; padding: 3px;  }
 
 /* outline object view */
@@ -509,7 +509,7 @@ table.results td {  font-size: 100%;
 
 
 table.results th {  font-size: 100%;
-    background-color: #ddf; 
+    background-color: #ddf;
     border-left: none;
     border-top: none;
     border-right: solid #777 0.1em;
@@ -539,8 +539,8 @@ Supposed to leave layoutunchanged. So we float it too. */
 /* Try to get the icons to flush right in the cell */
 
 .sortheader {
-    color: black; 
-    text-decoration: none; 
+    color: black;
+    text-decoration: none;
     position: relative;
     border:none;   /* Jim's commented out */
 }
@@ -731,7 +731,7 @@ textarea.textinput{
 
 td.undetermined{
    color: gray;
-   font-style: italic; 
+   font-style: italic;
 }
 
 /*revert back*/
@@ -766,10 +766,10 @@ div.bottom-border-active{
     cursor: copy;
     border: .2em solid;
     border-color: rgb(100%,65%,0%);
-}   
+}
 
-/* The thing below was for the kenny's orange bar*/ 
-/* @@@ This is not specific enough 
+/* The thing below was for the kenny's orange bar*/
+/* @@@ This is not specific enough
 td{
     margin: 0;
     padding: 0;
@@ -918,7 +918,7 @@ div.photoImportContentPane {
     float: left;
     padding: 10px;
     border: 1px solid #AAAAAA;
-    margin: 0px 10px 10px 0px; 
+    margin: 0px 10px 10px 0px;
 }
 .photoControlImg {
     border: 0px;
@@ -952,7 +952,7 @@ div.TagSemanticsPanel {
 div.TagSemanticsTable {
     width: 100%;
     font-family: Arial;
-    font-size: 12px;    
+    font-size: 12px;
 }
 div.AddTagSemantics {
     margin: 50px 0px 10px 0px;
@@ -1029,7 +1029,7 @@ Styles for tableViewPane
 .tableViewPane a:hover   { color: #3B5998; text-decoration: underline; font-weight: bold}
 .tableViewPane a:active  { color: #888; text-decoration: none; }
 
-.tableViewPane tr {border-color: #444; padding-left: 0.3em; padding-right: 0.3em  } 
+.tableViewPane tr {border-color: #444; padding-left: 0.3em; padding-right: 0.3em  }
 
 
 
@@ -1042,7 +1042,7 @@ Styles for tableViewPane
 }
 
 /*
-End of styles for tableViewPane 
+End of styles for tableViewPane
 */
 
 

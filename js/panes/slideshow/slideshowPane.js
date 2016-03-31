@@ -29,7 +29,7 @@ tabulator.loadScript("js/panes/slideshow/better-simple-slideshow/js/better-simpl
 // load also js/panes/slideshow/better-simple-slideshow/css/simple-slideshow-styles.css
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_slideshow = iconPrefix + 'js/panes/common/icons/noun_138712.svg';
+tabulator.Icon.src.icon_slideshow = tabulator.iconPrefix + 'js/panes/common/icons/noun_138712.svg';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_slideshow] = 'Slideshow'
 
 tabulator.panes.register( {

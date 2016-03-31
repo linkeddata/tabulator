@@ -16,17 +16,17 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 }
 
 
-    
+
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_bug = iconPrefix + 'js/panes/issue/tbl-bug-22.png';
+tabulator.Icon.src.icon_bug = tabulator.iconPrefix + 'js/panes/issue/tbl-bug-22.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Track issue'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_bug,
-    
+
     name: 'issue',
-    
+
     // Does the subject deserve an issue pane?
     label: function(subject) {
         var kb = tabulator.kb;
@@ -48,11 +48,11 @@ tabulator.panes.register( {
         div.setAttribute('class', 'issuePane');
 
         var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
+            if (!inverse && pred.uri ==
                 'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
-        
+
         var setModifiedDate = function(subj, kb, doc) {
             if (!getOption(tracker, 'trackLastModified')) return;
             var deletions = kb.statementsMatching(subject, DCT('modified'));
@@ -68,7 +68,7 @@ tabulator.panes.register( {
             div.appendChild(pre);
             pre.appendChild(dom.createTextNode(message));
             return pre
-        } 
+        }
 
         var complainIfBad = function(ok,body){
             if (ok) {
@@ -106,12 +106,12 @@ tabulator.panes.register( {
                 titlefield.setAttribute('class','pendingedit');
                 titlefield.disabled = true;
                 sts = [];
-                
+
                 var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestring());
                 sts.push(new $rdf.Statement(issue, WF('tracker'), tracker, stateStore));
                 var title = kb.literal(titlefield.value);
                 sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
-                
+
                 // sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
                 sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
 
@@ -137,13 +137,13 @@ tabulator.panes.register( {
             }
             //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
             //form.setAttribute('onsubmit', "function xx(){return false;}");
-            
-            
-            
+
+
+
             tabulator.fetcher.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
             tabulator.fetcher.removeCallback('fail','expand');
 
-            
+
             var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
@@ -161,27 +161,27 @@ tabulator.panes.register( {
             form.appendChild(titlefield);
             return form;
         };
-        
-        
 
-                                                  
+
+
+
         /////////////////////// Reproduction: Spawn a new instance of this app
-        
+
         var newTrackerButton = function(thisTracker) {
 	    var button = tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
-        
-                var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
+
+                var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to
 
                 // console.log("Ready to make new instance at "+ws);
                 var sp = tabulator.ns.space;
                 var kb = tabulator.kb;
-                
+
                 var base = kb.any(ws, sp('uriPrefix')).value;
                 if (base.slice(-1) !== '/') {
                     $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + base );
                     base = base + '/';
                 }
-                base += appPathSegment + '/' + timestring() + '/'; // unique id 
+                base += appPathSegment + '/' + timestring() + '/'; // unique id
 
                 var documentOf = function(x) {
                     return kb.sym($rdf.uri.docpart(x.uri));
@@ -206,20 +206,20 @@ tabulator.panes.register( {
                     return kb.sym(u);
                 }
                 var there = morph(here);
-                var newTracker = morph(thisTracker); 
-                
+                var newTracker = morph(thisTracker);
+
                 var myConfig = kb.statementsMatching(undefined, undefined, undefined, here);
                 for (var i=0; i < myConfig.length; i++) {
                     st = myConfig[i];
                     kb.add(morph(st.subject), morph(st.predicate), morph(st.object), there);
                 }
-                
+
                 // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
                 //
                 kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, stateStore);
-                
+
                 kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, there);
-                
+
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
@@ -242,29 +242,29 @@ tabulator.panes.register( {
                         };
                     }
                 );
-                
+
                 // Created new data files.
                 // @@ Now create initial files - html skin, (Copy of mashlib, css?)
                 // @@ Now create form to edit configuation parameters
                 // @@ Optionally link new instance to list of instances -- both ways? and to child/parent?
-                // @@ Set up access control for new config and store. 
-                
+                // @@ Set up access control for new config and store.
+
             }); // callback to newAppInstance
-			 
+
 	    button.setAttribute('style', 'margin: 0.5em 1em;');
 	    return button;
-            
+
         }; // newTrackerButton
 
- 
- 
+
+
 ///////////////////////////////////////////////////////////////////////////////
-        
-        
+
+
         tabulator.updater = tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
         var updater = tabulator.updater;
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -275,7 +275,7 @@ tabulator.panes.register( {
 
 
         // Reload resorce then
-        
+
         var reloadStore = function(store, callBack) {
             tabulator.fetcher.unload(store);
             tabulator.fetcher.nowOrWhenFetched(store.uri, undefined, function(ok, body){
@@ -290,7 +290,7 @@ tabulator.panes.register( {
 
 
         // Refresh the DOM tree
-      
+
         var refreshTree = function(root) {
             if (root.refresh) {
                 root.refresh();
@@ -300,11 +300,11 @@ tabulator.panes.register( {
                 refreshTree(root.children[i]);
             }
         }
-        
+
         // All the UI for a single issue, without store load or listening for changes
         //
         var singleIssueUI = function(subject, div) {
-        
+
             var ns = tabulator.ns
             var predicateURIsDone = {};
             var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
@@ -325,7 +325,7 @@ tabulator.panes.register( {
                 div.setAttribute('style', mystyle);
             }
             setPaneStyle();
-            
+
             var stateStore = kb.any(tracker, WF('stateStore'));
             var store = kb.sym(subject.uri.split('#')[0]);
 
@@ -342,7 +342,7 @@ tabulator.panes.register( {
 
             tabulator.panes.utils.checkUserSetMe(stateStore);
 
-            
+
             var states = kb.any(tracker, WF('issueClass'));
             if (!states) throw 'This tracker '+tracker+' has no issueClass';
             var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
@@ -357,7 +357,7 @@ tabulator.panes.register( {
 
             var cats = kb.each(tracker, WF('issueCategory')); // zero or more
             for (var i=0; i<cats.length; i++) {
-                div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
+                div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom,
                         kb, subject, cats[i], store, function(ok,body){
                     if (ok) {
                         setModifiedDate(store, kb, store);
@@ -366,7 +366,7 @@ tabulator.panes.register( {
                     else console.log("Failed to change category:\n"+body);
                 }));
             }
-            
+
             var a = dom.createElement('a');
             a.setAttribute('href',tracker.uri);
             a.setAttribute('style', 'float:right');
@@ -385,7 +385,7 @@ tabulator.panes.register( {
 
 
             // Assigned to whom?
-            
+
             var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
             if (assignments.length > 1) {
                 say("Weird, was assigned to more than one person. Fixing ..");
@@ -400,7 +400,7 @@ tabulator.panes.register( {
 
                 // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
             }
-            
+
             var assignee = assignments.length ? assignments[0].object : null;
             // Who could be assigned to this?
             // Anyone assigned to any issue we know about  @@ should be just for this tracker
@@ -469,14 +469,14 @@ tabulator.panes.register( {
                         donePredicate(p); // Check that one off
                     }
                 });
-                
+
             };
-            
+
             //   Comment/discussion area
-            
+
             var spacer = div.appendChild(dom.createElement('tr'));
 	    spacer.setAttribute('style','height: 1em');  // spacer and placeHolder
-			
+
             var messageStore = kb.any(tracker, ns.wf('messageStore'));
             if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));
 	    kb.fetcher.nowOrWhenFetched(messageStore, function(ok, body, xhr){
@@ -491,8 +491,8 @@ tabulator.panes.register( {
 		}
 	    })
 	    donePredicate(ns.wf('message'));
-			 
-			 
+
+
             // Remaining properties
 	    var plist = kb.statementsMatching(subject)
 	    var qlist = kb.statementsMatching(undefined, undefined, subject)
@@ -505,7 +505,7 @@ tabulator.panes.register( {
                 function(pred, inverse) {
                     return !(pred.uri in predicateURIsDone)
                 });
-                
+
             var refreshButton = dom.createElement('button');
             refreshButton.textContent = "refresh";
             refreshButton.addEventListener('click', function(e) {
@@ -526,12 +526,12 @@ tabulator.panes.register( {
 
 
         //              Render a single issue
-        
+
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
 
             var tracker = kb.any(subject, WF('tracker'));
             if (!tracker) throw 'This issue '+subject+'has no tracker';
-            
+
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
             tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane1(ok, body) {
@@ -540,29 +540,29 @@ tabulator.panes.register( {
 
                 tabulator.fetcher.nowOrWhenFetched(stateStore, subject, function drawIssuePane2(ok, body) {
                     if (!ok) return console.log("Failed to load state " + stateStore + ' '+body);
-                    
+
                     singleIssueUI(subject, div);
                     updater.addDownstreamChangeListener(stateStore, function() {refreshTree(div)}); // Live update
                 });
-                    
+
             });  // End nowOrWhenFetched tracker
 
     ///////////////////////////////////////////////////////////
 
         //          Render a Tracker instance
-        
+
         } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
             var tracker = subject;
-            
+
             var states = kb.any(subject, WF('issueClass'));
             if (!states) throw 'This tracker has no issueClass';
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
-            
+
             tabulator.panes.utils.checkUserSetMe(stateStore);
-            
+
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
-            
+
             var h = dom.createElement('h2');
             h.setAttribute('style', 'font-size: 150%');
             div.appendChild(h);
@@ -581,7 +581,7 @@ tabulator.panes.register( {
                     b.setAttribute('disabled', 'true');
                     container.appendChild(newIssueForm(dom, kb, subject));
                 }, false);
-            
+
             // Table of issues - when we have the main issue list
             tabulator.fetcher.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
                 if (!ok) return console.log("Cannot load state store "+body);
@@ -600,9 +600,9 @@ tabulator.panes.register( {
                     query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
                     query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
                 }
-                
+
                 query.pat.optional = [];
-                
+
                 var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
                 // console.log('Property list: '+propertyList); //
                 if (propertyList) {
@@ -619,11 +619,11 @@ tabulator.panes.register( {
                         oneOpt.add(v['issue'], prop, v[vname]);
                     }
                 }
-                
-            
+
+
                 // console.log('Query pattern is:\n'+query.pat);
-                // console.log('Query pattern optional is:\n'+opts); 
-            
+                // console.log('Query pattern optional is:\n'+opts);
+
                 var selectedStates = {};
                 var possible = kb.each(undefined, ns.rdfs('subClassOf'), states);
                 possible.map(function(s){
@@ -632,9 +632,9 @@ tabulator.panes.register( {
                         // console.log('on '+s.uri); // @@
                     };
                 });
-                
+
                 var overlay, overlayTable;
-                
+
                 var bringUpInOverlay = function(href) {
                     overlayPane.innerHTML = ''; // clear existing
                     var button = overlayPane.appendChild(dom.createElement('button'))
@@ -644,7 +644,7 @@ tabulator.panes.register( {
                     })
                     singleIssueUI(kb.sym(href), overlayPane);
                 }
-                        
+
                 var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {
                     query: query,
                     keyVariable: '?issue', // Charactersic of row
@@ -653,7 +653,7 @@ tabulator.panes.register( {
                         '?created': { cellFormat: 'shortDate'},
                         '?state': { initialSelection: selectedStates }}} );
                 div.appendChild(tableDiv);
-                
+
                 overlay = div.appendChild(dom.createElement('div'));
                 overlay.setAttribute('style', ' position: absolute; top: 100px; right: 20px; margin: 1em white;');
                 overlayPane = overlay.appendChild(dom.createElement('div')); // avoid stomping on style by pane
@@ -675,28 +675,28 @@ tabulator.panes.register( {
                 } else {
                     console.log('No refresh function?!');
                 }
-                            
+
                 updater.addDownstreamChangeListener(stateStore, tableDiv.refresh); // Live update
-                
-                
+
+
             });
-            
-            
+
+
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
             // end of Tracker instance
 
 
-        } else { 
+        } else {
             console.log("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
-        }         
+        }
         if (!tabulator.preferences.get('me')) {
             console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
             // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
-        
-        
+
+
         var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
             // sayt.parent.removeChild(sayt);
             if (webid) {
@@ -708,15 +708,13 @@ tabulator.panes.register( {
                 console.log("(Logged out)")
                 me = null;
             }
-        });        
-        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;'); 
+        });
+        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;');
         div.appendChild(loginOutButton);
-        
+
         return div;
 
     }
 }, true);
 
 //ends
-
-

@@ -3,16 +3,16 @@
 **
 */
 
-    
-tabulator.Icon.src.icon_form = iconPrefix + 'js/panes/form/form-b-22.png';
+
+tabulator.Icon.src.icon_form = tabulator.iconPrefix + 'js/panes/form/form-b-22.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_form] = 'forms';
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_form,
-    
+
     name: 'form',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var n = tabulator.panes.utils.formsFor(subject).length;
@@ -28,18 +28,18 @@ tabulator.panes.register( {
         var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
-        
+
 
         var mention = function complain(message, style){
             var pre = dom.createElement("p");
             pre.setAttribute('style', style ? style :'color: grey; background-color: white');
             box.appendChild(pre).textContent = message;
             return pre
-        } 
+        }
 
         var complain = function complain(message, style){
             mention(message, 'style', style ? style :'color: grey; background-color: #fdd;');
-        } 
+        }
 
         var complainIfBad = function(ok,body){
             if (ok) {
@@ -55,15 +55,15 @@ tabulator.panes.register( {
             var box2 = thisPane.render(subject, dom);
             parent.replaceChild(box2, box);
         };
-        
+
         if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
-         
+
         //kb.statementsMatching(undefined, undefined, subject);
 
         // The question of where to store this data about subject
         // This in general needs a whole lot more thought
         // and it connects to the discoverbility through links
-        
+
         var t = kb.findTypeURIs(subject);
 
         var me_uri = tabulator.preferences.get('me');
@@ -81,7 +81,7 @@ to put this new information")
             if (ws.length = 0) {
                 mention("You don't seem to have any workspaces defined.  \
 A workspace is a place on the web (http://..) or in \
-the file system (file:///) to store application data.\n")            
+the file system (file:///) to store application data.\n")
             } else {
                 //@@
             }
@@ -89,15 +89,15 @@ the file system (file:///) to store application data.\n")
 
 
         // Render forms using a given store
-        
+
         var renderFormsFor = function(store, subject) {
             kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
                 if (!ok) return complain("Cannot load store "+store.uri + ': '+ body);
 
                 //              Render the forms
-                
+
                 var forms = tabulator.panes.utils.formsFor(subject);
-                
+
                 // complain('Form for editing this form:');
                 for (var i=0; i<forms.length; i++) {
                     var form = forms[i];
@@ -115,7 +115,7 @@ the file system (file:///) to store application data.\n")
                     anchor.setAttribute('href', form.uri);
                     heading.appendChild(anchor)
                     anchor.textContent = tabulator.Util.label(form, true);
-                    
+
                     /*  Keep tis as a reminder to let a New one have its URI given by user
                     mention("Where will this information be stored?")
                     var ele = dom.createElement('input');
@@ -126,7 +126,7 @@ the file system (file:///) to store application data.\n")
                     ele.setAttribute('style', 'font-size: 80%; color:#222;');
                     ele.value = store.uri
                     */
-                    
+
                     tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
                 }
 
@@ -145,9 +145,9 @@ the file system (file:///) to store application data.\n")
         if (subject.uri != docuri
             && tabulator.sparql.editable(docuri, kb))
             store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable data file with hash
-            
+
         else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
-            // 
+            //
         }
         // 2. where stuff is already stored
         if (!store) {
@@ -161,12 +161,12 @@ the file system (file:///) to store application data.\n")
                 if (uri && tabulator.sparql.editable(uri)) {
                     store = kb.sym(uri);
                     break;
-                }            
+                }
             }
         }
 
         // 3. In a workspace store
-        
+
         var followeach = function(kb, subject, path) {
             if (path.length == 0) return [ subject ];
             var oo = kb.each(subj, path[0]);
@@ -179,7 +179,7 @@ the file system (file:///) to store application data.\n")
 
         var date = '2014'; // @@@@@@@@@@@@ pass as parameter
 
-        
+
 
        if (store) {
             // mention("@@ Ok, we have a store <" + store.uri + ">.");
@@ -204,17 +204,14 @@ the file system (file:///) to store application data.\n")
                         complain("Note no suitable annotation store in activity: " + act);
                     }
                 }
-                
+
            });
            box.appendChild(foobarbaz);
         };
-        
+
         return box;
     }
 
 }, false);
 
 //ends
-
-
-

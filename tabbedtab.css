@@ -50,15 +50,17 @@ img.pic { max-height: 20em }
 pre#status { font-size: 100% }
 
 /* Panes */
-
+/*
 td.internal  {  }
+
+/*   Moved into code:
 div.internalPane { background-color: #ddddff; padding: 0.5em;
- -moz-border-radius: 1em; /* CSS3: border-radius: .4em; */ }
+ -moz-border-radius: 1em;   border-radius: .4em;  }
 
 div.instancePane {
         border-top: solid 1px #777; border-bottom: solid 1px #777;
         margin-top: 0.5em; margin-bottom: 0.5em }
-
+*/
 /* ***************** For the Justification UI Panes **********/
 
 div.container {
@@ -70,7 +72,7 @@ div.container {
     margin-bottom: 0.5em;
     -moz-border-radius: 0.75em;
 }
-
+/*
 div.nonCompliantPane {
     border-top: solid 1px red;
     border-left: solid 1px red;
@@ -92,7 +94,7 @@ div.compliantPane {
     margin-top: 0.5em; margin-bottom: 0.5em;
     -moz-border-radius: 1em;
 }
-
+*/
 div.justification {
     font-size: 100%;
     padding: 0 5px;

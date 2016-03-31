@@ -8,30 +8,30 @@
 **  trips, etc
 */
 
-    
-tabulator.Icon.src.icon_trip = iconPrefix +
+
+tabulator.Icon.src.icon_trip = tabulator.iconPrefix +
     'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png'; // @@
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_trip] = 'travel expenses'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_trip,
-    
+
     name: 'travel expenses',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
-        
+
         // if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
         //if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
 
 
         if (Q('Transaction') in kb.findSuperClassesNT(subject)) return "by Trip";
         if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
-        
+
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -45,7 +45,7 @@ tabulator.panes.register( {
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
+
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'transactionPane');
         div.innerHTML='<h1>Transaction</h1><table><tbody><tr>\
@@ -53,11 +53,11 @@ tabulator.panes.register( {
         <p>This is a pane under development.</p>';
 
         var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
+            if (!inverse && pred.uri ==
                 'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
-        
+
         var setModifiedDate = function(subj, kb, doc) {
             var deletions = kb.statementsMatching(subject, DCT('modified'));
             var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
@@ -72,7 +72,7 @@ tabulator.panes.register( {
             pre.setAttribute('style', style);
             div.appendChild(pre);
             pre.appendChild(myDocument.createTextNode(message));
-        } 
+        }
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
@@ -81,13 +81,13 @@ tabulator.panes.register( {
         };
 
 
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
+ // //////////////////////////////////////////////////////////////////////////////
+
+
+
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -104,13 +104,13 @@ tabulator.panes.register( {
             var v = {};
             vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
             query.pat.add(v['transaction'], TRIP('trip'), subject);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
             query.pat.optional.push(opt);
-            
+
             query.pat.add(v['transaction'], Q('date'), v['date']);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
             query.pat.optional.push(opt);
@@ -137,7 +137,7 @@ tabulator.panes.register( {
                         if (lit) {
                             total[tyuri] = total[tyuri] + parseFloat(lit.value);
                             //complain('      Trans type ='+ty+'; in_USD "' + lit
-                            //       +'; total[tyuri] = '+total[tyuri]+';') 
+                            //       +'; total[tyuri] = '+total[tyuri]+';')
                         }
                     }
                 });
@@ -148,7 +148,7 @@ tabulator.panes.register( {
                     str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
                     types++;
                     grandTotal += total[uri];
-                } 
+                }
                 complain("Totals of "+trans.length+" transactions: " + str, ''); // @@@@@  yucky -- need 2 col table
                 if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
             }
@@ -158,7 +158,7 @@ tabulator.panes.register( {
         }
 
         //          Render the set of trips which have transactions in this class
-        
+
         if (Q('Transaction') in kb.findSuperClassesNT(subject)) {
 
             ts = kb.each(undefined, ns.rdf('type'), subject);
@@ -172,13 +172,13 @@ tabulator.panes.register( {
                 } else {
                     if (!(trans in index)) index[trip] =  { total:0, transactions: [] };
                     var usd = kb.any(trans, Q('in_USD'));
-                    if (usd) index[trip]['total'] += usd; 
+                    if (usd) index[trip]['total'] += usd;
                     var date = kb.any(trans, Q('date'));
-                    index[trip.toNT()]['transactions'].push([date, trans]); 
+                    index[trip.toNT()]['transactions'].push([date, trans]);
                 }
             }
 /*            var byDate = function(a,b) {
-                return new Date(kb.any(a, CAL('dtstart'))) - 
+                return new Date(kb.any(a, CAL('dtstart'))) -
                         new Date(kb.any(b, CAL('dtstart')));
             }
 */
@@ -199,19 +199,17 @@ tabulator.panes.register( {
         } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
 
             renderTrip(subject, div);
-            
+
         }
 
 
-        
+
         //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
 
         return div;
     }
-        
+
 
 }, true);
 
 //ends
-
-

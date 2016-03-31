@@ -23,7 +23,7 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_contactCard = iconPrefix + 'js/panes/contact/card.png';
+tabulator.Icon.src.icon_contactCard = tabulator.iconPrefix + 'js/panes/contact/card.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_contactCard] = 'Contact'
 
 tabulator.panes.register( {
@@ -303,7 +303,7 @@ tabulator.panes.register( {
 
         if (t[ns.vcard('Individual').uri]|| t[ns.vcard('Organization').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
 
-            var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
+            var individualFormDoc = kb.sym(tabulator.iconPrefix + 'js/panes/contact/individualForm.ttl');
             // var individualFormDoc = kb.sym('https://timbl.rww.io/Apps/Contactator/individualForm.ttl');
             var individualForm = kb.sym(individualFormDoc.uri + '#form1')
 
@@ -338,6 +338,11 @@ tabulator.panes.register( {
 
 
                 tabulator.panes.utils.checkUserSetMe(cardDoc);
+
+                var img = div.appendChild(dom.createElement('img'));
+                img.setAttribute('style', 'max-height: 10em; border-radius: 1em; margin: 0.7em;')
+                tabulator.panes.utils.setImage(img, subject);
+
 
                 tabulator.panes.utils.appendForm(dom, div, {}, subject, individualForm, cardDoc, complainIfBad);
 

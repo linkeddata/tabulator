@@ -106,27 +106,55 @@ tabulator.panes.utils.setName = function(element, x) {
     }
 }
 
+// Set of suitable images
+tabulator.panes.utils.imagesOf = function(x) {
+    return (kb.each(x, ns.sioc('avatar'))
+    .concat(kb.each(x, ns.foaf('img')))
+    .concat(kb.each(x, ns.vcard('logo')))
+    .concat(kb.each(x, ns.vcard('photo')))
+    .concat(kb.each(x, ns.foaf('depiction'))))
+}
 // Best logo or avater or photo etc to represent someone or some group etc
 //
+
 tabulator.panes.utils.setImage = function(element, x) {
     var kb = tabulator.kb, ns = tabulator.ns;
-    var fallback = "https://webizen.org/img/photo.png";
+    var iconDir = tabulator.scriptBase + "js/panes/common/icons/"
+    var fallback = iconDir + "noun_15059.svg";
     var findImage = function(x) {
+        if (x.sameTerm(ns.foaf('Agent')) || x.sameTerm(ns.rdf('Resource'))) {
+          return iconDir + 'noun_98053.svg' // Globe
+        }
         var image = kb.any(x, ns.sioc('avatar'))
             || kb.any(x, ns.foaf('img'))
             || kb.any(x, ns.vcard('logo'))
+            || kb.any(x, ns.vcard('hasPhoto'))
             || kb.any(x, ns.vcard('photo'))
             || kb.any(x, ns.foaf('depiction'));
-        return image ? image.uri : fallback;
+        return image ? image.uri : null
+      }
+      var findImageByClass = function(x) {
+        var types = kb.findTypeURIs(x)
+        if (ns.solid('AppProvider').uri in types) {
+          return iconDir + 'noun_15177.svg' // App
+        }
+        if ((x.uri.split('/').length = 4 && !(x.uri.split('/')[1]) && !(x.uri.split('/')[3]))) {
+          return iconDir + 'noun_15177.svg' // App -- this is an origin
+        }
+        if (ns.solid('AppProviderClass').uri in types) {
+          return iconDir + 'noun_144.svg' // App Whitelist @@@ ICON (three apps ?)
+        }
+        if (ns.vcard('Group').uri in types || ns.rdfs('Class').uri in types) {
+          return iconDir + 'noun_339237.svg' // Group of people
+        }
+        return fallback
     }
 
-    var uri = x.sameTerm(ns.foaf('Agent'))
-      ? tabulator.scriptBase + 'js/panes/common/icons/noun_98053.svg'
-      : findImage(x);
-    element.setAttribute('src', uri);
-    if (uri === fallback && x.uri) {
+    var uri = findImage(x)
+    element.setAttribute('src', uri || findImageByClass(x));
+    if (!uri && x.uri) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
-            element.setAttribute('src', findImage(x));
+            element.setAttribute('src', findImage(x) || findImageByClass(x));
         });
     }
 }
@@ -166,6 +194,71 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, del
     }, false);
 }
 
+
+
+
+// A TR to repreent a draggable person, etc in a list
+//
+//
+tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
+  var tr = dom.createElement('tr');
+  options = options || {}
+  tr.predObj = [pred.uri, obj.uri];
+  var td1 = tr.appendChild(dom.createElement('td'));
+  var td2 = tr.appendChild(dom.createElement('td'));
+  var td3 = tr.appendChild(dom.createElement('td'));
+
+  var agent = obj;
+  var image = td1.appendChild(dom.createElement('img'));
+  td1.setAttribute('style','width:4em; padding:0.5em; height: 4em;')
+  td2.setAttribute('style', 'text-align:left;')
+  td3.setAttribute('style','width:2em; padding:0.5em; height: 4em;')
+  image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
+  tabulator.panes.utils.setImage(image, agent);
+
+  tabulator.panes.utils.setName(td2, agent);
+  if (options.deleteFunction){
+    tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
+  }
+  if (options.link !== false) {
+    var anchor = td3.appendChild(dom.createElement('a'))
+    anchor.setAttribute('href', obj.uri);
+    anchor.classList.add('HoverControlHide')
+    var linkImage = anchor.appendChild(dom.createElement('img'));
+    linkImage.setAttribute('src', tabulator.scriptBase + 'icons/go-to-this.png');
+    td3.appendChild(dom.createElement('br'))
+  }
+  if (options.draggable !== false){ // default is on
+    tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
+
+    tr.addEventListener('dragstart', function(e){
+        tr.style.fontWeight = 'bold';
+        // e.dataTransfer.dropEffect = 'move';
+        // e.dataTransfer.effectAllowed = 'all'  // same as default
+        e.dataTransfer.setData("text/uri-list", obj.uri);
+        e.dataTransfer.setData("text/plain", obj.uri);
+        e.dataTransfer.setData("text/html", tr.outerHTML);
+        console.log("Dragstart: " + tr + " -> " + obj + "de: "+ e.dataTransfer.dropEffect)
+    }, false);
+
+    tr.addEventListener('drag', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        //e.dataTransfer.dropEffect = 'copy';
+        // e.dataTransfer.setData("text/uri-list", obj);
+        console.log("Drag: dropEffect: "+ e.dataTransfer.dropEffect)
+    }, false);
+
+    // icons/go-to-this.png
+
+    tr.addEventListener('dragend', function(e){
+        tr.style.fontWeight = 'normal';
+        console.log("Dragend dropeffect: " + e.dataTransfer.dropEffect )
+        console.log("Dragend: " + tr + " -> " + obj)
+    }, false);
+  }
+  return tr;
+}
 
 
 

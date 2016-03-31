@@ -10,19 +10,25 @@ if (typeof tabulator.panes.utils === 'undefined') {
 //
 
 // Take the "defaltForNew" ACL and convert it into the equivlent ACL
-// which the resource would have had.  Retur it as a new separate store.
+// which the resource would have had.  Return it as a new separate store.
 
 tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
     var kb = tabulator.kb;
     var ACL = tabulator.ns.acl;
     var ns = tabulator.ns;
+    var isContainer = doc.uri.slice(-1) === '/' // Give default for all directories
     var defaults = kb.each(undefined, ACL('defaultForNew'), defaultResource, defaultACLdoc);
     var proposed = [];
     defaults.map(function(da) {
         proposed = proposed.concat(kb.statementsMatching(da, ACL('agent'), undefined, defaultACLdoc))
-            .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
+        .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
+        .concat(kb.statementsMatching(da, ACL('origin'), undefined, defaultACLdoc))
+        .concat(kb.statementsMatching(da, ACL('originClass'), undefined, defaultACLdoc))
             .concat(kb.statementsMatching(da, ACL('mode'), undefined, defaultACLdoc));
         proposed.push($rdf.st(da, ACL('accessTo'), doc, defaultACLdoc)); // Suppose
+        if (isContainer){ // By default, make this apply to folder contents too
+            proposed.push($rdf.st(da, ACL('defaultForNew'), doc, defaultACLdoc))
+        }
     });
     var kb2 = $rdf.graph(); // Potential - derived is kept apart
     proposed.map(function(st){
@@ -31,7 +37,7 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
             return  $rdf.sym( (sym.uri.slice(0, y) == defaultACLdoc.uri) ?
                  aclDoc.uri + sym.uri.slice(y) : sym.uri );
         }
-        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
+        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri));
     });
 
     //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
@@ -64,10 +70,9 @@ tabulator.panes.utils.readACL = function(x, aclDoc, kb, getDefaults) {
     var ns = tabulator.ns
     var predicate = getDefaults ? ns.acl('defaultForNew') : ns.acl('accessTo')
     var ACL = tabulator.ns.acl;
-    var ac = {'agent': [], 'agentClass': []};
+    var ac = {'agent': [], 'agentClass': [], 'origin': [], 'originClass': []};
     var auths = kb.each(undefined, predicate, x);
-    for (var pred in { 'agent': true, 'agentClass': true}) {
-//    ['agent', 'agentClass'].map(function(pred){
+    for (var pred in { 'agent': true, 'agentClass': true, 'origin': true, 'originClass': true}) {
         auths.map(function(a){
             kb.each(a,  ACL('mode')).map(function(mode){
                  kb.each(a,  ACL(pred)).map(function(agent){
@@ -83,7 +88,7 @@ tabulator.panes.utils.readACL = function(x, aclDoc, kb, getDefaults) {
 // Compare two ACLs
 tabulator.panes.utils.sameACL = function(a, b) {
     var contains = function(a, b) {
-        for (var pred in { 'agent': true, 'agentClass': true}) {
+        for (var pred in { 'agent': true, 'agentClass': true, 'origin': true, 'originClass': true}) {
             if (a[pred]) {
                 for (var agent in a[pred]) {
                     for (var mode in a[pred][agent]) {
@@ -103,7 +108,7 @@ tabulator.panes.utils.sameACL = function(a, b) {
 tabulator.panes.utils.ACLunion = function(list) {
     var b = list[0], a, ag;
     for (var k=1; k < list.length; k++) {
-        ['agent', 'agentClass'].map(function(pred){
+        ['agent', 'agentClass', 'origin', 'originClass'].map(function(pred){
             a = list[k];
             if (a[pred]) {
                 for (ag in a[pred]) {
@@ -147,7 +152,7 @@ tabulator.panes.utils.loadUnionACL = function(subjectList, callback) {
 //
 tabulator.panes.utils.ACLbyCombination = function(ac) {
     var byCombo = [];
-    ['agent', 'agentClass'].map(function(pred){
+    ['agent', 'agentClass', 'origin', 'originClass'].map(function(pred){
         for (var agent in ac[pred]) {
             var combo = [];
             for (var mode in ac[pred][agent]) {

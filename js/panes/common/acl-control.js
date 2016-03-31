@@ -42,66 +42,6 @@ tabulator.panes.utils.preventBrowserDropEvents = function(document) {
 }
 
 
-tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
-  var tr = dom.createElement('tr');
-  options = options || {}
-  tr.predObj = [pred.uri, obj.uri];
-  var td1 = tr.appendChild(dom.createElement('td'));
-  var td2 = tr.appendChild(dom.createElement('td'));
-  var td3 = tr.appendChild(dom.createElement('td'));
-
-  var agent = obj;
-  var image = td1.appendChild(dom.createElement('img'));
-  td1.setAttribute('style','width:4em; padding:0.5em; height: 4em;')
-  td2.setAttribute('style', 'text-align:left;')
-  td3.setAttribute('style','width:2em; padding:0.5em; height: 4em;')
-  image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
-  tabulator.panes.utils.setImage(image, agent);
-
-  tabulator.panes.utils.setName(td2, agent);
-  if (options.deleteFunction){
-    tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
-  }
-  if (options.link !== false) {
-    var anchor = td3.appendChild(dom.createElement('a'))
-    anchor.setAttribute('href', obj.uri);
-    anchor.classList.add('HoverControlHide')
-    var linkImage = anchor.appendChild(dom.createElement('img'));
-    linkImage.setAttribute('src', tabulator.scriptBase + 'icons/go-to-this.png');
-    td3.appendChild(dom.createElement('br'))
-  }
-  if (options.draggable !== false){ // default is on
-    tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
-
-    tr.addEventListener('dragstart', function(e){
-        tr.style.fontWeight = 'bold';
-        // e.dataTransfer.dropEffect = 'move';
-        // e.dataTransfer.effectAllowed = 'all'  // same as default
-        e.dataTransfer.setData("text/uri-list", obj.uri);
-        e.dataTransfer.setData("text/plain", obj.uri);
-        e.dataTransfer.setData("text/html", tr.outerHTML);
-        console.log("Dragstart: " + tr + " -> " + obj + "de: "+ e.dataTransfer.dropEffect)
-    }, false);
-
-    tr.addEventListener('drag', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        //e.dataTransfer.dropEffect = 'copy';
-        // e.dataTransfer.setData("text/uri-list", obj);
-        console.log("Drag: dropEffect: "+ e.dataTransfer.dropEffect)
-    }, false);
-
-    // icons/go-to-this.png
-
-    tr.addEventListener('dragend', function(e){
-        tr.style.fontWeight = 'normal';
-        console.log("Dragend dropeffect: " + e.dataTransfer.dropEffect )
-        console.log("Dragend: " + tr + " -> " + obj)
-    }, false);
-  }
-  return tr;
-}
-
 
 tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
     var kb = tabulator.kb;
@@ -142,16 +82,18 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             combo = combo.join('\n')
             return combo;
         };
-        var colloquial = {13: "Owners", 5: "Editors", 3: "Posters", 2: "Submitters", 1: "Viewers"};
+        var colloquial = {13: "Owners", 9: "Owners (write locked)", 5: "Editors", 3: "Posters", 2: "Submitters", 1: "Viewers"};
+        var recommended = {13: true, 5: true, 3: true, 2: true, 1: true};
         var explanation = {
             13: "can read, write, and control sharing.",
+            9: "can read and control sharing, currently write-locked.",
             5: "can read and change information",
             3: "can add new information, and read but not change existing information",
             2: "can add new information but not read any",
             1: "can read but not change information"
         };
 
-        var kToColor = {13: 'purple', 5: 'red', 3: 'orange', 2: '#cc0', 1: 'green'};
+        var kToColor = {13: 'purple', 9: 'blue', 5: 'red', 3: 'orange', 2: '#cc0', 1: 'green'};
 
         var ktToList = function(k){
             var list = "", y = ['Read', 'Append', 'Write', 'Control'];
@@ -181,6 +123,9 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
           var obj = $rdf.sym(uri)
           var types = kb.findTypeURIs(obj);
           console.log('Drop object types: ' + types)
+          if (uri.split('/').length = 4 && !(uri.split('/')[1]) && !(uri.split('/')[3])) {
+            return { pred: 'origin', obj: obj} // The only way to know an origin alas
+          }
           if (ns.vcard('WebID').uri in types) return {pred: 'agent', obj: obj}
           if (ns.vcard('Individual').uri in types || ns.foaf('Person').uri in types || ns.foaf('Agent').uri in types) {
             var pref = kb.any(obj, ns.foaf('preferredURI'))
@@ -398,7 +343,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
         var k, combo, label;
         for (k=15; k>0; k--) {
             combo = kToCombo(k);
-            if (( options.modify && colloquial[k]) || byCombo[combo]){
+            if (( options.modify && recommended[k]) || byCombo[combo]){
                 renderCombo(byCombo, combo);
             } // if
         } // for
@@ -407,6 +352,8 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
 
     tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
         var defa = !p2;
+        box.isContainer = targetDoc.uri.slice(-1) === '/' // Give default for all directories
+        // @@ Could also set from classes ldp:Container etc etc
         if (!ok) {
             statusBlock.textContent += "Error reading " + (defa? " default " : "") + "ACL."
                 + " status " + targetDoc + ": " + targetACLDoc;
@@ -432,7 +379,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                                 statusBlock.textContent += " (Error writing back access control file: "+message+")";
                             } else {
                                 statusBlock.textContent = " (Now editing specific access for this " + noun + ")";
-                                box.style = 'color: black;';
+                                // box.style = 'color: black;';
                                 bottomRow.removeChild(editPlease);
                             }
                         });
@@ -485,7 +432,8 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 }
 
                 box.addControlForDefaults = function() {
-                  box.notice.textContent = "Defaults for things within this folder:"
+                  box.notice.textContent = "Access to things within this folder:"
+                  box.notice.style = 'font-size: 120%; color: black;'
                   var mergeButton = tabulator.panes.utils.clearElement(box.offer).appendChild(dom.createElement('button'))
                   mergeButton.innerHTML = "<p>Set default for folder contents to<br />just track the sharing for the folder</p>"
                   mergeButton.style = bigButtonStyle;
@@ -504,6 +452,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 box.removeControlForDefaults = function(){
                   statusBlock.textContent = "This is also the default for things in this folder."
                   box.notice.textContent = "Sharing for things within the folder currently tracks sharing for the folder."
+                  box.notice.style = 'font-size: 80%; color: #888;'
                   var splitButton = tabulator.panes.utils.clearElement(box.offer).appendChild(dom.createElement('button'))
                   splitButton.innerHTML = "<p>Set the sharing of folder contets <br />separately from the sharing for the folder</p>"
                   splitButton.style = bigButtonStyle;
@@ -517,8 +466,6 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                   statusBlock.textContent = "This is now also the default for things in this folder."
                 }
 
-                box.isContainer = targetDoc.uri.slice(-1) === '/' // Give default for all directories
-                // @@ Could also set from classes ldp:Container etc etc
                 if (box.isContainer){
                     var ac = tabulator.panes.utils.readACL(targetDoc, targetACLDoc, kb);
                     var acd = tabulator.panes.utils.readACL(targetDoc, targetACLDoc, kb, true);

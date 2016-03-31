@@ -1,6 +1,6 @@
  /** AIR (Amord in RDF) Pane
  *
- * This pane will display the justification trace of a when it encounters 
+ * This pane will display the justification trace of a when it encounters
  * air reasoner output
  * oshani@csail.mit.edu
  */
@@ -8,7 +8,7 @@
 
 
 
-	
+
 //These are horrible global vars. To minimize the chance of an unintended name collision
 //these are prefixed with 'ap_' (short for air pane) - Oshani
 // moved to airpane.js from paneutils.js 2014 tbl
@@ -28,18 +28,18 @@ var justificationsArr = [];
 
 
 
- 
+
 airPane = {};
 airPane.name = 'air';
 airPane.icon = tabulator.Icon.src.icon_airPane;
 
 airPane.label = function(subject) {
-  
+
     //Flush all the justification statements already found
     justificationsArr = [];
-    
+
 	//Find all the statements with air:justification in it
-	var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
+	var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject);
 	//This will hold the string to display if the pane appears
 	var stringToDisplay = null
 	//Then make a registry of the compliant and non-compliant subjects
@@ -47,7 +47,7 @@ airPane.label = function(subject) {
 	//If the output changes, the parser will break.)
 	for (var j=0; j<stsJust.length; j++){
 		//The subject of the statements should be a quouted formula and
-		//the object should not be tms:premise (this corresponds to the final chunk of the output 
+		//the object should not be tms:premise (this corresponds to the final chunk of the output
 		//which has {some triples} tms:justification tms:premise)
 		if (stsJust[j].subject.termType == 'formula' && stsJust[j].object != ap_prem.toString()){
 			var sts = stsJust[j].subject.statements;
@@ -71,13 +71,13 @@ airPane.label = function(subject) {
 				justificationsArr.push(nonCompliantArr);
 
             }
-			stringToDisplay = "Justify" //Even with one relevant statement this method should return something 
-		}   
+			stringToDisplay = "Justify" //Even with one relevant statement this method should return something
+		}
 	}
 	//Make the subject list we will be exploring in the render function unique
 	//compliantStrings = tabulator.panes.utils.unique(compliantStrings);
-	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings); 
-    
+	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings);
+
    return stringToDisplay;
 }
 
@@ -85,7 +85,7 @@ airPane.label = function(subject) {
 airPane.render = function(subject, myDocument) {
 
 	//Variables specific to the UI
-	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
+	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;
 	var divClass;
 	var div = myDocument.createElement("div");
 
@@ -99,23 +99,23 @@ airPane.render = function(subject, myDocument) {
     //If there are multiple justifications show a dropdown box to select the correct one
     var selectEl = myDocument.createElement("select");
 
-    var divOutcome = myDocument.createElement("div"); //This is div to display the final outcome. 
+    var divOutcome = myDocument.createElement("div"); //This is div to display the final outcome.
     divOutcome.setAttribute('id', 'outcome'); //There can only be one outcome per selection from the drop down box
-  
+
     //Show the selected justification only
 	airPane.render.showSelected = function(){
-        
+
         //Clear the contents of the outcome div
         if (myDocument.getElementById('outcome') != null){
-            myDocument.getElementById('outcome').innerHTML = ''; 
+            myDocument.getElementById('outcome').innerHTML = '';
         }
-        
+
         //Function to hide the natural language description div and the premises div
         airPane.render.showSelected.hide = function(){
-        
+
             //Clear the outcome div
             if (myDocument.getElementById('outcome') != null){
-                myDocument.getElementById('outcome').innerHTML = ''; 
+                myDocument.getElementById('outcome').innerHTML = '';
             }
             //Remove the justification div from the pane
             var d = myDocument.getElementById('dataContentPane');
@@ -143,42 +143,44 @@ airPane.render = function(subject, myDocument) {
 
         //Clear the contents of the justification div
         airPane.render.showSelected.hide();
-        
+
         if (this.selectedIndex == 0)
             return;
-            
+
         selected = justificationsArr[this.selectedIndex - 1];
-        var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
-        
+        var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject);
+
 
         for (var i=0; i<stsJust.length; i++){
-        
+
             //Find the statement maching the option selected from the drop down box
-            if (stsJust[i].subject.termType == 'formula' && 
-                stsJust[i].object != ap_prem.toString() && 
+            if (stsJust[i].subject.termType == 'formula' &&
+                stsJust[i].object != ap_prem.toString() &&
                 stsJust[i].subject.statements[0].object.toString() == selected[0].toString()){
-                
+
                 var stsFound = stsJust[i].subject.statements[0]; //We have only one statement - so no need to iterate
-                
-                //@@@@@@ Variables specific to the logic	
+
+                //@@@@@@ Variables specific to the logic
                 var ruleNameFound;
-                
+
                 //Display red or green depending on the compliant/non-compliant status
                 if (selected[1].toString() == ap_nonCompliant.toString()){
-                    divOutcome.setAttribute('class', 'nonCompliantPane');
+									divOutcome.setAttribute('class', 'nonCompliantPane');
+									divOutcome.setAttribute('style', 'border-top: solid 1px red; border-left: solid 1px red; border-bottom: solid 1px red; border-right: solid 1px red; padding: 0.5em; background-color: #fbf0f7; margin-top: 0.5em; margin-bottom: 0.5em; border-radius: 1em;');
                 }
                 else if (selected[1].toString() == ap_compliant.toString()){
-                    divOutcome.setAttribute('class', 'compliantPane');
+									divOutcome.setAttribute('class', 'compliantPane');
+									divOutcome.setAttribute('style', 'border-top: solid 1px green; border-left: solid 1px green; border-bottom: solid 1px green;border-right: solid 1px green;padding: 0.5em; background-color: #def8e0;margin-top: 0.5em; margin-bottom: 0.5em;border-radius: 1em;');
                 }
                 else{
                     alert("something went terribly wrong");
-                } 
-                
+                }
+
                 //Create a table and structure the final conclucsion appropriately
-                
+
                 var table = myDocument.createElement("table");
                 var tr = myDocument.createElement("tr");
-                
+
                 var td_s = myDocument.createElement("td");
                 var a_s = myDocument.createElement('a')
                 a_s.setAttribute('href', stsFound.subject.uri)
@@ -206,14 +208,14 @@ airPane.render = function(subject, myDocument) {
 
                 table.appendChild(tr);
                 divOutcome.appendChild(table);
-                
+
                 div.appendChild(divOutcome);
                 //End of the outcome sentences
-                
-                //Add the initial buttons 
+
+                //Add the initial buttons
                 airPane.render.showSelected.addInitialButtons = function(){ //Function Call 1
 
-                    //Create and append the 'Why?' button        
+                    //Create and append the 'Why?' button
                     //Check if it is visible in the DOM, if not add it.
                     if (myDocument.getElementById('whyButton') == null){
                         var becauseButton = myDocument.createElement('input');
@@ -223,7 +225,7 @@ airPane.render = function(subject, myDocument) {
                         div.appendChild(becauseButton);
                         becauseButton.addEventListener('click',airPane.render.showSelected.because,false);
                     }
-                                        
+
                     div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
                 }
                 //End of airPane.render.showSelected.addInitialButtons
@@ -231,28 +233,28 @@ airPane.render = function(subject, myDocument) {
 
                 //The following function is triggered, when the why button is clicked
                 airPane.render.showSelected.because = function(){ //Function Call 2
-                
-                
-                    //If the reasoner used closed-world-assumption, there are no interesting premises 
+
+
+                    //If the reasoner used closed-world-assumption, there are no interesting premises
                     var cwa = ap_air('closed-world-assumption');
                     var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
                     var noPremises = false;
                 /*    if (cwaStatements.length > 0){
                         noPremises = true;
                     }
-                 */   
-                    //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
+                 */
+                    //Disable the 'why' button, otherwise clicking on that will keep adding the divs
                     var whyButton = myDocument.getElementById('whyButton');
                     var d = myDocument.getElementById('dataContentPane');
                     if (d != null && whyButton != null)
                         d.removeChild(whyButton);
-                
+
                     //Function to display the natural language description
                     airPane.render.showSelected.because.displayDesc = function(obj){
                         for (var i=0; i<obj.elements.length; i++) {
                                 dump(obj.elements[i]);
                                 dump("\n");
-                                
+
                                 if (obj.elements[i].termType == 'symbol') {
                                     var anchor = myDocument.createElement('a');
                                     anchor.setAttribute('href', obj.elements[i].uri);
@@ -269,14 +271,14 @@ airPane.render = function(subject, myDocument) {
                                     divDescription.appendChild(myDocument.createTextNode(obj.elements[i]));
                                     //@@@ Using statementsAsTables to render the result gives a very ugly result -- urgh!
                                     //divDescription.appendChild(statementsAsTables(obj.elements[i].statements,myDocument));
-                                }       
+                                }
                             }
                     }
                     //End of airPane.render.showSelected.because.displayDesc
 
                     //Function to display the inner most stuff from the proof-tree
                     airPane.render.showSelected.because.moreInfo = function(ruleToFollow){
-                        //Terminating condition: 
+                        //Terminating condition:
                         // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
                         // there are no more information to follow
                         var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
@@ -287,21 +289,21 @@ airPane.render = function(subject, myDocument) {
                            divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
                            divPremises.appendChild(myDocument.createElement('br'));
                            divPremises.appendChild(myDocument.createElement('br'));
-                       
+
                         }
                         else{
-                            
+
                             //Update the description div with the description at the next level
                             var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow, subject);
-                            
+
                             //Find the corresponding description matching the currenrRule
 
                             var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
-                            
+
                             for (var i=0; i<currentRuleDescSts.length; i++){
                                 if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
                                     var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
-                                    
+
                                     for (var j=0; j<currentRuleDesc.length; j++){
                                         if (currentRuleDesc[j].predicate == ap_description.toString() &&
                                         currentRuleDesc[j].object.termType == 'collection'){
@@ -310,7 +312,7 @@ airPane.render = function(subject, myDocument) {
                                             divDescription.appendChild(myDocument.createElement('br'));
                                             divDescription.appendChild(myDocument.createElement('br'));
                                         }
-                                    }	
+                                    }
                                 }
                             }
 
@@ -322,28 +324,28 @@ airPane.render = function(subject, myDocument) {
                                     break;
                                 }
                             }
-                            
+
                             var currentRuleSts = tabulator.kb.statementsMatching(correctCurrentRule, ap_just, undefined, subject);
                             var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
                             ruleNameFound = nextRuleSts[0].object;
 
                             var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
-                            
+
                             var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined, subject);
-    
+
                             var formulaFound = false;
                             var bnodeFound = false;
                             for (var i=0; i<currentRuleSubExpr.length; i++){
                                 if(currentRuleSubExpr[i].object.termType == 'formula'){
-                                    divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                                    divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument));
                                     formulaFound = true;
                                 }
                                 else if (currentRuleSubExpr[i].object.termType == 'bnode'){
                                     bnodeFound = true;
-                            
+
                                 }
                             }
-                            
+
                             if (bnodeFound){
                                 divPremises.appendChild(myDocument.createElement("br"));
                                 divPremises.appendChild(myDocument.createTextNode("  No premises applicable."));
@@ -355,13 +357,13 @@ airPane.render = function(subject, myDocument) {
                         }
                     }
                     //End of airPane.render.showSelected.because.moreInfo
-                    
+
                     //Function to bootstrap the natural language description div and the premises div
                     airPane.render.showSelected.because.justify = function(){ //Function Call 3
-                    
+
                         //Clear the contents of the premises div
                         myDocument.getElementById('premises').innerHTML='';
-                        airPane.render.showSelected.because.moreInfo(ruleNameFound);   //@@@@ make sure this rul would be valid at all times!      	
+                        airPane.render.showSelected.because.moreInfo(ruleNameFound);   //@@@@ make sure this rul would be valid at all times!
 
                         divJustification.appendChild(divPremises);
                         div.appendChild(divJustification);
@@ -376,8 +378,8 @@ airPane.render = function(subject, myDocument) {
                     justifyButton.setAttribute('value','More Information');
                     justifyButton.addEventListener('click',airPane.render.showSelected.because.justify,false);
                     div.appendChild(justifyButton);
-                                    
-                    //Add 2 spaces to leave some space between the 2 buttons, any better method?                
+
+                    //Add 2 spaces to leave some space between the 2 buttons, any better method?
                     div.appendChild(myDocument.createTextNode('   '));
                     div.appendChild(myDocument.createTextNode('   '));
 
@@ -401,44 +403,44 @@ airPane.render = function(subject, myDocument) {
                     var divDescription = myDocument.createElement("div");
                     divDescription.setAttribute('class', 'description');
                     divDescription.setAttribute('id', 'description');
-                    
+
                     //Div for the premises
                     var divPremises = myDocument.createElement("div");
                     divPremises.setAttribute('class', 'premises');
                     divPremises.setAttribute('id', 'premises');
-                    
+
                     //@@@@ what is this for?
                     var justificationSts;
-                    
-                    //Get all the triples with a air:description as the predicate
-                    var stsDesc = tabulator.kb.statementsMatching(undefined, ap_description, undefined, subject); 
 
-                    //You are bound to have more than one such triple, 
+                    //Get all the triples with a air:description as the predicate
+                    var stsDesc = tabulator.kb.statementsMatching(undefined, ap_description, undefined, subject);
+
+                    //You are bound to have more than one such triple,
                     //so iterates through all of them and figure out which belongs to the one that's referred from the drop down box
                     for (var j=0; j<stsDesc.length; j++){
-                        if (stsDesc[j].subject.termType == 'formula' && 
+                        if (stsDesc[j].subject.termType == 'formula' &&
                             stsDesc[j].object.termType == 'collection' &&
                             stsDesc[j].subject.statements[0].object.toString() == selected[0].toString()){
-                            
+
                             divDescription.appendChild(myDocument.createElement('br'));
                             airPane.render.showSelected.because.displayDesc(stsDesc[j].object);
                             divDescription.appendChild(myDocument.createElement('br'));
                             divDescription.appendChild(myDocument.createElement('br'));
                         }
                         divJustification.appendChild(divDescription);
-                        
-                    }	
-                    
+
+                    }
+
                     //@@@@@@@@@ Why was this here???
                     //div.appendChild(divJustification);
-                    
+
                     //Leave spaces
                     divJustification.appendChild(myDocument.createElement('br'));
                     divJustification.appendChild(myDocument.createElement('br'));
-                    
+
                     //Yes, we are showing premises next...
                     divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
-                    
+
                     //Leave spaces
                     divJustification.appendChild(myDocument.createElement('br'));
                     divJustification.appendChild(myDocument.createElement('br'));
@@ -454,15 +456,15 @@ airPane.render = function(subject, myDocument) {
                         divPremises.appendChild(a);
                         divPremises.appendChild(myDocument.createElement('br'));
                         divPremises.appendChild(myDocument.createElement('br'));
-                        
+
                     }
-                        
+
                     for (var j=0; j<stsJust.length; j++){
                         if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-                        
+
                             var ruleNameSts = tabulator.kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
-                            ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
-                                                // statement containing the formula		
+                            ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the
+                                                // statement containing the formula
                             if (!noPremises){
                                 var t1 = tabulator.kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
                                 for (var k=0; k<t1.length; k++){
@@ -472,16 +474,16 @@ airPane.render = function(subject, myDocument) {
                                             justificationSts = t2;
                                             divPremises.appendChild(myDocument.createElement('br'));
                                             //divPremises.appendChild(myDocument.createElement('br'));
-                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
-                                           
+                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument));
+
                                             //@@@@ The following piece of code corresponds to going one level of the justification proof to figure out
                                             // whether there are any premises
                                             //it is commented out, because, the user need not know that at each level there are no premises associated
                                             //that particular step
-                                            
+
                                             /*if (t2[l].object.statements.length == 0){
                                                 alert("here");
-                        
+
                                                 divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
                                                 var a = myDocument.createElement('a')
                                                 a.setAttribute('href', unescape(logFileURI));
@@ -489,29 +491,29 @@ airPane.render = function(subject, myDocument) {
                                                 divPremises.appendChild(a);
                                             }
                                             else{
-                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument));
                                             }
                                            */
                                             //divPremises.appendChild(myDocument.createElement('br'));
                                             divPremises.appendChild(myDocument.createElement('br'));
                                         }
-                                   }     
+                                   }
                                 }
                             }
                         }
                     }
-                    
-                    divJustification.appendChild(divPremises);   
-                    div.appendChild(divJustification); 
-                      
+
+                    divJustification.appendChild(divPremises);
+                    div.appendChild(divJustification);
+
                 }
                 //End of airPane.render.showSelected.because
-                
+
                 airPane.render.showSelected.addInitialButtons(); //Add the "Why Button"
              }
         }
     }
-    
+
 
     //First add a bogus element
     var optionElBogus = myDocument.createElement("option");
@@ -526,12 +528,12 @@ airPane.render = function(subject, myDocument) {
         optionEl.appendChild(optionText);
         selectEl.appendChild(optionEl);
     }
-    
+
     div.appendChild(selectEl);
     selectEl.addEventListener('change', airPane.render.showSelected, false);
     div.appendChild(myDocument.createElement('br'));
     div.appendChild(myDocument.createElement('br'));
-        
+
 	return div;
 };
 
@@ -558,7 +560,7 @@ airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
 		divJustification.appendChild(divDescription);
                 //Make a copy of the orange box
 		divDescription = divDescription.cloneNode(false); //shallow:true
-            
+
             }
 	} else{
 	  airPane.render.because.displayDesc(stsDesc[0].object,
@@ -566,7 +568,7 @@ airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
 	  divJustification.appendChild(divDescription);
 	}
 };
-    
+
 airPane.renderExplanationForStatement = function renderExplanationForStatement(st){
     var subject = undefined; //not restricted to a source, but kb
     var div = myDocument.createElement("div"); //the returned div
@@ -574,35 +576,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
     var stsCompliant;
     var stsNonCompliant;
     var stsFound;
-    var stsJust = tabulator.kb.statementsMatching(st, ap_just); 
-	
-    
+    var stsJust = tabulator.kb.statementsMatching(st, ap_just);
+
+
     var divOutcome = myDocument.createElement("div"); //To give the "yes/no" type answer indicating the concise reason
 
-        /*
-	for (var j=0; j<stsJust.length; j++){
-		if (stsJust[j].subject.termType == 'formula'){
-			var sts = stsJust[j].subject.statements;
-			for (var k=0; k<sts.length; k++){
-				if (sts[0].predicate.toString() == ap_compliant.toString()){
-					stsCompliant = sts[k];
-				} 
-				if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
-					stsNonCompliant = sts[k];
-				}
-			}
-		}    
-	}
-
-	if (stsNonCompliant != undefined){
-		divClass = 'nonCompliantPane';
-		stsFound =  stsNonCompliant;
-	}
-	if (stsCompliant != undefined){
-		divClass = 'compliantPane';
-		stsFound =  stsCompliant;
-	}
-        */
 
     var divClass = 'compliantPane'; //a statement is natively good :)
     //stsFound = kb.anyStatementsMatching(st, ap_just);
@@ -666,19 +644,19 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 
     airPane.render.addInitialButtons = function(){ //Function Call 1
 
-        //Create and append the 'Why?' button        
+        //Create and append the 'Why?' button
         var becauseButton = myDocument.createElement('input');
         becauseButton.setAttribute('type','button');
         becauseButton.setAttribute('id','whyButton');
         becauseButton.setAttribute('value','Why?');
         div.appendChild(becauseButton);
         becauseButton.addEventListener('click',airPane.render.because,false);
-                            
+
         div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
     }
-    
+
     airPane.render.hide = function(){
-    
+
         //Remove the justification div from the pane
         var d = myDocument.getElementById('dataContentPane');
         var j = myDocument.getElementById('justification');
@@ -693,26 +671,26 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         }
 
         airPane.render.addInitialButtons();
-                    
+
     }
 
     airPane.render.because = function(){ //Function Call 2
-    
+
         var cwa = ap_air('closed-world-assumption');
         var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
         var noPremises = false;
         if (cwaStatements.length > 0){
             noPremises = true;
         }
-        
-           //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
+
+           //Disable the 'why' button, otherwise clicking on that will keep adding the divs
            var whyButton = myDocument.getElementById('whyButton');
         var d = myDocument.getElementById('dataContentPane');
         if (d != null && whyButton != null)
             d.removeChild(whyButton);
-    
+
         airPane.render.because.displayDesc = function(obj, divDescription){
-	  //@argument obj: most likely a [] that has 
+	  //@argument obj: most likely a [] that has
 	  //a tms:antecedent-expr and a tms:rule-name
 	  var aAnd_justification = tabulator.kb.the(obj, ap_antcExpr);
 	  var subExprs = tabulator.kb.each(aAnd_justification, ap_subExpr);
@@ -721,14 +699,14 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	    premiseFormula = subExprs[0];
 	  else
 	    premiseFormula = subExprs[1];
-	  divDescription.waitingFor = []; //resources of more information 
+	  divDescription.waitingFor = []; //resources of more information
                                           //this reason is waiting for
-	  divDescription.informationFound = false; //true if an extra 
+	  divDescription.informationFound = false; //true if an extra
 	               //information is found and we can stop the throbber
 	  function dumpFormula(formula, firstLevel){
 	    for (var i=0;i<formula.statements.length;i++){
 	      var st = formula.statements[i];
-	      var elements_to_display = [st.subject, st.predicate, 
+	      var elements_to_display = [st.subject, st.predicate,
 					 st.object];
 	      var p = null; //the paragraph element the description is dumped to
 	      if (firstLevel){
@@ -770,9 +748,9 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		  break;
 		case 'literal':
 		  //if (obj.elements[i].value != undefined)
-		  p.appendChild(myDocument.createTextNode(element.value)); 
-		  
-		}       
+		  p.appendChild(myDocument.createTextNode(element.value));
+
+		}
 	      }
 	      p.appendChild(myDocument.createTextNode(". "));
 	      if(firstLevel){
@@ -799,7 +777,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 						      click_cb,
 						      false)
 		      }
-		      if (throbber_p && throbber_callback) 
+		      if (throbber_p && throbber_callback)
 			throbber_callback();
 		      return false; //no need to fire this function
 		    }
@@ -822,11 +800,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		      }
 		    }
 		    if (divDescription.waitingFor.length == 0){
-		      if (throbber_p && throbber_callback) 
+		      if (throbber_p && throbber_callback)
 			throbber_callback();
 		      return false; //the last resource this div is waiting for
 		    }
-		    if (throbber_p && throbber_callback) 
+		    if (throbber_p && throbber_callback)
 		      throbber_callback();
 		    return true;
 		  };
@@ -852,14 +830,14 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	  divDescription.appendChild(throbber_p);
 	  function throbber_callback(uri){
 	    divDescription.waitingFor.remove(uri);
-	    
+
 	    if (divDescription.informationFound){
 	      throbber_p.removeChild(throbber_p.firstChild);
 	      throbber_p.textContent = "More information found!";
 	      return false;
 	    } else if (divDescription.waitingFor.length == 0){
-	      
-	      //The final call to this function. But the above callbacks 
+
+	      //The final call to this function. But the above callbacks
 	      //might not have been fired. So check all. Well...
               //It takes time to close the world
 	      //@@This method assumes there's only one thread for this js.
@@ -892,11 +870,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 // 	  }
 	  for (var i=0;i<divDescription.waitingFor.length;i++)
 	    sf.lookUpThing(tabulator.kb.sym(divDescription.waitingFor[i]));
-	  
+
 	} //function airPane.render.because.displayDesc
 
         airPane.render.because.moreInfo = function(ruleToFollow){
-            //Terminating condition: 
+            //Terminating condition:
             // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
             // there are no more information to follow
             var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
@@ -907,21 +885,21 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
                divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
                divPremises.appendChild(myDocument.createElement('br'));
                divPremises.appendChild(myDocument.createElement('br'));
-           
+
             }
             else{
-                
+
                 //Update the description div with the description at the next level
                 var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow);
-                
+
                 //Find the corresponding description matching the currenrRule
 
                 var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
-                
+
                 for (var i=0; i<currentRuleDescSts.length; i++){
                     if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
                         var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
-                        
+
                         for (var j=0; j<currentRuleDesc.length; j++){
                             if (currentRuleDesc[j].predicate == ap_description.toString() &&
                             currentRuleDesc[j].object.termType == 'collection'){
@@ -930,33 +908,33 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
                                 divDescription.appendChild(myDocument.createElement('br'));
                                 divDescription.appendChild(myDocument.createElement('br'));
                             }
-                        }    
+                        }
                     }
                 }
 
-                
+
                 var currentRuleSts = tabulator.kb.statementsMatching(currentRule[0].subject, ap_just, undefined);
-                
+
                 var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined);
                 ruleNameFound = nextRuleSts[0].object;
 
                 var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined);
-                
+
                 var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined);
 
                 for (var i=0; i<currentRuleSubExpr.length; i++){
                     if(currentRuleSubExpr[i].object.termType == 'formula')
-                        divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                        divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument));
                 }
 
             }
         }
-        
+
         airPane.render.because.justify = function(){ //Function Call 3
-        
+
             //Clear the contents of the div
             myDocument.getElementById('premises').innerHTML='';
-            airPane.render.because.moreInfo(ruleNameFound);                
+            airPane.render.because.moreInfo(ruleNameFound);
 
             divJustification.appendChild(divPremises);
             div.appendChild(divJustification);
@@ -971,7 +949,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         justifyButton.setAttribute('value','More Information');
         justifyButton.addEventListener('click',airPane.render.because.justify,false);
         div.appendChild(justifyButton);
-                        
+
         div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
         div.appendChild(myDocument.createTextNode('   '));
 
@@ -991,24 +969,24 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         var divPremises = myDocument.createElement("div");
         divPremises.setAttribute('class', 'premises');
         divPremises.setAttribute('id', 'premises');
-        */ 
-        
-        
+        */
+
+
         var justificationSts;
-        
-        
+
+
 	airPane.renderReasonsForStatement(st, divJustification);
-    
-        
+
+
         div.appendChild(divJustification);
-	
+
         /*
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('br'));
-	
+
         if (noPremises){
             divPremises.appendChild(myDocument.createElement('br'));
             divPremises.appendChild(myDocument.createElement('br'));
@@ -1019,15 +997,15 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
             divPremises.appendChild(a);
             divPremises.appendChild(myDocument.createElement('br'));
             divPremises.appendChild(myDocument.createElement('br'));
-            
+
         }
-            
+
         for (var j=0; j<stsJust.length; j++){
             if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-            
+
                 var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
-                ruleNameFound =    ruleNameSts[0].object; // This would be the initial rule name from the 
-                                    // statement containing the formula        
+                ruleNameFound =    ruleNameSts[0].object; // This would be the initial rule name from the
+                                    // statement containing the formula
                 if (!noPremises){
                     var t1 = kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
                     for (var k=0; k<t1.length; k++){
@@ -1045,32 +1023,28 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
                                     divPremises.appendChild(a);
                                 }
                                 else{
-                                    divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                    divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument));
                                 }
                                 divPremises.appendChild(myDocument.createElement('br'));
                                 divPremises.appendChild(myDocument.createElement('br'));
                             }
-                       }     
+                       }
                     }
                 }
             }
         }
-        
+
         divJustification.appendChild(divPremises);
-        */    
-          
+        */
+
     }//end of airPane.render.because
 
 
     //airPane.render.addInitialButtons();
     airPane.render.because();
-        
+
     return div;
 }
 tabulator.panes.register(airPane, false);
 
 // ends
-
-
-
-

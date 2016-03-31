@@ -7,17 +7,17 @@
 ** or for a class of a related thing, such of class of person in the picture.
 ** Maybe this hsoul dbe split off as a widget for tagging within other panes.
 */
-    
+
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_categorize = iconPrefix + 'icons/22-categorize.png';
+tabulator.Icon.src.icon_categorize = tabulator.iconPrefix + 'icons/22-categorize.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_categorize] = 'Categories'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_categorize,
-    
+
     name: 'category',
-    
+
     // Does the subject deserve a categorizing pane?
     label: function(subject) {
         var kb = tabulator.kb
@@ -26,36 +26,36 @@ tabulator.panes.register( {
         var classes = 0;
         for (var u in t) classes++;
         //@@@@  if (classes==0) return null ;  // None, suppress pane
-        
+
         // Not if a class itself (maybe need a different pane for that):
-        if (t['http://www.w3.org/2000/01/rdf-schema#Class']) return null; 
+        if (t['http://www.w3.org/2000/01/rdf-schema#Class']) return null;
         if (t['http://www.w3.org/2002/07/owl#Class']) return null;
-        
+
         return "Categorize "+classes; // Yes under other circumstances (while testing at least!)
 
     },
 
     render: function(subject, myDocument) {
         var kb = tabulator.kb;
-    
+
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'categoryPane');
-        
+
         var types = kb.findTypeURIs(subject);
         var tops = kb.topTypeURIs(types);
         var bots = kb.bottomTypeURIs(types);
 
-        /////////////// debug 
+        /////////////// debug
         /*
         var str = "";
         for (var t in types) str = str + t + ",  ";
         var debug = div.appendChild(myDocument.createTextNode('Types: '+str)) // @@@
-        
+
         var str = "";
         for (var t in bots) str = str + t + ",  ";
         var debug = div.appendChild(myDocument.createTextNode('. Bots: '+str)) // @@@
         */
-        
+
         function domForClass(c, force) {
             var tr = myDocument.createElement('TR');
             tr.setAttribute('class', 'categoryClass');
@@ -67,7 +67,7 @@ tabulator.panes.register( {
             if (c.uri in types) lab += " *";
             anchor.appendChild(myDocument.createTextNode(lab));
             tr.appendChild(anchor);
-            
+
             // Add provenance info - which statement makes us beleive this
             if (c.uri) {
                 var st = types[c.uri];
@@ -111,13 +111,13 @@ tabulator.panes.register( {
                     return select;
                 }
                 return null;
-            
+
             } // makeSelectForSubs
             */
-            
+
             if (kb.any(c, kb.sym('http://www.w3.org/2002/07/owl#disjointUnionOf'))) {
                 var sel = tabulator.panes.utils.makeSelectForCategory(
-                    myDocument, kb, subject, c, 
+                    myDocument, kb, subject, c,
                     subs, false); // Not multiple
             }
 /*
@@ -127,16 +127,16 @@ tabulator.panes.register( {
                     td.appendChild(myDocument.createTextNode('subs:'+subs));
                     var subs = disjointSubclassLists[j].elements;
                     var sel = tabulator.panes.utils.makeSelectForCategory(
-                        myDocument, kb, subject, c, 
+                        myDocument, kb, subject, c,
                         subs, false); // Not multiple
-                    if (sel) tr.appendChild(sel); 
+                    if (sel) tr.appendChild(sel);
                     for (var i=0; i<subs.length; i++) {
                         subClassesAsNT[subs[i].toNT()] = true; // Could be blank node
                     }
                 }
             }
-*/            
-            
+*/
+
             var subs = kb.each(undefined, kb.sym('http://www.w3.org/2000/01/rdf-schema#subClassOf'), c);
             if (subs) {
                 if (!table) {
@@ -144,7 +144,7 @@ tabulator.panes.register( {
                     table.setAttribute('class', 'categoryTable');
                     tr.appendChild(table);
                 }
-                
+
                 var uris = {}; // remove duplicates (why dups?) and count
                 var n = 0;
                 for (var i=0; i < subs.length; i++) {
@@ -164,19 +164,17 @@ tabulator.panes.register( {
 
             return tr;
         }
-        
+
         for (var u in tops) {
             var c = kb.sym(u);
             var tr = domForClass(c);
             div.appendChild(tr);
         }
-        
-        
-        
+
+
+
         return div;
     }
 }, true);
 
 //ends
-
-

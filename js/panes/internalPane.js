@@ -6,14 +6,14 @@
 tabulator.panes.internalPane = {
 
     icon: tabulator.Icon.src.icon_internals,
-    
+
     name: 'internal',
 
     label: function(subject) {
-        //if (subject.uri) 
+        //if (subject.uri)
         return "under the hood";  // There is orften a URI even of no statements
       },
-    
+
     render: function(subject, myDocument) {
         var $r = tabulator.rdf;
         var kb = tabulator.kb;
@@ -25,8 +25,9 @@ tabulator.panes.internalPane = {
         }
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
+        div.setAttribute('style', 'background-color: #ddddff; padding: 0.5em; border-radius: 1em;')
 //        appendRemoveIcon(div, subject, div);
-                  
+
         var plist = kb.statementsMatching(subject);
         var doc_uri = null;
         if (subject.uri) {
@@ -57,7 +58,7 @@ tabulator.panes.internalPane = {
         tabulator.outline.appendPropertyTRs(div, plist, true, filter);
         return div
     },
-    
+
     predicates: {// Predicates used for inner workings. Under the hood
         'http://www.w3.org/2007/ont/link#request': 1,
         'http://www.w3.org/2007/ont/link#requestedBy': 1,
@@ -73,7 +74,7 @@ tabulator.panes.internalPane = {
     classes: { // Things which are inherently already undercover
         'http://www.w3.org/2007/ont/link#ProtocolEvent': 1
     }
-};    
+};
 
 //    if (!SourceOptions["seeAlso not internal"].enabled)
 tabulator.panes.internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
@@ -81,4 +82,3 @@ tabulator.panes.internalPane.predicates[tabulator.ns.owl('sameAs').uri] = 1;
 tabulator.panes.register(tabulator.panes.internalPane, true);
 
 //ends
-

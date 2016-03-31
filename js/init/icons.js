@@ -4,7 +4,7 @@ tabulator.Icon.tooltips= []
 
 var iconPrefix = tabulator.iconPrefix; // e.g. 'chrome://tabulator/content/';
 
-////////////////////////// Common icons with extension version
+////////////////////////// Common icons
 
 tabulator.Icon.src.icon_expand = iconPrefix + 'icons/tbl-expand-trans.png';
 tabulator.Icon.src.icon_more = iconPrefix + 'icons/tbl-more-trans.png'; // looks just like expand, diff semantics
@@ -36,9 +36,9 @@ tabulator.Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  /
 tabulator.Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
 tabulator.Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
 tabulator.Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
-tabulator.Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  
-tabulator.Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  
-tabulator.Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png';  
+tabulator.Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';
+tabulator.Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';
+tabulator.Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png';
 
 // For photo albums (By albert08@csail.mit.edu)
 tabulator.Icon.src.icon_photoPane = iconPrefix + 'icons/photo_small.png';
@@ -60,7 +60,7 @@ tabulator.Icon.src.icon_refresh = iconPrefix + 'icons/refresh.gif';
 tabulator.Icon.src.icon_optoff = iconPrefix + 'icons/optional_off.PNG';
 tabulator.Icon.src.icon_opton = iconPrefix + 'icons/optional_on.PNG';
 tabulator.Icon.src.icon_map = iconPrefix + 'icons/compassrose.png';
-tabulator.Icon.src.icon_retracted = tabulator.Icon.src.icon_unrequested 
+tabulator.Icon.src.icon_retracted = tabulator.Icon.src.icon_unrequested
 tabulator.Icon.src.icon_retracted = tabulator.Icon.src.icon_unrequested;
 
 tabulator.Icon.src.icon_time = iconPrefix+'icons/Wclocksmall.png';
@@ -120,4 +120,3 @@ tabulator.Icon.termWidgets.optOn = new tabulator.Icon.OutlinerIcon(tabulator.Ico
 tabulator.Icon.termWidgets.optOff = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
 tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_add_triple,18,"add tri","Add one");
 // Ideally: "New "+label(subject)
-

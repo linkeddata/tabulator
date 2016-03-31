@@ -31897,7 +31897,7 @@ tabulator.Icon.tooltips= []
 
 var iconPrefix = tabulator.iconPrefix; // e.g. 'chrome://tabulator/content/';
 
-////////////////////////// Common icons with extension version
+////////////////////////// Common icons
 
 tabulator.Icon.src.icon_expand = iconPrefix + 'icons/tbl-expand-trans.png';
 tabulator.Icon.src.icon_more = iconPrefix + 'icons/tbl-more-trans.png'; // looks just like expand, diff semantics
@@ -31929,9 +31929,9 @@ tabulator.Icon.src.icon_dataContents = iconPrefix + 'icons/rdf_flyer.24.gif';  /
 tabulator.Icon.src.icon_n3Pane = iconPrefix + 'icons/w3c/n3_smaller.png';  //@@ Bad .. find better
 tabulator.Icon.src.icon_RDFXMLPane = iconPrefix + 'icons/22-text-xml4.png';  //@@ Bad .. find better
 tabulator.Icon.src.icon_imageContents = iconPrefix + 'icons/tango/22-image-x-generic.png'
-tabulator.Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';  
-tabulator.Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';  
-tabulator.Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png';  
+tabulator.Icon.src.icon_airPane = iconPrefix + 'icons/1pt5a.gif';
+tabulator.Icon.src.icon_LawPane = iconPrefix + 'icons/law.jpg';
+tabulator.Icon.src.icon_pushbackPane = iconPrefix + 'icons/pb-logo.png';
 
 // For photo albums (By albert08@csail.mit.edu)
 tabulator.Icon.src.icon_photoPane = iconPrefix + 'icons/photo_small.png';
@@ -31953,7 +31953,7 @@ tabulator.Icon.src.icon_refresh = iconPrefix + 'icons/refresh.gif';
 tabulator.Icon.src.icon_optoff = iconPrefix + 'icons/optional_off.PNG';
 tabulator.Icon.src.icon_opton = iconPrefix + 'icons/optional_on.PNG';
 tabulator.Icon.src.icon_map = iconPrefix + 'icons/compassrose.png';
-tabulator.Icon.src.icon_retracted = tabulator.Icon.src.icon_unrequested 
+tabulator.Icon.src.icon_retracted = tabulator.Icon.src.icon_unrequested
 tabulator.Icon.src.icon_retracted = tabulator.Icon.src.icon_unrequested;
 
 tabulator.Icon.src.icon_time = iconPrefix+'icons/Wclocksmall.png';
@@ -32013,7 +32013,6 @@ tabulator.Icon.termWidgets.optOn = new tabulator.Icon.OutlinerIcon(tabulator.Ico
 tabulator.Icon.termWidgets.optOff = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_optoff,20,'opt off','Make this branch of your query optional.');
 tabulator.Icon.termWidgets.addTri = new tabulator.Icon.OutlinerIcon(tabulator.Icon.src.icon_add_triple,18,"add tri","Add one");
 // Ideally: "New "+label(subject)
-
 
 // ###### Finished expanding js/init/icons.js ##############
     //And Namespaces..
@@ -32120,19 +32119,25 @@ if (typeof tabulator.panes.utils === 'undefined') {
 //
 
 // Take the "defaltForNew" ACL and convert it into the equivlent ACL
-// which the resource would have had.  Retur it as a new separate store.
+// which the resource would have had.  Return it as a new separate store.
 
 tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, defaultACLdoc) {
     var kb = tabulator.kb;
     var ACL = tabulator.ns.acl;
     var ns = tabulator.ns;
+    var isContainer = doc.uri.slice(-1) === '/' // Give default for all directories
     var defaults = kb.each(undefined, ACL('defaultForNew'), defaultResource, defaultACLdoc);
     var proposed = [];
     defaults.map(function(da) {
         proposed = proposed.concat(kb.statementsMatching(da, ACL('agent'), undefined, defaultACLdoc))
-            .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
+        .concat(kb.statementsMatching(da, ACL('agentClass'), undefined, defaultACLdoc))
+        .concat(kb.statementsMatching(da, ACL('origin'), undefined, defaultACLdoc))
+        .concat(kb.statementsMatching(da, ACL('originClass'), undefined, defaultACLdoc))
             .concat(kb.statementsMatching(da, ACL('mode'), undefined, defaultACLdoc));
         proposed.push($rdf.st(da, ACL('accessTo'), doc, defaultACLdoc)); // Suppose
+        if (isContainer){ // By default, make this apply to folder contents too
+            proposed.push($rdf.st(da, ACL('defaultForNew'), doc, defaultACLdoc))
+        }
     });
     var kb2 = $rdf.graph(); // Potential - derived is kept apart
     proposed.map(function(st){
@@ -32141,7 +32146,7 @@ tabulator.panes.utils.adoptACLDefault = function(doc, aclDoc, defaultResource, d
             return  $rdf.sym( (sym.uri.slice(0, y) == defaultACLdoc.uri) ?
                  aclDoc.uri + sym.uri.slice(y) : sym.uri );
         }
-        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri) );
+        kb2.add(move(st.subject), move(st.predicate), move(st.object), $rdf.sym(aclDoc.uri));
     });
 
     //   @@@@@ ADD TRIPLES TO ACCES CONTROL ACL FILE -- until servers fixed @@@@@
@@ -32174,10 +32179,9 @@ tabulator.panes.utils.readACL = function(x, aclDoc, kb, getDefaults) {
     var ns = tabulator.ns
     var predicate = getDefaults ? ns.acl('defaultForNew') : ns.acl('accessTo')
     var ACL = tabulator.ns.acl;
-    var ac = {'agent': [], 'agentClass': []};
+    var ac = {'agent': [], 'agentClass': [], 'origin': [], 'originClass': []};
     var auths = kb.each(undefined, predicate, x);
-    for (var pred in { 'agent': true, 'agentClass': true}) {
-//    ['agent', 'agentClass'].map(function(pred){
+    for (var pred in { 'agent': true, 'agentClass': true, 'origin': true, 'originClass': true}) {
         auths.map(function(a){
             kb.each(a,  ACL('mode')).map(function(mode){
                  kb.each(a,  ACL(pred)).map(function(agent){
@@ -32193,7 +32197,7 @@ tabulator.panes.utils.readACL = function(x, aclDoc, kb, getDefaults) {
 // Compare two ACLs
 tabulator.panes.utils.sameACL = function(a, b) {
     var contains = function(a, b) {
-        for (var pred in { 'agent': true, 'agentClass': true}) {
+        for (var pred in { 'agent': true, 'agentClass': true, 'origin': true, 'originClass': true}) {
             if (a[pred]) {
                 for (var agent in a[pred]) {
                     for (var mode in a[pred][agent]) {
@@ -32213,7 +32217,7 @@ tabulator.panes.utils.sameACL = function(a, b) {
 tabulator.panes.utils.ACLunion = function(list) {
     var b = list[0], a, ag;
     for (var k=1; k < list.length; k++) {
-        ['agent', 'agentClass'].map(function(pred){
+        ['agent', 'agentClass', 'origin', 'originClass'].map(function(pred){
             a = list[k];
             if (a[pred]) {
                 for (ag in a[pred]) {
@@ -32257,7 +32261,7 @@ tabulator.panes.utils.loadUnionACL = function(subjectList, callback) {
 //
 tabulator.panes.utils.ACLbyCombination = function(ac) {
     var byCombo = [];
-    ['agent', 'agentClass'].map(function(pred){
+    ['agent', 'agentClass', 'origin', 'originClass'].map(function(pred){
         for (var agent in ac[pred]) {
             var combo = [];
             for (var mode in ac[pred][agent]) {
@@ -32587,66 +32591,6 @@ tabulator.panes.utils.preventBrowserDropEvents = function(document) {
 }
 
 
-tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
-  var tr = dom.createElement('tr');
-  options = options || {}
-  tr.predObj = [pred.uri, obj.uri];
-  var td1 = tr.appendChild(dom.createElement('td'));
-  var td2 = tr.appendChild(dom.createElement('td'));
-  var td3 = tr.appendChild(dom.createElement('td'));
-
-  var agent = obj;
-  var image = td1.appendChild(dom.createElement('img'));
-  td1.setAttribute('style','width:4em; padding:0.5em; height: 4em;')
-  td2.setAttribute('style', 'text-align:left;')
-  td3.setAttribute('style','width:2em; padding:0.5em; height: 4em;')
-  image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
-  tabulator.panes.utils.setImage(image, agent);
-
-  tabulator.panes.utils.setName(td2, agent);
-  if (options.deleteFunction){
-    tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
-  }
-  if (options.link !== false) {
-    var anchor = td3.appendChild(dom.createElement('a'))
-    anchor.setAttribute('href', obj.uri);
-    anchor.classList.add('HoverControlHide')
-    var linkImage = anchor.appendChild(dom.createElement('img'));
-    linkImage.setAttribute('src', tabulator.scriptBase + 'icons/go-to-this.png');
-    td3.appendChild(dom.createElement('br'))
-  }
-  if (options.draggable !== false){ // default is on
-    tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
-
-    tr.addEventListener('dragstart', function(e){
-        tr.style.fontWeight = 'bold';
-        // e.dataTransfer.dropEffect = 'move';
-        // e.dataTransfer.effectAllowed = 'all'  // same as default
-        e.dataTransfer.setData("text/uri-list", obj.uri);
-        e.dataTransfer.setData("text/plain", obj.uri);
-        e.dataTransfer.setData("text/html", tr.outerHTML);
-        console.log("Dragstart: " + tr + " -> " + obj + "de: "+ e.dataTransfer.dropEffect)
-    }, false);
-
-    tr.addEventListener('drag', function(e){
-        e.preventDefault();
-        e.stopPropagation();
-        //e.dataTransfer.dropEffect = 'copy';
-        // e.dataTransfer.setData("text/uri-list", obj);
-        console.log("Drag: dropEffect: "+ e.dataTransfer.dropEffect)
-    }, false);
-
-    // icons/go-to-this.png
-
-    tr.addEventListener('dragend', function(e){
-        tr.style.fontWeight = 'normal';
-        console.log("Dragend dropeffect: " + e.dataTransfer.dropEffect )
-        console.log("Dragend: " + tr + " -> " + obj)
-    }, false);
-  }
-  return tr;
-}
-
 
 tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
     var kb = tabulator.kb;
@@ -32687,16 +32631,18 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
             combo = combo.join('\n')
             return combo;
         };
-        var colloquial = {13: "Owners", 5: "Editors", 3: "Posters", 2: "Submitters", 1: "Viewers"};
+        var colloquial = {13: "Owners", 9: "Owners (write locked)", 5: "Editors", 3: "Posters", 2: "Submitters", 1: "Viewers"};
+        var recommended = {13: true, 5: true, 3: true, 2: true, 1: true};
         var explanation = {
             13: "can read, write, and control sharing.",
+            9: "can read and control sharing, currently write-locked.",
             5: "can read and change information",
             3: "can add new information, and read but not change existing information",
             2: "can add new information but not read any",
             1: "can read but not change information"
         };
 
-        var kToColor = {13: 'purple', 5: 'red', 3: 'orange', 2: '#cc0', 1: 'green'};
+        var kToColor = {13: 'purple', 9: 'blue', 5: 'red', 3: 'orange', 2: '#cc0', 1: 'green'};
 
         var ktToList = function(k){
             var list = "", y = ['Read', 'Append', 'Write', 'Control'];
@@ -32726,6 +32672,9 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
           var obj = $rdf.sym(uri)
           var types = kb.findTypeURIs(obj);
           console.log('Drop object types: ' + types)
+          if (uri.split('/').length = 4 && !(uri.split('/')[1]) && !(uri.split('/')[3])) {
+            return { pred: 'origin', obj: obj} // The only way to know an origin alas
+          }
           if (ns.vcard('WebID').uri in types) return {pred: 'agent', obj: obj}
           if (ns.vcard('Individual').uri in types || ns.foaf('Person').uri in types || ns.foaf('Agent').uri in types) {
             var pref = kb.any(obj, ns.foaf('preferredURI'))
@@ -32943,7 +32892,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
         var k, combo, label;
         for (k=15; k>0; k--) {
             combo = kToCombo(k);
-            if (( options.modify && colloquial[k]) || byCombo[combo]){
+            if (( options.modify && recommended[k]) || byCombo[combo]){
                 renderCombo(byCombo, combo);
             } // if
         } // for
@@ -32952,6 +32901,8 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
 
     tabulator.panes.utils.getACLorDefault(doc, function(ok, p2, targetDoc, targetACLDoc, defaultHolder, defaultACLDoc){
         var defa = !p2;
+        box.isContainer = targetDoc.uri.slice(-1) === '/' // Give default for all directories
+        // @@ Could also set from classes ldp:Container etc etc
         if (!ok) {
             statusBlock.textContent += "Error reading " + (defa? " default " : "") + "ACL."
                 + " status " + targetDoc + ": " + targetACLDoc;
@@ -32977,7 +32928,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                                 statusBlock.textContent += " (Error writing back access control file: "+message+")";
                             } else {
                                 statusBlock.textContent = " (Now editing specific access for this " + noun + ")";
-                                box.style = 'color: black;';
+                                // box.style = 'color: black;';
                                 bottomRow.removeChild(editPlease);
                             }
                         });
@@ -33030,7 +32981,8 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 }
 
                 box.addControlForDefaults = function() {
-                  box.notice.textContent = "Defaults for things within this folder:"
+                  box.notice.textContent = "Access to things within this folder:"
+                  box.notice.style = 'font-size: 120%; color: black;'
                   var mergeButton = tabulator.panes.utils.clearElement(box.offer).appendChild(dom.createElement('button'))
                   mergeButton.innerHTML = "<p>Set default for folder contents to<br />just track the sharing for the folder</p>"
                   mergeButton.style = bigButtonStyle;
@@ -33049,6 +33001,7 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                 box.removeControlForDefaults = function(){
                   statusBlock.textContent = "This is also the default for things in this folder."
                   box.notice.textContent = "Sharing for things within the folder currently tracks sharing for the folder."
+                  box.notice.style = 'font-size: 80%; color: #888;'
                   var splitButton = tabulator.panes.utils.clearElement(box.offer).appendChild(dom.createElement('button'))
                   splitButton.innerHTML = "<p>Set the sharing of folder contets <br />separately from the sharing for the folder</p>"
                   splitButton.style = bigButtonStyle;
@@ -33062,8 +33015,6 @@ tabulator.panes.utils.ACLControlBox = function(subject, dom, noun, callback) {
                   statusBlock.textContent = "This is now also the default for things in this folder."
                 }
 
-                box.isContainer = targetDoc.uri.slice(-1) === '/' // Give default for all directories
-                // @@ Could also set from classes ldp:Container etc etc
                 if (box.isContainer){
                     var ac = tabulator.panes.utils.readACL(targetDoc, targetACLDoc, kb);
                     var acd = tabulator.panes.utils.readACL(targetDoc, targetACLDoc, kb, true);
@@ -33203,27 +33154,55 @@ tabulator.panes.utils.setName = function(element, x) {
     }
 }
 
+// Set of suitable images
+tabulator.panes.utils.imagesOf = function(x) {
+    return (kb.each(x, ns.sioc('avatar'))
+    .concat(kb.each(x, ns.foaf('img')))
+    .concat(kb.each(x, ns.vcard('logo')))
+    .concat(kb.each(x, ns.vcard('photo')))
+    .concat(kb.each(x, ns.foaf('depiction'))))
+}
 // Best logo or avater or photo etc to represent someone or some group etc
 //
+
 tabulator.panes.utils.setImage = function(element, x) {
     var kb = tabulator.kb, ns = tabulator.ns;
-    var fallback = "https://webizen.org/img/photo.png";
+    var iconDir = tabulator.scriptBase + "js/panes/common/icons/"
+    var fallback = iconDir + "noun_15059.svg";
     var findImage = function(x) {
+        if (x.sameTerm(ns.foaf('Agent')) || x.sameTerm(ns.rdf('Resource'))) {
+          return iconDir + 'noun_98053.svg' // Globe
+        }
         var image = kb.any(x, ns.sioc('avatar'))
             || kb.any(x, ns.foaf('img'))
             || kb.any(x, ns.vcard('logo'))
+            || kb.any(x, ns.vcard('hasPhoto'))
             || kb.any(x, ns.vcard('photo'))
             || kb.any(x, ns.foaf('depiction'));
-        return image ? image.uri : fallback;
+        return image ? image.uri : null
+      }
+      var findImageByClass = function(x) {
+        var types = kb.findTypeURIs(x)
+        if (ns.solid('AppProvider').uri in types) {
+          return iconDir + 'noun_15177.svg' // App
+        }
+        if ((x.uri.split('/').length = 4 && !(x.uri.split('/')[1]) && !(x.uri.split('/')[3]))) {
+          return iconDir + 'noun_15177.svg' // App -- this is an origin
+        }
+        if (ns.solid('AppProviderClass').uri in types) {
+          return iconDir + 'noun_144.svg' // App Whitelist @@@ ICON (three apps ?)
+        }
+        if (ns.vcard('Group').uri in types || ns.rdfs('Class').uri in types) {
+          return iconDir + 'noun_339237.svg' // Group of people
+        }
+        return fallback
     }
 
-    var uri = x.sameTerm(ns.foaf('Agent'))
-      ? tabulator.scriptBase + 'js/panes/common/icons/noun_98053.svg'
-      : findImage(x);
-    element.setAttribute('src', uri);
-    if (uri === fallback && x.uri) {
+    var uri = findImage(x)
+    element.setAttribute('src', uri || findImageByClass(x));
+    if (!uri && x.uri) {
         tabulator.sf.nowOrWhenFetched(x, undefined, function(ok) {
-            element.setAttribute('src', findImage(x));
+            element.setAttribute('src', findImage(x) || findImageByClass(x));
         });
     }
 }
@@ -33263,6 +33242,71 @@ tabulator.panes.utils.deleteButtonWithCheck = function(dom, container, noun, del
     }, false);
 }
 
+
+
+
+// A TR to repreent a draggable person, etc in a list
+//
+//
+tabulator.panes.utils.personTR = function(dom, pred, obj, options) {
+  var tr = dom.createElement('tr');
+  options = options || {}
+  tr.predObj = [pred.uri, obj.uri];
+  var td1 = tr.appendChild(dom.createElement('td'));
+  var td2 = tr.appendChild(dom.createElement('td'));
+  var td3 = tr.appendChild(dom.createElement('td'));
+
+  var agent = obj;
+  var image = td1.appendChild(dom.createElement('img'));
+  td1.setAttribute('style','width:4em; padding:0.5em; height: 4em;')
+  td2.setAttribute('style', 'text-align:left;')
+  td3.setAttribute('style','width:2em; padding:0.5em; height: 4em;')
+  image.setAttribute('style', 'width: 3em; height: 3em; margin: 0.1em; border-radius: 1em;')
+  tabulator.panes.utils.setImage(image, agent);
+
+  tabulator.panes.utils.setName(td2, agent);
+  if (options.deleteFunction){
+    tabulator.panes.utils.deleteButtonWithCheck(dom, td3, 'person', options.deleteFunction);
+  }
+  if (options.link !== false) {
+    var anchor = td3.appendChild(dom.createElement('a'))
+    anchor.setAttribute('href', obj.uri);
+    anchor.classList.add('HoverControlHide')
+    var linkImage = anchor.appendChild(dom.createElement('img'));
+    linkImage.setAttribute('src', tabulator.scriptBase + 'icons/go-to-this.png');
+    td3.appendChild(dom.createElement('br'))
+  }
+  if (options.draggable !== false){ // default is on
+    tr.setAttribute('draggable','true'); // allow a person to be dragged to diff role
+
+    tr.addEventListener('dragstart', function(e){
+        tr.style.fontWeight = 'bold';
+        // e.dataTransfer.dropEffect = 'move';
+        // e.dataTransfer.effectAllowed = 'all'  // same as default
+        e.dataTransfer.setData("text/uri-list", obj.uri);
+        e.dataTransfer.setData("text/plain", obj.uri);
+        e.dataTransfer.setData("text/html", tr.outerHTML);
+        console.log("Dragstart: " + tr + " -> " + obj + "de: "+ e.dataTransfer.dropEffect)
+    }, false);
+
+    tr.addEventListener('drag', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        //e.dataTransfer.dropEffect = 'copy';
+        // e.dataTransfer.setData("text/uri-list", obj);
+        console.log("Drag: dropEffect: "+ e.dataTransfer.dropEffect)
+    }, false);
+
+    // icons/go-to-this.png
+
+    tr.addEventListener('dragend', function(e){
+        tr.style.fontWeight = 'normal';
+        console.log("Dragend dropeffect: " + e.dataTransfer.dropEffect )
+        console.log("Dragend: " + tr + " -> " + obj)
+    }, false);
+  }
+  return tr;
+}
 
 
 
@@ -38650,17 +38694,17 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 }
 
 
-    
+
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_bug = iconPrefix + 'js/panes/issue/tbl-bug-22.png';
+tabulator.Icon.src.icon_bug = tabulator.iconPrefix + 'js/panes/issue/tbl-bug-22.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_bug] = 'Track issue'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_bug,
-    
+
     name: 'issue',
-    
+
     // Does the subject deserve an issue pane?
     label: function(subject) {
         var kb = tabulator.kb;
@@ -38682,11 +38726,11 @@ tabulator.panes.register( {
         div.setAttribute('class', 'issuePane');
 
         var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
+            if (!inverse && pred.uri ==
                 'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
-        
+
         var setModifiedDate = function(subj, kb, doc) {
             if (!getOption(tracker, 'trackLastModified')) return;
             var deletions = kb.statementsMatching(subject, DCT('modified'));
@@ -38702,7 +38746,7 @@ tabulator.panes.register( {
             div.appendChild(pre);
             pre.appendChild(dom.createTextNode(message));
             return pre
-        } 
+        }
 
         var complainIfBad = function(ok,body){
             if (ok) {
@@ -38740,12 +38784,12 @@ tabulator.panes.register( {
                 titlefield.setAttribute('class','pendingedit');
                 titlefield.disabled = true;
                 sts = [];
-                
+
                 var issue = kb.sym(stateStore.uri + '#' + 'Iss'+timestring());
                 sts.push(new $rdf.Statement(issue, WF('tracker'), tracker, stateStore));
                 var title = kb.literal(titlefield.value);
                 sts.push(new $rdf.Statement(issue, DC('title'), title, stateStore))
-                
+
                 // sts.push(new $rdf.Statement(issue, ns.rdfs('comment'), "", stateStore))
                 sts.push(new $rdf.Statement(issue, DCT('created'), new Date(), stateStore));
 
@@ -38771,13 +38815,13 @@ tabulator.panes.register( {
             }
             //form.addEventListener('submit', function() {try {sendNewIssue} catch(e){console.log('sendNewIssue: '+e)}}, false)
             //form.setAttribute('onsubmit', "function xx(){return false;}");
-            
-            
-            
+
+
+
             tabulator.fetcher.removeCallback('done','expand'); // @@ experimental -- does this kill the re-paint? no
             tabulator.fetcher.removeCallback('fail','expand');
 
-            
+
             var states = kb.any(tracker, WF('issueClass'));
             classLabel = tabulator.Util.label(states);
             form.innerHTML = "<h2>Add new "+ (superIssue?"sub ":"")+
@@ -38795,27 +38839,27 @@ tabulator.panes.register( {
             form.appendChild(titlefield);
             return form;
         };
-        
-        
 
-                                                  
+
+
+
         /////////////////////// Reproduction: Spawn a new instance of this app
-        
+
         var newTrackerButton = function(thisTracker) {
 	    var button = tabulator.panes.utils.newAppInstance(dom, "Start your own new tracker", function(ws){
-        
-                var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to 
+
+                var appPathSegment = 'issuetracker.w3.org'; // how to allocate this string and connect to
 
                 // console.log("Ready to make new instance at "+ws);
                 var sp = tabulator.ns.space;
                 var kb = tabulator.kb;
-                
+
                 var base = kb.any(ws, sp('uriPrefix')).value;
                 if (base.slice(-1) !== '/') {
                     $rdf.log.error(appPathSegment + ": No / at end of uriPrefix " + base );
                     base = base + '/';
                 }
-                base += appPathSegment + '/' + timestring() + '/'; // unique id 
+                base += appPathSegment + '/' + timestring() + '/'; // unique id
 
                 var documentOf = function(x) {
                     return kb.sym($rdf.uri.docpart(x.uri));
@@ -38840,20 +38884,20 @@ tabulator.panes.register( {
                     return kb.sym(u);
                 }
                 var there = morph(here);
-                var newTracker = morph(thisTracker); 
-                
+                var newTracker = morph(thisTracker);
+
                 var myConfig = kb.statementsMatching(undefined, undefined, undefined, here);
                 for (var i=0; i < myConfig.length; i++) {
                     st = myConfig[i];
                     kb.add(morph(st.subject), morph(st.predicate), morph(st.object), there);
                 }
-                
+
                 // Keep a paper trail   @@ Revisit when we have non-public ones @@ Privacy
                 //
                 kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, stateStore);
-                
+
                 kb.add(newTracker, tabulator.ns.space('inspiration'), thisTracker, there);
-                
+
                 // $rdf.log.debug("\n Ready to put " + kb.statementsMatching(undefined, undefined, undefined, there)); //@@
 
 
@@ -38876,29 +38920,29 @@ tabulator.panes.register( {
                         };
                     }
                 );
-                
+
                 // Created new data files.
                 // @@ Now create initial files - html skin, (Copy of mashlib, css?)
                 // @@ Now create form to edit configuation parameters
                 // @@ Optionally link new instance to list of instances -- both ways? and to child/parent?
-                // @@ Set up access control for new config and store. 
-                
+                // @@ Set up access control for new config and store.
+
             }); // callback to newAppInstance
-			 
+
 	    button.setAttribute('style', 'margin: 0.5em 1em;');
 	    return button;
-            
+
         }; // newTrackerButton
 
- 
- 
+
+
 ///////////////////////////////////////////////////////////////////////////////
-        
-        
+
+
         tabulator.updater = tabulator.updater || new tabulator.rdf.sparqlUpdate(kb);
         var updater = tabulator.updater;
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -38909,7 +38953,7 @@ tabulator.panes.register( {
 
 
         // Reload resorce then
-        
+
         var reloadStore = function(store, callBack) {
             tabulator.fetcher.unload(store);
             tabulator.fetcher.nowOrWhenFetched(store.uri, undefined, function(ok, body){
@@ -38924,7 +38968,7 @@ tabulator.panes.register( {
 
 
         // Refresh the DOM tree
-      
+
         var refreshTree = function(root) {
             if (root.refresh) {
                 root.refresh();
@@ -38934,11 +38978,11 @@ tabulator.panes.register( {
                 refreshTree(root.children[i]);
             }
         }
-        
+
         // All the UI for a single issue, without store load or listening for changes
         //
         var singleIssueUI = function(subject, div) {
-        
+
             var ns = tabulator.ns
             var predicateURIsDone = {};
             var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
@@ -38959,7 +39003,7 @@ tabulator.panes.register( {
                 div.setAttribute('style', mystyle);
             }
             setPaneStyle();
-            
+
             var stateStore = kb.any(tracker, WF('stateStore'));
             var store = kb.sym(subject.uri.split('#')[0]);
 
@@ -38976,7 +39020,7 @@ tabulator.panes.register( {
 
             tabulator.panes.utils.checkUserSetMe(stateStore);
 
-            
+
             var states = kb.any(tracker, WF('issueClass'));
             if (!states) throw 'This tracker '+tracker+' has no issueClass';
             var select = tabulator.panes.utils.makeSelectForCategory(dom, kb, subject, states, store, function(ok,body){
@@ -38991,7 +39035,7 @@ tabulator.panes.register( {
 
             var cats = kb.each(tracker, WF('issueCategory')); // zero or more
             for (var i=0; i<cats.length; i++) {
-                div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom, 
+                div.appendChild(tabulator.panes.utils.makeSelectForCategory(dom,
                         kb, subject, cats[i], store, function(ok,body){
                     if (ok) {
                         setModifiedDate(store, kb, store);
@@ -39000,7 +39044,7 @@ tabulator.panes.register( {
                     else console.log("Failed to change category:\n"+body);
                 }));
             }
-            
+
             var a = dom.createElement('a');
             a.setAttribute('href',tracker.uri);
             a.setAttribute('style', 'float:right');
@@ -39019,7 +39063,7 @@ tabulator.panes.register( {
 
 
             // Assigned to whom?
-            
+
             var assignments = kb.statementsMatching(subject, ns.wf('assignee'));
             if (assignments.length > 1) {
                 say("Weird, was assigned to more than one person. Fixing ..");
@@ -39034,7 +39078,7 @@ tabulator.panes.register( {
 
                 // throw "Error:"+subject+"has "+assignees.length+" > 1 assignee.";
             }
-            
+
             var assignee = assignments.length ? assignments[0].object : null;
             // Who could be assigned to this?
             // Anyone assigned to any issue we know about  @@ should be just for this tracker
@@ -39103,14 +39147,14 @@ tabulator.panes.register( {
                         donePredicate(p); // Check that one off
                     }
                 });
-                
+
             };
-            
+
             //   Comment/discussion area
-            
+
             var spacer = div.appendChild(dom.createElement('tr'));
 	    spacer.setAttribute('style','height: 1em');  // spacer and placeHolder
-			
+
             var messageStore = kb.any(tracker, ns.wf('messageStore'));
             if (!messageStore) messageStore = kb.any(tracker, WF('stateStore'));
 	    kb.fetcher.nowOrWhenFetched(messageStore, function(ok, body, xhr){
@@ -39125,8 +39169,8 @@ tabulator.panes.register( {
 		}
 	    })
 	    donePredicate(ns.wf('message'));
-			 
-			 
+
+
             // Remaining properties
 	    var plist = kb.statementsMatching(subject)
 	    var qlist = kb.statementsMatching(undefined, undefined, subject)
@@ -39139,7 +39183,7 @@ tabulator.panes.register( {
                 function(pred, inverse) {
                     return !(pred.uri in predicateURIsDone)
                 });
-                
+
             var refreshButton = dom.createElement('button');
             refreshButton.textContent = "refresh";
             refreshButton.addEventListener('click', function(e) {
@@ -39160,12 +39204,12 @@ tabulator.panes.register( {
 
 
         //              Render a single issue
-        
+
         if (t["http://www.w3.org/2005/01/wf/flow#Task"]) {
 
             var tracker = kb.any(subject, WF('tracker'));
             if (!tracker) throw 'This issue '+subject+'has no tracker';
-            
+
             var trackerURI = tracker.uri.split('#')[0];
             // Much data is in the tracker instance, so wait for the data from it
             tabulator.fetcher.nowOrWhenFetched(trackerURI, subject, function drawIssuePane1(ok, body) {
@@ -39174,29 +39218,29 @@ tabulator.panes.register( {
 
                 tabulator.fetcher.nowOrWhenFetched(stateStore, subject, function drawIssuePane2(ok, body) {
                     if (!ok) return console.log("Failed to load state " + stateStore + ' '+body);
-                    
+
                     singleIssueUI(subject, div);
                     updater.addDownstreamChangeListener(stateStore, function() {refreshTree(div)}); // Live update
                 });
-                    
+
             });  // End nowOrWhenFetched tracker
 
     ///////////////////////////////////////////////////////////
 
         //          Render a Tracker instance
-        
+
         } else if (t['http://www.w3.org/2005/01/wf/flow#Tracker']) {
             var tracker = subject;
-            
+
             var states = kb.any(subject, WF('issueClass'));
             if (!states) throw 'This tracker has no issueClass';
             var stateStore = kb.any(subject, WF('stateStore'));
             if (!stateStore) throw 'This tracker has no stateStore';
-            
+
             tabulator.panes.utils.checkUserSetMe(stateStore);
-            
+
             var cats = kb.each(subject, WF('issueCategory')); // zero or more
-            
+
             var h = dom.createElement('h2');
             h.setAttribute('style', 'font-size: 150%');
             div.appendChild(h);
@@ -39215,7 +39259,7 @@ tabulator.panes.register( {
                     b.setAttribute('disabled', 'true');
                     container.appendChild(newIssueForm(dom, kb, subject));
                 }, false);
-            
+
             // Table of issues - when we have the main issue list
             tabulator.fetcher.nowOrWhenFetched(stateStore.uri, subject, function(ok, body) {
                 if (!ok) return console.log("Cannot load state store "+body);
@@ -39234,9 +39278,9 @@ tabulator.panes.register( {
                     query.pat.add(v['issue'], ns.rdf('type'), v['_cat_'+i]);
                     query.pat.add(v['_cat_'+i], ns.rdfs('subClassOf'), cats[i]);
                 }
-                
+
                 query.pat.optional = [];
-                
+
                 var propertyList = kb.any(tracker, WF('propertyList')); // List of extra properties
                 // console.log('Property list: '+propertyList); //
                 if (propertyList) {
@@ -39253,11 +39297,11 @@ tabulator.panes.register( {
                         oneOpt.add(v['issue'], prop, v[vname]);
                     }
                 }
-                
-            
+
+
                 // console.log('Query pattern is:\n'+query.pat);
-                // console.log('Query pattern optional is:\n'+opts); 
-            
+                // console.log('Query pattern optional is:\n'+opts);
+
                 var selectedStates = {};
                 var possible = kb.each(undefined, ns.rdfs('subClassOf'), states);
                 possible.map(function(s){
@@ -39266,9 +39310,9 @@ tabulator.panes.register( {
                         // console.log('on '+s.uri); // @@
                     };
                 });
-                
+
                 var overlay, overlayTable;
-                
+
                 var bringUpInOverlay = function(href) {
                     overlayPane.innerHTML = ''; // clear existing
                     var button = overlayPane.appendChild(dom.createElement('button'))
@@ -39278,7 +39322,7 @@ tabulator.panes.register( {
                     })
                     singleIssueUI(kb.sym(href), overlayPane);
                 }
-                        
+
                 var tableDiv = tabulator.panes.utils.renderTableViewPane(dom, {
                     query: query,
                     keyVariable: '?issue', // Charactersic of row
@@ -39287,7 +39331,7 @@ tabulator.panes.register( {
                         '?created': { cellFormat: 'shortDate'},
                         '?state': { initialSelection: selectedStates }}} );
                 div.appendChild(tableDiv);
-                
+
                 overlay = div.appendChild(dom.createElement('div'));
                 overlay.setAttribute('style', ' position: absolute; top: 100px; right: 20px; margin: 1em white;');
                 overlayPane = overlay.appendChild(dom.createElement('div')); // avoid stomping on style by pane
@@ -39309,28 +39353,28 @@ tabulator.panes.register( {
                 } else {
                     console.log('No refresh function?!');
                 }
-                            
+
                 updater.addDownstreamChangeListener(stateStore, tableDiv.refresh); // Live update
-                
-                
+
+
             });
-            
-            
+
+
             div.appendChild(dom.createElement('hr'));
             div.appendChild(newTrackerButton(subject));
             // end of Tracker instance
 
 
-        } else { 
+        } else {
             console.log("Error: Issue pane: No evidence that "+subject+" is either a bug or a tracker.")
-        }         
+        }
         if (!tabulator.preferences.get('me')) {
             console.log("(You do not have your Web Id set. Sign in or sign up to make changes.)");
         } else {
             // console.log("(Your webid is "+ tabulator.preferences.get('me')+")");
         };
-        
-        
+
+
         var loginOutButton = tabulator.panes.utils.loginStatusBox(dom, function(webid){
             // sayt.parent.removeChild(sayt);
             if (webid) {
@@ -39342,18 +39386,16 @@ tabulator.panes.register( {
                 console.log("(Logged out)")
                 me = null;
             }
-        });        
-        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;'); 
+        });
+        loginOutButton.setAttribute('style', 'margin: 0.5em 1em;');
         div.appendChild(loginOutButton);
-        
+
         return div;
 
     }
 }, true);
 
 //ends
-
-
 
 // ###### Finished expanding js/panes/issue/pane.js ##############
 // ###### Expanding js/panes/contact/contactPane.js ##############
@@ -39382,7 +39424,7 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_contactCard = iconPrefix + 'js/panes/contact/card.png';
+tabulator.Icon.src.icon_contactCard = tabulator.iconPrefix + 'js/panes/contact/card.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_contactCard] = 'Contact'
 
 tabulator.panes.register( {
@@ -39662,7 +39704,7 @@ tabulator.panes.register( {
 
         if (t[ns.vcard('Individual').uri]|| t[ns.vcard('Organization').uri]) { // https://timbl.rww.io/Apps/Contactator/individualForm.ttl
 
-            var individualFormDoc = kb.sym(iconPrefix + 'js/panes/contact/individualForm.ttl');
+            var individualFormDoc = kb.sym(tabulator.iconPrefix + 'js/panes/contact/individualForm.ttl');
             // var individualFormDoc = kb.sym('https://timbl.rww.io/Apps/Contactator/individualForm.ttl');
             var individualForm = kb.sym(individualFormDoc.uri + '#form1')
 
@@ -39697,6 +39739,11 @@ tabulator.panes.register( {
 
 
                 tabulator.panes.utils.checkUserSetMe(cardDoc);
+
+                var img = div.appendChild(dom.createElement('img'));
+                img.setAttribute('style', 'max-height: 10em; border-radius: 1em; margin: 0.7em;')
+                tabulator.panes.utils.setImage(img, subject);
+
 
                 tabulator.panes.utils.appendForm(dom, div, {}, subject, individualForm, cardDoc, complainIfBad);
 
@@ -40509,7 +40556,7 @@ tabulator.panes.register( {
 // load also js/panes/pad/better-simple-pad/css/simple-pad-styles.css
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_pad = iconPrefix + 'js/panes/pad/images/ColourOn.png';
+tabulator.Icon.src.icon_pad = tabulator.iconPrefix + 'js/panes/pad/images/ColourOn.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_pad] = 'notepad'
 
 tabulator.panes.register( {
@@ -41134,17 +41181,17 @@ tabulator.panes.register(tabulator.panes.argumentPane, false);
 ** trips, etc
 */
 
-    
-tabulator.Icon.src.icon_money = iconPrefix +
+
+tabulator.Icon.src.icon_money = tabulator.iconPrefix +
     'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Transaction'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_money,
-    
+
     name: 'transaction',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
@@ -41152,10 +41199,10 @@ tabulator.panes.register( {
         var t = kb.findTypeURIs(subject);
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
         if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
-        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period $";        
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period $";
 
         if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
-        
+
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -41168,7 +41215,7 @@ tabulator.panes.register( {
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
+
         var div = dom.createElement('div')
         div.setAttribute('class', 'transactionPane');
 
@@ -41189,11 +41236,11 @@ tabulator.panes.register( {
         };
         var happy = function happy(message){
             return mention('✓ ' + message, 'color: #010; background-color: #efe');
-        }; 
+        };
         var complain = function complain(message){
             return mention(message, 'color: #100; background-color: #fee');
-        }; 
- 
+        };
+
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
@@ -41202,13 +41249,13 @@ tabulator.panes.register( {
         };
 
 
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
+ // //////////////////////////////////////////////////////////////////////////////
+
+
+
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -41244,23 +41291,23 @@ tabulator.panes.register( {
             }
             return s + '.00'
         }
-        
+
         var numericCell = function numericCell(amount, suppressZero) {
             var td = dom.createElement('td');
-            if (!(0.0 + amount === 0.0 && suppressZero)) { 
+            if (!(0.0 + amount === 0.0 && suppressZero)) {
                 td.textContent = d2(amount);
             }
             td.setAttribute('style', 'width: 6em; text-align: right; ')
             return td;
         };
-        
+
         var headerCell = function headerCell(str) {
             var td = dom.createElement('th');
             td.textContent = str;
             td.setAttribute('style', 'text-align: right; ')
             return td;
         };
-        
+
         var oderByDate = function(x, y) {
             dx = tabulator.kb.any(x, ns.qu('date'));
             dy = tabulator.kb.any(y, ns.qu('date'));
@@ -41272,15 +41319,15 @@ tabulator.panes.register( {
             if (x.uri > y.uri) return 1;
             return 0;
         }
-        
-        
+
+
         var insertedPane = function(dom, subject, paneName) {
             var p = tabulator.panes.byName(paneName);
             var d = p.render(subject, dom);
             d.setAttribute('style', 'border: 0.1em solid green;')
             return d;
         };
-        
+
         var expandAfterRow = function(dom, row, subject, paneName, solo) {
             var siblings = row.parentNode.children;
             if (solo) {
@@ -41302,9 +41349,9 @@ tabulator.panes.register( {
             }
             row.expanded = tr;
             td.setAttribute('colspan', '' + cols)
-            td.appendChild(insertedPane(dom, subject, paneName));            
+            td.appendChild(insertedPane(dom, subject, paneName));
         };
-        
+
         var expandAfterRowOrCollapse = function(dom, row, subject, paneName, solo) {
             if (row.expanded) {
                 row.parentNode.removeChild(row.expanded);
@@ -41315,7 +41362,7 @@ tabulator.panes.register( {
         };
 
         var transactionTable = function(dom, list, filter) {
-        
+
             var table = dom.createElement('table');
             table.setAttribute('style', 'padding-left: 0.5em; padding-right: 0.5em; font-size: 9pt; width: 85%;');
             var transactionRow = function(dom, x) {
@@ -41331,15 +41378,15 @@ tabulator.panes.register( {
                     }
                     tr.setAttribute('style', mystyle);
                 }
-            
+
                 var account = kb.any(x, ns.qu('toAccount'));
                 setTRStyle(tr, account);
-                
+
                 var c0 = tr.appendChild(dom.createElement('td'));
                 var date = kb.any(x, ns.qu('date'));
                 c0.textContent = date ? date.value.slice(0,10) : '???';
                 c0.setAttribute('style',  'width: 7em;');
-                
+
                 var c1 = tr.appendChild(dom.createElement('td'));
                 c1.setAttribute('style',  'width: 36em;');
                 var payee = kb.any(x, ns.qu('payee'));
@@ -41355,13 +41402,13 @@ tabulator.panes.register( {
                 tr.addEventListener('click', function(e) { // solo unless shift key
                     expandAfterRowOrCollapse(dom, tr, x, 'transaction', !e.shiftKey);
                 }, false);
-                
+
                 return tr;
-            }; 
+            };
 
             var list2 = filter ? list.filter(filter) : list.slice(); // don't sort a paramater passed in place
             list2.sort(oderByDate);
-             
+
              for (var i=0; i < list2.length; i++) {
                 table.appendChild(transactionRow(dom, list2[i]));
              }
@@ -41377,7 +41424,7 @@ tabulator.panes.register( {
 
 
         //              Render a single transaction
-        
+
         // This works only if enough metadata about the properties can drive the RDFS
         // (or actual type statements whichtypically are NOT there on)
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
@@ -41385,7 +41432,7 @@ tabulator.panes.register( {
             var trip = kb.any(subject, WF('trip'));
             var ns = tabulator.ns
             donePredicate(ns.rdf('type'));
-            
+
             var setPaneStyle = function(account) {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                 if (account) {
@@ -41395,14 +41442,14 @@ tabulator.panes.register( {
                 }
                 div.setAttribute('style', mystyle);
             }
-            
+
             var account = kb.any(subject, Q('toAccount'));
             setPaneStyle(account);
             if (account == undefined) {
                 complain('(Error: There is no bank account known for this transaction <'
                         +subject.uri+'>,\n -- every transaction needs one.)')
             };
-	    
+
 	    var store = null;
             var statement = kb.any(subject, Q('accordingTo'));
             if (statement == undefined) {
@@ -41433,7 +41480,7 @@ tabulator.panes.register( {
             navLink(Q('toAccount'));
             navLink(Q('accordingTo'), "Statement");
             navLink(TRIP('trip'));
-            
+
             // Basic data:
             var table = dom.createElement('table');
             div.appendChild(table);
@@ -41456,7 +41503,7 @@ tabulator.panes.register( {
             }
 
             // What trips do we know about?
-            
+
             // Classify:
             if (store) {
                 kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body){
@@ -41471,21 +41518,21 @@ tabulator.panes.register( {
                     var trips = kb.statementsMatching(undefined, TRIP('trip'), undefined, store)
                                 .map(function(st){return st.object}); // @@ Use rdfs
                     var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
-                    trips = trips.concat(trips2).sort(); // @@ Unique 
-                    
+                    trips = trips.concat(trips2).sort(); // @@ Unique
+
                     var sortedBy = function(kb, list, pred, reverse) {
                         l2 = list.map(function(x) {
                             var key = kb.any(x, pred);
                             key = key ? key.value : "9999-12-31";
-                            return [ key, x ]; 
+                            return [ key, x ];
                         });
                         l2.sort();
                         if (reverse) l2.reverse();
                         return l2.map(function(pair){return pair[1]});
                     }
-                    
+
                     trips = sortedBy(kb, trips, tabulator.ns.cal('dtstart'), true); // Reverse chron
-                    
+
                     if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
                         dom, kb, subject, TRIP('trip'), trips,
                             { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *",
@@ -41499,7 +41546,7 @@ tabulator.panes.register( {
                 });
             }
 
-            
+
 
             div.appendChild(dom.createElement('br'));
 
@@ -41509,14 +41556,14 @@ tabulator.panes.register( {
             donePredicate(ns.rdfs('comment')); // Done above
 /*            tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
-                    if (!inverse && pred.uri == 
+                    if (!inverse && pred.uri ==
                         "http://www.w3.org/2000/01/rdf-schema#comment") return true;
                     return false
                 });
 */
             div.appendChild(dom.createElement('tr'))
                         .setAttribute('style','height: 1em'); // spacer
-            
+
             // Remaining properties
             tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
@@ -41540,13 +41587,13 @@ tabulator.panes.register( {
             var v = {};
             vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
             query.pat.add(v['transaction'], TRIP('trip'), subject);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
             query.pat.optional.push(opt);
-            
+
             query.pat.add(v['transaction'], Q('date'), v['date']);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
             query.pat.optional.push(opt);
@@ -41577,7 +41624,7 @@ tabulator.panes.register( {
                         if (!yearCategoryTotal[year]) yearCategoryTotal[year] = {};
                         if (!total[tyuri]) total[tyuri] = 0.0;
                         if (!yearCategoryTotal[year][tyuri]) yearCategoryTotal[year][tyuri] = 0.0;
-                        
+
                         var lit = kb.any(t, Q('in_USD'));
                         if (!lit) {
                             complain("@@ No amount in USD: "+lit+" for " + t);
@@ -41594,7 +41641,7 @@ tabulator.panes.register( {
                 var types = [];
                 var grandTotal = 0.0;
                 var years = [], i;
-                
+
                 for (var y in yearCategoryTotal) {
                     if (yearCategoryTotal.hasOwnProperty(y)) {
                         years.push(y);
@@ -41603,10 +41650,10 @@ tabulator.panes.register( {
                 years.sort();
                 var ny = years.length, cell;
                 // happy('years: '+ ny); // @@
-                
+
                 var table = div.appendChild(dom.createElement('table'));
                 table.setAttribute('style', 'font-size: 120%; margin-left:auto; margin-right:1em; margin-top: 1em; border: 0.05em solid gray; padding: 1em;')
-                
+
                 if (ny > 1) {
                     var header = table.appendChild(dom.createElement('tr'));
                     header.appendChild(headerCell(''));
@@ -41619,7 +41666,7 @@ tabulator.panes.register( {
                 for (var uri in total) if (total.hasOwnProperty(uri)) {
                     types.push(uri);
                     grandTotal += total[uri];
-                } 
+                }
                 types.sort();
                 // happy('types: '+ types.length); // @@
                 var row, label, z;
@@ -41653,22 +41700,22 @@ tabulator.panes.register( {
 
                 // happy("Overall net: "+grandTotal, 'font-weight: bold;') // @@
             }
-            
+
             var trans = kb.each(undefined, TRIP('trip'), subject);
             var tab = transactionTable(dom, trans);
             tab.setAttribute('style', 'margin-left:auto; margin-right:1em; margin-top: 1em; border: padding: 1em;')
             div.appendChild(tab);
             calculations();
-            
 
 
-            
- 
+
+
+
         //              Render a single Period
-        
+
         // This works only if enough metadata about the properties can drive the RDFS
         // (or actual type statements which typically are NOT there on)
-        
+
         } else if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) {
 
             var dtstart = kb.any(subject, ns.cal('dtstart'));
@@ -41676,7 +41723,7 @@ tabulator.panes.register( {
                 complain('(Error: There is no start date known for this period <'
                         +subject.uri+'>,\n -- every period needs one.)')
             };
-            
+
             var dtend = kb.any(subject, ns.cal('dtend'));
             if (dtend === undefined) {
                 complain('(Error: There is no end date known for this period <'
@@ -41684,33 +41731,33 @@ tabulator.panes.register( {
             };
 
             var store = kb.any(subject, Q('annotationStore')) || null;
-            
+
             var needed = kb.each(subject, ns.rdfs('seeAlso'));
-            
+
             donePredicate(ns.rdf('type'));
-            
+
             var inPeriod = function(date) {
                 return !!(date && date >= dtstart && date < dtend);
             };
-            
+
             var transactionInPeriod = function(x) {
                 return inPeriod(kb.any(x, ns.qu('date')));
             };
-            
+
             var h2 = div.appendChild(dom.createElement('p'));
             h2.textContent = "Period " + dtstart.value.slice(0,10) + ' - ' + dtend.value.slice(0,10);
-        
-            
-            // List unclassified transactions
-            
 
-            var dummies = { 
+
+            // List unclassified transactions
+
+
+            var dummies = {
                 'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true, // (we knew)
                 'http://www.w3.org/2000/10/swap/pim/qif#Unclassified': true, // pseudo classifications we may phase out
                 'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedOutgoing': true,
                 'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedIncome': true,
             };
-            var xURIs = kb.findMemberURIs(ns.qu('Transaction')); 
+            var xURIs = kb.findMemberURIs(ns.qu('Transaction'));
             var unc_in = [], unc_out = [], usd, z, tt, t, j;
             for (var y in xURIs) { // For each thing which can be inferred to be a transaction
                 if (xURIs.hasOwnProperty(y)) {
@@ -41749,7 +41796,7 @@ tabulator.panes.register( {
             if (unc_out.length) {
                 tab = transactionTable(dom, unc_out, transactionInPeriod);
                 count = tab.children.length;
-                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" + 
+                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" +
                     ( count < 4 ? '' : ' (' + count+ ')' );
                 div.appendChild(tab);
             } else {
@@ -41757,7 +41804,7 @@ tabulator.panes.register( {
             }
 
             /////////////////  Check some categories of transaction for having given fields
-            
+
             var catSymbol = function(catTail) {
                 var cat, cats = kb.findSubClassesNT(ns.qu('Transaction'));
                 for (cat in cats) {
@@ -41794,7 +41841,7 @@ tabulator.panes.register( {
                 }
                 return count;
             }
-            
+
             // @@ In future could load these params dynamically as properties of period
             if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
                 happy("Reimbursables all have trips")
@@ -41805,10 +41852,10 @@ tabulator.panes.register( {
             if (checkCatHasField('Vacation', ns.trip('trip')) === 0) {
                 happy("Vacation all has trips")
             };
-			 
+
 	    ///////////////   Check Internal transactions balance
-			 
-			 
+
+
             var checkInternals = function() {
 		var catTail = 'Internal';
 		var pred = ns.qu('in_USD');
@@ -41856,13 +41903,13 @@ tabulator.panes.register( {
                 }
                 return count;
             }
-            
+
             if (checkInternals() === 0) {
                 happy("Intenral transactions all pair up")
             };
 
 
-			 
+
         // end of render period instance
 
         }; // if
@@ -41871,13 +41918,11 @@ tabulator.panes.register( {
 
         return div;
     }
-        
+
 
 }, true);
 
 //ends
-
-
 
 // ###### Finished expanding js/panes/transaction/pane.js ##############
 // ###### Expanding js/panes/transaction/period.js ##############
@@ -41888,8 +41933,8 @@ tabulator.panes.register( {
 ** trips, etc
 */
 
-/*    
-tabulator.Icon.src.icon_money = iconPrefix +
+/*
+tabulator.Icon.src.icon_money = tabulator.iconPrefix +
     'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Period'
 
@@ -41898,13 +41943,13 @@ tabulator.panes.register( {
     icon: tabulator.Icon.src.icon_money,
     
     name: 'period',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
-        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period";        
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period";
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -41917,7 +41962,7 @@ tabulator.panes.register( {
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
+
         var div = dom.createElement('div')
         div.setAttribute('class', 'periodPane');
         div.innerHTML='<h1>Period</h1><table><tbody><tr>\
@@ -41925,11 +41970,11 @@ tabulator.panes.register( {
         <p>This is a pane under development.</p>';
 
         var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
+            if (!inverse && pred.uri ==
                 'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
-        
+
 
         var mention = function mention(message, style){
             if (style == undefined) style = 'color: grey';
@@ -41937,13 +41982,13 @@ tabulator.panes.register( {
             pre.setAttribute('style', style);
             div.appendChild(pre);
             pre.appendChild(dom.createTextNode(message));
-        } 
+        }
         var happy = function happy(message){
             return mention('✓ ' + message, 'color: #010; background-color: #efe');
-        } 
+        }
         var complain = function complain(message){
             return mention(message, 'color: #100; background-color: #fee');
-        } 
+        }
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
@@ -41952,13 +41997,13 @@ tabulator.panes.register( {
         };
 
 
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
+ // //////////////////////////////////////////////////////////////////////////////
+
+
+
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -41969,7 +42014,7 @@ tabulator.panes.register( {
 
 
         //              Render a single Period
-        
+
         // This works only if enough metadata about the properties can drive the RDFS
         // (or actual type statements whichtypically are NOT there on)
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) {
@@ -41979,7 +42024,7 @@ tabulator.panes.register( {
                 complain('(Error: There is no start date known for this period <'
                         +subject.uri+'>,\n -- every period needs one.)')
             };
-            
+
             var dtend = kb.any(subject, ns.cal('dtend'));
             if (dtend === undefined) {
                 complain('(Error: There is no end date known for this period <'
@@ -41987,18 +42032,18 @@ tabulator.panes.register( {
             };
 
             var store = kb.any(subject, Q('annotationStore')) || null;
-            
+
             var needed = kb.each(subject, ns.rdfs('seeAlso'));
-            
-            
+
+
             var predicateURIsDone = {};
             var donePredicate = function(pred) {predicateURIsDone[pred.uri]=true};
             donePredicate(ns.rdf('type'));
-            
+
             var inPeriod = function(date) {
                 return !!(date && date >= dtstart && date < dtend);
             };
-            
+
             var d2 = function(n) {
                 var s = '' + n
                 if (s.indexOf('.') >= 0) {
@@ -42006,11 +42051,11 @@ tabulator.panes.register( {
                 }
                 return s + '.00'
             }
-            
+
             var transactionInPeriod = function(x) {
                 return inPeriod(kb.any(x, ns.qu('date')));
             };
-            
+
             var oderByDate = function(x, y) {
                 dx = tabulator.kb.any(x, ns.qu('date'));
                 dy = tabulator.kb.any(y, ns.qu('date'));
@@ -42022,7 +42067,7 @@ tabulator.panes.register( {
                 if (x.uri > y.uri) return 1;
                 return 0;
             }
-            
+
             var setPaneStyle = function() {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                 if (account) {
@@ -42033,17 +42078,17 @@ tabulator.panes.register( {
                 div.setAttribute('style', mystyle);
             }
             // setPaneStyle();
-            
+
             var h2 = div.appendChild(dom.createElement('h2'));
             h2.textContent = "Period " + dtstart.value.slice(0,10) + ' - ' + dtend.value.slice(0,10);
-            
+
             var insertedPane = function(dom, subject, paneName) {
                 var p = tabulator.panes.byName(paneName);
                 var d = p.render(subject, dom);
                 d.setAttribute('style', 'border: 0.1em solid green;')
                 return d;
             };
-            
+
             var expandAfterRow = function(dom, row, subject, paneName, solo) {
                 var siblings = row.parentNode.children;
                 if (solo) {
@@ -42065,9 +42110,9 @@ tabulator.panes.register( {
                 }
                 row.expanded = tr;
                 td.setAttribute('colspan', '' + cols)
-                td.appendChild(insertedPane(dom, subject, paneName));            
+                td.appendChild(insertedPane(dom, subject, paneName));
             };
-            
+
             var expandAfterRowOrCollapse = function(dom, row, subject, paneName, solo) {
                 if (row.expanded) {
                     row.parentNode.removeChild(row.expanded);
@@ -42078,7 +42123,7 @@ tabulator.panes.register( {
             };
 
             var transactionTable = function(dom, list) {
-            
+
                 var table = dom.createElement('table');
                 table.setAttribute('style', 'margin-left: 100; font-size: 9pt; width: 85%;');
                 var transactionRow = function(dom, x) {
@@ -42094,15 +42139,15 @@ tabulator.panes.register( {
                         }
                         tr.setAttribute('style', mystyle);
                     }
-                
+
                     var account = kb.any(x, ns.qu('toAccount'));
                     setTRStyle(tr, account);
-                    
+
                     var c0 = tr.appendChild(dom.createElement('td'));
                     var date = kb.any(x, ns.qu('date'));
                     c0.textContent = date ? date.value.slice(0,10) : '???';
                     c0.setAttribute('style',  'width: 7em;');
-                    
+
                     var c1 = tr.appendChild(dom.createElement('td'));
                     c1.setAttribute('style',  'width: 36em;');
                     var payee = kb.any(x, ns.qu('payee'));
@@ -42118,30 +42163,30 @@ tabulator.panes.register( {
                     tr.addEventListener('click', function(e) { // solo unless shift key
                         expandAfterRowOrCollapse(dom, tr, x, 'transaction', !e.shiftKey);
                     }, false);
-                    
+
                     return tr;
-                 }; 
-                 
+                 };
+
                  var list2 = list.filter(transactionInPeriod);
                  list2.sort(oderByDate);
-                 
+
                  for (var i=0; i < list2.length; i++) {
                     table.appendChild(transactionRow(dom, list2[i]));
                  }
                  return table;
             };
-            
-            
-            // List unclassified transactions
-            
 
-            var dummies = { 
+
+            // List unclassified transactions
+
+
+            var dummies = {
                 'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true, // (we knew)
                 'http://www.w3.org/2000/10/swap/pim/qif#Unclassified': true, // pseudo classifications we may phase out
                 'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedOutgoing': true,
                 'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedIncome': true,
             };
-            var xURIs = kb.findMemberURIs(ns.qu('Transaction')); 
+            var xURIs = kb.findMemberURIs(ns.qu('Transaction'));
             var unc_in = [], unc_out = [], usd, z, tt, t, j;
             for (var y in xURIs) { // For each thing which can be inferred to be a transaction
                 if (xURIs.hasOwnProperty(y)) {
@@ -42180,7 +42225,7 @@ tabulator.panes.register( {
             if (unc_out.length) {
                 tab = transactionTable(dom, unc_out);
                 count = tab.children.length;
-                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" + 
+                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" +
                     ( count < 4 ? '' : ' (' + count+ ')' );
                 div.appendChild(tab);
             } else {
@@ -42188,7 +42233,7 @@ tabulator.panes.register( {
             }
 
             /////////////////  Check some categories of transaction for having given fields
-            
+
             var catSymbol = function(catTail) {
                 var cat, cats = kb.findSubClassesNT(ns.qu('Transaction'));
                 for (cat in cats) {
@@ -42224,33 +42269,31 @@ tabulator.panes.register( {
                 }
                 return count;
             }
-            
-            // Load dynamically as properties of period 
+
+            // Load dynamically as properties of period
             if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
                 happy("Reimbursables all have trips")
             };
             if (checkCatHasField('Other_Inc_Speaking', ns.trip('trip')) === 0) {
                 happy("Speaking income all has trips")
             };
-            
+
         // end of render period instance
 
         };
 
 
-        
+
         //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
 
         return div;
     }
-        
+
 
 }, true);
 
 */
 //ends
-
-
 
 // ###### Finished expanding js/panes/transaction/period.js ##############
 // ###### Expanding js/panes/chat/chatPane.js ##############
@@ -42260,7 +42303,7 @@ tabulator.panes.register( {
 ** and investigate the interop between them.
 */
 
-tabulator.Icon.src.icon_chat = iconPrefix + 'js/panes/common/icons/noun_346319.svg';
+tabulator.Icon.src.icon_chat = tabulator.iconPrefix + 'js/panes/common/icons/noun_346319.svg';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_chat] = 'chat'
 
 tabulator.panes.register( {
@@ -42364,30 +42407,30 @@ tabulator.panes.register( {
 **  trips, etc
 */
 
-    
-tabulator.Icon.src.icon_trip = iconPrefix +
+
+tabulator.Icon.src.icon_trip = tabulator.iconPrefix +
     'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png'; // @@
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_trip] = 'travel expenses'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_trip,
-    
+
     name: 'travel expenses',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var kb = tabulator.kb;
         var t = kb.findTypeURIs(subject);
-        
+
         // if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
         //if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
 
 
         if (Q('Transaction') in kb.findSuperClassesNT(subject)) return "by Trip";
         if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
-        
+
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -42401,7 +42444,7 @@ tabulator.panes.register( {
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
+
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'transactionPane');
         div.innerHTML='<h1>Transaction</h1><table><tbody><tr>\
@@ -42409,11 +42452,11 @@ tabulator.panes.register( {
         <p>This is a pane under development.</p>';
 
         var commentFlter = function(pred, inverse) {
-            if (!inverse && pred.uri == 
+            if (!inverse && pred.uri ==
                 'http://www.w3.org/2000/01/rdf-schema#comment') return true;
             return false
         }
-        
+
         var setModifiedDate = function(subj, kb, doc) {
             var deletions = kb.statementsMatching(subject, DCT('modified'));
             var deletions = deletions.concat(kb.statementsMatching(subject, WF('modifiedBy')));
@@ -42428,7 +42471,7 @@ tabulator.panes.register( {
             pre.setAttribute('style', style);
             div.appendChild(pre);
             pre.appendChild(myDocument.createTextNode(message));
-        } 
+        }
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
@@ -42437,13 +42480,13 @@ tabulator.panes.register( {
         };
 
 
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
+ // //////////////////////////////////////////////////////////////////////////////
+
+
+
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -42460,13 +42503,13 @@ tabulator.panes.register( {
             var v = {};
             vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
             query.pat.add(v['transaction'], TRIP('trip'), subject);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
             query.pat.optional.push(opt);
-            
+
             query.pat.add(v['transaction'], Q('date'), v['date']);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
             query.pat.optional.push(opt);
@@ -42493,7 +42536,7 @@ tabulator.panes.register( {
                         if (lit) {
                             total[tyuri] = total[tyuri] + parseFloat(lit.value);
                             //complain('      Trans type ='+ty+'; in_USD "' + lit
-                            //       +'; total[tyuri] = '+total[tyuri]+';') 
+                            //       +'; total[tyuri] = '+total[tyuri]+';')
                         }
                     }
                 });
@@ -42504,7 +42547,7 @@ tabulator.panes.register( {
                     str += tabulator.Util.label(kb.sym(uri)) + ': '+total[uri]+'; ';
                     types++;
                     grandTotal += total[uri];
-                } 
+                }
                 complain("Totals of "+trans.length+" transactions: " + str, ''); // @@@@@  yucky -- need 2 col table
                 if (types > 1) complain("Overall net: "+grandTotal, 'text-treatment: bold;')
             }
@@ -42514,7 +42557,7 @@ tabulator.panes.register( {
         }
 
         //          Render the set of trips which have transactions in this class
-        
+
         if (Q('Transaction') in kb.findSuperClassesNT(subject)) {
 
             ts = kb.each(undefined, ns.rdf('type'), subject);
@@ -42528,13 +42571,13 @@ tabulator.panes.register( {
                 } else {
                     if (!(trans in index)) index[trip] =  { total:0, transactions: [] };
                     var usd = kb.any(trans, Q('in_USD'));
-                    if (usd) index[trip]['total'] += usd; 
+                    if (usd) index[trip]['total'] += usd;
                     var date = kb.any(trans, Q('date'));
-                    index[trip.toNT()]['transactions'].push([date, trans]); 
+                    index[trip.toNT()]['transactions'].push([date, trans]);
                 }
             }
 /*            var byDate = function(a,b) {
-                return new Date(kb.any(a, CAL('dtstart'))) - 
+                return new Date(kb.any(a, CAL('dtstart'))) -
                         new Date(kb.any(b, CAL('dtstart')));
             }
 */
@@ -42555,28 +42598,26 @@ tabulator.panes.register( {
         } else if (t['http://www.w3.org/ns/pim/trip#Trip']) {
 
             renderTrip(subject, div);
-            
+
         }
 
 
-        
+
         //if (!me) complain("You do not have your Web Id set. Set your Web ID to make changes.");
 
         return div;
     }
-        
+
 
 }, true);
 
 //ends
 
-
-
 // ###### Finished expanding js/panes/trip/tripPane.js ##############
 // ###### Expanding js/panes/airPane.js ##############
  /** AIR (Amord in RDF) Pane
  *
- * This pane will display the justification trace of a when it encounters 
+ * This pane will display the justification trace of a when it encounters
  * air reasoner output
  * oshani@csail.mit.edu
  */
@@ -42584,7 +42625,7 @@ tabulator.panes.register( {
 
 
 
-	
+
 //These are horrible global vars. To minimize the chance of an unintended name collision
 //these are prefixed with 'ap_' (short for air pane) - Oshani
 // moved to airpane.js from paneutils.js 2014 tbl
@@ -42604,18 +42645,18 @@ var justificationsArr = [];
 
 
 
- 
+
 airPane = {};
 airPane.name = 'air';
 airPane.icon = tabulator.Icon.src.icon_airPane;
 
 airPane.label = function(subject) {
-  
+
     //Flush all the justification statements already found
     justificationsArr = [];
-    
+
 	//Find all the statements with air:justification in it
-	var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
+	var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject);
 	//This will hold the string to display if the pane appears
 	var stringToDisplay = null
 	//Then make a registry of the compliant and non-compliant subjects
@@ -42623,7 +42664,7 @@ airPane.label = function(subject) {
 	//If the output changes, the parser will break.)
 	for (var j=0; j<stsJust.length; j++){
 		//The subject of the statements should be a quouted formula and
-		//the object should not be tms:premise (this corresponds to the final chunk of the output 
+		//the object should not be tms:premise (this corresponds to the final chunk of the output
 		//which has {some triples} tms:justification tms:premise)
 		if (stsJust[j].subject.termType == 'formula' && stsJust[j].object != ap_prem.toString()){
 			var sts = stsJust[j].subject.statements;
@@ -42647,13 +42688,13 @@ airPane.label = function(subject) {
 				justificationsArr.push(nonCompliantArr);
 
             }
-			stringToDisplay = "Justify" //Even with one relevant statement this method should return something 
-		}   
+			stringToDisplay = "Justify" //Even with one relevant statement this method should return something
+		}
 	}
 	//Make the subject list we will be exploring in the render function unique
 	//compliantStrings = tabulator.panes.utils.unique(compliantStrings);
-	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings); 
-    
+	//nonCompliantStrings = tabulator.panes.utils.unique(nonCompliantStrings);
+
    return stringToDisplay;
 }
 
@@ -42661,7 +42702,7 @@ airPane.label = function(subject) {
 airPane.render = function(subject, myDocument) {
 
 	//Variables specific to the UI
-	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;        
+	var statementsAsTables = tabulator.panes.dataContentPane.statementsAsTables;
 	var divClass;
 	var div = myDocument.createElement("div");
 
@@ -42675,23 +42716,23 @@ airPane.render = function(subject, myDocument) {
     //If there are multiple justifications show a dropdown box to select the correct one
     var selectEl = myDocument.createElement("select");
 
-    var divOutcome = myDocument.createElement("div"); //This is div to display the final outcome. 
+    var divOutcome = myDocument.createElement("div"); //This is div to display the final outcome.
     divOutcome.setAttribute('id', 'outcome'); //There can only be one outcome per selection from the drop down box
-  
+
     //Show the selected justification only
 	airPane.render.showSelected = function(){
-        
+
         //Clear the contents of the outcome div
         if (myDocument.getElementById('outcome') != null){
-            myDocument.getElementById('outcome').innerHTML = ''; 
+            myDocument.getElementById('outcome').innerHTML = '';
         }
-        
+
         //Function to hide the natural language description div and the premises div
         airPane.render.showSelected.hide = function(){
-        
+
             //Clear the outcome div
             if (myDocument.getElementById('outcome') != null){
-                myDocument.getElementById('outcome').innerHTML = ''; 
+                myDocument.getElementById('outcome').innerHTML = '';
             }
             //Remove the justification div from the pane
             var d = myDocument.getElementById('dataContentPane');
@@ -42719,42 +42760,44 @@ airPane.render = function(subject, myDocument) {
 
         //Clear the contents of the justification div
         airPane.render.showSelected.hide();
-        
+
         if (this.selectedIndex == 0)
             return;
-            
+
         selected = justificationsArr[this.selectedIndex - 1];
-        var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject); 
-        
+        var stsJust = tabulator.kb.statementsMatching(undefined, ap_just, undefined, subject);
+
 
         for (var i=0; i<stsJust.length; i++){
-        
+
             //Find the statement maching the option selected from the drop down box
-            if (stsJust[i].subject.termType == 'formula' && 
-                stsJust[i].object != ap_prem.toString() && 
+            if (stsJust[i].subject.termType == 'formula' &&
+                stsJust[i].object != ap_prem.toString() &&
                 stsJust[i].subject.statements[0].object.toString() == selected[0].toString()){
-                
+
                 var stsFound = stsJust[i].subject.statements[0]; //We have only one statement - so no need to iterate
-                
-                //@@@@@@ Variables specific to the logic	
+
+                //@@@@@@ Variables specific to the logic
                 var ruleNameFound;
-                
+
                 //Display red or green depending on the compliant/non-compliant status
                 if (selected[1].toString() == ap_nonCompliant.toString()){
-                    divOutcome.setAttribute('class', 'nonCompliantPane');
+									divOutcome.setAttribute('class', 'nonCompliantPane');
+									divOutcome.setAttribute('style', 'border-top: solid 1px red; border-left: solid 1px red; border-bottom: solid 1px red; border-right: solid 1px red; padding: 0.5em; background-color: #fbf0f7; margin-top: 0.5em; margin-bottom: 0.5em; border-radius: 1em;');
                 }
                 else if (selected[1].toString() == ap_compliant.toString()){
-                    divOutcome.setAttribute('class', 'compliantPane');
+									divOutcome.setAttribute('class', 'compliantPane');
+									divOutcome.setAttribute('style', 'border-top: solid 1px green; border-left: solid 1px green; border-bottom: solid 1px green;border-right: solid 1px green;padding: 0.5em; background-color: #def8e0;margin-top: 0.5em; margin-bottom: 0.5em;border-radius: 1em;');
                 }
                 else{
                     alert("something went terribly wrong");
-                } 
-                
+                }
+
                 //Create a table and structure the final conclucsion appropriately
-                
+
                 var table = myDocument.createElement("table");
                 var tr = myDocument.createElement("tr");
-                
+
                 var td_s = myDocument.createElement("td");
                 var a_s = myDocument.createElement('a')
                 a_s.setAttribute('href', stsFound.subject.uri)
@@ -42782,14 +42825,14 @@ airPane.render = function(subject, myDocument) {
 
                 table.appendChild(tr);
                 divOutcome.appendChild(table);
-                
+
                 div.appendChild(divOutcome);
                 //End of the outcome sentences
-                
-                //Add the initial buttons 
+
+                //Add the initial buttons
                 airPane.render.showSelected.addInitialButtons = function(){ //Function Call 1
 
-                    //Create and append the 'Why?' button        
+                    //Create and append the 'Why?' button
                     //Check if it is visible in the DOM, if not add it.
                     if (myDocument.getElementById('whyButton') == null){
                         var becauseButton = myDocument.createElement('input');
@@ -42799,7 +42842,7 @@ airPane.render = function(subject, myDocument) {
                         div.appendChild(becauseButton);
                         becauseButton.addEventListener('click',airPane.render.showSelected.because,false);
                     }
-                                        
+
                     div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
                 }
                 //End of airPane.render.showSelected.addInitialButtons
@@ -42807,28 +42850,28 @@ airPane.render = function(subject, myDocument) {
 
                 //The following function is triggered, when the why button is clicked
                 airPane.render.showSelected.because = function(){ //Function Call 2
-                
-                
-                    //If the reasoner used closed-world-assumption, there are no interesting premises 
+
+
+                    //If the reasoner used closed-world-assumption, there are no interesting premises
                     var cwa = ap_air('closed-world-assumption');
                     var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
                     var noPremises = false;
                 /*    if (cwaStatements.length > 0){
                         noPremises = true;
                     }
-                 */   
-                    //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
+                 */
+                    //Disable the 'why' button, otherwise clicking on that will keep adding the divs
                     var whyButton = myDocument.getElementById('whyButton');
                     var d = myDocument.getElementById('dataContentPane');
                     if (d != null && whyButton != null)
                         d.removeChild(whyButton);
-                
+
                     //Function to display the natural language description
                     airPane.render.showSelected.because.displayDesc = function(obj){
                         for (var i=0; i<obj.elements.length; i++) {
                                 dump(obj.elements[i]);
                                 dump("\n");
-                                
+
                                 if (obj.elements[i].termType == 'symbol') {
                                     var anchor = myDocument.createElement('a');
                                     anchor.setAttribute('href', obj.elements[i].uri);
@@ -42845,14 +42888,14 @@ airPane.render = function(subject, myDocument) {
                                     divDescription.appendChild(myDocument.createTextNode(obj.elements[i]));
                                     //@@@ Using statementsAsTables to render the result gives a very ugly result -- urgh!
                                     //divDescription.appendChild(statementsAsTables(obj.elements[i].statements,myDocument));
-                                }       
+                                }
                             }
                     }
                     //End of airPane.render.showSelected.because.displayDesc
 
                     //Function to display the inner most stuff from the proof-tree
                     airPane.render.showSelected.because.moreInfo = function(ruleToFollow){
-                        //Terminating condition: 
+                        //Terminating condition:
                         // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
                         // there are no more information to follow
                         var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
@@ -42863,21 +42906,21 @@ airPane.render = function(subject, myDocument) {
                            divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
                            divPremises.appendChild(myDocument.createElement('br'));
                            divPremises.appendChild(myDocument.createElement('br'));
-                       
+
                         }
                         else{
-                            
+
                             //Update the description div with the description at the next level
                             var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow, subject);
-                            
+
                             //Find the corresponding description matching the currenrRule
 
                             var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
-                            
+
                             for (var i=0; i<currentRuleDescSts.length; i++){
                                 if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
                                     var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
-                                    
+
                                     for (var j=0; j<currentRuleDesc.length; j++){
                                         if (currentRuleDesc[j].predicate == ap_description.toString() &&
                                         currentRuleDesc[j].object.termType == 'collection'){
@@ -42886,7 +42929,7 @@ airPane.render = function(subject, myDocument) {
                                             divDescription.appendChild(myDocument.createElement('br'));
                                             divDescription.appendChild(myDocument.createElement('br'));
                                         }
-                                    }	
+                                    }
                                 }
                             }
 
@@ -42898,28 +42941,28 @@ airPane.render = function(subject, myDocument) {
                                     break;
                                 }
                             }
-                            
+
                             var currentRuleSts = tabulator.kb.statementsMatching(correctCurrentRule, ap_just, undefined, subject);
                             var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined, subject);
                             ruleNameFound = nextRuleSts[0].object;
 
                             var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined, subject);
-                            
+
                             var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined, subject);
-    
+
                             var formulaFound = false;
                             var bnodeFound = false;
                             for (var i=0; i<currentRuleSubExpr.length; i++){
                                 if(currentRuleSubExpr[i].object.termType == 'formula'){
-                                    divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                                    divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument));
                                     formulaFound = true;
                                 }
                                 else if (currentRuleSubExpr[i].object.termType == 'bnode'){
                                     bnodeFound = true;
-                            
+
                                 }
                             }
-                            
+
                             if (bnodeFound){
                                 divPremises.appendChild(myDocument.createElement("br"));
                                 divPremises.appendChild(myDocument.createTextNode("  No premises applicable."));
@@ -42931,13 +42974,13 @@ airPane.render = function(subject, myDocument) {
                         }
                     }
                     //End of airPane.render.showSelected.because.moreInfo
-                    
+
                     //Function to bootstrap the natural language description div and the premises div
                     airPane.render.showSelected.because.justify = function(){ //Function Call 3
-                    
+
                         //Clear the contents of the premises div
                         myDocument.getElementById('premises').innerHTML='';
-                        airPane.render.showSelected.because.moreInfo(ruleNameFound);   //@@@@ make sure this rul would be valid at all times!      	
+                        airPane.render.showSelected.because.moreInfo(ruleNameFound);   //@@@@ make sure this rul would be valid at all times!
 
                         divJustification.appendChild(divPremises);
                         div.appendChild(divJustification);
@@ -42952,8 +42995,8 @@ airPane.render = function(subject, myDocument) {
                     justifyButton.setAttribute('value','More Information');
                     justifyButton.addEventListener('click',airPane.render.showSelected.because.justify,false);
                     div.appendChild(justifyButton);
-                                    
-                    //Add 2 spaces to leave some space between the 2 buttons, any better method?                
+
+                    //Add 2 spaces to leave some space between the 2 buttons, any better method?
                     div.appendChild(myDocument.createTextNode('   '));
                     div.appendChild(myDocument.createTextNode('   '));
 
@@ -42977,44 +43020,44 @@ airPane.render = function(subject, myDocument) {
                     var divDescription = myDocument.createElement("div");
                     divDescription.setAttribute('class', 'description');
                     divDescription.setAttribute('id', 'description');
-                    
+
                     //Div for the premises
                     var divPremises = myDocument.createElement("div");
                     divPremises.setAttribute('class', 'premises');
                     divPremises.setAttribute('id', 'premises');
-                    
+
                     //@@@@ what is this for?
                     var justificationSts;
-                    
-                    //Get all the triples with a air:description as the predicate
-                    var stsDesc = tabulator.kb.statementsMatching(undefined, ap_description, undefined, subject); 
 
-                    //You are bound to have more than one such triple, 
+                    //Get all the triples with a air:description as the predicate
+                    var stsDesc = tabulator.kb.statementsMatching(undefined, ap_description, undefined, subject);
+
+                    //You are bound to have more than one such triple,
                     //so iterates through all of them and figure out which belongs to the one that's referred from the drop down box
                     for (var j=0; j<stsDesc.length; j++){
-                        if (stsDesc[j].subject.termType == 'formula' && 
+                        if (stsDesc[j].subject.termType == 'formula' &&
                             stsDesc[j].object.termType == 'collection' &&
                             stsDesc[j].subject.statements[0].object.toString() == selected[0].toString()){
-                            
+
                             divDescription.appendChild(myDocument.createElement('br'));
                             airPane.render.showSelected.because.displayDesc(stsDesc[j].object);
                             divDescription.appendChild(myDocument.createElement('br'));
                             divDescription.appendChild(myDocument.createElement('br'));
                         }
                         divJustification.appendChild(divDescription);
-                        
-                    }	
-                    
+
+                    }
+
                     //@@@@@@@@@ Why was this here???
                     //div.appendChild(divJustification);
-                    
+
                     //Leave spaces
                     divJustification.appendChild(myDocument.createElement('br'));
                     divJustification.appendChild(myDocument.createElement('br'));
-                    
+
                     //Yes, we are showing premises next...
                     divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
-                    
+
                     //Leave spaces
                     divJustification.appendChild(myDocument.createElement('br'));
                     divJustification.appendChild(myDocument.createElement('br'));
@@ -43030,15 +43073,15 @@ airPane.render = function(subject, myDocument) {
                         divPremises.appendChild(a);
                         divPremises.appendChild(myDocument.createElement('br'));
                         divPremises.appendChild(myDocument.createElement('br'));
-                        
+
                     }
-                        
+
                     for (var j=0; j<stsJust.length; j++){
                         if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-                        
+
                             var ruleNameSts = tabulator.kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
-                            ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the 
-                                                // statement containing the formula		
+                            ruleNameFound =	ruleNameSts[0].object; // This would be the initial rule name from the
+                                                // statement containing the formula
                             if (!noPremises){
                                 var t1 = tabulator.kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
                                 for (var k=0; k<t1.length; k++){
@@ -43048,16 +43091,16 @@ airPane.render = function(subject, myDocument) {
                                             justificationSts = t2;
                                             divPremises.appendChild(myDocument.createElement('br'));
                                             //divPremises.appendChild(myDocument.createElement('br'));
-                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
-                                           
+                                            divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument));
+
                                             //@@@@ The following piece of code corresponds to going one level of the justification proof to figure out
                                             // whether there are any premises
                                             //it is commented out, because, the user need not know that at each level there are no premises associated
                                             //that particular step
-                                            
+
                                             /*if (t2[l].object.statements.length == 0){
                                                 alert("here");
-                        
+
                                                 divPremises.appendChild(myDocument.createTextNode("Nothing interesting found in "));
                                                 var a = myDocument.createElement('a')
                                                 a.setAttribute('href', unescape(logFileURI));
@@ -43065,29 +43108,29 @@ airPane.render = function(subject, myDocument) {
                                                 divPremises.appendChild(a);
                                             }
                                             else{
-                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                                     divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument));
                                             }
                                            */
                                             //divPremises.appendChild(myDocument.createElement('br'));
                                             divPremises.appendChild(myDocument.createElement('br'));
                                         }
-                                   }     
+                                   }
                                 }
                             }
                         }
                     }
-                    
-                    divJustification.appendChild(divPremises);   
-                    div.appendChild(divJustification); 
-                      
+
+                    divJustification.appendChild(divPremises);
+                    div.appendChild(divJustification);
+
                 }
                 //End of airPane.render.showSelected.because
-                
+
                 airPane.render.showSelected.addInitialButtons(); //Add the "Why Button"
              }
         }
     }
-    
+
 
     //First add a bogus element
     var optionElBogus = myDocument.createElement("option");
@@ -43102,12 +43145,12 @@ airPane.render = function(subject, myDocument) {
         optionEl.appendChild(optionText);
         selectEl.appendChild(optionEl);
     }
-    
+
     div.appendChild(selectEl);
     selectEl.addEventListener('change', airPane.render.showSelected, false);
     div.appendChild(myDocument.createElement('br'));
     div.appendChild(myDocument.createElement('br'));
-        
+
 	return div;
 };
 
@@ -43134,7 +43177,7 @@ airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
 		divJustification.appendChild(divDescription);
                 //Make a copy of the orange box
 		divDescription = divDescription.cloneNode(false); //shallow:true
-            
+
             }
 	} else{
 	  airPane.render.because.displayDesc(stsDesc[0].object,
@@ -43142,7 +43185,7 @@ airPane.renderReasonsForStatement = function renderReasonsForStatement(st,
 	  divJustification.appendChild(divDescription);
 	}
 };
-    
+
 airPane.renderExplanationForStatement = function renderExplanationForStatement(st){
     var subject = undefined; //not restricted to a source, but kb
     var div = myDocument.createElement("div"); //the returned div
@@ -43150,35 +43193,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
     var stsCompliant;
     var stsNonCompliant;
     var stsFound;
-    var stsJust = tabulator.kb.statementsMatching(st, ap_just); 
-	
-    
+    var stsJust = tabulator.kb.statementsMatching(st, ap_just);
+
+
     var divOutcome = myDocument.createElement("div"); //To give the "yes/no" type answer indicating the concise reason
 
-        /*
-	for (var j=0; j<stsJust.length; j++){
-		if (stsJust[j].subject.termType == 'formula'){
-			var sts = stsJust[j].subject.statements;
-			for (var k=0; k<sts.length; k++){
-				if (sts[0].predicate.toString() == ap_compliant.toString()){
-					stsCompliant = sts[k];
-				} 
-				if (sts[0].predicate.toString() == ap_nonCompliant.toString()){
-					stsNonCompliant = sts[k];
-				}
-			}
-		}    
-	}
-
-	if (stsNonCompliant != undefined){
-		divClass = 'nonCompliantPane';
-		stsFound =  stsNonCompliant;
-	}
-	if (stsCompliant != undefined){
-		divClass = 'compliantPane';
-		stsFound =  stsCompliant;
-	}
-        */
 
     var divClass = 'compliantPane'; //a statement is natively good :)
     //stsFound = kb.anyStatementsMatching(st, ap_just);
@@ -43242,19 +43261,19 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 
     airPane.render.addInitialButtons = function(){ //Function Call 1
 
-        //Create and append the 'Why?' button        
+        //Create and append the 'Why?' button
         var becauseButton = myDocument.createElement('input');
         becauseButton.setAttribute('type','button');
         becauseButton.setAttribute('id','whyButton');
         becauseButton.setAttribute('value','Why?');
         div.appendChild(becauseButton);
         becauseButton.addEventListener('click',airPane.render.because,false);
-                            
+
         div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
     }
-    
+
     airPane.render.hide = function(){
-    
+
         //Remove the justification div from the pane
         var d = myDocument.getElementById('dataContentPane');
         var j = myDocument.getElementById('justification');
@@ -43269,26 +43288,26 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         }
 
         airPane.render.addInitialButtons();
-                    
+
     }
 
     airPane.render.because = function(){ //Function Call 2
-    
+
         var cwa = ap_air('closed-world-assumption');
         var cwaStatements = tabulator.kb.statementsMatching(undefined, cwa, undefined, subject);
         var noPremises = false;
         if (cwaStatements.length > 0){
             noPremises = true;
         }
-        
-           //Disable the 'why' button, otherwise clicking on that will keep adding the divs 
+
+           //Disable the 'why' button, otherwise clicking on that will keep adding the divs
            var whyButton = myDocument.getElementById('whyButton');
         var d = myDocument.getElementById('dataContentPane');
         if (d != null && whyButton != null)
             d.removeChild(whyButton);
-    
+
         airPane.render.because.displayDesc = function(obj, divDescription){
-	  //@argument obj: most likely a [] that has 
+	  //@argument obj: most likely a [] that has
 	  //a tms:antecedent-expr and a tms:rule-name
 	  var aAnd_justification = tabulator.kb.the(obj, ap_antcExpr);
 	  var subExprs = tabulator.kb.each(aAnd_justification, ap_subExpr);
@@ -43297,14 +43316,14 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	    premiseFormula = subExprs[0];
 	  else
 	    premiseFormula = subExprs[1];
-	  divDescription.waitingFor = []; //resources of more information 
+	  divDescription.waitingFor = []; //resources of more information
                                           //this reason is waiting for
-	  divDescription.informationFound = false; //true if an extra 
+	  divDescription.informationFound = false; //true if an extra
 	               //information is found and we can stop the throbber
 	  function dumpFormula(formula, firstLevel){
 	    for (var i=0;i<formula.statements.length;i++){
 	      var st = formula.statements[i];
-	      var elements_to_display = [st.subject, st.predicate, 
+	      var elements_to_display = [st.subject, st.predicate,
 					 st.object];
 	      var p = null; //the paragraph element the description is dumped to
 	      if (firstLevel){
@@ -43346,9 +43365,9 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		  break;
 		case 'literal':
 		  //if (obj.elements[i].value != undefined)
-		  p.appendChild(myDocument.createTextNode(element.value)); 
-		  
-		}       
+		  p.appendChild(myDocument.createTextNode(element.value));
+
+		}
 	      }
 	      p.appendChild(myDocument.createTextNode(". "));
 	      if(firstLevel){
@@ -43375,7 +43394,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 						      click_cb,
 						      false)
 		      }
-		      if (throbber_p && throbber_callback) 
+		      if (throbber_p && throbber_callback)
 			throbber_callback();
 		      return false; //no need to fire this function
 		    }
@@ -43398,11 +43417,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 		      }
 		    }
 		    if (divDescription.waitingFor.length == 0){
-		      if (throbber_p && throbber_callback) 
+		      if (throbber_p && throbber_callback)
 			throbber_callback();
 		      return false; //the last resource this div is waiting for
 		    }
-		    if (throbber_p && throbber_callback) 
+		    if (throbber_p && throbber_callback)
 		      throbber_callback();
 		    return true;
 		  };
@@ -43428,14 +43447,14 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 	  divDescription.appendChild(throbber_p);
 	  function throbber_callback(uri){
 	    divDescription.waitingFor.remove(uri);
-	    
+
 	    if (divDescription.informationFound){
 	      throbber_p.removeChild(throbber_p.firstChild);
 	      throbber_p.textContent = "More information found!";
 	      return false;
 	    } else if (divDescription.waitingFor.length == 0){
-	      
-	      //The final call to this function. But the above callbacks 
+
+	      //The final call to this function. But the above callbacks
 	      //might not have been fired. So check all. Well...
               //It takes time to close the world
 	      //@@This method assumes there's only one thread for this js.
@@ -43468,11 +43487,11 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
 // 	  }
 	  for (var i=0;i<divDescription.waitingFor.length;i++)
 	    sf.lookUpThing(tabulator.kb.sym(divDescription.waitingFor[i]));
-	  
+
 	} //function airPane.render.because.displayDesc
 
         airPane.render.because.moreInfo = function(ruleToFollow){
-            //Terminating condition: 
+            //Terminating condition:
             // if the rule has for example - "pol:MA_Disability_Rule_1 tms:justification tms:premise"
             // there are no more information to follow
             var terminatingCondition = tabulator.kb.statementsMatching(ruleToFollow, ap_just, ap_prem, subject);
@@ -43483,21 +43502,21 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
                divPremises.appendChild(myDocument.createTextNode("No more information available from the reasoner!"));
                divPremises.appendChild(myDocument.createElement('br'));
                divPremises.appendChild(myDocument.createElement('br'));
-           
+
             }
             else{
-                
+
                 //Update the description div with the description at the next level
                 var currentRule = tabulator.kb.statementsMatching(undefined, undefined, ruleToFollow);
-                
+
                 //Find the corresponding description matching the currenrRule
 
                 var currentRuleDescSts = tabulator.kb.statementsMatching(undefined, undefined, currentRule[0].object);
-                
+
                 for (var i=0; i<currentRuleDescSts.length; i++){
                     if (currentRuleDescSts[i].predicate == ap_instanceOf.toString()){
                         var currentRuleDesc = tabulator.kb.statementsMatching(currentRuleDescSts[i].subject, undefined, undefined, subject);
-                        
+
                         for (var j=0; j<currentRuleDesc.length; j++){
                             if (currentRuleDesc[j].predicate == ap_description.toString() &&
                             currentRuleDesc[j].object.termType == 'collection'){
@@ -43506,33 +43525,33 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
                                 divDescription.appendChild(myDocument.createElement('br'));
                                 divDescription.appendChild(myDocument.createElement('br'));
                             }
-                        }    
+                        }
                     }
                 }
 
-                
+
                 var currentRuleSts = tabulator.kb.statementsMatching(currentRule[0].subject, ap_just, undefined);
-                
+
                 var nextRuleSts = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_ruleName, undefined);
                 ruleNameFound = nextRuleSts[0].object;
 
                 var currentRuleAntc = tabulator.kb.statementsMatching(currentRuleSts[0].object, ap_antcExpr, undefined);
-                
+
                 var currentRuleSubExpr = tabulator.kb.statementsMatching(currentRuleAntc[0].object, ap_subExpr, undefined);
 
                 for (var i=0; i<currentRuleSubExpr.length; i++){
                     if(currentRuleSubExpr[i].object.termType == 'formula')
-                        divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument)); 
+                        divPremises.appendChild(statementsAsTables(currentRuleSubExpr[i].object.statements, myDocument));
                 }
 
             }
         }
-        
+
         airPane.render.because.justify = function(){ //Function Call 3
-        
+
             //Clear the contents of the div
             myDocument.getElementById('premises').innerHTML='';
-            airPane.render.because.moreInfo(ruleNameFound);                
+            airPane.render.because.moreInfo(ruleNameFound);
 
             divJustification.appendChild(divPremises);
             div.appendChild(divJustification);
@@ -43547,7 +43566,7 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         justifyButton.setAttribute('value','More Information');
         justifyButton.addEventListener('click',airPane.render.because.justify,false);
         div.appendChild(justifyButton);
-                        
+
         div.appendChild(myDocument.createTextNode('   '));//To leave some space between the 2 buttons, any better method?
         div.appendChild(myDocument.createTextNode('   '));
 
@@ -43567,24 +43586,24 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
         var divPremises = myDocument.createElement("div");
         divPremises.setAttribute('class', 'premises');
         divPremises.setAttribute('id', 'premises');
-        */ 
-        
-        
+        */
+
+
         var justificationSts;
-        
-        
+
+
 	airPane.renderReasonsForStatement(st, divJustification);
-    
-        
+
+
         div.appendChild(divJustification);
-	
+
         /*
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('b').appendChild(myDocument.createTextNode('Premises:')));
         divJustification.appendChild(myDocument.createElement('br'));
         divJustification.appendChild(myDocument.createElement('br'));
-	
+
         if (noPremises){
             divPremises.appendChild(myDocument.createElement('br'));
             divPremises.appendChild(myDocument.createElement('br'));
@@ -43595,15 +43614,15 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
             divPremises.appendChild(a);
             divPremises.appendChild(myDocument.createElement('br'));
             divPremises.appendChild(myDocument.createElement('br'));
-            
+
         }
-            
+
         for (var j=0; j<stsJust.length; j++){
             if (stsJust[j].subject.termType == 'formula' && stsJust[j].object.termType == 'bnode'){
-            
+
                 var ruleNameSts = kb.statementsMatching(stsJust[j].object, ap_ruleName, undefined, subject);
-                ruleNameFound =    ruleNameSts[0].object; // This would be the initial rule name from the 
-                                    // statement containing the formula        
+                ruleNameFound =    ruleNameSts[0].object; // This would be the initial rule name from the
+                                    // statement containing the formula
                 if (!noPremises){
                     var t1 = kb.statementsMatching(stsJust[j].object, ap_antcExpr, undefined, subject);
                     for (var k=0; k<t1.length; k++){
@@ -43621,35 +43640,31 @@ airPane.renderExplanationForStatement = function renderExplanationForStatement(s
                                     divPremises.appendChild(a);
                                 }
                                 else{
-                                    divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument)); 
+                                    divPremises.appendChild(statementsAsTables(t2[l].object.statements, myDocument));
                                 }
                                 divPremises.appendChild(myDocument.createElement('br'));
                                 divPremises.appendChild(myDocument.createElement('br'));
                             }
-                       }     
+                       }
                     }
                 }
             }
         }
-        
+
         divJustification.appendChild(divPremises);
-        */    
-          
+        */
+
     }//end of airPane.render.because
 
 
     //airPane.render.addInitialButtons();
     airPane.render.because();
-        
+
     return div;
 }
 tabulator.panes.register(airPane, false);
 
 // ends
-
-
-
-
 
 // ###### Finished expanding js/panes/airPane.js ##############
 
@@ -43752,6 +43767,7 @@ tabulator.panes.register( {
         }
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
+        div.setAttribute('style', '  border-top: solid 1px #777; border-bottom: solid 1px #777; margin-top: 0.5em; margin-bottom: 0.5em ')
 
         // If this is an LDP container just list the directory
         var noHiddenFiles = function(st){
@@ -44105,7 +44121,7 @@ var makeBSS = function (el, options) {
 // load also js/panes/slideshow/better-simple-slideshow/css/simple-slideshow-styles.css
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_slideshow = iconPrefix + 'js/panes/common/icons/noun_138712.svg';
+tabulator.Icon.src.icon_slideshow = tabulator.iconPrefix + 'js/panes/common/icons/noun_138712.svg';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_slideshow] = 'Slideshow'
 
 tabulator.panes.register( {
@@ -44627,16 +44643,16 @@ tabulator.panes.register ({
 **
 */
 
-    
-tabulator.Icon.src.icon_form = iconPrefix + 'js/panes/form/form-b-22.png';
+
+tabulator.Icon.src.icon_form = tabulator.iconPrefix + 'js/panes/form/form-b-22.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_form] = 'forms';
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_form,
-    
+
     name: 'form',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var n = tabulator.panes.utils.formsFor(subject).length;
@@ -44652,18 +44668,18 @@ tabulator.panes.register( {
         var DC = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
         var DCT = $rdf.Namespace('http://purl.org/dc/terms/');
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
-        
+
 
         var mention = function complain(message, style){
             var pre = dom.createElement("p");
             pre.setAttribute('style', style ? style :'color: grey; background-color: white');
             box.appendChild(pre).textContent = message;
             return pre
-        } 
+        }
 
         var complain = function complain(message, style){
             mention(message, 'style', style ? style :'color: grey; background-color: #fdd;');
-        } 
+        }
 
         var complainIfBad = function(ok,body){
             if (ok) {
@@ -44679,15 +44695,15 @@ tabulator.panes.register( {
             var box2 = thisPane.render(subject, dom);
             parent.replaceChild(box2, box);
         };
-        
+
         if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
-         
+
         //kb.statementsMatching(undefined, undefined, subject);
 
         // The question of where to store this data about subject
         // This in general needs a whole lot more thought
         // and it connects to the discoverbility through links
-        
+
         var t = kb.findTypeURIs(subject);
 
         var me_uri = tabulator.preferences.get('me');
@@ -44705,7 +44721,7 @@ to put this new information")
             if (ws.length = 0) {
                 mention("You don't seem to have any workspaces defined.  \
 A workspace is a place on the web (http://..) or in \
-the file system (file:///) to store application data.\n")            
+the file system (file:///) to store application data.\n")
             } else {
                 //@@
             }
@@ -44713,15 +44729,15 @@ the file system (file:///) to store application data.\n")
 
 
         // Render forms using a given store
-        
+
         var renderFormsFor = function(store, subject) {
             kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
                 if (!ok) return complain("Cannot load store "+store.uri + ': '+ body);
 
                 //              Render the forms
-                
+
                 var forms = tabulator.panes.utils.formsFor(subject);
-                
+
                 // complain('Form for editing this form:');
                 for (var i=0; i<forms.length; i++) {
                     var form = forms[i];
@@ -44739,7 +44755,7 @@ the file system (file:///) to store application data.\n")
                     anchor.setAttribute('href', form.uri);
                     heading.appendChild(anchor)
                     anchor.textContent = tabulator.Util.label(form, true);
-                    
+
                     /*  Keep tis as a reminder to let a New one have its URI given by user
                     mention("Where will this information be stored?")
                     var ele = dom.createElement('input');
@@ -44750,7 +44766,7 @@ the file system (file:///) to store application data.\n")
                     ele.setAttribute('style', 'font-size: 80%; color:#222;');
                     ele.value = store.uri
                     */
-                    
+
                     tabulator.panes.utils.appendForm(dom, box, {}, subject, form, store, complainIfBad);
                 }
 
@@ -44769,9 +44785,9 @@ the file system (file:///) to store application data.\n")
         if (subject.uri != docuri
             && tabulator.sparql.editable(docuri, kb))
             store = kb.sym($rdf.Util.uri.docpart(subject.uri)); // an editable data file with hash
-            
+
         else if (store = kb.any(kb.sym(docuri), ns.link('annotationStore'))) {
-            // 
+            //
         }
         // 2. where stuff is already stored
         if (!store) {
@@ -44785,12 +44801,12 @@ the file system (file:///) to store application data.\n")
                 if (uri && tabulator.sparql.editable(uri)) {
                     store = kb.sym(uri);
                     break;
-                }            
+                }
             }
         }
 
         // 3. In a workspace store
-        
+
         var followeach = function(kb, subject, path) {
             if (path.length == 0) return [ subject ];
             var oo = kb.each(subj, path[0]);
@@ -44803,7 +44819,7 @@ the file system (file:///) to store application data.\n")
 
         var date = '2014'; // @@@@@@@@@@@@ pass as parameter
 
-        
+
 
        if (store) {
             // mention("@@ Ok, we have a store <" + store.uri + ">.");
@@ -44828,20 +44844,17 @@ the file system (file:///) to store application data.\n")
                         complain("Note no suitable annotation store in activity: " + act);
                     }
                 }
-                
+
            });
            box.appendChild(foobarbaz);
         };
-        
+
         return box;
     }
 
 }, false);
 
 //ends
-
-
-
 
 // ###### Finished expanding js/panes/form/pane.js ##############
 
@@ -45333,7 +45346,7 @@ tabulator.panes.register( {
 /* Table view pane  -- view of a class*/
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table.png",
+    icon: tabulator.iconPrefix + "icons/table.png",
 
     name: "tableOfClass",
 
@@ -45361,7 +45374,7 @@ tabulator.panes.register({
 /*
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table2.png",
+    icon: tabulator.iconPrefix + "icons/table2.png",
     @@@@@@  Needs to be different from other icons used eg above as eems to be used as to fire up the pane
     @@@@@@ Needs to be lower prio for a document than the data content pane
 
@@ -45544,16 +45557,16 @@ tabulator.panes.register(tabulator.panes.defaultPane, true);
 **
 */
 
-    
-tabulator.Icon.src.icon_builder = iconPrefix + 'js/panes/ui/22-builder.png';
+
+tabulator.Icon.src.icon_builder = tabulator.iconPrefix + 'js/panes/ui/22-builder.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_builder] = 'build user interface'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_builder,
-    
+
     name: 'ui',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var ns = tabulator.ns;
@@ -45562,14 +45575,14 @@ tabulator.panes.register( {
         if (t[ns.rdfs('Class').uri]) return "creation forms";
         // if (t[ns.rdf('Property').uri]) return "user interface";
         if (t[ns.ui('Form').uri]) return "edit form";
-        
+
         return null; // No under other circumstances (while testing at least!)
     },
 
     render: function(subject, dom) {
         var kb = tabulator.kb;
         var ns = tabulator.ns;
-        
+
         var box = dom.createElement('div')
         box.setAttribute('class', 'formPane'); // Share styles
         var label = tabulator.Util.label(subject);
@@ -45579,11 +45592,11 @@ tabulator.panes.register( {
             pre.setAttribute('style', style ? style :'color: grey; background-color: white');
             box.appendChild(pre).textContent = message;
             return pre
-        } 
+        }
 
         var complain = function complain(message, style){
             mention(message, 'style', style ? style :'color: grey; background-color: #fdd');
-        } 
+        }
 
         var complainIfBad = function(ok,body){
             if (ok) {
@@ -45601,12 +45614,12 @@ tabulator.panes.register( {
         };
 
 
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
+ // //////////////////////////////////////////////////////////////////////////////
+
+
+
         if (!tabulator.sparql) tabulator.sparql = new tabulator.rdf.sparqlUpdate(kb);
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -45614,7 +45627,7 @@ tabulator.panes.register( {
 
         var me_uri = tabulator.preferences.get('me');
         var me = me_uri? kb.sym(me_uri) : null;
-        
+
         var store = null;
         if (subject.uri) {
             var docuri = $rdf.Util.uri.docpart(subject.uri);
@@ -45625,13 +45638,13 @@ tabulator.panes.register( {
         if (!store) store = kb.any(kb.sym(docuri), ns.link('annotationStore'));
         if (!store) store = tabulator.panes.utils.defaultAnnotationStore(subject);
         if (!store) store = kb.sym('http://tabulator.org/wiki/ontologyAnnotation/common'); // fallback
-        
+
         // A fallback which gives a different store page for each ontology would be good @@
-        
+
         var pred;
         if (t[ns.rdfs('Class').uri]) { // Stuff we can do before we load the store
-        } 
-        
+        }
+
         var wait = mention('(Loading data from: '+store+')');
 
         kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body) {
@@ -45644,7 +45657,7 @@ tabulator.panes.register( {
 //      _____________________________________________________________________
 
             //              Render a Class -- the forms associated with it
-            
+
             if (t[ns.rdfs('Class').uri]) {
 
                 // For each creation form, allow one to create a new object with it, and also to edit the form.
@@ -45684,7 +45697,7 @@ tabulator.panes.register( {
                 pred = ns.ui('creationForm');
                 box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
                 mention("Creation forms allow you to add information about a new thing,\
-                                    in this case a new "+label+".");                
+                                    in this case a new "+label+".");
                 displayFormsForRelation(pred, true);
                 box.appendChild(dom.createElement('hr'));
                 mention("You can make a new creation form:");
@@ -45696,7 +45709,7 @@ tabulator.panes.register( {
                 pred = ns.ui('annotationForm');
                 box.appendChild(dom.createElement('h2')).textContent = tabulator.Util.label(pred);
                 mention("Annotaion forms allow you to add extra information about a ,\
-                                "+label+" we already know about.");                
+                                "+label+" we already know about.");
                 displayFormsForRelation(pred, false);
                 box.appendChild(dom.createElement('hr'));
                 mention("You can make a new annotation form:");
@@ -45711,7 +45724,7 @@ tabulator.panes.register( {
 //      _____________________________________________________________________
 
             //              Render a Form
-            
+
             } else if (t[ns.ui('Form').uri]) {
 
                 tabulator.panes.utils.appendForm(dom, box, kb, subject, ns.ui('FormForm'), store, complainIfBad);
@@ -45729,8 +45742,6 @@ tabulator.panes.register( {
 }, false);
 
 //ends
-
-
 
 // ###### Finished expanding js/panes/ui/pane.js ##############
 // tabulator.loadScript("js/panes/categoryPane.js");  // Not useful enough
@@ -47451,7 +47462,7 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_sharing = iconPrefix + 'js/panes/common/icons/noun_123691.svg';
+tabulator.Icon.src.icon_sharing = tabulator.iconPrefix + 'js/panes/common/icons/noun_123691.svg';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_sharing] = 'Sharing'
 
 tabulator.panes.register( {
@@ -47538,14 +47549,14 @@ tabulator.panes.register( {
 tabulator.panes.internalPane = {
 
     icon: tabulator.Icon.src.icon_internals,
-    
+
     name: 'internal',
 
     label: function(subject) {
-        //if (subject.uri) 
+        //if (subject.uri)
         return "under the hood";  // There is orften a URI even of no statements
       },
-    
+
     render: function(subject, myDocument) {
         var $r = tabulator.rdf;
         var kb = tabulator.kb;
@@ -47557,8 +47568,9 @@ tabulator.panes.internalPane = {
         }
         var div = myDocument.createElement('div')
         div.setAttribute('class', 'internalPane')
+        div.setAttribute('style', 'background-color: #ddddff; padding: 0.5em; border-radius: 1em;')
 //        appendRemoveIcon(div, subject, div);
-                  
+
         var plist = kb.statementsMatching(subject);
         var doc_uri = null;
         if (subject.uri) {
@@ -47589,7 +47601,7 @@ tabulator.panes.internalPane = {
         tabulator.outline.appendPropertyTRs(div, plist, true, filter);
         return div
     },
-    
+
     predicates: {// Predicates used for inner workings. Under the hood
         'http://www.w3.org/2007/ont/link#request': 1,
         'http://www.w3.org/2007/ont/link#requestedBy': 1,
@@ -47605,7 +47617,7 @@ tabulator.panes.internalPane = {
     classes: { // Things which are inherently already undercover
         'http://www.w3.org/2007/ont/link#ProtocolEvent': 1
     }
-};    
+};
 
 //    if (!SourceOptions["seeAlso not internal"].enabled)
 tabulator.panes.internalPane.predicates['http://www.w3.org/2000/01/rdf-schema#seeAlso'] = 1;
@@ -47613,7 +47625,6 @@ tabulator.panes.internalPane.predicates[tabulator.ns.owl('sameAs').uri] = 1;
 tabulator.panes.register(tabulator.panes.internalPane, true);
 
 //ends
-
 
 // ###### Finished expanding js/panes/internalPane.js ##############
 

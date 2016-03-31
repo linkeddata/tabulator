@@ -19,7 +19,7 @@
 /* Table view pane  -- view of a class*/
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table.png",
+    icon: tabulator.iconPrefix + "icons/table.png",
 
     name: "tableOfClass",
 
@@ -47,7 +47,7 @@ tabulator.panes.register({
 /*
 
 tabulator.panes.register({
-    icon: iconPrefix + "icons/table2.png",
+    icon: tabulator.iconPrefix + "icons/table2.png",
     @@@@@@  Needs to be different from other icons used eg above as eems to be used as to fire up the pane
     @@@@@@ Needs to be lower prio for a document than the data content pane
 

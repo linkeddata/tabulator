@@ -24,6 +24,7 @@ tabulator.isExtension = true;
 tabulator.mode = 'extension'; // can also be 'webapp'
 
 tabulator.iconPrefix = 'chrome://tabulator/content/';
+tabulator.scriptBase = 'chrome://tabulator/content/';
 
 tabulator.loadScript = function(uri) {
     dump("@@ Loading "+uri+"\n");
@@ -53,7 +54,7 @@ if (tabulator.jQuery) {
     tabulator.rdf = $rdf;
 
     tabulator.loadScript("js/solid/dist/solid.js"); // Defines Solid
-    
+
 
 
 //Common code has  stackString used reporting errors in catch() below
@@ -165,12 +166,12 @@ try {
         {
             //var responseSource = this.receivedData.join(); //entire file in responseSource
             //parse responseSource through tabulator
-            var uuidGenerator = 
+            var uuidGenerator =
                 Components.classes["@mozilla.org/uuid-generator;1"]
                 .getService(Components.interfaces.nsIUUIDGenerator);
             var uuid = uuidGenerator.generateUUID();
             var uuidString = uuid.toString();
-            
+
             tabulator.requestUUIDs[uuidString] = request.name;
 
             //send html file to originalListener
@@ -234,7 +235,7 @@ try {
                     aSubject.QueryInterface(Components.interfaces.nsIChannel)
                         .contentType = "text/html";
                     aSubject.QueryInterface(Ci.nsITraceableChannel);
-                    newListener.originalListener = 
+                    newListener.originalListener =
                         aSubject.setNewListener(newListener);
                 }
             }
@@ -266,23 +267,23 @@ try {
     ///////////////////////////////////////////////////////////////////
 
     tabulator.pumpRDFa = function(e){
-         
+
 
         // if (typeof tabulator == 'undefined') var tabulator = Components.classes["@dig.csail.mit.edu/tabulator;1"].getService(Components.interfaces.nsISupports).wrappedJSObject;
         var uri = gURLBar.value;
-        
+
         // From init/init.js
-        var uuidGenerator = 
+        var uuidGenerator =
             Components.classes["@mozilla.org/uuid-generator;1"]
             .getService(Components.interfaces.nsIUUIDGenerator);
         var uuid = uuidGenerator.generateUUID();
         var uuidString = uuid.toString();
-        
+
         tabulator.requestUUIDs[uuidString] = uri;
 
         var doc = window.content.document;
         //Remove all the style sheet elements and scripts
-        
+
         $jq('head', doc).empty();
         $jq('body', doc).empty();
         $jq('html', doc).attr("id","docHTML");
@@ -310,12 +311,12 @@ try {
         var outline = new tabulator.OutlineObject(doc)
 
         var a =$jq('.TabulatorOutline', doc).attr('id', uuidString);
-        
+
         outline.init();
 
         var nsIURI = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(uri, null, null); //ToDo: make sure the encoding is correct
         gBrowser.getBrowserForDocument(doc).webNavigation.setCurrentURI(nsIURI);
-        
+
         var queryButton = doc.createElement('input');
         queryButton.setAttribute('id','queryButton');
         queryButton.setAttribute('style','display:none;');
@@ -324,11 +325,11 @@ try {
         doc.body.appendChild(queryButton);
         queryButton.addEventListener('click',outline.viewAndSaveQuery,false);
 
-            
+
         outline.GotoSubject(tabulator.kb.sym(uri),true);
 
     }
-        
+
     tabulator.log.error("@@ init.js test 90 tabulator.log.error: $rdf.log.error)"+$rdf.log.error);
 } catch(e) {
     dump('Tabulator init.js:  Aaaaagh loading failed\n');

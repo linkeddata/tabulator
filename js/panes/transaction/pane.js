@@ -5,17 +5,17 @@
 ** trips, etc
 */
 
-    
-tabulator.Icon.src.icon_money = iconPrefix +
+
+tabulator.Icon.src.icon_money = tabulator.iconPrefix +
     'js/panes/transaction/22-pixel-068010-3d-transparent-glass-icon-alphanumeric-dollar-sign.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_money] = 'Transaction'
 
 tabulator.panes.register( {
 
     icon: tabulator.Icon.src.icon_money,
-    
+
     name: 'transaction',
-    
+
     // Does the subject deserve this pane?
     label: function(subject) {
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
@@ -23,10 +23,10 @@ tabulator.panes.register( {
         var t = kb.findTypeURIs(subject);
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) return "$$";
         if(kb.any(subject, Q('amount'))) return "$$$"; // In case schema not picked up
-        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period $";        
+        if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) return "period $";
 
         if (t['http://www.w3.org/ns/pim/trip#Trip']) return "Trip $";
-        
+
         return null; // No under other circumstances (while testing at least!)
     },
 
@@ -39,7 +39,7 @@ tabulator.panes.register( {
         var UI = $rdf.Namespace('http://www.w3.org/ns/ui#');
         var Q = $rdf.Namespace('http://www.w3.org/2000/10/swap/pim/qif#');
         var TRIP = $rdf.Namespace('http://www.w3.org/ns/pim/trip#');
-        
+
         var div = dom.createElement('div')
         div.setAttribute('class', 'transactionPane');
 
@@ -60,11 +60,11 @@ tabulator.panes.register( {
         };
         var happy = function happy(message){
             return mention('✓ ' + message, 'color: #010; background-color: #efe');
-        }; 
+        };
         var complain = function complain(message){
             return mention(message, 'color: #100; background-color: #fee');
-        }; 
- 
+        };
+
         var thisPane = this;
         var rerender = function(div) {
             var parent  = div.parentNode;
@@ -73,13 +73,13 @@ tabulator.panes.register( {
         };
 
 
- // //////////////////////////////////////////////////////////////////////////////       
-        
-        
-        
+ // //////////////////////////////////////////////////////////////////////////////
+
+
+
         var sparqlService = new tabulator.rdf.sparqlUpdate(kb);
 
- 
+
         var plist = kb.statementsMatching(subject)
         var qlist = kb.statementsMatching(undefined, undefined, subject)
 
@@ -115,23 +115,23 @@ tabulator.panes.register( {
             }
             return s + '.00'
         }
-        
+
         var numericCell = function numericCell(amount, suppressZero) {
             var td = dom.createElement('td');
-            if (!(0.0 + amount === 0.0 && suppressZero)) { 
+            if (!(0.0 + amount === 0.0 && suppressZero)) {
                 td.textContent = d2(amount);
             }
             td.setAttribute('style', 'width: 6em; text-align: right; ')
             return td;
         };
-        
+
         var headerCell = function headerCell(str) {
             var td = dom.createElement('th');
             td.textContent = str;
             td.setAttribute('style', 'text-align: right; ')
             return td;
         };
-        
+
         var oderByDate = function(x, y) {
             dx = tabulator.kb.any(x, ns.qu('date'));
             dy = tabulator.kb.any(y, ns.qu('date'));
@@ -143,15 +143,15 @@ tabulator.panes.register( {
             if (x.uri > y.uri) return 1;
             return 0;
         }
-        
-        
+
+
         var insertedPane = function(dom, subject, paneName) {
             var p = tabulator.panes.byName(paneName);
             var d = p.render(subject, dom);
             d.setAttribute('style', 'border: 0.1em solid green;')
             return d;
         };
-        
+
         var expandAfterRow = function(dom, row, subject, paneName, solo) {
             var siblings = row.parentNode.children;
             if (solo) {
@@ -173,9 +173,9 @@ tabulator.panes.register( {
             }
             row.expanded = tr;
             td.setAttribute('colspan', '' + cols)
-            td.appendChild(insertedPane(dom, subject, paneName));            
+            td.appendChild(insertedPane(dom, subject, paneName));
         };
-        
+
         var expandAfterRowOrCollapse = function(dom, row, subject, paneName, solo) {
             if (row.expanded) {
                 row.parentNode.removeChild(row.expanded);
@@ -186,7 +186,7 @@ tabulator.panes.register( {
         };
 
         var transactionTable = function(dom, list, filter) {
-        
+
             var table = dom.createElement('table');
             table.setAttribute('style', 'padding-left: 0.5em; padding-right: 0.5em; font-size: 9pt; width: 85%;');
             var transactionRow = function(dom, x) {
@@ -202,15 +202,15 @@ tabulator.panes.register( {
                     }
                     tr.setAttribute('style', mystyle);
                 }
-            
+
                 var account = kb.any(x, ns.qu('toAccount'));
                 setTRStyle(tr, account);
-                
+
                 var c0 = tr.appendChild(dom.createElement('td'));
                 var date = kb.any(x, ns.qu('date'));
                 c0.textContent = date ? date.value.slice(0,10) : '???';
                 c0.setAttribute('style',  'width: 7em;');
-                
+
                 var c1 = tr.appendChild(dom.createElement('td'));
                 c1.setAttribute('style',  'width: 36em;');
                 var payee = kb.any(x, ns.qu('payee'));
@@ -226,13 +226,13 @@ tabulator.panes.register( {
                 tr.addEventListener('click', function(e) { // solo unless shift key
                     expandAfterRowOrCollapse(dom, tr, x, 'transaction', !e.shiftKey);
                 }, false);
-                
+
                 return tr;
-            }; 
+            };
 
             var list2 = filter ? list.filter(filter) : list.slice(); // don't sort a paramater passed in place
             list2.sort(oderByDate);
-             
+
              for (var i=0; i < list2.length; i++) {
                 table.appendChild(transactionRow(dom, list2[i]));
              }
@@ -248,7 +248,7 @@ tabulator.panes.register( {
 
 
         //              Render a single transaction
-        
+
         // This works only if enough metadata about the properties can drive the RDFS
         // (or actual type statements whichtypically are NOT there on)
         if (t['http://www.w3.org/2000/10/swap/pim/qif#Transaction']) {
@@ -256,7 +256,7 @@ tabulator.panes.register( {
             var trip = kb.any(subject, WF('trip'));
             var ns = tabulator.ns
             donePredicate(ns.rdf('type'));
-            
+
             var setPaneStyle = function(account) {
                 var mystyle = "padding: 0.5em 1.5em 1em 1.5em; ";
                 if (account) {
@@ -266,14 +266,14 @@ tabulator.panes.register( {
                 }
                 div.setAttribute('style', mystyle);
             }
-            
+
             var account = kb.any(subject, Q('toAccount'));
             setPaneStyle(account);
             if (account == undefined) {
                 complain('(Error: There is no bank account known for this transaction <'
                         +subject.uri+'>,\n -- every transaction needs one.)')
             };
-	    
+
 	    var store = null;
             var statement = kb.any(subject, Q('accordingTo'));
             if (statement == undefined) {
@@ -304,7 +304,7 @@ tabulator.panes.register( {
             navLink(Q('toAccount'));
             navLink(Q('accordingTo'), "Statement");
             navLink(TRIP('trip'));
-            
+
             // Basic data:
             var table = dom.createElement('table');
             div.appendChild(table);
@@ -327,7 +327,7 @@ tabulator.panes.register( {
             }
 
             // What trips do we know about?
-            
+
             // Classify:
             if (store) {
                 kb.fetcher.nowOrWhenFetched(store.uri, subject, function(ok, body){
@@ -342,21 +342,21 @@ tabulator.panes.register( {
                     var trips = kb.statementsMatching(undefined, TRIP('trip'), undefined, store)
                                 .map(function(st){return st.object}); // @@ Use rdfs
                     var trips2 = kb.each(undefined, tabulator.ns.rdf('type'),  TRIP('Trip'));
-                    trips = trips.concat(trips2).sort(); // @@ Unique 
-                    
+                    trips = trips.concat(trips2).sort(); // @@ Unique
+
                     var sortedBy = function(kb, list, pred, reverse) {
                         l2 = list.map(function(x) {
                             var key = kb.any(x, pred);
                             key = key ? key.value : "9999-12-31";
-                            return [ key, x ]; 
+                            return [ key, x ];
                         });
                         l2.sort();
                         if (reverse) l2.reverse();
                         return l2.map(function(pair){return pair[1]});
                     }
-                    
+
                     trips = sortedBy(kb, trips, tabulator.ns.cal('dtstart'), true); // Reverse chron
-                    
+
                     if (trips.length > 1) div.appendChild(tabulator.panes.utils.makeSelectForOptions(
                         dom, kb, subject, TRIP('trip'), trips,
                             { 'multiple': false, 'nullLabel': "-- what trip? --", 'mint': "New Trip *",
@@ -370,7 +370,7 @@ tabulator.panes.register( {
                 });
             }
 
-            
+
 
             div.appendChild(dom.createElement('br'));
 
@@ -380,14 +380,14 @@ tabulator.panes.register( {
             donePredicate(ns.rdfs('comment')); // Done above
 /*            tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
-                    if (!inverse && pred.uri == 
+                    if (!inverse && pred.uri ==
                         "http://www.w3.org/2000/01/rdf-schema#comment") return true;
                     return false
                 });
 */
             div.appendChild(dom.createElement('tr'))
                         .setAttribute('style','height: 1em'); // spacer
-            
+
             // Remaining properties
             tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {
@@ -411,13 +411,13 @@ tabulator.panes.register( {
             var v = {};
             vars.map(function(x){query.vars.push(v[x]=$rdf.variable(x))}); // Only used by UI
             query.pat.add(v['transaction'], TRIP('trip'), subject);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdf('type'), v['type']); // Issue: this will get stored supertypes too
             query.pat.optional.push(opt);
-            
+
             query.pat.add(v['transaction'], Q('date'), v['date']);
-            
+
             var opt = kb.formula();
             opt.add(v['transaction'], ns.rdfs('comment'), v['comment']);
             query.pat.optional.push(opt);
@@ -448,7 +448,7 @@ tabulator.panes.register( {
                         if (!yearCategoryTotal[year]) yearCategoryTotal[year] = {};
                         if (!total[tyuri]) total[tyuri] = 0.0;
                         if (!yearCategoryTotal[year][tyuri]) yearCategoryTotal[year][tyuri] = 0.0;
-                        
+
                         var lit = kb.any(t, Q('in_USD'));
                         if (!lit) {
                             complain("@@ No amount in USD: "+lit+" for " + t);
@@ -465,7 +465,7 @@ tabulator.panes.register( {
                 var types = [];
                 var grandTotal = 0.0;
                 var years = [], i;
-                
+
                 for (var y in yearCategoryTotal) {
                     if (yearCategoryTotal.hasOwnProperty(y)) {
                         years.push(y);
@@ -474,10 +474,10 @@ tabulator.panes.register( {
                 years.sort();
                 var ny = years.length, cell;
                 // happy('years: '+ ny); // @@
-                
+
                 var table = div.appendChild(dom.createElement('table'));
                 table.setAttribute('style', 'font-size: 120%; margin-left:auto; margin-right:1em; margin-top: 1em; border: 0.05em solid gray; padding: 1em;')
-                
+
                 if (ny > 1) {
                     var header = table.appendChild(dom.createElement('tr'));
                     header.appendChild(headerCell(''));
@@ -490,7 +490,7 @@ tabulator.panes.register( {
                 for (var uri in total) if (total.hasOwnProperty(uri)) {
                     types.push(uri);
                     grandTotal += total[uri];
-                } 
+                }
                 types.sort();
                 // happy('types: '+ types.length); // @@
                 var row, label, z;
@@ -524,22 +524,22 @@ tabulator.panes.register( {
 
                 // happy("Overall net: "+grandTotal, 'font-weight: bold;') // @@
             }
-            
+
             var trans = kb.each(undefined, TRIP('trip'), subject);
             var tab = transactionTable(dom, trans);
             tab.setAttribute('style', 'margin-left:auto; margin-right:1em; margin-top: 1em; border: padding: 1em;')
             div.appendChild(tab);
             calculations();
-            
 
 
-            
- 
+
+
+
         //              Render a single Period
-        
+
         // This works only if enough metadata about the properties can drive the RDFS
         // (or actual type statements which typically are NOT there on)
-        
+
         } else if (t['http://www.w3.org/2000/10/swap/pim/qif#Period']) {
 
             var dtstart = kb.any(subject, ns.cal('dtstart'));
@@ -547,7 +547,7 @@ tabulator.panes.register( {
                 complain('(Error: There is no start date known for this period <'
                         +subject.uri+'>,\n -- every period needs one.)')
             };
-            
+
             var dtend = kb.any(subject, ns.cal('dtend'));
             if (dtend === undefined) {
                 complain('(Error: There is no end date known for this period <'
@@ -555,33 +555,33 @@ tabulator.panes.register( {
             };
 
             var store = kb.any(subject, Q('annotationStore')) || null;
-            
+
             var needed = kb.each(subject, ns.rdfs('seeAlso'));
-            
+
             donePredicate(ns.rdf('type'));
-            
+
             var inPeriod = function(date) {
                 return !!(date && date >= dtstart && date < dtend);
             };
-            
+
             var transactionInPeriod = function(x) {
                 return inPeriod(kb.any(x, ns.qu('date')));
             };
-            
+
             var h2 = div.appendChild(dom.createElement('p'));
             h2.textContent = "Period " + dtstart.value.slice(0,10) + ' - ' + dtend.value.slice(0,10);
-        
-            
-            // List unclassified transactions
-            
 
-            var dummies = { 
+
+            // List unclassified transactions
+
+
+            var dummies = {
                 'http://www.w3.org/2000/10/swap/pim/qif#Transaction': true, // (we knew)
                 'http://www.w3.org/2000/10/swap/pim/qif#Unclassified': true, // pseudo classifications we may phase out
                 'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedOutgoing': true,
                 'http://www.w3.org/2000/10/swap/pim/qif#UnclassifiedIncome': true,
             };
-            var xURIs = kb.findMemberURIs(ns.qu('Transaction')); 
+            var xURIs = kb.findMemberURIs(ns.qu('Transaction'));
             var unc_in = [], unc_out = [], usd, z, tt, t, j;
             for (var y in xURIs) { // For each thing which can be inferred to be a transaction
                 if (xURIs.hasOwnProperty(y)) {
@@ -620,7 +620,7 @@ tabulator.panes.register( {
             if (unc_out.length) {
                 tab = transactionTable(dom, unc_out, transactionInPeriod);
                 count = tab.children.length;
-                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" + 
+                div.appendChild(dom.createElement('h3')).textContent = "Unclassified Outgoings" +
                     ( count < 4 ? '' : ' (' + count+ ')' );
                 div.appendChild(tab);
             } else {
@@ -628,7 +628,7 @@ tabulator.panes.register( {
             }
 
             /////////////////  Check some categories of transaction for having given fields
-            
+
             var catSymbol = function(catTail) {
                 var cat, cats = kb.findSubClassesNT(ns.qu('Transaction'));
                 for (cat in cats) {
@@ -665,7 +665,7 @@ tabulator.panes.register( {
                 }
                 return count;
             }
-            
+
             // @@ In future could load these params dynamically as properties of period
             if (checkCatHasField('Reimbursables', ns.trip('trip')) === 0) {
                 happy("Reimbursables all have trips")
@@ -676,10 +676,10 @@ tabulator.panes.register( {
             if (checkCatHasField('Vacation', ns.trip('trip')) === 0) {
                 happy("Vacation all has trips")
             };
-			 
+
 	    ///////////////   Check Internal transactions balance
-			 
-			 
+
+
             var checkInternals = function() {
 		var catTail = 'Internal';
 		var pred = ns.qu('in_USD');
@@ -727,13 +727,13 @@ tabulator.panes.register( {
                 }
                 return count;
             }
-            
+
             if (checkInternals() === 0) {
                 happy("Intenral transactions all pair up")
             };
 
 
-			 
+
         // end of render period instance
 
         }; // if
@@ -742,10 +742,8 @@ tabulator.panes.register( {
 
         return div;
     }
-        
+
 
 }, true);
 
 //ends
-
-

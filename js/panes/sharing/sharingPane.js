@@ -18,7 +18,7 @@ if (typeof console == 'undefined') { // e.g. firefox extension. Node and browser
 
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_sharing = iconPrefix + 'js/panes/common/icons/noun_123691.svg';
+tabulator.Icon.src.icon_sharing = tabulator.iconPrefix + 'js/panes/common/icons/noun_123691.svg';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_sharing] = 'Sharing'
 
 tabulator.panes.register( {

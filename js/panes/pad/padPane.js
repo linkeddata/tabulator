@@ -6,7 +6,7 @@
 // load also js/panes/pad/better-simple-pad/css/simple-pad-styles.css
 
 // These used to be in js/init/icons.js but are better in the pane.
-tabulator.Icon.src.icon_pad = iconPrefix + 'js/panes/pad/images/ColourOn.png';
+tabulator.Icon.src.icon_pad = tabulator.iconPrefix + 'js/panes/pad/images/ColourOn.png';
 tabulator.Icon.tooltips[tabulator.Icon.src.icon_pad] = 'notepad'
 
 tabulator.panes.register( {

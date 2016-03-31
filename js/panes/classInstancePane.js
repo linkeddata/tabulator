@@ -31,6 +31,7 @@ tabulator.panes.register( {
         }
         var div = myDocument.createElement("div")
         div.setAttribute('class', 'instancePane');
+        div.setAttribute('style', '  border-top: solid 1px #777; border-bottom: solid 1px #777; margin-top: 0.5em; margin-bottom: 0.5em ')
 
         // If this is an LDP container just list the directory
         var noHiddenFiles = function(st){

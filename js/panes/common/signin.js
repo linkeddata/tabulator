@@ -60,6 +60,7 @@ tabulator.panes.utils.webCopy = function(here, there, content_type, callback) {
 
 tabulator.panes.utils.complain = function(context, err) {
     var ele = context.statusArea || context.div;
+    console.log('Complaint: ' + err)
     return ele.appendChild(tabulator.panes.utils.errorMessageBlock(context.dom, err));
 }
 

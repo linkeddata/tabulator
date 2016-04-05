@@ -87,7 +87,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
                                     '?content': kb.literal(field.value),
                                     '?date':  dateStamp,
                                     '?creator': me};
-                    addMessageFromBindings(bindings);
+                    addMessage2(bindings);
 
                     field.value = ''; // clear from out for reuse
                     field.setAttribute('class','');
@@ -150,11 +150,11 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
 
 
     }
-
+/*
     var addMessageFromBindings = function(bindings) {
         return addMessage(bindings['?msg']);
     }
-
+*/
     var deleteMessage = function(message) {
         deletions = kb.statementsMatching(message).concat(
                 kb.statementsMatching(undefined, undefined, message));
@@ -168,9 +168,27 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
     };
 
     var addMessage = function(message) {
-        var tr = dom.createElement('tr');
-        var date = kb.any(message,  DCT('created'));
+        var maker = kb.any(message, ns.foaf('maker'))
+        var date = kb.any(message,  DCT('created'))
+        var content = kb.any(message, ns.sioc('content'))
+        var bindings = {
+          msg: message,
+          maker:  kb.any(message, ns.foaf('maker')),
+          date: kb.any(message,  DCT('created')),
+          content: kb.any(message, ns.sioc('content'))
+        }
+        addMessage2(bindings)
+    }
+
+    var addMessage2 = function(bindings) {
+
+        var creator = bindings.maker
+        var message = bindings.msg
+        var date = bindings.date
+        var content = bindings.content
+
         var dateString = date.value;
+        var tr = dom.createElement('tr');
         tr.AJAR_date = dateString;
         tr.AJAR_subject = message;
 
@@ -193,7 +211,6 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         var  td1 = dom.createElement('td');
         tr.appendChild(td1);
 
-        var creator = kb.any(message, ns.foaf('maker'));
         var nickAnchor = td1.appendChild(anchor(nick(creator), creator));
         tabulator.fetcher.nowOrWhenFetched($rdf.uri.docpart(creator.uri), undefined, function(ok, body){
             nickAnchor.textContent = nick(creator);
@@ -206,7 +223,7 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         var pre = dom.createElement('p')
         pre.setAttribute('style', messageBodyStyle)
         td2.appendChild(pre);
-        pre.textContent = kb.any(message, ns.sioc('content')).value;
+        pre.textContent = content.value;
 
         var td3 = dom.createElement('td');
         tr.appendChild(td3);
@@ -253,23 +270,22 @@ tabulator.panes.utils.messageArea = function(dom, kb, subject, messageStore, opt
         }
     };
 
-    var query, msg = kb.any(subject, WF('message'));
-    if (msg != undefined) {
-        // Do this with a live query to pull in messages from web
-        if (options.query){
-          query = options.query
-        } else {
-          query = new $rdf.Query('Messages');
-          var v = {};
-          ['msg', 'date', 'creator', 'content'].map(function(x){
-               query.vars.push(v[x]=$rdf.variable(x))});
-          query.pat.add(subject, WF('message'), v['msg']);
-          query.pat.add(v['msg'], ns.dct('created'), v['date']);
-          query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
-          query.pat.add(v['msg'], ns.sioc('content'), v['content']);
-        }
-        kb.query(query, addMessageFromBindings);
+    var query
+    // var msg = kb.any(subject, WF('message'));
+    // Do this with a live query to pull in messages from web
+    if (options.query){
+      query = options.query
+    } else {
+      query = new $rdf.Query('Messages');
+      var v = {};
+      ['msg', 'date', 'creator', 'content'].map(function(x){
+           query.vars.push(v[x]=$rdf.variable(x))});
+      query.pat.add(subject, WF('message'), v['msg']);
+      query.pat.add(v['msg'], ns.dct('created'), v['date']);
+      query.pat.add(v['msg'], ns.foaf('maker'), v['creator']);
+      query.pat.add(v['msg'], ns.sioc('content'), v['content']);
     }
+    kb.query(query, addMessage2);
 /*
     var refreshButton = dom.createElement('button');
     refreshButton.textContent = "refresh";

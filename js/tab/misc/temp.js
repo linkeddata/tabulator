@@ -6,20 +6,20 @@
         //var brower=gBrowser.selectedTab.contentWindow;
         //gBrowser.selectedTab=gBrowser.addTab("http://www.w3.org/");
         //alert(gBrowser);alert(gBrowser.contentWindow);alert(gBrowser.contentDocument);
-        var myWindow=gBrowser.contentWindow; //get it scroll! Yeah!!   
+        var myWindow=gBrowser.contentWindow; //get it scroll! Yeah!!
         //alert(window);alert(brower);
 
         //alert(gBrowser.addTab);alert(gBrowser.scroll);alert(gBrowser.scrollBy)
         //gBrowser.scrollBy(0,100);
-        
+
         //var thisHtml=selection[0].owner
-        if (selection[0]){   
+        if (selection[0]){
 	        var PosY=findPos(selection[0])[1];
 	        if (PosY+selection[0].clientHeight > myWindow.scrollY+myWindow.innerHeight) getEyeFocus(selection[0],true,true,myWindow);
 	        if (PosY<myWindow.scrollY+54) getEyeFocus(selection[0],true,false,myWindow);
 	    }
 
-//Fragment: global clipboard	    
+//Fragment: global clipboard
     var clip  = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard);
     //if (!clip) return false;
     var clipid = Components.interfaces.nsIClipboard;
@@ -29,8 +29,8 @@
     //trans.addDataFlavor("text/x-moz-url");
     trans.addDataFlavor("application/x-moz-file","nsIFile");
     var str       = new Object();
-    var strLength = new Object();    
-    
+    var strLength = new Object();
+
     //var PBFlavourSet=new FlavourSet();
     //PBFlavourSet.appendFlavour("application/x-moz-file","nsIFile");
     clip.getData(trans, clipid.kGlobalClipboard);
@@ -41,17 +41,17 @@
         var clip  = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard);
         if (!clip) return false;
         var clipid = Components.interfaces.nsIClipboard;
-        
+
         var supportsContractID = "@mozilla.org/supports-array;1";
         var supportsIID = Components.interfaces.nsISupportsArray;
         var supportsArray = Components.classes[supportsContractID].createInstance(supportsIID);
         var trans = nsTransferable.createTransferable();
-        //for (var flavour in aFlavourList) 
+        //for (var flavour in aFlavourList)
         //    trans.addDataFlavor(flavour);
         trans.addDataFlavor("application/x-moz-file","nsIFile");
         clip.getData(trans, clipid.kGlobalClipboard);
         supportsArray.AppendElement(trans);
-        return supportsArray;            
+        return supportsArray;
     }
     */
     //var dataInClipboard=nsTransferable.get(PBFlavourSet,getClipboardTransferable,false);
@@ -69,19 +69,19 @@
     //alert(theData.flavour.dataIIDKey);
     //alert(theData);alert(theData.flavour.contentType);
     alert(transferUtils.retrieveURLFromData(theData.data, theData.flavour.contenType));
-        
+
     //if (str) str       = str.value.QueryInterface(Components.interfaces.nsISupportsString);
     //alert(str.data);
-    
+
 //Fragment:userinput::autocomplete
-    
+
     InputBox.choices=[] //{NT,label}
     switch(mode){
         case 'predicate':
             for (var predNT in kb.predicateIndex){ //there is supposed to be not smushing on predicates??
                 var pred=kb.fromNT(predNT);
-                if (pred.termType=='symbol') //temporarily deal with symbol only
-                    InputBox.choices.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})   
+                if (pred.termType=='NamedNode') //temporarily deal with symbol only
+                    InputBox.choices.push({'NT':predNT,'label':predicateLabelForXML(kb.fromNT(predNT),false)})
             }
             break;
         case 'all':
@@ -90,12 +90,12 @@
             for (var theNT in indexedStore){
                 var term=kb.fromNT(theNT);
                 if (term) InputBox.choices.push({'NT':theNT,'label':label(term)});
-            }            
             }
-            */                        
+            }
+            */
     }
 
-    
+
     function sortLabel(a,b){
         if (a.label < b.label) return -1;
         if (a.label > b.label) return 1;
@@ -133,7 +133,7 @@
         }
     */
     if (kb.whether(predicateTerm,rdf('type'),tabulator.ns.owl('ObjectProperty'))){
-        var preStat=insertTr.previousSibling.AJAR_statement;    
+        var preStat=insertTr.previousSibling.AJAR_statement;
         var tempTerm=kb.bnode();
         var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
         if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
@@ -156,7 +156,7 @@
         kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
         kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
 
-        insertTr.appendChild(outline.outline_objectTD(tempTerm));              
+        insertTr.appendChild(outline.outline_objectTD(tempTerm));
         if (!isInverse)
             this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
         else
@@ -169,7 +169,7 @@
         this.lastModified.isNew=true;
 
         this.lastModified.select();
-        this.statIsInverse=false;     
+        this.statIsInverse=false;
     } else { //inference work...
         var tiptext="(To be determined. Re-type of drag an object onto this field)";
         var reqTerm=this.generateRequest(tiptext,insertTr,false);
@@ -188,7 +188,7 @@
         this.formUndetStat(insertTr,reqTerm,predicateTerm,preStat.subject,preStat.why,true);
         this.lastModified = null;
     }
-    
+
 //Fragments: related to modes
     switchMode: function(){ //should be part of global UI
         switch (this._tabulatorMode){
@@ -228,7 +228,7 @@ else if (selectedTd.className=='undetermined selected'){
             this.lastModified=this.createInputBoxIn(selectedTd,"");
             this.lastModified.select();
             this.lastModified.addEventListener('keypress',this.AutoComplete,false);
-        }else if (obj.termType== 'symbol'){
+        }else if (obj.termType== 'NamedNode'){
             /*
             emptyNode(tdNode);
             tdNode.appendChild(myDocument.createTextNode("<"));
@@ -238,7 +238,7 @@ else if (selectedTd.className=='undetermined selected'){
             inputBox.setAttribute('size',obj.uri.length.toString());
             tdNode.appendChild(inputBox);
             tdNode.appendChild(myDocument.createTextNode(">"));
-            
+
             inputBox.select();
             this.lastModified = inputBox;
             //Kenny: What if the user just want to edit the title?
@@ -274,13 +274,13 @@ else if (selectedTd.className=='undetermined selected'){
                 inputTerm=kb.nextSymbol(stat.why);
                 //this.bnode2symbol(newTerm,inputTerm);
                 isNew=true;
-            } 
+            }
 //@ createNew
         var insertTr=selectedTd.parentNode;
         //var preStat=insertTr.previousSibling.AJAR_statement;
         var preStat=insertTr.AJAR_statement;
         var predicateTerm=preStat.predicate;
-            
+
         var tempTerm=kb.bnode();
         var tempType=(!isInverse)?kb.any(predicateTerm,tabulator.ns.rdfs('range')):kb.any(predicateTerm,tabulator.ns.rdfs('domain'));
         if (tempType) kb.add(tempTerm,rdf('type'),tempType,preStat.why);
@@ -292,7 +292,7 @@ else if (selectedTd.className=='undetermined selected'){
                ?labelProperty rdfs:domain tempType.
            }
         */ //this is ideal...but
-    
+
         /*<lable-choice>
         var labelChoices=kb.collection();
         var labelProperties = kb.each(undefined,tabulator.ns.rdfs('subPropertyOf'),tabulator.ns.rdfs('label'));
@@ -304,11 +304,11 @@ else if (selectedTd.className=='undetermined selected'){
         kb.add(labelChoices,tabulator.ns.link('element'),tabulator.ns.rdfs('label'),preStat.why);
         kb.add(tempTerm,labelChoices,this.generateRequest(" (Error) ",undefined,false,true),preStat.why);
         */
-    
+
         //insertTr.appendChild(outline.outline_objectTD(tempTerm));
-        //outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);              
+        //outline.replaceTD(outline.outline_objectTD(tempTerm),selectedTd);
         if (!isInverse)
             this.formUndetStat(insertTr,preStat.subject,predicateTerm,tempTerm,preStat.why,false);
         else
             this.formUndetStat(insertTr,tempTerm,predicateTerm,preStat.object,preStat.why,true);
-        return tempTerm;              
+        return tempTerm;

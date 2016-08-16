@@ -384,7 +384,7 @@ tabulator.Util.label = function(x, initialCap) { // x is an object
     if (lab) return doCap(lab.value);
     //load #foo to Labeler?
 
-    if (x.termType == 'bnode') {
+    if (x.termType == 'BlankNode') {
         return "...";
     }
     if (x.termType=='collection'){

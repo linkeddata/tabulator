@@ -33,7 +33,7 @@ YAHOO.util.Event=function(){
         if (index == -1) return false;
         var cacheItem = listeners[index];
         el.removeEventListener(sType,cacheItem[this.WFN],false);
-        
+
         delete listeners[index][this.WFN];
         delete listeners[index][this.FN];
         listeners.splice(index, 1);
@@ -43,22 +43,22 @@ YAHOO.util.Event=function(){
     _getCacheIndex: function(el, sType, fnId) {
         for (var i=0,len=listeners.length; i<len; ++i) {
             var li = listeners[i];
-            if ( li                 && 
-                 li[this.FNID] == fnId  && 
-                 li[this.EL] == el  && 
+            if ( li                 &&
+                 li[this.FNID] == fnId  &&
+                 li[this.EL] == el  &&
                  li[this.TYPE] == sType ) {
                 return i;
             }
         }
 
         return -1;
-    }    
+    }
     };
 }();
 YAHOO.util.DDExternalProxy =
 function DDExternalProxy(el){
     this.initTarget(el);
-    //YAHOO.util.Event.on(this.el, "mousedown", this.handleMouseDown, this, 'dragMouseDown'/*, true*/);       
+    //YAHOO.util.Event.on(this.el, "mousedown", this.handleMouseDown, this, 'dragMouseDown'/*, true*/);
 }
 //YAHOO.util.DDExternalProxy extends YAHOO.utilDDProxy
 YAHOO.util.DDExternalProxy.prototype={
@@ -70,7 +70,7 @@ YAHOO.util.DDExternalProxy.prototype={
 
         // set the el
         this.el = el;
-        
+
         /*
         // We don't want to register this as the handle with the manager
         // so we just set the id rather than calling the setter.
@@ -80,9 +80,9 @@ YAHOO.util.DDExternalProxy.prototype={
         */
 
         // the linked element is the element that gets dragged by default
-        //this.setDragElId(id); 
+        //this.setDragElId(id);
 
-        // by default, clicked anchors will not start drag operations. 
+        // by default, clicked anchors will not start drag operations.
         // @TODO what else should be here?  Probably form fields.
         //this.invalidHandleTypes = { A: "A" };
         //this.invalidHandleIds = {};
@@ -98,7 +98,7 @@ YAHOO.util.DDExternalProxy.prototype={
         //this.showFrame(x, y);
     },
     b4Drag: function(e) {
-        //this.setDragElPos(YAHOO.util.Event.getPageX(e), 
+        //this.setDragElPos(YAHOO.util.Event.getPageX(e),
         //                    YAHOO.util.Event.getPageY(e));
     },
     handleMouseDown: function(e, oDD) {
@@ -114,12 +114,12 @@ YAHOO.util.DDExternalProxy.prototype={
         // var self = this;
         // setTimeout( function() { self.DDM.refreshCache(self.groups); }, 0);
 
-        // Only process the event if we really clicked within the linked 
-        // element.  The reason we make this check is that in the case that 
-        // another element was moved between the clicked element and the 
-        // cursor in the time between the mousedown and mouseup events. When 
-        // this happens, the element gets the next mousedown event 
-        // regardless of where on the screen it happened.  
+        // Only process the event if we really clicked within the linked
+        // element.  The reason we make this check is that in the case that
+        // another element was moved between the clicked element and the
+        // cursor in the time between the mousedown and mouseup events. When
+        // this happens, the element gets the next mousedown event
+        // regardless of where on the screen it happened.
         //var pt = new YAHOO.util.Point(Event.getPageX(e), Event.getPageY(e));
         //if (!this.hasOuterHandles && !this.DDM.isOverTarget(pt, this) )  {
         //        this.logger.log("Click was not over the element: " + this.id);
@@ -163,16 +163,16 @@ YAHOO.util.DDM=function DDM(){
 
             this.dragThreshMet = false;
 
-            //this.clickTimeout = setTimeout( 
-            //        function() { 
+            //this.clickTimeout = setTimeout(
+            //        function() {
             //            var DDM = YAHOO.util.DDM;
-            //            DDM.startDrag(DDM.startX, DDM.startY); 
-            //        }, 
+            //            DDM.startDrag(DDM.startX, DDM.startY);
+            //        },
             //        this.clickTimeThresh );
             //YAHOO.util.Event.on(el,'mousemove',this.handleMouseMove,this,'dragMouseMove');
             //YAHOO.util.Event.on(el,'mouseup'  ,this.handleMouseUp  ,this,'dragMouseUp');
         },
-        
+
         handleMouseMove: function(e) {
             //YAHOO.log("handlemousemove");
             if (! this.dragCurrent) {
@@ -193,7 +193,7 @@ YAHOO.util.DDM=function DDM(){
                 var diffX = Math.abs(this.startX - e.pageX);
                 var diffY = Math.abs(this.startY - e.pageY);
                 // YAHOO.log("diffX: " + diffX + "diffY: " + diffY);
-                if (diffX > this.clickPixelThresh || 
+                if (diffX > this.clickPixelThresh ||
                             diffY > this.clickPixelThresh) {
                     //YAHOO.log("pixel threshold met", "info", "DragDropMgr");
                     this.startDrag(this.startX, this.startY);
@@ -295,15 +295,15 @@ onDropInside: function(targetTd){ //a special case that you draganddrop totally 
     var table=targetTd.ownerDocument.getElementById('outline');
     //var table=ancestor(ancestor(targetTd,'TABLE').parentNode,'TABLE');
     var thisOutline=table.outline;
-    thisOutline.UserInput.insertTermTo(targetTd,getAbout(kb,this.dragTarget));    
+    thisOutline.UserInput.insertTermTo(targetTd,getAbout(kb,this.dragTarget));
 },
 onDragStart: function(x,y,td){
     /* seeAlso nsDragAndDrop.js::nsDragAndDrop.startDrag */
     //ToDo for myself: understand the connections in firefox, x, screenX
-    
+
     this.dragTarget=td;
     var kDSIID = Components.interfaces.nsIDragService;
-    var dragAction = { action: kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_MOVE + kDSIID.DRAGDROP_ACTION_LINK };    
+    var dragAction = { action: kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_MOVE + kDSIID.DRAGDROP_ACTION_LINK };
 
     //alert(td.ownerDocument.getBoxObjectFor(td));
     //alert(td.ownerDocument.getBoxObjectFor(td).screenX);
@@ -315,17 +315,17 @@ onDragStart: function(x,y,td){
     var transferDataSet = {data:null};
     var term=tabulator.Util.getTerm(td);
     switch (term.termType){
-        case 'symbol':       
+        case 'NamedNode':
             transferDataSet.data = this.URItoTransferDataSet(term.uri);
             break;
-        case 'bnode':
+        case 'BlankNode':
             transferDataSet.data = this.URItoTransferDataSet(term.toNT());
             break;
-        case 'literal':
+        case 'Literal':
             transferDataSet.data = this.URItoTransferDataSet(term.value);
-            break; 
+            break;
     }
-            
+
     transferDataSet = transferDataSet.data; //quite confusing, anyway...
     var transArray = Components.classes["@mozilla.org/supports-array;1"]
                                .createInstance(Components.interfaces.nsISupportsArray);
@@ -362,8 +362,8 @@ URItoTransferDataSet: function(uri){
     dataSet.push(data);
     return dataSet;
 },
-_mDS: null, 
-get_mDragService:  function() //some syntax I don't understand -- was get mDragService() 
+_mDS: null,
+get_mDragService:  function() //some syntax I don't understand -- was get mDragService()
 {
     if (!this._mDS) {
         var kDSContractID = "@mozilla.org/widget/dragservice;1";

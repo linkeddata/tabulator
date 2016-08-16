@@ -860,7 +860,7 @@ tabulator.panes.utils.propertyTriage = function() {
     var pi = kb.predicateIndex; // One entry for each pred
     for (var p in pi) {
         var object = pi[p][0].object;
-        if (object.termType == 'literal') {
+        if (object.termType == 'Literal') {
             dp[p] = true;
             nd ++;
         } else {

@@ -5,25 +5,25 @@
 */
 tabulator.panes.defaultPane = {
     icon:  tabulator.iconPrefix + 'icons/about.png', // was tabulator.Icon.src.icon_defaultPane,
-    
+
     name: 'default',
-    
+
     label: function(subject) { return 'about ';},
-    
+
     filter: function(pred, inverse) {
         if (typeof tabulator.panes.internalPane.predicates[pred.uri] != 'undefined')
             return false;
-        if (inverse && (pred.uri == 
+        if (inverse && (pred.uri ==
                 "http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) return false;
         return true;
     },
-    
+
     render: function(subject, myDocument) {
         //var doc = myDocument.wrappedJSObject;   Jim? why-tim
         // dump( doc );
         var kb = tabulator.kb;
         var outline = tabulator.outline; //@@
-        tabulator.log.info("@defaultPane.render, myDocument is now " + myDocument.location);    
+        tabulator.log.info("@defaultPane.render, myDocument is now " + myDocument.location);
         subject = kb.canon(subject);
         var div = myDocument.createElement('div')
         //var f = jq("<div></div>", doc);
@@ -31,19 +31,19 @@ tabulator.panes.defaultPane = {
         //f.resource({subject:"http://web.mit.edu/jambo/www/foaf.rdf#jambo", predicate:"http://xmlns.com/foaf/0.1/knows"});
         div.setAttribute('class', 'defaultPane')
 //        appendRemoveIcon(div, subject, div);
-                  
+
         var plist = kb.statementsMatching(subject)
         tabulator.outline.appendPropertyTRs(div, plist, false, tabulator.panes.defaultPane.filter)
         plist = kb.statementsMatching(undefined, undefined, subject)
         tabulator.outline.appendPropertyTRs(div, plist, true, tabulator.panes.defaultPane.filter)
-        if ((subject.termType == 'literal') && (subject.value.slice(0,7) == 'http://'))
+        if ((subject.termType == 'Literal') && (subject.value.slice(0,7) == 'http://'))
             tabulator.outline.appendPropertyTRs(div,
                 [$rdf.st(kb.sym(subject.value), tabulator.ns.link('uri'), subject)],
                 true, tabulator.panes.defaultPane.filter)
-        if ((subject.termType == 'symbol' && 
+        if ((subject.termType == 'NamedNode' &&
              tabulator.sparql.editable(tabulator.rdf.Util.uri.docpart(subject.uri), kb))
-             || (subject.termType == 'bnode'
-                && kb.anyStatementMatching(subject) 
+             || (subject.termType == 'BlankNode'
+                && kb.anyStatementMatching(subject)
                 && kb.anyStatementMatching(subject).why
                 && kb.anyStatementMatching(subject).why.uri
                 && tabulator.sparql.editable(kb.anyStatementMatching(subject).why.uri)
@@ -63,14 +63,14 @@ tabulator.panes.defaultPane = {
             });
             img.className='bottom-border-active';
             //img.addEventListener('click', thisOutline.UserInput.addNewPredicateObject,false);
-            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);          
-        }        
-        return div    
+            div.appendChild(holdingTr).appendChild(holdingTd).appendChild(img);
+        }
+        return div
     },
-    
+
     sync: function(subject, myDocument, div) { // Untested  and not the best way to do it
     // This code was cut out of outline.js
-    //    best way is to leave TRs there and add/delete any necessray extras 
+    //    best way is to leave TRs there and add/delete any necessray extras
 
         tabulator.log.info('Re-expand: '+div)
         // try{table.replaceChild(expandedHeaderTR(subject),table.firstChild)}
@@ -111,13 +111,12 @@ tabulator.panes.defaultPane = {
 
 
 
-    
+
     }
-    
-    
+
+
 };
 
 tabulator.panes.register(tabulator.panes.defaultPane, true);
 
 // ends
-    

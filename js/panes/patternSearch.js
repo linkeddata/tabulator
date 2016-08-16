@@ -28,7 +28,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
     }
     this.PatternNode.prototype.fetch = function(subject) {
         if(subject == null) return null;
-        if(subject.type === 'Symbol')
+        if(subject.type === 'NamedNode')
             tabulator.fetcher.requestURI(getBaseURI(subject.uri));
         return this.fetchMethod(this.searchMethod(subject), this.children);
     }
@@ -48,7 +48,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
      ******************************/
     this.fetchSingle = function(subjects) {
         if(isEmpty(subjects)) return null;
-        else if(subjects[0].termType === 'literal' || subjects[0].termType === 'symbol')
+        else if(subjects[0].termType === 'Literal' || subjects[0].termType === 'NamedNode')
             return new DataContainer([subjects[0].toString()]);
         else return null;
     }
@@ -58,7 +58,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
         var dataContainers = new Array();
         for(var i = 0;i < subjects.length;i++)
             if(subjects[i] == null) continue;
-            else if(subjects[i].termType === 'literal' || subjects[i].termType === 'symbol')
+            else if(subjects[i].termType === 'Literal' || subjects[i].termType === 'NamedNode')
                 dataContainers.push(new DataContainer([subjects[i].toString()]));
         if(isEmpty(dataContainers)) return null;
         else return dataContainers;
@@ -288,7 +288,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                     toBeAdded = treeArray[i].lastIndexOf(">",leftBrackets[leftBrackets.length-1])-(leftBrackets.length)+3;
                 var toBePopped = rightBrackets.length;
                 var spaces = sumArray(numberOfSpaces);
-                
+
                 treeArray[i] = createBlankString(spaces) + treeArray[i];
                 if(toBeAdded > 0) numberOfSpaces.push(toBeAdded);
                 for(;toBePopped > 0;toBePopped--)
@@ -358,7 +358,7 @@ function PatternSearch() { // Encapsulates all of the methods and classes
                 indicesLevels[line].push([lineIndices[level],level+levelOffset])
         }
         alert(indicesLevels.toSource());
-        
+
 
         // Builds a two-dimensional array of nodes resembling the original string
         var stringTree = new Array();

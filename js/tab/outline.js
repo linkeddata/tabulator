@@ -165,7 +165,7 @@ tabulator.OutlineObject = function(doc) {
     }
 
     this.appendAccessIcons = function(kb, node, obj) {
-        if (obj.termType != 'symbol') return;
+        if (obj.termType != 'NamedNode') return;
         var uris = kb.uris(obj);
         uris.sort();
         var last = null;
@@ -338,8 +338,8 @@ tabulator.OutlineObject = function(doc) {
         }
 
         //set about and put 'expand' icon
-        if ((obj.termType == 'symbol') || (obj.termType == 'bnode') ||
-                (obj.termType == 'literal' && obj.value.slice && (
+        if ((obj.termType == 'NamedNode') || (obj.termType == 'BlankNode') ||
+                (obj.termType == 'Literal' && obj.value.slice && (
                     obj.value.slice(0,6) == 'ftp://' ||
                     obj.value.slice(0,8) == 'https://' ||
                     obj.value.slice(0,7) == 'http://'))) {
@@ -397,9 +397,9 @@ tabulator.OutlineObject = function(doc) {
         td_p.setAttribute('class', internal ? 'pred internal' : 'pred')
 
         switch (predicate.termType){
-            case 'bnode': //TBD
+            case 'BlankNode': //TBD
                 td_p.className='undetermined';
-            case 'symbol':
+            case 'NamedNode':
                 var lab = tabulator.Util.predicateLabelForXML(predicate, inverse);
                 break;
             case 'collection': // some choices of predicate
@@ -1035,11 +1035,11 @@ tabulator.OutlineObject = function(doc) {
     this.showURI = function showURI(about){
         if(about && myDocument.getElementById('UserURI')) {
              myDocument.getElementById('UserURI').value =
-                  (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+                  (about.termType == 'NamedNode') ? about.uri : ''; // blank if no URI
          } else if(about && tabulator.isExtension) {
              var tabStatusBar = gBrowser.ownerDocument.getElementById("tabulator-display");
              tabStatusBar.setAttribute('style','display:block');
-             tabStatusBar.label = (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+             tabStatusBar.label = (about.termType == 'NamedNode') ? about.uri : ''; // blank if no URI
              if(tabStatusBar.label=="") {
                  tabStatusBar.setAttribute('style','display:none');
              } else {
@@ -1065,7 +1065,7 @@ tabulator.OutlineObject = function(doc) {
             var source = st.why;
             if (source && source.uri)
                 sourceWidget.highlight(source, true);
-            else if (tabulator.isExtension && source.termType == 'bnode')
+            else if (tabulator.isExtension && source.termType == 'BlankNode')
                 sourceWidget.highlight(kb.sym(tabulator.sourceURI), true);
         }
     };
@@ -1090,7 +1090,7 @@ tabulator.OutlineObject = function(doc) {
 
             var about=tabulator.Util.getTerm(node); //show uri for a newly selectedTd
             thisOutline.showURI(about);
-            //if(tabulator.isExtension && about && about.termType=='symbol') gURLBar.value = about.uri;
+            //if(tabulator.isExtension && about && about.termType=='NamedNode') gURLBar.value = about.uri;
                            //about==null when node is a TBD
 
             var st = node.AJAR_statement; //show blue cross when the why of that triple is editable
@@ -1238,7 +1238,7 @@ tabulator.OutlineObject = function(doc) {
         function showURI(about){
             if(about && myDocument.getElementById('UserURI')) {
                     myDocument.getElementById('UserURI').value =
-                         (about.termType == 'symbol') ? about.uri : ''; // blank if no URI
+                         (about.termType == 'NamedNode') ? about.uri : ''; // blank if no URI
             }
         }
 
@@ -1783,7 +1783,7 @@ tabulator.OutlineObject = function(doc) {
         if (subj_uri && !immediate) {
             var doc = tabulator.rdf.uri.docpart(subj_uri);
             //dump('@@@@ Fetching before expanding ' + subj_uri + ' type ' + typeof subj_uri + '\n');
-            if (subject.termType == 'bnode') alert('@@@@@ bnode ' + subj_uri)
+            if (subject.termType == 'BlankNode') alert('@@@@@ bnode ' + subj_uri)
             // Wait till at least the main URI is loaded before expanding:
             sf.nowOrWhenFetched(doc, undefined, function(ok, body) {
                 if (ok) {
@@ -2003,7 +2003,7 @@ tabulator.OutlineObject = function(doc) {
         //tabulator.log.debug("entered VIEWAS_boring_default...");
         var rep; //representation in html
 
-        if (obj.termType == 'literal')
+        if (obj.termType == 'Literal')
         {
             var styles = { 'integer': 'text-align: right;',
                     'decimal': 'text-align: ".";',
@@ -2020,12 +2020,12 @@ tabulator.OutlineObject = function(doc) {
             }
             rep.setAttribute('style', style ? style : 'white-space: pre-wrap;');
 
-        } else if (obj.termType == 'symbol' || obj.termType == 'bnode') {
+        } else if (obj.termType == 'NamedNode' || obj.termType == 'BlankNode') {
             rep = myDocument.createElement('span');
             rep.setAttribute('about', obj.toNT());
             thisOutline.appendAccessIcons(kb, rep, obj);
 
-            if (obj.termType == 'symbol') {
+            if (obj.termType == 'NamedNode') {
                 if (obj.uri.slice(0,4) == 'tel:') {
                     var num = obj.uri.slice(4);
                     var anchor = myDocument.createElement('a');
@@ -2084,7 +2084,7 @@ tabulator.OutlineObject = function(doc) {
 
         // FOAF mboxs must NOT be literals -- must be mailto: URIs.
 
-        var address = (obj.termType=='symbol') ? obj.uri : obj.value; // this way for now
+        var address = (obj.termType=='NamedNode') ? obj.uri : obj.value; // this way for now
         if (!address) return VIEWAS_boring_default(obj)
         var index = address.indexOf('mailto:');
         address = (index >= 0) ? address.slice(index + 7) : address;

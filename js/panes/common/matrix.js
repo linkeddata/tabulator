@@ -32,28 +32,28 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
     var headerColumns = 1;
     var columns = []; // Vector
     var rows = []; // Associative array
-    
+
     var setCell = function(cell, x, y, value) {
         while(cell.firstChild) { // Empty any previous
             cell.removeChild(cell.firstChild);
         }
         cell.setAttribute('style', '');
         cell.style.textAlign = "center";
-        
+
         if (options.cellFunction) {
             options.cellFunction(cell, x, y, value);
         } else {
-            cell.textContent = tabulator.Util.label(value); 
+            cell.textContent = tabulator.Util.label(value);
         }
         delete cell.old;
     };
 
-    var rowFor = function(y1) { 
+    var rowFor = function(y1) {
         var y = y1.toNT();
         if (rows[y]) return rows[y];
         var tr = dom.createElement('tr');
         var header = tr.appendChild(dom.createElement('td'));
-        if (y1.termType = 'symbol') {
+        if (y1.termType = 'NamedNode') {
             kb.fetcher.nowOrWhenFetched(y1.uri.split('#')[0], undefined, function(uri, ok, body){
                 header.textContent = tabulator.Util.label(y1);
             });
@@ -73,7 +73,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
         }
         return matrix.appendChild(tr); // return the tr
     }
-    
+
     var columnNumberFor = function(x1) {
         var xNT = x1.toNT();  // xNT is a NT string
         var col = null;
@@ -82,7 +82,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
             if (columns[i] === xNT) {
                 return i
             }
-            
+
             if (((xNT > columns[i]) && options.xDecreasing) ||
                     ((xNT < columns[i]) && !options.xDecreasing)) {
                 columns = columns.slice(0, i).concat([xNT]).concat(columns.slice(i));
@@ -94,17 +94,17 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
         if (col === null) {
             col = columns.length;
             columns.push(xNT);
-        } 
+        }
 
         // col is the number of the new column, starting from 0
         for (var row = matrix.firstChild; row; row = row.nextSibling) { //For every row header or not
             var y = row.dataValueNT;
-            var td = dom.createElement('td'); // Add a new cell 
+            var td = dom.createElement('td'); // Add a new cell
             td.style.textAlign = "center";
             if (row === matrix.firstChild) {
-               td.textContent = tabulator.Util.label(x1); 
+               td.textContent = tabulator.Util.label(x1);
             } else {
-                setCell(td, x1, $rdf.fromNT(y), null) 
+                setCell(td, x1, $rdf.fromNT(y), null)
             }
             if (col === columns.length -1 ) {
                 row.appendChild(td);
@@ -113,7 +113,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
                 for (var j =0; j < col + 1; j++) { // Skip header col too
                     t = t.nextSibling;
                 }
-                row.insertBefore(td, t); 
+                row.insertBefore(td, t);
             }
         }
         return col;
@@ -206,7 +206,7 @@ tabulator.panes.utils.matrixForQuery  = function (dom, query, vx, vy, vvalue, op
             columnNumberFor(options.set_x[k]);
         }
     }
-    
+
     kb.query(query, addCellFromBindings, undefined, whenDone); // Populate the matrix
     return matrix;
 

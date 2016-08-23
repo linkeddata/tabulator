@@ -7,17 +7,17 @@ Kenny:
   Q: What is this?
   A: This is where I store optional codes and make them into preferences.
   Q: How do I use it?
-  A: Here is how I use it. 
+  A: Here is how I use it.
      Step 1: Wrap your code into a function with necesssary arguments.
      Step 2: OptionCollection.addOption(name,function)
      Step 3: Call this piece of code by OptionCollection[name].setupHere(arguments,location)
              where "arguments" is an array of arguments (corresponding to arguments of Step 1)
                    "location" is extra information about where the option is set up.
-                   
-     Remarks: If there is more than one piece corresponding to an option, use 
-              Option.addMoreCode(function) and access pieces of codes by using 
+
+     Remarks: If there is more than one piece corresponding to an option, use
+              Option.addMoreCode(function) and access pieces of codes by using
               OptionCollection[name][index].setupHere instead
-    
+
      Step 4: Remember to enable the option (default enabled=false) if you want to test it
   Q: Future?
   A: It should be easy to extend this architecture to contain "hooks", that is you should be able to
@@ -28,11 +28,11 @@ Tim (2007/9):
     Sorry, Kenny. This is some of the most difficult to understand code there is.
     It makes understanding it by others really hard.  We will have to get rid
     of it piece by piece. Please do NOT use the features in configuration.js for any more code.
-    
+
     This is a system of Kenny's for making optional compilation.  It inserts code
     defined n blocks here in  various places in the program. This makes it very
     hard to follow.
-*/ 
+*/
 
 
 function Option(code){ //{class Option}
@@ -44,16 +44,16 @@ function Option(code){ //{class Option}
         //which is faster? eval or Function?
 
         this.message=message;//you should input message
-        this.defaultCode=defaultCode;        
+        this.defaultCode=defaultCode;
         //eval:
         //for (var i=0;i<arguments.length;i+=2) eval("var "+arguments[i]+"="+arguments[i+1].toString());
         //if (this.enabled) eval(this.code);
-        
-        //Function:        
-        //if (this.enabled) Function("e",this.code).apply(this,arguments); 
-        
+
+        //Function:
+        //if (this.enabled) Function("e",this.code).apply(this,arguments);
+
         //Neither: (why didn't I find this solution in the past few hours...)
-        if (this.enabled) 
+        if (this.enabled)
             return this.code.apply(this,arg);
         else if (defaultCode)
             return this.defaultCode.apply(this,arg);
@@ -85,7 +85,7 @@ function getFunctionBody(func){
     return func.toSource().substring(func.name.length+13,func.toSource().length-1)
 }
 
-/** 
+/**
   * Human Computer Interaction Options
   **/
 var HCIoptions=new OptionCollection();
@@ -98,7 +98,7 @@ function temp_RCTSM0(){
     window.addEventListener('mousedown',UserInput.Mousedown,false);
     document.getElementById('outline').oncontextmenu=function(){return false;};
 }
-/* 
+/*
 HCIoptions.addOption("right click to switch mode",temp_RCTSM0);
 delete temp_RCTSM0;
 
@@ -165,7 +165,7 @@ delete temp_FD0;
 HCIoptions.addOption("bottom insert highlights");
 
 
-/** 
+/**
   * Source Options
   **/
 var SourceOptions=new OptionCollection();
@@ -181,8 +181,8 @@ delete javascript2rdf0;
 function javascript2rdf1(returnConditions)
 {
     function javascript2rdfLoad(subject){
-        if (subject.termType!='symbol') return false;
-        if (string_startswith(subject.uri,"javascript:")){ 
+        if (subject.termType!='NamedNode') return false;
+        if (string_startswith(subject.uri,"javascript:")){
             if(RDFizers["javascript2rdf"].load(subject.uri)) return [true,true];
             return [true,false];
         }
@@ -204,7 +204,7 @@ delete javascript2rdf2;
 function temp_TIT(returnConditions)
 {
     function tabulatorTermPanel(subject){
-        if (subject.termType!='symbol') return false;
+        if (subject.termType!='NamedNode') return false;
         if (string_startswith(subject.uri,"tabulator:")) return true;
         return false;
     }
@@ -254,19 +254,19 @@ var defaultpropview;
 			    }
 			}
 		    }
-	
+
 		    if (show < (k-dups)){ //didn't show every obj
 			// special case if show == 1 (case that wasn't covered above)
 			// since adding moreTD html cell, still need to expand td_p to accommodate
 			// add the '... more' cell here for now
 			var moreTR = myDocument.createElement('TR');
 			var moreTD = moreTR.appendChild(myDocument.createElement('TD'));
-	
+
 			if (k-dups > n){
-			    var small = myDocument.createElement('a');		    
+			    var small = myDocument.createElement('a');
 			    moreTD.appendChild(small);
-	
-	
+
+
 			    var predtoggle = (function(f){return f(td_p, k, dups, n);})(function(td_p, k, dups, n){
 				return function(display){
 				    // empty small
@@ -294,8 +294,8 @@ var defaultpropview;
 				if (event) event.stopPropagation();
 				return false;
 			    }
-			    toggleObj();		    
-			    small.addEventListener('click', toggleObj, false); 
+			    toggleObj();
+			    small.addEventListener('click', toggleObj, false);
 			}
 			parent.appendChild(moreTR);
 		    }
@@ -309,7 +309,7 @@ delete temp_DO;
   * Preferences
   **/
 //HCIoptions["right click to switch mode"].enable();
-// HCIoptions["able to edit in Discovery Mode by mouse"].enable(); // not used 
+// HCIoptions["able to edit in Discovery Mode by mouse"].enable(); // not used
 //HCIoptions["favorite dock"].enabled=true;
 //HCIoptions["bottom insert highlights"].enable();
 
@@ -340,6 +340,3 @@ HCIoption.instances=[];
 HCIoptions["right click to switch mode"][2].setupHere([],"end of configuration.js");
 SourceOptions["javascript2rdf"][0].setupHere([],"end of configuration.js");
 ///////////////////////////////////end of configurauration.js
-
-
-

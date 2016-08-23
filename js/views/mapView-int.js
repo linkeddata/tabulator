@@ -68,7 +68,7 @@ function mapView(container) {
                     tt.appendChild(document.createTextNode(q.vars[i].label));
                     tr.appendChild(tt);
                     var objNode;
-                    if(obj.termType=='symbol' && isImage(obj.uri.substring(obj.uri.length-4))) {
+                    if(obj.termType=='NamedNode' && isImage(obj.uri.substring(obj.uri.length-4))) {
                         var img = document.createElement('img');
                         var resizeRatio;
                         img.src=obj.uri;
@@ -115,7 +115,7 @@ function mapView(container) {
                var evt = document.createEvent("Events");
                evt.initEvent("TabulatorMapEvent",true,false);
                info.dispatchEvent(evt);
-               
+
                //TODO:Some kind of firing
             }
         }
@@ -216,7 +216,7 @@ function mapView(container) {
                 canBeMapped=true;
         }
         return canBeMapped;
-    } 
+    }
 
     function checkOptionals(optional) {
         var i, canBeMapped=false, pred, gotLat=false, gotLong=false, ns = optional.statements.length;
@@ -261,15 +261,15 @@ function mapViewDoubleClick(event) {
 function makeInfoWindowObjectNode(obj,asImage) {
     var newNode = document.createElement('td');
     if (!obj) var obj = new RDFLiteral(".");
-    /*if  ((obj.termType == 'symbol') || (obj.termType == 'bnode')) {
+    /*if  ((obj.termType == 'NamedNode') || (obj.termType == 'BlankNode')) {
         td.setAttribute('style', 'color:#4444ff');
     }*/
     var image
-    if (obj.termType == 'literal') {
+    if (obj.termType == 'Literal') {
         var text=document.createTextNode(obj.value)
         newNode.textAlign='right';
         newNode.appendChild(text);
-    } else if ((obj.termType == 'symbol') || (obj.termType == 'bnode')){
+    } else if ((obj.termType == 'NamedNode') || (obj.termType == 'BlankNode')){
         if (asImage) {
             var img = AJARImage(obj.uri, tabulator.Util.label(obj));
             img.setAttribute('class', 'pic');

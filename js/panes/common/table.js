@@ -4,7 +4,7 @@
 // This can operate in one of three modes: when the class of object is given
 // or when the source document from whuch data is taken is given,
 // or if a prepared query object is given.
-// (In principle it could operate with neither class nor document 
+// (In principle it could operate with neither class nor document
 // given but typically
 // there would be too much data.)
 // When the tableClass is not given, it looks for common  classes in the data,
@@ -67,7 +67,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // Name of the column used as a "key" value to look up the row.
     // This is necessary because in the normal view, the columns are
-    // all "optional" values, meaning that we will get a result set 
+    // all "optional" values, meaning that we will get a result set
     // for every individual value that is found.  The row key acts
     // as an anchor that can be used to combine this information
     // back into the same row.
@@ -75,7 +75,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     var keyVariable = options.keyVariable || '?_row';
 
     // Use queries to render the table, currently experimental:
- 
+
     var USE_QUERIES = true;
 
     var subjectIdCounter = 0;
@@ -104,13 +104,13 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // A specifically asked-for query
     if (givenQuery) {
-    
+
         var table = renderTableForQuery(givenQuery);
         //lastQuery = givenQuery;
         tableDiv.appendChild(table);
 
-        
-        
+
+
     } else {
 
         // Find the most common type and select it by default
@@ -128,10 +128,10 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         }
     }
     return resultDiv;
-    
-    
+
+
     ///////////////////////////////////////////////////////////////////
-    
+
 
     function closeDialog(dialog) {
         dialog.parentNode.removeChild(dialog);
@@ -196,8 +196,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         result.setAttribute("class", "toolbar");
 
         var tr = doc.createElement("tr");
-        
-/*             @@    Add in later -- not debugged yet 
+
+/*             @@    Add in later -- not debugged yet
         var sparqlButtonDiv = doc.createElement("td");
         sparqlButtonDiv.appendChild(generateSparqlButton());
         tr.appendChild(sparqlButtonDiv);
@@ -406,9 +406,9 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // a number selector.
 
         this.possiblyNumber = true;
-        
+
         // We accumulate classes which things in the column must be a member of
-        
+
         this.constraints = [];
 
         // Check values as they are read.  If we don't know what the
@@ -471,7 +471,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 this.inverse = predicate;
                 this.constraints = this.constraints.concat(
                             kb.each(predicate, tabulator.ns.rdfs("domain")));
-                if (predicate.sameTerm(ns.rdfs('subClassOf')) && (other.termType == 'symbol')) {
+                if (predicate.sameTerm(ns.rdfs('subClassOf')) && (other.termType == 'NamedNode')) {
                     this.superClass = other;
                     this.alternatives = kb.each(undefined, ns.rdfs('subClassOf'), other)
                 }
@@ -891,7 +891,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         };
     }
 
-    // Filter the list of rows based on the selectors for the 
+    // Filter the list of rows based on the selectors for the
     // columns.
 
     function applyColumnFiltersToRow(row, columns) {
@@ -928,8 +928,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             htmlRow.style.display = "none";
         }
     }
-    
-    // Filter the list of rows based on the selectors for the 
+
+    // Filter the list of rows based on the selectors for the
     // columns.
 
     function applyColumnFilters(rows, columns) {
@@ -941,7 +941,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             applyColumnFiltersToRow(row, columns);
         }
     }
-    
+
     ///////////////////////////////////// Literal column handling
 
     // Sort by literal value
@@ -1003,7 +1003,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
         var substring = null;
 
-        // Filter the table to show only rows that have a particular 
+        // Filter the table to show only rows that have a particular
         // substring in the specified column.
 
         column.filterFunction = function(colValue) {
@@ -1058,13 +1058,13 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             var value = list[i];
             searchValue[value.uri] = true;
         }
-        
+
         var initialSelection = getHints(column).initialSelection;
         if (initialSelection) searchValue = initialSelection;
 
         if (doMultiple) dropdown.setAttribute('multiple', 'true');
         else dropdown.appendChild(optionElement("(All)", "-1"));
-        
+
         for (var i=0; i<list.length; ++i) {
             var value = list[i];
             var ele = optionElement(tabulator.Util.label(value), i);
@@ -1082,7 +1082,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
         dropdown.addEventListener("click", function() {
             if (doMultiple) {
-                searchValue = {}; 
+                searchValue = {};
                 var opt = dropdown.options;
                 // dump('dropdown '+dropdown+', options a '+typeof dropdown.options +'\n') // +' array? '+ dropdown.options instanceof Array
                 for (var i=0; i< opt.length; i++) {
@@ -1094,7 +1094,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 //                    if (option.selected) searchValue[list[0+option.value].uri] = true})
                 // dump('searchValue:'); for (var x in searchValue) dump(' '+x+': '+searchValue[x]+'; '); // @@TBL
                 // dump('\n'); // @@TBL
-                
+
                 } else {
                     if (index < 0) { // All
                         searchValue = null;
@@ -1147,7 +1147,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             return true;
         }
 
-        // When the values in the boxes are changed, update the 
+        // When the values in the boxes are changed, update the
         // displayed columns.
 
         function eventListener() {
@@ -1173,8 +1173,8 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     }
 
     ///////////////////////////////////////////////////////////////////
-    
-    
+
+
     // Fallback attempts at generating a selector if other attempts fail.
 
     function fallbackRenderTableSelector(rows, columns, column) {
@@ -1199,11 +1199,11 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     function renderTableSelector(rows, columns, column) {
 
-        // What type of data is in this column?  Check the constraints for 
+        // What type of data is in this column?  Check the constraints for
         // this predicate.
 
         // If this is a class which can be one of various sibling classes?
-        if (column.superClass && (column.alternatives.length > 0)) 
+        if (column.superClass && (column.alternatives.length > 0))
                 return renderEnumSelector(rows, columns, column, column.alternatives);
 
         var cs = column.getConstraints();
@@ -1215,10 +1215,10 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             range = cs[i];
 
             // Is this a number type?
-            // Alternatively, is this an rdf:Literal type where all of 
+            // Alternatively, is this an rdf:Literal type where all of
             // the values match as numbers?
 
-            if (column.checkedAnyValues && column.possiblyNumber 
+            if (column.checkedAnyValues && column.possiblyNumber
              || range.uri in XSD_NUMBER_TYPES) {
                 return renderNumberSelector(rows, columns, column);
             }
@@ -1232,11 +1232,11 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             // Is this an enumeration type?
 
             // Also  ToDo: @@@ Handle membership of classes whcih are disjointUnions
-            
+
             var choices = kb.each(range,tabulator.ns.owl("oneOf"));
             if (choices.length > 0)
                 return renderEnumSelector(rows, columns, column, choices.elements);
-            
+
         }
         return fallbackRenderTableSelector(rows, columns, column);
     }
@@ -1323,7 +1323,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
 
     // Render an individual RDF object to an HTML object displayed
     // in a table cell.
-    
+
     function getHints(column) {
         if (options && options.hints && column.variable && options.hints[column.variable.toNT()]) {
             return options.hints[column.variable.toNT()];
@@ -1341,10 +1341,10 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             case 'shortDate':
                 return doc.createTextNode(tabulator.panes.utils.shortDate(obj.value));
                 break;
-                
+
             default:
                 // drop through
-            
+
             }
         } else {
             if (obj.termType == "literal") {
@@ -1535,7 +1535,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         query.running = true;
         var oldStyle;
         var startTime = Date.now();
-        
+
         var progressMessage = doc.createElement("tr");
         table.appendChild(progressMessage);
         progressMessage.textContent = "Loading ...";
@@ -1548,14 +1548,14 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             rows[i].values = {};
             // oldStyle = rows[i]._htmlRow.getAttribute('style') || '';
             // rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');// yellow
-        }   
-        
+        }
+
         var onResult = function(values) {
 
             if (!query.running) {
                 return;
             }
-            
+
             progressMessage.textContent += '.'; // give a progress bar
 
             var row = null;
@@ -1598,13 +1598,13 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
             delete row.original; // This is included in the new data
             updateRow(row, columns, values);
         };
-        
+
         var onDone = function() {
             if (progressMessage && progressMessage.parentNode && progressMessage.parentNode.removeChild) {
                 progressMessage.parentNode.removeChild(progressMessage);
                 progressMessage = null;
             }
-            
+
             var elapsedTime_ms = Date.now() - startTime;
             console.log("Query done: "+rows.length+" rows, " + elapsedTime_ms +"ms")
             // Delete rows which were from old values not new
@@ -1624,7 +1624,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
                 rows[i].originalValues = rows[i].values
                 rows[i].values = {};
                 // oldStyle = rows[i]._htmlRow.getAttribute('style') || '';
-                rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');// 
+                rows[i]._htmlRow.style.background = '#ffe'; //setAttribute('style', ' background-color: #ffe;');//
                 applyColumnFilters(rows, columns); // @@ TBL added this
                 // Here add table clean-up, remove "loading" message etc.
             }
@@ -1682,7 +1682,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
     // predicates based on the contents of the query
 
     function inferColumns(query) {
-        
+
         // Generate the columns list:
 
         var result = [];
@@ -1731,12 +1731,12 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         // query runs in the background and this call does not block.
 
         table.logicalRows = rows; // Save for refresh
-        table.columns = columns; 
+        table.columns = columns;
         table.query = query;
-        
+
         runQuery(query, rows, columns, table);
-        
-        
+
+
         return table;
     }
 
@@ -1758,7 +1758,7 @@ tabulator.panes.utils.renderTableViewPane = function renderTableViewPane(doc, op
         return best;
     }
 
-    // Filter list of columns to only those columns used in the 
+    // Filter list of columns to only those columns used in the
     // specified rows.
 
     function filterColumns(columns, rows) {

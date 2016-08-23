@@ -1,4 +1,4 @@
-/// @@@ Only works with tabulator.isExtension 
+/// @@@ Only works with tabulator.isExtension
 
 
 // isExtension = true;
@@ -67,7 +67,7 @@ RDFSymbol.prototype.compareTerm = function(other) {
     return 0
 }
 
-RDFSymbol.prototype.termType = 'symbol'
+RDFSymbol.prototype.termType = 'NamedNode'
 RDFSymbol.prototype.toString = toNT
 RDFSymbol.prototype.toNT = toNT
 RDFSymbol.prototype.hashString = RDFSymbol.prototype.toNT;

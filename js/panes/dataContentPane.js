@@ -10,11 +10,11 @@
 //         - original source view?  Use ffox view source
 
 tabulator.panes.dataContentPane = {
-    
+
     icon:  tabulator.Icon.src.icon_dataContents,
-    
+
     name: 'dataContents',
-    
+
     label: function(subject) {
         if('http://www.w3.org/2007/ont/link#ProtocolEvent' in tabulator.kb.findTypeURIs(subject)) return null;
         var n = tabulator.kb.statementsMatching(
@@ -38,7 +38,7 @@ tabulator.panes.dataContentPane = {
         var outline = tabulator.outline;
         var doneBnodes = {}; // For preventing looping
         var referencedBnodes = {}; // Bnodes which need to be named alas
-        
+
         // The property tree for a single subject or anonymos node
         function propertyTree(subject) {
             // print('Proprty tree for '+subject);
@@ -82,14 +82,14 @@ tabulator.panes.dataContentPane = {
         function objectTree(obj) {
             var res;
             switch(obj.termType) {
-                case 'symbol':
+                case 'NamedNode':
                     var anchor = myDocument.createElement('a')
                     anchor.setAttribute('href', obj.uri)
                     anchor.addEventListener('click', tabulator.panes.utils.openHrefInOutlineMode, true);
                     anchor.appendChild(myDocument.createTextNode(tabulator.Util.label(obj)));
                     return anchor;
-                    
-                case 'literal':
+
+                case 'Literal':
 
                     if (!obj.datatype || !obj.datatype.uri) {
                         res = myDocument.createElement('div');
@@ -102,16 +102,16 @@ tabulator.panes.dataContentPane = {
                         res.innerHTML = obj.value; // Try that  @@@ beware embedded dangerous code
                         return res;
                     };
-                    return myDocument.createTextNode(obj.value); // placeholder - could be smarter, 
-                    
-                case 'bnode':
+                    return myDocument.createTextNode(obj.value); // placeholder - could be smarter,
+
+                case 'BlankNode':
                     if (obj.toNT() in doneBnodes) { // Break infinite recursion
                         referencedBnodes[(obj.toNT())] = true;
                         var anchor = myDocument.createElement('a')
                         anchor.setAttribute('href', '#'+obj.toNT().slice(2))
                         anchor.setAttribute('class','bnodeRef')
                         anchor.textContent = '*'+obj.toNT().slice(3);
-                        return anchor; 
+                        return anchor;
                     }
                     doneBnodes[obj.toNT()] = true; // Flag to prevent infinite recusruion in propertyTree
                     var newTable =  propertyTree(obj);
@@ -122,7 +122,7 @@ tabulator.panes.dataContentPane = {
                         newTable.style.backgroundColor='white'
                     }
                     return newTable;
-                    
+
                 case 'collection':
                     var res = myDocument.createElement('table')
                     res.setAttribute('class', 'collectionAsTables')
@@ -136,14 +136,14 @@ tabulator.panes.dataContentPane = {
                     var res = tabulator.panes.dataContentPane.statementsAsTables(obj.statements, myDocument);
                     res.setAttribute('class', 'nestedFormula')
                     return res;
-                case 'variable':
+                case 'Variable':
                     var res = myDocument.createTextNode('?' + obj.uri);
                     return res;
-                    
+
             }
             throw "Unhandled node type: "+obj.termType
         }
-    
+
         // roots.sort();
 
         if (initialRoots) {
@@ -162,9 +162,9 @@ tabulator.panes.dataContentPane = {
             var td_tree = myDocument.createElement('td')
             tr.appendChild(td_tree);
             var root = roots[i];
-            if (root.termType == 'bnode') {
+            if (root.termType == 'BlankNode') {
                 td_s.appendChild(myDocument.createTextNode(tabulator.Util.label(root))); // Don't recurse!
-            } 
+            }
             else {
                 td_s.appendChild(objectTree(root)); // won't have tree
             }
@@ -201,7 +201,7 @@ tabulator.panes.dataContentPane = {
             if (ps) initialRoots.push(ps);
             div.appendChild(tabulator.panes.dataContentPane.statementsAsTables(
                             sts, myDocument, initialRoots));
-            
+
         } else {  // An outline mode openable rendering .. might be better
             var sz = tabulator.rdf.Serializer( tabulator.kb );
             var res = sz.rootSubjects(sts);
@@ -210,11 +210,11 @@ tabulator.panes.dataContentPane = {
             // p.icon = dataContentPane.icon
             p.render = function(s2) {
                 var div = myDocument.createElement('div')
-                
+
                 div.setAttribute('class', 'withinDocumentPane')
                 var plist = kb.statementsMatching(s2, undefined, undefined, subject)
                 appendPropertyTRs(div, plist, false, function(pred, inverse) {return true;})
-                return div    
+                return div
             }
             for (var i=0; i<roots.length; i++) {
                 var tr = myDocument.createElement("TR");
@@ -244,23 +244,22 @@ tabulator.panes.register({
     icon: Icon.src.icon_withinDocumentPane, // should not show
 
     label: function(subject) { return 'doc contents';},
-    
+
     filter: function(pred, inverse) {
         return true; // show all
     },
-    
+
     render: function(subject, source) {
         var div = myDocument.createElement('div')
-        div.setAttribute('class', 'withinDocumentPane')                  
+        div.setAttribute('class', 'withinDocumentPane')
         var plist = kb.statementsMatching(subject, undefined, undefined, source)
         tabulator.outline.appendPropertyTRs(div, plist, false,
                 function(pred, inverse) {return true;});
         return div ;
     }
 }, true);
-    
+
 */
 
 
 //ends
-

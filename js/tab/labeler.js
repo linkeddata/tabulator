@@ -1,7 +1,7 @@
 /*
    This is a translator between computer-recognizable object identifiers (URIs) and
    human terms.
-   
+
    This signs up to be notified whenever a new rtiple in the store gives anything
    a human-readable label.
                                                                     Sunday 2007.07.22 kennyluck
@@ -22,7 +22,7 @@ function Labeler(kb, LanguagePreference){
     }
     this.LanguagePreference = LanguagePreference;
     this.addLabelProperty(ns.link('message'),20); //quite a different semantic, cause confusion?
-    
+
     this.addLabelProperty(ns.vcard('fn'),10);
     this.addLabelProperty(ns.foaf('name'),10);
     this.addLabelProperty(ns.dct('title'),8);
@@ -33,19 +33,19 @@ function Labeler(kb, LanguagePreference){
     this.addLabelProperty(ns.foaf('nick'),3);
     this.addLabelProperty(ns.rdfs('label'),2);
     var lb=this;
-    
+
     // Note that adding a newPropertyAction has retrospecive effect
     tabulator.kb.newPropertyAction(ns.rdfs('subPropertyOf'), function(formula,subject,predicate,object,why) {
         if (!object.sameTerm(ns.rdfs('label'))) return; // Not doing transitive closure yet
         lb.addLabelProperty(subject);
         return;
     });
-/*        
+/*
         var hashP = subject.hashString();
         var already;
         if (object.sameTerm(ns.rdfs('label'))) already=lb.addLabelProperty(subject, 3);
         if (already) return;
-        
+
         var sts = kb.statementsMatching(undefined, subject); // Where was the subproperty used?
         for (var i=0;i< sts.length;i++){  // Where is the subproperty used?
             var st = sts[i];
@@ -98,12 +98,12 @@ Labeler.prototype={
 	    if (languageIndex >= 0)
 	      priority = priority + (languageIndex + 1) * lb.isLanguagePreferred;
             // if (typeof object.lang !='undefined' && object.lang!="" && object.lang!=lb.lang) return;
-            if (object.termType!='literal') return; //Request
+            if (object.termType!='Literal') return; //Request
             var label=object.value.toLowerCase();
             var entryVol=lb.entry.length;
-            if (entryVol==0) 
+            if (entryVol==0)
                 lb.entry.push([object,subject,priority]);
-            else if (label>lb.entry[entryVol-1][0].value.toLowerCase()) 
+            else if (label>lb.entry[entryVol-1][0].value.toLowerCase())
                 lb.entry.push([object,subject,priority])
             else{
                 for (var i=0;i<entryVol;i++){ //O(n) bad!     Put in in order
@@ -138,7 +138,7 @@ Labeler.prototype={
         var types=[];
         for (var i=0;i<(limited||this.entry.length);i++){   // What? limi
             var matchingString=this.entry[i][0].value.toLowerCase();
-            if (!match && tabulator.rdf.Util.string_startswith(matchingString,label)) 
+            if (!match && tabulator.rdf.Util.string_startswith(matchingString,label))
                 match=true;
             else if (match &&!tabulator.rdf.Util.string_startswith(matchingString,label))
                 break;
@@ -150,7 +150,7 @@ Labeler.prototype={
         }
         return [results,types];
     },
-    
+
     // This is (only) used for when the user has asked to add data and now
     // needs to sepcify a predicate.
     // It is called with (usertext, undefined, 'predicate')
@@ -168,7 +168,7 @@ Labeler.prototype={
         var types=[];
         for (var i=0;i<this.entry.length;i++){
             var matchingString=this.entry[i][0].value.toLowerCase();
-            if (!match && tabulator.rdf.Util.string_startswith(matchingString,label)) 
+            if (!match && tabulator.rdf.Util.string_startswith(matchingString,label))
                 match=true;
             else if (match &&!tabulator.rdf.Util.string_startswith(matchingString,label))
                 break;

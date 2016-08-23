@@ -551,7 +551,7 @@ $rdf.log = {
 }
 
 $rdf.Util = {
-    /** A simple debugging function */         
+    /** A simple debugging function */
     'output': function (o) {
 	    var k = document.createElement('div')
 	    k.textContent = o
@@ -570,25 +570,25 @@ $rdf.Util = {
 	    for (var x=callbacks.length-1; x>=0; x--) {
             obj.callbacks[callbacks[x]] = []
 	    }
-	    
+
 	    obj.addHook = function (hook) {
             if (!obj.callbacks[hook]) { obj.callbacks[hook] = [] }
 	    }
-        
+
 	    obj.addCallback = function (hook, func) {
             obj.callbacks[hook].push(func)
 	    }
-        
+
         obj.removeCallback = function (hook, funcName) {
             for (var i=0;i<obj.callbacks[hook].length;i++){
                 //alert(obj.callbacks[hook][i].name);
                 if (obj.callbacks[hook][i].name==funcName){
-                    
+
                     obj.callbacks[hook].splice(i,1);
                     return true;
                 }
             }
-            return false; 
+            return false;
         }
         obj.insertCallback=function (hook,func){
             obj.callbacks[hook].unshift(func);
@@ -604,19 +604,19 @@ $rdf.Util = {
                     newCallbacks.push(obj.callbacks[hook][x])
                 }
             }
-            
+
             for (var x=newCallbacks.length-1; x>=0; x--) {
                 replaceCallbacks.push(newCallbacks[x])
             }
-            
+
             for (var x=len; x<obj.callbacks[hook].length; x++) {
                 replaceCallbacks.push(obj.callbacks[hook][x])
             }
-            
+
             obj.callbacks[hook] = replaceCallbacks
 	    }
 	},
-    
+
     /**
     * A standard way to create XMLHttpRequest objects
      */
@@ -680,7 +680,7 @@ $rdf.Util = {
 	    }
 	    return headers
 	},
-    
+
     'dtstamp': function () {
 	    var now = new Date();
 	    var year  = now.getYear() + 1900;
@@ -697,7 +697,7 @@ $rdf.Util = {
 	    return year + "-" + month + "-" + day + "T"
             + hour + ":" + minute + ":" + second + "Z";
 	},
-    
+
     'enablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.enablePrivilege) || function() { return; },
     'disablePrivilege': ((typeof netscape != 'undefined') && netscape.security.PrivilegeManager.disablePrivilege) || function() { return; },
 
@@ -707,8 +707,8 @@ $rdf.Util = {
         for(var i=0; i<a.length; i++) {
             //TODO: This used to be the following, which didnt always work..why
             //if(a[i] == x)
-            if (a[i].subject.sameTerm( x.subject ) && 
-                a[i].predicate.sameTerm( x.predicate ) && 
+            if (a[i].subject.sameTerm( x.subject ) &&
+                a[i].predicate.sameTerm( x.predicate ) &&
                 a[i].object.sameTerm( x.object ) &&
                 a[i].why.sameTerm( x.why )) {
                 a.splice(i,1);
@@ -729,14 +729,14 @@ $rdf.Util = {
         } else {
             return;
         }
-        if (p.termType != 'symbol') return;
+        if (p.termType != 'NamedNode') return;
         var docuri = $rdf.Util.uri.docpart(p.uri);
         var fixuri;
         if (p.uri.indexOf('#') < 0) { // No hash
-            
+
             // @@ major hack for dbpedia Categories, which spred indefinitely
-            if ($rdf.Util.string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;  
-            
+            if ($rdf.Util.string_startswith(p.uri, 'http://dbpedia.org/resource/Category:')) return;
+
             /*
               if (string_startswith(p.uri, 'http://xmlns.com/foaf/0.1/')) {
               fixuri = "http://dig.csail.mit.edu/2005/ajar/ajaw/test/foaf"
@@ -758,10 +758,10 @@ $rdf.Util = {
             docuri = fixuri
         }
         if (sf && sf.getState(docuri) != 'unrequested') return;
-        
+
         if (fixuri) {   // only give warning once: else happens too often
             $rdf.log.warn("Assuming server still broken, faking redirect of <" + p.uri +
-                               "> to <" + docuri + ">")	
+                               "> to <" + docuri + ">")
                 }
         sf.requestURI(docuri, requestedBy);
     }, //AJAR_handleNewTerm
@@ -773,7 +773,7 @@ $rdf.Util = {
             if (arr[i] === item) return i;
         return -1;
     }
-    
+
 };
 
 //////////////////////String Utility
@@ -786,7 +786,7 @@ $rdf.Util.string = {
             subs[i] += '';
             result += baseA[i] + subs[i];
         }
-        return result + baseA.slice(subs.length).join(); 
+        return result + baseA.slice(subs.length).join();
     }
 };
 
@@ -847,13 +847,13 @@ $rdf.Util.uri.join = function (given, base) {
 
     if (given.indexOf('/') == 0)	// starts with / but not //
 	return base.slice(0, baseSingle) + given
-    
+
     var path = base.slice(baseSingle)
     var lastSlash = path.lastIndexOf("/")
     if (lastSlash <0) return baseScheme + given
     if ((lastSlash >=0) && (lastSlash < (path.length-1)))
 	path = path.slice(0, lastSlash+1) // Chop trailing filename from base
-    
+
     path = path + given
     while (path.match(/[^\/]*\/\.\.\//)) // must apply to result of prev
 	path = path.replace( /[^\/]*\/\.\.\//, '') // ECMAscript spec 7.8.5
@@ -872,7 +872,7 @@ if (isExtension) {
     }
 } else
     $rdf.Util.uri.join2 = $rdf.Util.uri.join;
-    
+
 //  refTo:    Make a URI relative to a given base
 //
 // based on code in http://www.w3.org/2000/10/swap/uripath.py
@@ -916,7 +916,7 @@ $rdf.Util.uri.docpart = function (uri) {
     var i = uri.indexOf("#")
     if (i < 0) return uri
     return uri.slice(0,i)
-} 
+}
 
 /** return the protocol of a uri **/
 /** return null if there isn't one **/
@@ -955,7 +955,7 @@ $rdf.Symbol = function( uri ) {
     return this;
 }
 
-$rdf.Symbol.prototype.termType = 'symbol';
+$rdf.Symbol.prototype.termType = 'NamedNode';
 $rdf.Symbol.prototype.toString = function () { return ("<" + this.uri + ">"); };
 $rdf.Symbol.prototype.toNT = $rdf.Symbol.prototype.toString;
 
@@ -977,7 +977,7 @@ $rdf.BlankNode = function ( id ) {
     return this
 };
 
-$rdf.BlankNode.prototype.termType = 'bnode';
+$rdf.BlankNode.prototype.termType = 'BlankNode';
 $rdf.BlankNode.prototype.toNT = function() {
     return $rdf.NTAnonymousNodePrefix + this.id
 };
@@ -992,7 +992,7 @@ $rdf.Literal= function (value, lang, datatype) {
     return this;
 }
 
-$rdf.Literal.prototype.termType = 'literal'    
+$rdf.Literal.prototype.termType = 'Literal'
 $rdf.Literal.prototype.toString = function() {
     return ''+this.value;
 };
@@ -1038,7 +1038,7 @@ $rdf.Collection.prototype.unshift=function(el){
 $rdf.Collection.prototype.shift=function(){
     return this.elements.shift();
 }
-        
+
 $rdf.Collection.prototype.close = function () {
     this.closed = true
 }
@@ -1058,7 +1058,7 @@ $rdf.Statement = function(subject, predicate, object, why) {
         if (typeof val == 'object') return val;
         if (typeof val == 'string') return new $rdf.Literal(val);
         if (typeof val == 'number') return new $rdf.Literal(val); // @@ differet types
-        if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined, 
+        if (typeof val == 'boolean') return new $rdf.Literal(val?"1":"0", undefined,
                                                            $rdf.Symbol.prototype.XSDboolean);
         if (typeof val == 'undefined') return undefined;
         alert("Can't make term from " + val + " of type " + typeof val);
@@ -1161,12 +1161,12 @@ $rdf.Formula.prototype.registerFormula = function(accesskey){
 */
 
 $rdf.Variable = function(rel) {
-    this.base = "varid:"; // We deem variabe x to be the symbol varid:x 
+    this.base = "varid:"; // We deem variabe x to be the symbol varid:x
     this.uri = $rdf.Util.uri.join(rel, this.base);
     return this;
 }
 
-$rdf.Variable.prototype.termType = 'variable';
+$rdf.Variable.prototype.termType = 'Variable';
 $rdf.Variable.prototype.toNT = function() {
     if (this.uri.slice(0, this.base.length) == this.base) {
 	return '?'+ this.uri.slice(this.base.length);} // @@ poor man's refTo
@@ -1183,7 +1183,7 @@ $rdf.Formula.prototype.variable = function(name) {
 $rdf.Variable.prototype.hashString = $rdf.Variable.prototype.toNT;
 
 
-// The namespace function generator 
+// The namespace function generator
 
 $rdf.Namespace = function (nsuri) {
     return function(ln) { return new $rdf.Symbol(nsuri+(ln===undefined?'':ln)) }
@@ -1211,7 +1211,7 @@ $rdf.Formula.prototype.fromNT = function(str) {
 	return x
     }
     throw "Can't convert from NT"+str;
-    
+
 }
 
 // ends
@@ -1260,7 +1260,7 @@ $rdf.Formula.prototype.sameTerm = function (other) {
 //
 // When we smush nodes we take the lowest value. This is not
 // arbitrary: we want the value actually used to be the literal
-// (or list or formula). 
+// (or list or formula).
 
 $rdf.Literal.prototype.classOrder = 1
 $rdf.Collection.prototype.classOrder = 3
@@ -1277,7 +1277,7 @@ $rdf.Literal.prototype.compareTerm = function(other) {
     if (this.value < other.value) return -1
     if (this.value > other.value) return +1
     return 0
-} 
+}
 
 $rdf.Symbol.prototype.compareTerm = function(other) {
     if (this.classOrder < other.classOrder) return -1
@@ -1285,7 +1285,7 @@ $rdf.Symbol.prototype.compareTerm = function(other) {
     if (this.uri < other.uri) return -1
     if (this.uri > other.uri) return +1
     return 0
-} 
+}
 
 $rdf.BlankNode.prototype.compareTerm = function(other) {
     if (this.classOrder < other.classOrder) return -1
@@ -1293,7 +1293,7 @@ $rdf.BlankNode.prototype.compareTerm = function(other) {
     if (this.id < other.id) return -1
     if (this.id > other.id) return +1
     return 0
-} 
+}
 
 $rdf.Collection.prototype.compareTerm = $rdf.BlankNode.prototype.compareTerm
 
@@ -1319,7 +1319,7 @@ $rdf.Formula.prototype.each = function(s,p,o,w) {
 $rdf.Formula.prototype.any = function(s,p,o,w) {
     var st = this.anyStatementMatching(s,p,o,w)
     if (typeof st == 'undefined') return undefined;
-    
+
     if (typeof s == 'undefined') return st.subject;
     if (typeof p == 'undefined') return st.predicate;
     if (typeof o == 'undefined') return st.object;
@@ -1358,13 +1358,13 @@ $rdf.Formula.prototype.whether = function(s,p,o,w) {
  * the following license. By obtaining, using and/or copying this work,
  * you (the licensee) agree that you have read, understood, and will
  * comply with the following terms and conditions.
- * 
+ *
  * Permission to copy, modify, and distribute this software and its
  * documentation, with or without modification, for any purpose and
  * without fee or royalty is hereby granted, provided that you include
  * the following on ALL copies of the software and documentation or
  * portions thereof, including modifications:
- * 
+ *
  * 1. The full text of this NOTICE in a location viewable to users of
  * the redistributed or derivative work.
  * 2. Any pre-existing intellectual property disclaimers, notices, or terms and
@@ -1374,18 +1374,18 @@ $rdf.Formula.prototype.whether = function(s,p,o,w) {
  * 3. Notice of any changes or modifications to the files, including the
  * date changes were made. (We recommend you provide URIs to the location
  * from which the code is derived.)
- * 
+ *
  * THIS SOFTWARE AND DOCUMENTATION IS PROVIDED "AS IS," AND COPYRIGHT
  * HOLDERS MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS
  * FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE OR
  * DOCUMENTATION WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS,
  * TRADEMARKS OR OTHER RIGHTS.
- * 
+ *
  * COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL
  * OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR
  * DOCUMENTATION.
- * 
+ *
  * The name and trademarks of copyright holders may NOT be used in
  * advertising or publicity pertaining to the software without specific,
  * written prior permission. Title to copyright in this software and any
@@ -1394,10 +1394,10 @@ $rdf.Formula.prototype.whether = function(s,p,o,w) {
  */
 /**
  * @class Class defining an RDFParser resource object tied to an RDFStore
- *  
+ *
  * @author David Sheets <dsheets@mit.edu>
  * @version 0.1
- * 
+ *
  * @constructor
  * @param {RDFStore} store An RDFStore object
  */
@@ -1450,14 +1450,14 @@ $rdf.RDFParser = function (store) {
 			this['node']['close']()
 		    }
 		},
-	
+
 	/** Add a symbol of a certain type to the this frame */
 		'addSymbol': function (type, uri) {
 		    uri = $rdf.Util.uri.join(uri, this['base'])
 		    this['node'] = this['store']['sym'](uri)
 		    this['nodeType'] = type
 		},
-	
+
 	/** Load any constructed triples into the store */
 		'loadTriple': function () {
 		    if (this['parent']['parent']['collection']) {
@@ -1541,10 +1541,10 @@ $rdf.RDFParser = function (store) {
 			if (this['parser']['bnodes'][id] != null) {
 			    this['node'] = this['parser']['bnodes'][id]
 			} else {
-			    this['node'] = this['parser']['bnodes'][id] = this['store']['bnode']()
+			    this['node'] = this['parser']['bnodes'][id] = this['store']['BlankNode']()
 			}
-		    } else { this['node'] = this['store']['bnode']() }
-		    
+		    } else { this['node'] = this['store']['BlankNode']() }
+
 		    this['nodeType'] = this['NODE']
 		    if (this['isTripleToLoad']()) {
 			this['loadTriple']()
@@ -1562,12 +1562,12 @@ $rdf.RDFParser = function (store) {
 	/** Add a literal to this frame */
 		'addLiteral': function (value) {
 		    if (this['parent']['datatype']) {
-			this['node'] = this['store']['literal'](
+			this['node'] = this['store']['Literal'](
 			    value, "", this['store']['sym'](
 				this['parent']['datatype']))
 		    }
 		    else {
-			this['node'] = this['store']['literal'](
+			this['node'] = this['store']['Literal'](
 			    value, this['lang'])
 		    }
 		    this['nodeType'] = this['NODE']
@@ -1613,7 +1613,7 @@ $rdf.RDFParser = function (store) {
     /**
      * Build our initial scope frame and parse the DOM into triples
      * @param {DOMTree} document The DOM to parse
-     * @param {String} base The base URL to use 
+     * @param {String} base The base URL to use
      * @param {Object} why The context to which this resource belongs
      */
     this['parse'] = function (document, base, why) {
@@ -1632,7 +1632,7 @@ $rdf.RDFParser = function (store) {
 		    var root = children[c]
 		    break
 		}
-	    }	    
+	    }
 	}
 	else if (document['nodeType'] == RDFParser['nodeType']['ELEMENT']) {
 	    var root = document
@@ -1642,9 +1642,9 @@ $rdf.RDFParser = function (store) {
 			    + ". Halting. ")
 	    return false
 	}
-	
+
 	this['why'] = why
-        
+
 
 	// our topmost frame
 
@@ -1652,7 +1652,7 @@ $rdf.RDFParser = function (store) {
         this['base'] = base
 	f['base'] = base
 	f['lang'] = ''
-	
+
 	this['parseDOM'](this['buildFrame'](f,root))
 	return true
     }
@@ -1727,7 +1727,7 @@ $rdf.RDFParser = function (store) {
 			frame['addNode'](about['nodeValue'])
 			dom['removeAttributeNode'](about)
 		    }
-		
+
 		    // Typed nodes
 		    var rdftype = this['getAttributeNodeNS'](dom,
 			RDFParser['ns']['RDF'],"type")
@@ -1748,13 +1748,13 @@ $rdf.RDFParser = function (store) {
 			    dom['removeAttributeNode'](rdftype)
 			}
 		    }
-		    
+
 		    // Property Attributes
 		    for (var x = attrs['length']-1; x >= 0; x--) {
 			this['store']['add'](frame['node'],
 					     this['store']['sym'](
 						 elementURI(attrs[x])),
-					     this['store']['literal'](
+					     this['store']['Literal'](
 						 attrs[x]['nodeValue'],
 						 frame['lang']),
 					     this['why'])
@@ -1890,7 +1890,7 @@ $rdf.RDFParser = function (store) {
     }
 
     /**
-     * Builds scope frame 
+     * Builds scope frame
      * @private
      */
     this['buildFrame'] = function (parent, element) {
@@ -2027,7 +2027,7 @@ var pyjslib_len = function(s) { return s.length }
 
 var pyjslib_slice = function(str, i, j) {
     if (typeof str.slice == 'undefined')
-        throw '@@ mising.js: No .slice function for '+str+' of type '+(typeof str) 
+        throw '@@ mising.js: No .slice function for '+str+' of type '+(typeof str)
     if ((typeof j == 'undefined') || (j ==null)) return str.slice(i);
     return str.slice(i, j) // @ exactly the same spec?
 }
@@ -2054,7 +2054,7 @@ var string_find = function(str, s) {
 var assertFudge = function(condition, desc) {
     if (condition) return;
     if (desc) throw "python Assertion failed: "+desc;
-    throw "(python) Assertion failed.";  
+    throw "(python) Assertion failed.";
 }
 
 
@@ -2163,7 +2163,7 @@ function __SinkParser(store, openFormula, thisDoc, baseURI, genPrefix, metaURI, 
     /*
     note: namespace names should *not* end in #;
     the # will get added during qname processing */
-    
+
     this._bindings = new pyjslib_Dict([]);
     this._flags = flags;
     if ((thisDoc != "")) {
@@ -2237,7 +2237,7 @@ __SinkParser.prototype.loadStream = function(stream) {
 __SinkParser.prototype.loadBuf = function(buf) {
     /*
     Parses a buffer and returns its top level formula*/
-    
+
     this.startDoc();
     this.feed(buf);
     return this.endDoc();
@@ -2245,13 +2245,13 @@ __SinkParser.prototype.loadBuf = function(buf) {
 __SinkParser.prototype.feed = function(octets) {
     /*
     Feed an octet stream tothe parser
-    
+
     if BadSyntax is raised, the string
     passed in the exception object is the
     remainder after any statements have been parsed.
     So if there is more data to feed to the
     parser, it should be straightforward to recover.*/
-    
+
     var str = octets.decode("utf-8");
     var i = 0;
     while ((i >= 0)) {
@@ -2329,24 +2329,24 @@ __SinkParser.prototype.directive = function(str, i) {
         if ((i < 0)) {
             throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad variable list after @forAll");
         }
-        
+
         var __x = new pyjslib_Iterator(res);
         try {
             while (true) {
                 var x = __x.next();
-                
-                
+
+
                 if ($rdf.Util.ArrayIndexOf(this._variables,x) < 0 || ($rdf.Util.ArrayIndexOf(this._parentVariables,x) >= 0)) {
                     this._variables[x] = ( this._context.newUniversal(x));
                 }
-                
+
             }
         } catch (e) {
             if (e != StopIteration) {
                 throw e;
             }
         }
-        
+
         return i;
     }
     var j = this.tok("forSome", str, i);
@@ -2355,22 +2355,22 @@ __SinkParser.prototype.directive = function(str, i) {
         if ((i < 0)) {
             throw BadSyntax(this._thisDoc, this.lines, str, i, "Bad variable list after @forSome");
         }
-        
+
         var __x = new pyjslib_Iterator(res);
         try {
             while (true) {
                 var x = __x.next();
-                
-                
+
+
                 this._context.declareExistential(x);
-                
+
             }
         } catch (e) {
             if (e != StopIteration) {
                 throw e;
             }
         }
-        
+
         return i;
     }
     var j = this.tok("prefix", str, i);
@@ -2393,7 +2393,7 @@ __SinkParser.prototype.directive = function(str, i) {
         }
         assertFudge((ns.indexOf(":") >= 0));
         this._bindings[t[0][0]] = ( ns);
-        
+
         this.bind(t[0][0], hexify(ns));
         return j;
     }
@@ -2427,7 +2427,7 @@ __SinkParser.prototype.bind = function(qn, uri) {
 __SinkParser.prototype.setKeywords = function(k) {
     /*
     Takes a list of strings*/
-    
+
     if ((k == null)) {
         this.keywordsSet = 0;
     }
@@ -2441,7 +2441,7 @@ __SinkParser.prototype.startDoc = function() {
 __SinkParser.prototype.endDoc = function() {
     /*
     Signal end of document and stop parsing. returns formula*/
-    
+
     return this._formula;
 };
 __SinkParser.prototype.makeStatement = function(quad) {
@@ -2473,7 +2473,7 @@ __SinkParser.prototype.verb = function(str, i, res) {
     >- prop ->
     <- prop -<
     _operator_*/
-    
+
     var j = this.skipSpace(str, i);
     if ((j < 0)) {
         return j;
@@ -2551,7 +2551,7 @@ __SinkParser.prototype.path = function(str, i, res) {
     /*
     Parse the path production.
     */
-    
+
     var j = this.nodeOrLiteral(str, i, res);
     if ((j < 0)) {
         return j;
@@ -2584,7 +2584,7 @@ __SinkParser.prototype.path = function(str, i, res) {
 __SinkParser.prototype.anonymousNode = function(ln) {
     /*
     Remember or generate a term for one of these _: anonymous nodes*/
-    
+
     var term = this._anonymousNodes[ln];
     if (term) {
         return term;
@@ -2600,7 +2600,7 @@ __SinkParser.prototype.node = function(str, i, res, subjectAlready) {
     Space is now skipped once at the beginning
     instead of in multipe calls to self.skipSpace().
     */
-    
+
     var subj = subjectAlready;
     var j = this.skipSpace(str, i);
     if ((j < 0)) {
@@ -2618,26 +2618,26 @@ __SinkParser.prototype.node = function(str, i, res, subjectAlready) {
             var i =  ( j + 1 ) ;
             var objs = new pyjslib_List([]);
             var j = this.objectList(str, i, objs);
-            
+
             if ((j >= 0)) {
                 var subj = objs[0];
                 if ((pyjslib_len(objs) > 1)) {
-                    
+
                     var __obj = new pyjslib_Iterator(objs);
                     try {
                         while (true) {
                             var obj = __obj.next();
-                            
-                            
+
+
                             this.makeStatement(new pyjslib_Tuple([this._context, this._store.sym(DAML_sameAs_URI), subj, obj]));
-                            
+
                         }
                     } catch (e) {
                         if (e != StopIteration) {
                             throw e;
                         }
                     }
-                    
+
                 }
                 var j = this.skipSpace(str, j);
                 if ((j < 0)) {
@@ -2801,7 +2801,7 @@ __SinkParser.prototype.property_list = function(str, i, subj) {
     Parse property list
     Leaves the terminating punctuation in the buffer
     */
-    
+
     while (1) {
         var j = this.skipSpace(str, i);
         if ((j < 0)) {
@@ -2829,13 +2829,13 @@ __SinkParser.prototype.property_list = function(str, i, subj) {
         if ((i < 0)) {
             throw BadSyntax(this._thisDoc, this.lines, str, j, "objectList expected");
         }
-        
+
         var __obj = new pyjslib_Iterator(objs);
         try {
             while (true) {
                 var obj = __obj.next();
-                
-                
+
+
                 var pairFudge = v[0];
                 var dir = pairFudge[0];
                 var sym = pairFudge[1];
@@ -2845,14 +2845,14 @@ __SinkParser.prototype.property_list = function(str, i, subj) {
                 else {
                     this.makeStatement(new pyjslib_Tuple([this._context, sym, obj, subj]));
                 }
-                
+
             }
         } catch (e) {
             if (e != StopIteration) {
                 throw e;
             }
         }
-        
+
         var j = this.skipSpace(str, i);
         if ((j < 0)) {
             throw BadSyntax(this._thisDoc, this.lines, str, j, "EOF found in list of objects");
@@ -2868,11 +2868,11 @@ __SinkParser.prototype.commaSeparatedList = function(str, j, res, ofUris) {
     /*
     return value: -1 bad syntax; >1 new position in str
     res has things found appended
-    
+
     Used to use a final value of the function to be called, e.g. this.bareWord
     but passing the function didn't work fo js converion pyjs
     */
-    
+
     var i = this.skipSpace(str, j);
     if ((i < 0)) {
         throw BadSyntax(this._thisDoc, this.lines, str, i, "EOF found expecting comma sep list");
@@ -2954,12 +2954,12 @@ __SinkParser.prototype.checkDot = function(str, i) {
 __SinkParser.prototype.uri_ref2 = function(str, i, res) {
     /*
     Generate uri from n3 representation.
-    
+
     Note that the RDF convention of directly concatenating
     NS and local name is now used though I prefer inserting a '#'
     to make the namesapces look more like what XML folks expect.
     */
-    
+
     var qn = new pyjslib_List([]);
     var j = this.qname(str, i, qn);
     if ((j >= 0)) {
@@ -3073,7 +3073,7 @@ __SinkParser.prototype.variable = function(str, i, res) {
     /*
     ?abc -> variable(:abc)
     */
-    
+
     var j = this.skipSpace(str, i);
     if ((j < 0)) {
         return -1;
@@ -3100,7 +3100,7 @@ __SinkParser.prototype.bareWord = function(str, i, res) {
     /*
     abc -> :abc
     */
-    
+
     var j = this.skipSpace(str, i);
     if ((j < 0)) {
         return -1;
@@ -3121,12 +3121,12 @@ __SinkParser.prototype.bareWord = function(str, i, res) {
 };
 __SinkParser.prototype.qname = function(str, i, res) {
     /*
-    
+
     xyz:def -> ('xyz', 'def')
     If not in keywords and keywordsSet: def -> ('', 'def')
-    :def -> ('', 'def')    
+    :def -> ('', 'def')
     */
-    
+
     var i = this.skipSpace(str, i);
     if ((i < 0)) {
         return -1;
@@ -3258,13 +3258,13 @@ __SinkParser.prototype.nodeOrLiteral = function(str, i, res) {
             var lang = null;
             if ((pyjslib_slice(str, j,  ( j + 1 ) ) == "@")) {
                 langcode.lastIndex = 0;
-                
+
                 var m = langcode.exec(str.slice( ( j + 1 ) ));
                 if ((m == null)) {
                     throw BadSyntax(this._thisDoc, startline, str, i, "Bad language code syntax on string literal, after @");
                 }
                 var i =  (  ( langcode.lastIndex + j )  + 1 ) ;
-                
+
                 var lang = pyjslib_slice(str,  ( j + 1 ) , i);
                 var j = i;
             }
@@ -3286,7 +3286,7 @@ __SinkParser.prototype.strconst = function(str, i, delim) {
     parse an N3 string constant delimited by delim.
     return index, val
     */
-    
+
     var j = i;
     var ustr = "";
     var startline = this.lines;
@@ -3436,24 +3436,24 @@ function BadSyntax(uri, lines, str, i, why) {
 
 function stripCR(str) {
     var res = "";
-    
+
     var __ch = new pyjslib_Iterator(str);
     try {
         while (true) {
             var ch = __ch.next();
-            
-            
+
+
             if ((ch != "\r")) {
                 var res =  ( res + ch ) ;
             }
-            
+
         }
     } catch (e) {
         if (e != StopIteration) {
             throw e;
         }
     }
-    
+
     return res;
 }
 
@@ -3469,7 +3469,7 @@ return SinkParser;
 // This file provides  IndexedFormula a formula (set of triples) which
 // indexed by predicate, subject and object.
 //
-// It "smushes"  (merges into a single node) things which are identical 
+// It "smushes"  (merges into a single node) things which are identical
 // according to owl:sameAs or an owl:InverseFunctionalProperty
 // or an owl:FunctionalProperty
 //
@@ -3477,7 +3477,7 @@ return SinkParser;
 //  2005-10 Written Tim Berners-Lee
 //  2007    Changed so as not to munge statements from documents when smushing
 //
-// 
+//
 
 /*jsl:option explicit*/ // Turn on JavaScriptLint variable declaration checking
 
@@ -3523,7 +3523,7 @@ $rdf.IndexedFormula = function(features) {
         var x = formula.classActions[obj.hashString()];
         var done = false;
         if (x) {
-            for (var i=0; i<x.length; i++) {                
+            for (var i=0; i<x.length; i++) {
                 done = done || x[i](formula, subj, pred, obj, why);
             }
         }
@@ -3641,9 +3641,9 @@ $rdf.IndexedFormula.prototype.replaceWith = function(big, small) {
         } else {
             ix[newhash] = oldlist.concat(newlist);
         }
-        delete ix[oldhash];    
+        delete ix[oldhash];
     }
-    
+
     // the canonical one carries all the indexes
     for (var i=0; i<4; i++) {
         moveIndex(this.index[i]);
@@ -3655,26 +3655,26 @@ $rdf.IndexedFormula.prototype.replaceWith = function(big, small) {
 	    if (this.aliases[newhash] == undefined)
 	        this.aliases[newhash] = [];
 	    this.aliases[newhash].push(big); // Back link
-        
+
         if( this.aliases[oldhash] ) {
             for( var i = 0; i < this.aliases[oldhash].length; i++ ) {
                 this.redirections[this.aliases[oldhash][i].hashString()] = small;
                 this.aliases[newhash].push(this.aliases[oldhash][i]);
-            }            
+            }
         }
-        
+
 	    this.add(small, this.sym('http://www.w3.org/2006/link#uri'), big.uri)
-        
+
 	    // If two things are equal, and one is requested, we should request the other.
 	    if (this.sf) {
 	        this.sf.nowKnownAs(big, small)
-	    }    
+	    }
     }
-    
+
     moveIndex(this.classActions);
     moveIndex(this.propertyActions);
 
-    //$rdf.log.debug("Equate done. "+big+" to be known as "+small)    
+    //$rdf.log.debug("Equate done. "+big+" to be known as "+small)
     return true;  // true means the statement does not need to be put in
 };
 
@@ -3713,22 +3713,22 @@ $rdf.IndexedFormula.prototype.uris = function(term) {
 }
 
 // On input parameters, convert constants to terms
-// 
+//
 function RDFMakeTerm(formula,val, canonicalize) {
-    if (typeof val != 'object') {   
+    if (typeof val != 'object') {
 	    if (typeof val == 'string')
 	        return new $rdf.Literal(val);
         if (typeof val == 'number')
             return new $rdf.Literal(val); // @@ differet types
         if (typeof val == 'boolean')
-            return new $rdf.Literal(val?"1":"0", undefined, 
+            return new $rdf.Literal(val?"1":"0", undefined,
                                     $rdf.Symbol.prototype.XSDboolean);
 	    else if (typeof val == 'number')
 	        return new $rdf.Literal(''+val);   // @@ datatypes
 	    else if (typeof val == 'undefined')
 	        return undefined;
 	    else    // @@ add converting of dates and numbers
-	        throw "Can't make Term from " + val + " of type " + typeof val; 
+	        throw "Can't make Term from " + val + " of type " + typeof val;
     }
     return val;
 }
@@ -3742,14 +3742,14 @@ $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
     pred = RDFMakeTerm(this, pred);
     obj = RDFMakeTerm(this, obj);
     why = RDFMakeTerm(this, why);
-    
+
     var hash = [ this.canon(subj).hashString(), this.canon(pred).hashString(),
             this.canon(obj).hashString(), this.canon(why).hashString()];
 
 
     if (this.predicateCallback != undefined)
 	this.predicateCallback(this, pred, why);
-	
+
     // Action return true if the statement does not need to be added
     var actions = this.propertyActions[hash[1]]; // Predicate hash
     var done = false;
@@ -3759,7 +3759,7 @@ $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
             done = done || actions[i](this, subj, pred, obj, why);
         }
     }
-    
+
     //If we are tracking provenanance, every thing should be loaded into the store
     //if (done) return new Statement(subj, pred, obj, why); // Don't put it in the store
                                                              // still return this statement for owl:sameAs input
@@ -3770,7 +3770,7 @@ $rdf.IndexedFormula.prototype.add = function(subj, pred, obj, why) {
         if (ix[h] == undefined) ix[h] = [];
         ix[h].push(st); // Set of things with this as subject
     }
-    
+
     //$rdf.log.debug("ADDING    {"+subj+" "+pred+" "+obj+"} "+why);
     this.statements.push(st);
     return st;
@@ -3805,7 +3805,7 @@ $rdf.IndexedFormula.prototype.anyStatementMatching = function(subj,pred,obj,why)
 // ALL CONVENIENCE LOOKUP FUNCTIONS RELY ON THIS!
 $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,justOne) {
     //$rdf.log.debug("Matching {"+subj+" "+pred+" "+obj+"}");
-    
+
     var pat = [ subj, pred, obj, why ];
     var pattern = [];
     var hash = [];
@@ -3832,11 +3832,11 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
         }
         return list == undefined ? [] : list;
     }
-    
+
     // Now given.length is 2, 3 or 4.
     // We hope that the scale-free nature of the data will mean we tend to get
     // a short index in there somewhere!
-    
+
     var best = 1e10; // really bad
     var best_i;
     for (var i=0; i<given.length; i++) {
@@ -3848,7 +3848,7 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
             best_i = i;  // (not p!)
         }
     }
-    
+
     // Ok, we have picked the shortest index but now we have to filter it
     var best_p = given[best_i];
     var possibles = this.index[best_p][hash[best_p]];
@@ -3860,7 +3860,7 @@ $rdf.IndexedFormula.prototype.statementsMatching = function(subj,pred,obj,why,ju
         for (var i=0; i <check.length; i++) { // for each position to be checked
             var p = check[i];
             if (!this.canon(st[parts[p]]).sameTerm(pattern[p])) {
-                st = null; 
+                st = null;
                 break;
             }
         }
@@ -3908,21 +3908,21 @@ $rdf.IndexedFormula.prototype.removeMany = function (subj, pred, obj, why, limit
 
 /*  @method: copyTo
     @discription: replace @template with @target and add appropriate triples (no triple removed)
-                  one-direction replication 
-*/ 
+                  one-direction replication
+*/
 $rdf.IndexedFormula.prototype.copyTo = function(template,target,flags){
     if (!flags) flags=[];
     var statList=this.statementsMatching(template);
-    if ($rdf.Util.ArrayIndexOf(flags,'two-direction')!=-1) 
+    if ($rdf.Util.ArrayIndexOf(flags,'two-direction')!=-1)
         statList.concat(this.statementsMatching(undefined,undefined,template));
     for (var i=0;i<statList.length;i++){
         var st=statList[i];
         switch (st.object.termType){
-            case 'symbol':
+            case 'NamedNode':
                 this.add(target,st.predicate,st.object);
                 break;
-            case 'literal':
-            case 'bnode':
+            case 'Literal':
+            case 'BlankNode':
             case 'collection':
                 this.add(target,st.predicate,st.object.copy(this));
         }
@@ -3930,7 +3930,7 @@ $rdf.IndexedFormula.prototype.copyTo = function(template,target,flags){
     }
 };
 //for the case when you alter this.value (text modified in userinput.js)
-$rdf.Literal.prototype.copy = function(){ 
+$rdf.Literal.prototype.copy = function(){
     return new $rdf.Literal(this.value,this.lang,this.datatype);
 };
 $rdf.BlankNode.prototype.copy = function(formula){ //depends on the formula
@@ -4074,7 +4074,7 @@ $rdf.QuerySource = function() {
             if(this.listeners[i]===listener) {
                 delete this.listeners[i];
             }
-        } 
+        }
     };
 }
 
@@ -4090,11 +4090,11 @@ $rdf.Collection.prototype.isVar = 0;
 // fetcher() waits for all the requested URIs to come in
 $rdf.IndexedFormula.prototype.query = function(foodog, callback, fetcher) {
     var kb = this;
-    //FUNCTIONS!! 
+    //FUNCTIONS!!
     //TODO:  Do these work here?
 
 
-// Unification: see also 
+// Unification: see also
 //  http://www.w3.org/2000/10/swap/term.py
 // for similar things in python
 //
@@ -4128,7 +4128,7 @@ function RDFUnifyTerm(self, other, bindings, formula) {
         return RDFArrayUnifyContents(self, other, bindings)
     };
     alert('oops - code not written yet');
-    return undefined;  // for lint 
+    return undefined;  // for lint
 //    return actual.unifyContents(other, bindings)
 }; //RDFUnifyTerm
 
@@ -4178,7 +4178,7 @@ function RDFBind(x, binding) {
 /** prepare -- sets the index of the item to the possible matches
     * @param f - formula
     * @param item - an Statement, possibly w/ vars in it
-    * @param bindings - 
+    * @param bindings -
 * @returns true if the query fails -- there are no items that match **/
 function prepare(f, item, bindings) {
     item.nvars = 0;
@@ -4186,7 +4186,7 @@ function prepare(f, item, bindings) {
     if (!f.statements) $rdf.log.warn("@@@ prepare: f is "+f);
 //    $rdf.log.debug("Prepare: f has "+ f.statements.length);
     $rdf.log.debug("Prepare: Kb size "+f.statements.length+" Preparing "+item);
-    
+
     var t,c,terms = [item.subject,item.predicate,item.object],ind = [f.subjectIndex,f.predicateIndex,f.objectIndex];
     for (i=0;i<3;i++)
     {
@@ -4205,13 +4205,13 @@ function prepare(f, item, bindings) {
         	}
     	}
     }
-    	
+
     if (item.index == null) item.index = f.statements;
     // $rdf.log.debug("Prep: index length="+item.index.length+" for "+item)
     $rdf.log.debug("prepare: index length "+item.index.length +" for "+ item);
     return false;
 } //prepare
-    
+
 /** sorting function -- negative if self is easier **/
 // We always prefer to start with a URI to be able to browse a graph
 // this is why we put off items with more variables till later.
@@ -4268,11 +4268,11 @@ function match(f, g, bindingsSoFar, level, fetcher, callback, branchCount) {
 			       return false
 			   })
       }
-            fetcher(requestedTerm, id)	    
+            fetcher(requestedTerm, id)
 	}
     for (i=0; i<n; i++) {
             item = pattern[i];  //for each of the triples in the query
-            if (item.subject in bindingsSoFar 
+            if (item.subject in bindingsSoFar
 		&& bindingsSoFar[item.subject].uri
 		&& sf && sf.getState($rdf.Util.uri.docpart(bindingsSoFar[item.subject].uri)) == "unrequested") {
 		//fetch the subject info and return to id
@@ -4308,13 +4308,13 @@ function match2(f, g, bindingsSoFar, level, fetcher, callback, branchCount) //po
     var rest = f.formula();
     rest.optional = g.optional;
     rest.constraints = g.constraints;
-    rest.statements = pattern.slice(1); // No indexes: we will not query g. 
+    rest.statements = pattern.slice(1); // No indexes: we will not query g.
     $rdf.log.debug(level + "Match2 searching "+item.index.length+ " for "+item+
             "; bindings so far="+bindingDebug(bindingsSoFar));
     //var results = [];
     var c, nc=item.index.length, nbs1, x;
     for (c=0; c<nc; c++) {   // For each candidate statement
-        var st = item.index[c]; //for each statement in the item's index, spawn a new match with that binding 
+        var st = item.index[c]; //for each statement in the item's index, spawn a new match with that binding
         nbs1 = RDFArrayUnifyContents(
                 [item.subject, item.predicate, item.object],
         [st.subject, st.predicate, st.object], bindingsSoFar, f);
@@ -4323,7 +4323,7 @@ function match2(f, g, bindingsSoFar, level, fetcher, callback, branchCount) //po
         branchCount.count+=nk;
         for (k=0; k<nk; k++) {  // For each way that statement binds
             var bindings2 = [];
-            var newBindings1 = nbs1[k][0]; 
+            var newBindings1 = nbs1[k][0];
             if (!constraintsSatisfied(newBindings1,g.constraints)) {branchCount--; continue;}
             for (v in newBindings1){
                 bindings2[v] = newBindings1[v]; // copy
@@ -4389,7 +4389,7 @@ function bindingDebug(b) {
                 $rdf.Util.AJAR_handleNewTerm(kb, x, requestedBy);
             }
         };
-    } 
+    }
     //prepare, oncallback: match1
     //match1: fetcher, oncallback: match2
     //match2, oncallback: populatetable
@@ -4397,7 +4397,7 @@ function bindingDebug(b) {
     var f = this;
     $rdf.log.debug("Query on "+this.statements.length)
 //    if (kb != this) alert("@@@@??? this="+ this)
-	
+
 	//kb.remoteQuery(foodog,'http://jena.hpl.hp.com:3040/backstage',callback);
 	//return;
 	function branchCount ()
@@ -4410,7 +4410,7 @@ function bindingDebug(b) {
 		//this.onComplete = callback({foodog.vars[0]:new $rdf.Literal("Done")})
 		return this;
 	}
-	
+
 	function optionalCallback (bindings,pat)
 	{
 		if (pat.optional.length==0) callback(bindings);
@@ -4440,7 +4440,7 @@ function bindingDebug(b) {
         }
     }
     $rdf.log.debug("Returning from query length="+res.length+" bindings: "+bindingsDebug(res));
-        
+
     return res;
     */
     return; //returns nothing; callback does the work
@@ -4454,12 +4454,12 @@ function SQuery ()
 	this.terms = [];
 	return this;
 }
-	
+
 STerm.prototype.toString = STerm.val;
 SQuery.prototype.add = function (str) {this.terms.push()}*/
 
 $rdf.queryToSPARQL = function(query)
-{	
+{
 	var indent=0;
 	function getSelect (query)
 	{
@@ -4469,7 +4469,7 @@ $rdf.queryToSPARQL = function(query)
 		str+="\n";
 		return str;
 	}
-	
+
 	function getPattern (pat)
 	{
 		var str = "";
@@ -4481,7 +4481,7 @@ $rdf.queryToSPARQL = function(query)
 		}
 		return str;
 	}
-	
+
 	function getConstraints (pat)
 	{
 		var str="";
@@ -4492,7 +4492,7 @@ $rdf.queryToSPARQL = function(query)
 		}
 		return str;
 	}
-	
+
 	function getOptionals (pat)
 	{
 		var str = ""
@@ -4510,7 +4510,7 @@ $rdf.queryToSPARQL = function(query)
 		}
 	return str;
 	}
-	
+
 	function getWhere (pat)
 	{
 		var str = addIndent() + "WHERE \n" + "{ \n";
@@ -4522,7 +4522,7 @@ $rdf.queryToSPARQL = function(query)
 		str+="}"
 		return str;
 	}
-	
+
 	function addIndent()
 	{
 		var str="";
@@ -4530,12 +4530,12 @@ $rdf.queryToSPARQL = function(query)
 			str+="    ";
 		return str;
 	}
-	
+
 	function getSPARQL (query)
 	{
 		return getSelect(query) + getWhere(query.pat);
 	}
-		
+
 	return getSPARQL (query)
 }
 
@@ -4543,7 +4543,7 @@ $rdf.queryToSPARQL = function(query)
  * @SPARQL: SPARQL text that is converted to a query object which is returned.
  * @testMode: testing flag. Prevents loading of sources.
  */
- 
+
 $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 {
 	//AJAR_ClearTable();
@@ -4555,18 +4555,18 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		variableHash[name] = newVar;
 		return newVar
 	}
-	
-	//term type functions			
+
+	//term type functions
 	function isRealText(term) { return (typeof term == 'string' && term.match(/[^ \n\t]/)) }
 	function isVar(term) { return (typeof term == 'string' && term.match(/^[\?\$]/)) }
 	function fixSymbolBrackets(term) { if (typeof term == 'string') return term.replace(/^&lt;/,"<").replace(/&gt;$/,">"); else return term }
 	function isSymbol(term) { return (typeof term == 'string' && term.match(/^<[^>]*>$/)) }
 	function isBnode(term) { return (typeof term == 'string' && (term.match(/^_:/)||term.match(/^$/))) }
 	function isPrefix(term) { return (typeof term == 'string' && term.match(/:$/)) }
-	function isPrefixedSymbol(term) { return (typeof term == 'string' && term.match(/^:|^[^_][^:]*:/)) } 
+	function isPrefixedSymbol(term) { return (typeof term == 'string' && term.match(/^:|^[^_][^:]*:/)) }
 	function getPrefix(term) { var a = term.split(":"); return a[0] }
 	function getSuffix(term) { var a = term.split(":"); return a[1] }
-	function removeBrackets(term) { if (isSymbol(term)) {return term.slice(1,term.length-1)} else return term }	
+	function removeBrackets(term) { if (isSymbol(term)) {return term.slice(1,term.length-1)} else return term }
 	//takes a string and returns an array of strings and Literals in the place of literals
 	function parseLiterals (str)
 	{
@@ -4578,14 +4578,14 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 			var a = new Array(1);
 			a[0]=str;
 			return a;
-		}	
+		}
 		var res = new Array(2);
 		if (!sin || (doub && doub<sin)) {var br='"'; var ind = doub}
 		else if (!doub || (sin && sin<doub)) {var br="'"; var ind = sin}
 		else {$rdf.log.error ("SQARQL QUERY OOPS!"); return res}
 		res[0] = str.slice(0,ind);
 		var end = str.slice(ind+1).indexOf(br);
-		if (end==-1) 
+		if (end==-1)
 		{
 			$rdf.log.error("SPARQL parsing error: no matching parentheses in literal "+str);
 			return str;
@@ -4607,8 +4607,8 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 			//alert(res[1].datatype.uri)
 			res = res.concat(parseLiterals(str.slice(end+ind+2+end2)));
 		}
-		
-		else 
+
+		else
 		{
 		res[1]=kb.literal(str.slice(ind+1,ind+1+end),"",null)
 		$rdf.log.info("Literal found: "+res[1]);
@@ -4616,8 +4616,8 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		}
 		return res;
 	}
-	
-	
+
+
 	function spaceDelimit (str)
 	{
 		var str = str.replace(/\(/g," ( ").replace(/\)/g," ) ").replace(/</g," <").replace(/>/g,"> ").replace(/{/g," { ").replace(/}/g," } ").replace(/[\t\n\r]/g," ").replace(/; /g," ; ").replace(/\. /g," . ").replace(/, /g," , ");
@@ -4631,13 +4631,13 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		}
 		return res;
 	}
-	
+
 	function replaceKeywords(input) {
 		var strarr = input;
 		for (var x=0;x<strarr.length;x++)
 		{
 			if (strarr[x]=="a") strarr[x] = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
-			if (strarr[x]=="is" && strarr[x+2]=="of") 
+			if (strarr[x]=="is" && strarr[x+2]=="of")
 			{
 				strarr.splice(x,1);
 				strarr.splice(x+1,1) ;
@@ -4648,7 +4648,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		}
 		return strarr;
 	}
-	
+
 	function toTerms (input)
 	{
 		var res = []
@@ -4683,7 +4683,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		}
 		return res;
 	}
-	
+
 	function tokenize (str)
 	{
 		var token1 = parseLiterals(str);
@@ -4699,7 +4699,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 	$rdf.log.info("SPARQL Tokens: "+token2);
 	return token2;
     }
-    
+
     //CASE-INSENSITIVE
 	function arrayIndexOf (str,arr)
 	{
@@ -4712,7 +4712,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		//$rdf.log.warn("No instance of "+str+" in array "+arr);
 		return null;
 	}
-	
+
 	//CASE-INSENSITIVE
 	function arrayIndicesOf (str,arr)
 	{
@@ -4725,8 +4725,8 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		}
 		return ind;
 	}
-				
-	
+
+
 	function setVars (input,query)
 	{
 		$rdf.log.info("SPARQL vars: "+input);
@@ -4744,11 +4744,11 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 				$rdf.log.warn("Incorrect SPARQL variable in SELECT: "+input[x]);
 		}
 	}
-	
+
 
 	function getPrefixDeclarations (input)
 	{
-		
+
 		var prefInd = arrayIndicesOf ("PREFIX",input), res = [];
 		for (i in prefInd)
 		{
@@ -4766,7 +4766,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		}
 		return res;
 	}
-	
+
 	function getMatchingBracket(arr,open,close)
 	{
 		$rdf.log.info("Looking for a close bracket of type "+close+" in "+arr);
@@ -4780,32 +4780,32 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		$rdf.log.error("Statement had no close parenthesis in SPARQL query");
 		return 0;
 	}
-	
 
-	
+
+
     function constraintGreaterThan (value)
     {
         this.describe = function (varstr) { return varstr + " > "+value.toNT() }
         this.test = function (term) {
             if (term.value.match(/[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/))
-                return (parseFloat(term.value) > parseFloat(value)); 
-            else return (term.toNT() > value.toNT()); 
+                return (parseFloat(term.value) > parseFloat(value));
+            else return (term.toNT() > value.toNT());
         }
         return this;
     }
-    
+
     function constraintLessThan (value) //this is not the recommended usage. Should only work on literal, numeric, dateTime
     {
         this.describe = function (varstr) { return varstr + " < "+value.toNT() }
         this.test = function (term) {
             //this.describe = function (varstr) { return varstr + " < "+value }
             if (term.value.match(/[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?/))
-                return (parseFloat(term.value) < parseFloat(value)); 
-            else return (term.toNT() < value.toNT()); 
+                return (parseFloat(term.value) < parseFloat(value));
+            else return (term.toNT() < value.toNT());
         }
         return this;
     }
-    
+
     function constraintEqualTo (value) //This should only work on literals but doesn't.
     {
         this.describe = function (varstr) { return varstr + " = "+value.toNT() }
@@ -4814,19 +4814,19 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
         }
         return this;
     }
-    
+
     function constraintRegexp (value) //value must be a literal
     {
         this.describe = function (varstr) { return "REGEXP( '"+value+"' , "+varstr+" )"}
-        this.test=function(term) { 
+        this.test=function(term) {
             var str = value;
             //str = str.replace(/^//,"").replace(//$/,"")
-            var rg = new RegExp(str); 
-            if (term.value) return rg.test(term.value); 
+            var rg = new RegExp(str);
+            if (term.value) return rg.test(term.value);
             else return false;
         }
-    }					
-	
+    }
+
 
 	function setConstraint(input,pat)
 	{
@@ -4850,21 +4850,21 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 			else
 				$rdf.log.warn("I don't know how to handle the constraint: "+input);
 		}
-		else if (input.length == 6 && typeof input[0] == 'string' && input[0].toLowerCase() == 'regexp' 
-					&& input[1] == '(' && input[5] == ')' && input[3] == ',' && input[4].termType == 'variable'
-					&& input[2].termType == 'literal')
+		else if (input.length == 6 && typeof input[0] == 'string' && input[0].toLowerCase() == 'regexp'
+					&& input[1] == '(' && input[5] == ')' && input[3] == ',' && input[4].termType == 'Variable'
+					&& input[2].termType == 'Literal')
 					{
 						$rdf.log.debug("Constraint added: "+input)
 						pat.constraints[input[4]]=new constraintRegexp(input[2].value)
 					}
-		
+
 			//$rdf.log.warn("I don't know how to handle the constraint: "+input);
-		
+
 		//alert("length: "+input.length+" input 0 type: "+input[0].termType+" input 1: "+input[1]+" input[2] type: "+input[2].termType);
 	}
-	
 
-	
+
+
 	function setOptional (terms, pat)
 	{
 		$rdf.log.debug("Optional query: "+terms+" not yet implemented.");
@@ -4872,7 +4872,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 		setWhere (terms, opt)
 		pat.optional.push(opt);
 	}
-	
+
 	function setWhere (input,pat)
 	{
 		var terms = toTerms(input)
@@ -4910,9 +4910,9 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 			}
 		}
 		$rdf.log.debug("WHERE after filters and optionals: "+terms)
-		extractStatements (terms,pat)	
+		extractStatements (terms,pat)
 	}
-	
+
 	function extractStatements (terms, formula)
 	{
 		var arrayZero = new Array(1); arrayZero[0]=-1;  //this is just to add the beginning of the where to the periods index.
@@ -4950,8 +4950,8 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 			}
 		}
 	}
-		
-	//*******************************THE ACTUAL CODE***************************//	
+
+	//*******************************THE ACTUAL CODE***************************//
 	$rdf.log.info("SPARQL input: \n"+SPARQL);
 	var q = new $rdf.Query();
 	var sp = tokenize (SPARQL); //first tokenize everything
@@ -4967,17 +4967,17 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
 	setVars (sp.slice(selectLoc+1,whereLoc),q);
 
 	setWhere (sp.slice(whereLoc+2,sp.length-1),q.pat);
-	
+
     if (testMode) return q;
     for (x in q.pat.statements)
     {
 	var st = q.pat.statements[x]
-	if (st.subject.termType == 'symbol'
+	if (st.subject.termType == 'NamedNode'
 	    /*&& sf.isPending(st.subject.uri)*/) { //This doesn't work.
 	    //sf.requestURI(st.subject.uri,"sparql:"+st.subject) Kenny: I remove these two
 	    if($rdf.sf) $rdf.sf.lookUpThing(st.subject,"sparql:"+st.subject);
 	}
-	if (st.object.termType == 'symbol'
+	if (st.object.termType == 'NamedNode'
 	    /*&& sf.isPending(st.object.uri)*/) {
 	    //sf.requestURI(st.object.uri,"sparql:"+st.object)
 	    if($rdf.sf) $rdf.sf.lookUpThing(st.object,"sparql:"+st.object);
@@ -4986,7 +4986,7 @@ $rdf.SPARQLToQuery = function(SPARQL, testMode, kb)
     //alert(q.pat);
     return q;
     //checkVars()
-    
+
     //*******************************************************************//
 }
 
@@ -4998,21 +4998,21 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 	function isSymbol(term) { return (typeof term == 'string' && term.match(/^<[^>]*>$/)) }
 	function isBnode(term) { return (typeof term == 'string' && (term.match(/^_:/)||term.match(/^$/))) }
 	function isPrefix(term) { return (typeof term == 'string' && term.match(/:$/)) }
-	function isPrefixedSymbol(term) { return (typeof term == 'string' && term.match(/^:|^[^_][^:]*:/)) } 
+	function isPrefixedSymbol(term) { return (typeof term == 'string' && term.match(/^:|^[^_][^:]*:/)) }
 	function getPrefix(term) { var a = term.split(":"); return a[0] }
 	function getSuffix(term) { var a = term.split(":"); return a[1] }
-	function removeBrackets(term) { if (isSymbol(term)) {return term.slice(1,term.length-1)} else return term }	
-	
+	function removeBrackets(term) { if (isSymbol(term)) {return term.slice(1,term.length-1)} else return term }
+
 	function parsePrefix(attribute)
 	{
 		if (!attribute.name.match(/^xmlns/))
 			return false;
-		
+
 		var pref = attribute.name.replace(/^xmlns/,"").replace(/^:/,"").replace(/ /g,"");
 		prefixes[pref]=attribute.value;
 		$rdf.log.info("Prefix: "+pref+"\nValue: "+attribute.value);
 	}
-	
+
 	function handleP (str)  //reconstructs prefixed URIs
 	{
 		if (isPrefixedSymbol(str))
@@ -5024,21 +5024,21 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 		else
 			$rdf.log.error("Incorrect SPARQL results - bad prefix");
 	}
-	
+
 	function xmlMakeTerm(node)
 	{
 		//alert("xml Node name: "+node.nodeName+"\nxml Child value: "+node.childNodes[0].nodeValue);
 		var val=node.childNodes[0]
 		for (var x=0; x<node.childNodes.length;x++)
 			if (node.childNodes[x].nodeType==3) { val=node.childNodes[x]; break; }
-		
-		if (handleP(node.nodeName) == spns+"uri") 
+
+		if (handleP(node.nodeName) == spns+"uri")
 			return kb.sym(val.nodeValue);
 		else if (handleP(node.nodeName) == spns+"literal")
 			return kb.literal(val.nodeValue);
 		else if (handleP(node.nodeName) == spns+"unbound")
 			return 'unbound'
-		
+
 		else $rdf.log.warn("Don't know how to handle xml binding term "+node);
 		return false
 	}
@@ -5061,40 +5061,40 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 			if (binding != 'unbound')
 			resultBindings[bindVar]=binding;
 		}
-		
+
 		//alert(callback)
 		if (bound && callback) setTimeout(function(){callback(resultBindings)},0)
 		bindingList.push(resultBindings);
 		return;
 	}
-	
+
 	//****MAIN CODE**********
 	var prefixes = [], bindingList=[], head, results, sparql = xml.childNodes[0], spns = "http://www.w3.org/2005/sparql-results#";
 	prefixes[""]="";
-	
+
 	if (sparql.nodeName != 'sparql') { $rdf.log.error("Bad SPARQL results XML"); return }
-	
+
 	for (var x=0;x<sparql.attributes.length;x++)  //deals with all the prefixes beforehand
 		parsePrefix(sparql.attributes[x]);
-		
+
 	for (var x=0;x<sparql.childNodes.length;x++) //looks for the head and results childNodes
 	{
 		$rdf.log.info("Type: "+sparql.childNodes[x].nodeType+"\nName: "+sparql.childNodes[x].nodeName+"\nValue: "+sparql.childNodes[x].nodeValue);
-		
+
 		if (sparql.childNodes[x].nodeType==1 && handleP(sparql.childNodes[x].nodeName)== spns+"head")
 			head = sparql.childNodes[x];
 		else if (sparql.childNodes[x].nodeType==1 && handleP(sparql.childNodes[x].nodeName)==spns+"results")
 			results = sparql.childNodes[x];
 	}
-	
+
 	if (!results && !head) { $rdf.log.error("Bad SPARQL results XML"); return }
-	
+
 	for (var x=0;x<head.childNodes.length;x++) //@@does anything need to be done with these? Should we check against query vars?
 	{
 		if (head.childNodes[x].nodeType == 1 && handleP(head.childNodes[x].nodeName) == spns+"variable")
 			$rdf.log.info("Var: "+head.childNodes[x].getAttribute('name'))
 	}
-	
+
 	for (var x=0;x<results.childNodes.length;x++)
 	{
 		if (handleP(results.childNodes[x].nodeName)==spns+"result")
@@ -5103,7 +5103,7 @@ $rdf.SPARQLResultsInterpreter = function (xml, callback, doneCallback)
 			handleResult(results.childNodes[x]);
 		}
 	}
-	
+
 	if (doneCallback) doneCallback();
 	return bindingList;
 	//****END OF MAIN CODE*****
@@ -5192,7 +5192,7 @@ sparql.prototype._bnode_context2 = function(x, source, depth) {
                 if (res != null)
                     return res.concat([ sts[i] ]);
             }
-        }        
+        }
     }
     var sts = this.store.statementsMatching(x, undefined, undefined, source); // outgoing links
     for (var i=0; i<sts.length; i++) {
@@ -5205,7 +5205,7 @@ sparql.prototype._bnode_context2 = function(x, source, depth) {
                 if (res != undefined)
                     return res.concat([ sts[i] ]);
             }
-        }        
+        }
     }
     return null; // Failure
 }
@@ -5214,7 +5214,7 @@ sparql.prototype._bnode_context2 = function(x, source, depth) {
 sparql.prototype._bnode_context = function(x, source) {
     // Return a list of statements which indirectly identify a node
     //   Breadth-first
-    for (var depth = 0; depth < 3; depth++) { // Try simple first 
+    for (var depth = 0; depth < 3; depth++) { // Try simple first
         var con = this._bnode_context2(x, source, depth);
         if (con != null) return con;
     }
@@ -5264,7 +5264,7 @@ sparql.prototype._fire = function(uri, query, callback) {
             alert("Failed to get privileges: " + e)
         }
     }
-    
+
     xhr.open('POST', uri);
     xhr.setRequestHeader('Content-type', 'application/sparql-query');
     xhr.send(query);
@@ -5288,7 +5288,7 @@ sparql.prototype.update_statement = function(statement) {
                 anonymize(this.statement[0]) + " " +
                 anonymize(this.statement[1]) + " " +
                 anonymize(obj) + " " + " . }\n";
- 
+
             sparql._fire(this.statement[3].uri, query, callback);
         }
     }
@@ -5297,7 +5297,7 @@ sparql.prototype.update_statement = function(statement) {
 sparql.prototype.insert_statement = function(st, callback) {
     var st0 = st instanceof Array ? st[0] : st;
     var query = this._context_where(this._statement_context(st0));
-    
+
     if (st instanceof Array) {
         var stText="";
         for (var i=0;i<st.length;i++) stText+=st[i]+'\n';
@@ -5310,15 +5310,15 @@ sparql.prototype.insert_statement = function(st, callback) {
             anonymize(st.predicate) + " " +
             anonymize(st.object) + " " + " . }\n";
     }
-    
+
     this._fire(st0.why.uri, query, callback);
 }
 
 sparql.prototype.delete_statement = function(st, callback) {
     var query = this._context_where(this._statement_context(st));
-    
+
     query += "DELETE { " + anonymizeNT(st) + " }\n";
-    
+
     this._fire(st instanceof Array?st[0].why.uri:st.why.uri, query, callback);
 }
 
@@ -5351,7 +5351,7 @@ $rdf.jsonParser = function() {
                         var obj = objects[z];
                         if( obj.type === "uri" ) {
                             object = store.sym(obj.value);
-                            store.add( subject, predicate, object, why );                            
+                            store.add( subject, predicate, object, why );
                         } else if( obj.type === "bnode" ) {
                             if( bnodes[obj.value] ) {
                                 object = bnodes[obj.value];
@@ -5365,7 +5365,7 @@ $rdf.jsonParser = function() {
                             if( obj.datatype ) {
                                 object = store.literal(obj.value, undefined, store.sym(obj.datatype));
                             } else if ( obj.lang ) {
-                                object = store.literal(obj.value, obj.lang);                                
+                                object = store.literal(obj.value, obj.lang);
                             } else {
                                 object = store.literal(obj.value);
                             }
@@ -5384,7 +5384,7 @@ $rdf.jsonParser = function() {
 ** Tim Berners-Lee 2006
 ** This is or was http://dig.csail.mit.edu/2005/ajar/ajaw/js/rdf/serialize.js
 **
-** Bug: can't serialize  http://data.semanticweb.org/person/abraham-bernstein/rdf 
+** Bug: can't serialize  http://data.semanticweb.org/person/abraham-bernstein/rdf
 ** in XML (from mhausenblas)
 */
 $rdf.Serializer = function() {
@@ -5396,13 +5396,13 @@ var __Serializer = function( store ){
     this.keywords = ['a']; // The only one we generate at the moment
     this.prefixchars = "abcdefghijklmnopqustuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     this.incoming = null;  // Array not calculated yet
-    this.formulas = [];  // remebering original formulae from hashes 
+    this.formulas = [];  // remebering original formulae from hashes
     this.store = store;
 
     /* pass */
 }
 
-var Serializer = function( store ) {return new __Serializer( store )}; 
+var Serializer = function( store ) {return new __Serializer( store )};
 
 __Serializer.prototype.setBase = function(base)
     { this.base = base };
@@ -5418,7 +5418,7 @@ __Serializer.prototype.toStr = function(x) {
         }
         return s;
 };
-    
+
 __Serializer.prototype.fromStr = function(s) {
         if (s[0] == '{') {
             var x = this.formulas[s];
@@ -5427,13 +5427,13 @@ __Serializer.prototype.fromStr = function(s) {
         }
         return this.store.fromNT(s);
 };
-    
+
 
 
 
 
 /* Accumulate Namespaces
-** 
+**
 ** These are only hints.  If two overlap, only one gets used
 ** There is therefore no guarantee in general.
 */
@@ -5455,7 +5455,7 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     var namespaces = [];
     var pok;
     var sz = this;
-    
+
     function canUse(pp) {
         if (namespaces[pp]) return false; // already used
 
@@ -5479,7 +5479,7 @@ __Serializer.prototype.makeUpPrefix = function(uri) {
     if (canUse(p.slice(0,4))) return pok;
     if (canUse(p.slice(0,1))) return pok;
     if (canUse(p.slice(0,5))) return pok;
-    for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok; 
+    for (var i=0;; i++) if (canUse(p.slice(0,3)+i)) return pok;
 }
 
 
@@ -5514,9 +5514,9 @@ __Serializer.prototype.rootSubjects = function(sts) {
 
     var roots = [];
     var loopBreakers = [];
-    
+
     function accountedFor(x, start) {
-        if (x.termType != 'bnode') return true; // will be subject
+        if (x.termType != 'BlankNode') return true; // will be subject
         var zz = incoming[x];
         if (!zz || zz.length != 1) return true;
         if (loopBreakers[x]) return true;
@@ -5525,7 +5525,7 @@ __Serializer.prototype.rootSubjects = function(sts) {
     }
     for (var xNT in subjects) {
         var x = sz.fromStr(xNT);
-        if ((x.termType != 'bnode') || !incoming[x] || (incoming[x].length != 1)){
+        if ((x.termType != 'BlankNode') || !incoming[x] || (incoming[x].length != 1)){
             roots.push(x);
             //$rdf.log.debug(' sz actual subject -: ' + x)
             continue;
@@ -5548,10 +5548,10 @@ __Serializer.prototype.toN3 = function(f) {
 }
 
 __Serializer.prototype._notQNameChars = "\t\r\n !\"#$%&'()*.,+/;<=>?@[\\]^`{|}~";
-__Serializer.prototype._notNameChars = 
+__Serializer.prototype._notNameChars =
                     ( __Serializer.prototype._notQNameChars + ":" ) ;
 
-    
+
 __Serializer.prototype.statementsToN3 = function(sts) {
     var indent = 4;
     var width = 80;
@@ -5565,11 +5565,11 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         'http://www.w3.org/2000/10/swap/log#implies': '=>',
         'http://www.w3.org/1999/02/22-rdf-syntax-ns#type': 'a'
     }
-    
 
-    
-    
-    ////////////////////////// Arrange the bits of text 
+
+
+
+    ////////////////////////// Arrange the bits of text
 
     var spaces=function(n) {
         var s='';
@@ -5587,7 +5587,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         }
         return str;
     }
-    
+
     // Convert a nested tree of lists and strings to a string
     treeToString = function(tree, level) {
         var str = '';
@@ -5626,10 +5626,10 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                     lastLength += branch.length + 1;
                 } else {
                     var line = spaces(indent*level) +branch;
-                    str += line +'\n'; 
+                    str += line +'\n';
                     lastLength = line.length;
                 }
- 
+
             } else { // not string
             }
         }
@@ -5637,8 +5637,8 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     };
 
     ////////////////////////////////////////////// Structure for N3
-    
-    
+
+
     function statementListToTree(statements) {
         // print('Statement tree for '+statements.length);
         var res = [];
@@ -5653,14 +5653,14 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         }
         return results;
     }
-    
+
     // The tree for a subject
     function subjectTree(subject, subjects) {
-        if (subject.termType == 'bnode' && !sz.incoming[subject])
+        if (subject.termType == 'BlankNode' && !sz.incoming[subject])
             return objectTree(subject, subjects).concat(["."]); // Anonymous bnode subject
         return [ termToN3(subject, subjects) ].concat([propertyTree(subject, subjects)]).concat(["."]);
     }
-    
+
 
     // The property tree for a single subject or anonymous node
     function propertyTree(subject, subjects) {
@@ -5694,25 +5694,25 @@ __Serializer.prototype.statementsToN3 = function(sts) {
 
     // Convert a set of statements into a nested tree of lists and strings
     function objectTree(obj, subjects) {
-        if (obj.termType == 'bnode' && subjects[sz.toStr(obj)] /* && !sz.incoming[st.object]*/) // and there are statements
+        if (obj.termType == 'BlankNode' && subjects[sz.toStr(obj)] /* && !sz.incoming[st.object]*/) // and there are statements
             return  ['['].concat(propertyTree(obj, subjects)).concat([']']);
         return termToN3(obj, subjects);
     }
-    
+
     ////////////////////////////////////////////// Atomic Terms
-    
+
     //  Deal with term level things and nesting with no bnode structure
-    
+
     function termToN3(expr, subjects) {
         switch(expr.termType) {
-            case 'bnode':
-            case 'variable':  return expr.toNT();
-            case 'literal':
+            case 'BlankNode':
+            case 'Variable':  return expr.toNT();
+            case 'Literal':
                 var str = stringToN3(expr.value);
                 if (expr.lang) str+= '@' + expr.lang;
                 if (expr.datatype) str+= '^^' + termToN3(expr.datatype, subjects);
                 return str;
-            case 'symbol':
+            case 'NamedNode':
                 return symbolToN3(expr.uri);
             case 'formula':
                 var res = ['{'];
@@ -5725,13 +5725,13 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                 }
                 res.push(')');
                 return res;
-                
+
            default:
                 throw "Internal: termToN3 cannot handle "+expr+" of termType+"+expr.termType
                 return ''+expr;
         }
     }
-    
+
     function symbolToN3(uri) {  // c.f. symbolString() in notation3.py
         var j = uri.indexOf('#');
         if (j<0 && sz.flags.indexOf('/') < 0) {
@@ -5751,7 +5751,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
                     && sz.flags.indexOf('d') < 0) {// d -> suppress default
                     if (sz.flags.indexOf('k') >= 0 &&
                         sz.keyords.indexOf(localid) <0)
-                        return localid; 
+                        return localid;
                     return ':' + localid;
                 }
                 var prefix = sz.prefixes[namesp];
@@ -5771,7 +5771,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         else uri = hexify(uri);
         return '<'+uri+'>';
     }
-    
+
     function prefixDirectives() {
         str = '';
 	if (sz.defaultNamespace)
@@ -5781,7 +5781,7 @@ __Serializer.prototype.statementsToN3 = function(sts) {
         }
         return str + '\n';
     }
-    
+
     //  stringToN3:  String escaping for N3
     //
     var forbidden1 = new RegExp(/[\\"\b\f\r\v\t\n\u0080-\uffff]/gm);
@@ -5829,13 +5829,13 @@ __Serializer.prototype.statementsToN3 = function(sts) {
     }
 
     // Body of toN3:
-    
+
     var tree = statementListToTree(sts);
     return prefixDirectives() + treeToString(tree, -1);
-    
+
 }
 
-// String ecaping utilities 
+// String ecaping utilities
 
 function hexify(str) { // also used in parser
 //     var res = '';
@@ -5857,7 +5857,7 @@ function backslashUify(str) {
         k = str.charCodeAt(i);
         if (k>65535)
             res += '\\U' + ('00000000'+n.toString(16)).slice(-8); // convert to upper?
-        else if (k>126) 
+        else if (k>126)
             res += '\\u' + ('0000'+n.toString(16)).slice(-4);
         else
             res += str[i];
@@ -5881,7 +5881,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     var namespaceCounts = []; // which have been used
     namespaceCounts['http://www.w3.org/1999/02/22-rdf-syntax-ns#'] = true;
 
-    ////////////////////////// Arrange the bits of XML text 
+    ////////////////////////// Arrange the bits of XML text
 
     var spaces=function(n) {
         var s='';
@@ -5898,7 +5898,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
         }
         return str;
     }
-    
+
     // Convert a nested tree of lists and strings to a string
     XMLtreeToString = function(tree, level) {
         var str = '';
@@ -5926,10 +5926,10 @@ __Serializer.prototype.statementsToXML = function(sts) {
                     lastLength += branch.length + 1;
                 } else {
                     var line = spaces(indent*level) +branch;
-                    str += line +'\n'; 
+                    str += line +'\n';
                     lastLength = line.length;
                 }
- 
+
             } else { // not string
             }
         }
@@ -5949,7 +5949,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
         }
         return results;
     }
-    
+
     function escapeForXML(str) {
         if (typeof str == 'undefined') return '@@@undefined@@@@';
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -5962,7 +5962,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
     // The tree for a subject
     function subjectXMLTree(subject, subjects) {
         var start
-        if (subject.termType == 'bnode') {
+        if (subject.termType == 'BlankNode') {
             if (!sz.incoming[subject]) { // anonymous bnode
                 var start = '<rdf:Description>';
             } else {
@@ -5981,7 +5981,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
             res.push(subjectXMLTree(subject.elements[i], subjects));
          }
          return res;
-    }   
+    }
 
     // The property tree for a single subject or anonymos node
     function propertyXMLTree(subject, subjects) {
@@ -5991,9 +5991,9 @@ __Serializer.prototype.statementsToXML = function(sts) {
         for (var i=0; i<sts.length; i++) {
             var st = sts[i];
             switch (st.object.termType) {
-                case 'bnode':
+                case 'BlankNode':
                     /*if(!sz.incoming[st.object]) {
-                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">',
                         propertyXMLTree(st.object, subjects),
                         '</'+qname(st.predicate)+'>']);
                     } else {
@@ -6003,29 +6003,29 @@ __Serializer.prototype.statementsToXML = function(sts) {
 
                     }
                     break;*/
-                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">', 
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Resource">',
                         propertyXMLTree(st.object, subjects),
                         '</'+qname(st.predicate)+'>']);
                     break;
-                case 'symbol':
+                case 'NamedNode':
                     results = results.concat(['<'+qname(st.predicate)+' rdf:resource="'
-                            + relURI(st.object)+'"/>']); 
+                            + relURI(st.object)+'"/>']);
                     break;
-                case 'literal':
+                case 'Literal':
                     results = results.concat(['<'+qname(st.predicate)
-                        + (st.object.datatype ? ' rdf:datatype="'+escapeForXML(st.object.datatype.uri)+'"' : '') 
-                        + (st.object.lang ? ' xml:lang="'+st.object.lang+'"' : '') 
+                        + (st.object.datatype ? ' rdf:datatype="'+escapeForXML(st.object.datatype.uri)+'"' : '')
+                        + (st.object.lang ? ' xml:lang="'+st.object.lang+'"' : '')
                         + '>' + escapeForXML(st.object.value)
                         + '</'+qname(st.predicate)+'>']);
                     break;
                 case 'collection':
-                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Collection">', 
+                    results = results.concat(['<'+qname(st.predicate)+' rdf:parseType="Collection">',
                         collectionXMLTree(st.object, subjects),
                         '</'+qname(st.predicate)+'>']);
                     break;
                 default:
                     throw "Can't serialize object of type "+st.object.termType +" into XML";
-                
+
             } // switch
         }
         return results;
@@ -6043,7 +6043,7 @@ __Serializer.prototype.statementsToXML = function(sts) {
         var canSplit = true;
         for (var k=j+1; k<uri.length; k++) {
             if (__Serializer.prototype._notNameChars.indexOf(uri[k]) >=0) {
-                throw ('Invalid character "'+uri[k] +'" cannot be in XML qname for URI: '+uri); 
+                throw ('Invalid character "'+uri[k] +'" cannot be in XML qname for URI: '+uri);
             }
         }
         var localid = uri.slice(j+1);
@@ -6056,11 +6056,11 @@ __Serializer.prototype.statementsToXML = function(sts) {
         if (!prefix) prefix = sz.makeUpPrefix(namesp);
         namespaceCounts[namesp] = true;
         return prefix + ':' + localid;
-//        throw ('No prefix for namespace "'+namesp +'" for XML qname for '+uri+', namespaces: '+sz.prefixes+' sz='+sz); 
+//        throw ('No prefix for namespace "'+namesp +'" for XML qname for '+uri+', namespaces: '+sz.prefixes+' sz='+sz);
     }
 
     // Body of toXML:
-    
+
     var tree = statementListToXMLTree(sts);
     var str = '<rdf:RDF';
     if (sz.defaultNamespace)
@@ -6213,7 +6213,7 @@ jQuery.rdfwidgets = function($) {
                 var s_v = processVar( s );
                 var p_v = processVar( p );
                 var o_v = processVar( o );
-                
+
                 var newBindings = [];
                 var matches;
                 for( var i=0; i < bindings.length; i++ ) {
@@ -6272,7 +6272,7 @@ jQuery.rdfwidgets = function($) {
                 history.push({f:this.match, args:[s,p,o,optional]});
                 return this;
             },
-            
+
             optional: function( s,p,o ) {
                 return this.match( s,p,o,true );
             },
@@ -6282,7 +6282,7 @@ jQuery.rdfwidgets = function($) {
                 history.push({f:this.filter, args:[f]});
                 return this;
             },
-            
+
             draw: function( template, element, justOne ) {
                 var target = element ? $(element, document) : elt;
                 var output = "";
@@ -6291,7 +6291,7 @@ jQuery.rdfwidgets = function($) {
                     temp = template;
                     for( x in bindings[i] ) {
                         temp = temp.replace( new RegExp("\\?"+x,"g"), (bindings[i][x] ? bindings[i][x].value : "None" ));
-                        temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" )); 
+                        temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" ));
                     }
                     output += temp;
                 }
@@ -6300,7 +6300,7 @@ jQuery.rdfwidgets = function($) {
                 history.push({f:this.draw, args:[template, element, justOne]});
                 return this;
             },
-            
+
             page: function( template, perPage, element ) {
                 //split bindings into ceil(bindings.length/perPage) pages.
                 if( !perPage ) { perPage = 10 }
@@ -6312,7 +6312,7 @@ jQuery.rdfwidgets = function($) {
                 var left = $('<div style="float:left"><a href="#">&lt; Previous</a></div>', document);
                 var center = $('<div style="clear:both"> </div>', document);
                 var right = $('<div style="float:right"><a href="#">Next &gt;</a></div>', document);
-                
+
                 left.click( function( e ) {
                     e.preventDefault();
                     if( currentPage > 0 ) {
@@ -6320,21 +6320,21 @@ jQuery.rdfwidgets = function($) {
                         drawPage( currentPage );
                     }
                 });
-                
-                right.click( function( e ) { 
+
+                right.click( function( e ) {
                     e.preventDefault();
                     if( (currentPage+1)*perPage < bindings.length ) {
                         currentPage++;
                         drawPage( currentPage );
                     }
                 });
-                
+
                 area.append( page );
                 area.append( left );
                 area.append( right );
                 area.append( center );
                 var drawPage = function( pnumber ) {
-                    
+
                     if( pnumber === 0 ) {
                         left.hide();
                         if( (pnumber+1)*perPage < bindings.length ) {
@@ -6349,25 +6349,25 @@ jQuery.rdfwidgets = function($) {
                         left.show();
                         right.show();
                     }
-                    
+
                     var output = "";
                     for( var i = pnumber * perPage; ( i < (pnumber+1)*perPage && (i < bindings.length) ); i++ ) {
                         temp = template;
                         for( x in bindings[i] ) {
                             temp = temp.replace( new RegExp("\\?"+x,"g"), (bindings[i][x] ? bindings[i][x].value : "None" ));
-                            temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" )); 
+                            temp = temp.replace( new RegExp("\\@"+x,"g"), (bindings[i][x] ? doLabel( bindings[i][x] , opts ) : "None" ));
                         }
                         output += temp;
                     }
                     page.html( output );
-                    processHTMLWidgets( target );                    
+                    processHTMLWidgets( target );
                 }
                 drawPage( currentPage );
                 target.empty().append(area);
                 history.push({f:this.page, args:[template, perPage, element]});
                 return this;
             },
-            
+
             replay: function() {
                 bindings = [{}];
                 cstring = "";
@@ -6565,15 +6565,15 @@ jQuery.rdfwidgets = function($) {
             return;
         }
         var format = (t === "application/json" ? "json" :
-                      (t === "application/jsonp" ? "jsonp" : 
+                      (t === "application/jsonp" ? "jsonp" :
                        (t === "application/rdf+xml" ? "xml" :
-                        ((t === "text/n3" || t === "text/rdf+n3") ? "text" : 
+                        ((t === "text/n3" || t === "text/rdf+n3") ? "text" :
                          "text") ) ) );
         try {
             requestedURIs[docpart( uri )] = true;
             if( originalURI ) { requestedURIs[docpart( originalURI )] = true; }
             $.ajax({
-                url: uri, 
+                url: uri,
                 beforeSend: function( xhr ) {
                     if( xhr.withCredentials !== undefined ) {
                         xhr.withCredentials = true;
@@ -6588,9 +6588,9 @@ jQuery.rdfwidgets = function($) {
                             contenttype = t;
                         }
                         format = (contenttype === "application/json" ? "json" :
-                                  (contenttype === "application/jsonp" ? "jsonp" : 
+                                  (contenttype === "application/jsonp" ? "jsonp" :
                                    (contenttype === "application/rdf+xml" ? "xml" :
-                                    ((contenttype === "text/n3" || contenttype === "text/rdf+n3") ? "text" : 
+                                    ((contenttype === "text/n3" || contenttype === "text/rdf+n3") ? "text" :
                                      null) ) ) );
                     }
                     if( xhr && xhr.status >= 400  || ( !xhr && format !== "jsonp" ) ) {
@@ -6749,7 +6749,7 @@ jQuery.rdfwidgets = function($) {
         var lit = db.literal( v );
         return lit;
     }
-    
+
     function processObject( v, o ) {
         if( v === null || v === undefined ) { return null; }
         if( typeof( v ) === "object" && v.termType ) {
@@ -6777,7 +6777,7 @@ jQuery.rdfwidgets = function($) {
         }  else if ( o.subject && o.object ) {
             o.editTerm = "predicate";
             return o.editTerm;
-        }  else if ( o.subject && o.predicate ) { 
+        }  else if ( o.subject && o.predicate ) {
             o.editTerm = "object";
             return o.editTerm;
         }
@@ -6914,7 +6914,7 @@ jQuery.rdfwidgets = function($) {
                 }
             }
         }
-        
+
         var props = [];
         if( ranges.length > 0 ) {
             for( var i = 0; i < ranges.length; i++ ) {
@@ -7000,7 +7000,7 @@ jQuery.rdfwidgets = function($) {
         }
     }
 
-    function doInsert( triples, callback, o ){ 
+    function doInsert( triples, callback, o ){
         if( !triples || triples.length == 0 ) { callback( true, triples, null );return; }
         var endpoint = getEndpoint( triples[0], o );
         var queryString = "INSERT ";
@@ -7073,7 +7073,7 @@ jQuery.rdfwidgets = function($) {
         });
     }
 
-    function doDelete( triples, callback, o ){ 
+    function doDelete( triples, callback, o ){
         if( !triples || triples.length == 0 ) { callback( true, triples, null );return; }
         var endpoint = getEndpoint( triples[0], o );
         var queryString = "DELETE ";
@@ -7145,7 +7145,7 @@ jQuery.rdfwidgets = function($) {
             //dataType:"xml"
         });
     }
-    
+
     //when i feel confident that its being implemented, this will use the w3c spec which allows multiple update actions in one query
     function doUpdate( triples, callback,  o ) {
         doDelete( triples['delete_triples'], function( success, t, xhr ) {
@@ -7281,7 +7281,7 @@ jQuery.rdfwidgets = function($) {
 
     function doAutocomplete( jq, o ) {
         var options;
-        
+
         if( o.menuOptions !== null && o.menuOptions !== undefined ) {
             options = o.menuOptions;
         } else if( o.editTerm === "object" && $.rdfwidgets.whether(processResource( o.predicate, o ), db.sym("http://www.w3.org/2000/01/rdf-schema#range" ), db.sym("http://www.w3.org/2000/01/rdf-schema#Literal"), undefined, o ) ) {
@@ -7303,7 +7303,7 @@ jQuery.rdfwidgets = function($) {
         function getEvent( val ) {
             //perform label-> uri OR uri -> label.
             if( lastSelect && lastSelect.value === jq.val() ) {
-                return { type: "autocompletechoice", uri:lastSelect.uri,  input: jq.val(), label:lastSelect.value };                
+                return { type: "autocompletechoice", uri:lastSelect.uri,  input: jq.val(), label:lastSelect.value };
             } else if ( validURI( jq.val() ) ) {
                 return { type: "autocompletechoice", uri:jq.val(), input: jq.val(), label:( options.uriToValue[ jq.val() ] ? options.uriToValue[ jq.val() ] : jq.val() ) };
             } else if ( options.valueToURI[jq.val()] ) {
@@ -7318,11 +7318,11 @@ jQuery.rdfwidgets = function($) {
         return jq.autocomplete("destroy").autocomplete({
                     source: preds,
                     open: function() {
-                      open = true; 
+                      open = true;
                       passedUp = false;
                       selected = false;
                     },
-                    close: function() { 
+                    close: function() {
                       open = false;
                       if( passedUp && !selected ) {
                           var evt = getEvent( jq.val() );
@@ -7333,7 +7333,7 @@ jQuery.rdfwidgets = function($) {
                               jq.data( "uri", null );
                               jq.data( "val", evt.input );
                           }
-                          $(this, document).trigger( evt ); 
+                          $(this, document).trigger( evt );
                       }
                     },
                     focus: function( e, ui ) {
@@ -7343,7 +7343,7 @@ jQuery.rdfwidgets = function($) {
                       selected = true;
                       lastSelect = ui.item;
                     }
-               }).blur( function() { 
+               }).blur( function() {
                     if( !open ) {
                         var evt = getEvent( jq.val() );
                         if( evt.uri ) {
@@ -7353,10 +7353,10 @@ jQuery.rdfwidgets = function($) {
                             jq.data( "uri", null );
                             jq.data( "val", evt.input );
                         }
-                        $(this, document).trigger( evt ); 
+                        $(this, document).trigger( evt );
                     } else {
-                        passedUp = true; 
-                    } 
+                        passedUp = true;
+                    }
                });
     }
 
@@ -7376,7 +7376,7 @@ jQuery.rdfwidgets = function($) {
             var obj = processObject( o.object, o );
             if( original ) { delete_triples = $.rdfwidgets.statementsMatching( subj, original, obj,undefined,false,o ); }
             if( term ) {
-                insert_triples = [ new $rdf.Statement( subj, term, obj ) ]; 
+                insert_triples = [ new $rdf.Statement( subj, term, obj ) ];
                 if( delete_triples && delete_triples[0] && delete_triples[0].why ) { insert_triples[0].why = delete_triples[0].why; }
             }
         } else if ( o.editTerm === "object" ) {
@@ -7652,7 +7652,7 @@ jQuery.rdfwidgets = function($) {
             } else if( o.predicateElement ) {
                 return $(o.predicateElement, document).edit('getTriple');
             } else if( o.objectElement) {
-                return $(o.objectElement, document).edit('getTriple');                
+                return $(o.objectElement, document).edit('getTriple');
             }
             return null;
         },
@@ -7908,9 +7908,9 @@ jQuery.rdfwidgets = function($) {
             html+= "</tbody></table>";
             element.bind( "rdfdelete", function( e ) {
                 var triple = $(e.target, document).edit("getTriple");
-                
+
                 if( triple ) {
-                    doDelete( [ triple ] , function( success, foobar, xhr ) { 
+                    doDelete( [ triple ] , function( success, foobar, xhr ) {
                         if( success ) {
                             var parent = $(e.target, document).parent();
                             $(e.target, document).remove();
@@ -7937,7 +7937,7 @@ jQuery.rdfwidgets = function($) {
                 }
             });
             element.html(html);
-            
+
             $(element, document).find('div').each( function() {
                     var p = optsArray[this.id]
                         if( p ) {
@@ -7947,7 +7947,7 @@ jQuery.rdfwidgets = function($) {
                                 $(this, document).label( optsArray[this.id] );
                             }
                         }
-                });           
+                });
             }
         });
 
@@ -7987,7 +7987,7 @@ jQuery.rdfwidgets = function($) {
             doAutocomplete( input, {menuOptions: getMenuUsedOptions( { type: o.type, sources:o.sources } ) } );
             input.bind( "autocompletechoice", function(e) {
                 if( e.uri ) {
-                    element.trigger( "rdfselect", [db.sym(e.uri)] ); 
+                    element.trigger( "rdfselect", [db.sym(e.uri)] );
                 } else {
                     alert( "Please enter a valid menu selection." );
                 }
@@ -8458,7 +8458,7 @@ jQuery.rdfwidgets = function($) {
                 var row = $(e.target, document).parent();
                 var triple = row.tripleedit( "getTriple" );
                 if( triple ) {
-                    doDelete( [ triple ] , function( success, foobar, xhr ) { 
+                    doDelete( [ triple ] , function( success, foobar, xhr ) {
                         if( success ) {
                             row.remove();
                         } else {
@@ -8528,13 +8528,13 @@ jQuery.rdfwidgets = function($) {
         },
 
         disable: function() {
-            element.find( "td" ).each( function() { 
+            element.find( "td" ).each( function() {
                 $(this, document).image("disable");
             });
         },
 
         enable: function() {
-            element.find( "td" ).each( function() { 
+            element.find( "td" ).each( function() {
                 $(this, document).image("enable");
             });
         },
@@ -8561,7 +8561,7 @@ jQuery.rdfwidgets = function($) {
             }
             html += "</tr></table>";
             element.html(html);
-            element.find( "td" ).each( function(i) { 
+            element.find( "td" ).each( function(i) {
                     var opts = {};
                     var tripopts = {subject: actual[i], selectable:true};
                     $.extend( opts, o, tripopts );
@@ -8611,7 +8611,7 @@ jQuery.rdfwidgets = function($) {
                 var row = $(e.target, document).parent();
                 var triple = row.tripleedit( "getTriple" );
                 if( triple ) {
-                    doDelete( [ triple ] , function( success, foobar, xhr ) { 
+                    doDelete( [ triple ] , function( success, foobar, xhr ) {
                         if( success ) {
                             row.remove();
                         } else {
@@ -8645,7 +8645,7 @@ jQuery.rdfwidgets = function($) {
             }
             tbody += "</tbody>";
             table.append( tbody );
-            
+
             for( var i = 0; i < this.triples.length; i++ ) {
                 $('#'+ids[i].r, document).tripleedit( sopts[i] );
             }
@@ -8660,17 +8660,17 @@ jQuery.rdfwidgets = function($) {
                 var secondRow = $('<tr><td><label for="'+rowid2+'">Value: </label></td></tr>', document);
                 var firstInput = $('<input name="'+rowid1+'" type="text"></input>', document);
                 var secondInput = $('<input name="'+rowid2+'" type="text"></input>', document);
-                
+
                 doAutocomplete( firstInput, { menuOptions:getMenuPredicateOptions( {} ) } );
                 doAutocomplete( secondInput, { menuOptions:getMenuInstanceOptions( {} ) } );
-                
+
                 var lastPred, lastPredInput, lastObj, lastObjInput;
-                
+
                 firstInput.bind( "autocompletechoice", function(e) {
                     lastPred = e.uri;
                     lastPredInput = e.input;
                 });
-                
+
                 secondInput.bind( "autocompletechoice", function(e) {
                     lastObj = e.uri;
                     lastObjInput = e.input;
@@ -8706,7 +8706,7 @@ jQuery.rdfwidgets = function($) {
                                     var predicateTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>', document);
                                     var objectTD = $('<td class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></td>', document);
                                     var TR = $('<tr class="'+((2%2===0) ? 'rdfediteven' : 'rdfeditodd')+'"></tr>', document);
-                                    
+
                                     table.append(TR);
                                     TR.append(predicateTD);
                                     TR.append(objectTD);
@@ -8736,7 +8736,7 @@ jQuery.rdfwidgets = function($) {
                 div.append( addPopup );
                 closeButton.css( { "right": "2px", "top": "2px" } );
                 addPopup.css( {"left": (pos.left + width) + "px", "top":(pos.top+height) + "px" } );
-                
+
                 addPopup.show("fast");
             });
         }
@@ -8838,7 +8838,7 @@ jQuery.rdfwidgets = function($) {
                 for( var i=0; i<itemIDs.length; i++ ) { $('#'+itemIDs[i], document).attr("disabled",false); }
                 submit.attr("disabled",false);
             };
-            form.submit( function(e) { 
+            form.submit( function(e) {
                 e.preventDefault();
                 disableAll();
                 var subject = o.subject ? processResource(o.subject) : (o.baseURI ? db.sym(docpart(o.baseURI) + '#' + randomID()) : db.sym( docpart(window.location.toString()) + '#' + randomID() ) );
@@ -8864,7 +8864,7 @@ jQuery.rdfwidgets = function($) {
                     triples.push( new $rdf.Statement( subject, processResource( staticTriples[i].predicate ), processObject( staticTriples[i].object ), subject ) );
                 }
 
-                doInsert( triples , function(success, foobar, xhr) { 
+                doInsert( triples , function(success, foobar, xhr) {
                     if( success ) {
                     } else {
                         alert( "Sorry, an error occurred during the submission of your information.  Server Response: " + (xhr ? (xhr.status + " " + xhr.responseText) : "" ) );
@@ -9112,7 +9112,7 @@ jQuery.rdfwidgets = function($) {
             } else {
                 text = s.toN3( db );
             }
-            
+
             pre.text( text );
             element.append(pre);
         }
@@ -9144,7 +9144,7 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var that = this;
             o.editTerm = this.originalEditTerm;
-            
+
             if( !( o.subject && !o.predicate && !o.object ) ) {
                 processEditTerm( o );
             } else {
@@ -9155,7 +9155,7 @@ jQuery.rdfwidgets = function($) {
             if( o.subject ) { subject = processResource(o.subject, o); }
             if( o.predicate ) { predicate = processResource(o.predicate, o); }
             if( o.object ) { object = processObject( o.object, o ); }
-            
+
             var temp;
             var output = null;
             var type;
@@ -9193,7 +9193,7 @@ jQuery.rdfwidgets = function($) {
             }
 
             if( o.selectable ) {
-                element.click( function(e) { 
+                element.click( function(e) {
                         e.stopPropagation();
                         setSelected( element, that.rdfvalue );
                     } );
@@ -9217,7 +9217,7 @@ jQuery.rdfwidgets = function($) {
             if( imageuri ) {
                 output = "<span class='rdfimage'><img class='rdfimage' style='display:none' "+"src='"+imageuri+"' title='"+doLabel(output,o)+" "+output.value+"'></img></span>";
                 this.element.empty().html(output);
-                $(element, document).find( "img" ).one( "load", function() { 
+                $(element, document).find( "img" ).one( "load", function() {
                     var im = $(this, document).show(0);
                     var width = im.width();    // Current image width
                     var height = im.height();  // Current image height
@@ -9225,14 +9225,14 @@ jQuery.rdfwidgets = function($) {
                     var maxWidth = o.width?o.width:width; // Max width for the image
                     var maxHeight = o.height?o.height:height;    // Max height for the image
                     var ratio = 0;  // Used for aspect ratio
-                    
+
                     // Check if the current width is larger than the max
                     if(width > maxWidth){
                         ratio = maxWidth / width;   // get ratio for scaling image
                         height = height * ratio;    // Reset height to match scaled image
                         width = width * ratio;    // Reset width to match scaled image
                     }
-                    
+
                     // Check if current height is larger than max
                     if(height > maxHeight){
                         ratio = maxHeight / height; // get ratio for scaling image
@@ -9296,7 +9296,7 @@ jQuery.rdfwidgets = function($) {
             var o = this.options;
             var that = this;
             o.editTerm = this.originalEditTerm;
-            
+
 
             if( !( o.subject && !o.predicate && !o.object ) ) {
                 processEditTerm( o );
@@ -9323,7 +9323,7 @@ jQuery.rdfwidgets = function($) {
                     temp = $.rdfwidgets.any( (subject ? subject : undefined), (predicate ? predicate : undefined), undefined, undefined, o);
                     if( temp ) { o.object = temp; output = temp; }
                 }
-                
+
             } else if( o.editTerm==="predicate" ) {
                 if( predicate ) {
                     output = predicate;
@@ -9636,7 +9636,7 @@ jQuery.rdfwidgets = function($) {
          */
         statementsMatching: function( s, p, o, w, justOne, opts ) {
             var f = null;
-            if( opts ) { 
+            if( opts ) {
                 f = processSourceFilter( opts.sources, opts );
             }
             var sts = db.statementsMatching( s, p, o, w, justOne );
@@ -9667,7 +9667,7 @@ jQuery.rdfwidgets = function($) {
         anyStatementMatching: function( s, p, o, w, opts ) {
             var x = $.rdfwidgets.statementsMatching(s,p,o,w,true,opts);
             if (!x || x == []) return undefined;
-            return x[0];            
+            return x[0];
         },
 
         /**
@@ -9726,7 +9726,7 @@ jQuery.rdfwidgets = function($) {
          * @returns {Boolean} True if a match exists, false otherwise.
          */
         whether: function( s, p, o, w, opts ) {
-            return $.rdfwidgets.statementsMatching(s,p,o,w,false,opts).length;            
+            return $.rdfwidgets.statementsMatching(s,p,o,w,false,opts).length;
         }
 
     };
@@ -9807,7 +9807,7 @@ jQuery.rdfwidgets = function($) {
      * @type Object
      * @memberOf CommonOptions
      * @field
-     * @description An anonymous object containing namespace->URI mappings, e.g. {"foaf":"http://xmlns.com/foaf/0.1/"}. 
+     * @description An anonymous object containing namespace->URI mappings, e.g. {"foaf":"http://xmlns.com/foaf/0.1/"}.
      */
 
 }(jQuery);

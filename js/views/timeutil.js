@@ -37,28 +37,28 @@ function matrixTD(obj, st, asImage, doc) {
     var td = doc.createElement('TD');
     td.stat = st; // pointer to the statement for the td
     if (!obj) var obj = new RDFLiteral(".");
-    if  ((obj.termType == 'symbol') || (obj.termType == 'bnode') || 
+    if  ((obj.termType == 'NamedNode') || (obj.termType == 'BlankNode') ||
     (obj.termType == 'collection')) {
         td.setAttribute('about', obj.toNT());
         td.setAttribute('style', 'color:#4444ff');
     }
-    
-    if (obj.termType =='symbol') {
+
+    if (obj.termType =='NamedNode') {
         td.setAttribute('type', 'sym');
     }
-    if (obj.termType =='bnode') {
-        td.setAttribute('type', 'bnode');
+    if (obj.termType =='BlankNode') {
+        td.setAttribute('type', 'BlankNode');
     }
-    if (obj.termType =='literal') {
+    if (obj.termType =='Literal') {
         td.setAttribute('type', 'lit');
     }
-    
+
     var image;
-    if (obj.termType == 'literal') {
+    if (obj.termType == 'Literal') {
         td.setAttribute('about', obj.value);
         td.appendChild(doc.createTextNode(obj.value));
     }
-    else if ((obj.termType == 'symbol') || (obj.termType == 'bnode') || (obj.termType == 'collection')) {
+    else if ((obj.termType == 'NamedNode') || (obj.termType == 'BlankNode') || (obj.termType == 'collection')) {
         if (asImage) {
             image = AJARImage(mapURI(obj.uri), label(obj), label(obj));
             image.setAttribute('class', 'pic');
